@@ -14,7 +14,7 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       vérifié le 16/08, la couche SCAN25 répond 400 sans clé Géoplateforme —
       l'inscription (gratuite) est une démarche à faire par Armelin ; la
       roadmap la reprendra ensuite.
-- [ ] PR #4 — Recherche d'adresse avec autocomplétion BAN + géocodage inverse
+- [x] PR #4 — Recherche d'adresse avec autocomplétion BAN + géocodage inverse
       au long-press + affichage coordonnées
 
 ## Navigation (planificateur)
