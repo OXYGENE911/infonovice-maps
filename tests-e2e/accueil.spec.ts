@@ -39,3 +39,21 @@ test('des tuiles IGN sont réellement demandées et servies', async ({ page }) =
   await expect.poll(() => tuiles.length, { timeout: 15_000 }).toBeGreaterThan(3);
   expect(tuiles.filter((s) => s === 200).length, 'aucune tuile servie en 200').toBeGreaterThan(0);
 });
+
+test('le sélecteur de fonds bascule en satellite, et la préférence survit au rechargement', async ({ page }) => {
+  const ortho: string[] = [];
+  page.on('request', (r) => { if (r.url().includes('ORTHOIMAGERY')) ortho.push(r.url()); });
+
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await page.locator('.fonds summary').click();
+  await page.getByRole('radio', { name: 'Satellite', exact: true }).check();
+  await expect.poll(() => ortho.length, { timeout: 15_000 }).toBeGreaterThan(0);
+
+  // LA PERSISTANCE : on recharge, le satellite doit revenir tout seul (IndexedDB).
+  const orthoApres: string[] = [];
+  page.on('request', (r) => { if (r.url().includes('ORTHOIMAGERY')) orthoApres.push(r.url()); });
+  await page.reload();
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await expect.poll(() => orthoApres.length, { timeout: 15_000 }).toBeGreaterThan(0);
+});

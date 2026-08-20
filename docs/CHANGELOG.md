@@ -26,3 +26,15 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   4,2 Ko gzippé — budget respecté.
 - E2E : tuiles IGN réellement servies (200), souveraineté mesurée (aucune
   origine hors liste blanche), contrôles français visibles.
+
+## [0.3.0] — 2026-08-16 — Les fonds
+- Sélecteur de fonds (premier Web Component) : Plan IGN, Satellite,
+  Satellite + routes ; surcouche Parcelles cadastrales (utile à Arpentine).
+- Préférence persistée en IndexedDB (`lib/stockage`, socle des favoris à
+  venir) et rétablie au chargement — prouvé par E2E avec rechargement.
+- Mode sombre automatique du fond Plan (filtre calibré, canevas seul) ;
+  le satellite reste intouché.
+- Topo 25 écarté avec preuve : SCAN25 répond 400 sans clé. À réintroduire
+  après inscription Géoplateforme (gratuite).
+- Deux défauts attrapés par les tests avant l'œil : l'en-tête intercepait
+  les clics du sélecteur ; le panneau se reconstruisait en plein clic.

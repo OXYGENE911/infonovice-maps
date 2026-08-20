@@ -45,3 +45,39 @@ body { font-family: var(--police); background: var(--fond); }
 .maplibregl-ctrl-group button { width: 40px !important; height: 40px !important; }
 .maplibregl-ctrl-group button:focus-visible { box-shadow: var(--focus) inset !important; }
 .maplibregl-ctrl-attrib { font-size: 11px !important; }
+
+/* Sélecteur de fonds — panneau flottant SOUS l'en-tête. Le décalage n'est
+   pas décoratif : sans lui, l'en-tête fixe recouvre le contrôle et intercepte
+   les clics — mesuré par le test E2E avant d'être vu à l'œil. */
+#carte .maplibregl-ctrl-top-left { top: 62px; }  /* gagne sur la feuille MapLibre, chargée après */
+.porte-fonds { pointer-events: auto; margin: 10px 0 0 12px !important; }
+.fonds { position: relative; }
+.fonds summary {
+  list-style: none; cursor: pointer;
+  padding: 9px 16px; border-radius: 12px;
+  background: color-mix(in srgb, var(--fond) 92%, transparent);
+  border: 1px solid var(--bord);
+  box-shadow: var(--ombre-s);
+  font: 600 13.5px var(--police); color: var(--texte-1);
+}
+.fonds summary::-webkit-details-marker { display: none; }
+.fonds summary:focus-visible { outline: none; box-shadow: var(--focus); }
+.fonds fieldset {
+  position: absolute; top: calc(100% + 8px); left: 0; min-width: 210px;
+  padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
+  background: var(--fond); box-shadow: var(--ombre-m);
+  display: grid; gap: 9px;
+}
+.fonds legend { font: 700 11px var(--police); color: var(--texte-3);
+  text-transform: uppercase; letter-spacing: .08em; padding: 0 4px; }
+.fonds label { display: flex; align-items: center; gap: 9px;
+  font: 400 14px var(--police); color: var(--texte-1); cursor: pointer; }
+.fonds input:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+.fonds hr { border: 0; border-top: 1px solid var(--bord); margin: 2px 0; }
+
+/* Mode sombre du fond Plan IGN : inversion calibrée, canevas seulement. */
+@media (prefers-color-scheme: dark) {
+  .fond-sombre .maplibregl-canvas {
+    filter: invert(0.92) hue-rotate(180deg) saturate(0.65) brightness(0.92) contrast(0.94);
+  }
+}

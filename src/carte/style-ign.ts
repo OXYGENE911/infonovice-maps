@@ -18,25 +18,77 @@ export function urlTuiles(couche: string, format: 'image/png' | 'image/jpeg'): s
   return `${WMTS}&LAYER=${couche}&FORMAT=${format}`;
 }
 
-export function styleIGNPlan(): StyleSpecification {
-  return {
-    version: 8,
-    name: 'Plan IGN v2',
-    sources: {
-      'plan-ign': {
+/* Les fonds disponibles. SCAN 25 (Topo) est ABSENT à dessein : vérifié le
+   16/08, la couche répond 400 sans clé — elle appartient aux flux soumis à
+   inscription Géoplateforme (gratuite, mais c'est une démarche d'Armelin).
+   En échange, deux couches libres plus utiles aux produits maison : le
+   CADASTRE (Arpentine) et les ROUTES en surcouche du satellite. */
+export type Fond = 'plan' | 'ortho' | 'ortho-routes';
+export const FONDS: Record<Fond, string> = {
+  plan: 'Plan IGN',
+  ortho: 'Satellite',
+  'ortho-routes': 'Satellite + routes',
+};
+
+export interface OptionsStyle {
+  fond: Fond;
+  cadastre?: boolean;
+}
+
+export function styleCarte({ fond, cadastre = false }: OptionsStyle): StyleSpecification {
+  const sources: StyleSpecification['sources'] = {};
+  const layers: StyleSpecification['layers'] = [];
+
+  if (fond === 'plan') {
+    sources['plan-ign'] = {
+      type: 'raster',
+      tiles: [urlTuiles('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', 'image/png')],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: ATTRIBUTION_IGN,
+    };
+    layers.push({ id: 'fond-plan-ign', type: 'raster', source: 'plan-ign' });
+  } else {
+    sources['ortho'] = {
+      type: 'raster',
+      tiles: [urlTuiles('ORTHOIMAGERY.ORTHOPHOTOS', 'image/jpeg')],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: ATTRIBUTION_IGN,
+    };
+    layers.push({ id: 'fond-ortho', type: 'raster', source: 'ortho' });
+    if (fond === 'ortho-routes') {
+      sources['routes'] = {
         type: 'raster',
-        tiles: [urlTuiles('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', 'image/png')],
+        tiles: [urlTuiles('TRANSPORTNETWORKS.ROADS', 'image/png')],
         tileSize: 256,
-        // Le WMTS PM s'arrête à 19 pour Plan IGN v2 ; au-delà MapLibre
-        // sur-échantillonne proprement.
-        maxzoom: 19,
+        maxzoom: 18,
         attribution: ATTRIBUTION_IGN,
-      },
-    },
-    layers: [
-      { id: 'fond-plan-ign', type: 'raster', source: 'plan-ign' },
-    ],
-  };
+      };
+      layers.push({ id: 'surcouche-routes', type: 'raster', source: 'routes' });
+    }
+  }
+
+  if (cadastre) {
+    sources['cadastre'] = {
+      type: 'raster',
+      tiles: [urlTuiles('CADASTRALPARCELS.PARCELLAIRE_EXPRESS', 'image/png')],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: ATTRIBUTION_IGN,
+    };
+    layers.push({
+      id: 'surcouche-cadastre', type: 'raster', source: 'cadastre',
+      paint: { 'raster-opacity': 0.75 },
+    });
+  }
+
+  return { version: 8, name: `Fond ${fond}${cadastre ? ' + cadastre' : ''}`, sources, layers };
+}
+
+/** Le style historique de la PR #2, conservé comme raccourci. */
+export function styleIGNPlan(): StyleSpecification {
+  return styleCarte({ fond: 'plan' });
 }
 
 /* Les libellés français des contrôles MapLibre : la bibliothèque parle

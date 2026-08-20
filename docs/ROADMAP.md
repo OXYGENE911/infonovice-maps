@@ -9,8 +9,11 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       page « en construction »
 - [x] PR #2 — Carte MapLibre plein écran avec fond IGN Plan, contrôles
       zoom/boussole/géolocalisation navigateur, design tokens Infonovice
-- [ ] PR #3 — Sélecteur de fonds : Plan IGN / Ortho satellite / Topo 25 /
-      mode sombre auto
+- [x] PR #3 — Sélecteur de fonds : Plan IGN / Satellite / Satellite+routes,
+      surcouche Cadastre, mode sombre auto (fond plan). Topo 25 ÉCARTÉ :
+      vérifié le 16/08, la couche SCAN25 répond 400 sans clé Géoplateforme —
+      l'inscription (gratuite) est une démarche à faire par Armelin ; la
+      roadmap la reprendra ensuite.
 - [ ] PR #4 — Recherche d'adresse avec autocomplétion BAN + géocodage inverse
       au long-press + affichage coordonnées
 
