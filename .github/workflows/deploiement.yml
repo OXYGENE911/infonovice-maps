@@ -23,7 +23,7 @@ jobs:
       # racine du domaine, la base par défaut du dépôt. L'époque du sous-chemin
       # github.io est consignée dans docs/DEPLOIEMENT.md.
       - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with: { path: dist }
   publier:
     needs: construire
