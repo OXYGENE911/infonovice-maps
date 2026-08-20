@@ -12,6 +12,43 @@ const DELAI_MS = 8000;
 export type Profil = 'car' | 'pedestrian';
 export const PROFILS: Record<Profil, string> = { car: 'Voiture', pedestrian: 'À pied' };
 
+/* Ce que le service permet RÉELLEMENT d'éviter (getcapabilities du 21/08 :
+   seule clé `waytype`, valeurs autoroute|tunnel|pont). Les PÉAGES n'existent
+   sur aucun moteur public — écart documenté dans la roadmap, comme l'absence
+   d'itinéraires alternatifs. */
+export type Eviter = 'autoroute' | 'tunnel' | 'pont';
+export const EVITEMENTS: Record<Eviter, string> = {
+  autoroute: 'Autoroutes', tunnel: 'Tunnels', pont: 'Ponts',
+};
+
+export interface OptionsItineraire {
+  /** Étapes intermédiaires, dans l'ordre du trajet. */
+  etapes?: PointGeo[];
+  eviter?: Eviter[];
+}
+
+/** L'URL du service — PURE, partagée avec la feuille de route, testée à sec.
+    Contraintes multiples jointes par `|` (vérifié le 21/08 : le paramètre
+    répété rend 500, le `;` rend 400 — seul le pipe passe). */
+export function urlItineraire(
+  depart: PointGeo, arrivee: PointGeo, profil: Profil,
+  options: OptionsItineraire = {}, etapesDetaillees = false,
+): string {
+  let url = `${SERVICE}?resource=bdtopo-osrm&profile=${profil}&optimization=fastest`
+    + `&start=${depart.lon},${depart.lat}&end=${arrivee.lon},${arrivee.lat}`
+    + '&geometryFormat=geojson&distanceUnit=meter&timeUnit=second';
+  if (options.etapes?.length) {
+    url += `&intermediates=${options.etapes.map((p) => `${p.lon},${p.lat}`).join('|')}`;
+  }
+  if (options.eviter?.length) {
+    url += `&constraints=${encodeURIComponent(options.eviter
+      .map((v) => JSON.stringify({ constraintType: 'banned', key: 'waytype', operator: '=', value: v }))
+      .join('|'))}`;
+  }
+  if (etapesDetaillees) url += '&getSteps=true&waysAttributes=name';
+  return url;
+}
+
 export interface Itineraire {
   /** LineString GeoJSON en WGS 84. */
   geometrie: LineString;
@@ -45,11 +82,9 @@ export function versItineraire(brut: unknown): Itineraire {
 }
 
 export async function calculerItineraire(
-  depart: PointGeo, arrivee: PointGeo, profil: Profil,
+  depart: PointGeo, arrivee: PointGeo, profil: Profil, options: OptionsItineraire = {},
 ): Promise<Itineraire> {
-  const url = `${SERVICE}?resource=bdtopo-osrm&profile=${profil}&optimization=fastest`
-    + `&start=${depart.lon},${depart.lat}&end=${arrivee.lon},${arrivee.lat}`
-    + '&geometryFormat=geojson&distanceUnit=meter&timeUnit=second';
+  const url = urlItineraire(depart, arrivee, profil, options);
   let derniere: unknown;
   for (let essai = 0; essai < 2; essai += 1) {
     try {
