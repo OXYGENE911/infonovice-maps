@@ -1,0 +1,41 @@
+# CI de chaque PR : lint + typecheck + tests unitaires + E2E + build + audit.
+# Une PR ne se merge que si ce workflow est vert — c'est la règle du projet,
+# et la protection de branche l'impose.
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Lint et typecheck
+        run: npm run lint
+      - name: Tests unitaires
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Navigateurs Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Tests bout-en-bout
+        run: npm run e2e
+      - name: Audit des dépendances
+        # Bloquant à partir de « high » : un audit qui ne bloque jamais
+        # n'est qu'un bruit de journal.
+        run: npm audit --audit-level=high
+      - name: Budget du bundle (< 300 Ko gzippé hors MapLibre)
+        run: |
+          TOTAL=0
+          for f in $(find dist/assets -name '*.js' ! -name '*maplibre*' 2>/dev/null); do
+            TAILLE=$(gzip -c "$f" | wc -c)
+            TOTAL=$((TOTAL + TAILLE))
+          done
+          echo "Bundle applicatif gzippé : ${TOTAL} octets"
+          if [ "$TOTAL" -gt 307200 ]; then
+            echo "::error::Budget dépassé : ${TOTAL} > 307200 octets" && exit 1
+          fi
