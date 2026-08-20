@@ -2,6 +2,12 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.8.0] — 2026-08-21 — Feuille de route imprimable
+- Étapes détaillées de l'itinéraire en français (traduction des codes OSRM,
+  noms de voies BD TOPO dépliés : « R DE RIVOLI » → « Rue de Rivoli »).
+- Impression de la feuille seule (rien d'autre sur la page).
+- Chargée à la demande : au plus un appel par itinéraire.
+
 ## [0.7.0] — 2026-08-20 — Profil altimétrique
 - Profil en long de l'itinéraire (API altimétrie Géoplateforme,
   elevationLine) : courbe SVG, dénivelés D+ / D−, altitudes min-max.

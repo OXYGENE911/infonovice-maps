@@ -31,7 +31,9 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       serveur : tout vit dans le fragment #, jamais envoyé au serveur HTTP).
       La FEUILLE DE ROUTE IMPRIMABLE est scindée en PR #8bis : elle exige les
       étapes détaillées du service (getSteps), un chantier à part entière.
-- [ ] PR #8bis — Feuille de route imprimable (étapes getSteps du service)
+- [x] PR #8bis — Feuille de route imprimable : étapes getSteps traduites en
+      français (codes OSRM), noms BD TOPO dépliés, impression sans rien
+      d'autre sur la page — chargée à la demande, un appel par itinéraire
 
 ## POI & profil local
 - [ ] PR #9 — Couches POI : carburants (avec prix), bornes IRVE, parkings

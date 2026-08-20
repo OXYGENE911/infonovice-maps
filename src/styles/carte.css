@@ -187,3 +187,35 @@ body { font-family: var(--police); background: var(--fond); }
 .alti-aire { fill: #2272C4; opacity: 0.16; }
 .alti-ligne { fill: none; stroke: #2272C4; stroke-width: 2; }
 .alti-bilan { margin: 5px 0 0; font: 600 12.5px var(--police); color: var(--texte-1); }
+
+/* --- Feuille de route (PR #8bis) --- */
+.iti-feuille summary {
+  cursor: pointer; font: 600 13px var(--police); color: var(--texte-2);
+  padding: 3px 0;
+}
+.iti-feuille summary:focus-visible { outline: none; box-shadow: var(--focus); }
+.iti-feuille-corps { padding-top: 6px; font: 400 13px var(--police); color: var(--texte-2); }
+.feuille-imprimer {
+  margin-bottom: 7px; padding: 7px 13px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-1); font: 600 12.5px var(--police); cursor: pointer;
+}
+.feuille-imprimer:focus-visible { outline: none; box-shadow: var(--focus); }
+.feuille-etapes {
+  margin: 0; padding-left: 20px; max-height: 260px; overflow-y: auto;
+  display: grid; gap: 5px;
+}
+.feuille-etapes li { display: flex; justify-content: space-between; gap: 10px; }
+.etape-texte { color: var(--texte-1); }
+.etape-dist { white-space: nowrap; color: var(--texte-2); }
+
+/* L'impression de la feuille de route ne montre qu'elle — mais SEULEMENT
+   quand le bouton l'a demandée (classe posée sur body le temps du print) :
+   sans la classe, un Ctrl+P ordinaire imprime la page normalement. */
+.zone-impression { display: none; }
+@media print {
+  body.impression-feuille > :not(.zone-impression) { display: none !important; }
+  body.impression-feuille .zone-impression { display: block; font: 12pt/1.5 var(--police); color: #000; }
+  .zone-impression h1 { font-size: 16pt; margin: 0 0 4pt; }
+  .zone-impression .feuille-etapes { max-height: none; overflow: visible; }
+}

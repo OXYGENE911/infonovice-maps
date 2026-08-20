@@ -44,6 +44,14 @@ Ces quotas sont un bien commun : debounce, cache, jamais de martèlement.
   l'endpoint du profil altimétrique (PR #7) ; « pas de donnée » = z très
   négatif (-99999), à écarter côté client.
 
+## Étapes d'itinéraire (vérifié 21/08/2026)
+- `data.geopf.fr/navigation/itineraire` + `getSteps=true&waysAttributes=name`
+  → `portions[].steps[]` avec `instruction` en CODES OSRM (`type`, `modifier`,
+  parfois `exit`) — AUCUN texte : la traduction française est à notre charge.
+- Noms de voies dans `attributes.name` : `nom_1_gauche` en MAJUSCULES ABRÉGÉES
+  BD TOPO (« R DE RIVOLI »), `cpx_numero` pour les routes numérotées (« A6 »),
+  `cpx_toponyme` en repli. Chaque étape porte `distance`, `duration`, `geometry`.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Panoramax `https://api.panoramax.xyz` (PR #12)
 - Météo-France open data (PR #13)
