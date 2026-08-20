@@ -15,6 +15,7 @@ import type { ResultatAdresse } from '../lib/adresse';
 import { versGPX, versKML, telecharger } from '../lib/trace';
 import { versFragment, depuisFragment } from '../lib/partage-url';
 import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
+import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 
 const SOURCE = 'itineraire';
 
@@ -24,8 +25,13 @@ export class PanneauItineraire extends HTMLElement {
   #arrivee: PointGeo | null = null;
   #profil: Profil = 'car';
   #dernier: Itineraire | null = null;
+  /** Le cliché {départ, arrivée, profil} qui a produit #dernier — il vieillit
+      AVEC lui : un recalcul raté laisse les deux cohérents entre eux. */
+  #calculPour: { depart: PointGeo; arrivee: PointGeo; profil: Profil } | null = null;
   /** Itinéraire dont le profil altimétrique est chargé (ou en cours). */
   #profilPour: Itineraire | null = null;
+  /** Itinéraire dont la feuille de route est chargée (ou en cours). */
+  #feuillePour: Itineraire | null = null;
   #marqueurs: Marker[] = [];
 
   set carte(c: CarteMapLibre) {
@@ -59,6 +65,10 @@ export class PanneauItineraire extends HTMLElement {
           <details class="iti-alti" hidden>
             <summary>Profil altimétrique</summary>
             <div class="iti-alti-corps" role="status"></div>
+          </details>
+          <details class="iti-feuille" hidden>
+            <summary>Feuille de route</summary>
+            <div class="iti-feuille-corps" role="status"></div>
           </details>
         </div>
       </details>`;
@@ -100,6 +110,9 @@ export class PanneauItineraire extends HTMLElement {
     this.querySelector('.iti-alti')?.addEventListener('toggle', () => {
       void this.#chargerProfil();
     });
+    this.querySelector('.iti-feuille')?.addEventListener('toggle', () => {
+      void this.#chargerFeuille();
+    });
 
     /* UN LIEN PARTAGÉ S'OUVRE TOUT SEUL : le fragment porte l'itinéraire, on
        le rejoue à l'arrivée. Défensif — un fragment forgé rend null et la
@@ -120,6 +133,98 @@ export class PanneauItineraire extends HTMLElement {
 
   #nomTrajet(): string {
     return `Itinéraire Infonovice Maps (${PROFILS[this.#profil]})`;
+  }
+
+  /** Replie et vide les sections profil/feuille (cachées si `cachees`). */
+  #reinitialiserSections(cachees: boolean): void {
+    for (const cls of ['iti-alti', 'iti-feuille'] as const) {
+      const section = this.querySelector(`.${cls}`) as HTMLDetailsElement;
+      section.hidden = cachees;
+      section.open = false;
+      (this.querySelector(`.${cls}-corps`) as HTMLElement).textContent = '';
+    }
+    this.#profilPour = null;
+    this.#feuillePour = null;
+  }
+
+  async #chargerFeuille(): Promise<void> {
+    const section = this.querySelector('.iti-feuille') as HTMLDetailsElement;
+    const corps = this.querySelector('.iti-feuille-corps') as HTMLElement;
+    // Le CLICHÉ du calcul réussi, jamais l'état vivant : entre-temps l'usager
+    // a pu changer de profil ou d'adresse sans que le recalcul aboutisse — la
+    // feuille doit décrire le trajet TRACÉ, pas celui des champs (revue 21/08).
+    const cliche = this.#calculPour;
+    const iti = this.#dernier;
+    if (!section.open || !iti || !cliche || this.#feuillePour === iti) return;
+    this.#feuillePour = iti;
+    corps.textContent = 'Préparation de la feuille de route…';
+    try {
+      const etapes = await etapesItineraire(cliche.depart, cliche.arrivee, cliche.profil);
+      if (this.#dernier !== iti) return;
+      corps.textContent = '';
+      // Titre et résumé FIGÉS avec les étapes : l'impression décrira ce
+      // trajet-là, quel que soit l'état du panneau au moment du clic.
+      const titre = `Itinéraire Infonovice Maps (${PROFILS[cliche.profil]})`;
+      const resume = `${formaterDistance(iti.distance)} — ${formaterDuree(iti.duree)}`;
+      const imprimer = document.createElement('button');
+      imprimer.type = 'button';
+      imprimer.className = 'feuille-imprimer';
+      imprimer.textContent = 'Imprimer';
+      imprimer.addEventListener('click', () => this.#imprimerFeuille(etapes, titre, resume));
+      corps.append(imprimer, this.#listeEtapes(etapes));
+    } catch (e) {
+      if (this.#dernier !== iti) return;
+      this.#feuillePour = null; // réessayable à la prochaine ouverture
+      corps.textContent = e instanceof ErreurFeuille
+        ? e.message : 'Feuille de route indisponible pour le moment.';
+    }
+  }
+
+  /** La liste des étapes, construite en textContent : les noms de voies sont
+      des données EXTERNES (BD TOPO via le service) — jamais d'innerHTML. */
+  #listeEtapes(etapes: EtapeRoute[]): HTMLOListElement {
+    const liste = document.createElement('ol');
+    liste.className = 'feuille-etapes';
+    for (const e of etapes) {
+      const item = document.createElement('li');
+      const texte = document.createElement('span');
+      texte.className = 'etape-texte';
+      texte.textContent = e.voie ? `${e.texte} — ${e.voie}` : e.texte;
+      item.append(texte);
+      if (e.distance >= 10) {
+        const dist = document.createElement('span');
+        dist.className = 'etape-dist';
+        dist.textContent = formaterDistance(e.distance);
+        item.append(dist);
+      }
+      liste.append(item);
+    }
+    return liste;
+  }
+
+  /** Imprime la feuille seule : un clone au niveau du body, que la feuille de
+      styles d'impression est seule à laisser paraître — et SEULEMENT quand la
+      classe `impression-feuille` est posée sur body : sans elle, un Ctrl+P
+      ordinaire imprime la page normalement (la première version masquait tout,
+      pages blanches — revue du 21/08). */
+  #imprimerFeuille(etapes: EtapeRoute[], titre: string, resume: string): void {
+    // Idempotent : si un afterprint ne s'est jamais présenté (WebView, environ-
+    // nements sans impression), on repart d'un body propre au lieu d'empiler.
+    document.querySelectorAll('.zone-impression').forEach((z) => z.remove());
+    const zone = document.createElement('section');
+    zone.className = 'zone-impression';
+    const h = document.createElement('h1');
+    h.textContent = titre;
+    const p = document.createElement('p');
+    p.textContent = resume;
+    zone.append(h, p, this.#listeEtapes(etapes));
+    document.body.append(zone);
+    document.body.classList.add('impression-feuille');
+    window.addEventListener('afterprint', () => {
+      zone.remove();
+      document.body.classList.remove('impression-feuille');
+    }, { once: true });
+    window.print();
   }
 
   async #chargerProfil(): Promise<void> {
@@ -162,20 +267,18 @@ export class PanneauItineraire extends HTMLElement {
     resultat.hidden = false;
     resultat.textContent = 'Calcul de l’itinéraire…';
     try {
-      const iti = await calculerItineraire(this.#depart, this.#arrivee, this.#profil);
+      const depart = this.#depart; const arrivee = this.#arrivee; const profil = this.#profil;
+      const iti = await calculerItineraire(depart, arrivee, profil);
       this.#dernier = iti;
+      this.#calculPour = { depart, arrivee, profil };
       // Le résumé AVANT la pose : distance et durée ne dépendent pas de la
       // carte, et la pose peut légitimement attendre (style en cours de
       // chargement) — l'utilisateur ne doit pas payer cette attente.
       resultat.textContent = `${formaterDistance(iti.distance)} — ${formaterDuree(iti.duree)}`;
       (this.querySelector('.iti-actions') as HTMLElement).hidden = false;
-      // Nouveau trajet : la section profil réapparaît repliée, vidée de
-      // l'ancien profil — il ne vaut que pour l'itinéraire qui l'a produit.
-      const alti = this.querySelector('.iti-alti') as HTMLDetailsElement;
-      alti.hidden = false;
-      alti.open = false;
-      (this.querySelector('.iti-alti-corps') as HTMLElement).textContent = '';
-      this.#profilPour = null;
+      // Nouveau trajet : profil et feuille de route réapparaissent repliés et
+      // vidés — leurs contenus ne valent que pour l'itinéraire qui les a produits.
+      this.#reinitialiserSections(false);
       this.#tracer(iti);
     } catch (e) {
       resultat.hidden = true;
@@ -240,7 +343,7 @@ export class PanneauItineraire extends HTMLElement {
   }
 
   #effacer(): void {
-    this.#dernier = null; this.#depart = null; this.#arrivee = null;
+    this.#dernier = null; this.#calculPour = null; this.#depart = null; this.#arrivee = null;
     this.#marqueurs.forEach((m) => m.remove()); this.#marqueurs = [];
     const carte = this.#carte;
     if (carte?.getSource(SOURCE)) {
@@ -249,11 +352,7 @@ export class PanneauItineraire extends HTMLElement {
     }
     (this.querySelector('.iti-resultat') as HTMLElement).hidden = true;
     (this.querySelector('.iti-actions') as HTMLElement).hidden = true;
-    const alti = this.querySelector('.iti-alti') as HTMLDetailsElement;
-    alti.hidden = true;
-    alti.open = false;
-    (this.querySelector('.iti-alti-corps') as HTMLElement).textContent = '';
-    this.#profilPour = null;
+    this.#reinitialiserSections(true);
     this.querySelectorAll('input[type="search"]').forEach((c) => { (c as HTMLInputElement).value = ''; });
   }
 }

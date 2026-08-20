@@ -200,6 +200,98 @@ test('le profil altimétrique se charge À LA DEMANDE, et affiche les dénivelé
   expect(appelsAlti, 'le service a été rappelé pour le même itinéraire').toBe(1);
 });
 
+test('la feuille de route parle français, et ne se charge qu’à la demande', async ({ page }) => {
+  let appelsEtapes = 0;
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    const url = route.request().url();
+    if (url.includes('getSteps=true')) {
+      appelsEtapes += 1;
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ portions: [{ steps: [
+        { instruction: { type: 'depart', modifier: 'left' }, distance: 98.2, duration: 40,
+          attributes: { name: { nom_1_gauche: 'R DE RIVOLI', nom_1_droite: 'R DE RIVOLI', cpx_numero: '', cpx_toponyme: '' } } },
+        { instruction: { type: 'turn', modifier: 'right' }, distance: 19.6, duration: 8,
+          attributes: { name: { nom_1_gauche: 'AV VICTORIA', nom_1_droite: 'AV VICTORIA', cpx_numero: '', cpx_toponyme: '' } } },
+        { instruction: { type: 'arrive', modifier: 'straight' }, distance: 0, duration: 0,
+          attributes: { name: { nom_1_gauche: '', nom_1_droite: '', cpx_numero: '', cpx_toponyme: '' } } },
+      ] }] }) });
+    }
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 465_000, duration: 15_480,
+    }) });
+  });
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
+  expect(appelsEtapes, 'les étapes ont été demandées sans ouverture').toBe(0);
+  await page.locator('.iti-feuille summary').click();
+  const etapes = page.locator('.feuille-etapes li');
+  await expect(etapes).toHaveCount(3, { timeout: 10_000 });
+  await expect(etapes.nth(0)).toContainText('Départ — Rue de Rivoli');
+  await expect(etapes.nth(1)).toContainText('Tournez à droite — Avenue Victoria');
+  await expect(etapes.nth(2)).toContainText('Vous êtes arrivé');
+  await expect(page.locator('.feuille-imprimer')).toBeVisible();
+  expect(appelsEtapes, 'le service doit être appelé une fois').toBe(1);
+
+  // Refermer puis rouvrir ne rappelle pas le service : les étapes sont acquises.
+  await page.locator('.iti-feuille summary').click();
+  await page.locator('.iti-feuille summary').click();
+  await expect(etapes).toHaveCount(3);
+  expect(appelsEtapes, 'le service a été rappelé pour le même itinéraire').toBe(1);
+
+  // LE CONTRAT D'IMPRESSION, déterministe : window.print() est remplacé par un
+  // témoin, le clone .zone-impression et la classe body doivent apparaître au
+  // clic et disparaître à afterprint.
+  await page.evaluate(() => {
+    (window as unknown as { __imprime: boolean }).__imprime = false;
+    window.print = () => { (window as unknown as { __imprime: boolean }).__imprime = true; };
+  });
+  await page.locator('.feuille-imprimer').click();
+  expect(await page.evaluate(() => (window as unknown as { __imprime: boolean }).__imprime)).toBe(true);
+  await expect(page.locator('body > .zone-impression .feuille-etapes li')).toHaveCount(3);
+  await expect(page.locator('body.impression-feuille')).toHaveCount(1);
+  // Sous le média print, la page disparaît et la feuille reste seule.
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('.entete')).toBeHidden();
+  await expect(page.locator('body > .zone-impression')).toBeVisible();
+  await page.emulateMedia({ media: 'screen' });
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  await expect(page.locator('body > .zone-impression')).toHaveCount(0);
+  await expect(page.locator('body.impression-feuille')).toHaveCount(0);
+  // RÉGRESSION Ctrl+P (revue 21/08) : SANS le clic Imprimer, le média print ne
+  // doit RIEN masquer — la première version rendait des pages blanches.
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('.entete')).toBeVisible();
+});
+
+test('la feuille de route en panne parle français, et se réessaie', async ({ page }) => {
+  let enPanne = true;
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    const url = route.request().url();
+    if (!url.includes('getSteps=true')) {
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+        geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+        distance: 465_000, duration: 15_480,
+      }) });
+    }
+    if (enPanne) return route.abort('failed');
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ portions: [{ steps: [
+      { instruction: { type: 'depart', modifier: 'left' }, distance: 10,
+        attributes: { name: { nom_1_gauche: 'R DE RIVOLI', cpx_numero: '', cpx_toponyme: '' } } },
+      { instruction: { type: 'arrive' }, distance: 0,
+        attributes: { name: { nom_1_gauche: '', cpx_numero: '', cpx_toponyme: '' } } },
+    ] }] }) });
+  });
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
+  await page.locator('.iti-feuille summary').click();
+  await expect(page.locator('.iti-feuille-corps')).toContainText('momentanément indisponible', { timeout: 10_000 });
+  // Le service revient : refermer puis rouvrir suffit — l'échec n'a rien verrouillé.
+  enPanne = false;
+  await page.locator('.iti-feuille summary').click();
+  await page.locator('.iti-feuille summary').click();
+  await expect(page.locator('.feuille-etapes li')).toHaveCount(2, { timeout: 10_000 });
+});
+
 test('l’export GPX télécharge un fichier nommé, sans aucune requête', async ({ page }) => {
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
     contentType: 'application/json',
