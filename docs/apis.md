@@ -12,6 +12,12 @@ Ces quotas sont un bien commun : debounce, cache, jamais de martèlement.
 - Quota indicatif : usage raisonné, pas de clé requise sur les couches
   essentielles. Attribution obligatoire : « IGN-F / Géoplateforme ».
 
+## Couches WMTS supplémentaires (vérifié 16/08/2026)
+- `CADASTRALPARCELS.PARCELLAIRE_EXPRESS` (png) → 200 sans clé.
+- `TRANSPORTNETWORKS.ROADS` (png) → 200 sans clé (surcouche du satellite).
+- `GEOGRAPHICALGRIDSYSTEMS.MAPS*` (SCAN 25/Topo) → **400 sans clé** : flux
+  soumis à inscription Géoplateforme (gratuite). À activer plus tard.
+
 ## API Adresse BAN (vérifié 16/08/2026)
 - `https://api-adresse.data.gouv.fr/search/?q=<texte>&limit=5` → GeoJSON.
 - Géocodage inverse : `/reverse/?lon=&lat=`.
