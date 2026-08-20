@@ -19,7 +19,14 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      # PROVISOIRE : tant que maps.infonovice.fr n'est pas câblé (CNAME
+      # Cloudflare + domaine personnalisé Pages, voir docs/DEPLOIEMENT.md), le
+      # site vit sous /infonovice-maps/ sur github.io — le build doit le savoir.
+      # À la mise en service du domaine : supprimer cette variable (retour à la
+      # racine, valeur par défaut du dépôt).
       - run: npm run build
+        env:
+          BASE_PUBLIQUE: /infonovice-maps/
       - uses: actions/upload-pages-artifact@v3
         with: { path: dist }
   publier:
