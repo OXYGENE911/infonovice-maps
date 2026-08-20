@@ -1,52 +1,26 @@
 # Déploiement et domaine
 
-## État actuel (20/08/2026)
+## État en service (depuis le 21/08/2026)
 
-Chaque fusion sur `main` publie le build sur GitHub Pages (workflow
-`deploiement.yml`, source « GitHub Actions »). Le site est servi à :
+**https://maps.infonovice.fr** — l'état canonique visé est atteint :
 
-**https://oxygene911.github.io/infonovice-maps/**
+- DNS : CNAME `maps` → `oxygene911.github.io` (zone Cloudflare, proxy gris),
+  posé par Armelin le 21/08.
+- GitHub Pages : domaine personnalisé `maps.infonovice.fr`, HTTPS forcé.
+- Build : à la racine (`/`), valeur par défaut du dépôt — chaque fusion sur
+  `main` publie via le workflow `deploiement.yml` (source « GitHub Actions »).
+- `https://oxygene911.github.io/infonovice-maps/` redirige en 301 : les liens
+  partagés avant la mise en service ne cassent pas.
 
-Le build de déploiement pose `BASE_PUBLIQUE=/infonovice-maps/` car Pages sert
-les dépôts de projet sous un sous-chemin. Le reste de la chaîne (dev, tests,
-CI) construit à la racine (`/`), la valeur cible.
+## Histoire courte, pour la prochaine fois
 
-## Mise en service de maps.infonovice.fr (action requise : Armelin)
+Avant le CNAME, le site a vécu sous `/infonovice-maps/` sur github.io : le
+workflow posait alors `BASE_PUBLIQUE=/infonovice-maps/` (variable lue par
+`vite.config.ts`, retirée en PR #20). Ce mécanisme reste disponible si le
+site devait un jour être servi sous un sous-chemin. Détail utile : les icônes
+du manifeste PWA sont en chemins RELATIFS précisément pour suivre la base
+sans retouche.
 
-La seule étape hors de portée de l'automatisation est l'enregistrement DNS
-(zone Cloudflare d'infonovice.fr). Dans l'ordre :
-
-1. **DNS (Cloudflare, ~2 minutes)** — zone `infonovice.fr` → DNS → ajouter :
-   - Type : `CNAME` — Nom : `maps` — Cible : `oxygene911.github.io`
-   - **Proxy DÉSACTIVÉ (nuage gris, « DNS only »)** dans un premier temps :
-     GitHub doit voir le CNAME nu pour valider le domaine et émettre son
-     certificat TLS. (Le proxy orange peut être réactivé plus tard si besoin,
-     mais il est inutile : Pages sert déjà en HTTPS.)
-
-2. **Côté GitHub Pages** — une fois le DNS posé, dire à Claude « le CNAME est
-   posé » ; il exécutera :
-
-   ```bash
-   gh api -X PUT repos/OXYGENE911/infonovice-maps/pages --field cname=maps.infonovice.fr
-   ```
-
-   puis, quand le certificat est émis (quelques minutes) :
-
-   ```bash
-   gh api -X PUT repos/OXYGENE911/infonovice-maps/pages --field https_enforced=true
-   ```
-
-3. **Retour du build à la racine** — retirer la variable `BASE_PUBLIQUE` du
-   workflow `deploiement.yml` (le commentaire PROVISOIRE marque l'endroit) :
-   avec le domaine personnalisé, le site vit à `/`.
-
-Après quoi `https://oxygene911.github.io/infonovice-maps/` redirigera d'office
-vers `https://maps.infonovice.fr` — aucun lien ne casse.
-
-## Pourquoi pas de passerelle Cloudflare Worker
-
-Un Worker en domaine personnalisé aurait créé le DNS automatiquement, mais il
-ajoutait une pièce d'infrastructure hors du contrat du projet (GitHub Pages
-direct, zéro backend) et sa création a été refusée par le garde-fou de
-permissions de la session du 20/08 — refus respecté. Le CNAME canonique est de
-toute façon plus simple et plus durable.
+Une passerelle Worker Cloudflare avait été envisagée pour créer le DNS sans
+attendre ; refusée par le garde-fou de permissions de la session du 20/08 —
+refus respecté, et le CNAME canonique s'est avéré plus simple et durable.
