@@ -6,6 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { styleCarte, LOCALE_FR, type OptionsStyle } from './style-ign';
 import { SelecteurFonds } from './selecteur-fonds';
 import { RechercheAdresse } from './recherche';
+import { PanneauItineraire } from './panneau-itineraire';
 import { adresseInverse } from '../lib/adresse';
 import { formaterCoordonnees } from '../lib/coordonnees';
 
@@ -38,6 +39,14 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   const appliquerSombre = (o: OptionsStyle) => {
     conteneur.classList.toggle('fond-sombre', sombre.matches && o.fond === 'plan');
   };
+
+  /* LE PLANIFICATEUR — sous le sélecteur de fonds, même colonne. */
+  const panneau = new PanneauItineraire();
+  panneau.carte = carte;
+  const porteIti = document.createElement('div');
+  porteIti.className = 'maplibregl-ctrl porte-iti';
+  porteIti.appendChild(panneau);
+  carte.addControl({ onAdd: () => porteIti, onRemove: () => porteIti.remove() }, 'top-left');
 
   const selecteur = new SelecteurFonds();
   selecteur.surChangement = (o) => { carte.setStyle(styleCarte(o)); appliquerSombre(o); };
@@ -102,6 +111,10 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
         'Adresse indisponible pour le moment.';
     }
   }
+
+  // Poignée de débogage et d'E2E : lire l'état de la carte depuis la console
+  // ou Playwright. Lecture seule par convention — rien du produit n'en dépend.
+  (window as unknown as { __carte: CarteMapLibre }).__carte = carte;
 
   return carte;
 }

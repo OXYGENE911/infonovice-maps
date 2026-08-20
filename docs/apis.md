@@ -27,8 +27,11 @@ Ces quotas sont un bien commun : debounce, cache, jamais de martèlement.
 ## Itinéraire Géoplateforme (vérifié 16/08/2026)
 - `https://data.geopf.fr/navigation/itineraire?resource=bdtopo-osrm&start=lon,lat&end=lon,lat&profile=car|pedestrian&optimization=fastest|shortest`
   → JSON avec `geometry` (GeoJSON), `distance`, `duration`.
-- Ressource vérifiée : `bdtopo-osrm` (version 2026-07-12). `bdtopo-valhalla`
-  existe aussi (à vérifier avant usage — options péages/vélo).
+- Ressource vérifiée : `bdtopo-osrm` (version 2026-07-12). Profils au
+  getcapabilities (16/08) : `car`, `pedestrian` (+ `exceptionnal`) — PAS de
+  vélo sur les moteurs publics. `bdtopo-valhalla` : mêmes profils.
+- Un 404 du service = « aucun chemin entre ces points » (île, mer) : c'est
+  une réponse, pas une panne — ne pas rejouer.
 - Sans clé. Throttle sur les recalculs.
 
 ## Altimétrie Géoplateforme (vérifié 16/08/2026)
