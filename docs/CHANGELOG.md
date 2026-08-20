@@ -63,3 +63,12 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   vélo écarté avec preuve (getcapabilities : car et pedestrian seulement).
 - 7 tests unitaires (formats français, 404-est-une-réponse, URL du service),
   E2E complet Paris→Lyon simulé.
+
+## [0.6.0] — 2026-08-16 — Exporter et partager
+- Export GPX 1.1 et KML 2.2 du trajet, fabriqués à la main (20 lignes chacun),
+  nom échappé (il vient des libellés BAN). GPX : lat PUIS lon dans trkpt —
+  l'inverse du GeoJSON, l'erreur classique, verrouillée par test.
+- Partage par URL SANS serveur : l'itinéraire vit dans le fragment (#), qui
+  n'est jamais envoyé au serveur HTTP. Un lien ouvert rejoue le trajet tout
+  seul ; un fragment forgé rend null, jamais une exception.
+- Feuille de route imprimable scindée en PR #8bis (exige getSteps).

@@ -26,8 +26,11 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
 - [ ] PR #6 — Itinéraires alternatifs + options éviter péages/autoroutes +
       waypoints multiples (drag & drop)
 - [ ] PR #7 — Profil altimétrique de l'itinéraire (API altimétrie)
-- [ ] PR #8 — Feuille de route imprimable + export GPX/KML + partage
-      d'itinéraire par URL encodée (aucun serveur)
+- [x] PR #8 — Export GPX/KML + partage d'itinéraire par URL encodée (aucun
+      serveur : tout vit dans le fragment #, jamais envoyé au serveur HTTP).
+      La FEUILLE DE ROUTE IMPRIMABLE est scindée en PR #8bis : elle exige les
+      étapes détaillées du service (getSteps), un chantier à part entière.
+- [ ] PR #8bis — Feuille de route imprimable (étapes getSteps du service)
 
 ## POI & profil local
 - [ ] PR #9 — Couches POI : carburants (avec prix), bornes IRVE, parkings

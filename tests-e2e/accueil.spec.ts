@@ -136,3 +136,34 @@ test('l’itinéraire A→B se calcule, se trace, et SURVIT au changement de fon
       .__carte?.getSource('itineraire')));
   expect(traitPresent, 'le tracé a disparu au changement de fond').toBe(true);
 });
+
+test('un lien d’itinéraire partagé rejoue le trajet à l’ouverture — sans serveur', async ({ page }) => {
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 465_000, duration: 15_480,
+    }),
+  }));
+  // On OUVRE directement le lien partagé : le fragment porte tout.
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('465 km', { timeout: 10_000 });
+  await expect(page.locator('.maplibregl-marker')).toHaveCount(2);
+});
+
+test('l’export GPX télécharge un fichier nommé, sans aucune requête', async ({ page }) => {
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 465_000, duration: 15_480,
+    }),
+  }));
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
+  const telechargement = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'GPX' }).click();
+  const fichier = await telechargement;
+  expect(fichier.suggestedFilename()).toBe('itineraire-infonovice.gpx');
+});
