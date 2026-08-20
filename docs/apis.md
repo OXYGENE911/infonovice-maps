@@ -37,7 +37,12 @@ Ces quotas sont un bien commun : debounce, cache, jamais de martèlement.
 ## Altimétrie Géoplateforme (vérifié 16/08/2026)
 - `https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json?lon=&lat=&resource=ign_rge_alti_wld`
   → `{"elevations":[{"lon","lat","z","acc"}]}` (z en mètres).
-- Multi-points : paramètres `lon=a|b|c&lat=d|e|f` (à vérifier en PR #7).
+- Multi-points : `lon=a|b|c&lat=d|e|f` — vérifié le 20/08/2026.
+- Profil en long : `elevationLine.json?lon=…&lat=…&resource=ign_rge_alti_wld&sampling=N`
+  échantillonne N points LE LONG de la polyligne fournie (vérifié 20/08/2026 :
+  40 sommets ≈ 800 caractères d'URL, sampling=60 rendu intégralement). C'est
+  l'endpoint du profil altimétrique (PR #7) ; « pas de donnée » = z très
+  négatif (-99999), à écarter côté client.
 
 ## À vérifier avant leur PR (ne pas présumer)
 - Panoramax `https://api.panoramax.xyz` (PR #12)

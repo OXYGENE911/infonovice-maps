@@ -25,7 +25,8 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       moteur souverain à trouver (BRouter auto-hébergé = backend, hors 0 €).
 - [ ] PR #6 — Itinéraires alternatifs + options éviter péages/autoroutes +
       waypoints multiples (drag & drop)
-- [ ] PR #7 — Profil altimétrique de l'itinéraire (API altimétrie)
+- [x] PR #7 — Profil altimétrique de l'itinéraire (elevationLine, chargé À LA
+      DEMANDE à l'ouverture de la section — un appel par itinéraire au plus)
 - [x] PR #8 — Export GPX/KML + partage d'itinéraire par URL encodée (aucun
       serveur : tout vit dans le fragment #, jamais envoyé au serveur HTTP).
       La FEUILLE DE ROUTE IMPRIMABLE est scindée en PR #8bis : elle exige les
