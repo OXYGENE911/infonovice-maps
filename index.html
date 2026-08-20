@@ -2,35 +2,34 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- CSP stricte dès la première page : les seules origines réseau permises
-       sont les API souveraines du projet. Élargir cette liste est une
-       DÉCISION, tracée par PR — jamais un réflexe. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- CSP stricte : seules origines réseau, les API souveraines du projet.
+       Élargir cette liste est une DÉCISION, tracée par PR — jamais un réflexe. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self';
     img-src 'self' data: blob: https://data.geopf.fr;
     connect-src 'self' https://data.geopf.fr https://api-adresse.data.gouv.fr;
     style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self' blob:;
     base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
   <meta name="description" content="Infonovice Maps — cartographie et itinéraires
-    souverains. L’alternative française à Google Maps : IGN, BAN, zéro tracking.">
+    souverains. L’alternative française à Google Maps : fond IGN, adresses BAN,
+    zéro tracking.">
   <meta name="theme-color" content="#0F1B2D">
   <title>Infonovice Maps — cartographie souveraine française</title>
   <link rel="icon" href="/icones/icone-192.png" type="image/png">
   <script type="module" src="/src/main.ts"></script>
 </head>
 <body>
-  <main class="construction">
-    <p class="marque">INFONOVICE</p>
-    <h1>Infonovice Maps</h1>
-    <p class="pitch">Cartographie et itinéraires <strong>souverains</strong> —
-      l’alternative française à Google Maps, construite sur l’IGN, la Base
-      Adresse Nationale et l’open data français. Zéro tracking&nbsp;: vos
-      données ne quittent jamais votre navigateur.</p>
-    <p class="etat" role="status">En construction — première carte imminente.</p>
-    <p class="sources">Fonds de carte IGN&nbsp;· Adresses BAN&nbsp;· Photos Panoramax
-      &nbsp;· Météo-France&nbsp;· transport.data.gouv.fr</p>
-    <a class="github" href="https://github.com/OXYGENE911/infonovice-maps"
-       rel="noopener">Suivre le développement sur GitHub</a>
-  </main>
+  <a class="evitement" href="#carte">Aller à la carte</a>
+  <header class="entete" role="banner">
+    <span class="entete-marque">Infonovice <strong>Maps</strong></span>
+    <span class="entete-note">Cartographie souveraine — IGN&nbsp;· BAN&nbsp;· zéro tracking</span>
+  </header>
+  <main id="carte" role="application" aria-label="Carte de France interactive.
+    Utilisez les boutons Zoomer, Dézoomer et Me localiser en haut à droite."></main>
+  <noscript>
+    <p class="sans-js">Infonovice Maps a besoin de JavaScript pour afficher la
+    carte. Aucune donnée n’est envoyée ailleurs qu’aux services publics
+    français (IGN, BAN).</p>
+  </noscript>
 </body>
 </html>

@@ -1,0 +1,47 @@
+/* L'application carte : la carte EST la page. L'en-tête flotte dessus,
+   discret ; les contrôles MapLibre héritent des tokens. */
+* { margin: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body { font-family: var(--police); background: var(--fond); }
+
+#carte { position: fixed; inset: 0; }
+
+/* Lien d'évitement : premier élément focusable, visible seulement au clavier. */
+.evitement {
+  position: fixed; top: -48px; left: 12px; z-index: 30;
+  padding: 10px 16px; border-radius: 10px;
+  background: var(--fond-profond); color: #fff; font-size: 14px;
+  transition: top .15s;
+}
+.evitement:focus-visible { top: 12px; outline: none; box-shadow: var(--focus); }
+
+.entete {
+  position: fixed; top: 12px; left: 12px; z-index: 20;
+  display: flex; align-items: baseline; gap: 12px;
+  padding: 9px 16px;
+  background: color-mix(in srgb, var(--fond) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre-s);
+}
+.entete-marque { font-size: 15.5px; color: var(--texte-1); letter-spacing: .01em; }
+.entete-marque strong { color: var(--accent); font-weight: 750; }
+.entete-note { font-size: 11.5px; color: var(--texte-3); }
+@media (max-width: 560px) { .entete-note { display: none; } }
+
+.sans-js {
+  position: fixed; inset: auto 12px 12px 12px; z-index: 30;
+  padding: 14px 16px; border-radius: var(--rayon);
+  background: var(--fond-profond); color: #F0F2F5; font-size: 14px;
+}
+
+/* Les contrôles MapLibre, aux couleurs de la maison. */
+.maplibregl-ctrl-group {
+  border-radius: 12px !important;
+  box-shadow: var(--ombre-m) !important;
+  overflow: hidden;
+}
+.maplibregl-ctrl-group button { width: 40px !important; height: 40px !important; }
+.maplibregl-ctrl-group button:focus-visible { box-shadow: var(--focus) inset !important; }
+.maplibregl-ctrl-attrib { font-size: 11px !important; }

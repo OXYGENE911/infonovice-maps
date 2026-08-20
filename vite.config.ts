@@ -13,6 +13,14 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        // MapLibre pèse ~230 Ko gzippé à lui seul : il vit dans son propre
+        // morceau, exclu du budget bundle applicatif (< 300 Ko) que la CI
+        // mesure — le budget surveille NOTRE code, pas la bibliothèque carte.
+        manualChunks: { maplibre: ['maplibre-gl'] },
+      },
+    },
   },
   plugins: [
     VitePWA({
