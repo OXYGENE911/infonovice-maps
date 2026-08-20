@@ -46,7 +46,10 @@ export class EtapesItineraire extends HTMLElement {
   }
 
   #signaler(): void {
-    this.dispatchEvent(new CustomEvent('change'));
+    // Nom DÉDIÉ : « change » serait indiscernable des change natifs des
+    // inputs de recherche, qui bullent jusqu'ici — chaque sélection
+    // déclenchait deux recalculs (vu en E2E, urls.length 5 au lieu de 4).
+    this.dispatchEvent(new CustomEvent('etapes-changees'));
   }
 
   #bouton(libelle: string, symbole: string, action: () => void): HTMLButtonElement {

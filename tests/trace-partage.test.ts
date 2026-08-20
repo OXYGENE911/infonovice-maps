@@ -48,4 +48,31 @@ describe('partage par URL', () => {
       expect(depuisFragment(f), f).toBeNull();
     }
   });
+
+  it('porte les étapes intermédiaires et les évitements — aller-retour exact', () => {
+    const relu = depuisFragment(versFragment({
+      ...P,
+      etapes: [{ lon: 5.0415, lat: 47.322 }],
+      eviter: ['autoroute', 'tunnel'],
+    }));
+    expect(relu).not.toBeNull();
+    expect(relu?.etapes).toHaveLength(1);
+    expect(relu?.etapes[0]?.lon).toBeCloseTo(5.0415, 5);
+    expect(relu?.eviter).toEqual(['autoroute', 'tunnel']);
+    expect(relu?.depart.lon).toBeCloseTo(2.3522, 5);
+    expect(relu?.arrivee.lat).toBeCloseTo(45.764, 5);
+  });
+
+  it('l’ancienne forme à deux points reste lisible : étapes et évitements vides', () => {
+    const relu = depuisFragment('#iti=2.35220,48.85660;4.83570,45.76400;car');
+    expect(relu?.etapes).toEqual([]);
+    expect(relu?.eviter).toEqual([]);
+  });
+
+  it('un évitement inconnu ou une étape hors du globe invalident TOUT le fragment', () => {
+    expect(depuisFragment('#iti=2,48;5,45;car;evite=peages')).toBeNull();
+    expect(depuisFragment('#iti=2,48;5,45;car;evite=autoroute|nid-de-poule')).toBeNull();
+    expect(depuisFragment('#iti=2,48;200,95;5,45;car')).toBeNull();
+    expect(depuisFragment('#iti=2,48;car')).toBeNull();
+  });
 });

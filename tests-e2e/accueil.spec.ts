@@ -200,6 +200,74 @@ test('le profil altimétrique se charge À LA DEMANDE, et affiche les dénivelé
   expect(appelsAlti, 'le service a été rappelé pour le même itinéraire').toBe(1);
 });
 
+test('étapes intermédiaires et évitements PARLENT AU SERVICE, et se retirent', async ({ page }) => {
+  await page.route('**/api-adresse.data.gouv.fr/search/**', (route) => {
+    const q = new URL(route.request().url()).searchParams.get('q') ?? '';
+    const [libelle, lon, lat] = q.includes('dijon') ? ['Dijon', 5.0415, 47.322]
+      : q.includes('lyon') ? ['Lyon', 4.8357, 45.7640] : ['Paris', 2.3522, 48.8566];
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ features: [{
+      geometry: { coordinates: [lon, lat] },
+      properties: { label: libelle, type: 'municipality', postcode: '', city: libelle },
+    }] }) });
+  });
+  const urls: string[] = [];
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    urls.push(route.request().url());
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [5.0415, 47.322], [4.8357, 45.764]] },
+      distance: 539_000, duration: 37_000,
+    }) });
+  });
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await page.locator('.iti > summary').click();
+  const champs = page.locator('.iti-champs input[type="search"]');
+  await champs.nth(0).fill('paris');
+  await page.getByRole('option', { name: 'Paris' }).first().click();
+  await champs.nth(1).fill('lyon');
+  await page.getByRole('option', { name: 'Lyon' }).first().click();
+  await expect(page.locator('.iti-resultat')).toContainText('539 km', { timeout: 10_000 });
+  expect(urls[urls.length - 1]).not.toContain('constraints');
+
+  // Éviter les autoroutes : le recalcul porte la contrainte, encodée.
+  await page.getByRole('checkbox', { name: 'Autoroutes' }).check();
+  await expect.poll(() => urls.length).toBe(2);
+  expect(decodeURIComponent(urls[1]!)).toContain('"value":"autoroute"');
+
+  // Une étape intermédiaire : le recalcul porte intermediates.
+  await page.getByRole('button', { name: 'Ajouter une étape' }).click();
+  await page.locator('.etape-ligne input[type="search"]').fill('dijon');
+  await page.getByRole('option', { name: 'Dijon' }).first().click();
+  await expect.poll(() => urls.length).toBe(3);
+  expect(urls[2]).toContain('intermediates=5.0415,47.322');
+  // Trois marqueurs : départ, arrivée, étape.
+  await expect(page.locator('.maplibregl-marker')).toHaveCount(3);
+
+  // Retirer l'étape : le recalcul repart sans intermediates.
+  await page.getByRole('button', { name: 'Retirer l’étape' }).click();
+  await expect.poll(() => urls.length).toBe(4);
+  expect(urls[3]).not.toContain('intermediates');
+});
+
+test('un lien partagé porte étapes et évitements, et les rejoue', async ({ page }) => {
+  const urls: string[] = [];
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    urls.push(route.request().url());
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [5.0415, 47.322], [4.8357, 45.764]] },
+      distance: 539_000, duration: 37_000,
+    }) });
+  });
+  await page.goto('/#iti=2.35220,48.85660;5.04150,47.32200;4.83570,45.76400;car;evite=autoroute');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('539 km', { timeout: 10_000 });
+  expect(urls[0]).toContain('intermediates=5.0415,47.322');
+  expect(decodeURIComponent(urls[0]!)).toContain('"value":"autoroute"');
+  await expect(page.getByRole('checkbox', { name: 'Autoroutes' })).toBeChecked();
+  await expect(page.locator('.etape-ligne input')).toHaveValue(/47,32200/);
+  await expect(page.locator('.maplibregl-marker')).toHaveCount(3);
+});
+
 test('la feuille de route parle français, et ne se charge qu’à la demande', async ({ page }) => {
   let appelsEtapes = 0;
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {

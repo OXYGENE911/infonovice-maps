@@ -23,8 +23,14 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       getcapabilities du service (16/08) n'offre que `car` et `pedestrian` —
       aucun moteur public IGN ne porte de profil vélo. À réintroduire via un
       moteur souverain à trouver (BRouter auto-hébergé = backend, hors 0 €).
-- [ ] PR #6 — Itinéraires alternatifs + options éviter péages/autoroutes +
-      waypoints multiples (drag & drop)
+- [x] PR #6 — Options d'itinéraire : étapes intermédiaires (ajout/retrait/
+      réordonnancement par boutons ↑↓ — accessibles au clavier, là où le
+      drag & drop de l'intitulé initial ne l'est pas) + éviter autoroutes/
+      tunnels/ponts, le tout porté par le lien de partage. TROIS ÉCARTS avec
+      preuve (getcapabilities du 21/08) : les PÉAGES n'existent sur aucun
+      moteur public (seule clé waytype : autoroute|tunnel|pont) ; les
+      itinéraires ALTERNATIFS ne sont pas un paramètre du service ; le
+      drag & drop est remplacé par des boutons pour l'accessibilité.
 - [x] PR #7 — Profil altimétrique de l'itinéraire (elevationLine, chargé À LA
       DEMANDE à l'ouverture de la section — un appel par itinéraire au plus)
 - [x] PR #8 — Export GPX/KML + partage d'itinéraire par URL encodée (aucun

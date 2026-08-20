@@ -94,7 +94,7 @@ export class PanneauItineraire extends HTMLElement {
       this.querySelector(`[data-role="${role}"]`)?.appendChild(champ);
     }
     const etapes = new EtapesItineraire();
-    etapes.addEventListener('change', () => { void this.#calculer(); });
+    etapes.addEventListener('etapes-changees', () => { void this.#calculer(); });
     this.querySelector('.iti-inter')?.appendChild(etapes);
     this.querySelectorAll('.iti-eviter input').forEach((c) => {
       c.addEventListener('change', () => {
@@ -369,6 +369,10 @@ export class PanneauItineraire extends HTMLElement {
       this.#marqueurs.push(
         new Marker({ color: '#3FA877' }).setLngLat(premier as [number, number]).addTo(carte),
         new Marker({ color: '#E89C2C' }).setLngLat(dernier as [number, number]).addTo(carte),
+        // Les étapes intermédiaires du CLICHÉ (les coordonnées demandées) :
+        // marqueurs réduits, dans le bleu du tracé.
+        ...(this.#calculPour?.etapes ?? []).map((p) => new Marker({ color: '#2272C4', scale: 0.72 })
+          .setLngLat([p.lon, p.lat]).addTo(carte)),
       );
       const lons = points.map((c) => c[0] as number); const lats = points.map((c) => c[1] as number);
       carte.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
@@ -387,6 +391,9 @@ export class PanneauItineraire extends HTMLElement {
     (this.querySelector('.iti-resultat') as HTMLElement).hidden = true;
     (this.querySelector('.iti-actions') as HTMLElement).hidden = true;
     this.#reinitialiserSections(true);
+    (this.querySelector('etapes-itineraire') as EtapesItineraire).points = [];
+    this.#eviter.clear();
+    this.querySelectorAll('.iti-eviter input').forEach((c) => { (c as HTMLInputElement).checked = false; });
     this.querySelectorAll('input[type="search"]').forEach((c) => { (c as HTMLInputElement).value = ''; });
   }
 }

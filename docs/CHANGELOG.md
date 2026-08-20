@@ -2,6 +2,14 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.9.0] — 2026-08-21 — Options d'itinéraire + domaine
+- **https://maps.infonovice.fr en service** (CNAME + domaine Pages + HTTPS
+  forcé, build à la racine ; github.io redirige en 301).
+- Étapes intermédiaires : ajout, retrait, réordonnancement par boutons
+  accessibles au clavier ; marqueurs dédiés sur la carte.
+- Éviter autoroutes / tunnels / ponts (contraintes vérifiées du service).
+- Le lien de partage porte étapes et évitements — l'ancienne forme reste lue.
+
 ## [0.8.0] — 2026-08-21 — Feuille de route imprimable
 - Étapes détaillées de l'itinéraire en français (traduction des codes OSRM,
   noms de voies BD TOPO dépliés : « R DE RIVOLI » → « Rue de Rivoli »).

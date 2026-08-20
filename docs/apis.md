@@ -44,6 +44,15 @@ Ces quotas sont un bien commun : debounce, cache, jamais de martèlement.
   l'endpoint du profil altimétrique (PR #7) ; « pas de donnée » = z très
   négatif (-99999), à écarter côté client.
 
+## Options d'itinéraire (vérifié 21/08/2026)
+- `intermediates=lon,lat|lon,lat` : étapes intermédiaires, réponse en
+  `portions[]` (une par tronçon).
+- `constraints={json}` : bannir `waytype` = `autoroute|tunnel|pont` sur
+  bdtopo-osrm. PLUSIEURS contraintes se joignent par `|` DANS LE MÊME
+  paramètre — le paramètre répété rend 500, le `;` rend 400 (testé).
+- Pas de clé « péage » sur AUCUN moteur ; pas de paramètre « alternatives » :
+  écarts consignés dans la roadmap (PR #6).
+
 ## Étapes d'itinéraire (vérifié 21/08/2026)
 - `data.geopf.fr/navigation/itineraire` + `getSteps=true&waysAttributes=name`
   → `portions[].steps[]` avec `instruction` en CODES OSRM (`type`, `modifier`,
