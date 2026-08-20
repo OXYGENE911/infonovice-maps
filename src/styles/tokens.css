@@ -1,0 +1,47 @@
+/* Design tokens — Infonovice Maps.
+   Dérivés de la charte du site infonovice.fr (bleus profonds, gris chauds,
+   accent ambre) pour que Maps soit immédiatement reconnaissable comme un
+   produit de la maison. Une carte vit surtout en plein écran : les tokens
+   privilégient les surfaces sombres discrètes qui laissent la carte parler. */
+:root {
+  /* Palette Infonovice */
+  --bleu-50: #E6F1FB;  --bleu-100: #B5D4F4; --bleu-400: #378ADD;
+  --bleu-500: #2272C4; --bleu-600: #185FA5; --bleu-700: #114E8C;
+  --bleu-800: #0C447C; --bleu-900: #042C53;
+  --gris-50: #F7F6F2;  --gris-100: #F1EFE8; --gris-200: #D3D1C7;
+  --gris-400: #888780; --gris-600: #5F5E5A; --gris-800: #2C2C2A; --gris-900: #1A1A19;
+  --ambre: #FAC775;    --ambre-fonce: #E89C2C; --vert: #3FA877; --blanc: #FFFFFF;
+
+  /* Rôles */
+  --fond: var(--blanc);
+  --fond-doux: #FAFBFC;
+  --fond-profond: #0F1B2D;
+  --texte-1: var(--gris-900);
+  --texte-2: var(--gris-600);
+  --texte-3: var(--gris-400);
+  --bord: var(--gris-100);
+  --bord-2: var(--gris-200);
+  --accent: var(--bleu-500);
+  --accent-vif: var(--bleu-400);
+
+  --ombre-s: 0 1px 2px rgba(10, 30, 60, .05);
+  --ombre-m: 0 6px 24px -8px rgba(10, 30, 60, .14);
+  --rayon: 14px;
+  --focus: 0 0 0 3px rgba(55, 138, 221, .35);
+
+  /* Système, pas Google Fonts : contrainte de souveraineté n° 3. */
+  --police: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #0E1014;
+    --fond-doux: #13161C;
+    --texte-1: #F0F2F5;
+    --texte-2: #B5BDC8;
+    --texte-3: #788391;
+    --bord: #222730;
+    --bord-2: #2E3540;
+    --accent: var(--bleu-400);
+  }
+}
