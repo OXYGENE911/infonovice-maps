@@ -162,6 +162,13 @@ body { font-family: var(--police); background: var(--fond); }
 .iti-profil input:focus-visible + span { box-shadow: var(--focus); }
 .iti-resultat { font: 650 15px var(--police); color: var(--texte-1); }
 .iti-erreur { font: 400 13px var(--police); color: #C0392B; }
+.iti-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+.iti-actions button {
+  padding: 7px 13px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-1); font: 600 12.5px var(--police); cursor: pointer;
+}
+.iti-actions button:focus-visible { outline: none; box-shadow: var(--focus); }
 .iti-effacer {
   justify-self: start; padding: 7px 13px; border-radius: 9px;
   border: 1px solid var(--bord-2); background: var(--fond-doux);

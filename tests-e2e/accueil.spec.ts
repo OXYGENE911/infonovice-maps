@@ -1,5 +1,21 @@
 import { test, expect } from '@playwright/test';
 
+/* LES TUILES IGN SONT SIMULÉES EN E2E — pour deux raisons qui n'en font
+   qu'une : la CI ne doit ni dépendre de la disponibilité d'un tiers, ni
+   MARTELER la Géoplateforme à chaque poussée (nos propres règles : ces quotas
+   sont un bien commun). Ce que la suite prouve reste réel : l'application
+   émet les bonnes requêtes vers les bons endpoints — la disponibilité de
+   l'IGN, elle, a été prouvée par appels réels et vit dans docs/apis.md. */
+const PNG_1PX = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  'base64');
+
+test.beforeEach(async ({ page }) => {
+  await page.route('**/data.geopf.fr/wmts**', (route) => route.fulfill({
+    contentType: 'image/png', body: PNG_1PX,
+  }));
+});
+
 // Depuis la PR #2, la page EST la carte : on vérifie que MapLibre s'amorce,
 // que les contrôles parlent français, et que la souveraineté tient.
 
@@ -29,7 +45,7 @@ test('SOUVERAINETÉ : seules les origines déclarées sont contactées', async (
   expect([...new Set(intrus)], `origines non déclarées : ${intrus.join(', ')}`).toHaveLength(0);
 });
 
-test('des tuiles IGN sont réellement demandées et servies', async ({ page }) => {
+test('l’application demande ses tuiles au WMTS Géoplateforme, et les affiche', async ({ page }) => {
   const tuiles: number[] = [];
   page.on('response', (r) => {
     if (r.url().includes('data.geopf.fr/wmts') && r.url().includes('GetTile')) tuiles.push(r.status());
@@ -135,4 +151,35 @@ test('l’itinéraire A→B se calcule, se trace, et SURVIT au changement de fon
     Boolean((window as unknown as { __carte?: { getSource(n: string): unknown } })
       .__carte?.getSource('itineraire')));
   expect(traitPresent, 'le tracé a disparu au changement de fond').toBe(true);
+});
+
+test('un lien d’itinéraire partagé rejoue le trajet à l’ouverture — sans serveur', async ({ page }) => {
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 465_000, duration: 15_480,
+    }),
+  }));
+  // On OUVRE directement le lien partagé : le fragment porte tout.
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('465 km', { timeout: 10_000 });
+  await expect(page.locator('.maplibregl-marker')).toHaveCount(2);
+});
+
+test('l’export GPX télécharge un fichier nommé, sans aucune requête', async ({ page }) => {
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 465_000, duration: 15_480,
+    }),
+  }));
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
+  const telechargement = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'GPX' }).click();
+  const fichier = await telechargement;
+  expect(fichier.suggestedFilename()).toBe('itineraire-infonovice.gpx');
 });

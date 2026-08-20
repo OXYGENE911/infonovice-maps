@@ -12,6 +12,8 @@ import { RechercheAdresse } from './recherche';
 import { calculerItineraire, formaterDistance, formaterDuree, PROFILS, ErreurItineraire, type Profil, type Itineraire } from '../lib/itineraire';
 import type { PointGeo } from '../lib/coordonnees';
 import type { ResultatAdresse } from '../lib/adresse';
+import { versGPX, versKML, telecharger } from '../lib/trace';
+import { versFragment, depuisFragment } from '../lib/partage-url';
 
 const SOURCE = 'itineraire';
 
@@ -45,7 +47,12 @@ export class PanneauItineraire extends HTMLElement {
           </div>
           <p class="iti-resultat" role="status" hidden></p>
           <p class="iti-erreur" role="alert" hidden></p>
-          <button type="button" class="iti-effacer" hidden>Effacer l’itinéraire</button>
+          <div class="iti-actions" hidden>
+            <button type="button" class="iti-gpx">GPX</button>
+            <button type="button" class="iti-kml">KML</button>
+            <button type="button" class="iti-lien">Copier le lien</button>
+            <button type="button" class="iti-effacer">Effacer</button>
+          </div>
         </div>
       </details>`;
 
@@ -64,6 +71,42 @@ export class PanneauItineraire extends HTMLElement {
       });
     });
     this.querySelector('.iti-effacer')?.addEventListener('click', () => this.#effacer());
+    this.querySelector('.iti-gpx')?.addEventListener('click', () => {
+      if (this.#dernier) telecharger(versGPX(this.#dernier, this.#nomTrajet()),
+        'itineraire-infonovice.gpx', 'application/gpx+xml');
+    });
+    this.querySelector('.iti-kml')?.addEventListener('click', () => {
+      if (this.#dernier) telecharger(versKML(this.#dernier, this.#nomTrajet()),
+        'itineraire-infonovice.kml', 'application/vnd.google-earth.kml+xml');
+    });
+    this.querySelector('.iti-lien')?.addEventListener('click', (e) => {
+      if (!this.#depart || !this.#arrivee) return;
+      const url = location.origin + location.pathname
+        + versFragment({ depart: this.#depart, arrivee: this.#arrivee, profil: this.#profil });
+      void navigator.clipboard.writeText(url);
+      (e.target as HTMLElement).textContent = 'Lien copié !';
+      setTimeout(() => { (e.target as HTMLElement).textContent = 'Copier le lien'; }, 1800);
+    });
+
+    /* UN LIEN PARTAGÉ S'OUVRE TOUT SEUL : le fragment porte l'itinéraire, on
+       le rejoue à l'arrivée. Défensif — un fragment forgé rend null et la
+       page s'ouvre normalement. */
+    const partage = depuisFragment(location.hash);
+    if (partage) {
+      this.#depart = partage.depart;
+      this.#arrivee = partage.arrivee;
+      this.#profil = partage.profil;
+      const radio = this.querySelector(`input[name="profil"][value="${partage.profil}"]`);
+      if (radio) (radio as HTMLInputElement).checked = true;
+      this.querySelector('details')?.setAttribute('open', '');
+      // La carte n'est branchée qu'après la construction : on attend le tour
+      // de boucle où `carte` est posée.
+      queueMicrotask(() => { void this.#calculer(); });
+    }
+  }
+
+  #nomTrajet(): string {
+    return `Itinéraire Infonovice Maps (${PROFILS[this.#profil]})`;
   }
 
   async #calculer(): Promise<void> {
@@ -78,7 +121,7 @@ export class PanneauItineraire extends HTMLElement {
       this.#dernier = iti;
       this.#tracer(iti);
       resultat.textContent = `${formaterDistance(iti.distance)} — ${formaterDuree(iti.duree)}`;
-      (this.querySelector('.iti-effacer') as HTMLElement).hidden = false;
+      (this.querySelector('.iti-actions') as HTMLElement).hidden = false;
     } catch (e) {
       resultat.hidden = true;
       erreur.textContent = e instanceof ErreurItineraire
@@ -136,7 +179,7 @@ export class PanneauItineraire extends HTMLElement {
       carte.removeSource(SOURCE);
     }
     (this.querySelector('.iti-resultat') as HTMLElement).hidden = true;
-    (this.querySelector('.iti-effacer') as HTMLElement).hidden = true;
+    (this.querySelector('.iti-actions') as HTMLElement).hidden = true;
     this.querySelectorAll('input[type="search"]').forEach((c) => { (c as HTMLInputElement).value = ''; });
   }
 }
