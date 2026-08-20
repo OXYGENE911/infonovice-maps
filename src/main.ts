@@ -1,8 +1,11 @@
-// Point d'entrée. La page « en construction » n'a besoin que de ses styles ;
-// le service worker est enregistré par vite-plugin-pwa (registerType
-// autoUpdate) via ce module virtuel. La carte arrive en PR #2.
+// Point d'entrée : la carte plein écran (PR #2). La page « en construction »
+// de la PR #1 est morte ici, comme prévu.
 import './styles/tokens.css';
-import './styles/construction.css';
+import './styles/carte.css';
 import { registerSW } from 'virtual:pwa-register';
+import { creerCarte } from './carte/carte';
 
 registerSW({ immediate: true });
+
+const conteneur = document.getElementById('carte');
+if (conteneur) creerCarte(conteneur);

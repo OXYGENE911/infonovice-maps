@@ -4,10 +4,10 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
 États : [ ] à faire · [~] en cours · [x] fusionnée.
 
 ## Fondations
-- [ ] PR #1 — Scaffolding : Vite + TS + PWA + ESLint + Vitest + Playwright +
+- [x] PR #1 — Scaffolding : Vite + TS + PWA + ESLint + Vitest + Playwright +
       GitHub Actions (CI + déploiement Pages) + CNAME maps.infonovice.fr +
       page « en construction »
-- [ ] PR #2 — Carte MapLibre plein écran avec fond IGN Plan, contrôles
+- [x] PR #2 — Carte MapLibre plein écran avec fond IGN Plan, contrôles
       zoom/boussole/géolocalisation navigateur, design tokens Infonovice
 - [ ] PR #3 — Sélecteur de fonds : Plan IGN / Ortho satellite / Topo 25 /
       mode sombre auto

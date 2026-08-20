@@ -14,3 +14,15 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - Déploiement GitHub Pages automatique sur main, CNAME maps.infonovice.fr.
 - Test E2E de souveraineté : la page ne contacte AUCUN domaine externe.
 - Dependabot hebdomadaire (npm + actions).
+
+## [0.2.0] — 2026-08-16 — La carte
+- Carte MapLibre plein écran, fond Plan IGN v2 (WMTS Géoplateforme, sans clé),
+  attribution IGN obligatoire.
+- Contrôles zoom / boussole / géolocalisation / échelle, ENTIÈREMENT en
+  français (locale MapLibre surchargée) — la géolocalisation est un geste de
+  l'utilisateur, jamais demandée à l'arrivée.
+- En-tête flottant, lien d'évitement clavier, page sans JavaScript expliquée.
+- MapLibre isolé dans son propre chunk (252 Ko gzippé) ; code applicatif :
+  4,2 Ko gzippé — budget respecté.
+- E2E : tuiles IGN réellement servies (200), souveraineté mesurée (aucune
+  origine hors liste blanche), contrôles français visibles.
