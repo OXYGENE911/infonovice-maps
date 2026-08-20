@@ -90,3 +90,49 @@ test('l’erreur BAN parle français et n’éventre pas l’interface', async (
   await page.getByRole('combobox', { name: /Rechercher une adresse/ }).fill('rue de la paix');
   await expect(page.getByRole('alert')).toContainText('momentanément indisponible', { timeout: 10_000 });
 });
+
+test('l’itinéraire A→B se calcule, se trace, et SURVIT au changement de fond', async ({ page }) => {
+  // BAN et service d'itinéraire simulés : déterminisme, zéro quota consommé.
+  await page.route('**/api-adresse.data.gouv.fr/search/**', (route) => {
+    const q = new URL(route.request().url()).searchParams.get('q') ?? '';
+    const [libelle, lon, lat] = q.includes('lyon')
+      ? ['Lyon', 4.8357, 45.7640] : ['Paris', 2.3522, 48.8566];
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ features: [{
+      geometry: { coordinates: [lon, lat] },
+      properties: { label: libelle, type: 'municipality', postcode: '', city: libelle },
+    }] }) });
+  });
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [3.5, 47.3], [4.8357, 45.764]] },
+      distance: 465_000, duration: 15_480,
+    }),
+  }));
+
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await page.locator('.iti summary').click();
+
+  const champs = page.locator('.iti input[type="search"]');
+  await champs.nth(0).fill('paris');
+  await page.getByRole('option', { name: 'Paris' }).first().click();
+  await champs.nth(1).fill('lyon');
+  await page.getByRole('option', { name: 'Lyon' }).first().click();
+
+  // Le résultat : distance et durée au format français.
+  await expect(page.locator('.iti-resultat')).toContainText('465 km', { timeout: 10_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('4 h 18');
+  // Le tracé et ses deux marqueurs sont posés.
+  await expect(page.locator('.maplibregl-marker')).toHaveCount(2);
+
+  // LE CHANGEMENT DE FOND NE MANGE PAS LE TRAJET : setStyle détruit les
+  // sources ; le panneau doit reposer le tracé sur style.load.
+  await page.locator('.fonds summary').click();
+  await page.getByRole('radio', { name: 'Satellite', exact: true }).check();
+  await page.waitForTimeout(1200);
+  const traitPresent = await page.evaluate(() =>
+    Boolean((window as unknown as { __carte?: { getSource(n: string): unknown } })
+      .__carte?.getSource('itineraire')));
+  expect(traitPresent, 'le tracé a disparu au changement de fond').toBe(true);
+});

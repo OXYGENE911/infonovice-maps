@@ -18,8 +18,11 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       au long-press + affichage coordonnées
 
 ## Navigation (planificateur)
-- [ ] PR #5 — Calcul d'itinéraire A→B voiture/piéton/vélo via API
-      Géoplateforme, tracé sur carte, distance/durée
+- [x] PR #5 — Calcul d'itinéraire A→B voiture/piéton via API Géoplateforme,
+      tracé sur carte, distance/durée. VÉLO ÉCARTÉ avec preuve : le
+      getcapabilities du service (16/08) n'offre que `car` et `pedestrian` —
+      aucun moteur public IGN ne porte de profil vélo. À réintroduire via un
+      moteur souverain à trouver (BRouter auto-hébergé = backend, hors 0 €).
 - [ ] PR #6 — Itinéraires alternatifs + options éviter péages/autoroutes +
       waypoints multiples (drag & drop)
 - [ ] PR #7 — Profil altimétrique de l'itinéraire (API altimétrie)

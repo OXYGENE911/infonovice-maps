@@ -51,3 +51,15 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   français ; une frappe annulée ne se rejoue jamais. 7 tests réseau à sec.
 - E2E : BAN simulée par interception (déterministe, zéro quota consommé) ;
   la sélection se prouve AU CLAVIER.
+
+## [0.5.0] — 2026-08-16 — Le planificateur
+- Itinéraire A→B (Géoplateforme bdtopo-osrm, sans clé) : voiture et à pied,
+  tracé bleu à liseré blanc lisible sur tout fond, marqueurs départ/arrivée,
+  distance et durée au format français, vol vers l'emprise du trajet.
+- Les deux champs réutilisent le composant de recherche BAN (rien dupliqué).
+- LE TRACÉ SURVIT AU CHANGEMENT DE FOND : setStyle détruit les sources,
+  le panneau repose le trajet à chaque style.load — prouvé par E2E.
+- Un 404 du service = « aucun itinéraire », sans seconde tentative ;
+  vélo écarté avec preuve (getcapabilities : car et pedestrian seulement).
+- 7 tests unitaires (formats français, 404-est-une-réponse, URL du service),
+  E2E complet Paris→Lyon simulé.
