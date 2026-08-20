@@ -1,5 +1,21 @@
 import { test, expect } from '@playwright/test';
 
+/* LES TUILES IGN SONT SIMULÉES EN E2E — pour deux raisons qui n'en font
+   qu'une : la CI ne doit ni dépendre de la disponibilité d'un tiers, ni
+   MARTELER la Géoplateforme à chaque poussée (nos propres règles : ces quotas
+   sont un bien commun). Ce que la suite prouve reste réel : l'application
+   émet les bonnes requêtes vers les bons endpoints — la disponibilité de
+   l'IGN, elle, a été prouvée par appels réels et vit dans docs/apis.md. */
+const PNG_1PX = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  'base64');
+
+test.beforeEach(async ({ page }) => {
+  await page.route('**/data.geopf.fr/wmts**', (route) => route.fulfill({
+    contentType: 'image/png', body: PNG_1PX,
+  }));
+});
+
 // Depuis la PR #2, la page EST la carte : on vérifie que MapLibre s'amorce,
 // que les contrôles parlent français, et que la souveraineté tient.
 
@@ -29,7 +45,7 @@ test('SOUVERAINETÉ : seules les origines déclarées sont contactées', async (
   expect([...new Set(intrus)], `origines non déclarées : ${intrus.join(', ')}`).toHaveLength(0);
 });
 
-test('des tuiles IGN sont réellement demandées et servies', async ({ page }) => {
+test('l’application demande ses tuiles au WMTS Géoplateforme, et les affiche', async ({ page }) => {
   const tuiles: number[] = [];
   page.on('response', (r) => {
     if (r.url().includes('data.geopf.fr/wmts') && r.url().includes('GetTile')) tuiles.push(r.status());
