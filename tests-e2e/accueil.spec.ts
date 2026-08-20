@@ -128,7 +128,7 @@ test('l’itinéraire A→B se calcule, se trace, et SURVIT au changement de fon
 
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
-  await page.locator('.iti summary').click();
+  await page.locator('.iti > summary').click();
 
   const champs = page.locator('.iti input[type="search"]');
   await champs.nth(0).fill('paris');
@@ -166,6 +166,38 @@ test('un lien d’itinéraire partagé rejoue le trajet à l’ouverture — san
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await expect(page.locator('.iti-resultat')).toContainText('465 km', { timeout: 10_000 });
   await expect(page.locator('.maplibregl-marker')).toHaveCount(2);
+});
+
+test('le profil altimétrique se charge À LA DEMANDE, et affiche les dénivelés', async ({ page }) => {
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 465_000, duration: 15_480,
+    }),
+  }));
+  let appelsAlti = 0;
+  await page.route('**/data.geopf.fr/altimetrie/**', (route) => {
+    appelsAlti += 1;
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ elevations: [
+      { lon: 2.3522, lat: 48.8566, z: 35, acc: 'Average value' },
+      { lon: 3.5, lat: 47.3, z: 320, acc: 'Average value' },
+      { lon: 4.8357, lat: 45.764, z: 168, acc: 'Average value' },
+    ] }) });
+  });
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
+  // Tant que la section est repliée, AUCUN appel : les quotas sont un bien commun.
+  expect(appelsAlti, 'l’altimétrie a été appelée sans demande').toBe(0);
+  await page.locator('.iti-alti summary').click();
+  await expect(page.locator('.alti-bilan')).toContainText('D+ 285 m', { timeout: 10_000 });
+  await expect(page.locator('.alti-bilan')).toContainText('D− 152 m');
+  await expect(page.locator('.iti-alti svg')).toBeVisible();
+  // Refermer puis rouvrir ne rappelle pas le service : le profil est acquis.
+  await page.locator('.iti-alti summary').click();
+  await page.locator('.iti-alti summary').click();
+  await expect(page.locator('.alti-bilan')).toBeVisible();
+  expect(appelsAlti, 'le service a été rappelé pour le même itinéraire').toBe(1);
 });
 
 test('l’export GPX télécharge un fichier nommé, sans aucune requête', async ({ page }) => {

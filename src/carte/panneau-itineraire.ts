@@ -14,6 +14,7 @@ import type { PointGeo } from '../lib/coordonnees';
 import type { ResultatAdresse } from '../lib/adresse';
 import { versGPX, versKML, telecharger } from '../lib/trace';
 import { versFragment, depuisFragment } from '../lib/partage-url';
+import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
 
 const SOURCE = 'itineraire';
 
@@ -23,6 +24,8 @@ export class PanneauItineraire extends HTMLElement {
   #arrivee: PointGeo | null = null;
   #profil: Profil = 'car';
   #dernier: Itineraire | null = null;
+  /** Itinéraire dont le profil altimétrique est chargé (ou en cours). */
+  #profilPour: Itineraire | null = null;
   #marqueurs: Marker[] = [];
 
   set carte(c: CarteMapLibre) {
@@ -53,6 +56,10 @@ export class PanneauItineraire extends HTMLElement {
             <button type="button" class="iti-lien">Copier le lien</button>
             <button type="button" class="iti-effacer">Effacer</button>
           </div>
+          <details class="iti-alti" hidden>
+            <summary>Profil altimétrique</summary>
+            <div class="iti-alti-corps" role="status"></div>
+          </details>
         </div>
       </details>`;
 
@@ -87,6 +94,12 @@ export class PanneauItineraire extends HTMLElement {
       (e.target as HTMLElement).textContent = 'Lien copié !';
       setTimeout(() => { (e.target as HTMLElement).textContent = 'Copier le lien'; }, 1800);
     });
+    /* LE PROFIL NE SE CALCULE QU'À LA DEMANDE : au plus un appel altimétrie
+       par itinéraire, et seulement si l'utilisateur ouvre la section — les
+       quotas de la Géoplateforme sont un bien commun. */
+    this.querySelector('.iti-alti')?.addEventListener('toggle', () => {
+      void this.#chargerProfil();
+    });
 
     /* UN LIEN PARTAGÉ S'OUVRE TOUT SEUL : le fragment porte l'itinéraire, on
        le rejoue à l'arrivée. Défensif — un fragment forgé rend null et la
@@ -109,6 +122,38 @@ export class PanneauItineraire extends HTMLElement {
     return `Itinéraire Infonovice Maps (${PROFILS[this.#profil]})`;
   }
 
+  async #chargerProfil(): Promise<void> {
+    const section = this.querySelector('.iti-alti') as HTMLDetailsElement;
+    const corps = this.querySelector('.iti-alti-corps') as HTMLElement;
+    const iti = this.#dernier;
+    if (!section.open || !iti || this.#profilPour === iti) return;
+    this.#profilPour = iti;
+    corps.textContent = 'Calcul du profil…';
+    try {
+      const points = await profilItineraire(iti.geometrie);
+      // Un nouvel itinéraire a pu arriver pendant l'appel : ce profil ne le
+      // concerne pas, on ne touche à rien.
+      if (this.#dernier !== iti) return;
+      const t = versTraceSVG(points, 280, 72);
+      const d = denivele(points);
+      // Uniquement des nombres formatés par nos soins : ce innerHTML ne porte
+      // aucune donnée externe (la règle textContent vaut pour les libellés).
+      corps.innerHTML = `
+        <svg viewBox="0 0 280 72" preserveAspectRatio="none" role="img"
+          aria-label="Profil altimétrique, de ${Math.round(t.zMin)} à ${Math.round(t.zMax)} mètres d’altitude">
+          <polygon class="alti-aire" points="${t.aire}"></polygon>
+          <polyline class="alti-ligne" points="${t.ligne}"></polyline>
+        </svg>
+        <p class="alti-bilan">D+ ${Math.round(d.montee)} m · D− ${Math.round(d.descente)} m ·
+          de ${Math.round(t.zMin)} à ${Math.round(t.zMax)} m</p>`;
+    } catch (e) {
+      if (this.#dernier !== iti) return;
+      this.#profilPour = null; // réessayable à la prochaine ouverture
+      corps.textContent = e instanceof ErreurAltimetrie
+        ? e.message : 'Profil indisponible pour le moment.';
+    }
+  }
+
   async #calculer(): Promise<void> {
     if (!this.#carte || !this.#depart || !this.#arrivee) return;
     const resultat = this.querySelector('.iti-resultat') as HTMLElement;
@@ -124,6 +169,13 @@ export class PanneauItineraire extends HTMLElement {
       // chargement) — l'utilisateur ne doit pas payer cette attente.
       resultat.textContent = `${formaterDistance(iti.distance)} — ${formaterDuree(iti.duree)}`;
       (this.querySelector('.iti-actions') as HTMLElement).hidden = false;
+      // Nouveau trajet : la section profil réapparaît repliée, vidée de
+      // l'ancien profil — il ne vaut que pour l'itinéraire qui l'a produit.
+      const alti = this.querySelector('.iti-alti') as HTMLDetailsElement;
+      alti.hidden = false;
+      alti.open = false;
+      (this.querySelector('.iti-alti-corps') as HTMLElement).textContent = '';
+      this.#profilPour = null;
       this.#tracer(iti);
     } catch (e) {
       resultat.hidden = true;
@@ -197,6 +249,11 @@ export class PanneauItineraire extends HTMLElement {
     }
     (this.querySelector('.iti-resultat') as HTMLElement).hidden = true;
     (this.querySelector('.iti-actions') as HTMLElement).hidden = true;
+    const alti = this.querySelector('.iti-alti') as HTMLDetailsElement;
+    alti.hidden = true;
+    alti.open = false;
+    (this.querySelector('.iti-alti-corps') as HTMLElement).textContent = '';
+    this.#profilPour = null;
     this.querySelectorAll('input[type="search"]').forEach((c) => { (c as HTMLInputElement).value = ''; });
   }
 }

@@ -2,6 +2,19 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.7.0] — 2026-08-20 — Profil altimétrique
+- Profil en long de l'itinéraire (API altimétrie Géoplateforme,
+  elevationLine) : courbe SVG, dénivelés D+ / D−, altitudes min-max.
+- Chargé À LA DEMANDE à l'ouverture de la section, au plus un appel par
+  itinéraire — les quotas publics sont un bien commun.
+
+## [0.6.2] — 2026-08-20 — Correctifs de mise en ligne
+- Le site fonctionne sur github.io (base publique configurable, icônes du
+  manifeste PWA en chemins relatifs) — première version testable en ligne.
+- Le rejeu d'un lien partagé n'échoue plus quand le calcul aboutit avant le
+  chargement du style (pose du tracé différée au style.load).
+- E2E : tuiles IGN simulées (déterminisme, zéro quota consommé par la CI).
+
 ## [0.1.0] — 2026-08-16 — Fondations
 - Scaffolding Vite + TypeScript strict + PWA (manifeste, service worker,
   icônes générées par script).
