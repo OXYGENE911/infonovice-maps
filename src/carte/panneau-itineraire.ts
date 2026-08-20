@@ -136,34 +136,40 @@ export class PanneauItineraire extends HTMLElement {
   #tracer(iti: Itineraire): void {
     const carte = this.#carte;
     if (!carte) return;
-    // LA POSE ATTEND LE STYLE. Au rejeu d'un lien partagé — surtout dans un
-    // onglet ouvert en arrière-plan, où le navigateur suspend le rendu — le
-    // calcul aboutit avant que la carte ait fini de charger son style, et
-    // addSource lèverait « Style is not done loading » (vu en production le
-    // 20/08, invisible en E2E où le style simulé charge instantanément). Le
-    // gestionnaire style.load branché dans `set carte` reposera #dernier dès
-    // que le style sera prêt : ne rien faire ici n'est pas un abandon.
-    if (!carte.isStyleLoaded()) return;
     const donnees = {
       type: 'Feature' as const, properties: {}, geometry: iti.geometrie,
     };
-    const existante = carte.getSource(SOURCE) as GeoJSONSource | undefined;
-    if (existante) {
-      existante.setData(donnees);
-    } else {
-      carte.addSource(SOURCE, { type: 'geojson', data: donnees });
-      // Le liseré clair sous le trait bleu : lisible sur le plan comme sur
-      // l'ortho, sans dépendre du fond.
-      carte.addLayer({
-        id: 'itineraire-bord', type: 'line', source: SOURCE,
-        paint: { 'line-color': '#FFFFFF', 'line-width': 9, 'line-opacity': 0.9 },
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-      });
-      carte.addLayer({
-        id: 'itineraire-trait', type: 'line', source: SOURCE,
-        paint: { 'line-color': '#2272C4', 'line-width': 5 },
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-      });
+    try {
+      const existante = carte.getSource(SOURCE) as GeoJSONSource | undefined;
+      if (existante) {
+        existante.setData(donnees);
+      } else {
+        carte.addSource(SOURCE, { type: 'geojson', data: donnees });
+        // Le liseré clair sous le trait bleu : lisible sur le plan comme sur
+        // l'ortho, sans dépendre du fond.
+        carte.addLayer({
+          id: 'itineraire-bord', type: 'line', source: SOURCE,
+          paint: { 'line-color': '#FFFFFF', 'line-width': 9, 'line-opacity': 0.9 },
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+        });
+        carte.addLayer({
+          id: 'itineraire-trait', type: 'line', source: SOURCE,
+          paint: { 'line-color': '#2272C4', 'line-width': 5 },
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+        });
+      }
+    } catch (e) {
+      // MapLibre refuse toute pose tant que le STYLE n'a pas fini de charger
+      // (rejeu d'un lien partagé plus rapide que le style, onglet ouvert en
+      // arrière-plan au rendu suspendu). C'est le SEUL cas différé : la pose
+      // se rejouera au prochain style.load — branché dans `set carte`, émis
+      // au chargement initial comme à chaque changement de fond. On teste le
+      // message faute d'erreur typée côté MapLibre. Un garde isStyleLoaded()
+      // ne convient PAS : il attend aussi les tuiles et reste faux au moment
+      // même où style.load autorise déjà la pose — en CI, le tracé ne se
+      // posait plus jamais (run 32350033200 du 20/08).
+      if (e instanceof Error && /style is not done loading/i.test(e.message)) return;
+      throw e;
     }
 
     this.#marqueurs.forEach((m) => m.remove());
