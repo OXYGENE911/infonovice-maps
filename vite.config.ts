@@ -2,11 +2,15 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// Le site vit à la racine du domaine maps.infonovice.fr (CNAME GitHub Pages) :
-// base « / ». Si le CNAME saute un jour, Pages servirait sous /infonovice-maps/
-// et il faudrait une base relative — le choix est consigné ici pour ce jour-là.
+// La base du site vient de l'environnement : « / » quand il vivra à la racine
+// de maps.infonovice.fr, « /infonovice-maps/ » tant que github.io le sert sous
+// ce sous-chemin (le déploiement pose la variable, voir docs/DEPLOIEMENT.md).
+// Une variable plutôt qu'un drapeau --base : Git Bash sous Windows réécrit les
+// arguments qui ressemblent à des chemins POSIX, pas les variables.
+const BASE = process.env.BASE_PUBLIQUE ?? '/';
+
 export default defineConfig({
-  base: '/',
+  base: BASE,
   // Vitest ne regarde QUE tests/ : les specs Playwright (tests-e2e/) ont leur
   // propre exécuteur, et les mêler faisait échouer la suite unitaire.
   test: { include: ['tests/**/*.test.ts'] },
@@ -35,14 +39,18 @@ export default defineConfig({
         description:
           'Cartographie et itinéraires souverains : l’alternative française à Google Maps.',
         lang: 'fr',
-        start_url: '/',
+        start_url: BASE,
         display: 'standalone',
         background_color: '#0F1B2D',
         theme_color: '#0F1B2D',
+        // Chemins RELATIFS : le navigateur les résout contre l'URL du
+        // manifeste lui-même, donc ils suivent la base sans qu'on les touche
+        // (en absolu, /icones/... aurait ignoré la base et cassé sous
+        // github.io — vu au premier build en sous-chemin).
         icons: [
-          { src: '/icones/icone-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icones/icone-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icones/icone-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icones/icone-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icones/icone-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icones/icone-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
