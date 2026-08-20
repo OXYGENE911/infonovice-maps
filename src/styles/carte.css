@@ -28,6 +28,47 @@ body { font-family: var(--police); background: var(--fond); }
 .entete-marque { font-size: 15.5px; color: var(--texte-1); letter-spacing: .01em; }
 .entete-marque strong { color: var(--accent); font-weight: 750; }
 .entete-note { font-size: 11.5px; color: var(--texte-3); }
+.entete recherche-adresse { flex: 1; min-width: 200px; }
+.recherche { position: relative; }
+.recherche input {
+  width: 100%; min-width: 220px;
+  padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--bord-2); background: var(--fond);
+  color: var(--texte-1); font: 400 14px var(--police);
+}
+.recherche input:focus-visible { outline: none; box-shadow: var(--focus); }
+.recherche ul {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 25;
+  margin: 0; padding: 6px; list-style: none;
+  background: var(--fond); border: 1px solid var(--bord);
+  border-radius: var(--rayon); box-shadow: var(--ombre-m);
+}
+.recherche [role="option"] {
+  display: flex; justify-content: space-between; gap: 10px; align-items: baseline;
+  padding: 9px 10px; border-radius: 9px; cursor: pointer;
+  font: 400 13.5px var(--police); color: var(--texte-1);
+}
+.recherche [role="option"]:hover,
+.recherche [role="option"][aria-selected="true"] { background: var(--bleu-50); }
+@media (prefers-color-scheme: dark) {
+  .recherche [role="option"]:hover,
+  .recherche [role="option"][aria-selected="true"] { background: #1A2634; }
+}
+.recherche .contexte { font-size: 11.5px; color: var(--texte-3); white-space: nowrap; }
+.recherche-erreur {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 25;
+  padding: 10px 12px; border-radius: 10px;
+  background: #7A2E2E; color: #fff; font: 400 13px var(--police);
+}
+.popup-adresse { font-family: var(--police); display: grid; gap: 7px; padding: 2px 4px; }
+.pa-libelle { font-size: 13.5px; font-weight: 600; }
+.pa-coords { font-size: 12.5px; color: var(--texte-2); font-variant-numeric: tabular-nums; }
+.pa-copier {
+  justify-self: start; padding: 6px 12px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-1); font: 600 12.5px var(--police); cursor: pointer;
+}
+.pa-copier:focus-visible { outline: none; box-shadow: var(--focus); }
 @media (max-width: 560px) { .entete-note { display: none; } }
 
 .sans-js {

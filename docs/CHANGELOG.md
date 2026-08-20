@@ -38,3 +38,16 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   après inscription Géoplateforme (gratuite).
 - Deux défauts attrapés par les tests avant l'œil : l'en-tête intercepait
   les clics du sélecteur ; le panneau se reconstruisait en plein clic.
+
+## [0.4.0] — 2026-08-16 — La recherche
+- Barre de recherche BAN dans l'en-tête : combobox ARIA complète (flèches,
+  Entrée, Échap, aria-activedescendant), débounce 300 ms, annulation de la
+  requête précédente — le quota BAN est un bien commun.
+- Sélection → marqueur + vol vers l'adresse (zoom 13 pour une commune, 17
+  pour un numéro).
+- Appui long (500 ms, souris comme doigt) → adresse inverse + coordonnées au
+  format maison + bouton copier ; le déplacement annule l'appui.
+- `lib/adresse` : timeout 5 s, UNE reprise à délai croissant, erreurs en
+  français ; une frappe annulée ne se rejoue jamais. 7 tests réseau à sec.
+- E2E : BAN simulée par interception (déterministe, zéro quota consommé) ;
+  la sélection se prouve AU CLAVIER.
