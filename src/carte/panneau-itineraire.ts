@@ -119,9 +119,12 @@ export class PanneauItineraire extends HTMLElement {
     try {
       const iti = await calculerItineraire(this.#depart, this.#arrivee, this.#profil);
       this.#dernier = iti;
-      this.#tracer(iti);
+      // Le résumé AVANT la pose : distance et durée ne dépendent pas de la
+      // carte, et la pose peut légitimement attendre (style en cours de
+      // chargement) — l'utilisateur ne doit pas payer cette attente.
       resultat.textContent = `${formaterDistance(iti.distance)} — ${formaterDuree(iti.duree)}`;
       (this.querySelector('.iti-actions') as HTMLElement).hidden = false;
+      this.#tracer(iti);
     } catch (e) {
       resultat.hidden = true;
       erreur.textContent = e instanceof ErreurItineraire
@@ -133,6 +136,14 @@ export class PanneauItineraire extends HTMLElement {
   #tracer(iti: Itineraire): void {
     const carte = this.#carte;
     if (!carte) return;
+    // LA POSE ATTEND LE STYLE. Au rejeu d'un lien partagé — surtout dans un
+    // onglet ouvert en arrière-plan, où le navigateur suspend le rendu — le
+    // calcul aboutit avant que la carte ait fini de charger son style, et
+    // addSource lèverait « Style is not done loading » (vu en production le
+    // 20/08, invisible en E2E où le style simulé charge instantanément). Le
+    // gestionnaire style.load branché dans `set carte` reposera #dernier dès
+    // que le style sera prêt : ne rien faire ici n'est pas un abandon.
+    if (!carte.isStyleLoaded()) return;
     const donnees = {
       type: 'Feature' as const, properties: {}, geometry: iti.geometrie,
     };
