@@ -19,6 +19,7 @@ import { styleCarte, LOCALE_FR, type OptionsStyle } from './style-ign';
 import { SelecteurFonds } from './selecteur-fonds';
 import { RechercheAdresse } from './recherche';
 import { PanneauItineraire } from './panneau-itineraire';
+import { PanneauPoi } from './panneau-poi';
 import { adresseInverse } from '../lib/adresse';
 import { formaterCoordonnees } from '../lib/coordonnees';
 
@@ -66,6 +67,30 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   support.className = 'maplibregl-ctrl porte-fonds';
   support.appendChild(selecteur);
   carte.addControl({ onAdd: () => support, onRemove: () => support.remove() }, 'top-left');
+
+  /* LES POINTS D'INTÉRÊT — sous le sélecteur de fonds, même colonne. */
+  const poi = new PanneauPoi();
+  poi.carte = carte;
+  const portePoi = document.createElement('div');
+  portePoi.className = 'maplibregl-ctrl porte-poi';
+  portePoi.appendChild(poi);
+  carte.addControl({ onAdd: () => portePoi, onRemove: () => portePoi.remove() }, 'top-left');
+
+  /* UN SEUL volet ouvert à la fois dans la colonne : leurs panneaux déroulés
+     se superposent — le volet POI ouvert interceptait les radios du sélecteur
+     de fonds (attrapé par Playwright, comme l'en-tête la première nuit).
+     Délégation en phase de CAPTURE : `toggle` ne bulle pas mais se capture,
+     et la délégation ne dépend pas du moment où les panneaux se rendent.
+     Les volets INTERNES du planificateur (profil, feuille) ne sont pas
+     concernés : seuls les trois volets de tête comptent. */
+  document.addEventListener('toggle', (e) => {
+    const cible = e.target;
+    if (!(cible instanceof HTMLDetailsElement) || !cible.open) return;
+    if (!cible.matches('details.iti, details.fonds, details.poi')) return;
+    document.querySelectorAll<HTMLDetailsElement>(
+      'details.iti[open], details.fonds[open], details.poi[open]',
+    ).forEach((autre) => { if (autre !== cible) autre.open = false; });
+  }, true);
   appliquerSombre(selecteur.options);
   sombre.addEventListener('change', () => appliquerSombre(selecteur.options));
   carte.addControl(new GeolocateControl({

@@ -2,6 +2,18 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.10.0] — 2026-08-22 — Points d'intérêt
+- Trois couches à la demande : carburants (prix du jour en popup), bornes de
+  recharge, parkings > 500 m² — jamais sous le zoom 12, appel précédent
+  annulé au déplacement, plafonds des portails affichés honnêtement.
+- CSP élargie (décision tracée) : data.economie.gouv.fr,
+  public.opendatasoft.com.
+
+## [0.9.1] — 2026-08-22 — Le worker MapLibre manquait au build
+- AUCUNE couche GeoJSON (tracé d'itinéraire compris) n'était rendue depuis la
+  v0.5.0, production comprise — 404 silencieux du worker. Corrigé
+  (`?worker&url` + setWorkerUrl) ; l'E2E vérifie désormais les PIXELS.
+
 ## [0.9.0] — 2026-08-21 — Options d'itinéraire + domaine
 - **https://maps.infonovice.fr en service** (CNAME + domaine Pages + HTTPS
   forcé, build à la racine ; github.io redirige en 301).
