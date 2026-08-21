@@ -2,6 +2,13 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.14.0] — 2026-08-22 — Sur le trajet
+- Section « Sur le trajet » du planificateur : stations-service et bornes de
+  recharge le long de l'itinéraire (1, 3 ou 10 km), triées par avancement,
+  avec l'écart au trajet, le prix ou la puissance, et un marqueur par point.
+- Frugalité : au plus six appels par recherche (plafond dur), rien tant que
+  la section est fermée ; la précision vient d'un calcul local.
+
 ## [0.13.0] — 2026-08-22 — Référencement
 - sitemap.xml, robots.txt, balises Open Graph et données structurées
   schema.org sur les quatre pages ; image de partage 1200x630 générée par
