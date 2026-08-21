@@ -76,7 +76,17 @@ Ces quotas sont un bien commun : debounce, cache, jamais de martèlement.
   `BBOX=latS,lonO,latN,lonE,urn:ogc:def:crs:EPSG::4326`, MultiPolygones avec
   `surfm2`/`nomcom`. Même origine que nos tuiles.
 
+## Photos de rue — Panoramax (vérifié 22/08/2026)
+- Recherche STAC : `https://api.panoramax.xyz/api/search?bbox=O,S,E,N&limit=N`
+  — CORS ouvert (renvoie l'origine appelante). Chaque `feature` : `geometry`
+  Point, `properties` (`datetime`, `license`, `geovisio:producer`,
+  `view:azimuth`), `assets` `hd` / `sd` / `thumb`.
+- ATTENTION : les IMAGES sont servies par un AUTRE hôte,
+  `panoramax.openstreetmap.fr` — deux origines à déclarer (connect-src pour
+  l'API, img-src pour les photos).
+- Licence des photos : CC-BY-SA-4.0 → l'attribution (producteur, licence,
+  date) est une OBLIGATION, affichée sous l'image.
+
 ## À vérifier avant leur PR (ne pas présumer)
-- Panoramax `https://api.panoramax.xyz` (PR #12)
 - Météo-France open data (PR #13)
 - transport.data.gouv.fr GTFS/GTFS-RT (PR #15-16)

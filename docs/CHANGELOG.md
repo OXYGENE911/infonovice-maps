@@ -2,6 +2,13 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.15.0] — 2026-08-22 — Photos de rue
+- Panoramax : « Photos de rue » dans la popup d'appui long, visionneuse
+  modale avec attribution CC-BY-SA (producteur, licence, date), Échap ferme
+  et rend le focus. Un appel, et seulement sur demande.
+- CSP élargie (décision tracée) : api.panoramax.xyz (recherche) et
+  panoramax.openstreetmap.fr (images).
+
 ## [0.14.0] — 2026-08-22 — Sur le trajet
 - Section « Sur le trajet » du planificateur : stations-service et bornes de
   recharge le long de l'itinéraire (1, 3 ou 10 km), triées par avancement,

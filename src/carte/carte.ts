@@ -22,6 +22,8 @@ import { PanneauItineraire } from './panneau-itineraire';
 import { PanneauPoi } from './panneau-poi';
 import { PanneauFavoris } from './panneau-favoris';
 import { ajouterFavori } from '../lib/favoris';
+import { VisionneusePhoto } from './visionneuse-photo';
+import { chercherPhotos, plusProche, ErreurPhotos } from '../lib/panoramax';
 import { adresseInverse } from '../lib/adresse';
 import { formaterCoordonnees } from '../lib/coordonnees';
 
@@ -77,6 +79,11 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   portePoi.className = 'maplibregl-ctrl porte-poi';
   portePoi.appendChild(poi);
   carte.addControl({ onAdd: () => portePoi, onRemove: () => portePoi.remove() }, 'top-left');
+
+  /* LA VISIONNEUSE DE PHOTOS — une seule pour l'application, posée au body :
+     une modale doit couvrir la carte, pas vivre dedans. */
+  const visionneuse = new VisionneusePhoto();
+  document.body.appendChild(visionneuse);
 
   /* LES FAVORIS — même colonne, sous les points d'intérêt. */
   const favoris = new PanneauFavoris();
@@ -146,7 +153,9 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
       .setLngLat(ou)
       .setHTML('<div class="popup-adresse"><p class="pa-libelle">Recherche de l’adresse…</p>'
         + '<p class="pa-coords"></p><button type="button" class="pa-copier">Copier les coordonnées</button>'
-        + '<button type="button" class="pa-favori" disabled>Ajouter aux favoris</button></div>')
+        + '<button type="button" class="pa-favori" disabled>Ajouter aux favoris</button>'
+        + '<button type="button" class="pa-photo">Photos de rue</button>'
+        + '<p class="pa-photo-etat" role="status"></p></div>')
       .addTo(carte);
     const bloc = popup.getElement();
     (bloc.querySelector('.pa-coords') as HTMLElement).textContent = coords;
@@ -178,6 +187,34 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     }
     // Quel que soit le sort de la BAN, le nom est arrêté : le bouton s'ouvre.
     bouton.disabled = false;
+
+    /* LES PHOTOS DE RUE ne partent QUE sur demande explicite : une photo
+       coûte du réseau à un commun associatif, et personne n'en veut à chaque
+       appui long. */
+    const boutonPhoto = bloc.querySelector('.pa-photo') as HTMLButtonElement;
+    const etatPhoto = bloc.querySelector('.pa-photo-etat') as HTMLElement;
+    boutonPhoto.addEventListener('click', () => {
+      boutonPhoto.disabled = true;
+      etatPhoto.textContent = 'Recherche d’une photo…';
+      chercherPhotos(point.lon, point.lat).then(
+        (photos) => {
+          const photo = plusProche(photos, point.lon, point.lat);
+          if (!photo) {
+            etatPhoto.textContent = 'Aucune photo de rue à cet endroit.';
+            boutonPhoto.disabled = false;
+            return;
+          }
+          etatPhoto.textContent = '';
+          boutonPhoto.disabled = false;
+          visionneuse.ouvrir(photo);
+        },
+        (e: unknown) => {
+          etatPhoto.textContent = e instanceof ErreurPhotos
+            ? e.message : 'Photos de rue indisponibles pour le moment.';
+          boutonPhoto.disabled = false;
+        },
+      );
+    });
   }
 
   // Poignée de débogage et d'E2E : lire l'état de la carte depuis la console

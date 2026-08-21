@@ -748,6 +748,66 @@ test('FAVORIS : le bouton d’ajout attend que l’adresse soit tranchée', asyn
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
 });
 
+test('PHOTOS DE RUE : à la demande seulement, avec attribution, fermeture au clavier', async ({ page }) => {
+  await page.route('**/api-adresse.data.gouv.fr/reverse/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ features: [{
+      geometry: { coordinates: [2.3364, 48.8611] },
+      properties: { label: 'Rue de Rivoli 75001 Paris', type: 'street', postcode: '75001', city: 'Paris' },
+    }] }),
+  }));
+  let appelsPhotos = 0;
+  await page.route('**/api.panoramax.xyz/**', (route) => {
+    appelsPhotos += 1;
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ features: [{
+      id: 'photo-1',
+      geometry: { type: 'Point', coordinates: [2.3364, 48.8611] },
+      properties: {
+        datetime: '2015-07-30T17:10:04+00:00',
+        license: 'CC-BY-SA-4.0',
+        'geovisio:producer': 'Contributeur OSM',
+      },
+      assets: {
+        sd: { href: 'https://panoramax.openstreetmap.fr/derivates/photo-1/sd.jpg', type: 'image/jpeg' },
+        thumb: { href: 'https://panoramax.openstreetmap.fr/derivates/photo-1/thumb.jpg', type: 'image/jpeg' },
+      },
+    }] }) });
+  });
+  // L'image elle-même est simulée : la CI ne télécharge pas de photo réelle.
+  await page.route('**/panoramax.openstreetmap.fr/**', (route) => route.fulfill({
+    contentType: 'image/png', body: PNG_1PX,
+  }));
+
+  await page.goto('/');
+  const canevas = page.locator('#carte canvas.maplibregl-canvas');
+  await canevas.waitFor({ timeout: 15_000 });
+  const cadre = await canevas.boundingBox();
+  await page.mouse.move(cadre!.x + 640, cadre!.y + 360);
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+  await expect(page.locator('.pa-libelle')).toContainText('Rue de Rivoli', { timeout: 10_000 });
+
+  // RIEN n'est demandé à Panoramax tant qu'on ne le demande pas.
+  expect(appelsPhotos, 'photo demandée sans clic').toBe(0);
+
+  await page.getByRole('button', { name: 'Photos de rue' }).click();
+  const modale = page.getByRole('dialog', { name: 'Photo de rue' });
+  await expect(modale).toBeVisible({ timeout: 10_000 });
+  expect(appelsPhotos).toBe(1);
+  // L'ATTRIBUTION est obligatoire (CC-BY-SA) : producteur, licence, date, source.
+  await expect(page.locator('.photo-legende')).toContainText('Contributeur OSM');
+  await expect(page.locator('.photo-legende')).toContainText('CC-BY-SA-4.0');
+  await expect(page.locator('.photo-legende')).toContainText('juillet 2015');
+  await expect(page.locator('.photo-legende')).toContainText('Panoramax');
+  await expect(page.locator('.photo-image')).toHaveAttribute('src', /panoramax\.openstreetmap\.fr/);
+
+  // Échap ferme, et l'image est libérée.
+  await page.keyboard.press('Escape');
+  await expect(modale).toBeHidden();
+  expect(await page.locator('.photo-image').getAttribute('src')).toBeNull();
+});
+
 test('SUR LE TRAJET : stations trouvées le long de l’itinéraire, appels PLAFONNÉS', async ({ page }) => {
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
     contentType: 'application/json',

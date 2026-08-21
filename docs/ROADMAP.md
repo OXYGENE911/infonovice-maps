@@ -60,7 +60,11 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       d'une rafale de requêtes.
 
 ## Panoramax & météo
-- [ ] PR #12 — Visionneuse Panoramax
+- [x] PR #12 — Photos de rue Panoramax (le commun français d'imagerie de
+      rue) : bouton « Photos de rue » dans la popup d'appui long, visionneuse
+      modale avec attribution CC-BY-SA obligatoire (producteur, licence,
+      date), fermeture à Échap et focus rendu. À LA DEMANDE seulement — aucun
+      appel tant que l'usager ne clique pas.
 - [ ] PR #13 — Météo à destination + vigilances Météo-France en bandeau
 
 ## Transports & trafic
