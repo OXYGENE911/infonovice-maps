@@ -33,7 +33,10 @@ test('SOUVERAINETÉ : seules les origines déclarées sont contactées', async (
   // La contrainte n° 3 du projet, mesurée au navigateur. La liste blanche
   // s'élargit par PR, jamais par accident : data.geopf.fr est arrivée avec
   // la carte (PR #2), api-adresse.data.gouv.fr avec la recherche (PR #4).
-  const AUTORISEES = new Set(['localhost', 'data.geopf.fr', 'api-adresse.data.gouv.fr']);
+  // data.economie.gouv.fr et public.opendatasoft.com sont arrivées avec les
+  // POI (PR #9) — et ne sont contactées QUE couche activée, zoom ≥ 12.
+  const AUTORISEES = new Set(['localhost', 'data.geopf.fr', 'api-adresse.data.gouv.fr',
+    'data.economie.gouv.fr', 'public.opendatasoft.com']);
   const intrus: string[] = [];
   page.on('request', (r) => {
     const h = new URL(r.url()).hostname;
@@ -453,6 +456,80 @@ test('la feuille de route en panne parle français, et se réessaie', async ({ p
   await page.locator('.iti-feuille summary').click();
   await page.locator('.iti-feuille summary').click();
   await expect(page.locator('.feuille-etapes li')).toHaveCount(2, { timeout: 10_000 });
+});
+
+test('les POI se chargent À LA DEMANDE : zoom respecté, prix en popup, choix persisté', async ({ page }) => {
+  let appelsCarbu = 0;
+  await page.route('**/data.economie.gouv.fr/**', (route) => {
+    appelsCarbu += 1;
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      total_count: 2, results: [
+        { geom: { lon: 2.3522, lat: 48.8566 }, adresse: '1 Rue de Rivoli', ville: 'Paris',
+          gazole_prix: 2.25, e10_prix: 1.99 },
+        { geom: { lon: 2.36, lat: 48.86 }, adresse: '2 Avenue X', ville: 'Paris', sp98_prix: 2.05 },
+      ] }) });
+  });
+  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ total_count: 11_950, results: [
+      { point_geo: { lon: 2.355, lat: 48.857 }, nom_station: 'Bercy Village',
+        puissance_nominale: 7, nbre_pdc: 30, gratuit: '1' },
+    ] }),
+  }));
+  await page.route('**/data.geopf.fr/wfs/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ type: 'FeatureCollection', numberMatched: 1, features: [
+      { type: 'Feature', properties: { surfm2: 1327, nomcom: 'Paris' },
+        geometry: { type: 'Polygon', coordinates: [[[2.353, 48.855], [2.354, 48.855], [2.354, 48.856], [2.353, 48.855]]] } },
+    ] }),
+  }));
+
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await page.locator('.poi summary').click();
+  await page.getByRole('checkbox', { name: 'Carburants' }).check();
+  // Au zoom initial (5,4 : la France entière), AUCUN appel — on demande de zoomer.
+  await expect(page.locator('.poi-etat')).toContainText('Zoomez', { timeout: 5_000 });
+  expect(appelsCarbu, 'appel parti sous le zoom minimal').toBe(0);
+
+  // Zoom sur Paris : l'appel part (débounce 500 ms), les points se posent.
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [2.3522, 48.8566], zoom: 13 });
+  });
+  await expect(page.locator('.poi-etat')).toContainText('Carburants : 2', { timeout: 10_000 });
+  expect(appelsCarbu).toBe(1);
+
+  // Clic sur la station : la popup parle français, prix à la virgule.
+  // On attend que le CERCLE SOIT RENDU au pixel visé — l'état textuel arrive
+  // une frame avant le rendu, et un clic trop tôt tombe dans le vide.
+  await expect.poll(() => page.evaluate(() => {
+    const carte = (window as unknown as { __carte: {
+      project(c: [number, number]): { x: number; y: number };
+      queryRenderedFeatures(p: { x: number; y: number }, o: object): unknown[];
+    } }).__carte;
+    return carte.queryRenderedFeatures(carte.project([2.3522, 48.8566]), { layers: ['poi-carburants'] }).length;
+  }), { timeout: 10_000 }).toBeGreaterThan(0);
+  const point = await page.evaluate(() => {
+    const carte = (window as unknown as { __carte: { project(c: [number, number]): { x: number; y: number } } }).__carte;
+    return carte.project([2.3522, 48.8566]);
+  });
+  const canevas = page.locator('#carte canvas.maplibregl-canvas');
+  const cadre = await canevas.boundingBox();
+  await page.mouse.click(cadre!.x + point.x, cadre!.y + point.y);
+  await expect(page.locator('.poi-popup')).toContainText('1 Rue de Rivoli, Paris', { timeout: 5_000 });
+  await expect(page.locator('.poi-popup')).toContainText('2,25 €/L');
+
+  // Les deux autres couches se posent aussi, l'état est honnête (« 1 sur 11 950 »).
+  await page.getByRole('checkbox', { name: 'Bornes électriques' }).check();
+  await page.getByRole('checkbox', { name: 'Parkings' }).check();
+  await expect(page.locator('.poi-etat')).toContainText('Bornes électriques : 1 sur 11 950', { timeout: 10_000 });
+  await expect(page.locator('.poi-etat')).toContainText('Parkings : 1');
+
+  // Le choix survit au rechargement (IndexedDB), et se recharge tout seul.
+  await page.reload();
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await expect(page.getByRole('checkbox', { name: 'Carburants' })).toBeChecked();
 });
 
 test('l’export GPX télécharge un fichier nommé, sans aucune requête', async ({ page }) => {

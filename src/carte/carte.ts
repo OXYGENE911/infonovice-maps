@@ -19,6 +19,7 @@ import { styleCarte, LOCALE_FR, type OptionsStyle } from './style-ign';
 import { SelecteurFonds } from './selecteur-fonds';
 import { RechercheAdresse } from './recherche';
 import { PanneauItineraire } from './panneau-itineraire';
+import { PanneauPoi } from './panneau-poi';
 import { adresseInverse } from '../lib/adresse';
 import { formaterCoordonnees } from '../lib/coordonnees';
 
@@ -66,6 +67,14 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   support.className = 'maplibregl-ctrl porte-fonds';
   support.appendChild(selecteur);
   carte.addControl({ onAdd: () => support, onRemove: () => support.remove() }, 'top-left');
+
+  /* LES POINTS D'INTÉRÊT — sous le sélecteur de fonds, même colonne. */
+  const poi = new PanneauPoi();
+  poi.carte = carte;
+  const portePoi = document.createElement('div');
+  portePoi.className = 'maplibregl-ctrl porte-poi';
+  portePoi.appendChild(poi);
+  carte.addControl({ onAdd: () => portePoi, onRemove: () => portePoi.remove() }, 'top-left');
   appliquerSombre(selecteur.options);
   sombre.addEventListener('change', () => appliquerSombre(selecteur.options));
   carte.addControl(new GeolocateControl({
