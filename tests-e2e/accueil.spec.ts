@@ -764,13 +764,14 @@ test('MÉTÉO : prévision à l’HEURE D’ARRIVÉE, à la demande, écart de s
     // Le service rend des heures LOCALES sans fuseau : on en fabrique une
     // série centrée sur l'heure d'arrivée réelle, calculée dans le test.
     const arrivee = new Date(Date.now() + 4 * 3600 * 1000);
+    // Heures fabriquées EN UTC avec un décalage déclaré à zéro : la fixture
+    // dit la même chose que le vrai service, qui rend toujours son décalage.
     const heure = (decalage: number) => {
       const d = new Date(arrivee.getTime() + decalage * 3600 * 1000);
-      d.setMinutes(0, 0, 0);
       const p = (n: number) => String(n).padStart(2, '0');
-      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:00`;
+      return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:00`;
     };
-    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ hourly: {
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ utc_offset_seconds: 0, hourly: {
       time: [heure(-2), heure(0), heure(2)],
       temperature_2m: [12.1, 23.8, 15.5],
       precipitation: [0, 1.8, 0],
@@ -791,7 +792,9 @@ test('MÉTÉO : prévision à l’HEURE D’ARRIVÉE, à la demande, écart de s
   await expect(page.locator('.meteo-ligne')).toContainText('vent 32 km/h');
   // C'est bien l'heure d'ARRIVÉE (maintenant + 4 h) qui est annoncée.
   const dans4h = new Date(Date.now() + 4 * 3600 * 1000);
-  await expect(page.locator('.meteo-ligne')).toContainText(`Arrivée vers ${dans4h.getHours()} h`);
+  // Le décalage déclaré vaut 0 : l'heure « locale au lieu » est donc UTC.
+  await expect(page.locator('.meteo-ligne')).toContainText(`${dans4h.getUTCHours()} h`);
+  await expect(page.locator('.meteo-ligne')).toContainText('heure locale');
   expect(appelsMeteo).toBe(1);
 
   // La prévision est demandée pour l'ARRIVÉE, pas pour le départ.
@@ -803,11 +806,90 @@ test('MÉTÉO : prévision à l’HEURE D’ARRIVÉE, à la demande, écart de s
   await expect(page.locator('.meteo-source')).toContainText('Open-Meteo');
   await expect(page.locator('.meteo-source')).toContainText('européen');
 
-  // …et la page « À propos » l'explique noir sur blanc.
+  // …et les pages publiques le disent AUSSI, sans se contredire.
   await page.goto('/a-propos.html');
   await expect(page.locator('.page-corps')).toContainText('L’exception : la météo');
   await expect(page.locator('.page-corps')).toContainText('Open-Meteo, un service européen (allemand)');
   await expect(page.locator('.page-corps')).toContainText('seules les coordonnées de votre');
+  // Le chapô ne promet plus « rien d'autre » que le français.
+  await expect(page.locator('.page-chapo')).toContainText('à une exception près');
+  await page.goto('/mentions-legales.html');
+  await expect(page.locator('.page-corps')).toContainText('Open-Meteo, service européen');
+});
+
+test('MÉTÉO : une arrivée hors horizon ne se déguise PAS en prévision', async ({ page }) => {
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 465_000, duration: 6 * 24 * 3600, // six jours à pied
+    }),
+  }));
+  await page.route('**/api.open-meteo.com/**', (route) => {
+    // Le service ne prévoit que trois jours : la dernière case est très loin
+    // de l'arrivée. Elle ne doit surtout pas être présentée comme le bulletin.
+    const base = new Date();
+    const case_ = (h: number) => {
+      const d = new Date(base.getTime() + h * 3600 * 1000);
+      const p = (n: number) => String(n).padStart(2, '0');
+      return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:00`;
+    };
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      utc_offset_seconds: 0,
+      hourly: {
+        time: [case_(0), case_(24), case_(48)],
+        temperature_2m: [20, 21, 22], precipitation: [0, 0, 0],
+        weather_code: [0, 0, 0], wind_speed_10m: [5, 5, 5],
+      },
+    }) });
+  });
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
+  await page.locator('.iti-meteo summary').click();
+  await expect(page.locator('.iti-meteo-corps')).toContainText('trop lointaine', { timeout: 15_000 });
+  await expect(page.locator('.meteo-ligne')).toHaveCount(0);
+});
+
+test('MÉTÉO : le bulletin se REJOUE quand l’horloge a tourné', async ({ page }) => {
+  await page.clock.install();
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 465_000, duration: 3600,
+    }),
+  }));
+  let appels = 0;
+  await page.route('**/api.open-meteo.com/**', (route) => {
+    appels += 1;
+    const d = new Date(Date.now() + 3600 * 1000);
+    const p = (n: number) => String(n).padStart(2, '0');
+    const heure = `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:00`;
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      utc_offset_seconds: 0,
+      hourly: { time: [heure], temperature_2m: [20], precipitation: [0], weather_code: [0], wind_speed_10m: [5] },
+    }) });
+  });
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
+  await page.locator('.iti-meteo summary').click();
+  await expect(page.locator('.meteo-ligne')).toBeVisible({ timeout: 15_000 });
+  expect(appels).toBe(1);
+
+  // Refermer/rouvrir tout de suite : inutile de redemander.
+  await page.locator('.iti-meteo summary').click();
+  await page.locator('.iti-meteo summary').click();
+  await page.waitForTimeout(400);
+  expect(appels, 'redemandé alors que rien n’a changé').toBe(1);
+
+  // MAIS si l'horloge tourne pour de bon, rouvrir doit REJOUER — sinon on
+  // afficherait une arrivée déjà passée. L'horloge simulée de Playwright
+  // avance le temps DU NAVIGATEUR, ce qu'une redéfinition de Date.now ne fait
+  // pas (new Date() lit l'horloge système, pas Date.now).
+  await page.locator('.iti-meteo summary').click();
+  await page.clock.fastForward('20:00');
+  await page.locator('.iti-meteo summary').click();
+  await expect.poll(() => appels, { timeout: 15_000 }).toBe(2);
 });
 
 test('PHOTOS DE RUE : à la demande seulement, avec attribution, fermeture au clavier', async ({ page }) => {

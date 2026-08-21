@@ -17,7 +17,13 @@ bibliothèque interne `/src/lib/` réutilisable — pas de backend.
 1. Coût de production : 0 €. Aucun service payant, aucun backend, aucune BDD serveur.
 2. Hébergement : GitHub Pages (repo public) + CNAME maps.infonovice.fr.
    Build et CI exclusivement via GitHub Actions (tier gratuit).
-3. Souveraineté : uniquement des API publiques françaises ou de l'open data
+3. Souveraineté : API publiques françaises ou open data français par défaut.
+   UNE dérogation existe, décidée par Armelin le 22/08/2026 et écrite sur la
+   page publique « À propos » : les prévisions météo viennent d'Open-Meteo
+   (européen), aucune source française n'étant utilisable sans clé au
+   navigateur (huit testées, preuves dans docs/apis.md). Toute autre
+   dérogation demande la même chose : une décision explicite ET une mention
+   publique. Le reste : uniquement des API publiques françaises ou de l'open data
    français. INTERDITS : Google (Maps, Fonts, Analytics), AWS, Azure CDN,
    tout tracker tiers, tout cookie non essentiel.
 4. RGPD by design : aucune donnée utilisateur ne quitte le navigateur.

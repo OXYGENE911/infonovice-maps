@@ -19,7 +19,7 @@ const DELAI_MS = 8000;
 export class ErreurMeteo extends Error {}
 
 export interface Meteo {
-  /** Heure visée, ISO locale du lieu (ex. « 2026-08-22T14:00 »). */
+  /** Heure retenue, ISO locale du lieu (ex. « 2026-08-22T14:00 »). */
   heure: string;
   temperature: number;
   /** Précipitations en mm sur l'heure. */
@@ -27,7 +27,17 @@ export interface Meteo {
   ventKmh: number;
   /** Code temps OMM (WMO 4677 simplifié par Open-Meteo). */
   code: number;
+  /** Décalage du LIEU par rapport à UTC, en secondes (fourni par le service). */
+  decalageLieu: number;
+  /** Écart entre l'heure retenue et l'heure demandée, en minutes.
+      Au-delà de l'horizon de prévision, il devient énorme : l'appelant DOIT
+      le regarder plutôt que d'afficher un bulletin trompeur. */
+  ecartMinutes: number;
 }
+
+/** Au-delà, la case trouvée ne décrit plus l'arrivée : mieux vaut le dire
+    que de servir un bulletin faux (revue du 22/08). */
+export const ECART_MAX_MINUTES = 90;
 
 /** URL de prévision — PURE, testée à sec. */
 export function urlMeteo(lon: number, lat: number): string {
@@ -94,6 +104,7 @@ export function symboleTemps(code: number): string {
 }
 
 interface ReponseMeteo {
+  utc_offset_seconds?: unknown;
   hourly?: {
     time?: unknown;
     temperature_2m?: unknown;
@@ -103,38 +114,46 @@ interface ReponseMeteo {
   };
 }
 
-/** Choisit l'heure la plus proche de `vise` dans la réponse — PURE.
-    `vise` est un horodatage local « YYYY-MM-DDTHH » (le service rend ses
-    heures dans le fuseau du LIEU, ce que demande `timezone=auto`). */
+/** Choisit l'heure la plus proche de l'instant `vise` — PURE.
+    LE PIÈGE DES FUSEAUX, ET SA PARADE. `timezone=auto` fait rendre au service
+    des heures LOCALES AU LIEU et sans décalage (« 2026-08-22T14:00 ») ; les
+    lire avec `new Date(...)` les interprète dans le fuseau du NAVIGATEUR.
+    Tant que l'usager est en France pour un trajet en France, cela coïncide —
+    et ment dès que les deux diffèrent (depuis La Réunion, deux heures
+    d'écart ; depuis Nouméa, neuf — soit la nuit pour une arrivée en plein
+    jour). La réponse porte `utc_offset_seconds` : on s'en sert pour ramener
+    chaque case à un INSTANT ABSOLU, seule grandeur comparable (revue 22/08). */
 export function versMeteo(brut: unknown, vise: Date): Meteo {
-  const h = (brut as ReponseMeteo)?.hourly;
+  const r = brut as ReponseMeteo;
+  const h = r?.hourly;
   const temps = h?.time;
   if (!Array.isArray(temps) || temps.length === 0) {
     throw new ErreurMeteo('Le service météo n’a pas rendu de prévision exploitable.');
   }
+  const decalageLieu = Number.isFinite(Number(r?.utc_offset_seconds))
+    ? Number(r.utc_offset_seconds) : 0;
   const nombres = (v: unknown): number[] => (Array.isArray(v) ? v.map(Number) : []);
   const t = nombres(h?.temperature_2m);
   const p = nombres(h?.precipitation);
   const c = nombres(h?.weather_code);
   const w = nombres(h?.wind_speed_10m);
 
-  // Les heures du service sont SANS fuseau (« 2026-08-22T14:00 ») et déjà
-  // exprimées dans le fuseau du lieu ; la cible est convertie de la même
-  // façon pour que la comparaison ait un sens.
   const cible = vise.getTime();
-  let choisi = 0;
+  let choisi = -1;
   let ecart = Infinity;
   for (let i = 0; i < temps.length; i += 1) {
     const brute = temps[i];
     if (typeof brute !== 'string') continue;
-    const quand = new Date(brute).getTime();
+    // « 2026-08-22T14:00 » + « Z » se lit en UTC ; retrancher le décalage du
+    // lieu rend l'instant absolu où il est 14 h LÀ-BAS.
+    const quand = Date.parse(`${brute}Z`) - decalageLieu * 1000;
     if (Number.isNaN(quand)) continue;
     const d = Math.abs(quand - cible);
     if (d < ecart) { ecart = d; choisi = i; }
   }
   const temperature = t[choisi];
   const code = c[choisi];
-  if (!Number.isFinite(temperature) || !Number.isFinite(code)) {
+  if (choisi < 0 || !Number.isFinite(temperature) || !Number.isFinite(code)) {
     throw new ErreurMeteo('Le service météo n’a pas rendu de prévision exploitable.');
   }
   return {
@@ -143,6 +162,8 @@ export function versMeteo(brut: unknown, vise: Date): Meteo {
     pluie: Number.isFinite(p[choisi]) ? (p[choisi] as number) : 0,
     ventKmh: Number.isFinite(w[choisi]) ? (w[choisi] as number) : 0,
     code: code as number,
+    decalageLieu,
+    ecartMinutes: Math.round(ecart / 60_000),
   };
 }
 
@@ -162,9 +183,29 @@ export function heureArrivee(dureeSecondes: number, maintenant: Date): Date {
   return new Date(maintenant.getTime() + dureeSecondes * 1000);
 }
 
-/** Formate une heure d'arrivée en français : « à 14 h 30 » — PURE. */
-export function formaterHeure(d: Date): string {
-  return `${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}`;
+const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+
+/** L'heure d'arrivée DANS LE FUSEAU DU LIEU, avec le jour quand l'arrivée
+    n'est pas pour aujourd'hui — PURE. « 14 h 05 » lu à midi laisse croire
+    « dans deux heures » même quand l'arrivée est le lendemain (trajet à
+    pied), et l'horloge du navigateur n'est pas celle de la destination
+    (revue du 22/08). `decalageLieu` en secondes, `maintenant` sert à savoir
+    si l'on change de jour LÀ-BAS. */
+export function formaterHeure(arrivee: Date, decalageLieu = 0, maintenant?: Date): string {
+  // Décaler l'instant puis lire en UTC = lire l'heure telle qu'elle est au lieu.
+  const laBas = new Date(arrivee.getTime() + decalageLieu * 1000);
+  const heure = `${laBas.getUTCHours()} h ${String(laBas.getUTCMinutes()).padStart(2, '0')}`;
+  if (!maintenant) return heure;
+  const iciLaBas = new Date(maintenant.getTime() + decalageLieu * 1000);
+  const jours = Math.round(
+    (Date.UTC(laBas.getUTCFullYear(), laBas.getUTCMonth(), laBas.getUTCDate())
+      - Date.UTC(iciLaBas.getUTCFullYear(), iciLaBas.getUTCMonth(), iciLaBas.getUTCDate()))
+    / 86_400_000,
+  );
+  if (jours <= 0) return heure;
+  if (jours === 1) return `demain ${heure}`;
+  if (jours < 7) return `${JOURS[laBas.getUTCDay()]} ${heure}`;
+  return `dans ${jours} jours, ${heure}`;
 }
 
 export async function meteoA(

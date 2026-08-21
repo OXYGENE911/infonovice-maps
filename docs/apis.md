@@ -101,7 +101,7 @@ Ces quotas sont un bien commun : debounce, cache, jamais de martèlement.
 ## Sources météo françaises testées et écartées (22/08/2026)
 
 Aucune source météo ne satisfait les trois contraintes du projet à la fois
-(publique française · sans clé exposée · CORS pour le navigateur). Sept pistes
+(publique française · sans clé exposée · CORS pour le navigateur). Huit pistes
 testées par appels réels :
 
 | Piste | Verdict |
