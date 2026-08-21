@@ -2,6 +2,13 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.13.0] — 2026-08-22 — Référencement
+- sitemap.xml, robots.txt, balises Open Graph et données structurées
+  schema.org sur les quatre pages ; image de partage 1200x630 générée par
+  script (l'encodeur PNG maison est désormais partagé avec les icônes).
+- Un test unitaire tient le sitemap honnête : il échoue si une page du dépôt
+  en est absente, ou s'il déclare une page qui n'existe pas.
+
 ## [0.12.0] — 2026-08-22 — Pages vitrine
 - Trois pages de texte : À propos, Vie privée, Mentions légales — vraies
   pages HTML, lisibles sans JavaScript, sans script ni origine tierce.

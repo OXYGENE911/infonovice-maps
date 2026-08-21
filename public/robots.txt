@@ -1,0 +1,5 @@
+# Infonovice Maps — tout est public, rien n'est à cacher.
+User-agent: *
+Allow: /
+
+Sitemap: https://maps.infonovice.fr/sitemap.xml

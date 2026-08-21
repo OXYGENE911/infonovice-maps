@@ -794,6 +794,28 @@ test('VITRINE : les pages de texte s’ouvrent depuis la carte, SANS JavaScript'
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
 });
 
+test('RÉFÉRENCEMENT : sitemap, robots et image de partage sont réellement servis', async ({ page }) => {
+  // Les tests unitaires vérifient le CONTENU de ces fichiers ; ici on prouve
+  // qu'ils sortent bien du build et arrivent au bon type MIME — un fichier
+  // parfait qui n'est pas publié ne référence rien.
+  const sitemap = await page.request.get('/sitemap.xml');
+  expect(sitemap.status()).toBe(200);
+  expect(sitemap.headers()['content-type']).toContain('xml');
+  expect(await sitemap.text()).toContain('https://maps.infonovice.fr/a-propos.html');
+
+  const robots = await page.request.get('/robots.txt');
+  expect(robots.status()).toBe(200);
+  expect(await robots.text()).toContain('Sitemap: https://maps.infonovice.fr/sitemap.xml');
+
+  const image = await page.request.get('/partage-social.png');
+  expect(image.status()).toBe(200);
+  expect(image.headers()['content-type']).toContain('image/png');
+  // 1200 × 630 : les dimensions vivent dans l'en-tête IHDR du PNG.
+  const octets = await image.body();
+  expect(octets.readUInt32BE(16)).toBe(1200);
+  expect(octets.readUInt32BE(20)).toBe(630);
+});
+
 test('l’export GPX télécharge un fichier nommé, sans aucune requête', async ({ page }) => {
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
     contentType: 'application/json',

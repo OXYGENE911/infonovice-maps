@@ -77,7 +77,11 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       cookie). L'accueil marchand séparé n'est pas retenu : la carte EST
       l'accueil.
 - [ ] PR #20 — Page « Offre flottes B2B » + formulaire de contact
-- [ ] PR #21 — SEO : sitemap, meta OG, schema.org
+- [x] PR #21 — Référencement : sitemap.xml, robots.txt, Open Graph et
+      JSON-LD (WebApplication / AboutPage) sur les quatre pages, image de
+      partage 1200x630 GÉNÉRÉE par script (aucun binaire opaque au dépôt).
+      Un test unitaire compare le sitemap aux pages réelles : une page qui
+      naît hors du sitemap ou sans canonical fait échouer la CI.
 
 ## Itérations suivantes (backlog ouvert)
 - PR #22+ — Signalements communautaires (premier backend, hors périmètre 0 €),
