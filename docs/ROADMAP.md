@@ -65,7 +65,19 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       modale avec attribution CC-BY-SA obligatoire (producteur, licence,
       date), fermeture à Échap et focus rendu. À LA DEMANDE seulement — aucun
       appel tant que l'usager ne clique pas.
-- [ ] PR #13 — Météo à destination + vigilances Météo-France en bandeau
+- [~] PR #13 — Météo à destination + vigilances : **BLOQUÉE, décision
+      attendue**. Aucune source ne réunit « publique française + sans clé
+      exposée + CORS » — sept pistes testées avec preuves (docs/apis.md).
+      Trois issues, au choix d'Armelin :
+      1. **Relais Cloudflare Worker** (il en exploite déjà) : la clé
+         Météo-France reste côté serveur, coût 0 €, mais le projet cesse
+         d'être « sans aucun backend » ;
+      2. **Source européenne non française** (type Open-Meteo : gratuite,
+         sans clé, CORS) : faisable tout de suite, mais contredit la
+         promesse de souveraineté affichée sur la page « À propos » — il
+         faudrait l'y écrire honnêtement ;
+      3. **Renoncer** à la météo tant qu'une donnée publique française
+         exploitable au navigateur n'existe pas.
 
 ## Transports & trafic
 - [ ] PR #14 — Couche info trafic / travaux (open data)

@@ -87,6 +87,31 @@ Ces quotas sont un bien commun : debounce, cache, jamais de martèlement.
 - Licence des photos : CC-BY-SA-4.0 → l'attribution (producteur, licence,
   date) est une OBLIGATION, affichée sous l'image.
 
+## Météo — ÉCART DOCUMENTÉ (vérifié 22/08/2026, PR #13 bloquée)
+
+Aucune source météo ne satisfait les trois contraintes du projet à la fois
+(publique française · sans clé exposée · CORS pour le navigateur). Sept pistes
+testées par appels réels :
+
+| Piste | Verdict |
+|---|---|
+| `public-api.meteofrance.fr` (API officielle) | **clé obligatoire** — sans elle, page HTML du portail |
+| `donneespubliques.meteofrance.fr` | page HTML, **aucun en-tête CORS** |
+| `meteo.data.gouv.fr` | portail web, pas d'API JSON avec CORS |
+| data.gouv.fr, jeux Météo-France (122) | seul jeu vigilance = **archivé** (historique, pas temps réel) |
+| Modèles ARPEGE / AROME | GRIB de plusieurs centaines de Mo + clé — inexploitable au navigateur |
+| Miroir SYNOP `public.opendatasoft.com` | CORS OK mais **figé au 15/01/2026** (7 mois de retard) |
+| Géoplateforme (WMTS/WFS) | **aucune couche météo** |
+| infoclimat | HTTP 400 sans authentification |
+
+Une clé Météo-France ne suffirait pas : sans backend, elle vivrait en clair
+dans le JavaScript public. Trois issues possibles, toutes des DÉCISIONS
+d'Armelin (voir ROADMAP PR #13) — aucune n'est prise unilatéralement.
+
+ENDPOINTS INTERNES ÉCARTÉS PAR PRINCIPE : le site vigilance.meteofrance.fr
+consomme des endpoints non documentés (`rpcache-*.meteofrance.com`). Les
+utiliser serait fragile et hors des conditions d'usage : la règle du projet
+est « API publiques documentées », elle ne se contourne pas.
+
 ## À vérifier avant leur PR (ne pas présumer)
-- Météo-France open data (PR #13)
 - transport.data.gouv.fr GTFS/GTFS-RT (PR #15-16)
