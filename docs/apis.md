@@ -61,9 +61,22 @@ Ces quotas sont un bien commun : debounce, cache, jamais de martèlement.
   BD TOPO (« R DE RIVOLI »), `cpx_numero` pour les routes numérotées (« A6 »),
   `cpx_toponyme` en repli. Chaque étape porte `distance`, `duration`, `geometry`.
 
+## Points d'intérêt (vérifiés 21-22/08/2026)
+- CARBURANTS : `data.economie.gouv.fr/api/explore/v2.1/.../prix-des-carburants-en-france-flux-instantane-v2/records`
+  + `where=in_bbox(geom,latS,lonO,latN,lonE)` (CET ORDRE) — prix du jour par
+  carburant (`gazole_prix`…), `geom {lon,lat}` propre, CORS *. Plafond DUR
+  `limit=100` (tout portail Opendatasoft).
+- BORNES IRVE : `public.opendatasoft.com/.../mobilityref-france-irve-220/records`
+  + `in_bbox(point_geo,…)` — republication à jour (18/08) du consolidé Etalab.
+  ÉCARTÉ avec preuve : le jeu `bornes-irve` d'ODRE (figé 2019-09, lon/lat
+  INVERSÉS sur tout le jeu — bbox inversée : 12 129 résultats, normale : 0).
+  Attention : `coordonneesxy` y est du TEXTE, le champ géo est `point_geo`.
+- PARKINGS : WFS Géoplateforme `data.geopf.fr/wfs/ows`, couche
+  `PARKING.SUP.500:parkings_sup500m2` (> 500 m²), GetFeature GeoJSON,
+  `BBOX=latS,lonO,latN,lonE,urn:ogc:def:crs:EPSG::4326`, MultiPolygones avec
+  `surfm2`/`nomcom`. Même origine que nos tuiles.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Panoramax `https://api.panoramax.xyz` (PR #12)
 - Météo-France open data (PR #13)
 - transport.data.gouv.fr GTFS/GTFS-RT (PR #15-16)
-- prix-carburants.gouv.fr + IRVE (PR #9)
-- Overpass API + usage policy (PR #9)

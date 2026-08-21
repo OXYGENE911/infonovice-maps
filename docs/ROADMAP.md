@@ -42,7 +42,11 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       d'autre sur la page — chargée à la demande, un appel par itinéraire
 
 ## POI & profil local
-- [ ] PR #9 — Couches POI : carburants (avec prix), bornes IRVE, parkings
+- [x] PR #9 — Couches POI : carburants (prix du jour), bornes IRVE
+      (consolidé Etalab via public.opendatasoft.com — ODRE écarté avec preuve :
+      figé 2019, coordonnées inversées), parkings > 500 m² (WFS Géoplateforme).
+      Chargement à la demande, zoom ≥ 12, appel précédent annulé, plafond des
+      portails affiché honnêtement (« 100 sur N »)
 - [ ] PR #10 — Favoris et listes de POI en IndexedDB + export/import JSON +
       page « Vos données ne quittent jamais ce navigateur »
 - [ ] PR #11 — Recherche le long de l'itinéraire

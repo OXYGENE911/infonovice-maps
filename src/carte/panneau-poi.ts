@@ -150,7 +150,8 @@ export class PanneauPoi extends HTMLElement {
       if (total === undefined) continue;
       const montres = couche === 'carburants' ? this.#carburants.length
         : couche === 'bornes' ? this.#bornes.length : this.#parkings.features.length;
-      bouts.push(`${COUCHES[couche]} : ${montres < total ? `${montres} sur ${total}` : montres}`);
+      const fr = (n: number): string => n.toLocaleString('fr-FR');
+      bouts.push(`${COUCHES[couche]} : ${montres < total ? `${fr(montres)} sur ${fr(total)}` : fr(montres)}`);
     }
     p.textContent = bouts.join(' · ');
   }

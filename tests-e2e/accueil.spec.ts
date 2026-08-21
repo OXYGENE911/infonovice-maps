@@ -529,6 +529,7 @@ test('les POI se chargent À LA DEMANDE : zoom respecté, prix en popup, choix p
   // Le choix survit au rechargement (IndexedDB), et se recharge tout seul.
   await page.reload();
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await page.locator('.poi summary').click();
   await expect(page.getByRole('checkbox', { name: 'Carburants' })).toBeChecked();
 });
 
