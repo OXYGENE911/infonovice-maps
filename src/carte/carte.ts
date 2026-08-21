@@ -1,8 +1,20 @@
 // Création de la carte : plein écran, fond Plan IGN, contrôles localisés.
 // Tout ce qui est TESTABLE hors navigateur vit dans style-ign.ts ; ce module
 // ne fait que l'assemblage MapLibre.
-import { Map as CarteMapLibre, NavigationControl, GeolocateControl, ScaleControl, Marker, Popup } from 'maplibre-gl';
+import { Map as CarteMapLibre, NavigationControl, GeolocateControl, ScaleControl, Marker, Popup, setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+// LE WORKER DE MAPLIBRE DOIT ÊTRE ÉMIS PAR LE BUILD. MapLibre 6 le charge en
+// module séparé, résolu PAR DÉFAUT relativement à son propre fichier — dans
+// notre bundle, cela donnait /assets/maplibre-gl-worker.mjs… jamais émis :
+// 404 silencieux, et AUCUNE couche GeoJSON (tracé d'itinéraire compris) n'a
+// été rendue de v0.5.0 à v0.9.0, en production aussi. Marqueurs DOM et résumé
+// masquaient l'absence, et aucun test ne vérifiait les PIXELS (corrigé : le
+// parcours E2E interroge désormais queryRenderedFeatures). `?worker&url`
+// demande à Vite d'empaqueter le worker AVEC ses imports et d'en émettre
+// l'URL ; setWorkerUrl est l'API MapLibre prévue pour la lui donner.
+import lienWorkerMaplibre from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+
+setWorkerUrl(lienWorkerMaplibre);
 import { styleCarte, LOCALE_FR, type OptionsStyle } from './style-ign';
 import { SelecteurFonds } from './selecteur-fonds';
 import { RechercheAdresse } from './recherche';

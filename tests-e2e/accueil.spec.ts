@@ -141,6 +141,14 @@ test('l’itinéraire A→B se calcule, se trace, et SURVIT au changement de fon
   await expect(page.locator('.iti-resultat')).toContainText('4 h 18');
   // Le tracé et ses deux marqueurs sont posés.
   await expect(page.locator('.maplibregl-marker')).toHaveCount(2);
+  // LE TRAIT EST RÉELLEMENT RENDU — au niveau des PIXELS. De v0.5.0 à v0.9.0,
+  // le worker MapLibre manquait au build (404 silencieux) : aucune couche
+  // GeoJSON ne se dessinait, en production non plus, et cette suite n'y voyait
+  // rien parce qu'elle ne vérifiait que la source et les marqueurs DOM.
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __carte: { queryRenderedFeatures(o: object): unknown[] } })
+      .__carte.queryRenderedFeatures({ layers: ['itineraire-trait'] }).length,
+  ), { timeout: 15_000 }).toBeGreaterThan(0);
 
   // LE CHANGEMENT DE FOND NE MANGE PAS LE TRAJET : setStyle détruit les
   // sources ; le panneau doit reposer le tracé sur style.load.
@@ -151,6 +159,11 @@ test('l’itinéraire A→B se calcule, se trace, et SURVIT au changement de fon
     Boolean((window as unknown as { __carte?: { getSource(n: string): unknown } })
       .__carte?.getSource('itineraire')));
   expect(traitPresent, 'le tracé a disparu au changement de fond').toBe(true);
+  // Et il se REDESSINE vraiment sur le nouveau fond, pixels à l'appui.
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __carte: { queryRenderedFeatures(o: object): unknown[] } })
+      .__carte.queryRenderedFeatures({ layers: ['itineraire-trait'] }).length,
+  ), { timeout: 15_000 }).toBeGreaterThan(0);
 });
 
 test('un lien d’itinéraire partagé rejoue le trajet à l’ouverture — sans serveur', async ({ page }) => {
