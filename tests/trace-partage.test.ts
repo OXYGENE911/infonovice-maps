@@ -48,4 +48,45 @@ describe('partage par URL', () => {
       expect(depuisFragment(f), f).toBeNull();
     }
   });
+
+  it('porte les étapes intermédiaires et les évitements — aller-retour exact', () => {
+    const relu = depuisFragment(versFragment({
+      ...P,
+      etapes: [{ lon: 5.0415, lat: 47.322 }],
+      eviter: ['autoroute', 'tunnel'],
+    }));
+    expect(relu).not.toBeNull();
+    expect(relu?.etapes).toHaveLength(1);
+    expect(relu?.etapes[0]?.lon).toBeCloseTo(5.0415, 5);
+    expect(relu?.eviter).toEqual(['autoroute', 'tunnel']);
+    expect(relu?.depart.lon).toBeCloseTo(2.3522, 5);
+    expect(relu?.arrivee.lat).toBeCloseTo(45.764, 5);
+  });
+
+  it('l’ancienne forme à deux points reste lisible : étapes et évitements vides', () => {
+    const relu = depuisFragment('#iti=2.35220,48.85660;4.83570,45.76400;car');
+    expect(relu?.etapes).toEqual([]);
+    expect(relu?.eviter).toEqual([]);
+  });
+
+  it('un évitement inconnu ou une étape hors du globe invalident TOUT le fragment', () => {
+    expect(depuisFragment('#iti=2,48;5,45;car;evite=peages')).toBeNull();
+    expect(depuisFragment('#iti=2,48;5,45;car;evite=autoroute|nid-de-poule')).toBeNull();
+    expect(depuisFragment('#iti=2,48;200,95;5,45;car')).toBeNull();
+    expect(depuisFragment('#iti=2,48;car')).toBeNull();
+  });
+
+  it('les clés héritées d’Object ne passent pas la validation (hasOwn, pas `in`)', () => {
+    // `in` remonte la chaîne de prototypes : `evite=constructor` passait.
+    expect(depuisFragment('#iti=2,48;5,45;car;evite=constructor')).toBeNull();
+  });
+
+  it('la borne d’étapes du lien est celle de l’interface : 6 passent, 7 invalident', () => {
+    const etape = (i: number) => `${(3 + i / 10).toFixed(5)},46.00000`;
+    const six = [...Array(6)].map((_, i) => etape(i)).join(';');
+    const relu = depuisFragment(`#iti=2.35220,48.85660;${six};4.83570,45.76400;car`);
+    expect(relu?.etapes).toHaveLength(6);
+    const sept = [...Array(7)].map((_, i) => etape(i)).join(';');
+    expect(depuisFragment(`#iti=2.35220,48.85660;${sept};4.83570,45.76400;car`)).toBeNull();
+  });
 });

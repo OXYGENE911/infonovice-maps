@@ -7,9 +7,8 @@
 // numéros de routes dans `cpx_numero` (« A6 »). Résilience : timeout 8 s,
 // une reprise, erreurs en français (règles du projet).
 import type { PointGeo } from './coordonnees';
-import type { Profil } from './itineraire';
+import { urlItineraire, type Profil, type OptionsItineraire } from './itineraire';
 
-const SERVICE = 'https://data.geopf.fr/navigation/itineraire';
 const DELAI_MS = 8000;
 
 export class ErreurFeuille extends Error {}
@@ -138,11 +137,11 @@ export function versEtapes(brut: unknown): EtapeRoute[] {
 }
 
 export async function etapesItineraire(
-  depart: PointGeo, arrivee: PointGeo, profil: Profil,
+  depart: PointGeo, arrivee: PointGeo, profil: Profil, options: OptionsItineraire = {},
 ): Promise<EtapeRoute[]> {
-  const url = `${SERVICE}?resource=bdtopo-osrm&profile=${profil}&optimization=fastest`
-    + `&start=${depart.lon},${depart.lat}&end=${arrivee.lon},${arrivee.lat}`
-    + '&geometryFormat=geojson&getSteps=true&waysAttributes=name';
+  // La MÊME construction d'URL que le calcul d'itinéraire (options comprises) :
+  // la feuille décrit le trajet demandé, pas une variante sans contraintes.
+  const url = urlItineraire(depart, arrivee, profil, options, true);
   let derniere: unknown;
   for (let essai = 0; essai < 2; essai += 1) {
     try {

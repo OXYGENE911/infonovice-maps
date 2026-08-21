@@ -1,6 +1,6 @@
 // Le calcul d'itinéraire : transformation pure, formats français, résilience.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { versItineraire, calculerItineraire, formaterDistance, formaterDuree, ErreurItineraire } from '../src/lib/itineraire';
+import { versItineraire, calculerItineraire, formaterDistance, formaterDuree, ErreurItineraire, urlItineraire } from '../src/lib/itineraire';
 
 const REPONSE = {
   geometry: { type: 'LineString', coordinates: [[2.33, 48.85], [2.35, 48.86]] },
@@ -60,5 +60,40 @@ describe('calculerItineraire', () => {
     expect(url).toContain('profile=pedestrian');
     expect(url).toContain('start=2.33,48.85');
     expect(url).toContain('geometryFormat=geojson');
+  });
+});
+
+describe('urlItineraire', () => {
+  const A = { lon: 2.3522, lat: 48.8566 };
+  const B = { lon: 4.8357, lat: 45.764 };
+
+  it('sans options : la même URL qu’avant la PR #6 — aucune régression', () => {
+    const u = urlItineraire(A, B, 'car');
+    expect(u).toContain('resource=bdtopo-osrm');
+    expect(u).toContain('start=2.3522,48.8566');
+    expect(u).toContain('end=4.8357,45.764');
+    expect(u).not.toContain('intermediates');
+    expect(u).not.toContain('constraints');
+    expect(u).not.toContain('getSteps');
+  });
+
+  it('étapes intermédiaires jointes par |, dans l’ordre du trajet', () => {
+    const u = urlItineraire(A, B, 'car', { etapes: [{ lon: 5.0415, lat: 47.322 }, { lon: 4.0, lat: 46.0 }] });
+    expect(u).toContain('intermediates=5.0415,47.322|4,46');
+  });
+
+  it('contraintes en JSON banni waytype, jointes par | et encodées (vérifié 21/08 : le paramètre répété rend 500)', () => {
+    const u = urlItineraire(A, B, 'car', { eviter: ['autoroute', 'tunnel'] });
+    const brut = decodeURIComponent(u.split('constraints=')[1]!);
+    expect(brut).toBe('{"constraintType":"banned","key":"waytype","operator":"=","value":"autoroute"}'
+      + '|{"constraintType":"banned","key":"waytype","operator":"=","value":"tunnel"}');
+    expect(u.split('constraints=')).toHaveLength(2);
+  });
+
+  it('la forme feuille de route ajoute getSteps et waysAttributes', () => {
+    const u = urlItineraire(A, B, 'pedestrian', {}, true);
+    expect(u).toContain('profile=pedestrian');
+    expect(u).toContain('getSteps=true');
+    expect(u).toContain('waysAttributes=name');
   });
 });

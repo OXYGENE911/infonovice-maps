@@ -9,7 +9,8 @@
 import type { Map as CarteMapLibre, GeoJSONSource } from 'maplibre-gl';
 import { Marker } from 'maplibre-gl';
 import { RechercheAdresse } from './recherche';
-import { calculerItineraire, formaterDistance, formaterDuree, PROFILS, ErreurItineraire, type Profil, type Itineraire } from '../lib/itineraire';
+import { EtapesItineraire } from './etapes-itineraire';
+import { calculerItineraire, formaterDistance, formaterDuree, PROFILS, EVITEMENTS, ErreurItineraire, type Profil, type Itineraire, type Eviter } from '../lib/itineraire';
 import type { PointGeo } from '../lib/coordonnees';
 import type { ResultatAdresse } from '../lib/adresse';
 import { versGPX, versKML, telecharger } from '../lib/trace';
@@ -24,10 +25,17 @@ export class PanneauItineraire extends HTMLElement {
   #depart: PointGeo | null = null;
   #arrivee: PointGeo | null = null;
   #profil: Profil = 'car';
+  #eviter = new Set<Eviter>();
+  /** Jeton anti-réponses-hors-d'ordre de #calculer (voir le commentaire là-bas). */
+  #sequence = 0;
   #dernier: Itineraire | null = null;
-  /** Le cliché {départ, arrivée, profil} qui a produit #dernier — il vieillit
-      AVEC lui : un recalcul raté laisse les deux cohérents entre eux. */
-  #calculPour: { depart: PointGeo; arrivee: PointGeo; profil: Profil } | null = null;
+  /** Le cliché complet qui a produit #dernier — il vieillit AVEC lui : un
+      recalcul raté laisse les deux cohérents entre eux. Feuille de route,
+      lien partagé et marqueurs se lisent ICI, jamais dans l'état vivant. */
+  #calculPour: {
+    depart: PointGeo; arrivee: PointGeo; profil: Profil;
+    etapes: PointGeo[]; eviter: Eviter[];
+  } | null = null;
   /** Itinéraire dont le profil altimétrique est chargé (ou en cours). */
   #profilPour: Itineraire | null = null;
   /** Itinéraire dont la feuille de route est chargée (ou en cours). */
@@ -47,8 +55,14 @@ export class PanneauItineraire extends HTMLElement {
         <div class="iti-corps">
           <div class="iti-champs">
             <label>Départ<span class="iti-porte" data-role="depart"></span></label>
+            <span class="iti-inter"></span>
             <label>Arrivée<span class="iti-porte" data-role="arrivee"></span></label>
           </div>
+          <fieldset class="iti-eviter">
+            <legend>Éviter</legend>
+            ${(Object.keys(EVITEMENTS) as Eviter[]).map((v) => `
+              <label class="iti-evite"><input type="checkbox" value="${v}"><span>${EVITEMENTS[v]}</span></label>`).join('')}
+          </fieldset>
           <div class="iti-profils" role="radiogroup" aria-label="Mode de déplacement">
             ${(Object.keys(PROFILS) as Profil[]).map((p) => `
               <label class="iti-profil"><input type="radio" name="profil" value="${p}"
@@ -81,6 +95,17 @@ export class PanneauItineraire extends HTMLElement {
       };
       this.querySelector(`[data-role="${role}"]`)?.appendChild(champ);
     }
+    const etapes = new EtapesItineraire();
+    etapes.addEventListener('etapes-changees', () => { void this.#calculer(); });
+    this.querySelector('.iti-inter')?.appendChild(etapes);
+    this.querySelectorAll('.iti-eviter input').forEach((c) => {
+      c.addEventListener('change', () => {
+        const case_ = c as HTMLInputElement;
+        if (case_.checked) this.#eviter.add(case_.value as Eviter);
+        else this.#eviter.delete(case_.value as Eviter);
+        void this.#calculer();
+      });
+    });
     this.querySelectorAll('input[name="profil"]').forEach((r) => {
       r.addEventListener('change', () => {
         this.#profil = (r as HTMLInputElement).value as Profil;
@@ -97,9 +122,11 @@ export class PanneauItineraire extends HTMLElement {
         'itineraire-infonovice.kml', 'application/vnd.google-earth.kml+xml');
     });
     this.querySelector('.iti-lien')?.addEventListener('click', (e) => {
-      if (!this.#depart || !this.#arrivee) return;
-      const url = location.origin + location.pathname
-        + versFragment({ depart: this.#depart, arrivee: this.#arrivee, profil: this.#profil });
+      // Le lien décrit le trajet CALCULÉ (le cliché), pas l'état des champs :
+      // entre les deux, l'usager a pu cocher ou saisir sans que rien n'aboutisse.
+      const c = this.#calculPour;
+      if (!c) return;
+      const url = location.origin + location.pathname + versFragment(c);
       void navigator.clipboard.writeText(url);
       (e.target as HTMLElement).textContent = 'Lien copié !';
       setTimeout(() => { (e.target as HTMLElement).textContent = 'Copier le lien'; }, 1800);
@@ -122,6 +149,12 @@ export class PanneauItineraire extends HTMLElement {
       this.#depart = partage.depart;
       this.#arrivee = partage.arrivee;
       this.#profil = partage.profil;
+      etapes.points = partage.etapes;
+      this.#eviter = new Set(partage.eviter);
+      for (const v of partage.eviter) {
+        const case_ = this.querySelector(`.iti-eviter input[value="${v}"]`);
+        if (case_) (case_ as HTMLInputElement).checked = true;
+      }
       const radio = this.querySelector(`input[name="profil"][value="${partage.profil}"]`);
       if (radio) (radio as HTMLInputElement).checked = true;
       this.querySelector('details')?.setAttribute('open', '');
@@ -159,7 +192,8 @@ export class PanneauItineraire extends HTMLElement {
     this.#feuillePour = iti;
     corps.textContent = 'Préparation de la feuille de route…';
     try {
-      const etapes = await etapesItineraire(cliche.depart, cliche.arrivee, cliche.profil);
+      const etapes = await etapesItineraire(cliche.depart, cliche.arrivee, cliche.profil,
+        { etapes: cliche.etapes, eviter: cliche.eviter });
       if (this.#dernier !== iti) return;
       corps.textContent = '';
       // Titre et résumé FIGÉS avec les étapes : l'impression décrira ce
@@ -261,6 +295,12 @@ export class PanneauItineraire extends HTMLElement {
 
   async #calculer(): Promise<void> {
     if (!this.#carte || !this.#depart || !this.#arrivee) return;
+    // JETON DE SÉQUENCE : cases à cocher et boutons ↑/↓ relancent des calculs
+    // en rafale, et une reprise (500 ms + nouvel essai) peut faire aboutir la
+    // requête la plus VIEILLE en dernier — sans ce jeton, elle écraserait le
+    // trajet demandé. Effacer incrémente aussi : une réponse tardive ne
+    // ressuscite pas un panneau vidé (revue du 21/08).
+    const jeton = (this.#sequence += 1);
     const resultat = this.querySelector('.iti-resultat') as HTMLElement;
     const erreur = this.querySelector('.iti-erreur') as HTMLElement;
     erreur.hidden = true;
@@ -268,9 +308,12 @@ export class PanneauItineraire extends HTMLElement {
     resultat.textContent = 'Calcul de l’itinéraire…';
     try {
       const depart = this.#depart; const arrivee = this.#arrivee; const profil = this.#profil;
-      const iti = await calculerItineraire(depart, arrivee, profil);
+      const inter = (this.querySelector('etapes-itineraire') as EtapesItineraire).points;
+      const eviter = [...this.#eviter];
+      const iti = await calculerItineraire(depart, arrivee, profil, { etapes: inter, eviter });
+      if (jeton !== this.#sequence) return;
       this.#dernier = iti;
-      this.#calculPour = { depart, arrivee, profil };
+      this.#calculPour = { depart, arrivee, profil, etapes: inter, eviter };
       // Le résumé AVANT la pose : distance et durée ne dépendent pas de la
       // carte, et la pose peut légitimement attendre (style en cours de
       // chargement) — l'utilisateur ne doit pas payer cette attente.
@@ -281,6 +324,7 @@ export class PanneauItineraire extends HTMLElement {
       this.#reinitialiserSections(false);
       this.#tracer(iti);
     } catch (e) {
+      if (jeton !== this.#sequence) return;
       resultat.hidden = true;
       erreur.textContent = e instanceof ErreurItineraire
         ? e.message : 'Calcul impossible pour le moment.';
@@ -335,6 +379,10 @@ export class PanneauItineraire extends HTMLElement {
       this.#marqueurs.push(
         new Marker({ color: '#3FA877' }).setLngLat(premier as [number, number]).addTo(carte),
         new Marker({ color: '#E89C2C' }).setLngLat(dernier as [number, number]).addTo(carte),
+        // Les étapes intermédiaires du CLICHÉ (les coordonnées demandées) :
+        // marqueurs réduits, dans le bleu du tracé.
+        ...(this.#calculPour?.etapes ?? []).map((p) => new Marker({ color: '#2272C4', scale: 0.72 })
+          .setLngLat([p.lon, p.lat]).addTo(carte)),
       );
       const lons = points.map((c) => c[0] as number); const lats = points.map((c) => c[1] as number);
       carte.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
@@ -343,6 +391,7 @@ export class PanneauItineraire extends HTMLElement {
   }
 
   #effacer(): void {
+    this.#sequence += 1; // tue toute réponse d'itinéraire encore en vol
     this.#dernier = null; this.#calculPour = null; this.#depart = null; this.#arrivee = null;
     this.#marqueurs.forEach((m) => m.remove()); this.#marqueurs = [];
     const carte = this.#carte;
@@ -353,6 +402,9 @@ export class PanneauItineraire extends HTMLElement {
     (this.querySelector('.iti-resultat') as HTMLElement).hidden = true;
     (this.querySelector('.iti-actions') as HTMLElement).hidden = true;
     this.#reinitialiserSections(true);
+    (this.querySelector('etapes-itineraire') as EtapesItineraire).points = [];
+    this.#eviter.clear();
+    this.querySelectorAll('.iti-eviter input').forEach((c) => { (c as HTMLInputElement).checked = false; });
     this.querySelectorAll('input[type="search"]').forEach((c) => { (c as HTMLInputElement).value = ''; });
   }
 }
