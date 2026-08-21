@@ -15,7 +15,47 @@
     zéro tracking.">
   <meta name="theme-color" content="#0F1B2D">
   <title>Infonovice Maps — cartographie souveraine française</title>
+  <link rel="canonical" href="https://maps.infonovice.fr/">
   <link rel="icon" href="/icones/icone-192.png" type="image/png">
+  <!-- Partage social : l'image est GÉNÉRÉE par script (scripts/generer-partage.mjs),
+       comme les icônes — pas de binaire opaque au dépôt. Pas de balise Twitter
+       propriétaire au-delà de `twitter:card` : les autres plateformes lisent
+       Open Graph, qui suffit. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Infonovice Maps">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:url" content="https://maps.infonovice.fr/">
+  <meta property="og:title" content="Infonovice Maps — cartographie souveraine française">
+  <meta property="og:description" content="L’alternative française à Google Maps : fond IGN, adresses BAN, itinéraires, prix des carburants. Aucun traceur, aucun cookie, aucun compte.">
+  <meta property="og:image" content="https://maps.infonovice.fr/partage-social.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Épingle de carte blanche à cœur ambre sur fond bleu profond, identité d’Infonovice Maps">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Infonovice Maps",
+    "url": "https://maps.infonovice.fr/",
+    "applicationCategory": "TravelApplication",
+    "operatingSystem": "Tout navigateur web moderne",
+    "inLanguage": "fr-FR",
+    "isAccessibleForFree": true,
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+    "description": "Cartographie et itinéraires souverains fondés sur les données publiques françaises : fond IGN, adresses BAN, prix des carburants, bornes de recharge. Sans traceur, sans cookie, sans compte.",
+    "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+    "publisher": { "@type": "Organization", "name": "Infonovice", "url": "https://infonovice.fr/" },
+    "featureList": [
+      "Recherche d’adresse (Base Adresse Nationale)",
+      "Itinéraires voiture et piéton avec étapes et évitements",
+      "Profil altimétrique et feuille de route imprimable",
+      "Export GPX et KML, partage par lien sans serveur",
+      "Prix des carburants, bornes de recharge, parkings",
+      "Favoris et export de vos données en JSON"
+    ]
+  }
+  </script>
   <script type="module" src="/src/main.ts"></script>
 </head>
 <body>
