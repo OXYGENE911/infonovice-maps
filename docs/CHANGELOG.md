@@ -2,6 +2,14 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.11.0] — 2026-08-22 — Favoris et portabilité des données
+- Favoris : appui long → « Ajouter aux favoris », volet de gestion (aller,
+  retirer), persistés en IndexedDB — jamais ailleurs.
+- Export JSON intégral (favoris + préférences) et import qui restaure tout :
+  la portabilité RGPD en deux boutons, sans compte, sans serveur.
+- Corrigé au passage : la popup d'appui long se refermait au relâchement
+  (closeOnClick) ; le volet ouvert prend l'ascendant sur la colonne.
+
 ## [0.10.0] — 2026-08-22 — Points d'intérêt
 - Trois couches à la demande : carburants (prix du jour en popup), bornes de
   recharge, parkings > 500 m² — jamais sous le zoom 12, appel précédent

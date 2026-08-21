@@ -47,8 +47,11 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       figé 2019, coordonnées inversées), parkings > 500 m² (WFS Géoplateforme).
       Chargement à la demande, zoom ≥ 12, appel précédent annulé, plafond des
       portails affiché honnêtement (« 100 sur N »)
-- [ ] PR #10 — Favoris et listes de POI en IndexedDB + export/import JSON +
-      page « Vos données ne quittent jamais ce navigateur »
+- [x] PR #10 — Favoris en IndexedDB (appui long → « Ajouter aux favoris »,
+      volet de gestion, vol vers le lieu) + export/import JSON intégral
+      (favoris + préférences — la portabilité RGPD en deux boutons) + la
+      promesse « Vos données ne quittent jamais ce navigateur » affichée en
+      toutes lettres (la page vitrine complète arrive en PR #19)
 - [ ] PR #11 — Recherche le long de l'itinéraire
 
 ## Panoramax & météo

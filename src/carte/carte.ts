@@ -20,6 +20,8 @@ import { SelecteurFonds } from './selecteur-fonds';
 import { RechercheAdresse } from './recherche';
 import { PanneauItineraire } from './panneau-itineraire';
 import { PanneauPoi } from './panneau-poi';
+import { PanneauFavoris } from './panneau-favoris';
+import { ajouterFavori } from '../lib/favoris';
 import { adresseInverse } from '../lib/adresse';
 import { formaterCoordonnees } from '../lib/coordonnees';
 
@@ -76,20 +78,29 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   portePoi.appendChild(poi);
   carte.addControl({ onAdd: () => portePoi, onRemove: () => portePoi.remove() }, 'top-left');
 
+  /* LES FAVORIS — même colonne, sous les points d'intérêt. */
+  const favoris = new PanneauFavoris();
+  favoris.carte = carte;
+  const porteFavoris = document.createElement('div');
+  porteFavoris.className = 'maplibregl-ctrl porte-favoris';
+  porteFavoris.appendChild(favoris);
+  carte.addControl({ onAdd: () => porteFavoris, onRemove: () => porteFavoris.remove() }, 'top-left');
+
   /* UN SEUL volet ouvert à la fois dans la colonne : leurs panneaux déroulés
      se superposent — le volet POI ouvert interceptait les radios du sélecteur
      de fonds (attrapé par Playwright, comme l'en-tête la première nuit).
      Délégation en phase de CAPTURE : `toggle` ne bulle pas mais se capture,
      et la délégation ne dépend pas du moment où les panneaux se rendent.
      Les volets INTERNES du planificateur (profil, feuille) ne sont pas
-     concernés : seuls les trois volets de tête comptent. */
+     concernés : seuls les volets de tête comptent. */
+  const VOLETS = 'details.iti, details.fonds, details.poi, details.favoris';
   document.addEventListener('toggle', (e) => {
     const cible = e.target;
     if (!(cible instanceof HTMLDetailsElement) || !cible.open) return;
-    if (!cible.matches('details.iti, details.fonds, details.poi')) return;
-    document.querySelectorAll<HTMLDetailsElement>(
-      'details.iti[open], details.fonds[open], details.poi[open]',
-    ).forEach((autre) => { if (autre !== cible) autre.open = false; });
+    if (!cible.matches(VOLETS)) return;
+    document.querySelectorAll<HTMLDetailsElement>(VOLETS).forEach((autre) => {
+      if (autre !== cible && autre.open) autre.open = false;
+    });
   }, true);
   appliquerSombre(selecteur.options);
   sombre.addEventListener('change', () => appliquerSombre(selecteur.options));
@@ -128,10 +139,14 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   async function montrerAdresse(ou: { lng: number; lat: number }): Promise<void> {
     const point = { lon: ou.lng, lat: ou.lat };
     const coords = formaterCoordonnees(point);
-    const popup = new Popup({ closeButton: true, maxWidth: '320px' })
+    // closeOnClick: false — le RELÂCHEMENT de l'appui long produit un click,
+    // qui refermait la popup dans la foulée de son ouverture (attrapé par le
+    // premier E2E d'appui long, PR #10) ; la croix suffit pour fermer.
+    const popup = new Popup({ closeButton: true, closeOnClick: false, maxWidth: '320px' })
       .setLngLat(ou)
       .setHTML('<div class="popup-adresse"><p class="pa-libelle">Recherche de l’adresse…</p>'
-        + `<p class="pa-coords"></p><button type="button" class="pa-copier">Copier les coordonnées</button></div>`)
+        + '<p class="pa-coords"></p><button type="button" class="pa-copier">Copier les coordonnées</button>'
+        + '<button type="button" class="pa-favori" disabled>Ajouter aux favoris</button></div>')
       .addTo(carte);
     const bloc = popup.getElement();
     (bloc.querySelector('.pa-coords') as HTMLElement).textContent = coords;
@@ -139,14 +154,30 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
       void navigator.clipboard.writeText(coords);
       (bloc.querySelector('.pa-copier') as HTMLElement).textContent = 'Copié !';
     });
+    // Le nom du favori : l'adresse si la BAN en connaît une, les coordonnées
+    // sinon — jamais un champ vide. Le bouton naît DÉSACTIVÉ et n'ouvre qu'une
+    // fois l'adresse tranchée : cliquer pendant le vol figeait le favori sous
+    // des coordonnées, sans moyen de le renommer (revue du 22/08).
+    const bouton = bloc.querySelector('.pa-favori') as HTMLButtonElement;
+    let nomFavori = coords;
+    bouton.addEventListener('click', () => {
+      bouton.disabled = true;
+      ajouterFavori(nomFavori, point).then(
+        () => { bouton.textContent = 'Ajouté aux favoris ✓'; void favoris.rafraichir(); },
+        () => { bouton.textContent = 'Ajout impossible (stockage local indisponible)'; },
+      );
+    });
     try {
       const adresse = await adresseInverse(point);
+      if (adresse) nomFavori = adresse.libelle;
       (bloc.querySelector('.pa-libelle') as HTMLElement).textContent =
         adresse ? adresse.libelle : 'Aucune adresse connue à cet endroit.';
     } catch {
       (bloc.querySelector('.pa-libelle') as HTMLElement).textContent =
         'Adresse indisponible pour le moment.';
     }
+    // Quel que soit le sort de la BAN, le nom est arrêté : le bouton s'ouvre.
+    bouton.disabled = false;
   }
 
   // Poignée de débogage et d'E2E : lire l'état de la carte depuis la console

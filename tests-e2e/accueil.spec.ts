@@ -643,6 +643,111 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
   expect(appelsCarbu, 'appel parti sous le zoom minimal').toBe(appelsAvant);
 });
 
+test('FAVORIS : appui long → ajout, persistance, export JSON, retrait, import', async ({ page }) => {
+  await page.route('**/api-adresse.data.gouv.fr/reverse/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ features: [{
+      geometry: { coordinates: [2.330992, 48.868831] },
+      properties: { label: '8 Rue de la Paix 75002 Paris', type: 'housenumber', postcode: '75002', city: 'Paris' },
+    }] }),
+  }));
+  await page.goto('/');
+  const canevas = page.locator('#carte canvas.maplibregl-canvas');
+  await canevas.waitFor({ timeout: 15_000 });
+
+  // L'APPUI LONG (600 ms) ouvre la popup d'adresse, qui sait ajouter un favori.
+  const cadre = await canevas.boundingBox();
+  await page.mouse.move(cadre!.x + 640, cadre!.y + 360);
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+  await expect(page.locator('.pa-libelle')).toContainText('8 Rue de la Paix', { timeout: 10_000 });
+  await page.getByRole('button', { name: 'Ajouter aux favoris' }).click();
+  await expect(page.getByRole('button', { name: /Ajouté aux favoris/ })).toBeVisible();
+
+  // Le volet Favoris le liste, avec la promesse en toutes lettres.
+  await page.locator('.favoris summary').click();
+  await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
+  await expect(page.locator('.favoris-promesse')).toContainText('ne quittent jamais ce navigateur');
+
+  // Il SURVIT au rechargement (IndexedDB).
+  await page.reload();
+  await canevas.waitFor({ timeout: 15_000 });
+  await page.locator('.favoris summary').click();
+  await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
+
+  // Cliquer le favori Y VOLE (zoom 16).
+  await page.locator('.favori-aller').click();
+  await expect.poll(() => page.evaluate(() =>
+    Math.round((window as unknown as { __carte: { getZoom(): number } }).__carte.getZoom()),
+  ), { timeout: 10_000 }).toBe(16);
+
+  // L'EXPORT télécharge un JSON qui contient tout.
+  const telechargement = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exporter mes données' }).click();
+  const fichier = await telechargement;
+  expect(fichier.suggestedFilename()).toBe('infonovice-maps-donnees.json');
+  const chemin = await fichier.path();
+  const contenu = JSON.parse(String(await (await import('node:fs/promises')).readFile(chemin!, 'utf8')));
+  expect(contenu.application).toBe('infonovice-maps');
+  expect(contenu.favoris).toHaveLength(1);
+  expect(contenu.favoris[0].nom).toBe('8 Rue de la Paix 75002 Paris');
+
+  // LE RETRAIT vide la liste, ANNONCE ce qu'il a fait, et rend le focus —
+  // sans quoi l'usager clavier repart du haut du document.
+  await page.getByRole('button', { name: /Retirer 8 Rue de la Paix/ }).click();
+  await expect(page.locator('.favoris-vide')).toBeVisible();
+  await expect(page.locator('.favoris-etat')).toContainText('retiré des favoris');
+  expect(await page.evaluate(() => document.activeElement?.tagName)).toBe('SUMMARY');
+
+  // L'IMPORT restaure — et recharge la page pour appliquer les préférences.
+  await page.locator('.favoris input[type="file"]').setInputFiles(chemin!);
+  await expect(page.locator('.favoris-etat')).toContainText('Importé : 1 favori', { timeout: 10_000 });
+  await page.waitForLoadState('load');
+  await canevas.waitFor({ timeout: 15_000 });
+  await page.locator('.favoris summary').click();
+  await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris', { timeout: 10_000 });
+
+  // UN FICHIER QUI N'EST PAS UNE SAUVEGARDE : message français, et le champ
+  // se nettoie pour qu'un second essai reparte (le même fichier compris).
+  const intrus = test.info().outputPath('intrus.json');
+  await (await import('node:fs/promises')).writeFile(intrus, '{"application":"autre-app"}');
+  await page.locator('.favoris input[type="file"]').setInputFiles(intrus);
+  await expect(page.locator('.favoris-etat')).toContainText('pas une sauvegarde Infonovice Maps', { timeout: 10_000 });
+  expect(await page.locator('.favoris input[type="file"]').inputValue()).toBe('');
+  // L'échec n'a rien détruit : le favori est toujours là.
+  await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
+});
+
+test('FAVORIS : le bouton d’ajout attend que l’adresse soit tranchée', async ({ page }) => {
+  // La BAN traîne : tant qu'elle n'a pas répondu, on ne peut pas figer un
+  // favori sous des coordonnées (revue du 22/08).
+  await page.route('**/api-adresse.data.gouv.fr/reverse/**', async (route) => {
+    await new Promise((s) => setTimeout(s, 1500));
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ features: [{
+      geometry: { coordinates: [2.330992, 48.868831] },
+      properties: { label: '8 Rue de la Paix 75002 Paris', type: 'housenumber', postcode: '75002', city: 'Paris' },
+    }] }) });
+  });
+  await page.goto('/');
+  const canevas = page.locator('#carte canvas.maplibregl-canvas');
+  await canevas.waitFor({ timeout: 15_000 });
+  const cadre = await canevas.boundingBox();
+  await page.mouse.move(cadre!.x + 640, cadre!.y + 360);
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+
+  const ajouter = page.getByRole('button', { name: 'Ajouter aux favoris' });
+  await expect(ajouter).toBeVisible({ timeout: 10_000 });
+  await expect(ajouter).toBeDisabled();
+  // L'adresse arrive : le bouton s'ouvre, et le favori porte L'ADRESSE.
+  await expect(ajouter).toBeEnabled({ timeout: 10_000 });
+  await ajouter.click();
+  await page.locator('.favoris summary').click();
+  await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
+});
+
 test('l’export GPX télécharge un fichier nommé, sans aucune requête', async ({ page }) => {
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
     contentType: 'application/json',
