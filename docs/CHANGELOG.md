@@ -2,6 +2,13 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.12.0] — 2026-08-22 — Pages vitrine
+- Trois pages de texte : À propos, Vie privée, Mentions légales — vraies
+  pages HTML, lisibles sans JavaScript, sans script ni origine tierce.
+- Pied de page discret sur la carte pour y accéder.
+- Licences des sources vérifiées et citées (Licence Ouverte v2.0 Etalab pour
+  les carburants et les bornes ; attribution IGN-F / Géoplateforme).
+
 ## [0.11.0] — 2026-08-22 — Favoris et portabilité des données
 - Favoris : appui long → « Ajouter aux favoris », volet de gestion (aller,
   retirer), persistés en IndexedDB — jamais ailleurs.

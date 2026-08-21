@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -18,6 +19,16 @@ export default defineConfig({
     target: 'es2022',
     sourcemap: true,
     rollupOptions: {
+      // MULTI-PAGES : les pages de texte (à propos, vie privée, mentions
+      // légales) sont de vraies pages HTML, servies telles quelles et
+      // lisibles SANS JavaScript — c'est meilleur pour le référencement, pour
+      // la vitesse, et cohérent avec ce qu'elles promettent.
+      input: {
+        index: resolve(__dirname, 'index.html'),
+        'a-propos': resolve(__dirname, 'a-propos.html'),
+        'vie-privee': resolve(__dirname, 'vie-privee.html'),
+        'mentions-legales': resolve(__dirname, 'mentions-legales.html'),
+      },
       output: {
         // MapLibre pèse ~230 Ko gzippé à lui seul : il vit dans son propre
         // morceau, exclu du budget bundle applicatif (< 300 Ko) que la CI

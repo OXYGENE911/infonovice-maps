@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self';
+    img-src 'self' data:; style-src 'self'; script-src 'none';
+    base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+  <meta name="description" content="Vie privée d’Infonovice Maps : quelles
+    données, où elles vivent, comment les exporter et les effacer. Aucun
+    cookie, aucun traceur, aucun compte.">
+  <meta name="theme-color" content="#0F1B2D">
+  <title>Vie privée — Infonovice Maps</title>
+  <link rel="icon" href="/icones/icone-192.png" type="image/png">
+  <link rel="stylesheet" href="/src/styles/tokens.css">
+  <link rel="stylesheet" href="/src/styles/pages.css">
+</head>
+<body class="page">
+  <header class="page-entete">
+    <div class="page-entete-bande">
+      <a class="page-marque" href="/">Infonovice <strong>Maps</strong></a>
+      <a class="page-retour" href="/">← Retour à la carte</a>
+    </div>
+  </header>
+
+  <main class="page-corps">
+    <h1>Vos données ne quittent jamais ce navigateur</h1>
+    <p class="page-chapo">Cette page dit exactement ce qui est stocké, où, et
+      comment le récupérer ou l’effacer. Elle est courte parce qu’il y a peu à
+      dire : Infonovice Maps n’a pas de serveur qui vous connaisse.</p>
+
+    <h2>Y a-t-il des cookies ?</h2>
+    <p><strong>Non — aucun.</strong> Pas même un cookie dit « nécessaire ».
+      C’est pourquoi vous n’avez jamais vu de bandeau de consentement ici :
+      il n’y a rien à consentir.</p>
+
+    <h2>Qu’est-ce qui est enregistré, alors ?</h2>
+    <p>Trois choses, toutes dans le <strong>stockage local de votre
+      navigateur</strong> (IndexedDB), sur votre appareil :</p>
+    <ul>
+      <li><strong>Vos réglages d’affichage</strong> : le fond de carte choisi,
+        la surcouche cadastre, les couches de points d’intérêt cochées.</li>
+      <li><strong>Vos favoris</strong> : le nom et les coordonnées des lieux
+        que vous avez enregistrés vous-même.</li>
+      <li>Rien d’autre. Pas d’historique de recherche, pas de trajets
+        conservés, pas d’identifiant.</li>
+    </ul>
+    <p>Ces données ne sont jamais transmises : il n’existe aucun serveur
+      Infonovice qui les reçoive.</p>
+
+    <h2>Comment les récupérer ou les effacer ?</h2>
+    <ul>
+      <li><strong>Les récupérer</strong> : volet « Favoris » →
+        « Exporter mes données ». Vous obtenez un fichier JSON lisible qui
+        contient vos favoris et vos réglages. Il vous appartient.</li>
+      <li><strong>Les restaurer</strong> : volet « Favoris » → « Importer ».
+        Utile pour passer d’un appareil à un autre, sans compte.</li>
+      <li><strong>Tout effacer</strong> : retirez vos favoris un par un, ou
+        videz les données de site depuis les réglages de votre navigateur.
+        L’effacement est immédiat et définitif — nous n’en gardons pas de
+        copie, puisque nous n’en avons jamais eu.</li>
+    </ul>
+
+    <h2>Que voient les services interrogés ?</h2>
+    <p>Quand vous cherchez une adresse ou calculez un itinéraire, votre
+      navigateur interroge directement des services publics français (IGN,
+      Base Adresse Nationale, portails de données ouvertes). Ces services
+      reçoivent donc ce que toute requête web transmet : votre adresse IP et
+      les paramètres de la requête (le texte cherché, les coordonnées du
+      trajet). Nous ne pouvons pas parler à leur place : leurs propres
+      politiques s’appliquent, et nous les citons dans la page
+      <a href="/a-propos.html">À propos</a>.</p>
+    <p>Ce que nous pouvons affirmer : <strong>aucune requête ne passe par un
+      serveur qui nous appartiendrait</strong>, et l’application ne contacte
+      aucune autre origine que ces services publics. Cette liste est
+      verrouillée dans le code par une politique de sécurité du contenu, et un
+      test automatisé échoue si une origine non déclarée est contactée.</p>
+
+    <h2>Et le partage d’itinéraire ?</h2>
+    <p>Le lien de partage contient tout le trajet après le signe
+      <code>#</code>. Ce fragment n’est <strong>jamais envoyé au serveur
+      web</strong> — c’est une règle des navigateurs, pas une politesse de
+      notre part. Le trajet voyage donc de vous à votre destinataire, sans
+      escale chez nous.</p>
+
+    <h2>Et la géolocalisation ?</h2>
+    <p>Elle ne se déclenche que si vous appuyez sur « Me localiser », et votre
+      navigateur vous demandera confirmation. La position sert à centrer la
+      carte, dans le navigateur. Elle n’est ni enregistrée, ni transmise.</p>
+
+    <div class="page-note">Vous n’avez pas besoin de nous écrire pour exercer
+      un droit d’accès ou d’effacement : le bouton d’export vous donne tout ce
+      que l’application détient, et les réglages de votre navigateur
+      l’effacent. C’est le sens de « ne rien collecter ».</div>
+
+    <footer class="page-pied">
+      <nav>
+        <a href="/">Carte</a>
+        <a href="/a-propos.html">À propos</a>
+        <a href="/mentions-legales.html">Mentions légales</a>
+        <a href="https://github.com/OXYGENE911/infonovice-maps">Code source</a>
+      </nav>
+      <p>Infonovice Maps — aucune donnée personnelle collectée, aucun cookie.</p>
+    </footer>
+  </main>
+</body>
+</html>

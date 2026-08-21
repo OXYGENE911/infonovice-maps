@@ -2,6 +2,8 @@
 // de la PR #1 est morte ici, comme prévu.
 import './styles/tokens.css';
 import './styles/carte.css';
+// Le pied de page de la carte partage la feuille des pages de texte.
+import './styles/pages.css';
 import { registerSW } from 'virtual:pwa-register';
 import { creerCarte } from './carte/carte';
 

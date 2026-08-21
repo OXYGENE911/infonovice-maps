@@ -1,0 +1,81 @@
+/* Les pages de texte (à propos, vie privée, mentions légales). Sobres et
+   SANS JavaScript : elles doivent s'ouvrir vite, se lire au clavier, et
+   survivre à un navigateur qui refuse les scripts — c'est le contraire d'une
+   carte, et c'est voulu. Elles réutilisent les tokens de la carte pour rester
+   du même monde. */
+
+body.page {
+  margin: 0;
+  background: var(--fond);
+  color: var(--texte-1);
+  font: 400 16px/1.65 var(--police);
+}
+
+.page-entete {
+  border-bottom: 1px solid var(--bord);
+  background: var(--fond-profond);
+}
+.page-entete a { color: var(--blanc); text-decoration: none; }
+.page-entete-bande {
+  max-width: 760px; margin: 0 auto; padding: 14px 22px;
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+}
+.page-marque { font: 600 16px var(--police); letter-spacing: -0.01em; }
+.page-marque strong { color: var(--ambre); font-weight: 700; }
+.page-retour { font: 600 13.5px var(--police); color: var(--bleu-100) !important; }
+.page-retour:hover, .page-retour:focus-visible { text-decoration: underline; }
+
+.page-corps { max-width: 760px; margin: 0 auto; padding: 40px 22px 64px; }
+.page-corps h1 {
+  font: 700 clamp(28px, 5vw, 38px)/1.15 var(--police);
+  letter-spacing: -0.02em; margin: 0 0 10px;
+}
+.page-chapo { font-size: 18px; color: var(--texte-2); margin: 0 0 34px; }
+.page-corps h2 {
+  font: 650 21px/1.3 var(--police); margin: 38px 0 12px;
+  padding-top: 20px; border-top: 1px solid var(--bord);
+}
+.page-corps h3 { font: 650 16px var(--police); margin: 24px 0 6px; }
+.page-corps p, .page-corps li { color: var(--texte-1); }
+.page-corps ul { padding-left: 22px; }
+.page-corps li { margin: 6px 0; }
+.page-corps a { color: var(--accent); }
+.page-corps a:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 3px; }
+.page-corps dt { font-weight: 650; margin-top: 16px; }
+.page-corps dd { margin: 4px 0 0; color: var(--texte-2); }
+
+/* Les promesses vérifiables : ce que l'application NE fait pas. */
+.page-promesses { list-style: none; padding: 0; display: grid; gap: 10px; margin: 24px 0; }
+.page-promesses li {
+  padding: 13px 16px; border: 1px solid var(--bord); border-radius: var(--rayon);
+  background: var(--fond-doux);
+}
+.page-promesses strong { display: block; margin-bottom: 2px; }
+.page-promesses span { color: var(--texte-2); font-size: 15px; }
+
+.page-note {
+  margin: 28px 0; padding: 14px 16px; border-left: 3px solid var(--ambre-fonce);
+  background: var(--fond-doux); color: var(--texte-2); font-size: 15px;
+}
+
+.page-pied {
+  border-top: 1px solid var(--bord); margin-top: 48px; padding-top: 20px;
+  font-size: 14.5px; color: var(--texte-2);
+}
+.page-pied a { color: var(--accent); }
+.page-pied nav { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+
+/* Le pied de la CARTE : discret, mais toujours atteignable. */
+.pied-carte {
+  position: absolute; right: 8px; bottom: 26px; z-index: 5;
+  display: flex; gap: 10px; align-items: center;
+  padding: 4px 10px; border-radius: 9px;
+  background: color-mix(in srgb, var(--fond) 88%, transparent);
+  border: 1px solid var(--bord);
+  font: 500 11.5px var(--police);
+}
+.pied-carte a { color: var(--texte-2); text-decoration: none; }
+.pied-carte a:hover, .pied-carte a:focus-visible { color: var(--accent); text-decoration: underline; }
+@media (max-width: 560px) {
+  .pied-carte { left: 8px; right: 8px; justify-content: center; flex-wrap: wrap; }
+}
