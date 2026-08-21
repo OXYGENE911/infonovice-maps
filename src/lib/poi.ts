@@ -167,8 +167,14 @@ async function appel(url: string, quoi: string, signal?: AbortSignal): Promise<u
           : AbortSignal.timeout(DELAI_MS),
         headers: { Accept: 'application/json' },
       });
-      if (!r.ok) throw new Error(`service ${r.status}`);
-      return await r.json();
+      if (r.ok) return await r.json();
+      // SEULS les 5xx se rejouent : un 4xx est déterministe (même URL, même
+      // verdict) et un 429 dit PRÉCISÉMENT de ralentir — le rejouer 500 ms
+      // plus tard doublerait la charge au pire moment (revue du 22/08).
+      if (r.status >= 500) throw new Error(`service ${r.status}`);
+      throw new ErreurPoi(r.status === 429
+        ? `Le service des ${quoi} limite le débit. Patientez un instant.`
+        : `Les ${quoi} sont momentanément indisponibles (réponse ${r.status}).`);
     } catch (e) {
       // Un déplacement de carte annule l'appel : ce n'est pas une panne.
       if (signal?.aborted) throw e;
@@ -181,6 +187,20 @@ async function appel(url: string, quoi: string, signal?: AbortSignal): Promise<u
     `Les ${quoi} sont momentanément indisponibles. Réessayez dans un instant.`,
     { cause: derniere },
   );
+}
+
+/** La vue a-t-elle assez changé pour justifier un rechargement ? PURE.
+    Sans ce seuil, le suivi GPS (un moveend par fixe, ~1 Hz en voiture) ou la
+    molette cran par cran rechargeaient TOUTES les couches à chaque geste —
+    le débounce seul ne protège pas les quotas publics (revue du 22/08). */
+export function vueAChange(chargee: Bbox, courante: Bbox): boolean {
+  const largeur = chargee.est - chargee.ouest;
+  const hauteur = chargee.nord - chargee.sud;
+  const dx = Math.abs((courante.ouest + courante.est) - (chargee.ouest + chargee.est)) / 2;
+  const dy = Math.abs((courante.sud + courante.nord) - (chargee.sud + chargee.nord)) / 2;
+  const largeurCourante = courante.est - courante.ouest;
+  return dx > largeur * 0.2 || dy > hauteur * 0.2
+    || largeurCourante > largeur * 1.4 || largeurCourante < largeur / 1.4;
 }
 
 export async function chargerCarburants(b: Bbox, signal?: AbortSignal): Promise<Charge<PoiCarburant>> {

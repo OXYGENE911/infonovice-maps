@@ -5,7 +5,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import {
   urlCarburants, urlBornes, urlParkings,
   versCarburants, versBornes, versParkings,
-  chargerCarburants, ErreurPoi, type Bbox,
+  chargerCarburants, chargerBornes, vueAChange, ErreurPoi, type Bbox,
 } from '../src/lib/poi';
 
 const B: Bbox = { ouest: 2.25, sud: 48.8, est: 2.42, nord: 48.9 };
@@ -69,6 +69,31 @@ describe('versBornes', () => {
   });
 });
 
+describe('versBornes — réponse difforme', () => {
+  test('refuse en français, comme les autres transformations', () => {
+    expect(() => versBornes({})).toThrow(ErreurPoi);
+    expect(() => versBornes({ results: 'pas-une-liste' })).toThrow('bornes');
+  });
+});
+
+describe('vueAChange — le seuil qui protège les quotas', () => {
+  const CHARGEE: Bbox = { ouest: 2.0, sud: 48.0, est: 2.4, nord: 48.3 };
+
+  test('un glissement minime ou un fixe GPS ne rechargent pas', () => {
+    expect(vueAChange(CHARGEE, CHARGEE)).toBe(false);
+    expect(vueAChange(CHARGEE, { ouest: 2.01, sud: 48.01, est: 2.41, nord: 48.31 })).toBe(false);
+  });
+
+  test('un vrai déplacement ou un changement de zoom rechargent', () => {
+    // Décalage de plus de 20 % de la largeur chargée.
+    expect(vueAChange(CHARGEE, { ouest: 2.1, sud: 48.0, est: 2.5, nord: 48.3 })).toBe(true);
+    // Dézoom : la vue couvre bien plus que ce qui a été chargé.
+    expect(vueAChange(CHARGEE, { ouest: 1.7, sud: 47.8, est: 2.7, nord: 48.5 })).toBe(true);
+    // Zoom serré : on veut le détail de la nouvelle vue.
+    expect(vueAChange(CHARGEE, { ouest: 2.15, sud: 48.1, est: 2.25, nord: 48.17 })).toBe(true);
+  });
+});
+
 describe('versParkings', () => {
   test('ne garde que les polygones, rend une FeatureCollection prête à poser', () => {
     const c = versParkings({ type: 'FeatureCollection', numberMatched: 15, features: [
@@ -92,7 +117,7 @@ describe('chargerCarburants (fetch simulé)', () => {
     { geom: { lon: 2.33, lat: 48.9 }, adresse: 'A', ville: 'Paris', gazole_prix: 2.1 },
   ] });
 
-  test('une panne se rejoue UNE fois, puis parle français', async () => {
+  test('une panne réseau se rejoue UNE fois, un double échec parle français', async () => {
     const f = vi.fn()
       .mockRejectedValueOnce(new TypeError('failed to fetch'))
       .mockResolvedValueOnce(new Response(OK, { status: 200 }));
@@ -100,17 +125,48 @@ describe('chargerCarburants (fetch simulé)', () => {
     const c = await chargerCarburants(B);
     expect(c.elements).toHaveLength(1);
     expect(f).toHaveBeenCalledTimes(2);
+    // Double panne : le message final est bien le français promis.
+    const g = vi.fn(async () => { throw new TypeError('failed to fetch'); });
+    vi.stubGlobal('fetch', g);
+    await expect(chargerCarburants(B)).rejects.toThrow('momentanément indisponibles');
+    expect(g).toHaveBeenCalledTimes(2);
   });
 
-  test('l’annulation volontaire (déplacement de carte) ne se rejoue JAMAIS', async () => {
+  test('un 5xx se rejoue, un 4xx JAMAIS, et le 429 dit de patienter', async () => {
+    // 500 puis 200 : la reprise sert à quelque chose.
+    const f = vi.fn()
+      .mockResolvedValueOnce(new Response('', { status: 500 }))
+      .mockResolvedValueOnce(new Response(OK, { status: 200 }));
+    vi.stubGlobal('fetch', f);
+    expect((await chargerCarburants(B)).elements).toHaveLength(1);
+    expect(f).toHaveBeenCalledTimes(2);
+    // 400 : déterministe — UNE requête, pas de « réessayez » mensonger.
+    const g = vi.fn(async () => new Response('', { status: 400 }));
+    vi.stubGlobal('fetch', g);
+    await expect(chargerCarburants(B)).rejects.toThrow('réponse 400');
+    expect(g).toHaveBeenCalledTimes(1);
+    // 429 : le service demande de ralentir — on ne le double pas.
+    const h = vi.fn(async () => new Response('', { status: 429 }));
+    vi.stubGlobal('fetch', h);
+    await expect(chargerBornes(B)).rejects.toThrow('limite le débit');
+    expect(h).toHaveBeenCalledTimes(1);
+  });
+
+  test('le signal d’annulation est RÉELLEMENT câblé jusqu’à fetch', async () => {
+    // Le contrôleur est aborté AVANT l'appel : si le signal transmis à fetch
+    // en dérive (AbortSignal.any), il naît déjà aborté — c'est le câblage
+    // qu'on prouve, pas la garde post-hoc (revue du 22/08).
     const controleur = new AbortController();
-    const f = vi.fn(() => {
-      controleur.abort();
+    controleur.abort();
+    let signalRecu: AbortSignal | undefined;
+    const f = vi.fn((_u: string, o: { signal?: AbortSignal }) => {
+      signalRecu = o.signal;
       return Promise.reject(new DOMException('annulé', 'AbortError'));
     });
     vi.stubGlobal('fetch', f);
     await expect(chargerCarburants(B, controleur.signal)).rejects.toThrow();
     expect(f).toHaveBeenCalledTimes(1);
+    expect(signalRecu?.aborted).toBe(true);
   });
 
   test('une réponse 200 difforme ne consomme pas de seconde requête', async () => {

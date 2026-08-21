@@ -274,6 +274,9 @@ etapes-itineraire { display: grid; gap: 7px; }
 .poi-etat {
   position: absolute; top: calc(100% + 8px); left: 0; margin: 0;
   max-width: 240px;
+  /* Pur affichage : SANS ceci, la bandelette flottante interceptait les
+     clics du sélecteur de fonds en dessous (attrapé par Playwright). */
+  pointer-events: none;
 }
 .poi[open] .poi-etat { position: static; margin-top: 6px; }
 .poi-etat:empty { display: none; }

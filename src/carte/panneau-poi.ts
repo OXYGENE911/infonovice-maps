@@ -1,18 +1,21 @@
 // <panneau-poi> — les couches de points d'intérêt : carburants (avec prix),
 // bornes de recharge, parkings. Trois cases ; chaque couche active se charge
-// pour la VUE COURANTE et se recharge au déplacement (débounce 500 ms, appel
-// précédent annulé) — jamais en dessous du zoom 12 : sous ce seuil la France
-// entière serait demandée pour rien, et les quotas publics sont un bien
-// commun. Le choix des couches est persisté en IndexedDB, comme le fond.
+// pour la VUE COURANTE et se recharge au déplacement — débounce 500 ms,
+// appel précédent annulé, et SEUIL de changement de vue : le suivi GPS ou la
+// molette ne rechargent pas une vue quasi identique. Jamais sous le zoom 12 :
+// la France entière serait demandée pour rien, et les quotas publics sont un
+// bien commun. Le choix des couches est persisté en IndexedDB, comme le fond.
 //
 // Les popups sont construites en textContent EXCLUSIVEMENT : adresses, noms
-// de stations et d'enseignes viennent de services externes (règle du projet).
+// de stations et communes viennent de services externes (règle du projet).
+// Leurs données voyagent DANS les propriétés des features — jamais par indice
+// vers un tableau vivant, qu'un rechargement rendrait périmé (revue du 22/08).
 import type { Map as CarteMapLibre, GeoJSONSource, MapGeoJSONFeature } from 'maplibre-gl';
 import { Popup } from 'maplibre-gl';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import {
-  chargerCarburants, chargerBornes, chargerParkings, ErreurPoi,
-  type Bbox, type PoiCarburant, type PoiBorne,
+  chargerCarburants, chargerBornes, chargerParkings, vueAChange,
+  type Bbox,
 } from '../lib/poi';
 
 export const PREF_POI = 'poi';
@@ -30,14 +33,24 @@ export class PanneauPoi extends HTMLElement {
   #carte: CarteMapLibre | null = null;
   #actives = new Set<Couche>();
   #controleurs: Partial<Record<Couche, AbortController>> = {};
-  #carburants: PoiCarburant[] = [];
-  #bornes: PoiBorne[] = [];
+  /** La bbox pour laquelle chaque couche a été chargée — le seuil de vue. */
+  #chargee: Partial<Record<Couche, Bbox>> = {};
+  #erreurs: Partial<Record<Couche, true>> = {};
+  #carburants: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+  #bornes: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
   #parkings: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+  #montres: Partial<Record<Couche, number>> = {};
   #totaux: Partial<Record<Couche, number>> = {};
   #minuteur: ReturnType<typeof setTimeout> | undefined;
   #popup: Popup | null = null;
+  #popupDe: Couche | null = null;
+  #clicTraite: unknown = null;
 
+  /* Posé UNE fois à l'assemblage, pour la vie de l'application : le panneau
+     n'est jamais détruit, on ne s'encombre pas d'un désabonnement (décision
+     tracée — revue du 22/08). */
   set carte(c: CarteMapLibre) {
+    if (this.#carte) return;
     this.#carte = c;
     c.on('moveend', () => {
       if (this.#actives.size === 0) return;
@@ -47,12 +60,24 @@ export class PanneauPoi extends HTMLElement {
     // setStyle détruit les sources : on repose données ET couches (le même
     // contrat que le tracé d'itinéraire).
     c.on('style.load', () => { this.#poserTout(); });
+    /* Un clic peut toucher PLUSIEURS couches superposées (un cercle posé sur
+       un polygone de parking) : le premier gestionnaire REVENDIQUE l'événement,
+       les suivants s'effacent — et les points, enregistrés d'abord, gagnent
+       sur les surfaces. */
     for (const couche of ['carburants', 'bornes'] as const) {
-      c.on('click', `poi-${couche}`, (e) => this.#ouvrirPopup(couche, e.features ?? []));
+      c.on('click', `poi-${couche}`, (e) => {
+        if (e.originalEvent === this.#clicTraite) return;
+        this.#clicTraite = e.originalEvent;
+        this.#ouvrirPopup(couche, e.features ?? []);
+      });
       c.on('mouseenter', `poi-${couche}`, () => { c.getCanvas().style.cursor = 'pointer'; });
       c.on('mouseleave', `poi-${couche}`, () => { c.getCanvas().style.cursor = ''; });
     }
-    c.on('click', 'poi-parkings-fond', (e) => this.#popupParking(e.lngLat, e.features ?? []));
+    c.on('click', 'poi-parkings-fond', (e) => {
+      if (e.originalEvent === this.#clicTraite) return;
+      this.#clicTraite = e.originalEvent;
+      this.#popupParking(e.lngLat, e.features ?? []);
+    });
   }
 
   connectedCallback(): void {
@@ -76,13 +101,16 @@ export class PanneauPoi extends HTMLElement {
         else { this.#vider(couche); this.#etat(); }
       });
     });
-    void lirePreference<Couche[]>(PREF_POI).then((memo) => {
-      for (const couche of memo ?? []) {
-        if (!(couche in COUCHES)) continue;
-        this.#actives.add(couche);
+    void lirePreference<unknown>(PREF_POI).then((memo) => {
+      // Frontière système : la valeur relue se VALIDE (hasOwn, pas `in` — la
+      // chaîne de prototypes laissait passer « constructor », revue du 22/08).
+      const couches = Array.isArray(memo) ? memo : [];
+      for (const couche of couches) {
+        if (typeof couche !== 'string' || !Object.hasOwn(COUCHES, couche)) continue;
+        this.#actives.add(couche as Couche);
         const case_ = this.querySelector(`input[value="${couche}"]`);
         if (case_) (case_ as HTMLInputElement).checked = true;
-        void this.#charger(couche);
+        void this.#charger(couche as Couche);
       }
     });
   }
@@ -91,9 +119,17 @@ export class PanneauPoi extends HTMLElement {
     for (const couche of this.#actives) void this.#charger(couche);
   }
 
+  /** Bbox de la vue, longitudes RAMENÉES dans [-180, 180] : MapLibre les rend
+      « déroulées » sur les copies du monde. */
   #bbox(): Bbox {
     const b = this.#carte!.getBounds();
-    return { ouest: b.getWest(), sud: b.getSouth(), est: b.getEast(), nord: b.getNorth() };
+    const enrouler = (l: number): number => ((l + 180) % 360 + 360) % 360 - 180;
+    const ouest = enrouler(b.getWest());
+    const est = enrouler(b.getEast());
+    // Vue à cheval sur l'antiméridien (rarissime à zoom ≥ 12) : on dégrade
+    // en monde entier plutôt que d'envoyer une bbox inversée aux services.
+    if (ouest > est) return { ouest: -180, sud: b.getSouth(), est: 180, nord: b.getNorth() };
+    return { ouest, sud: b.getSouth(), est, nord: b.getNorth() };
   }
 
   async #charger(couche: Couche): Promise<void> {
@@ -104,53 +140,90 @@ export class PanneauPoi extends HTMLElement {
       this.#etat('Zoomez pour afficher les points d’intérêt.');
       return;
     }
+    const bbox = this.#bbox();
+    // Le SEUIL : une vue quasi identique ne se recharge pas.
+    const deja = this.#chargee[couche];
+    if (deja && !vueAChange(deja, bbox)) return;
     this.#controleurs[couche]?.abort();
     const controleur = new AbortController();
     this.#controleurs[couche] = controleur;
     try {
-      const bbox = this.#bbox();
       if (couche === 'carburants') {
         const c = await chargerCarburants(bbox, controleur.signal);
         if (controleur !== this.#controleurs[couche]) return;
-        this.#carburants = c.elements; this.#totaux.carburants = c.total;
+        this.#carburants = {
+          type: 'FeatureCollection',
+          features: c.elements.map((p) => ({
+            type: 'Feature',
+            properties: { adresse: p.adresse, ville: p.ville, prix: JSON.stringify(p.prix) },
+            geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
+          })),
+        };
+        this.#montres.carburants = c.elements.length; this.#totaux.carburants = c.total;
       } else if (couche === 'bornes') {
         const c = await chargerBornes(bbox, controleur.signal);
         if (controleur !== this.#controleurs[couche]) return;
-        this.#bornes = c.elements; this.#totaux.bornes = c.total;
+        this.#bornes = {
+          type: 'FeatureCollection',
+          features: c.elements.map((p) => ({
+            type: 'Feature',
+            properties: { nom: p.nom, puissance: p.puissance, pdc: p.pdc, gratuit: p.gratuit },
+            geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
+          })),
+        };
+        this.#montres.bornes = c.elements.length; this.#totaux.bornes = c.total;
       } else {
         const c = await chargerParkings(bbox, controleur.signal);
         if (controleur !== this.#controleurs[couche]) return;
-        this.#parkings = c.collection; this.#totaux.parkings = c.total;
+        this.#parkings = c.collection;
+        this.#montres.parkings = c.collection.features.length; this.#totaux.parkings = c.total;
       }
+      delete this.#erreurs[couche];
+      this.#chargee[couche] = bbox;
       this.#poserTout();
       this.#etat();
     } catch (e) {
       if (controleur.signal.aborted) return;
-      this.#etat(e instanceof ErreurPoi ? e.message : 'Points d’intérêt indisponibles pour le moment.');
+      // Pas de données périmées sous un message de panne : la couche en échec
+      // se PURGE, et l'état PAR COUCHE la dit indisponible — durablement, sans
+      // écraser les compteurs des couches qui vont bien (revue du 22/08).
+      this.#purger(couche);
+      this.#erreurs[couche] = true;
+      this.#poserTout();
+      this.#etat();
     }
+  }
+
+  #purger(couche: Couche): void {
+    const vide: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+    if (couche === 'carburants') this.#carburants = vide;
+    else if (couche === 'bornes') this.#bornes = vide;
+    else this.#parkings = vide;
+    delete this.#totaux[couche];
+    delete this.#montres[couche];
+    delete this.#chargee[couche];
   }
 
   #vider(couche: Couche): void {
     this.#controleurs[couche]?.abort();
-    if (couche === 'carburants') this.#carburants = [];
-    else if (couche === 'bornes') this.#bornes = [];
-    else this.#parkings = { type: 'FeatureCollection', features: [] };
-    delete this.#totaux[couche];
-    this.#popup?.remove();
+    this.#purger(couche);
+    delete this.#erreurs[couche];
+    if (this.#popupDe === couche) { this.#popup?.remove(); this.#popup = null; this.#popupDe = null; }
     this.#poserTout();
   }
 
-  /** L'état, honnête : « 100 sur 11 950 » quand le plafond du portail mord. */
+  /** L'état, honnête : « 100 sur 11 950 » quand le plafond du portail mord,
+      « indisponibles » tant qu'une couche est en panne. */
   #etat(message?: string): void {
     const p = this.querySelector('.poi-etat') as HTMLElement;
     if (message) { p.textContent = message; return; }
+    const fr = (n: number): string => n.toLocaleString('fr-FR');
     const bouts: string[] = [];
     for (const couche of this.#actives) {
+      if (this.#erreurs[couche]) { bouts.push(`${COUCHES[couche]} : indisponibles`); continue; }
       const total = this.#totaux[couche];
-      if (total === undefined) continue;
-      const montres = couche === 'carburants' ? this.#carburants.length
-        : couche === 'bornes' ? this.#bornes.length : this.#parkings.features.length;
-      const fr = (n: number): string => n.toLocaleString('fr-FR');
+      const montres = this.#montres[couche];
+      if (total === undefined || montres === undefined) continue;
       bouts.push(`${COUCHES[couche]} : ${montres < total ? `${fr(montres)} sur ${fr(total)}` : fr(montres)}`);
     }
     p.textContent = bouts.join(' · ');
@@ -162,9 +235,11 @@ export class PanneauPoi extends HTMLElement {
     const carte = this.#carte;
     if (!carte) return;
     try {
-      this.#poserPoints('carburants', this.#carburants.map((p, i) => ({ lon: p.lon, lat: p.lat, i })));
-      this.#poserPoints('bornes', this.#bornes.map((p, i) => ({ lon: p.lon, lat: p.lat, i })));
-      this.#poserParkings();
+      // Les surfaces d'abord, les points ensuite : les cercles restent
+      // cliquables au-dessus des polygones, quel que soit l'ordre d'activation.
+      this.#poserSource('poi-parkings', this.#parkings);
+      this.#poserSource('poi-carburants', this.#carburants);
+      this.#poserSource('poi-bornes', this.#bornes);
     } catch (e) {
       // Style en cours de chargement : style.load (branché dans `set carte`)
       // reposera tout — même contrat que le tracé d'itinéraire.
@@ -173,20 +248,25 @@ export class PanneauPoi extends HTMLElement {
     }
   }
 
-  #poserPoints(couche: 'carburants' | 'bornes', points: { lon: number; lat: number; i: number }[]): void {
+  #poserSource(id: string, donnees: GeoJSON.FeatureCollection): void {
     const carte = this.#carte!;
-    const donnees: GeoJSON.FeatureCollection = {
-      type: 'FeatureCollection',
-      features: points.map((p) => ({
-        type: 'Feature', properties: { i: p.i },
-        geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
-      })),
-    };
-    const source = carte.getSource(`poi-${couche}`) as GeoJSONSource | undefined;
+    const source = carte.getSource(id) as GeoJSONSource | undefined;
     if (source) { source.setData(donnees); return; }
-    carte.addSource(`poi-${couche}`, { type: 'geojson', data: donnees });
+    carte.addSource(id, { type: 'geojson', data: donnees });
+    if (id === 'poi-parkings') {
+      carte.addLayer({
+        id: 'poi-parkings-fond', type: 'fill', source: id,
+        paint: { 'fill-color': COULEURS.parkings, 'fill-opacity': 0.22 },
+      });
+      carte.addLayer({
+        id: 'poi-parkings-bord', type: 'line', source: id,
+        paint: { 'line-color': COULEURS.parkings, 'line-width': 1.5 },
+      });
+      return;
+    }
+    const couche = id === 'poi-carburants' ? 'carburants' as const : 'bornes' as const;
     carte.addLayer({
-      id: `poi-${couche}`, type: 'circle', source: `poi-${couche}`,
+      id, type: 'circle', source: id,
       paint: {
         'circle-radius': 7, 'circle-color': COULEURS[couche],
         'circle-stroke-width': 2, 'circle-stroke-color': '#FFFFFF',
@@ -194,25 +274,11 @@ export class PanneauPoi extends HTMLElement {
     });
   }
 
-  #poserParkings(): void {
-    const carte = this.#carte!;
-    const source = carte.getSource('poi-parkings') as GeoJSONSource | undefined;
-    if (source) { source.setData(this.#parkings); return; }
-    carte.addSource('poi-parkings', { type: 'geojson', data: this.#parkings });
-    carte.addLayer({
-      id: 'poi-parkings-fond', type: 'fill', source: 'poi-parkings',
-      paint: { 'fill-color': COULEURS.parkings, 'fill-opacity': 0.22 },
-    });
-    carte.addLayer({
-      id: 'poi-parkings-bord', type: 'line', source: 'poi-parkings',
-      paint: { 'line-color': COULEURS.parkings, 'line-width': 1.5 },
-    });
-  }
-
   /* ---- popups, en textContent : les libellés viennent de l'extérieur ---- */
 
-  #monterPopup(lngLat: { lng: number; lat: number }, contenu: HTMLElement): void {
+  #monterPopup(couche: Couche, lngLat: { lng: number; lat: number }, contenu: HTMLElement): void {
     this.#popup?.remove();
+    this.#popupDe = couche;
     this.#popup = new Popup({ closeButton: true, maxWidth: '260px' })
       .setLngLat(lngLat).setDOMContent(contenu).addTo(this.#carte!);
   }
@@ -220,18 +286,21 @@ export class PanneauPoi extends HTMLElement {
   #ouvrirPopup(couche: 'carburants' | 'bornes', features: MapGeoJSONFeature[]): void {
     const f = features[0];
     if (!f || f.geometry.type !== 'Point') return;
-    const i = Number(f.properties?.['i']);
+    const p = f.properties ?? {};
     const [lng, lat] = f.geometry.coordinates as [number, number];
     const bloc = document.createElement('div');
     bloc.className = 'poi-popup';
     const titre = document.createElement('strong');
     if (couche === 'carburants') {
-      const station = this.#carburants[i];
-      if (!station) return;
-      titre.textContent = [station.adresse, station.ville].filter(Boolean).join(', ') || 'Station-service';
+      titre.textContent = [p['adresse'], p['ville']].filter((v) => typeof v === 'string' && v).join(', ')
+        || 'Station-service';
       bloc.append(titre);
       const liste = document.createElement('dl');
-      for (const [libelle, valeur] of station.prix) {
+      let prix: unknown = [];
+      try { prix = JSON.parse(String(p['prix'] ?? '[]')); } catch { /* propriété forgée : liste vide */ }
+      for (const ligne of Array.isArray(prix) ? prix : []) {
+        const [libelle, valeur] = ligne as [unknown, unknown];
+        if (typeof libelle !== 'string' || typeof valeur !== 'number') continue;
         const dt = document.createElement('dt'); dt.textContent = libelle;
         const dd = document.createElement('dd');
         dd.textContent = `${valeur.toFixed(2).replace('.', ',')} €/L`;
@@ -239,19 +308,19 @@ export class PanneauPoi extends HTMLElement {
       }
       bloc.append(liste);
     } else {
-      const borne = this.#bornes[i];
-      if (!borne) return;
-      titre.textContent = borne.nom;
+      titre.textContent = typeof p['nom'] === 'string' && p['nom'] ? p['nom'] : 'Borne de recharge';
       bloc.append(titre);
       const detail = document.createElement('p');
+      const puissance = Number(p['puissance']);
+      const pdc = Number(p['pdc']);
       detail.textContent = [
-        borne.puissance ? `${borne.puissance} kW` : null,
-        borne.pdc ? `${borne.pdc} point${borne.pdc > 1 ? 's' : ''} de charge` : null,
-        borne.gratuit === true ? 'gratuit' : null,
+        Number.isFinite(puissance) && puissance > 0 ? `${puissance} kW` : null,
+        Number.isFinite(pdc) && pdc > 0 ? `${pdc} point${pdc > 1 ? 's' : ''} de charge` : null,
+        p['gratuit'] === true ? 'gratuit' : null,
       ].filter(Boolean).join(' · ');
       bloc.append(detail);
     }
-    this.#monterPopup({ lng, lat }, bloc);
+    this.#monterPopup(couche, { lng, lat }, bloc);
   }
 
   #popupParking(lngLat: { lng: number; lat: number }, features: MapGeoJSONFeature[]): void {
@@ -269,9 +338,9 @@ export class PanneauPoi extends HTMLElement {
       typeof p['nomcom'] === 'string' ? p['nomcom'] : null,
     ].filter(Boolean).join(' · ');
     bloc.append(titre, detail);
-    // La popup s'ouvre là où l'usager a cliqué (le polygone n'a pas de centre
-    // évident, et le clic est déjà le bon endroit).
-    this.#monterPopup(lngLat, bloc);
+    // La popup s'ouvre là où l'usager a cliqué : un polygone n'a pas de
+    // centre évident.
+    this.#monterPopup('parkings', lngLat, bloc);
   }
 }
 

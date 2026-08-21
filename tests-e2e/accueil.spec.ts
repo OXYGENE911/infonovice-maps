@@ -520,17 +520,127 @@ test('les POI se chargent À LA DEMANDE : zoom respecté, prix en popup, choix p
   await expect(page.locator('.poi-popup')).toContainText('1 Rue de Rivoli, Paris', { timeout: 5_000 });
   await expect(page.locator('.poi-popup')).toContainText('2,25 €/L');
 
+  // Un MICRO-déplacement (fixe GPS, molette hésitante) ne recharge PAS :
+  // le seuil de vue protège les quotas, pas seulement le débounce.
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [2.3532, 48.8570], zoom: 13 });
+  });
+  await page.waitForTimeout(900);
+  expect(appelsCarbu, 'un micro-déplacement a rechargé').toBe(1);
+
   // Les deux autres couches se posent aussi, l'état est honnête (« 1 sur 11 950 »).
   await page.getByRole('checkbox', { name: 'Bornes électriques' }).check();
   await page.getByRole('checkbox', { name: 'Parkings' }).check();
   await expect(page.locator('.poi-etat')).toContainText('Bornes électriques : 1 sur 11 950', { timeout: 10_000 });
   await expect(page.locator('.poi-etat')).toContainText('Parkings : 1');
 
-  // Le choix survit au rechargement (IndexedDB), et se recharge tout seul.
+  // LES COUCHES SURVIVENT AU CHANGEMENT DE FOND — pixels à l'appui, le même
+  // contrat que le tracé d'itinéraire.
+  await page.locator('.fonds summary').click();
+  await page.getByRole('radio', { name: 'Satellite', exact: true }).check();
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __carte: { queryRenderedFeatures(o: object): unknown[] } })
+      .__carte.queryRenderedFeatures({ layers: ['poi-carburants'] }).length,
+  ), { timeout: 15_000 }).toBeGreaterThan(0);
+
+  // Le choix survit au rechargement (IndexedDB). La carte revient au zoom
+  // France entière : l'application prévient et NE demande rien — puis un
+  // zoom suffisant recharge tout seul.
+  const appelsAvantReload = appelsCarbu;
   await page.reload();
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await page.locator('.poi summary').click();
   await expect(page.getByRole('checkbox', { name: 'Carburants' })).toBeChecked();
+  await expect(page.locator('.poi-etat')).toContainText('Zoomez', { timeout: 10_000 });
+  expect(appelsCarbu, 'appel parti au zoom France entière après reload').toBe(appelsAvantReload);
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [2.3522, 48.8566], zoom: 13 });
+  });
+  await expect.poll(() => appelsCarbu, { timeout: 10_000 }).toBeGreaterThan(appelsAvantReload);
+  await expect(page.locator('.poi-etat')).toContainText('Carburants : 2', { timeout: 10_000 });
+});
+
+test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom arrière prévient', async ({ page }) => {
+  let panneBornes = true;
+  let appelsCarbu = 0;
+  await page.route('**/data.economie.gouv.fr/**', (route) => {
+    appelsCarbu += 1;
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      total_count: 1, results: [
+        { geom: { lon: 2.3522, lat: 48.8566 }, adresse: '1 Rue de Rivoli', ville: 'Paris', gazole_prix: 2.25 },
+      ] }) });
+  });
+  await page.route('**/public.opendatasoft.com/**', (route) => {
+    if (panneBornes) return route.abort('failed');
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      total_count: 1, results: [
+        { point_geo: { lon: 2.356, lat: 48.858 }, nom_station: 'Bercy Village',
+          puissance_nominale: 7, nbre_pdc: 30, gratuit: '1' },
+      ] }) });
+  });
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [2.3540, 48.8570], zoom: 13 });
+  });
+  await page.locator('.poi summary').click();
+
+  // La panne d'UNE couche s'affiche pour elle, sans gêner les autres.
+  await page.getByRole('checkbox', { name: 'Carburants' }).check();
+  await page.getByRole('checkbox', { name: 'Bornes électriques' }).check();
+  await expect(page.locator('.poi-etat')).toContainText('Bornes électriques : indisponibles', { timeout: 15_000 });
+  await expect(page.locator('.poi-etat')).toContainText('Carburants : 1');
+
+  // Le service revient : un VRAI déplacement suffit, l'échec n'a rien verrouillé.
+  panneBornes = false;
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [2.30, 48.83], zoom: 13 });
+  });
+  await expect(page.locator('.poi-etat')).toContainText('Bornes électriques : 1', { timeout: 15_000 });
+
+  // Clic sur la borne : puissance, points de charge, gratuité — en français.
+  // On CENTRE d'abord la borne : queryRenderedFeatures répond même hors du
+  // cadre (tampon de tuiles), mais un clic physique, non (vu à la sonde :
+  // point projeté à x=1292 pour un canevas de 1280).
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [2.356, 48.858], zoom: 14 });
+  });
+  await expect.poll(() => page.evaluate(() => {
+    const carte = (window as unknown as { __carte: {
+      project(c: [number, number]): { x: number; y: number };
+      queryRenderedFeatures(p: { x: number; y: number }, o: object): unknown[];
+    } }).__carte;
+    return carte.queryRenderedFeatures(carte.project([2.356, 48.858]), { layers: ['poi-bornes'] }).length;
+  }), { timeout: 10_000 }).toBeGreaterThan(0);
+  const point = await page.evaluate(() => {
+    const carte = (window as unknown as { __carte: { project(c: [number, number]): { x: number; y: number } } }).__carte;
+    return carte.project([2.356, 48.858]);
+  });
+  const cadre = await page.locator('#carte canvas.maplibregl-canvas').boundingBox();
+  await page.mouse.click(cadre!.x + point.x, cadre!.y + point.y);
+  await expect(page.locator('.poi-popup')).toContainText('Bercy Village', { timeout: 5_000 });
+  await expect(page.locator('.poi-popup')).toContainText('7 kW · 30 points de charge · gratuit');
+
+  // DÉCOCHER vide réellement la carte — pixels à l'appui.
+  await page.getByRole('checkbox', { name: 'Bornes électriques' }).uncheck();
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __carte: { queryRenderedFeatures(o: object): unknown[] } })
+      .__carte.queryRenderedFeatures({ layers: ['poi-bornes'] }).length,
+  ), { timeout: 10_000 }).toBe(0);
+
+  // Repartir sous le zoom 12 : on prévient, et on ne demande PLUS rien.
+  const appelsAvant = appelsCarbu;
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [2.4, 46.6], zoom: 5.4 });
+  });
+  await expect(page.locator('.poi-etat')).toContainText('Zoomez', { timeout: 10_000 });
+  expect(appelsCarbu, 'appel parti sous le zoom minimal').toBe(appelsAvant);
 });
 
 test('l’export GPX télécharge un fichier nommé, sans aucune requête', async ({ page }) => {
