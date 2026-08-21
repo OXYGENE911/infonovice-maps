@@ -182,7 +182,7 @@ export class PanneauPoi extends HTMLElement {
       this.#chargee[couche] = bbox;
       this.#poserTout();
       this.#etat();
-    } catch (e) {
+    } catch {
       if (controleur.signal.aborted) return;
       // Pas de données périmées sous un message de panne : la couche en échec
       // se PURGE, et l'état PAR COUCHE la dit indisponible — durablement, sans
