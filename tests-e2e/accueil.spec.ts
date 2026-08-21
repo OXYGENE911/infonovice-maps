@@ -748,6 +748,68 @@ test('FAVORIS : le bouton d’ajout attend que l’adresse soit tranchée', asyn
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
 });
 
+test('MÉTÉO : prévision à l’HEURE D’ARRIVÉE, à la demande, écart de source assumé', async ({ page }) => {
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 465_000, duration: 4 * 3600, // quatre heures pile
+    }),
+  }));
+  let appelsMeteo = 0;
+  let urlMeteo = '';
+  await page.route('**/api.open-meteo.com/**', (route) => {
+    appelsMeteo += 1;
+    urlMeteo = route.request().url();
+    // Le service rend des heures LOCALES sans fuseau : on en fabrique une
+    // série centrée sur l'heure d'arrivée réelle, calculée dans le test.
+    const arrivee = new Date(Date.now() + 4 * 3600 * 1000);
+    const heure = (decalage: number) => {
+      const d = new Date(arrivee.getTime() + decalage * 3600 * 1000);
+      d.setMinutes(0, 0, 0);
+      const p = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:00`;
+    };
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ hourly: {
+      time: [heure(-2), heure(0), heure(2)],
+      temperature_2m: [12.1, 23.8, 15.5],
+      precipitation: [0, 1.8, 0],
+      weather_code: [3, 95, 2],
+      wind_speed_10m: [5, 32, 7],
+    } }) });
+  });
+
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
+  // Rien tant que la section est fermée.
+  expect(appelsMeteo, 'météo demandée sans ouvrir la section').toBe(0);
+
+  await page.locator('.iti-meteo summary').click();
+  await expect(page.locator('.meteo-ligne')).toContainText('24 °C', { timeout: 15_000 });
+  await expect(page.locator('.meteo-ligne')).toContainText('orage');
+  await expect(page.locator('.meteo-ligne')).toContainText('1,8 mm de pluie');
+  await expect(page.locator('.meteo-ligne')).toContainText('vent 32 km/h');
+  // C'est bien l'heure d'ARRIVÉE (maintenant + 4 h) qui est annoncée.
+  const dans4h = new Date(Date.now() + 4 * 3600 * 1000);
+  await expect(page.locator('.meteo-ligne')).toContainText(`Arrivée vers ${dans4h.getHours()} h`);
+  expect(appelsMeteo).toBe(1);
+
+  // La prévision est demandée pour l'ARRIVÉE, pas pour le départ.
+  const u = new URL(urlMeteo);
+  expect(Number(u.searchParams.get('latitude'))).toBeCloseTo(45.764, 3);
+  expect(Number(u.searchParams.get('longitude'))).toBeCloseTo(4.8357, 3);
+
+  // L'ÉCART DE SOUVERAINETÉ EST DIT LÀ OÙ IL SE PRODUIT.
+  await expect(page.locator('.meteo-source')).toContainText('Open-Meteo');
+  await expect(page.locator('.meteo-source')).toContainText('européen');
+
+  // …et la page « À propos » l'explique noir sur blanc.
+  await page.goto('/a-propos.html');
+  await expect(page.locator('.page-corps')).toContainText('L’exception : la météo');
+  await expect(page.locator('.page-corps')).toContainText('Open-Meteo, un service européen (allemand)');
+  await expect(page.locator('.page-corps')).toContainText('seules les coordonnées de votre');
+});
+
 test('PHOTOS DE RUE : à la demande seulement, avec attribution, fermeture au clavier', async ({ page }) => {
   await page.route('**/api-adresse.data.gouv.fr/reverse/**', (route) => route.fulfill({
     contentType: 'application/json',

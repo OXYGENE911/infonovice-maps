@@ -2,6 +2,13 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.16.0] — 2026-08-22 — Météo à l'arrivée
+- Section « Météo à l'arrivée » du planificateur : prévision à l'heure
+  d'arrivée estimée (température, temps, pluie, vent), à la demande.
+- Écart de souveraineté assumé et ÉCRIT : la prévision vient d'Open-Meteo,
+  service européen — aucune source française n'est utilisable sans clé au
+  navigateur (sept testées). Dit sur « À propos » et sous la prévision.
+
 ## [0.15.0] — 2026-08-22 — Photos de rue
 - Panoramax : « Photos de rue » dans la popup d'appui long, visionneuse
   modale avec attribution CC-BY-SA (producteur, licence, date), Échap ferme

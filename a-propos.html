@@ -69,8 +69,8 @@
     </ul>
 
     <h2>D’où viennent les données</h2>
-    <p>Uniquement de services publics français, interrogés directement par
-      votre navigateur :</p>
+    <p>De services publics français, interrogés directement par votre
+      navigateur — <strong>à une exception près, dite plus bas</strong> :</p>
     <dl>
       <dt>Fonds de carte, itinéraires, altitudes, parkings — Géoplateforme
         (IGN)</dt>
@@ -91,6 +91,21 @@
       <dd>Points de recharge pour véhicules électriques, sous Licence Ouverte
         v2.0 (Etalab).</dd>
     </dl>
+
+    <h2>L’exception : la météo</h2>
+    <p>Les prévisions affichées à l’arrivée d’un itinéraire viennent
+      d’<strong>Open-Meteo, un service européen (allemand)</strong> — pas
+      d’un service français. Nous préférons l’écrire que le taire.</p>
+    <p>La raison est simple : au 22 août 2026, Météo-France ne publie aucune
+      prévision exploitable directement par un navigateur sans clé d’accès.
+      Or une clé posée dans le code d’un site public serait visible de tous.
+      Sept sources françaises ont été testées, une par une, et consignées
+      dans le dépôt. Le jour où une donnée publique française sera
+      interrogeable sans clé, cette exception disparaîtra.</p>
+    <p>Ce qui ne change pas : <strong>seules les coordonnées de votre
+      destination</strong> sont transmises pour obtenir la prévision — jamais
+      votre position, jamais votre identité, et seulement si vous ouvrez la
+      section « Météo à l’arrivée ».</p>
 
     <h2>Le code est ouvert</h2>
     <p>Infonovice Maps est publié sous licence <strong>AGPL-3.0</strong> : le
