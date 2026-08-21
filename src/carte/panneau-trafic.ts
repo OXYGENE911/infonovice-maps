@@ -29,18 +29,37 @@ export class PanneauTrafic extends HTMLElement {
   #minuteur: ReturnType<typeof setInterval> | undefined;
   #annulation: AbortController | null = null;
   #popup: Popup | null = null;
+  /** Instant du dernier chargement RÉUSSI, pour ne pas harceler la source. */
+  #charge = 0;
 
   set carte(c: CarteMapLibre) {
     if (this.#carte) return;
     this.#carte = c;
     // setStyle détruit les sources : on repose (même contrat que les autres).
     c.on('style.load', () => { this.#poser(); });
-    c.on('click', 'trafic-points', (e) => { void this.#ouvrirPopup(e.features ?? []); });
+    c.on('click', 'trafic-points', (e) => {
+      // Le clic est REVENDIQUÉ : les couches POI posent leurs propres
+      // gestionnaires délégués, et un point de trafic sur un polygone de
+      // parking déclenchait les deux popups (revue du 22/08). La marque vit
+      // sur l'événement natif, donc elle traverse les composants.
+      const natif = e.originalEvent as Event & { __clicPris?: boolean };
+      if (natif.__clicPris) return;
+      natif.__clicPris = true;
+      void this.#ouvrirPopup(e.features ?? []);
+    });
     c.on('mouseenter', 'trafic-points', () => { c.getCanvas().style.cursor = 'pointer'; });
     c.on('mouseleave', 'trafic-points', () => { c.getCanvas().style.cursor = ''; });
-    // Un onglet caché ne consomme rien ; au retour, on rattrape.
+    /* Un onglet caché ne consomme rien ; au retour, on rattrape — MAIS
+       seulement si la donnée a vieilli. Sans ce garde, dix bascules d'onglet
+       (ou dix déverrouillages de téléphone) valaient vingt requêtes à un
+       service public qui ne publie que toutes les 3 minutes, et chaque
+       bascule annulait le chargement en cours (revue du 22/08). */
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && this.#actif) void this.#charger();
+      if (document.visibilityState !== 'visible' || !this.#actif) return;
+      const age = this.#charge ? Date.now() - this.#charge : Infinity;
+      if (age < CADENCE_MS) return;
+      void this.#charger();
+      this.#lancerCadence(); // rephasé : le prochain tic part de maintenant
     });
   }
 
@@ -86,6 +105,7 @@ export class PanneauTrafic extends HTMLElement {
     this.#minuteur = undefined;
     this.#annulation?.abort();
     this.#evenements = [];
+    this.#charge = 0;
     this.#popup?.remove();
     this.#popup = null;
     this.#poser();
@@ -106,6 +126,7 @@ export class PanneauTrafic extends HTMLElement {
       const evenements = await chargerTrafic(annulation.signal);
       if (annulation !== this.#annulation || !this.#actif) return;
       this.#evenements = evenements;
+      this.#charge = Date.now();
       this.#poser();
       const n = evenements.length;
       this.#etat(`${n.toLocaleString('fr-FR')} événement${n > 1 ? 's' : ''} en cours`);

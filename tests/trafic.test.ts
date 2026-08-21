@@ -2,10 +2,10 @@
 // analyse défensive, à sec. Les fixtures reprennent la FORME RÉELLE de Bison
 // Futé (vérifiée le 22/08/2026) : GeoJSON en Lambert-93, propriétés
 // techniques, détail en tableau imbriqué contenant du HTML.
-import { describe, expect, test } from 'vitest';
 import { versWGS84, dansEmpriseFrance } from '../src/lib/lambert93';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import {
-  dossierIteration, urlEvenements, versEvenements, versDetail,
+  dossierIteration, urlEvenements, versEvenements, versDetail, chargerTrafic,
   libelleType, couleurType, ErreurTrafic,
 } from '../src/lib/trafic';
 
@@ -181,5 +181,82 @@ describe('libellés et couleurs', () => {
     expect(couleurType('ACCIDENT')).toBe(couleurType('COUPURE'));
     expect(couleurType('ACCIDENT')).not.toBe(couleurType('TRAVAUX'));
     expect(couleurType('TYPE_INCONNU')).toBe('#5F5E5A');
+  });
+});
+
+
+describe('versDetail — l’assainisseur, FALSIFIÉ', () => {
+  // La revue du 22/08 a prouvé par mutation que les tests précédents
+  // passaient MÊME sans le retrait des balises : ils vérifiaient l'absence
+  // d'exécution (garantie par textContent), pas le nettoyage lui-même.
+  test('AUCUNE balise ne survit à versDetail — sur du texte, pas dans le DOM', () => {
+    const brut = [['T', 'c', [],
+      ['<img src=x onerror=alert(1)> <b>gras</b> <script>vol()</script> fin'], '', '']];
+    const d = versDetail(brut)!;
+    expect(d.texte).not.toContain('<img');
+    expect(d.texte).not.toContain('<b>');
+    expect(d.texte).not.toContain('<script');
+    expect(d.texte).not.toMatch(/<\/?[a-z][^>]*>/i);
+    // Le texte utile survit, lui.
+    expect(d.texte).toContain('gras');
+    expect(d.texte).toContain('fin');
+  });
+
+  test('un point de code HORS LIMITES ne fait plus tomber le bulletin', () => {
+    // String.fromCodePoint lève au-delà de 0x10FFFF : une entité fantaisiste
+    // coûtait tout le détail (revue du 22/08).
+    for (const entite of ['&#1114112;', '&#x110000;', '&#99999999999999;', '&#xD800;']) {
+      const d = versDetail([['T', 'c', [], [`A25 fermée ${entite} sens Lille`], '', '']]);
+      expect(d, entite).not.toBeNull();
+      expect(d!.texte).toContain('A25 fermée');
+      expect(d!.texte).toContain('sens Lille');
+      // L'entité douteuse reste en clair plutôt que de tout emporter.
+      expect(d!.texte).toContain(entite);
+    }
+  });
+});
+
+describe('chargerTrafic — les gardes de la chaîne', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  const EVENEMENT = {
+    type: 'FeatureCollection',
+    features: [{
+      geometry: { type: 'Point', coordinates: [695546.6, 6813337.5] },
+      properties: { type: 'TRAVAUX', etat_evenement: 'EFFECTIF', urlcpc: '/data/x/cpc/1.json' },
+    }],
+  };
+  const reponse = (v: unknown) => new Response(JSON.stringify(v), { status: 200 });
+
+  test('UNE LISTE NATIONALE VIDE est traitée comme une panne, pas comme une vérité', async () => {
+    // Le cas réel : un dossier d'itération périmé rend un fichier VIDE, sans
+    // erreur HTTP. L'accepter afficherait « 0 événement » pour toute la France.
+    const f = vi.fn(async (u: string) => (String(u).includes('date.json')
+      ? reponse([Date.now()])
+      : reponse({ type: 'FeatureCollection', features: [] })));
+    vi.stubGlobal('fetch', f);
+    const erreur = await chargerTrafic().catch((e: unknown) => e);
+    expect(erreur).toBeInstanceOf(ErreurTrafic);
+    expect((erreur as Error).message).toContain('données conservées');
+  });
+
+  test('une horodate DIFFORME est refusée avant de composer un chemin de 1970', async () => {
+    for (const mauvaise of [null, '', [], [0], ['non'], [-1], [12345]]) {
+      const f = vi.fn().mockResolvedValue(reponse(mauvaise));
+      vi.stubGlobal('fetch', f);
+      await expect(chargerTrafic(), JSON.stringify(mauvaise)).rejects.toThrow('horodate');
+      // La deuxième requête ne part JAMAIS sur une horodate absurde.
+      expect(f).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  test('une horodate plausible enchaîne bien sur la couche', async () => {
+    const f = vi.fn()
+      .mockResolvedValueOnce(reponse([Date.parse('2026-08-21T23:05:03Z')]))
+      .mockResolvedValueOnce(reponse(EVENEMENT));
+    vi.stubGlobal('fetch', f);
+    const e = await chargerTrafic();
+    expect(e).toHaveLength(1);
+    expect(String(f.mock.calls[1]?.[0])).toContain('data-20260822-010503');
   });
 });

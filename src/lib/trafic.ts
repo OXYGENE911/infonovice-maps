@@ -139,6 +139,15 @@ export function versEvenements(brut: unknown): EvenementRoute[] {
   return evenements;
 }
 
+/** Rend le caractère d'un point de code VALIDE, ou l'entité telle quelle.
+    Les demi-codets (D800–DFFF) et tout ce qui dépasse 0x10FFFF feraient lever
+    String.fromCodePoint : une entité douteuse ne doit pas coûter le bulletin. */
+function codePointSur(cp: number, entier: string): string {
+  if (!Number.isInteger(cp) || cp < 0 || cp > 0x10FFFF) return entier;
+  if (cp >= 0xD800 && cp <= 0xDFFF) return entier;
+  return String.fromCodePoint(cp);
+}
+
 /** Le détail d'un événement : un tableau imbriqué, avec du HTML dedans.
     On en tire du TEXTE — jamais de balises : ce contenu vient d'un service
     externe, et le projet n'injecte pas d'HTML étranger dans le DOM. */
@@ -156,8 +165,11 @@ export function versDetail(brut: unknown): { titre: string; texte: string } | nu
     // Entités NUMÉRIQUES d'abord (le service écrit « jusqu&#39;au »), puis
     // les nommées. L'ordre compte : `&amp;#39;` doit rendre « &#39; », pas
     // une apostrophe — on décode donc `&amp;` en DERNIER.
-    .replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n: string) => String.fromCodePoint(parseInt(n, 16)))
+    // Le point de code est BORNÉ : `&#1114112;` fait lever String.fromCodePoint,
+    // ce qui transformait une entité fantaisiste en « détail indisponible »
+    // alors que le texte était lisible à un caractère près (revue du 22/08).
+    .replace(/&#(\d+);/g, (entier, n: string) => codePointSur(Number(n), entier))
+    .replace(/&#x([0-9a-f]+);/gi, (entier, n: string) => codePointSur(parseInt(n, 16), entier))
     .replace(/&nbsp;/gi, ' ')
     .replace(/&quot;/gi, '"')
     .replace(/&apos;/gi, '\'')
@@ -197,15 +209,38 @@ async function appel(url: string, signal?: AbortSignal): Promise<unknown> {
   );
 }
 
+/** Horodate plausible : le service publie des millisecondes Unix récentes.
+    Sans ce garde, `null`, `""` ou `[]` deviennent 0 par `Number()`, et le
+    chemin composé pointe le 1er janvier 1970 — une itération qui n'a jamais
+    existé (revue du 22/08). */
+function horodatePlausible(ms: number): boolean {
+  // 2020 → 2100 : assez large pour ne jamais gêner, assez étroit pour
+  // attraper 0, NaN et les valeurs fantaisistes.
+  return Number.isFinite(ms) && ms > 1_577_836_800_000 && ms < 4_102_444_800_000;
+}
+
 /** Les événements routiers de toute la France (~100 Ko). Deux requêtes :
     l'horodate courante, puis la couche elle-même. */
 export async function chargerTrafic(signal?: AbortSignal): Promise<EvenementRoute[]> {
   const horodate = await appel(HORODATE, signal);
   const ms = Array.isArray(horodate) ? Number(horodate[0]) : Number(horodate);
-  if (!Number.isFinite(ms)) {
+  if (!horodatePlausible(ms)) {
     throw new ErreurTrafic('Le service d’info trafic n’a pas rendu d’horodate exploitable.');
   }
-  return versEvenements(await appel(urlEvenements(dossierIteration(ms)), signal));
+  const evenements = versEvenements(await appel(urlEvenements(dossierIteration(ms)), signal));
+  /* UNE LISTE NATIONALE VIDE N'EST PAS UNE NOUVELLE, C'EST UNE PANNE.
+     Le service publie chaque itération dans un dossier horodaté : demander un
+     dossier périmé rend un fichier VIDE, pas une erreur HTTP. Traiter ce vide
+     comme une vérité effacerait la couche et afficherait « 0 événement en
+     cours » — soit : aucun accident, aucune route coupée, aucun chantier dans
+     toute la France. Le flux réel en comptait 243 le jour de la vérification,
+     et n'est jamais vide (revue du 22/08). */
+  if (evenements.length === 0) {
+    throw new ErreurTrafic(
+      'L’info trafic n’a rien rendu pour cette actualisation — données conservées.',
+    );
+  }
+  return evenements;
 }
 
 export async function chargerDetail(
