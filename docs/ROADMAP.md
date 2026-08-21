@@ -75,7 +75,14 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       hors de portée (clé) : non promises dans l'interface.
 
 ## Transports & trafic
-- [ ] PR #14 — Couche info trafic / travaux (open data)
+- [x] PR #14 — Couche info trafic NATIONALE (Bison Futé, ministère chargé
+      des transports) : travaux, accidents, coupures, bouchons, intempéries,
+      rafraîchis toutes les 3 minutes — et seulement si la couche est active
+      ET l'onglet visible. Reprojection Lambert-93 → WGS84 écrite à la main
+      (aucune dépendance), validée sur l'origine conventionnelle et par
+      contrôle départemental. Détail au clic, réduit en texte.
+      À FAIRE PLUS TARD : les fluidités d'agglomération (Bordeaux, Nantes,
+      Rennes) fonctionnent aussi — sources listées dans docs/apis.md.
 - [ ] PR #15 — Transports en commun : GTFS des principales agglos
 - [ ] PR #16 — GTFS-RT temps réel là où disponible
 

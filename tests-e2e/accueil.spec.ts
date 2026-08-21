@@ -748,6 +748,88 @@ test('FAVORIS : le bouton d’ajout attend que l’adresse soit tranchée', asyn
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
 });
 
+test('TRAFIC : couche nationale à la demande, popup au clic, détail assaini', async ({ page }) => {
+  let appelsHorodate = 0;
+  let appelsEvenements = 0;
+  let appelsDetail = 0;
+  await page.route('**/www.bison-fute.gouv.fr/data/iteration/date.json', (route) => {
+    appelsHorodate += 1;
+    // 22 août 2026 01:05:03 à Paris.
+    return route.fulfill({ contentType: 'application/json', body: '[1787353503716]' });
+  });
+  await page.route('**/www1.bison-fute.gouv.fr/data/**/evenementsOL6.json', (route) => {
+    appelsEvenements += 1;
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      type: 'FeatureCollection',
+      features: [
+        // Coordonnées Lambert-93 réelles (A5 en Seine-et-Marne).
+        { geometry: { type: 'Point', coordinates: [695546.6, 6813337.5] },
+          properties: { type: 'COUPURE', etat_evenement: 'EFFECTIF',
+            urlcpc: '/data/x/evenementsOL6/maintenant/cpc/1.json',
+            dateCreation: '21/08/2026 05:48:17' } },
+        // Un événement TERMINÉ : ne doit PAS apparaître.
+        { geometry: { type: 'Point', coordinates: [700000, 6600000] },
+          properties: { type: 'ACCIDENT', etat_evenement: 'TERMINE', urlcpc: '' } },
+      ],
+    }) });
+  });
+  await page.route('**/www1.bison-fute.gouv.fr/data/**/cpc/**', (route) => {
+    appelsDetail += 1;
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify([[
+      'A5 (77) Route fermée', 'coupure', [],
+      ['Route fermée', '<br/>jusqu&#39;au 30/03/2028<br/> A5 (deux sens)<br/><script>alert(1)</script>'],
+      '', 'EFFECTIF',
+    ]]) });
+  });
+
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  // RIEN tant que la couche n'est pas demandée.
+  expect(appelsHorodate + appelsEvenements, 'trafic chargé sans être demandé').toBe(0);
+
+  await page.locator('.trafic summary').click();
+  await page.getByRole('checkbox', { name: /Événements routiers/ }).check();
+  // Un seul événement retenu : le TERMINÉ est écarté.
+  await expect(page.locator('.trafic-etat')).toContainText('1 événement en cours', { timeout: 15_000 });
+  expect(appelsHorodate).toBe(1);
+  expect(appelsEvenements).toBe(1);
+
+  // La pastille est RENDUE au bon endroit (reprojection Lambert-93 → WGS84).
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [2.9398, 48.4203], zoom: 12 });
+  });
+  await expect.poll(() => page.evaluate(() => {
+    const c = (window as unknown as { __carte: {
+      project(p: [number, number]): { x: number; y: number };
+      queryRenderedFeatures(p: { x: number; y: number }, o: object): unknown[];
+    } }).__carte;
+    return c.queryRenderedFeatures(c.project([2.9398, 48.4203]), { layers: ['trafic-points'] }).length;
+  }), { timeout: 15_000 }).toBeGreaterThan(0);
+
+  // Clic : le détail est demandé, et arrive ASSAINI (aucune balise).
+  const point = await page.evaluate(() => {
+    const c = (window as unknown as { __carte: { project(p: [number, number]): { x: number; y: number } } }).__carte;
+    return c.project([2.9398, 48.4203]);
+  });
+  const cadre = await page.locator('#carte canvas.maplibregl-canvas').boundingBox();
+  await page.mouse.click(cadre!.x + point.x, cadre!.y + point.y);
+  await expect(page.locator('.trafic-popup')).toContainText('A5 (77) Route fermée', { timeout: 10_000 });
+  await expect(page.locator('.trafic-detail')).toContainText('A5 (deux sens)');
+  await expect(page.locator('.trafic-detail')).toContainText("jusqu'au 30/03/2028");
+  expect(appelsDetail).toBe(1);
+  // Le script du détail n'a pas été exécuté ni injecté comme balise.
+  expect(await page.locator('.trafic-popup script').count()).toBe(0);
+  await expect(page.locator('.trafic-popup')).toContainText('alert(1)'); // en TEXTE
+
+  // Décocher éteint la couche pour de bon (le volet est resté ouvert).
+  await page.getByRole('checkbox', { name: /Événements routiers/ }).uncheck();
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __carte: { queryRenderedFeatures(o: object): unknown[] } })
+      .__carte.queryRenderedFeatures({ layers: ['trafic-points'] }).length,
+  ), { timeout: 10_000 }).toBe(0);
+});
+
 test('MÉTÉO : prévision à l’HEURE D’ARRIVÉE, à la demande, écart de source assumé', async ({ page }) => {
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
     contentType: 'application/json',

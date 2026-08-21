@@ -2,6 +2,13 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.17.0] — 2026-08-22 — Info trafic nationale
+- Couche « Trafic » : les événements routiers de toute la France (Bison Futé),
+  actualisés toutes les 3 minutes, avec le détail au clic.
+- Reprojection Lambert-93 → WGS84 écrite à la main, sans dépendance.
+- Frugalité : rien tant que la couche n'est pas cochée, et aucune requête
+  quand l'onglet est en arrière-plan.
+
 ## [0.16.0] — 2026-08-22 — Météo à l'arrivée
 - Section « Météo à l'arrivée » du planificateur : prévision à l'heure
   d'arrivée estimée (température, temps, pluie, vent), à la demande.
