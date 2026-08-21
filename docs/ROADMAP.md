@@ -92,6 +92,12 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       Un test unitaire compare le sitemap aux pages réelles : une page qui
       naît hors du sitemap ou sans canonical fait échouer la CI.
 
+## Limites connues, à traiter plus tard
+- Les photos Panoramax sont souvent des panoramas 360° (équirectangulaires) :
+  la visionneuse les affiche À PLAT, donc très larges et déformées. Un vrai
+  visualiseur 360 demanderait une bibliothèque supplémentaire — à peser
+  contre le budget bundle (< 300 Ko hors MapLibre).
+
 ## Itérations suivantes (backlog ouvert)
 - PR #22+ — Signalements communautaires (premier backend, hors périmètre 0 €),
   zones de danger, planificateur EV…
