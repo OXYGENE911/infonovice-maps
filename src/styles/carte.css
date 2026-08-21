@@ -429,3 +429,36 @@ etapes-itineraire { display: grid; gap: 7px; }
   font: 600 13.5px var(--police); color: var(--texte-1); }
 .meteo-symbole { font-size: 19px; line-height: 1; }
 .meteo-source { margin: 6px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); }
+
+/* --- Info trafic (PR #14) — même livrée que les autres volets --- */
+.porte-trafic { pointer-events: auto; margin: 8px 0 0 12px !important; }
+.trafic { position: relative; }
+.trafic summary {
+  list-style: none; cursor: pointer;
+  padding: 9px 16px; border-radius: 12px;
+  background: color-mix(in srgb, var(--fond) 92%, transparent);
+  border: 1px solid var(--bord);
+  box-shadow: var(--ombre-s);
+  font: 600 13.5px var(--police); color: var(--texte-1);
+}
+.trafic summary::-webkit-details-marker { display: none; }
+.trafic summary:focus-visible { outline: none; box-shadow: var(--focus); }
+.trafic fieldset {
+  position: absolute; top: calc(100% + 8px); left: 0; min-width: 240px; max-width: 280px;
+  padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
+  background: var(--fond); box-shadow: var(--ombre-m);
+  display: grid; gap: 8px;
+}
+.trafic legend { font: 700 11px var(--police); color: var(--texte-3);
+  text-transform: uppercase; letter-spacing: .08em; padding: 0 4px; }
+.trafic label { display: flex; align-items: center; gap: 9px;
+  font: 400 14px var(--police); color: var(--texte-1); cursor: pointer; }
+.trafic input:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+.trafic-etat { margin: 0; font: 600 12.5px var(--police); color: var(--texte-2); }
+.trafic-etat:empty { display: none; }
+.trafic-source { margin: 0; font: 400 11.5px var(--police); color: var(--texte-3);
+  border-top: 1px solid var(--bord); padding-top: 8px; }
+.trafic-popup strong { font: 650 13.5px var(--police); color: var(--texte-1); }
+.trafic-detail { margin: 7px 0 0; font: 400 13px var(--police); color: var(--texte-2);
+  white-space: pre-line; max-height: 220px; overflow-y: auto; }
+.trafic-date { margin: 7px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); }

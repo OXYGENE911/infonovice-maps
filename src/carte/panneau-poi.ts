@@ -44,7 +44,6 @@ export class PanneauPoi extends HTMLElement {
   #minuteur: ReturnType<typeof setTimeout> | undefined;
   #popup: Popup | null = null;
   #popupDe: Couche | null = null;
-  #clicTraite: unknown = null;
 
   /* Posé UNE fois à l'assemblage, pour la vie de l'application : le panneau
      n'est jamais détruit, on ne s'encombre pas d'un désabonnement (décision
@@ -66,16 +65,21 @@ export class PanneauPoi extends HTMLElement {
        sur les surfaces. */
     for (const couche of ['carburants', 'bornes'] as const) {
       c.on('click', `poi-${couche}`, (e) => {
-        if (e.originalEvent === this.#clicTraite) return;
-        this.#clicTraite = e.originalEvent;
+        // Marque posée sur l'ÉVÉNEMENT NATIF (et non dans un champ privé) :
+        // les autres couches — trafic compris — la voient aussi, alors qu'un
+        // champ d'instance ne protégeait que de soi-même (revue du 22/08).
+        const natif = e.originalEvent as Event & { __clicPris?: boolean };
+        if (natif.__clicPris) return;
+        natif.__clicPris = true;
         this.#ouvrirPopup(couche, e.features ?? []);
       });
       c.on('mouseenter', `poi-${couche}`, () => { c.getCanvas().style.cursor = 'pointer'; });
       c.on('mouseleave', `poi-${couche}`, () => { c.getCanvas().style.cursor = ''; });
     }
     c.on('click', 'poi-parkings-fond', (e) => {
-      if (e.originalEvent === this.#clicTraite) return;
-      this.#clicTraite = e.originalEvent;
+      const natif = e.originalEvent as Event & { __clicPris?: boolean };
+      if (natif.__clicPris) return;
+      natif.__clicPris = true;
       this.#popupParking(e.lngLat, e.features ?? []);
     });
   }

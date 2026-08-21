@@ -124,5 +124,38 @@ consomme des endpoints non documentés (`rpcache-*.meteofrance.com`). Les
 utiliser serait fragile et hors des conditions d'usage : la règle du projet
 est « API publiques documentées », elle ne se contourne pas.
 
+## Info trafic — Bison Futé (vérifié 22/08/2026)
+- SOURCE NATIONALE, CORS `*`, aucune clé, rafraîchie toutes les 3 minutes.
+- L'URL N'EST PAS FIXE. Deux requêtes :
+  1. `https://www.bison-fute.gouv.fr/data/iteration/date.json` → `[horodateMs]`
+  2. `https://www1.bison-fute.gouv.fr/data/data-AAAAMMJJ-HHMMSS/evenementsOL6/maintenant/tfs/evenements/evenementsOL6.json`
+     — le dossier se compose en HEURE DE PARIS. Une URL notée un jour rend un
+     fichier VIDE le lendemain (deux contre-vérifications de la revue s'y sont
+     laissé prendre).
+- COORDONNÉES EN LAMBERT-93 (EPSG:2154), pas en WGS84 : reprojection maison
+  dans `src/lib/lambert93.ts` (aucune dépendance ; proj4js pèserait ~40 Ko
+  gzippés pour cette seule projection). Validée sur l'origine conventionnelle
+  ET sémantiquement : A5 → Seine-et-Marne, N20 → Ariège, A103 → Seine-Saint-Denis.
+- 243 événements observés : TRAVAUX 104, OBSTACLE 46, RESTRICTION 28,
+  COUPURE 26, MESURE_GESTION_TRAFIC 20, ACCIDENT 10, INFORMATION 5,
+  INTEMPERIES 2, INTERDICTION_PL 1, BOUCHON 1. `etat_evenement` : EFFECTIF,
+  PREVISIONNEL, TERMINE (écarté à l'affichage), ou vide.
+- Détail par événement (`urlcpc`) : tableau imbriqué CONTENANT DU HTML avec
+  entités numériques (`jusqu&#39;au`) — réduit en texte côté client, jamais
+  injecté en balises. ~100 Ko pour toute la France (gzip ~12 Ko).
+
+## Sources trafic écartées (22/08/2026, mêmes vérifications)
+- `tipi.bison-fute.gouv.fr` (flux DATEX II référencés par transport.data.gouv.fr) :
+  répond en HTTPS mais **sans aucun en-tête CORS** — inutilisable au navigateur.
+- Miroir `transport.data.gouv.fr/resources/NNNNN/download` : **HTTP 500**.
+- Bordeaux `ci_evenmt_p` : 3 entrées, plus rien depuis le 19/05/2026.
+- Montpellier : le chemin ODS n'existe pas (404, page Drupal).
+- Géoplateforme : **aucune couche trafic ou travaux** (WFS/WMTS inspectés).
+- ÉCARTÉES POUR PLUS TARD (fonctionnent, mais couverture d'agglomération) :
+  Bordeaux `ci_trafi_l` (fluidité temps réel, 687 tronçons, 376 Ko),
+  Rennes `etat-du-trafic-en-temps-reel` (2 859 tronçons, 2,3 Mo — trop lourd
+  en chargement intégral), Nantes `fluidite-axes-routiers` (889 tronçons),
+  Paris `chantiers-perturbants` (122), Toulouse `chantiers-en-cours` (987).
+
 ## À vérifier avant leur PR (ne pas présumer)
 - transport.data.gouv.fr GTFS/GTFS-RT (PR #15-16)

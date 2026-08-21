@@ -21,6 +21,7 @@ import { RechercheAdresse } from './recherche';
 import { PanneauItineraire } from './panneau-itineraire';
 import { PanneauPoi } from './panneau-poi';
 import { PanneauFavoris } from './panneau-favoris';
+import { PanneauTrafic } from './panneau-trafic';
 import { ajouterFavori } from '../lib/favoris';
 import { VisionneusePhoto } from './visionneuse-photo';
 import { chercherPhotos, plusProche, ErreurPhotos } from '../lib/panoramax';
@@ -80,6 +81,14 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   portePoi.appendChild(poi);
   carte.addControl({ onAdd: () => portePoi, onRemove: () => portePoi.remove() }, 'top-left');
 
+  /* L'INFO TRAFIC — couche nationale, sous les points d'intérêt. */
+  const trafic = new PanneauTrafic();
+  trafic.carte = carte;
+  const porteTrafic = document.createElement('div');
+  porteTrafic.className = 'maplibregl-ctrl porte-trafic';
+  porteTrafic.appendChild(trafic);
+  carte.addControl({ onAdd: () => porteTrafic, onRemove: () => porteTrafic.remove() }, 'top-left');
+
   /* LA VISIONNEUSE DE PHOTOS — une seule pour l'application, posée au body :
      une modale doit couvrir la carte, pas vivre dedans. */
   const visionneuse = new VisionneusePhoto();
@@ -100,7 +109,7 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      et la délégation ne dépend pas du moment où les panneaux se rendent.
      Les volets INTERNES du planificateur (profil, feuille) ne sont pas
      concernés : seuls les volets de tête comptent. */
-  const VOLETS = 'details.iti, details.fonds, details.poi, details.favoris';
+  const VOLETS = 'details.iti, details.fonds, details.poi, details.trafic, details.favoris';
   document.addEventListener('toggle', (e) => {
     const cible = e.target;
     if (!(cible instanceof HTMLDetailsElement) || !cible.open) return;
