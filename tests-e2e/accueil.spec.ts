@@ -249,6 +249,88 @@ test('étapes intermédiaires et évitements PARLENT AU SERVICE, et se retirent'
   expect(urls[3]).not.toContain('intermediates');
 });
 
+test('réordonner les étapes, copier le lien, ouvrir la feuille : tout suit le CLICHÉ', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.route('**/api-adresse.data.gouv.fr/search/**', (route) => {
+    const q = new URL(route.request().url()).searchParams.get('q') ?? '';
+    const [libelle, lon, lat] = q.includes('dijon') ? ['Dijon', 5.0415, 47.322]
+      : q.includes('macon') ? ['Mâcon', 4.8328, 46.3069] : ['Autre', 2.0, 48.0];
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ features: [{
+      geometry: { coordinates: [lon, lat] },
+      properties: { label: libelle, type: 'municipality', postcode: '', city: libelle },
+    }] }) });
+  });
+  const urls: string[] = [];
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    const url = route.request().url();
+    urls.push(url);
+    if (url.includes('getSteps=true')) {
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ portions: [{ steps: [
+        { instruction: { type: 'depart', modifier: 'left' }, distance: 10,
+          attributes: { name: { nom_1_gauche: 'R DE RIVOLI', cpx_numero: '', cpx_toponyme: '' } } },
+        { instruction: { type: 'arrive' }, distance: 0,
+          attributes: { name: { nom_1_gauche: '', cpx_numero: '', cpx_toponyme: '' } } },
+      ] }] }) });
+    }
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 539_000, duration: 37_000,
+    }) });
+  });
+  // Deux étapes déjà posées par le lien : Dijon puis Mâcon.
+  await page.goto('/#iti=2.35220,48.85660;5.04150,47.32200;4.83280,46.30690;4.83570,45.76400;car;evite=autoroute');
+  await page.locator('.iti-resultat').waitFor({ state: 'visible', timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('539 km');
+  expect(urls[0]).toContain('intermediates=5.0415,47.322|4.8328,46.3069');
+
+  // MONTER la seconde étape : l'ordre s'inverse dans la requête suivante,
+  // et la saisie de la ligne déplacée SURVIT au déplacement.
+  await page.getByRole('button', { name: 'Monter l’étape' }).nth(1).click();
+  await expect.poll(() => urls.length).toBe(2);
+  expect(urls[1]).toContain('intermediates=4.8328,46.3069|5.0415,47.322');
+  await expect(page.locator('.etape-ligne input').first()).toHaveValue(/46,30690/);
+
+  // Une ligne VIDE ajoutée puis déplacée ou retirée : AUCUNE requête de plus.
+  await page.getByRole('button', { name: 'Ajouter une étape' }).click();
+  await page.getByRole('button', { name: 'Monter l’étape' }).nth(2).click();
+  // Le ↑ a remonté la ligne vide en position 2 sur 3 : c'est elle qu'on retire.
+  await page.getByRole('button', { name: 'Retirer l’étape' }).nth(1).click();
+  await page.waitForTimeout(400);
+  expect(urls.length, 'une ligne vide a déclenché un recalcul').toBe(2);
+
+  // COPIER LE LIEN : il décrit le trajet CALCULÉ (ordre inversé, évitement).
+  await page.getByRole('button', { name: 'Copier le lien' }).click();
+  const lien = await page.evaluate(() => navigator.clipboard.readText());
+  expect(lien).toContain('4.83280,46.30690;5.04150,47.32200');
+  expect(lien).toContain(';car;evite=autoroute');
+
+  // LA FEUILLE DE ROUTE hérite étapes ET évitements du cliché.
+  await page.locator('.iti-feuille summary').click();
+  await expect(page.locator('.feuille-etapes li')).toHaveCount(2, { timeout: 10_000 });
+  const urlFeuille = urls.find((u) => u.includes('getSteps=true'));
+  expect(urlFeuille).toContain('intermediates=4.8328,46.3069|5.0415,47.322');
+  expect(decodeURIComponent(urlFeuille!)).toContain('"value":"autoroute"');
+});
+
+test('après Effacer, le bouton « Ajouter une étape » revient — même depuis six étapes', async ({ page }) => {
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 539_000, duration: 37_000,
+    }),
+  }));
+  const six = [...Array(6)].map((_, i) => `${(3 + i / 10).toFixed(5)},46.00000`).join(';');
+  await page.goto(`/#iti=2.35220,48.85660;${six};4.83570,45.76400;car`);
+  await page.locator('.iti-resultat').waitFor({ state: 'visible', timeout: 15_000 });
+  // Six étapes : la borne est atteinte, le bouton d'ajout est masqué.
+  await expect(page.locator('.etape-ligne')).toHaveCount(6);
+  await expect(page.getByRole('button', { name: 'Ajouter une étape' })).toBeHidden();
+  await page.getByRole('button', { name: 'Effacer' }).click();
+  await expect(page.locator('.etape-ligne')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Ajouter une étape' })).toBeVisible();
+});
+
 test('un lien partagé porte étapes et évitements, et les rejoue', async ({ page }) => {
   const urls: string[] = [];
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {

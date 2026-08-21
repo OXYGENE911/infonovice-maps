@@ -9,16 +9,14 @@
 // désynchroniser en déplaçant ou retirant une ligne.
 import { RechercheAdresse } from './recherche';
 import { formaterCoordonnees, type PointGeo } from '../lib/coordonnees';
+import { MAX_ETAPES } from '../lib/itineraire';
 import type { ResultatAdresse } from '../lib/adresse';
-
-/* Au-delà, l'URL s'allonge et le trajet devient illisible : six suffisent
-   largement à une tournée — et le service accepte la liste sans broncher. */
-const MAX_ETAPES = 6;
 
 export class EtapesItineraire extends HTMLElement {
   #pointDe = new WeakMap<HTMLElement, PointGeo | null>();
 
   connectedCallback(): void {
+    if (this.firstElementChild) return;
     this.innerHTML = `
       <div class="etapes-lignes"></div>
       <button type="button" class="etapes-ajouter">+ Ajouter une étape</button>`;
@@ -43,22 +41,28 @@ export class EtapesItineraire extends HTMLElement {
   set points(pts: PointGeo[]) {
     (this.querySelector('.etapes-lignes') as HTMLElement).replaceChildren();
     for (const p of pts.slice(0, MAX_ETAPES)) this.#ajouter(p);
+    // Même avec une liste vide : le bouton d'ajout et les boutons de butée
+    // doivent refléter l'état — Effacer après six étapes le laissait caché.
+    this.#rafraichir();
   }
 
-  #signaler(): void {
-    // Nom DÉDIÉ : « change » serait indiscernable des change natifs des
-    // inputs de recherche, qui bullent jusqu'ici — chaque sélection
-    // déclenchait deux recalculs (vu en E2E, urls.length 5 au lieu de 4).
-    this.dispatchEvent(new CustomEvent('etapes-changees'));
+  /** Ne prévient le panneau que si la séquence RÉSOLUE a changé : déplacer ou
+      retirer une ligne vide ne change pas le trajet, et un recalcul identique
+      gaspillerait le quota public. */
+  #signalerSi(avant: PointGeo[]): void {
+    const apres = this.points;
+    const pareil = avant.length === apres.length
+      && avant.every((p, i) => p.lon === apres[i]!.lon && p.lat === apres[i]!.lat);
+    if (!pareil) this.dispatchEvent(new CustomEvent('etapes-changees'));
   }
 
-  #bouton(libelle: string, symbole: string, action: () => void): HTMLButtonElement {
+  #bouton(libelle: string, symbole: string, action: (b: HTMLButtonElement) => void): HTMLButtonElement {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'etape-action';
     b.setAttribute('aria-label', libelle);
     b.textContent = symbole;
-    b.addEventListener('click', action);
+    b.addEventListener('click', () => action(b));
     return b;
   }
 
@@ -71,38 +75,64 @@ export class EtapesItineraire extends HTMLElement {
 
     const champ = new RechercheAdresse();
     champ.surSelection = (r: ResultatAdresse) => {
+      const avant = this.points;
       this.#pointDe.set(ligne, r);
-      this.#signaler();
+      this.#signalerSi(avant);
     };
     ligne.append(
       champ,
-      this.#bouton('Monter l’étape', '↑', () => {
-        const avant = ligne.previousElementSibling;
-        if (avant) { conteneur.insertBefore(ligne, avant); this.#signaler(); }
+      this.#bouton('Monter l’étape', '↑', (b) => {
+        const avantElt = ligne.previousElementSibling;
+        if (!avantElt) return;
+        const avant = this.points;
+        conteneur.insertBefore(ligne, avantElt);
+        this.#rafraichir();
+        b.focus(); // insertBefore a déconnecté la ligne : le focus était perdu
+        this.#signalerSi(avant);
       }),
-      this.#bouton('Descendre l’étape', '↓', () => {
-        const apres = ligne.nextElementSibling;
-        if (apres) { conteneur.insertBefore(apres, ligne); this.#signaler(); }
+      this.#bouton('Descendre l’étape', '↓', (b) => {
+        const apresElt = ligne.nextElementSibling;
+        if (!apresElt) return;
+        const avant = this.points;
+        conteneur.insertBefore(apresElt, ligne);
+        this.#rafraichir();
+        b.focus();
+        this.#signalerSi(avant);
       }),
       this.#bouton('Retirer l’étape', '✕', () => {
-        const avaitPoint = Boolean(this.#pointDe.get(ligne));
+        const avant = this.points;
         ligne.remove();
-        this.#basculerAjout();
-        // Retirer une ligne vide ne change pas le trajet : pas de recalcul.
-        if (avaitPoint) this.#signaler();
+        this.#rafraichir();
+        // Le bouton focalisé vient de disparaître avec sa ligne.
+        (this.querySelector('.etapes-ajouter') as HTMLButtonElement).focus();
+        this.#signalerSi(avant);
       }),
     );
     conteneur.append(ligne);
-    if (point) {
-      const saisie = ligne.querySelector('input');
-      if (saisie) saisie.value = formaterCoordonnees(point);
-    }
-    this.#basculerAjout();
+    const saisie = ligne.querySelector('input');
+    if (point && saisie) saisie.value = formaterCoordonnees(point);
+    // Un champ VIDÉ retire son point : sans cela, une ligne visuellement vide
+    // resterait comptée dans le trajet (revue du 21/08).
+    saisie?.addEventListener('input', () => {
+      if (saisie.value.trim() === '' && this.#pointDe.get(ligne)) {
+        const avant = this.points;
+        this.#pointDe.set(ligne, null);
+        this.#signalerSi(avant);
+      }
+    });
+    this.#rafraichir();
   }
 
-  #basculerAjout(): void {
-    const b = this.querySelector('.etapes-ajouter') as HTMLButtonElement;
-    b.hidden = this.#lignes().length >= MAX_ETAPES;
+  /** Recalcule l'état des boutons : ajout (borne MAX_ETAPES) et butées ↑/↓. */
+  #rafraichir(): void {
+    const lignes = this.#lignes();
+    (this.querySelector('.etapes-ajouter') as HTMLButtonElement).hidden =
+      lignes.length >= MAX_ETAPES;
+    lignes.forEach((l, i) => {
+      const [monter, descendre] = l.querySelectorAll<HTMLButtonElement>('.etape-action');
+      if (monter) monter.disabled = i === 0;
+      if (descendre) descendre.disabled = i === lignes.length - 1;
+    });
   }
 }
 

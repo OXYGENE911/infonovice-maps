@@ -21,6 +21,12 @@ export const EVITEMENTS: Record<Eviter, string> = {
   autoroute: 'Autoroutes', tunnel: 'Tunnels', pont: 'Ponts',
 };
 
+/* Au-delà, l'URL s'allonge et le trajet devient illisible : six étapes
+   suffisent à une tournée. La borne vit ICI (le domaine) : l'interface ET le
+   lien de partage la respectent — sinon un lien à dix étapes rejouerait en
+   silence un trajet tronqué à six, différent de ce qu'il promet. */
+export const MAX_ETAPES = 6;
+
 export interface OptionsItineraire {
   /** Étapes intermédiaires, dans l'ordre du trajet. */
   etapes?: PointGeo[];

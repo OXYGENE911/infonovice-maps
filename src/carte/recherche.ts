@@ -4,32 +4,55 @@
 // quota BAN est un bien commun (règle du projet).
 import { chercherAdresses, type ResultatAdresse } from '../lib/adresse';
 
+/* Chaque instance a SES ids ARIA : le composant vit désormais en plusieurs
+   exemplaires (départ, arrivée, jusqu'à six étapes) et des ids dupliqués
+   feraient résoudre aria-controls/aria-activedescendant sur la première
+   occurrence du document (revue du 21/08). */
+let instances = 0;
+
 export class RechercheAdresse extends HTMLElement {
   #resultats: ResultatAdresse[] = [];
   #actif = -1;
   #minuteur: ReturnType<typeof setTimeout> | undefined;
   #annulation: AbortController | null = null;
   #surSelection: ((r: ResultatAdresse) => void) | null = null;
+  #docEcoute: AbortController | null = null;
+  readonly #idListe = `recherche-liste-${(instances += 1)}`;
 
   set surSelection(f: (r: ResultatAdresse) => void) { this.#surSelection = f; }
 
   connectedCallback(): void {
-    this.innerHTML = `
-      <div class="recherche">
-        <input type="search" role="combobox" aria-expanded="false"
-          aria-controls="recherche-liste" aria-autocomplete="list"
-          aria-label="Rechercher une adresse en France"
-          placeholder="Rechercher une adresse…" autocomplete="off" spellcheck="false">
-        <ul id="recherche-liste" role="listbox" aria-label="Suggestions d’adresses" hidden></ul>
-        <p class="recherche-erreur" role="alert" hidden></p>
-      </div>`;
-    const champ = this.querySelector('input');
-    champ?.addEventListener('input', () => this.#planifier(champ.value));
-    champ?.addEventListener('keydown', (e) => this.#clavier(e));
+    /* IDEMPOTENT : déplacer une ligne d'étape (insertBefore) déconnecte puis
+       reconnecte le composant — reconstruire le DOM ici effaçait la saisie de
+       l'usager et ré-empilait les écouteurs (revue du 21/08). */
+    if (!this.firstElementChild) {
+      this.innerHTML = `
+        <div class="recherche">
+          <input type="search" role="combobox" aria-expanded="false"
+            aria-controls="${this.#idListe}" aria-autocomplete="list"
+            aria-label="Rechercher une adresse en France"
+            placeholder="Rechercher une adresse…" autocomplete="off" spellcheck="false">
+          <ul id="${this.#idListe}" role="listbox" aria-label="Suggestions d’adresses" hidden></ul>
+          <p class="recherche-erreur" role="alert" hidden></p>
+        </div>`;
+      const champ = this.querySelector('input');
+      champ?.addEventListener('input', () => this.#planifier(champ.value));
+      champ?.addEventListener('keydown', (e) => this.#clavier(e));
+    }
+    // L'écouteur document suit le cycle de vie : posé à la connexion, retiré
+    // à la déconnexion — sans quoi chaque ligne d'étape retirée le laissait
+    // fuir (et s'exécuter sur un arbre mort à chaque clic de la page).
+    this.#docEcoute?.abort();
+    this.#docEcoute = new AbortController();
     // Cliquer ailleurs referme la liste — sans voler le focus du champ.
     document.addEventListener('pointerdown', (e) => {
       if (!this.contains(e.target as Node)) this.#fermer();
-    });
+    }, { signal: this.#docEcoute.signal });
+  }
+
+  disconnectedCallback(): void {
+    this.#docEcoute?.abort();
+    this.#docEcoute = null;
   }
 
   #planifier(texte: string): void {
@@ -56,10 +79,10 @@ export class RechercheAdresse extends HTMLElement {
   }
 
   #afficher(): void {
-    const liste = this.querySelector('#recherche-liste') as HTMLUListElement;
+    const liste = this.querySelector('ul[role="listbox"]') as HTMLUListElement;
     const champ = this.querySelector('input') as HTMLInputElement;
     liste.innerHTML = this.#resultats.map((r, i) => `
-      <li role="option" id="recherche-option-${i}" aria-selected="${i === this.#actif}">
+      <li role="option" id="${this.#idListe}-option-${i}" aria-selected="${i === this.#actif}">
         <span class="libelle"></span><span class="contexte"></span>
       </li>`).join('');
     // textContent, jamais innerHTML : le libellé vient d'un service externe.
@@ -83,7 +106,7 @@ export class RechercheAdresse extends HTMLElement {
       this.querySelectorAll('[role="option"]').forEach((o, i) =>
         o.setAttribute('aria-selected', String(i === this.#actif)));
       (this.querySelector('input') as HTMLInputElement)
-        .setAttribute('aria-activedescendant', `recherche-option-${this.#actif}`);
+        .setAttribute('aria-activedescendant', `${this.#idListe}-option-${this.#actif}`);
     } else if (e.key === 'Enter' && this.#actif >= 0) {
       e.preventDefault();
       this.#choisir(this.#actif);
@@ -102,7 +125,7 @@ export class RechercheAdresse extends HTMLElement {
   }
 
   #fermer(): void {
-    const liste = this.querySelector('#recherche-liste') as HTMLUListElement | null;
+    const liste = this.querySelector('ul[role="listbox"]') as HTMLUListElement | null;
     if (liste) liste.hidden = true;
     this.querySelector('input')?.setAttribute('aria-expanded', 'false');
     this.#actif = -1;

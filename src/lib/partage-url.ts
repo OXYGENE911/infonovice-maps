@@ -7,7 +7,7 @@
 // points minimum. L'ancienne forme à deux points reste un cas particulier :
 // les liens déjà partagés ne cassent pas.
 import type { PointGeo } from './coordonnees';
-import { EVITEMENTS, type Eviter, type Profil } from './itineraire';
+import { EVITEMENTS, MAX_ETAPES, type Eviter, type Profil } from './itineraire';
 
 export interface PartageItineraire {
   depart: PointGeo;
@@ -40,12 +40,16 @@ export function depuisFragment(fragment: string): PartageItineraire | null {
       || Math.abs(lon) > 180 || Math.abs(lat) > 90) return null;
     points.push({ lon, lat });
   }
-  if (points.length < 2) return null;
+  // Deux extrémités + la même borne d'étapes que l'interface : un lien à dix
+  // étapes rejouerait sinon, en silence, un trajet tronqué — différent de ce
+  // qu'il promet.
+  if (points.length < 2 || points.length > MAX_ETAPES + 2) return null;
   const eviter: Eviter[] = [];
   for (const v of brutEvite ? brutEvite.split('|') : []) {
     // Une valeur inconnue invalide TOUT le fragment : on ne devine pas ce
-    // qu'un lien forgé a voulu dire.
-    if (!(v in EVITEMENTS)) return null;
+    // qu'un lien forgé a voulu dire. hasOwn, pas `in` : `in` remonte la chaîne
+    // de prototypes et laissait passer `evite=constructor` (revue du 21/08).
+    if (!Object.hasOwn(EVITEMENTS, v)) return null;
     if (!eviter.includes(v as Eviter)) eviter.push(v as Eviter);
   }
   return {

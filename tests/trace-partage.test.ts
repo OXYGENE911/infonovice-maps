@@ -75,4 +75,18 @@ describe('partage par URL', () => {
     expect(depuisFragment('#iti=2,48;200,95;5,45;car')).toBeNull();
     expect(depuisFragment('#iti=2,48;car')).toBeNull();
   });
+
+  it('les clés héritées d’Object ne passent pas la validation (hasOwn, pas `in`)', () => {
+    // `in` remonte la chaîne de prototypes : `evite=constructor` passait.
+    expect(depuisFragment('#iti=2,48;5,45;car;evite=constructor')).toBeNull();
+  });
+
+  it('la borne d’étapes du lien est celle de l’interface : 6 passent, 7 invalident', () => {
+    const etape = (i: number) => `${(3 + i / 10).toFixed(5)},46.00000`;
+    const six = [...Array(6)].map((_, i) => etape(i)).join(';');
+    const relu = depuisFragment(`#iti=2.35220,48.85660;${six};4.83570,45.76400;car`);
+    expect(relu?.etapes).toHaveLength(6);
+    const sept = [...Array(7)].map((_, i) => etape(i)).join(';');
+    expect(depuisFragment(`#iti=2.35220,48.85660;${sept};4.83570,45.76400;car`)).toBeNull();
+  });
 });

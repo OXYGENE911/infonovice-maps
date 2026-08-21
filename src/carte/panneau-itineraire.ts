@@ -26,6 +26,8 @@ export class PanneauItineraire extends HTMLElement {
   #arrivee: PointGeo | null = null;
   #profil: Profil = 'car';
   #eviter = new Set<Eviter>();
+  /** Jeton anti-réponses-hors-d'ordre de #calculer (voir le commentaire là-bas). */
+  #sequence = 0;
   #dernier: Itineraire | null = null;
   /** Le cliché complet qui a produit #dernier — il vieillit AVEC lui : un
       recalcul raté laisse les deux cohérents entre eux. Feuille de route,
@@ -293,6 +295,12 @@ export class PanneauItineraire extends HTMLElement {
 
   async #calculer(): Promise<void> {
     if (!this.#carte || !this.#depart || !this.#arrivee) return;
+    // JETON DE SÉQUENCE : cases à cocher et boutons ↑/↓ relancent des calculs
+    // en rafale, et une reprise (500 ms + nouvel essai) peut faire aboutir la
+    // requête la plus VIEILLE en dernier — sans ce jeton, elle écraserait le
+    // trajet demandé. Effacer incrémente aussi : une réponse tardive ne
+    // ressuscite pas un panneau vidé (revue du 21/08).
+    const jeton = (this.#sequence += 1);
     const resultat = this.querySelector('.iti-resultat') as HTMLElement;
     const erreur = this.querySelector('.iti-erreur') as HTMLElement;
     erreur.hidden = true;
@@ -303,6 +311,7 @@ export class PanneauItineraire extends HTMLElement {
       const inter = (this.querySelector('etapes-itineraire') as EtapesItineraire).points;
       const eviter = [...this.#eviter];
       const iti = await calculerItineraire(depart, arrivee, profil, { etapes: inter, eviter });
+      if (jeton !== this.#sequence) return;
       this.#dernier = iti;
       this.#calculPour = { depart, arrivee, profil, etapes: inter, eviter };
       // Le résumé AVANT la pose : distance et durée ne dépendent pas de la
@@ -315,6 +324,7 @@ export class PanneauItineraire extends HTMLElement {
       this.#reinitialiserSections(false);
       this.#tracer(iti);
     } catch (e) {
+      if (jeton !== this.#sequence) return;
       resultat.hidden = true;
       erreur.textContent = e instanceof ErreurItineraire
         ? e.message : 'Calcul impossible pour le moment.';
@@ -381,6 +391,7 @@ export class PanneauItineraire extends HTMLElement {
   }
 
   #effacer(): void {
+    this.#sequence += 1; // tue toute réponse d'itinéraire encore en vol
     this.#dernier = null; this.#calculPour = null; this.#depart = null; this.#arrivee = null;
     this.#marqueurs.forEach((m) => m.remove()); this.#marqueurs = [];
     const carte = this.#carte;
