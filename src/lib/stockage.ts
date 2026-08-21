@@ -92,15 +92,23 @@ export async function supprimerDans(magasin: string, cle: IDBValidKey): Promise<
   });
 }
 
-/** Remplace TOUT le contenu d'un magasin (import) — atomique, une transaction. */
-export async function remplacerMagasin(magasin: string, entrees: [IDBValidKey, unknown][]): Promise<void> {
+/** Remplace TOUT le contenu de plusieurs magasins EN UNE SEULE transaction :
+    un import est un tout — restaurer les favoris puis échouer sur les
+    préférences laisserait l'usager entre deux états (revue du 22/08). */
+export async function remplacerMagasins(
+  contenus: Record<string, [IDBValidKey, unknown][]>,
+): Promise<void> {
   const db = await ouvrir();
+  const magasins = Object.keys(contenus);
   await new Promise<void>((resoudre, rejeter) => {
-    const t = db.transaction(magasin, 'readwrite');
-    const m = t.objectStore(magasin);
-    m.clear();
-    for (const [cle, valeur] of entrees) m.put(valeur, cle);
+    const t = db.transaction(magasins, 'readwrite');
+    for (const magasin of magasins) {
+      const m = t.objectStore(magasin);
+      m.clear();
+      for (const [cle, valeur] of contenus[magasin]!) m.put(valeur, cle);
+    }
     t.oncomplete = () => resoudre();
     t.onerror = () => rejeter(t.error);
+    t.onabort = () => rejeter(t.error);
   });
 }

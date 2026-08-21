@@ -146,7 +146,7 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
       .setLngLat(ou)
       .setHTML('<div class="popup-adresse"><p class="pa-libelle">Recherche de l’adresse…</p>'
         + '<p class="pa-coords"></p><button type="button" class="pa-copier">Copier les coordonnées</button>'
-        + '<button type="button" class="pa-favori">Ajouter aux favoris</button></div>')
+        + '<button type="button" class="pa-favori" disabled>Ajouter aux favoris</button></div>')
       .addTo(carte);
     const bloc = popup.getElement();
     (bloc.querySelector('.pa-coords') as HTMLElement).textContent = coords;
@@ -155,10 +155,12 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
       (bloc.querySelector('.pa-copier') as HTMLElement).textContent = 'Copié !';
     });
     // Le nom du favori : l'adresse si la BAN en connaît une, les coordonnées
-    // sinon — jamais un champ vide.
+    // sinon — jamais un champ vide. Le bouton naît DÉSACTIVÉ et n'ouvre qu'une
+    // fois l'adresse tranchée : cliquer pendant le vol figeait le favori sous
+    // des coordonnées, sans moyen de le renommer (revue du 22/08).
+    const bouton = bloc.querySelector('.pa-favori') as HTMLButtonElement;
     let nomFavori = coords;
-    bloc.querySelector('.pa-favori')?.addEventListener('click', () => {
-      const bouton = bloc.querySelector('.pa-favori') as HTMLButtonElement;
+    bouton.addEventListener('click', () => {
       bouton.disabled = true;
       ajouterFavori(nomFavori, point).then(
         () => { bouton.textContent = 'Ajouté aux favoris ✓'; void favoris.rafraichir(); },
@@ -174,6 +176,8 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
       (bloc.querySelector('.pa-libelle') as HTMLElement).textContent =
         'Adresse indisponible pour le moment.';
     }
+    // Quel que soit le sort de la BAN, le nom est arrêté : le bouton s'ouvre.
+    bouton.disabled = false;
   }
 
   // Poignée de débogage et d'E2E : lire l'état de la carte depuis la console

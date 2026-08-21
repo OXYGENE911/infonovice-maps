@@ -693,9 +693,12 @@ test('FAVORIS : appui long → ajout, persistance, export JSON, retrait, import'
   expect(contenu.favoris).toHaveLength(1);
   expect(contenu.favoris[0].nom).toBe('8 Rue de la Paix 75002 Paris');
 
-  // LE RETRAIT vide la liste.
+  // LE RETRAIT vide la liste, ANNONCE ce qu'il a fait, et rend le focus —
+  // sans quoi l'usager clavier repart du haut du document.
   await page.getByRole('button', { name: /Retirer 8 Rue de la Paix/ }).click();
   await expect(page.locator('.favoris-vide')).toBeVisible();
+  await expect(page.locator('.favoris-etat')).toContainText('retiré des favoris');
+  expect(await page.evaluate(() => document.activeElement?.tagName)).toBe('SUMMARY');
 
   // L'IMPORT restaure — et recharge la page pour appliquer les préférences.
   await page.locator('.favoris input[type="file"]').setInputFiles(chemin!);
@@ -704,6 +707,45 @@ test('FAVORIS : appui long → ajout, persistance, export JSON, retrait, import'
   await canevas.waitFor({ timeout: 15_000 });
   await page.locator('.favoris summary').click();
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris', { timeout: 10_000 });
+
+  // UN FICHIER QUI N'EST PAS UNE SAUVEGARDE : message français, et le champ
+  // se nettoie pour qu'un second essai reparte (le même fichier compris).
+  const intrus = test.info().outputPath('intrus.json');
+  await (await import('node:fs/promises')).writeFile(intrus, '{"application":"autre-app"}');
+  await page.locator('.favoris input[type="file"]').setInputFiles(intrus);
+  await expect(page.locator('.favoris-etat')).toContainText('pas une sauvegarde Infonovice Maps', { timeout: 10_000 });
+  expect(await page.locator('.favoris input[type="file"]').inputValue()).toBe('');
+  // L'échec n'a rien détruit : le favori est toujours là.
+  await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
+});
+
+test('FAVORIS : le bouton d’ajout attend que l’adresse soit tranchée', async ({ page }) => {
+  // La BAN traîne : tant qu'elle n'a pas répondu, on ne peut pas figer un
+  // favori sous des coordonnées (revue du 22/08).
+  await page.route('**/api-adresse.data.gouv.fr/reverse/**', async (route) => {
+    await new Promise((s) => setTimeout(s, 1500));
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ features: [{
+      geometry: { coordinates: [2.330992, 48.868831] },
+      properties: { label: '8 Rue de la Paix 75002 Paris', type: 'housenumber', postcode: '75002', city: 'Paris' },
+    }] }) });
+  });
+  await page.goto('/');
+  const canevas = page.locator('#carte canvas.maplibregl-canvas');
+  await canevas.waitFor({ timeout: 15_000 });
+  const cadre = await canevas.boundingBox();
+  await page.mouse.move(cadre!.x + 640, cadre!.y + 360);
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+
+  const ajouter = page.getByRole('button', { name: 'Ajouter aux favoris' });
+  await expect(ajouter).toBeVisible({ timeout: 10_000 });
+  await expect(ajouter).toBeDisabled();
+  // L'adresse arrive : le bouton s'ouvre, et le favori porte L'ADRESSE.
+  await expect(ajouter).toBeEnabled({ timeout: 10_000 });
+  await ajouter.click();
+  await page.locator('.favoris summary').click();
+  await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
 });
 
 test('l’export GPX télécharge un fichier nommé, sans aucune requête', async ({ page }) => {

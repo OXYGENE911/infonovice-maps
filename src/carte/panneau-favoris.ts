@@ -5,7 +5,10 @@
 // serveur. Les noms de favoris passent par textContent : ils peuvent venir
 // d'un libellé BAN (service externe) comme d'une saisie libre.
 import type { Map as CarteMapLibre } from 'maplibre-gl';
-import { listerFavoris, retirerFavori, exporterDonnees, importerDonnees, ErreurFavoris } from '../lib/favoris';
+import {
+  listerFavoris, retirerFavori, exporterDonnees, importerDonnees,
+  ErreurFavoris, ErreurStockage,
+} from '../lib/favoris';
 import { telecharger } from '../lib/trace';
 
 export class PanneauFavoris extends HTMLElement {
@@ -44,20 +47,25 @@ export class PanneauFavoris extends HTMLElement {
     fichier.addEventListener('change', () => {
       const f = fichier.files?.[0];
       if (!f) return;
-      void f.text().then(async (json) => {
-        const etat = this.querySelector('.favoris-etat') as HTMLElement;
-        try {
+      const etat = this.querySelector('.favoris-etat') as HTMLElement;
+      // Le .catch couvre AUSSI l'échec de lecture du fichier (clé USB retirée,
+      // fichier cloud non synchronisé) : sans lui, l'échec était muet et le
+      // champ restait « sale », si bien que re-choisir le MÊME fichier
+      // n'émettait plus d'événement (revue du 22/08).
+      void f.text()
+        .then(async (json) => {
           const n = await importerDonnees(json);
           etat.textContent = `Importé : ${n} favori${n > 1 ? 's' : ''}. Rechargement…`;
           // Les préférences importées (fond, couches) s'appliquent au
           // chargement : recharger EST l'application de l'import.
           setTimeout(() => window.location.reload(), 800);
-        } catch (e) {
-          etat.textContent = e instanceof ErreurFavoris
-            ? e.message : 'Import impossible : fichier illisible.';
+        })
+        .catch((e: unknown) => {
+          etat.textContent = e instanceof ErreurFavoris || e instanceof ErreurStockage
+            ? e.message : 'Import impossible : le fichier n’a pas pu être lu.';
           fichier.value = '';
-        }
-      });
+          void this.rafraichir();
+        });
     });
     void this.rafraichir();
   }
@@ -86,7 +94,19 @@ export class PanneauFavoris extends HTMLElement {
       retirer.textContent = '✕';
       retirer.setAttribute('aria-label', `Retirer ${favori.nom} des favoris`);
       retirer.addEventListener('click', () => {
-        void retirerFavori(favori.id).then(() => this.rafraichir());
+        // Le retrait DÉTRUIT le bouton focalisé : sans reprise explicite, le
+        // focus retombe sur <body> et l'usager clavier doit tout retraverser ;
+        // et rien n'est annoncé au lecteur d'écran (revue du 22/08).
+        const rang = favoris.indexOf(favori);
+        void retirerFavori(favori.id)
+          .then(() => this.rafraichir())
+          .then(() => {
+            (this.querySelector('.favoris-etat') as HTMLElement).textContent =
+              `${favori.nom} retiré des favoris.`;
+            const restants = this.querySelectorAll<HTMLButtonElement>('.favori-retirer');
+            const suivant = restants[Math.min(rang, restants.length - 1)];
+            (suivant ?? this.querySelector<HTMLElement>('.favoris summary'))?.focus();
+          });
       });
       item.append(aller, retirer);
       liste.append(item);

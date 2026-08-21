@@ -7,10 +7,13 @@
 import type { PointGeo } from './coordonnees';
 import {
   MAGASIN_FAVORIS, MAGASIN_PREFERENCES,
-  entreesMagasin, ecrireDans, supprimerDans, remplacerMagasin,
+  entreesMagasin, ecrireDans, supprimerDans, remplacerMagasins,
 } from './stockage';
 
 export class ErreurFavoris extends Error {}
+/** L'écriture locale a échoué (quota, navigation privée) — le fichier, lui,
+    était bon : l'usager doit lire la bonne cause. */
+export class ErreurStockage extends Error {}
 
 export interface Favori extends PointGeo {
   id: string;
@@ -100,7 +103,17 @@ export async function importerDonnees(json: string): Promise<number> {
     throw new ErreurFavoris('Ce fichier n’est pas un JSON lisible.');
   }
   const { preferences, favoris } = validerSauvegarde(brut);
-  await remplacerMagasin(MAGASIN_FAVORIS, favoris.map((f) => [f.id, f]));
-  await remplacerMagasin(MAGASIN_PREFERENCES, Object.entries(preferences));
+  try {
+    // UNE transaction pour les deux magasins : tout ou rien.
+    await remplacerMagasins({
+      [MAGASIN_FAVORIS]: favoris.map((f) => [f.id, f]),
+      [MAGASIN_PREFERENCES]: Object.entries(preferences),
+    });
+  } catch (e) {
+    throw new ErreurStockage(
+      'Le fichier est valide, mais l’enregistrement local a échoué (espace insuffisant ou navigation privée).',
+      { cause: e },
+    );
+  }
   return favoris.length;
 }
