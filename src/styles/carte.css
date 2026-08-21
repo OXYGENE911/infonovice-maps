@@ -292,3 +292,64 @@ etapes-itineraire { display: grid; gap: 7px; }
 .poi-popup dt { color: var(--texte-2); }
 .poi-popup dd { margin: 0; font-weight: 650; color: var(--texte-1); text-align: right; }
 .poi-popup p { margin: 6px 0 0; font: 400 13px var(--police); color: var(--texte-2); }
+
+/* --- Favoris (PR #10) — même livrée que les autres volets --- */
+.porte-favoris { pointer-events: auto; margin: 8px 0 0 12px !important; }
+.favoris { position: relative; }
+.favoris summary {
+  list-style: none; cursor: pointer;
+  padding: 9px 16px; border-radius: 12px;
+  background: color-mix(in srgb, var(--fond) 92%, transparent);
+  border: 1px solid var(--bord);
+  box-shadow: var(--ombre-s);
+  font: 600 13.5px var(--police); color: var(--texte-1);
+}
+.favoris summary::-webkit-details-marker { display: none; }
+.favoris summary:focus-visible { outline: none; box-shadow: var(--focus); }
+.favoris-corps {
+  position: absolute; top: calc(100% + 8px); left: 0; min-width: 250px; max-width: 300px;
+  padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
+  background: var(--fond); box-shadow: var(--ombre-m);
+  display: grid; gap: 9px;
+}
+.favoris-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px;
+  max-height: 220px; overflow-y: auto; }
+.favoris-liste:empty { display: none; }
+.favoris-liste li { display: flex; gap: 5px; align-items: center; }
+.favori-aller {
+  flex: 1; min-width: 0; text-align: left; padding: 7px 10px; border-radius: 8px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-1); font: 600 13px var(--police); cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.favori-aller:focus-visible { outline: none; box-shadow: var(--focus); }
+.favori-retirer {
+  width: 30px; height: 32px; border-radius: 8px; flex: none;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-2); font: 600 13px var(--police); cursor: pointer;
+}
+.favori-retirer:focus-visible { outline: none; box-shadow: var(--focus); }
+.favoris-vide { margin: 0; font: 400 13px var(--police); color: var(--texte-2); }
+.favoris-promesse { margin: 0; font: 400 12.5px var(--police); color: var(--texte-2);
+  border-top: 1px solid var(--bord); padding-top: 9px; }
+.favoris-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+.favoris-actions button {
+  padding: 7px 12px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-1); font: 600 12.5px var(--police); cursor: pointer;
+}
+.favoris-actions button:focus-visible { outline: none; box-shadow: var(--focus); }
+.favoris-etat { margin: 0; font: 600 12.5px var(--police); color: var(--texte-2); }
+.favoris-etat:empty { display: none; }
+.pa-favori {
+  display: block; margin-top: 6px; padding: 6px 11px; border-radius: 8px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-1); font: 600 12px var(--police); cursor: pointer;
+}
+
+/* LE VOLET OUVERT PREND L'ASCENDANT sur toute la colonne : sans cela, les
+   boutons fermés situés PLUS BAS (peints après, donc au-dessus) interceptent
+   les clics destinés au panneau déroulé — attrapé trois fois par Playwright
+   (fonds sous POI, radios sous Favoris) avant ce correctif GÉNÉRAL. */
+.maplibregl-ctrl-top-left .maplibregl-ctrl { position: relative; }
+.maplibregl-ctrl-top-left .maplibregl-ctrl:has(details[open]) { z-index: 10; }
