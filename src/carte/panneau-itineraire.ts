@@ -19,6 +19,7 @@ import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../l
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 import { chercherLeLongDuTrajet, type Categorie, type SurLeTrajet } from '../lib/le-long-du-trajet';
 import { ErreurPoi, type PoiCarburant, type PoiBorne } from '../lib/poi';
+import { meteoA, phraseMeteo, symboleTemps, heureArrivee, formaterHeure, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
 
 const SOURCE = 'itineraire';
 
@@ -44,6 +45,10 @@ export class PanneauItineraire extends HTMLElement {
   #feuillePour: Itineraire | null = null;
   /** Itinéraire dont la recherche « sur le trajet » est faite (ou en cours). */
   #trajetPour: Itineraire | null = null;
+  /** Itinéraire dont la météo d'arrivée est chargée (ou en cours), et QUAND :
+      un bulletin d'arrivée périme avec l'horloge, pas avec l'itinéraire. */
+  #meteoPour: Itineraire | null = null;
+  #meteoLe: Date | null = null;
   #annulationTrajet: AbortController | null = null;
   #marqueursTrajet: Marker[] = [];
   #marqueurs: Marker[] = [];
@@ -110,6 +115,10 @@ export class PanneauItineraire extends HTMLElement {
             </div>
             <div class="iti-trajet-corps" role="status"></div>
           </details>
+          <details class="iti-meteo" hidden>
+            <summary>Météo à l’arrivée</summary>
+            <div class="iti-meteo-corps" role="status"></div>
+          </details>
         </div>
       </details>`;
 
@@ -169,6 +178,9 @@ export class PanneauItineraire extends HTMLElement {
     this.querySelector('.iti-trajet')?.addEventListener('toggle', () => {
       void this.#chercherSurLeTrajet();
     });
+    this.querySelector('.iti-meteo')?.addEventListener('toggle', () => {
+      void this.#chargerMeteo();
+    });
     // Changer de catégorie ou de rayon relance la recherche — mais seulement
     // si la section est ouverte : un réglage invisible ne consomme rien.
     for (const cls of ['.trajet-quoi', '.trajet-rayon']) {
@@ -209,7 +221,8 @@ export class PanneauItineraire extends HTMLElement {
   #reinitialiserSections(cachees: boolean): void {
     this.#trajetPour = null;
     this.#annulationTrajet?.abort();
-    for (const cls of ['iti-alti', 'iti-feuille', 'iti-trajet'] as const) {
+    this.#meteoPour = null; this.#meteoLe = null;
+    for (const cls of ['iti-alti', 'iti-feuille', 'iti-trajet', 'iti-meteo'] as const) {
       const section = this.querySelector(`.${cls}`) as HTMLDetailsElement;
       section.hidden = cachees;
       section.open = false;
@@ -217,6 +230,61 @@ export class PanneauItineraire extends HTMLElement {
     }
     this.#profilPour = null;
     this.#feuillePour = null;
+  }
+
+  /** La météo À L'HEURE D'ARRIVÉE estimée (départ maintenant + durée) : le
+      temps qu'il fait là-bas en ce moment n'intéresse pas qui arrive dans
+      cinq heures. À la demande, un seul appel par itinéraire. */
+  async #chargerMeteo(): Promise<void> {
+    const section = this.querySelector('.iti-meteo') as HTMLDetailsElement;
+    const corps = this.querySelector('.iti-meteo-corps') as HTMLElement;
+    const iti = this.#dernier;
+    const cliche = this.#calculPour;
+    if (!section.open || !iti || !cliche) return;
+    /* LE BULLETIN NE SE FIGE PAS : il décrit « maintenant + durée », donc il
+       PÉRIME avec l'horloge. Se contenter de « déjà calculé pour cet
+       itinéraire » affichait, deux heures plus tard, une arrivée déjà passée
+       (revue du 22/08). On rejoue passé un quart d'heure. */
+    const maintenant = new Date();
+    if (this.#meteoPour === iti
+      && this.#meteoLe && maintenant.getTime() - this.#meteoLe.getTime() < 15 * 60_000) return;
+    this.#meteoPour = iti;
+    this.#meteoLe = maintenant;
+    corps.textContent = 'Prévision en cours…';
+    try {
+      const arrivee = heureArrivee(iti.duree, maintenant);
+      const m = await meteoA(cliche.arrivee.lon, cliche.arrivee.lat, arrivee);
+      if (this.#dernier !== iti) return;
+      corps.replaceChildren();
+      // AU-DELÀ DE L'HORIZON, ON SE TAIT. Le service ne prévoit que trois
+      // jours ; un trajet à pied de plusieurs jours retombait sur la dernière
+      // heure connue, présentée comme la prévision d'arrivée (revue du 22/08).
+      if (m.ecartMinutes > ECART_MAX_MINUTES) {
+        corps.textContent = 'Arrivée trop lointaine : aucune prévision fiable à cette échéance.';
+        return;
+      }
+      const ligne = document.createElement('p');
+      ligne.className = 'meteo-ligne';
+      const symbole = document.createElement('span');
+      symbole.className = 'meteo-symbole';
+      symbole.setAttribute('aria-hidden', 'true');
+      symbole.textContent = symboleTemps(m.code);
+      const texte = document.createElement('span');
+      texte.textContent = `Arrivée vers ${formaterHeure(arrivee, m.decalageLieu, maintenant)}`
+        + ` (heure locale) — ${phraseMeteo(m)}`;
+      ligne.append(symbole, texte);
+      const source = document.createElement('p');
+      source.className = 'meteo-source';
+      // L'écart de souveraineté se dit À L'ENDROIT où il se produit, pas
+      // seulement dans une page « À propos » que personne n'ouvre.
+      source.textContent = 'Prévision Open-Meteo (service européen) — voir « À propos ».';
+      corps.append(ligne, source);
+    } catch (e) {
+      if (this.#dernier !== iti) return;
+      this.#meteoPour = null; this.#meteoLe = null; // réessayable tout de suite
+      corps.textContent = e instanceof ErreurMeteo
+        ? e.message : 'Météo indisponible pour le moment.';
+    }
   }
 
   /** « Sur le trajet » — à la demande, au plus six appels par couche, et le

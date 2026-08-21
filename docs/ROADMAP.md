@@ -65,7 +65,14 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       modale avec attribution CC-BY-SA obligatoire (producteur, licence,
       date), fermeture à Échap et focus rendu. À LA DEMANDE seulement — aucun
       appel tant que l'usager ne clique pas.
-- [ ] PR #13 — Météo à destination + vigilances Météo-France en bandeau
+- [x] PR #13 — Météo à L'HEURE D'ARRIVÉE estimée (départ maintenant + durée
+      du trajet), à la demande, un appel par itinéraire. ÉCART DE
+      SOUVERAINETÉ ASSUMÉ : source Open-Meteo (service européen allemand) —
+      décision d'Armelin du 22/08 après que huit sources françaises se sont
+      révélées inutilisables (clé obligatoire, pas de CORS, ou données
+      figées ; preuves dans docs/apis.md). L'écart est écrit sur la page
+      « À propos » ET sous la prévision. Les VIGILANCES Météo-France restent
+      hors de portée (clé) : non promises dans l'interface.
 
 ## Transports & trafic
 - [ ] PR #14 — Couche info trafic / travaux (open data)

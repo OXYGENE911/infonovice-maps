@@ -1,7 +1,8 @@
 # Infonovice Maps
 
 Cartographie et itinéraires **souverains** : une alternative française à
-Google Maps, construite exclusivement sur les API publiques françaises
+Google Maps, construite sur les API publiques françaises — à une exception
+près, assumée et documentée : les prévisions météo (voir docs/apis.md)
 (Géoplateforme IGN, BAN, Panoramax, Météo-France, transport.data.gouv.fr).
 
 - **Zéro tracking.** Aucune donnée ne quitte votre navigateur : favoris et

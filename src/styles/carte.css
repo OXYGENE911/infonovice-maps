@@ -417,3 +417,15 @@ etapes-itineraire { display: grid; gap: 7px; }
   color: var(--texte-1); font: 600 15px var(--police); cursor: pointer;
 }
 .photo-fermer:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* --- Météo à l'arrivée (PR #13) --- */
+.iti-meteo summary {
+  cursor: pointer; font: 600 13px var(--police); color: var(--texte-2);
+  padding: 3px 0;
+}
+.iti-meteo summary:focus-visible { outline: none; box-shadow: var(--focus); }
+.iti-meteo-corps { padding-top: 6px; font: 400 13px var(--police); color: var(--texte-2); }
+.meteo-ligne { margin: 0; display: flex; gap: 9px; align-items: baseline;
+  font: 600 13.5px var(--police); color: var(--texte-1); }
+.meteo-symbole { font-size: 19px; line-height: 1; }
+.meteo-source { margin: 6px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); }

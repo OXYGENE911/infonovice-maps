@@ -7,7 +7,7 @@
        Élargir cette liste est une DÉCISION, tracée par PR — jamais un réflexe. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self';
     img-src 'self' data: blob: https://data.geopf.fr https://panoramax.openstreetmap.fr;
-    connect-src 'self' https://data.geopf.fr https://api-adresse.data.gouv.fr https://data.economie.gouv.fr https://public.opendatasoft.com https://api.panoramax.xyz;
+    connect-src 'self' https://data.geopf.fr https://api-adresse.data.gouv.fr https://data.economie.gouv.fr https://public.opendatasoft.com https://api.panoramax.xyz https://api.open-meteo.com;
     style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self' blob:;
     base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
   <meta name="description" content="Infonovice Maps — cartographie et itinéraires
@@ -73,8 +73,9 @@
   </nav>
   <noscript>
     <p class="sans-js">Infonovice Maps a besoin de JavaScript pour afficher la
-    carte. Aucune donnée n’est envoyée ailleurs qu’aux services publics
-    français (IGN, BAN).</p>
+    carte. Aucune donnée personnelle n’est collectée : les requêtes vont aux
+    services publics français (IGN, BAN…) et, pour les seules prévisions
+    météo, au service européen Open-Meteo.</p>
   </noscript>
 </body>
 </html>
