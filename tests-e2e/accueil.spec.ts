@@ -748,6 +748,52 @@ test('FAVORIS : le bouton d’ajout attend que l’adresse soit tranchée', asyn
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
 });
 
+test('SUR LE TRAJET : stations trouvées le long de l’itinéraire, appels PLAFONNÉS', async ({ page }) => {
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      // Un trajet plein est le long du parallèle 48, sur ~74 km.
+      geometry: { type: 'LineString', coordinates: [[2, 48], [2.25, 48], [2.5, 48], [2.75, 48], [3, 48]] },
+      distance: 74_000, duration: 3_600,
+    }),
+  }));
+  let appels = 0;
+  await page.route('**/data.economie.gouv.fr/**', (route) => {
+    appels += 1;
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      total_count: 3, results: [
+        // Sur la route, au tiers du trajet.
+        { geom: { lon: 2.3, lat: 48.002 }, adresse: '2 Route Nationale', ville: 'Melun', gazole_prix: 1.89 },
+        // Bien plus loin que le rayon : doit être écartée par le calcul local.
+        { geom: { lon: 2.5, lat: 48.6 }, adresse: 'Trop au nord', ville: 'Ailleurs', gazole_prix: 1.79 },
+        // Doublon d'un tronçon à l'autre : ne doit apparaître qu'une fois.
+        { geom: { lon: 2.3, lat: 48.002 }, adresse: '2 Route Nationale', ville: 'Melun', gazole_prix: 1.89 },
+      ] }) });
+  });
+
+  await page.goto('/#iti=2.00000,48.00000;3.00000,48.00000;car');
+  await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
+  // Tant que la section est fermée : AUCUN appel.
+  expect(appels, 'appel parti sans ouvrir la section').toBe(0);
+
+  await page.locator('.iti-trajet summary').click();
+  await expect(page.locator('.trajet-resume')).toContainText('1 station', { timeout: 15_000 });
+  await expect(page.locator('.trajet-liste li')).toHaveCount(1);
+  await expect(page.locator('.trajet-aller')).toHaveText('2 Route Nationale, Melun');
+  // L'avancement et le prix sont dits en français.
+  await expect(page.locator('.trajet-detail')).toContainText('km 22');
+  await expect(page.locator('.trajet-detail')).toContainText('Gazole 1,89 €');
+  // LE PLAFOND : au plus six appels, quel que soit le trajet.
+  expect(appels, `appels au service : ${appels}`).toBeLessThanOrEqual(6);
+  expect(appels).toBeGreaterThan(0);
+
+  // Changer de rayon relance UNE recherche, toujours sous le plafond.
+  const avant = appels;
+  await page.locator('.trajet-rayon').selectOption('1000');
+  await expect.poll(() => appels, { timeout: 15_000 }).toBeGreaterThan(avant);
+  expect(appels - avant).toBeLessThanOrEqual(6);
+});
+
 test('VITRINE : les pages de texte s’ouvrent depuis la carte, SANS JavaScript', async ({ page }) => {
   // Les pages promettent « aucun traceur » : la meilleure preuve est qu'elles
   // ne chargent AUCUN script et ne contactent AUCUNE origine tierce.

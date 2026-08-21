@@ -353,3 +353,31 @@ etapes-itineraire { display: grid; gap: 7px; }
    (fonds sous POI, radios sous Favoris) avant ce correctif GÉNÉRAL. */
 .maplibregl-ctrl-top-left .maplibregl-ctrl { position: relative; }
 .maplibregl-ctrl-top-left .maplibregl-ctrl:has(details[open]) { z-index: 10; }
+
+/* --- Sur le trajet (PR #11) --- */
+.iti-trajet summary {
+  cursor: pointer; font: 600 13px var(--police); color: var(--texte-2);
+  padding: 3px 0;
+}
+.iti-trajet summary:focus-visible { outline: none; box-shadow: var(--focus); }
+.iti-trajet-reglages { display: grid; gap: 6px; padding: 8px 0 2px;
+  font: 400 12.5px var(--police); color: var(--texte-2); }
+.iti-trajet-reglages label { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.iti-trajet-reglages select {
+  padding: 5px 8px; border-radius: 8px; border: 1px solid var(--bord-2);
+  background: var(--fond-doux); color: var(--texte-1); font: 600 12.5px var(--police);
+}
+.iti-trajet-reglages select:focus-visible { outline: none; box-shadow: var(--focus); }
+.iti-trajet-corps { padding-top: 6px; font: 400 13px var(--police); color: var(--texte-2); }
+.trajet-resume { margin: 0 0 6px; font: 650 12.5px var(--police); color: var(--texte-1); }
+.trajet-liste { margin: 0; padding-left: 20px; max-height: 240px; overflow-y: auto;
+  display: grid; gap: 7px; }
+.trajet-liste li { display: grid; gap: 1px; }
+.trajet-aller {
+  justify-self: start; text-align: left; padding: 0; border: 0; background: none;
+  color: var(--accent); font: 600 13px var(--police); cursor: pointer;
+}
+.trajet-aller:hover { text-decoration: underline; }
+.trajet-aller:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+.trajet-detail { color: var(--texte-2); font-size: 12.5px; }
+.trajet-note { margin: 7px 0 0; font-size: 12px; color: var(--texte-3); }

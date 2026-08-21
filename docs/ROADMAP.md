@@ -52,7 +52,12 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       (favoris + préférences — la portabilité RGPD en deux boutons) + la
       promesse « Vos données ne quittent jamais ce navigateur » affichée en
       toutes lettres (la page vitrine complète arrive en PR #19)
-- [ ] PR #11 — Recherche le long de l'itinéraire
+- [x] PR #11 — Recherche le long de l'itinéraire : stations-service et
+      bornes à moins de 1/3/10 km du TRACÉ (pas de l'écran), triées par
+      avancement, avec l'écart au trajet et le prix. Le trajet est découpé en
+      SIX tronçons au plus — six appels par recherche, plafond dur — et la
+      précision vient d'un filtre local exact (distance point-polyligne), pas
+      d'une rafale de requêtes.
 
 ## Panoramax & météo
 - [ ] PR #12 — Visionneuse Panoramax

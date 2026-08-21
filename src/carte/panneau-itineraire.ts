@@ -17,6 +17,8 @@ import { versGPX, versKML, telecharger } from '../lib/trace';
 import { versFragment, depuisFragment } from '../lib/partage-url';
 import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
+import { chercherLeLongDuTrajet, type Categorie, type SurLeTrajet } from '../lib/le-long-du-trajet';
+import { ErreurPoi, type PoiCarburant, type PoiBorne } from '../lib/poi';
 
 const SOURCE = 'itineraire';
 
@@ -40,6 +42,10 @@ export class PanneauItineraire extends HTMLElement {
   #profilPour: Itineraire | null = null;
   /** Itinéraire dont la feuille de route est chargée (ou en cours). */
   #feuillePour: Itineraire | null = null;
+  /** Itinéraire dont la recherche « sur le trajet » est faite (ou en cours). */
+  #trajetPour: Itineraire | null = null;
+  #annulationTrajet: AbortController | null = null;
+  #marqueursTrajet: Marker[] = [];
   #marqueurs: Marker[] = [];
 
   set carte(c: CarteMapLibre) {
@@ -83,6 +89,26 @@ export class PanneauItineraire extends HTMLElement {
           <details class="iti-feuille" hidden>
             <summary>Feuille de route</summary>
             <div class="iti-feuille-corps" role="status"></div>
+          </details>
+          <details class="iti-trajet" hidden>
+            <summary>Sur le trajet</summary>
+            <div class="iti-trajet-reglages">
+              <label>Chercher
+                <select class="trajet-quoi">
+                  <option value="carburants">Stations-service</option>
+                  <option value="bornes">Bornes de recharge</option>
+                </select>
+              </label>
+              <label>à moins de
+                <select class="trajet-rayon">
+                  <option value="1000">1 km</option>
+                  <option value="3000" selected>3 km</option>
+                  <option value="10000">10 km</option>
+                </select>
+                du trajet
+              </label>
+            </div>
+            <div class="iti-trajet-corps" role="status"></div>
           </details>
         </div>
       </details>`;
@@ -140,6 +166,17 @@ export class PanneauItineraire extends HTMLElement {
     this.querySelector('.iti-feuille')?.addEventListener('toggle', () => {
       void this.#chargerFeuille();
     });
+    this.querySelector('.iti-trajet')?.addEventListener('toggle', () => {
+      void this.#chercherSurLeTrajet();
+    });
+    // Changer de catégorie ou de rayon relance la recherche — mais seulement
+    // si la section est ouverte : un réglage invisible ne consomme rien.
+    for (const cls of ['.trajet-quoi', '.trajet-rayon']) {
+      this.querySelector(cls)?.addEventListener('change', () => {
+        this.#trajetPour = null;
+        void this.#chercherSurLeTrajet();
+      });
+    }
 
     /* UN LIEN PARTAGÉ S'OUVRE TOUT SEUL : le fragment porte l'itinéraire, on
        le rejoue à l'arrivée. Défensif — un fragment forgé rend null et la
@@ -170,7 +207,9 @@ export class PanneauItineraire extends HTMLElement {
 
   /** Replie et vide les sections profil/feuille (cachées si `cachees`). */
   #reinitialiserSections(cachees: boolean): void {
-    for (const cls of ['iti-alti', 'iti-feuille'] as const) {
+    this.#trajetPour = null;
+    this.#annulationTrajet?.abort();
+    for (const cls of ['iti-alti', 'iti-feuille', 'iti-trajet'] as const) {
       const section = this.querySelector(`.${cls}`) as HTMLDetailsElement;
       section.hidden = cachees;
       section.open = false;
@@ -178,6 +217,92 @@ export class PanneauItineraire extends HTMLElement {
     }
     this.#profilPour = null;
     this.#feuillePour = null;
+  }
+
+  /** « Sur le trajet » — à la demande, au plus six appels par couche, et le
+      résultat vaut pour l'itinéraire TRACÉ (le cliché), pas pour les champs. */
+  async #chercherSurLeTrajet(): Promise<void> {
+    const section = this.querySelector('.iti-trajet') as HTMLDetailsElement;
+    const corps = this.querySelector('.iti-trajet-corps') as HTMLElement;
+    const iti = this.#dernier;
+    if (!section.open || !iti || this.#trajetPour === iti) return;
+    this.#trajetPour = iti;
+    const quoi = (this.querySelector('.trajet-quoi') as HTMLSelectElement).value as Categorie;
+    const rayon = Number((this.querySelector('.trajet-rayon') as HTMLSelectElement).value);
+    corps.textContent = 'Recherche le long du trajet…';
+    this.#annulationTrajet?.abort();
+    const annulation = new AbortController();
+    this.#annulationTrajet = annulation;
+    try {
+      const trouves = await chercherLeLongDuTrajet(iti.geometrie, quoi, rayon, annulation.signal);
+      if (this.#dernier !== iti || annulation.signal.aborted) return;
+      this.#afficherSurLeTrajet(trouves, quoi);
+    } catch (e) {
+      if (annulation.signal.aborted) return;
+      this.#trajetPour = null; // réessayable
+      corps.textContent = e instanceof ErreurPoi
+        ? e.message : 'Recherche le long du trajet indisponible pour le moment.';
+    }
+  }
+
+  /** Construit la liste EN textContent : les libellés viennent des services. */
+  #afficherSurLeTrajet(trouves: SurLeTrajet<PoiCarburant | PoiBorne>[], quoi: Categorie): void {
+    const corps = this.querySelector('.iti-trajet-corps') as HTMLElement;
+    corps.replaceChildren();
+    this.#marqueursTrajet.forEach((m) => m.remove());
+    this.#marqueursTrajet = [];
+    if (trouves.length === 0) {
+      corps.textContent = 'Rien trouvé dans ce rayon le long du trajet.';
+      return;
+    }
+    const resume = document.createElement('p');
+    resume.className = 'trajet-resume';
+    resume.textContent = `${trouves.length} ${quoi === 'carburants' ? 'station' : 'borne'}${trouves.length > 1 ? 's' : ''} sur le trajet`;
+    const liste = document.createElement('ol');
+    liste.className = 'trajet-liste';
+    for (const t of trouves.slice(0, 30)) {
+      const item = document.createElement('li');
+      const aller = document.createElement('button');
+      aller.type = 'button';
+      aller.className = 'trajet-aller';
+      const p = t.poi as Partial<PoiCarburant> & Partial<PoiBorne>;
+      const titre = quoi === 'carburants'
+        ? [p.adresse, p.ville].filter(Boolean).join(', ') || 'Station-service'
+        : p.nom ?? 'Borne de recharge';
+      aller.textContent = titre;
+      aller.setAttribute('aria-label', `Voir ${titre} sur la carte`);
+      aller.addEventListener('click', () => {
+        this.#carte?.flyTo({ center: [t.poi.lon, t.poi.lat], zoom: 15 });
+      });
+      const detail = document.createElement('span');
+      detail.className = 'trajet-detail';
+      const bouts = [
+        `km ${Math.round(t.avancement / 1000)}`,
+        t.ecart < 100 ? 'sur la route' : `${formaterDistance(t.ecart)} du trajet`,
+      ];
+      if (quoi === 'carburants' && p.prix?.length) {
+        const [libelle, valeur] = p.prix[0]!;
+        bouts.push(`${libelle} ${valeur.toFixed(2).replace('.', ',')} €`);
+      }
+      if (quoi === 'bornes' && p.puissance) bouts.push(`${p.puissance} kW`);
+      detail.textContent = bouts.join(' · ');
+      item.append(aller, detail);
+      liste.append(item);
+      // Un marqueur discret par point trouvé, dans la couleur de sa catégorie.
+      if (this.#carte) {
+        this.#marqueursTrajet.push(
+          new Marker({ color: quoi === 'carburants' ? '#E89C2C' : '#3FA877', scale: 0.6 })
+            .setLngLat([t.poi.lon, t.poi.lat]).addTo(this.#carte),
+        );
+      }
+    }
+    corps.append(resume, liste);
+    if (trouves.length > 30) {
+      const note = document.createElement('p');
+      note.className = 'trajet-note';
+      note.textContent = `Les 30 premières sont listées, sur ${trouves.length} trouvées.`;
+      corps.append(note);
+    }
   }
 
   async #chargerFeuille(): Promise<void> {
@@ -394,6 +519,7 @@ export class PanneauItineraire extends HTMLElement {
     this.#sequence += 1; // tue toute réponse d'itinéraire encore en vol
     this.#dernier = null; this.#calculPour = null; this.#depart = null; this.#arrivee = null;
     this.#marqueurs.forEach((m) => m.remove()); this.#marqueurs = [];
+    this.#marqueursTrajet.forEach((m) => m.remove()); this.#marqueursTrajet = [];
     const carte = this.#carte;
     if (carte?.getSource(SOURCE)) {
       carte.removeLayer('itineraire-trait'); carte.removeLayer('itineraire-bord');
