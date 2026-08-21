@@ -748,6 +748,52 @@ test('FAVORIS : le bouton d’ajout attend que l’adresse soit tranchée', asyn
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
 });
 
+test('VITRINE : les pages de texte s’ouvrent depuis la carte, SANS JavaScript', async ({ page }) => {
+  // Les pages promettent « aucun traceur » : la meilleure preuve est qu'elles
+  // ne chargent AUCUN script et ne contactent AUCUNE origine tierce.
+  const scripts: string[] = [];
+  const origines = new Set<string>();
+  page.on('request', (r) => {
+    origines.add(new URL(r.url()).hostname);
+    if (r.resourceType() === 'script') scripts.push(r.url());
+  });
+
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  // Le pied de carte donne accès aux trois pages.
+  await page.locator('.pied-carte a[href="/a-propos.html"]').click();
+  await expect(page).toHaveTitle(/À propos/);
+  await expect(page.locator('h1')).toHaveText('Une carte qui ne vous suit pas');
+  await expect(page.locator('.page-promesses li').first()).toContainText('Aucun traceur');
+
+  scripts.length = 0;
+  origines.clear();
+  await page.locator('.page-pied a[href="/vie-privee.html"]').click();
+  await expect(page).toHaveTitle(/Vie privée/);
+  await expect(page.locator('h1')).toHaveText('Vos données ne quittent jamais ce navigateur');
+  // Le cœur de la promesse : la page dit « aucun cookie » ET n'en pose aucun.
+  await expect(page.getByText('Non — aucun.')).toBeVisible();
+  expect(await page.context().cookies()).toHaveLength(0);
+
+  await page.locator('.page-pied a[href="/mentions-legales.html"]').click();
+  await expect(page).toHaveTitle(/Mentions légales/);
+  // Les mentions obligatoires sont présentes et exactes.
+  await expect(page.locator('.page-corps')).toContainText('Armelin ASIMANE');
+  await expect(page.locator('.page-corps')).toContainText('815 190 038');
+  await expect(page.locator('.page-corps')).toContainText('GitHub, Inc.');
+  await expect(page.locator('.page-corps')).toContainText('AGPL');
+  await expect(page.locator('.page-corps')).toContainText('IGN-F / Géoplateforme');
+
+  // AUCUN script, AUCUNE origine tierce sur les pages de texte.
+  expect(scripts, `scripts chargés : ${scripts.join(', ')}`).toHaveLength(0);
+  expect([...origines].filter((h) => h !== 'localhost'),
+    'origine tierce contactée par une page de texte').toHaveLength(0);
+
+  // Et le retour à la carte fonctionne.
+  await page.locator('.page-retour').click();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+});
+
 test('l’export GPX télécharge un fichier nommé, sans aucune requête', async ({ page }) => {
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
     contentType: 'application/json',

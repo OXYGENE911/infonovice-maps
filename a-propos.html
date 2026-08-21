@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self';
+    img-src 'self' data:; style-src 'self'; script-src 'none';
+    base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+  <meta name="description" content="Infonovice Maps : pourquoi une carte
+    française souveraine. Fond IGN, adresses BAN, aucune donnée envoyée
+    ailleurs, code ouvert sous AGPL.">
+  <meta name="theme-color" content="#0F1B2D">
+  <title>À propos — Infonovice Maps</title>
+  <link rel="icon" href="/icones/icone-192.png" type="image/png">
+  <link rel="stylesheet" href="/src/styles/tokens.css">
+  <link rel="stylesheet" href="/src/styles/pages.css">
+</head>
+<body class="page">
+  <header class="page-entete">
+    <div class="page-entete-bande">
+      <a class="page-marque" href="/">Infonovice <strong>Maps</strong></a>
+      <a class="page-retour" href="/">← Retour à la carte</a>
+    </div>
+  </header>
+
+  <main class="page-corps">
+    <h1>Une carte qui ne vous suit pas</h1>
+    <p class="page-chapo">Infonovice Maps affiche la France avec les données
+      publiques de l’État français, et rien d’autre. Pas de compte, pas de
+      mouchard, pas de profil publicitaire — et le code est lisible par
+      quiconque veut vérifier.</p>
+
+    <h2>Ce que l’application ne fait pas</h2>
+    <ul class="page-promesses">
+      <li><strong>Aucun traceur, aucune régie publicitaire</strong>
+        <span>Ni Google Analytics, ni pixel, ni empreinte de navigateur. Il n’y
+        a rien à désactiver : rien n’a été posé.</span></li>
+      <li><strong>Aucun cookie</strong>
+        <span>Pas même un cookie « nécessaire ». Vos réglages vivent dans le
+        stockage local de votre navigateur, jamais sur un serveur.</span></li>
+      <li><strong>Aucun compte, aucun mot de passe</strong>
+        <span>Vos favoris sont à vous, sur votre machine. Il n’y a pas de
+        base de données où ils pourraient fuiter.</span></li>
+      <li><strong>Aucune position envoyée</strong>
+        <span>Le bouton « Me localiser » se déclenche par votre geste, et la
+        position reste dans le navigateur pour centrer la carte.</span></li>
+    </ul>
+
+    <h2>D’où viennent les données</h2>
+    <p>Uniquement de services publics français, interrogés directement par
+      votre navigateur :</p>
+    <dl>
+      <dt>Fonds de carte, itinéraires, altitudes, parkings — Géoplateforme
+        (IGN)</dt>
+      <dd>Plan IGN, photographies aériennes, cadastre, calcul d’itinéraire et
+        profil altimétrique. Attribution requise : © IGN-F / Géoplateforme.
+        Conditions sur <a href="https://geoservices.ign.fr/">geoservices.ign.fr</a>.</dd>
+
+      <dt>Adresses — Base Adresse Nationale</dt>
+      <dd>La recherche et le géocodage inverse s’appuient sur
+        <a href="https://adresse.data.gouv.fr/">adresse.data.gouv.fr</a>, qui
+        publie ses conditions de réutilisation.</dd>
+
+      <dt>Prix des carburants — DGCCRF</dt>
+      <dd>Flux instantané publié sur data.economie.gouv.fr, sous Licence
+        Ouverte v2.0 (Etalab).</dd>
+
+      <dt>Bornes de recharge — fichier consolidé national</dt>
+      <dd>Points de recharge pour véhicules électriques, sous Licence Ouverte
+        v2.0 (Etalab).</dd>
+    </dl>
+
+    <h2>Le code est ouvert</h2>
+    <p>Infonovice Maps est publié sous licence <strong>AGPL-3.0</strong> : le
+      code source est public, et toute version modifiée mise en ligne doit
+      l’être aussi. La promesse « rien ne part ailleurs » n’est donc pas une
+      parole, c’est une ligne de code que vous pouvez aller lire.</p>
+    <p><a href="https://github.com/OXYGENE911/infonovice-maps">Voir le code sur
+      GitHub</a></p>
+
+    <h2>Ce que l’application sait faire</h2>
+    <ul>
+      <li>Chercher une adresse partout en France, au clavier compris.</li>
+      <li>Calculer un itinéraire en voiture ou à pied, avec étapes
+        intermédiaires, en évitant autoroutes, tunnels ou ponts.</li>
+      <li>Afficher le profil altimétrique et une feuille de route imprimable.</li>
+      <li>Exporter un trajet en GPX ou KML, ou le partager par un lien qui
+        contient tout — sans passer par un serveur.</li>
+      <li>Montrer les prix des carburants, les bornes de recharge et les
+        parkings autour de vous.</li>
+      <li>Garder vos lieux favoris, et vous les rendre en un fichier.</li>
+    </ul>
+
+    <div class="page-note">Infonovice Maps est un logiciel jeune, développé
+      par une petite structure française. Il ne prétend pas remplacer un
+      service mondial sur tous les points : il prétend ne rien vous prendre.</div>
+
+    <footer class="page-pied">
+      <nav>
+        <a href="/">Carte</a>
+        <a href="/vie-privee.html">Vie privée</a>
+        <a href="/mentions-legales.html">Mentions légales</a>
+        <a href="https://github.com/OXYGENE911/infonovice-maps">Code source</a>
+      </nav>
+      <p>Infonovice Maps — données © IGN-F / Géoplateforme, Base Adresse
+        Nationale et partenaires publics. Code sous AGPL-3.0.</p>
+    </footer>
+  </main>
+</body>
+</html>

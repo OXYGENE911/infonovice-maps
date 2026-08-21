@@ -68,8 +68,14 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
 - [ ] PR #18 — Adressage « commune + mot + chiffres » (alternative What3Words)
 
 ## Vitrine & B2B
-- [ ] PR #19 — Pages vitrine : accueil, manifeste souveraineté, FAQ RGPD,
-      mentions légales, lien GitHub
+- [x] PR #19 — Pages vitrine : « À propos » (manifeste de souveraineté,
+      sources et licences vérifiées), « Vie privée » (ce qui est stocké, où,
+      comment l'exporter et l'effacer), « Mentions légales » (éditeur repris
+      des mentions d'infonovice.fr, hébergeur GitHub Pages, AGPL,
+      attributions). VRAIES pages HTML multi-entrées Vite, ZÉRO JavaScript —
+      un parcours E2E le prouve (aucun script, aucune origine tierce, aucun
+      cookie). L'accueil marchand séparé n'est pas retenu : la carte EST
+      l'accueil.
 - [ ] PR #20 — Page « Offre flottes B2B » + formulaire de contact
 - [ ] PR #21 — SEO : sitemap, meta OG, schema.org
 
