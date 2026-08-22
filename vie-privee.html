@@ -58,17 +58,24 @@
 
     <h2>Qu’est-ce qui est enregistré, alors ?</h2>
     <p>Trois choses, toutes dans le <strong>stockage local de votre
-      navigateur</strong> (IndexedDB), sur votre appareil :</p>
+      navigateur</strong>, sur votre appareil :</p>
     <ul>
       <li><strong>Vos réglages d’affichage</strong> : le fond de carte choisi,
         la surcouche cadastre, les couches de points d’intérêt cochées.</li>
       <li><strong>Vos favoris</strong> : le nom et les coordonnées des lieux
         que vous avez enregistrés vous-même.</li>
-      <li>Rien d’autre. Pas d’historique de recherche, pas de trajets
-        conservés, pas d’identifiant.</li>
+      <li><strong>Les tuiles de carte que vous avez déjà affichées</strong>,
+        gardées pour que la carte s’ouvre sans réseau. Disons-le franchement :
+        <em>c’est une trace des endroits que vous avez regardés</em>, chaque
+        tuile portant les coordonnées de ce qu’elle montre et la date à
+        laquelle elle est arrivée. Cette réserve se limite à un millier de
+        tuiles environ (de l’ordre de 45 Mo) et chacune s’efface d’elle-même
+        au bout de <strong>quatorze jours</strong>. Vous pouvez la vider quand
+        vous voulez, voir plus bas.</li>
     </ul>
-    <p>Ces données ne sont jamais transmises : il n’existe aucun serveur
-      Infonovice qui les reçoive.</p>
+    <p>Rien d’autre : pas d’historique de vos recherches, pas de trajets
+      conservés, pas d’identifiant, pas de profil. Et aucune de ces données
+      n’est transmise — il n’existe aucun serveur Infonovice qui les reçoive.</p>
 
     <h2>Comment les récupérer ou les effacer ?</h2>
     <ul>
@@ -77,10 +84,14 @@
         contient vos favoris et vos réglages. Il vous appartient.</li>
       <li><strong>Les restaurer</strong> : volet « Favoris » → « Importer ».
         Utile pour passer d’un appareil à un autre, sans compte.</li>
-      <li><strong>Tout effacer</strong> : retirez vos favoris un par un, ou
-        videz les données de site depuis les réglages de votre navigateur.
-        L’effacement est immédiat et définitif — nous n’en gardons pas de
-        copie, puisque nous n’en avons jamais eu.</li>
+      <li><strong>Tout effacer</strong>, y compris la réserve de tuiles :
+        videz les données de site depuis les réglages de votre navigateur
+        (Chrome et Edge : « Paramètres des sites » → ce site → « Effacer les
+        données » ; Firefox : « Vie privée et sécurité » → « Cookies et
+        données de sites » ; Safari : « Gérer les données de sites web »).
+        Vous pouvez aussi retirer vos favoris un par un depuis le volet
+        « Favoris ». L’effacement est immédiat et définitif — nous n’en
+        gardons pas de copie, puisque nous n’en avons jamais eu.</li>
     </ul>
 
     <h2>Que voient les services interrogés ?</h2>

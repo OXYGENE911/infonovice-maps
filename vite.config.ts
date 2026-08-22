@@ -2,6 +2,7 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { JOURS_EN_CACHE, RESERVES_TUILES } from './src/lib/tuiles-en-cache';
 
 // La base du site vient de l'environnement : « / » quand il vivra à la racine
 // de maps.infonovice.fr, « /infonovice-maps/ » tant que github.io le sert sous
@@ -66,8 +67,49 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        // Les tuiles IGN se mettront en cache en PR #17 (stale-while-revalidate
-        // avec plafond). Rien ici tant que la stratégie n'est pas écrite.
+        /* LES TUILES IGN, une route par couche : la table et ses motifs
+           vivent dans src/lib/tuiles-en-cache.ts, où des tests unitaires les
+           confrontent aux URL réellement fabriquées par `urlTuiles()`.
+           CacheFirst : une tuile ne change pas d'un jour à l'autre, et c'est
+           ce qui rend la carte utilisable sans réseau.
+           LE TYPE MIME EST VÉRIFIÉ, PAS SEULEMENT LE CODE 200 : un portail
+           captif ou un proxy d'entreprise répond « 200 text/html » à tout, y
+           compris aux tuiles. Sans ce contrôle, la page de blocage s'écrivait
+           dans le cache et se resservait pendant 14 jours, réseau revenu —
+           reproduit en navigateur avant d'écrire ces lignes. Le statut 0
+           (réponse opaque) est écarté pour la même raison : rien n'y est
+           vérifiable, donc rien n'y est digne de confiance. */
+        runtimeCaching: RESERVES_TUILES.map((reserve) => ({
+          urlPattern: reserve.motif,
+          handler: 'CacheFirst' as const,
+          options: {
+            cacheName: reserve.cache,
+            expiration: {
+              maxEntries: reserve.tuiles,
+              maxAgeSeconds: JOURS_EN_CACHE * 24 * 60 * 60,
+              purgeOnQuotaError: true,
+            },
+            cacheableResponse: {
+              statuses: [200],
+              headers: { 'content-type': reserve.format },
+            },
+          },
+        })),
+        /* LE REPLI DE NAVIGATION reste celui de vite-plugin-pwa, `index.html`
+           RELATIF : une valeur absolue (« /index.html ») paraît équivalente à
+           la racine, mais sous une autre base — le sous-chemin github.io que
+           docs/DEPLOIEMENT.md garde disponible — workbox ne la retrouve pas
+           dans le précache, lève à l'évaluation du service worker, et TOUT ce
+           qui suit (les routes de tuiles) n'est jamais enregistré. En silence.
+
+           LA LISTE D'EXCLUSION, elle, sert dans un cas et un seul : les pages
+           de texte portant un paramètre. Sans paramètre, le précache les sert
+           directement ; avec « ?ref=… », la clé de précache ne correspond
+           plus, le repli prend la main et rendait l'application carte à la
+           place des mentions légales. D'où le « (\?|$) » : workbox confronte
+           ses motifs à `pathname + search`, pas au seul chemin. Le « (^|/) »
+           de tête laisse passer une base autre que la racine. */
+        navigateFallbackDenylist: [/(^|\/)(a-propos|vie-privee|mentions-legales)\.html(\?|$)/],
       },
     }),
   ],

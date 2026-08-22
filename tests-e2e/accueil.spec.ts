@@ -748,6 +748,173 @@ test('FAVORIS : le bouton d’ajout attend que l’adresse soit tranchée', asyn
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
 });
 
+test('HORS LIGNE : la carte s’ouvre sans réseau, et le dit honnêtement', async ({ page, context }) => {
+  // On note les URL que la carte demande vraiment : ce sont elles qu'on
+  // réclamera une fois le réseau coupé, plutôt qu'une tuile choisie au hasard.
+  const demandesReseau: string[] = [];
+  context.on('request', (r) => demandesReseau.push(r.url()));
+  // Le service worker doit être ACTIF avant de couper : c'est lui qui sert
+  // la coquille et les tuiles déjà vues.
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null, { timeout: 20_000 });
+  /* RECHARGER UNE FOIS LE SERVICE WORKER AUX COMMANDES : au tout premier
+     chargement, les tuiles partent AVANT qu'il ait pris le contrôle, donc
+     elles ne passent pas par lui et n'entrent pas en cache. C'est aussi ce
+     que vit un vrai visiteur : sa première visite prépare la seconde. */
+  await page.reload();
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await expect.poll(async () => page.evaluate(async () => {
+    const c = await caches.open('tuiles-plan');
+    return (await c.keys()).length;
+  }), { timeout: 20_000 }).toBeGreaterThan(0);
+
+  const tuilesEnCache = await page.evaluate(async () => {
+    const c = await caches.open('tuiles-plan');
+    return (await c.keys()).length;
+  });
+  expect(tuilesEnCache, 'aucune tuile mise en cache').toBeGreaterThan(0);
+
+  /* La région live existe EN PERMANENCE et se remplit à la coupure. Un
+     `role="status"` dont le texte est écrit au montage et qu'on se contente
+     de démasquer n'annonce RIEN : les lecteurs d'écran guettent les
+     changements de contenu, pas ceux de visibilité. */
+  await expect(page.locator('.hors-ligne')).toHaveCount(1);
+  await expect(page.locator('.hors-ligne')).toBeEmpty();
+
+  // COUPURE : le bandeau apparaît et DIT ce qui marche, ce qui attend.
+  await context.setOffline(true);
+  await expect(page.locator('.hors-ligne')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.hors-ligne')).toContainText('Hors ligne');
+  await expect(page.locator('.hors-ligne')).toContainText('favoris restent accessibles');
+  await expect(page.locator('.hors-ligne')).toContainText('attend le réseau');
+  // La liste nomme AUSSI ce que la première écriture passait sous silence.
+  await expect(page.locator('.hors-ligne')).toContainText('points d’intérêt');
+  await expect(page.locator('.hors-ligne')).toContainText('photos de rue');
+
+  // RETOUR DU RÉSEAU : le bandeau s'efface de lui-même.
+  await context.setOffline(false);
+  await expect(page.locator('.hors-ligne')).toBeHidden({ timeout: 10_000 });
+
+  /* CE QUE CE TEST PROUVE, ET CE QU'IL NE PROUVE PAS. Il faut le dire net,
+     parce que la version précédente prétendait davantage qu'elle ne tenait.
+
+     AUCUN outil de Playwright ni de CDP ne coupe le réseau du SERVICE WORKER
+     en laissant la page demander — quatre sondes, le 22/08, toutes mesurées :
+     `context.setOffline()` ne coupe que la page (cache des tuiles vidé puis
+     rechargement : il se REPEUPLAIT depuis data.geopf.fr) ;
+     `context.route(..., abort)` n'intercepte pas les requêtes du worker, et
+     `context.on('requestfailed')` ne les rapporte pas ;
+     `Network.setBlockedURLs` bloque EN AMONT du worker — la requête n'arrive
+     même pas jusqu'à lui, donc un succès ne dirait rien de sa réserve ;
+     `Network.clearBrowserCache`, enfin, efface AUSSI le Cache Storage, de
+     façon différée — il détruirait justement ce qu'on veut observer.
+
+     On prouve donc les deux moitiés séparément, chacune par ce qui la
+     démontre vraiment : (1) la coquille se recharge alors que la PAGE n'a
+     plus de réseau — elle ne peut venir que du précache ; (2) les tuiles que
+     la carte a affichées sont dans la réserve du service worker, relisibles,
+     et ce sont de vraies images PNG. Le service, lui, est le travail de
+     workbox, exercé à chaque visite. */
+  const tuilesVues = [...new Set(demandesReseau.filter((u) => u.includes('data.geopf.fr')))];
+  expect(tuilesVues.length, 'aucune tuile demandée pendant la navigation').toBeGreaterThan(0);
+  await context.setOffline(true);
+
+  /* Ce rechargement vient EN DERNIER : l'émulation hors ligne de Playwright
+     remet `navigator.onLine` à true dans la page nouvellement chargée, alors
+     que le réseau reste coupé (artefact de l'outil mesuré le 22/08, pas du
+     composant) — le bandeau ne s'y vérifie donc plus. */
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.entete-marque')).toBeVisible();
+
+  /* LES TUILES DÉJÀ VUES SONT EN RÉSERVE, ET CE SONT DES IMAGES. On relit les
+     URL exactes que la carte avait demandées, et on vérifie les huit premiers
+     octets : la signature PNG. Sans ce contrôle du contenu, une page de
+     blocage rendue en « 200 text/html » par un portail captif passerait pour
+     une tuile — c'est arrivé, reproduit en navigateur. Le canevas, lui,
+     s'affiche même sans une seule tuile : il ne prouve rien tout seul. */
+  const enReserve = await page.evaluate(async (urls) => Promise.all(urls.map(async (u) => {
+    const rep = await caches.match(u);
+    if (!rep) return 'absente';
+    const octets = new Uint8Array((await rep.arrayBuffer()).slice(0, 8));
+    const png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+    return png.every((o, i) => octets[i] === o) ? 'png' : `contenu ${rep.headers.get('content-type')}`;
+  })), tuilesVues.slice(0, 6));
+  expect(
+    enReserve.filter((t) => t !== 'png'),
+    'des tuiles déjà vues ne sont pas en réserve, ou ne sont pas des images',
+  ).toEqual([]);
+});
+
+test('HORS LIGNE : l’en-tête ne pousse rien hors de l’écran, ni ne couvre les volets', async ({ page }) => {
+  /* La régression que ce test empêche : le bandeau et le bouton
+     d'installation vivent DANS l'en-tête flottant. Sans enroulement ni
+     largeur maximale, il grandissait vers la droite sans fin — mesuré à
+     375 px, le champ de recherche partait 88 px hors du viewport avec le seul
+     bouton d'installation, qui apparaît EN LIGNE sur tout Chromium. Et le
+     décalage des volets, codé en dur à 62 px, laissait l'en-tête grandi
+     recouvrir « Itinéraire » et intercepter ses clics. */
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+
+  // On force les deux éléments à s'afficher, sans dépendre du réseau ni de
+  // `beforeinstallprompt` : c'est la GÉOMÉTRIE qu'on mesure, pas leur logique.
+  await page.evaluate(() => {
+    const bandeau = document.querySelector('.hors-ligne') as HTMLElement;
+    const titre = document.createElement('strong');
+    titre.textContent = 'Hors ligne.';
+    const detail = document.createElement('span');
+    detail.textContent = 'La carte déjà consultée et vos favoris restent accessibles. '
+      + 'Tout ce qui interroge un service — recherche, itinéraire, trafic, météo, '
+      + 'points d’intérêt, photos de rue — attend le réseau.';
+    bandeau.replaceChildren(titre, detail);
+    (document.querySelector('.installer') as HTMLElement).hidden = false;
+  });
+
+  const debords = await page.evaluate(() => {
+    const large = document.documentElement.clientWidth;
+    const cibles = ['.entete', '.recherche input', '.installer', '.hors-ligne'];
+    return cibles
+      .map((s) => ({ s, r: document.querySelector(s)?.getBoundingClientRect() }))
+      .filter((x) => x.r && (x.r.right > large + 1 || x.r.left < -1))
+      .map((x) => `${x.s} déborde de ${Math.round(x.r!.right - large)} px`);
+  });
+  expect(debords, 'un élément de l’en-tête sort de l’écran').toEqual([]);
+
+  // Et les volets restent ATTEIGNABLES : c'est bien eux, pas l'en-tête, qui
+  // reçoivent le clic à leur sommet.
+  const recouverts = await page.evaluate(() => {
+    const entete = document.querySelector('.entete')!;
+    return [...document.querySelectorAll('#carte .maplibregl-ctrl-top-left summary')]
+      .map((el) => {
+        const r = el.getBoundingClientRect();
+        const dessus = document.elementFromPoint(r.left + 8, r.top + 4);
+        return { nom: el.textContent?.trim().slice(0, 20), couvert: entete.contains(dessus) };
+      })
+      .filter((x) => x.couvert)
+      .map((x) => x.nom);
+  });
+  expect(recouverts, 'l’en-tête recouvre des volets de la carte').toEqual([]);
+});
+
+test('HORS LIGNE : une page de texte reste elle-même, même avec un paramètre', async ({ page }) => {
+  /* Le repli de navigation du service worker rendait l'application carte à la
+     place des mentions légales dès qu'un lien portait « ?ref=… » : la clé de
+     précache ne correspondait plus, et la liste d'exclusion, ancrée sur
+     « .html$ », ne reconnaissait plus le chemin une fois la requête ajoutée. */
+  await page.goto('/');
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null, { timeout: 20_000 });
+
+  for (const chemin of ['/vie-privee.html?ref=cnil', '/mentions-legales.html?partage=1',
+    '/a-propos.html?utm_source=test']) {
+    await page.goto(chemin);
+    await expect(page.locator('#carte'), `${chemin} a rendu la carte`).toHaveCount(0);
+    await expect(page.locator('h1')).toBeVisible();
+  }
+});
+
 test('TRAFIC : couche nationale à la demande, popup au clic, détail assaini', async ({ page }) => {
   let appelsHorodate = 0;
   let appelsEvenements = 0;

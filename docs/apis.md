@@ -157,5 +157,14 @@ est « API publiques documentées », elle ne se contourne pas.
   en chargement intégral), Nantes `fluidite-axes-routiers` (889 tronçons),
   Paris `chantiers-perturbants` (122), Toulouse `chantiers-en-cours` (987).
 
+## Mise en cache des tuiles IGN — ce que le serveur autorise (vérifié 22/08/2026)
+- `data.geopf.fr/wmts` répond `Cache-Control: private, max-age=1814400`, soit
+  **21 jours de cache PRIVÉ** — le serveur autorise donc lui-même la mise en
+  cache navigateur, et en fixe la durée. Notre service worker s'arrête à
+  14 jours, en deçà de ce que l'IGN accorde ; le cache vit dans le navigateur
+  de l'usager, jamais sur un serveur partagé (ce que « private » exige).
+- Une tuile PNG du Plan IGN pèse ~80 Ko : le plafond de 800 entrées borne le
+  disque à ~60 Mo au pire, avec purge automatique sur erreur de quota.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - transport.data.gouv.fr GTFS/GTFS-RT (PR #15-16)
