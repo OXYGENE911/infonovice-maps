@@ -200,16 +200,41 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
         () => { bouton.textContent = 'Ajout impossible (stockage local indisponible)'; },
       );
     });
-    /* Les deux interrogations sont INDÉPENDANTES : la BAN nomme la rue, le
-       répertoire nomme la commune. Les enchaîner ferait attendre l'adresse en
-       mots derrière un service qui ne la concerne pas — sur un réseau lent,
-       deux fois le délai pour rien. On lance donc celle-ci tout de suite et on
-       la recueille plus bas. Son échec est capturé À LA SOURCE : une promesse
-       rejetée qui patiente sans gardien déclenche un `unhandledrejection`. */
-    const enMots = communeDuPoint(point).then(
-      (commune) => ({ commune }),
-      (erreur: unknown) => ({ erreur }),
-    );
+    /* L'ADRESSE EN MOTS — « Dijon-21 BAKE 4831 ». Elle se dicte au téléphone
+       et s'écrit sur un papier, là où un lien de partage ne le peut pas.
+
+       ELLE NE FAIT ATTENDRE PERSONNE. Ni la BAN, qui nomme la rue et ne la
+       concerne pas ; ni surtout les boutons du reste de la fiche. Un `await`
+       posé ici retardait le câblage du bouton « Photos de rue » du temps que
+       met le répertoire des communes : sur une machine lente, le clic partait
+       avant l'écouteur et se perdait (CI rouge le 22/08, avant toute mise en
+       ligne). On remplit donc la ligne QUAND la réponse arrive, sans jamais
+       suspendre la suite. */
+    const ligneMots = bloc.querySelector('.pa-mots') as HTMLElement;
+    const copierMots = bloc.querySelector('.pa-copier-mots') as HTMLButtonElement;
+    /* `.catch` APRÈS `.then`, jamais le second bras de `.then` : `coder` lève
+       quand le point sort de la fenêtre, et cette exception-là naît DANS le
+       bras de succès — un `.then(ok, erreur)` la laisserait filer en promesse
+       non gérée, sans jamais afficher le refus qu'elle porte. */
+    void communeDuPoint(point)
+      .then((commune) => {
+        if (!commune) {
+          ligneMots.textContent = 'Adresse en mots : hors des communes françaises.';
+          return;
+        }
+        const mots = coder(commune, point);
+        ligneMots.textContent = mots;
+        copierMots.hidden = false;
+        copierMots.addEventListener('click', () => {
+          void navigator.clipboard.writeText(mots);
+          copierMots.textContent = 'Copié !';
+        });
+      })
+      .catch((e: unknown) => {
+        ligneMots.textContent = e instanceof ErreurAdresseMots
+          ? e.message
+          : 'Adresse en mots indisponible pour le moment.';
+      });
 
     try {
       const adresse = await adresseInverse(point);
@@ -222,32 +247,6 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     }
     // Quel que soit le sort de la BAN, le nom est arrêté : le bouton s'ouvre.
     bouton.disabled = false;
-
-    /* L'ADRESSE EN MOTS — « Dijon-21 BAKE 4831 ». Elle se dicte au téléphone
-       et s'écrit sur un papier, là où un lien de partage ne le peut pas. Elle
-       demande le répertoire des communes (réseau) : on ne la promet donc pas
-       avant de l'avoir, et on dit franchement quand elle n'est pas possible. */
-    const ligneMots = bloc.querySelector('.pa-mots') as HTMLElement;
-    const copierMots = bloc.querySelector('.pa-copier-mots') as HTMLButtonElement;
-    const resultat = await enMots;
-    try {
-      if ('erreur' in resultat) throw resultat.erreur;
-      if (!resultat.commune) {
-        ligneMots.textContent = 'Adresse en mots : hors des communes françaises.';
-      } else {
-        const mots = coder(resultat.commune, point);
-        ligneMots.textContent = mots;
-        copierMots.hidden = false;
-        copierMots.addEventListener('click', () => {
-          void navigator.clipboard.writeText(mots);
-          copierMots.textContent = 'Copié !';
-        });
-      }
-    } catch (e) {
-      ligneMots.textContent = e instanceof ErreurAdresseMots
-        ? e.message
-        : 'Adresse en mots indisponible pour le moment.';
-    }
 
     /* LES PHOTOS DE RUE ne partent QUE sur demande explicite : une photo
        coûte du réseau à un commun associatif, et personne n'en veut à chaque

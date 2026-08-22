@@ -2,9 +2,12 @@
 // fichier : la spec d'accueil dépassait déjà de loin les 500 lignes que le
 // projet s'impose, et cette fonctionnalité se relit très bien seule.
 import { test, expect } from '@playwright/test';
-import { simulerTuiles } from './tuiles-simulees';
+import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
 
-test.beforeEach(async ({ page }) => { await simulerTuiles(page); });
+test.beforeEach(async ({ page }) => {
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+});
 
 /* ---- LE FLUX GTFS-RT EST SIMULÉ ----
    Comme les tuiles et pour la même raison : la CI ne doit

@@ -1,7 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { PNG_1PX, simulerTuiles } from './tuiles-simulees';
+import { PNG_1PX, simulerTuiles, simulerCommunes } from './tuiles-simulees';
 
-test.beforeEach(async ({ page }) => { await simulerTuiles(page); });
+test.beforeEach(async ({ page }) => {
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+});
 
 // Depuis la PR #2, la page EST la carte : on vérifie que MapLibre s'amorce,
 // que les contrôles parlent français, et que la souveraineté tient.
