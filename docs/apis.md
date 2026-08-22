@@ -298,5 +298,55 @@ résulte est deux fois plus vaste que le territoire : celui des Pays de la Loire
 mesuré : Rennes n'interroge plus que le STAR (au lieu de STAR + Aléop +
 Atoumod), Saint-Malo que le MAT, Fougères deux réseaux au lieu de trois.
 
+## Répertoire des communes — geo.api.gouv.fr (vérifié 22/08/2026)
+
+Socle de l'adressage en mots. Service public, sans clé, CORS ouvert.
+
+| Usage | Requête | Mesure |
+|---|---|---|
+| Commune d'un point | `GET /communes?lat=47.322&lon=5.0415&fields=nom,code,centre&format=json` | 200 en 0,12 s |
+| Commune par nom | `GET /communes?nom=Dijon&fields=nom,code,centre&format=json&limit=20` | 200 |
+
+- CORS : `access-control-allow-origin` reflète l'origine appelante — vérifié
+  avec `Origin: https://maps.infonovice.fr`.
+- `cache-control: public, max-age=3600, immutable` : le navigateur garde la
+  réponse une heure. Une adresse relue plusieurs fois ne coûte qu'un appel.
+- Aucun en-tête de quota publié. On s'en tient à deux appels par adresse
+  (un au codage, un au décodage) et à rien du tout tant que l'usager
+  ne demande pas une adresse en mots.
+
+### `nom=` est une recherche APPROCHÉE — le piège
+
+Demander « Dijon » rend **sept** communes, dont six fausses :
+
+```
+Dijon (21231, score 1)          Plombières-lès-Dijon (21485, 0,63)
+Fontaine-lès-Dijon (21278, 0,75) Sennecey-lès-Dijon  (21605, 0,63)
+Asnières-lès-Dijon (21027, 0,69) Perrigny-lès-Dijon  (21481, 0,67)
+Hauteville-lès-Dijon (21315, 0,69)
+```
+
+Le centre de Fontaine-lès-Dijon est à 2 km de celui de Dijon : décoder une
+adresse sur la mauvaise commune la déplace d'autant, **sans rien signaler**.
+`communesParNom` exige donc le nom exact (accents et casse mis à part) puis le
+département. Le test « ÉCARTE les communes dont le nom n'est pas exactement
+celui demandé » est la sentinelle de ce filtre — son retrait le fait échouer.
+
+### Pourquoi le répertoire n'est pas embarqué
+
+Les 34 969 communes avec leur centre pèsent 3,3 Mo bruts. Même réduites au
+strict nécessaire, elles dépasseraient à elles seules le budget de 300 Ko du
+paquet. L'adressage en mots demande donc le réseau — c'est écrit dans
+l'interface, et la carte hors ligne n'en promet rien.
+
+### Mesures sur les 34 969 communes (22/08/2026)
+
+- Préfixer le nom par le département ne laisse que **6 collisions d'homonymes**,
+  toutes en outre-mer (97x). Elles sont proposées à l'usager, jamais arbitrées.
+- Commune médiane : 11 km². 99,9ᵉ centile : 652 km².
+- La fenêtre d'adressage (40,96 km de côté, soit ±20,48 km autour du centre)
+  couvre donc toutes les communes sauf les plus vastes, où `coder` refuse
+  explicitement plutôt que de rendre une adresse fausse.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.

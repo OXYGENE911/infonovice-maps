@@ -149,7 +149,15 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       donc les deux moitiés séparément : la coquille se recharge sans réseau
       de page, et les tuiles vues sont dans la réserve du worker, relisibles,
       signature PNG vérifiée. Le service, lui, est le travail de workbox.
-- [ ] PR #18 — Adressage « commune + mot + chiffres » (alternative What3Words)
+- [x] PR #18 — Adressage « commune + mot + chiffres » (alternative What3Words) :
+      « Dijon-21 BAKE 4831 » désigne 10 m² n'importe où en France. Grille de
+      4 096 × 4 096 cases autour du centre INSEE de la commune, 2 048 mots
+      prononçables × 8 192 chiffres — la bijection est exacte, sans trou ni
+      collision. Appui long pour l'obtenir et la copier, recherche pour y
+      revenir. Refuse au-delà de 20,48 km du centre plutôt que de mentir ;
+      propose les 6 homonymes ambigus (tous 97x) au lieu d'en élire un.
+      Le répertoire des communes vient du réseau — 3,3 Mo ne tiennent pas
+      dans un budget de 300 Ko, et la carte hors ligne ne le promet pas.
 
 ## Vitrine & B2B
 - [x] PR #19 — Pages vitrine : « À propos » (manifeste de souveraineté,

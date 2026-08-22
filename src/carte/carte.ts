@@ -28,6 +28,8 @@ import { VisionneusePhoto } from './visionneuse-photo';
 import { chercherPhotos, plusProche, ErreurPhotos } from '../lib/panoramax';
 import { adresseInverse } from '../lib/adresse';
 import { formaterCoordonnees } from '../lib/coordonnees';
+import { coder, ErreurAdresseMots } from '../lib/adresse-mots';
+import { communeDuPoint } from '../lib/commune';
 
 // La métropole entière au premier regard : centre sur la France, zoom qui
 // montre le pays sans le noyer. La géolocalisation est un GESTE de
@@ -173,6 +175,8 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
       .setLngLat(ou)
       .setHTML('<div class="popup-adresse"><p class="pa-libelle">Recherche de l’adresse…</p>'
         + '<p class="pa-coords"></p><button type="button" class="pa-copier">Copier les coordonnées</button>'
+        + '<p class="pa-mots" role="status"></p>'
+        + '<button type="button" class="pa-copier-mots" hidden>Copier l’adresse en mots</button>'
         + '<button type="button" class="pa-favori" disabled>Ajouter aux favoris</button>'
         + '<button type="button" class="pa-photo">Photos de rue</button>'
         + '<p class="pa-photo-etat" role="status"></p></div>')
@@ -196,6 +200,17 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
         () => { bouton.textContent = 'Ajout impossible (stockage local indisponible)'; },
       );
     });
+    /* Les deux interrogations sont INDÉPENDANTES : la BAN nomme la rue, le
+       répertoire nomme la commune. Les enchaîner ferait attendre l'adresse en
+       mots derrière un service qui ne la concerne pas — sur un réseau lent,
+       deux fois le délai pour rien. On lance donc celle-ci tout de suite et on
+       la recueille plus bas. Son échec est capturé À LA SOURCE : une promesse
+       rejetée qui patiente sans gardien déclenche un `unhandledrejection`. */
+    const enMots = communeDuPoint(point).then(
+      (commune) => ({ commune }),
+      (erreur: unknown) => ({ erreur }),
+    );
+
     try {
       const adresse = await adresseInverse(point);
       if (adresse) nomFavori = adresse.libelle;
@@ -207,6 +222,32 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     }
     // Quel que soit le sort de la BAN, le nom est arrêté : le bouton s'ouvre.
     bouton.disabled = false;
+
+    /* L'ADRESSE EN MOTS — « Dijon-21 BAKE 4831 ». Elle se dicte au téléphone
+       et s'écrit sur un papier, là où un lien de partage ne le peut pas. Elle
+       demande le répertoire des communes (réseau) : on ne la promet donc pas
+       avant de l'avoir, et on dit franchement quand elle n'est pas possible. */
+    const ligneMots = bloc.querySelector('.pa-mots') as HTMLElement;
+    const copierMots = bloc.querySelector('.pa-copier-mots') as HTMLButtonElement;
+    const resultat = await enMots;
+    try {
+      if ('erreur' in resultat) throw resultat.erreur;
+      if (!resultat.commune) {
+        ligneMots.textContent = 'Adresse en mots : hors des communes françaises.';
+      } else {
+        const mots = coder(resultat.commune, point);
+        ligneMots.textContent = mots;
+        copierMots.hidden = false;
+        copierMots.addEventListener('click', () => {
+          void navigator.clipboard.writeText(mots);
+          copierMots.textContent = 'Copié !';
+        });
+      }
+    } catch (e) {
+      ligneMots.textContent = e instanceof ErreurAdresseMots
+        ? e.message
+        : 'Adresse en mots indisponible pour le moment.';
+    }
 
     /* LES PHOTOS DE RUE ne partent QUE sur demande explicite : une photo
        coûte du réseau à un commun associatif, et personne n'en veut à chaque
