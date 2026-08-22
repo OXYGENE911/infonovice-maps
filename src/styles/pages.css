@@ -79,3 +79,33 @@ body.page {
 @media (max-width: 560px) {
   .pied-carte { left: 8px; right: 8px; justify-content: center; flex-wrap: wrap; }
 }
+
+/* Le lien de contact des pages vitrine. Un LIEN, pas un bouton de formulaire :
+   ces pages interdisent le script et l'envoi de formulaire dans leur propre
+   CSP (`script-src 'none'`, `form-action 'none'`). Il en a néanmoins le poids
+   visuel, parce que c'est l'action principale de la page « Professionnels ».
+   44 px de haut au minimum : la cible tactile en dessous de laquelle un doigt
+   rate.
+
+   LES COULEURS SONT CHOISIES SUR LEUR RAPPORT DE CONTRASTE, pas au jugé. Les
+   jetons --accent / --accent-vif ne conviennent pas ici : --accent-vif sur du
+   blanc ne donne que 3,6:1, sous le seuil de 4,5:1 — et un survol qui rend le
+   texte moins lisible est un survol raté. Mesures :
+   clair   #2272C4 + blanc  = 4,98:1   survol #185FA5 + blanc  = 6,52:1
+   sombre  #378ADD + #0E1014 = 5,26:1  survol #B5D4F4 + #0E1014 = 12,3:1 */
+.page-action {
+  display: inline-block; min-height: 44px; padding: 12px 20px;
+  border-radius: 8px; background: var(--bleu-500); color: var(--blanc);
+  font-weight: 600; text-decoration: none;
+  transition: background 200ms ease;
+}
+.page-action:hover, .page-action:focus-visible { background: var(--bleu-600); }
+/* L'ANNEAU de focus doit se voir sur le fond COLORÉ du lien, pas sur celui de
+   la page : d'où le décalage, et une couleur qui tranche dans les deux modes. */
+.page-action:focus-visible { outline: 3px solid var(--texte-1); outline-offset: 3px; }
+
+@media (prefers-color-scheme: dark) {
+  .page-action { background: var(--bleu-400); color: #0E1014; }
+  .page-action:hover, .page-action:focus-visible { background: var(--bleu-100); }
+}
+@media (prefers-reduced-motion: reduce) { .page-action { transition: none; } }

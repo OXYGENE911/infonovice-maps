@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Quatre pages, écrites à la main : un générateur serait plus de code que
+<!-- Cinq pages, écrites à la main : un générateur serait plus de code que
      de contenu. À tenir à jour quand une page naît (la CI le vérifie). -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -9,6 +9,11 @@
   </url>
   <url>
     <loc>https://maps.infonovice.fr/a-propos.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://maps.infonovice.fr/offre-flottes.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

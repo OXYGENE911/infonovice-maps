@@ -1335,3 +1335,54 @@ test('l’export GPX télécharge un fichier nommé, sans aucune requête', asyn
   const fichier = await telechargement;
   expect(fichier.suggestedFilename()).toBe('itineraire-infonovice.gpx');
 });
+
+test('PROFESSIONNELS : la page dit ce qu’elle ne fait pas, et contacte SANS serveur', async ({ page }) => {
+  /* Cette page vend quelque chose : c'est précisément celle où l'on peut être
+     tenté de poser un formulaire, un traceur de conversion, un chat. Le test
+     vérifie qu'il n'y a rien de tout cela — et que le contact passe par la
+     messagerie de l'usager, pas par un serveur. */
+  const scripts: string[] = [];
+  const origines = new Set<string>();
+  page.on('request', (r) => {
+    origines.add(new URL(r.url()).hostname);
+    if (r.resourceType() === 'script') scripts.push(r.url());
+  });
+
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await page.locator('.pied-carte a[href="/offre-flottes.html"]').click();
+  await expect(page).toHaveTitle(/Flottes et professionnels/);
+
+  scripts.length = 0;
+  origines.clear();
+  await page.reload();
+
+  // CE QU'ELLE PROMET, et surtout ce qu'elle refuse de promettre.
+  await expect(page.locator('h1')).toHaveText('Pour ceux dont le métier est sur la route');
+  const limites = page.locator('.page-promesses');
+  await expect(limites).toContainText('Aucun suivi de véhicule');
+  await expect(limites).toContainText('Aucune optimisation de tournée');
+
+  /* LE CONTACT EST UN mailto:, PAS UN FORMULAIRE. Un formulaire enverrait la
+     saisie à un serveur — le nôtre ou celui d'un tiers —, ce que ce site
+     n'a pas et ne veut pas. La page ne doit donc contenir AUCUN <form>. */
+  await expect(page.locator('form')).toHaveCount(0);
+  const contact = page.locator('.page-action');
+  await expect(contact).toBeVisible();
+  const lien = await contact.getAttribute('href');
+  expect(lien, 'le contact doit ouvrir la messagerie de l’usager')
+    .toMatch(/^mailto:contact@infonovice\.fr\?/);
+
+  // AUCUN script, AUCUNE origine tierce — comme les autres pages de texte.
+  expect(scripts, `scripts chargés : ${scripts.join(', ')}`).toHaveLength(0);
+  expect([...origines].filter((h) => h !== 'localhost'),
+    'origine tierce contactée par la page professionnels').toHaveLength(0);
+  expect(await page.context().cookies()).toHaveLength(0);
+
+  // La cible tactile du contact tient les 44 px exigés, doigt compris.
+  const cadre = await contact.boundingBox();
+  expect(cadre!.height, 'cible tactile trop courte').toBeGreaterThanOrEqual(44);
+
+  await page.locator('.page-retour').click();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+});

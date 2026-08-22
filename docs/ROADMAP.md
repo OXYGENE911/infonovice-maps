@@ -168,7 +168,16 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       un parcours E2E le prouve (aucun script, aucune origine tierce, aucun
       cookie). L'accueil marchand séparé n'est pas retenu : la carte EST
       l'accueil.
-- [ ] PR #20 — Page « Offre flottes B2B » + formulaire de contact
+- [x] PR #20 — Page « Professionnels » (offre flottes) : ce que la carte sait
+      faire pour une équipe de terrain, et surtout CE QU'ELLE NE FAIT PAS
+      (pas de suivi de véhicule, pas d'optimisation de tournée, pas
+      d'horaires, pas de comptes d'équipe). Contact par `mailto:` — PAS de
+      formulaire : ces pages interdisent le script et l'envoi de formulaire
+      dans leur propre CSP, et un formulaire enverrait la saisie à un serveur
+      que ce site n'a pas. Le parcours e2e vérifie l'absence de <form>, de
+      script, de cookie et de toute origine tierce.
+      RESTE À TRANCHER PAR ARMELIN : tarifs, engagements de service et
+      références clients sont volontairement absents — rien n'a été inventé.
 - [x] PR #21 — Référencement : sitemap.xml, robots.txt, Open Graph et
       JSON-LD (WebApplication / AboutPage) sur les quatre pages, image de
       partage 1200x630 GÉNÉRÉE par script (aucun binaire opaque au dépôt).

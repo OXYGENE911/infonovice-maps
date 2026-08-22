@@ -27,6 +27,7 @@ export default defineConfig({
       input: {
         index: resolve(__dirname, 'index.html'),
         'a-propos': resolve(__dirname, 'a-propos.html'),
+        'offre-flottes': resolve(__dirname, 'offre-flottes.html'),
         'vie-privee': resolve(__dirname, 'vie-privee.html'),
         'mentions-legales': resolve(__dirname, 'mentions-legales.html'),
       },
@@ -109,7 +110,9 @@ export default defineConfig({
            place des mentions légales. D'où le « (\?|$) » : workbox confronte
            ses motifs à `pathname + search`, pas au seul chemin. Le « (^|/) »
            de tête laisse passer une base autre que la racine. */
-        navigateFallbackDenylist: [/(^|\/)(a-propos|vie-privee|mentions-legales)\.html(\?|$)/],
+        navigateFallbackDenylist: [
+          /(^|\/)(a-propos|offre-flottes|vie-privee|mentions-legales)\.html(\?|$)/,
+        ],
       },
     }),
   ],

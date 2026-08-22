@@ -2,6 +2,22 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.21.0] — 2026-08-22 — Page « Professionnels »
+
+- Une page pour les flottes et les équipes de terrain : ce que la carte sait
+  faire pour elles (adresses de sites sans rue, hors ligne quatorze jours,
+  tournées à six étapes, trafic, transports en direct) — et, en aussi gros,
+  CE QU'ELLE NE FAIT PAS : ni suivi de véhicule, ni optimisation de tournée,
+  ni horaires de transport, ni comptes d'équipe. Personne ne doit découvrir
+  la limite un mardi matin.
+- Le contact passe par la messagerie de l'usager, pas par un serveur. Il n'y
+  a pas de formulaire sur cette page, et c'est le sujet : un formulaire
+  enverrait la saisie quelque part, ce que ce site ne fait nulle part
+  ailleurs. Ces pages interdisent d'ailleurs le script et l'envoi de
+  formulaire dans leur propre CSP.
+- Aucun tarif, aucun engagement de service, aucune référence client : rien
+  n'a été inventé faute de décision.
+
 ## [0.20.0] — 2026-08-22 — Adresse en mots
 
 - Tout point de France a désormais une adresse dictable : « Dijon-21 BAKE 4831 ».
