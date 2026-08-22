@@ -1,0 +1,53 @@
+// FICHIER ENGENDRÉ — ne pas modifier à la main.
+// Régénérer : `node scripts/reseaux-temps-reel.mjs` (voir l'en-tête du script).
+// Relevé le 2026-08-22 : 44 réseaux publient la position de leurs
+// véhicules en temps réel derrière le proxy CORS de transport.data.gouv.fr.
+//
+// `bbox` est l'emprise de l'autorité organisatrice — ouest, sud, est, nord —
+// et sert à ne solliciter QUE les flux qui concernent la vue affichée.
+export const RESEAUX_TEMPS_REEL = [
+  { id: 'aleop-pdl-gtfs-rt-vehicle-position', nom: "Aléop Pays de la Loire", autorite: "Pays de la Loire", bbox: [-2.64, 46.21, 0.95, 48.63] },
+  { id: 'alterneo-civis-gtfs-rt-vehicle-position', nom: "ALTERNEO", autorite: "CA CIVIS (Communauté Intercommunale des Villes Solidaires)", bbox: [55.32, -21.38, 55.61, -21.09] },
+  { id: 'ametis-amiens-gtfs-rt-vehicle-position', nom: "AMETIS", autorite: "CA Amiens Métropole", bbox: [2.07, 49.77, 2.46, 49.99] },
+  { id: 'astrobus-lisieux-gtfs-rt-vehicle-position', nom: "Astrobus", autorite: "CA Lisieux Normandie", bbox: [-0.16, 48.9, 0.45, 49.23] },
+  { id: 'atoumod-gtfs-rt-vehicle-position', nom: "Agrégat des réseaux urbains et interurbains de Normandie", autorite: "Normandie", bbox: [-1.97, 48.12, 1.86, 50.15] },
+  { id: 'axeo-guingamp-gtfs-rt-vehicle-position', nom: "Guingamp-Paimpol Mobilité", autorite: "CA Guingamp-Paimpol Agglomération de l'Armor à l'Argoat", bbox: [-3.61, 48.31, -2.93, 48.82] },
+  { id: 'beaune-cote-et-bus-gtfs-rt-vehicle-position', nom: "Côte&Bus", autorite: "CA Beaune, Côte et Sud - Communauté Beaune-Chagny-Nolay", bbox: [4.5, 46.87, 5.05, 47.16] },
+  { id: 'bibus-brest-gtfs-rt-vehicle-position', nom: "Bibus", autorite: "Brest Métropole", bbox: [-4.64, 48.32, -4.32, 48.47] },
+  { id: 'citea-valence-gtfs-rt-vehicle-position', nom: "VRD Mobilités - CITEA", autorite: "CA Valence Romans Agglo", bbox: [4.8, 44.77, 5.24, 45.26] },
+  { id: 'deepmob-dieppe-gtfs-rt-vehicle-position', nom: "Deep Mob", autorite: "CA de la Région Dieppoise", bbox: [0.93, 49.83, 1.21, 49.94] },
+  { id: 'divia-dijon-gtfs-rt-vehicle-position', nom: "Divia", autorite: "Dijon Métropole", bbox: [4.9, 47.22, 5.21, 47.4] },
+  { id: 'ficibus-fecamp-gtfs-rt-vehicle-position', nom: "Ficibus", autorite: "CA Fécamp Caux Littoral Agglomération", bbox: [0.25, 49.67, 0.59, 49.83] },
+  { id: 'fluo-forbus-forbach-gtfs-rt-vehicle-position', nom: "Forbus Intercity", autorite: "CA de Forbach Porte de France", bbox: [6.82, 49.07, 7.02, 49.22] },
+  { id: 'fluo-haut-rhin-68-gtfs-rt-vehicle-position', nom: "Fluo Grand Est", autorite: "Haut-Rhin", bbox: [6.78, 47.34, 7.7, 48.39] },
+  { id: 'fluo-sel-et-vermois-gtfs-rt-vehicle-position', nom: "La Navette", autorite: "CC des Pays du Sel et du Vermois", bbox: [6.19, 48.53, 6.44, 48.66] },
+  { id: 'giverny-vernon-gtfs-rt', nom: "SNgo!", autorite: "Giverny", bbox: [1.51, 49.07, 1.56, 49.1] },
+  { id: 'hobus-honfleur-gtfs-rt-vehicle-position', nom: "HOBus", autorite: "CC du Pays de Honfleur-Beuzeville", bbox: [0.13, 49.31, 0.47, 49.45] },
+  { id: 'jybus-rumilly-gtfs-rt-vehicle-position', nom: "J'ybus", autorite: "CC Rumilly Terre de Savoie", bbox: [5.86, 45.8, 6.03, 45.97] },
+  { id: 'kiceo-vannes-gtfs-rt-vehicle-position', nom: "Kicéo", autorite: "CA Golfe du Morbihan - Vannes Agglomération", bbox: [-2.96, 47.48, -2.5, 47.84] },
+  { id: 'le-vib-vierzon-gtfs-rt-vehicle-position', nom: "Le Vib'", autorite: "CC Vierzon-Sologne-Berry", bbox: [1.77, 47.1, 2.33, 47.38] },
+  { id: 'lemet-metz-gtfs-rt-vehicle-position', nom: "Le Met'", autorite: "Metz Métropole", bbox: [5.98, 48.96, 6.35, 49.21] },
+  { id: 'lila-presquile-cap-atlantique-gtfs-rt-vehicle-position', nom: "Lila presqu'ile", autorite: "CA de la Presqu'île de Guérande Atlantique (Cap Atlantique)", bbox: [-2.63, 47.26, -2.24, 47.52] },
+  { id: 'maelis-montlucon-gtfs-rt-vehicle-position', nom: "Maélis", autorite: "CA Montluçon Communauté", bbox: [2.41, 46.12, 2.73, 46.41] },
+  { id: 'mat-st-malo-gtfs-rt', nom: "MAT (Malo Agglo Transport)", autorite: "CA du Pays de Saint Malo Agglomération", bbox: [-2.08, 48.48, -1.78, 48.72] },
+  { id: 'mobivie-vichy-gtfs-rt-vehicle-position', nom: "Mobivie", autorite: "CA Vichy Communauté", bbox: [3.26, 45.93, 3.83, 46.25] },
+  { id: 'moca-caux-austreberthe-gtfs-rt-vehicle-position', nom: "Moca", autorite: "CC Caux - Austreberthe", bbox: [0.81, 49.52, 1.01, 49.64] },
+  { id: 'montelibus-montelimar-gtfs-rt-vehicle-position', nom: "MONTELIBUS", autorite: "CA Montélimar Agglomération", bbox: [4.69, 44.46, 5, 44.74] },
+  { id: 'moova-vesoul-gtfs-rt-vehicle-position', nom: "Moova", autorite: "CA de Vesoul", bbox: [6.04, 47.56, 6.26, 47.69] },
+  { id: 'mouveo-saint-omer-gtfs-rt-vehicle-position', nom: "Mouvéo", autorite: "CA du Pays de Saint-Omer", bbox: [2, 50.51, 2.47, 50.85] },
+  { id: 'neva-granville-gtfs-rt-vehicle-position', nom: "En bus NEVA", autorite: "CC de Granville, Terre et Mer", bbox: [-1.87, 48.73, -1.33, 48.96] },
+  { id: 'palmbus-cannes-gtfs-rt-vehicle-position', nom: "Palm Bus", autorite: "CA Cannes Pays de Lérins", bbox: [6.88, 43.48, 7.07, 43.62] },
+  { id: 'riom-rlv-mobilites-gtfs-rt-vehicle-position', nom: "RLVmobilités", autorite: "CA Riom Limagne et Volcans", bbox: [2.85, 45.8, 3.31, 45.98] },
+  { id: 'rubis-bourg-en-bresse-gtfs-rt-vehicle-position', nom: "Rubis", autorite: "CA du Bassin de Bourg-en-Bresse", bbox: [5, 46.03, 5.51, 46.52] },
+  { id: 'seine-eure-semo-gtfs-rt-vehicle-position', nom: "Semo Bus", autorite: "CA Seine-Eure", bbox: [0.96, 49.08, 1.42, 49.35] },
+  { id: 'setram-lemans-gtfs-rt-vehicle-position', nom: "SETRAM", autorite: "CU Le Mans Métropole", bbox: [0.03, 47.89, 0.37, 48.1] },
+  { id: 'sngo-vernon-gtfs-rt-vehicle-position', nom: "SNgo!", autorite: "CA Seine Normandie Agglomération", bbox: [1.24, 48.92, 1.67, 49.34] },
+  { id: 'star-rennes-integration-gtfs-rt-vehicle-position', nom: "STAR", autorite: "Rennes Métropole", bbox: [-1.96, 47.93, -1.47, 48.31] },
+  { id: 'surf-fougeres-gtfs-rt-vehicle-position', nom: "Le SURF", autorite: "CA Fougères Agglomération", bbox: [-1.48, 48.25, -1.05, 48.54] },
+  { id: 'tgd-dole-gtfs-rt-vehicle-position', nom: "TGD - Transport du Grand Dole", autorite: "CA du Grand Dole", bbox: [5.28, 46.93, 5.68, 47.29] },
+  { id: 'tgl-longwy-gtfs-rt-vehicle-position', nom: "TGL", autorite: "CA Grand Longwy Agglomération", bbox: [5.65, 49.39, 5.91, 49.56] },
+  { id: 'transpor-gtfs-rt-vehicle-position', nom: "Transp'Or", autorite: "CA du Pays de l'Or", bbox: [3.9, 43.52, 4.11, 43.69] },
+  { id: 'transurbain-evreux-gtfs-rt-vehicle-position', nom: "Transurbain", autorite: "CA Evreux Portes de Normandie", bbox: [1.01, 48.75, 1.46, 49.13] },
+  { id: 'vikibus-yvetot-gtfs-rt-vehicle-position', nom: "Vikibus", autorite: "CC Yvetot Normandie", bbox: [0.62, 49.53, 0.92, 49.69] },
+  { id: 'zest-menton-riviera-gtfs-rt-vehicle-position', nom: "ZEST", autorite: "CA de la Riviera Française", bbox: [7.37, 43.73, 7.72, 44.18] },
+] as const;

@@ -2,6 +2,19 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.19.0] — 2026-08-22 — Transports en commun, en direct
+- Volet « Transports » : la position des bus, cars et trams telle que les
+  réseaux la publient (GTFS-RT), pour 44 réseaux français. Clic sur un
+  véhicule : ligne, destination, vitesse et fraîcheur de la position.
+- Décodeur protobuf écrit à la main, moins de 2 Ko : la bibliothèque de
+  référence en aurait coûté 120, pour lire quatre champs.
+- Frugalité : rien tant que la case n'est pas cochée, jamais sous le zoom 10,
+  trois réseaux au plus par vue, un frein qui empêche un déplacement de
+  relancer un appel, et plus rien dès que l'onglet passe en arrière-plan.
+- Honnêteté : les positions de plus de dix minutes sont écartées, et le volet
+  DIT ce qu'il ne montre pas — ni horaires ni arrêts, faute de serveur pour
+  digérer des GTFS de plusieurs dizaines de mégaoctets.
+
 ## [0.18.0] — 2026-08-22 — Mode hors ligne
 - La carte déjà consultée s'ouvre sans réseau : tuiles en cache (14 jours,
   dans les bornes autorisées par l'IGN) et coquille complète précachée.

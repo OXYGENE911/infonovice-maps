@@ -1,0 +1,171 @@
+// Les transports en commun en direct (PR #16) vivent dans leur propre
+// fichier : la spec d'accueil dépassait déjà de loin les 500 lignes que le
+// projet s'impose, et cette fonctionnalité se relit très bien seule.
+import { test, expect } from '@playwright/test';
+import { simulerTuiles } from './tuiles-simulees';
+
+test.beforeEach(async ({ page }) => { await simulerTuiles(page); });
+
+/* ---- LE FLUX GTFS-RT EST SIMULÉ ----
+   Comme les tuiles et pour la même raison : la CI ne doit
+   ni dépendre de transport.data.gouv.fr, ni le solliciter à chaque poussée.
+   Ce que la suite prouve reste réel — quelles requêtes partent, quand elles
+   NE partent pas, et ce qui finit en pixels sur la carte. La disponibilité
+   des flux, elle, est prouvée par appels réels dans docs/apis.md. */
+
+const varint = (n: number): number[] => {
+  const o: number[] = [];
+  let v = n;
+  do { const c = v % 128; v = Math.floor(v / 128); o.push(v > 0 ? c | 0x80 : c); } while (v > 0);
+  return o;
+};
+const cle = (numero: number, type: number): number[] => varint(numero * 8 + type);
+const blocPb = (numero: number, contenu: number[]): number[] =>
+  [...cle(numero, 2), ...varint(contenu.length), ...contenu];
+const textePb = (numero: number, s: string): number[] =>
+  blocPb(numero, [...new TextEncoder().encode(s)]);
+const flottantPb = (numero: number, v: number): number[] => {
+  const b = new Uint8Array(4);
+  new DataView(b.buffer).setFloat32(0, v, true);
+  return [...cle(numero, 5), ...b];
+};
+
+interface Faux {
+  id: string; lon: number; lat: number; ligne: string; nom: string;
+  vitesse?: number; ageS?: number;
+}
+
+/** Fabrique un FeedMessage GTFS-RT « positions de véhicules ». */
+function fluxSimule(vehicules: Faux[], horodateS = Math.floor(Date.now() / 1000)): Buffer {
+  const octets: number[] = [
+    ...blocPb(1, [...textePb(1, '2.0'), ...cle(3, 0), ...varint(horodateS)]),
+  ];
+  for (const v of vehicules) {
+    const position = blocPb(2, [
+      ...flottantPb(1, v.lat), ...flottantPb(2, v.lon),
+      ...(v.vitesse === undefined ? [] : flottantPb(5, v.vitesse)),
+    ]);
+    const corps = [
+      ...blocPb(1, textePb(5, v.ligne)),
+      ...position,
+      ...cle(5, 0), ...varint(horodateS - (v.ageS ?? 5)),
+      ...blocPb(8, textePb(2, v.nom)),
+    ];
+    octets.push(...blocPb(2, [...textePb(1, v.id), ...blocPb(4, corps)]));
+  }
+  return Buffer.from(octets);
+}
+
+const DIJON: [number, number] = [5.0415, 47.3220];
+
+const nbPeints = (page: import('@playwright/test').Page): Promise<number> => page.evaluate(
+  () => (window as unknown as { __carte: { queryRenderedFeatures(o: object): unknown[] } })
+    .__carte.queryRenderedFeatures({ layers: ['transports-vehicules'] }).length,
+);
+const allerA = (page: import('@playwright/test').Page, lon: number, lat: number, zoom: number) =>
+  page.evaluate(([x, y, z]) => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [x, y], zoom: z });
+  }, [lon, lat, zoom]);
+
+test('TRANSPORTS : rien sans la case, du direct avec, et un frein aux appels', async ({ page }) => {
+  const appels: string[] = [];
+  await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => {
+    appels.push(route.request().url());
+    return route.fulfill({
+      contentType: 'application/x-protobuf',
+      body: fluxSimule([
+        { id: 'v1', lon: 5.0415, lat: 47.3220, ligne: 'T1', nom: 'Gare', vitesse: 8.3 },
+        { id: 'v2', lon: 5.0450, lat: 47.3250, ligne: 'B3', nom: 'Toison d’Or' },
+        // Périmé d'une heure : le décodeur le lit, la fraîcheur l'écarte.
+        { id: 'v3', lon: 5.0380, lat: 47.3190, ligne: 'X9', nom: 'Dépôt', ageS: 3600 },
+      ]),
+    });
+  });
+
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await allerA(page, DIJON[0], DIJON[1], 12);
+
+  // RIEN tant que la case n'est pas cochée : la couche ne s'invite pas.
+  await page.locator('.transports summary').click();
+  await expect(page.locator('.transports-case')).not.toBeChecked();
+  expect(appels, 'la couche a interrogé un service public sans qu’on le lui demande')
+    .toEqual([]);
+
+  await page.locator('.transports-case').check();
+  await expect(page.locator('.transports-etat'))
+    .toContainText('véhicules en circulation', { timeout: 10_000 });
+  expect(appels).toHaveLength(1);
+  expect(appels[0]).toContain('divia-dijon');
+
+  /* LES PIXELS, pas seulement l'état : `queryRenderedFeatures` interroge ce
+     que MapLibre a RÉELLEMENT peint. Deux véhicules, pas trois — le troisième
+     date d'une heure et n'a rien à faire sur une carte du direct. */
+  await expect.poll(() => nbPeints(page), { timeout: 10_000 }).toBe(2);
+
+  // LE FREIN : un déplacement dans la même agglomération ne redemande rien.
+  await allerA(page, 5.0480, 47.3260, 12);
+  await page.waitForTimeout(1500);
+  expect(appels, 'un simple déplacement a relancé un appel').toHaveLength(1);
+
+  // LE ZOOM ARRIÈRE se tait, et le DIT — sans rien demander de plus.
+  await allerA(page, 2.4, 46.6, 6);
+  await expect(page.locator('.transports-etat')).toContainText('Approchez', { timeout: 10_000 });
+  expect(await nbPeints(page)).toBe(0);
+  expect(appels).toHaveLength(1);
+});
+
+test('TRANSPORTS : le clic dit la ligne, la vitesse et la fraîcheur', async ({ page }) => {
+  await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => route.fulfill({
+    contentType: 'application/x-protobuf',
+    body: fluxSimule([
+      { id: 'v1', lon: 5.0415, lat: 47.3220, ligne: 'T1', nom: 'Gare', vitesse: 8.3 },
+    ]),
+  }));
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await allerA(page, DIJON[0], DIJON[1], 14);
+  await page.locator('.transports summary').click();
+  await page.locator('.transports-case').check();
+  await expect.poll(() => nbPeints(page), { timeout: 10_000 }).toBe(1);
+
+  // On clique le véhicule à sa position projetée — pas au centre de l'écran.
+  const point = await page.evaluate(([lon, lat]) => (window as unknown as {
+    __carte: { project(c: [number, number]): { x: number; y: number } };
+  }).__carte.project([lon, lat]), DIJON);
+  const cadre = (await page.locator('#carte canvas.maplibregl-canvas').boundingBox())!;
+  await page.mouse.click(cadre.x + point.x, cadre.y + point.y);
+
+  const popup = page.locator('.transports-popup');
+  await expect(popup).toBeVisible({ timeout: 10_000 });
+  await expect(popup).toContainText('Ligne T1');
+  await expect(popup).toContainText('Gare');
+  await expect(popup).toContainText('30 km/h');  // 8,3 m/s
+  await expect(popup).toContainText('à l’instant');
+});
+
+test('TRANSPORTS : un réseau muet se dit, en français', async ({ page }) => {
+  let appel = 0;
+  await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => {
+    appel += 1;
+    if (appel === 1) {
+      return route.fulfill({
+        contentType: 'application/x-protobuf',
+        body: fluxSimule([{ id: 'v1', lon: 5.0415, lat: 47.3220, ligne: 'T1', nom: 'Gare' }]),
+      });
+    }
+    return route.fulfill({ status: 404, body: 'ressource inconnue' });
+  });
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await allerA(page, DIJON[0], DIJON[1], 12);
+  await page.locator('.transports summary').click();
+  await page.locator('.transports-case').check();
+  await expect(page.locator('.transports-etat')).toContainText('véhicule', { timeout: 10_000 });
+
+  // Le réseau suivant tombe : l'usager l'apprend, en français, avec la raison.
+  await allerA(page, -1.6800, 48.1100, 12);  // Rennes
+  await expect(page.locator('.transports-etat'))
+    .toContainText('indisponible', { timeout: 15_000 });
+});

@@ -475,6 +475,39 @@ etapes-itineraire { display: grid; gap: 7px; }
   white-space: pre-line; max-height: 220px; overflow-y: auto; }
 .trafic-date { margin: 7px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); }
 
+/* --- Transports en commun en direct (PR #16) — même grammaire visuelle que
+   le volet trafic : c'est la même colonne, ce doit être le même objet. --- */
+.porte-transports { pointer-events: auto; margin: 8px 0 0 12px !important; }
+.transports { position: relative; }
+.transports summary {
+  list-style: none; cursor: pointer;
+  padding: 9px 16px; border-radius: 12px;
+  background: color-mix(in srgb, var(--fond) 92%, transparent);
+  border: 1px solid var(--bord);
+  box-shadow: var(--ombre-s);
+  font: 600 13.5px var(--police); color: var(--texte-1);
+}
+.transports summary::-webkit-details-marker { display: none; }
+.transports summary:focus-visible { outline: none; box-shadow: var(--focus); }
+.transports fieldset {
+  position: absolute; top: calc(100% + 8px); left: 0; min-width: 240px; max-width: 300px;
+  padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
+  background: var(--fond); box-shadow: var(--ombre-m);
+  display: grid; gap: 8px;
+}
+.transports legend { font: 700 11px var(--police); color: var(--texte-3);
+  text-transform: uppercase; letter-spacing: .08em; padding: 0 4px; }
+.transports label { display: flex; align-items: center; gap: 9px;
+  font: 400 14px var(--police); color: var(--texte-1); cursor: pointer; }
+.transports input:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+.transports-etat { margin: 0; font: 600 12.5px var(--police); color: var(--texte-2); }
+.transports-etat:empty { display: none; }
+.transports-source { margin: 0; font: 400 11.5px var(--police); color: var(--texte-3);
+  border-top: 1px solid var(--bord); padding-top: 8px; }
+.transports-popup strong { font: 650 13.5px var(--police); color: var(--texte-1); }
+.transports-detail { margin: 6px 0 0; font: 400 13px var(--police); color: var(--texte-2); }
+.transports-meta { margin: 7px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); }
+
 /* --- État de connexion et installation (PR #17) --- */
 etat-connexion { display: contents; }
 /* Le bandeau prend sa propre ligne dans l'en-tête enroulé : côte à côte avec

@@ -83,8 +83,24 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       contrôle départemental. Détail au clic, réduit en texte.
       À FAIRE PLUS TARD : les fluidités d'agglomération (Bordeaux, Nantes,
       Rennes) fonctionnent aussi — sources listées dans docs/apis.md.
-- [ ] PR #15 — Transports en commun : GTFS des principales agglos
-- [ ] PR #16 — GTFS-RT temps réel là où disponible
+- [~] PR #15 — GTFS statique des agglos : ABANDONNÉ, avec la mesure. Le
+      fichier national consolidé des arrêts pèse 578 Mo (GeoPackage) ou 302 Mo
+      (GeoJSON compressé) ; un seul réseau moyen, 11,5 Mo à décompresser et
+      indexer dans le navigateur. Sans serveur pour le pré-mâcher — et le
+      projet n'en veut pas — horaires et arrêts ne sont pas tenables. Écrit
+      dans docs/apis.md, sur la page « À propos » et dans le volet lui-même,
+      plutôt que promis à moitié.
+- [x] PR #16 — Transports en commun EN DIRECT : la position des bus, cars et
+      trams (GTFS-RT), 44 réseaux relayés avec CORS par le Point d'Accès
+      National. Décodeur protobuf minimal écrit à la main (moins de 2 Ko,
+      contre ~120 Ko pour gtfs-realtime-bindings), éprouvé sur des captures
+      réelles ET sur des octets hostiles (varint sans fin, longueur
+      mensongère, type inconnu). Table des emprises engendrée par script et
+      versionnée : la CI ne dépend d'aucun tiers. Frugalité : rien sans la
+      case, jamais sous le zoom 10, trois réseaux au plus, un frein qui
+      empêche un déplacement de relancer un appel, arrêt en arrière-plan.
+      Positions de plus de dix minutes écartées — une carte du direct ne
+      montre pas des véhicules rentrés au dépôt.
 
 ## Offline & PWA avancée
 - [x] PR #17 — Mode hors ligne : cache des tuiles IGN (CacheFirst, 14 jours,

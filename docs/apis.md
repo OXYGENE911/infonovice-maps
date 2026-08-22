@@ -163,8 +163,52 @@ est « API publiques documentées », elle ne se contourne pas.
   cache navigateur, et en fixe la durée. Notre service worker s'arrête à
   14 jours, en deçà de ce que l'IGN accorde ; le cache vit dans le navigateur
   de l'usager, jamais sur un serveur partagé (ce que « private » exige).
-- Une tuile PNG du Plan IGN pèse ~80 Ko : le plafond de 800 entrées borne le
-  disque à ~60 Mo au pire, avec purge automatique sur erreur de quota.
+- Une tuile pèse ~47 Ko (mesuré) : les plafonds par couche — 400 plan, 250
+  satellite, 150 routes, 150 cadastre — bornent le disque à ~45 Mo au pire,
+  avec purge automatique sur erreur de quota.
+
+## Transports en commun temps réel — transport.data.gouv.fr (vérifié 22/08/2026)
+- Catalogue : `GET https://transport.data.gouv.fr/api/datasets?type=public-transit`
+  → 200, 2,4 Mo, **781 jeux de données**. Formats recensés : 551 GTFS,
+  377 GTFS-RT, 169 NeTEx, 84 SIRI.
+- Sur ces 377 ressources GTFS-RT, **150 déclarent `vehicle_positions`**, et
+  **47 seulement passent par `proxy.transport.data.gouv.fr`** — les autres
+  pointent des URL d'opérateurs SANS en-tête CORS, donc inatteignables depuis
+  un navigateur. Après regroupement par réseau : **44 flux exploitables**.
+- CORS et fraîcheur, mesurés flux par flux (`Origin: https://maps.infonovice.fr`) :
+  ```
+  star-rennes-integration-gtfs-rt-vehicle-position  200  access-control-allow-origin: *
+  divia-dijon-gtfs-rt-vehicle-position              200  application/octet-stream   108 o
+  bibus-brest-gtfs-rt-vehicle-position              200  15 o (flux vide)
+  lemet-metz-gtfs-rt-vehicle-position               200  15 o (flux vide)
+  aleop-pdl-gtfs-rt-vehicle-position                200  application/x-protobuf     157 o
+  ```
+  `cache-control: max-age=0, private, must-revalidate` partout : le producteur
+  demande explicitement qu'on ne garde rien. On ne garde rien.
+- **Les tailles minuscules ci-dessus sont l'heure, pas la source** : relevé à
+  03 h 57 (Paris), deux véhicules circulaient dans toute la France proxifiée.
+  Contrôlé à 04 h 22 sur Dijon depuis l'application : 4 véhicules Divia.
+- Contenu décodé, réellement obtenu (Aléop, Pays de la Loire) :
+  `id RTVP:T:2644377402`, ligne `206`, `47.8137 / -0.0871`, étiquette
+  « Malicorne-sur-Sarthe », horodate à la seconde. Et (Divia, Dijon) :
+  véhicule `3631`, ligne `4-93`, `47.3170 / 5.0748`, cap 323°, 17 m/s.
+- Emprises des réseaux : `geo.api.gouv.fr`. Les EPCI et communes rendent leur
+  contour (`?format=geojson&geometry=contour`) ; **les départements et régions
+  ne le rendent PAS** — leur emprise est calculée à partir des centres de
+  leurs communes (`/communes?codeRegion=..&fields=centre`), élargie de 0,1°.
+  Table engendrée par `node scripts/reseaux-temps-reel.mjs`, versionnée.
+
+## GTFS statique — écarté, avec la mesure (22/08/2026)
+La PR #15 visait « le GTFS des principales agglomérations ». Ce n'est pas
+tenable sans serveur, et le chiffre le dit :
+- Fichier national consolidé « Position des arrêts de transport et tracés de
+  lignes » (data.gouv.fr, `5f186dca05ac2c31888a2262`) :
+  **578 Mo en GeoPackage, 302 Mo en GeoJSON compressé**.
+- Un seul réseau moyen : `gtfs-citea-sept2024.zip` = **11,5 Mo**, à décompresser
+  et indexer dans le navigateur — pour une agglomération de 65 000 habitants.
+Un navigateur ne digère pas cela à chaque visite, et le projet n'a pas de
+serveur pour le pré-mâcher. La couche livrée montre donc les VÉHICULES, pas
+les horaires, et le dit sur la page « À propos » comme dans le volet.
 
 ## À vérifier avant leur PR (ne pas présumer)
-- transport.data.gouv.fr GTFS/GTFS-RT (PR #15-16)
+- Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.
