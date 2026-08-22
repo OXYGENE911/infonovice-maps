@@ -2,6 +2,13 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.18.0] — 2026-08-22 — Mode hors ligne
+- La carte déjà consultée s'ouvre sans réseau : tuiles en cache (14 jours,
+  dans les bornes autorisées par l'IGN) et coquille complète précachée.
+- Bandeau « Hors ligne » qui dit ce qui reste utilisable (carte vue, favoris)
+  et ce qui attend le réseau (recherche, itinéraires, trafic, météo).
+- Bouton d'installation de l'application, sans invite imposée.
+
 ## [0.17.0] — 2026-08-22 — Info trafic nationale
 - Couche « Trafic » : les événements routiers de toute la France (Bison Futé),
   actualisés toutes les 3 minutes, avec le détail au clic.

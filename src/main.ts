@@ -6,8 +6,13 @@ import './styles/carte.css';
 import './styles/pages.css';
 import { registerSW } from 'virtual:pwa-register';
 import { creerCarte } from './carte/carte';
+import { EtatConnexion } from './carte/etat-connexion';
 
 registerSW({ immediate: true });
+
+// L'état de connexion et l'invite d'installation vivent dans l'en-tête :
+// ils concernent l'application entière, pas la carte.
+document.querySelector('.entete')?.appendChild(new EtatConnexion());
 
 const conteneur = document.getElementById('carte');
 if (conteneur) creerCarte(conteneur);

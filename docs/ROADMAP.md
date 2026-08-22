@@ -87,7 +87,11 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
 - [ ] PR #16 — GTFS-RT temps réel là où disponible
 
 ## Offline & PWA avancée
-- [ ] PR #17 — Mode hors ligne : cache des tuiles + install PWA + page offline
+- [x] PR #17 — Mode hors ligne : cache des tuiles IGN (CacheFirst, 14 jours,
+      800 entrées — DANS les bornes que le serveur annonce lui-même :
+      `private, max-age=1814400`), coquille complète précachée (MapLibre et
+      son worker compris), bandeau qui dit HONNÊTEMENT ce qui marche sans
+      réseau et ce qui l'attend, bouton d'installation PWA.
 - [ ] PR #18 — Adressage « commune + mot + chiffres » (alternative What3Words)
 
 ## Vitrine & B2B

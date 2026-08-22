@@ -748,6 +748,61 @@ test('FAVORIS : le bouton d’ajout attend que l’adresse soit tranchée', asyn
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
 });
 
+test('HORS LIGNE : la carte s’ouvre sans réseau, et le dit honnêtement', async ({ page, context }) => {
+  // Le service worker doit être ACTIF avant de couper : c'est lui qui sert
+  // la coquille et les tuiles déjà vues.
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null, { timeout: 20_000 });
+  /* RECHARGER UNE FOIS LE SERVICE WORKER AUX COMMANDES : au tout premier
+     chargement, les tuiles partent AVANT qu'il ait pris le contrôle, donc
+     elles ne passent pas par lui et n'entrent pas en cache. C'est aussi ce
+     que vit un vrai visiteur : sa première visite prépare la seconde. */
+  await page.reload();
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await expect.poll(async () => page.evaluate(async () => {
+    const c = await caches.open('tuiles-ign');
+    return (await c.keys()).length;
+  }), { timeout: 20_000 }).toBeGreaterThan(0);
+
+  const tuilesEnCache = await page.evaluate(async () => {
+    const c = await caches.open('tuiles-ign');
+    return (await c.keys()).length;
+  });
+  expect(tuilesEnCache, 'aucune tuile mise en cache').toBeGreaterThan(0);
+
+  // COUPURE : le bandeau apparaît et DIT ce qui marche, ce qui attend.
+  await context.setOffline(true);
+  await expect(page.locator('.hors-ligne')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.hors-ligne')).toContainText('Hors ligne');
+  await expect(page.locator('.hors-ligne')).toContainText('favoris restent accessibles');
+  await expect(page.locator('.hors-ligne')).toContainText('attendent le réseau');
+
+  // RETOUR DU RÉSEAU : le bandeau s'efface de lui-même.
+  await context.setOffline(false);
+  await expect(page.locator('.hors-ligne')).toBeHidden({ timeout: 10_000 });
+
+  /* LA CARTE S'OUVRE SANS RÉSEAU — coquille et tuiles viennent du cache.
+     Ce rechargement vient EN DERNIER : l'émulation hors ligne de Playwright
+     remet `navigator.onLine` à true dans la page nouvellement chargée, alors
+     que le réseau reste coupé (artefact de l'outil mesuré le 22/08, pas du
+     composant) — le bandeau ne s'y vérifie donc plus. */
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.entete-marque')).toBeVisible();
+
+  // Les tuiles déjà connues se relisent bien depuis le cache, sans réseau.
+  const servie = await page.evaluate(async () => {
+    const c = await caches.open('tuiles-ign');
+    const cles = await c.keys();
+    if (cles.length === 0) return false;
+    const r = await c.match(cles[0]!);
+    return Boolean(r && r.ok);
+  });
+  expect(servie, 'une tuile en cache ne se relit pas').toBe(true);
+});
+
 test('TRAFIC : couche nationale à la demande, popup au clic, détail assaini', async ({ page }) => {
   let appelsHorodate = 0;
   let appelsEvenements = 0;

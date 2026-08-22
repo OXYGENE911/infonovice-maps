@@ -66,6 +66,40 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // MapLibre et son worker dépassent la limite par défaut (2 Mio) :
+        // sans ce relèvement, le cœur de la carte reste hors du cache et le
+        // mode hors ligne ne montre rien.
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            /* LES TUILES IGN — mises en cache DANS LES BORNES QUE LE SERVEUR
+               LUI-MÊME ANNONCE : `Cache-Control: private, max-age=1814400`,
+               soit 21 jours (relevé le 22/08/2026 sur data.geopf.fr). On
+               s'arrête à 14 jours pour rester en deçà, et le cache est
+               « privé » par nature : il vit dans le navigateur de l'usager,
+               jamais sur un serveur partagé.
+               CacheFirst : une tuile ne change pas d'un jour à l'autre, et
+               c'est ce qui rend la carte utilisable sans réseau. */
+            urlPattern: ({ url }: { url: URL }) =>
+              url.hostname === 'data.geopf.fr' && url.pathname.startsWith('/wmts'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'tuiles-ign',
+              expiration: {
+                // ~800 tuiles à ~80 Ko : de l'ordre de 60 Mo au pire, et les
+                // plus anciennes s'effacent d'elles-mêmes.
+                maxEntries: 800,
+                maxAgeSeconds: 14 * 24 * 60 * 60,
+                purgeOnQuotaError: true,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+        // Une navigation hors ligne retombe sur la coquille de l'application,
+        // déjà en cache : la carte s'ouvre avec ce qu'elle connaît.
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/(a-propos|vie-privee|mentions-legales)\.html$/],
         // Les tuiles IGN se mettront en cache en PR #17 (stale-while-revalidate
         // avec plafond). Rien ici tant que la stratégie n'est pas écrite.
       },
