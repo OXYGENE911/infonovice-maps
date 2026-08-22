@@ -88,10 +88,19 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
 
 ## Offline & PWA avancée
 - [x] PR #17 — Mode hors ligne : cache des tuiles IGN (CacheFirst, 14 jours,
-      800 entrées — DANS les bornes que le serveur annonce lui-même :
-      `private, max-age=1814400`), coquille complète précachée (MapLibre et
-      son worker compris), bandeau qui dit HONNÊTEMENT ce qui marche sans
-      réseau et ce qui l'attend, bouton d'installation PWA.
+      UNE RÉSERVE PAR COUCHE — 400 plan, 250 satellite, 150 routes, 150
+      cadastre, DANS les bornes que le serveur annonce lui-même :
+      `private, max-age=1814400`), type MIME vérifié avant mise en cache,
+      coquille complète précachée, bandeau qui dit HONNÊTEMENT ce qui marche
+      sans réseau et ce qui l'attend, bouton d'installation PWA.
+      ÉCART ASSUMÉ, mesuré le 22/08 : aucun outil de Playwright ni de CDP ne
+      coupe le réseau du SERVICE WORKER en laissant la page demander
+      (`setOffline` n'atteint que la page ; `route(abort)` n'intercepte pas
+      le worker ; `setBlockedURLs` bloque en amont de lui ;
+      `clearBrowserCache` efface aussi le Cache Storage). Le test E2E prouve
+      donc les deux moitiés séparément : la coquille se recharge sans réseau
+      de page, et les tuiles vues sont dans la réserve du worker, relisibles,
+      signature PNG vérifiée. Le service, lui, est le travail de workbox.
 - [ ] PR #18 — Adressage « commune + mot + chiffres » (alternative What3Words)
 
 ## Vitrine & B2B

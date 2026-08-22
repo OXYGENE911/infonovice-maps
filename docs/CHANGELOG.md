@@ -5,8 +5,22 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 ## [0.18.0] — 2026-08-22 — Mode hors ligne
 - La carte déjà consultée s'ouvre sans réseau : tuiles en cache (14 jours,
   dans les bornes autorisées par l'IGN) et coquille complète précachée.
+- UNE RÉSERVE PAR COUCHE (plan, satellite, routes, cadastre) : avec un
+  plafond commun, une flânerie en satellite chassait les tuiles du plan que
+  le bandeau promet pourtant de garder.
+- Le TYPE MIME est vérifié avant toute mise en cache : une page de blocage
+  rendue en « 200 text/html » par un portail captif s'écrivait dans le cache
+  et se resservait 14 jours, réseau revenu.
 - Bandeau « Hors ligne » qui dit ce qui reste utilisable (carte vue, favoris)
-  et ce qui attend le réseau (recherche, itinéraires, trafic, météo).
+  et ce qui attend le réseau — la liste nomme AUSSI les points d'intérêt et
+  les photos de rue, et se termine par sa règle plutôt que par une
+  énumération qu'on pouvait croire complète. La région live se remplit à la
+  coupure, sans quoi les lecteurs d'écran n'annonçaient rien.
+- L'en-tête s'enroule et ne pousse plus le champ de recherche hors de
+  l'écran ; les volets de la carte suivent sa hauteur réelle au lieu d'un
+  décalage figé qui les laissait recouverts.
+- La page « Vie privée » dit ce que ce cache est : une trace des endroits
+  regardés, sur l'appareil, quatorze jours, et comment l'effacer.
 - Bouton d'installation de l'application, sans invite imposée.
 
 ## [0.17.0] — 2026-08-22 — Info trafic nationale

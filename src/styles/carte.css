@@ -15,9 +15,15 @@ body { font-family: var(--police); background: var(--fond); }
 }
 .evitement:focus-visible { top: 12px; outline: none; box-shadow: var(--focus); }
 
+/* L'en-tête S'ENROULE ET NE DÉPASSE JAMAIS DE L'ÉCRAN. Sans `flex-wrap` ni
+   largeur maximale, il grandissait vers la droite sans fin : mesuré à 375 px
+   de large, l'arrivée du seul bouton « Installer l'application » — qui
+   apparaît EN LIGNE, sur tout Chromium — poussait le champ de recherche
+   88 px hors du viewport, sans aucun moyen de défiler jusqu'à lui. */
 .entete {
   position: fixed; top: 12px; left: 12px; z-index: 20;
-  display: flex; align-items: baseline; gap: 12px;
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  max-width: calc(100vw - 24px);
   padding: 9px 16px;
   background: color-mix(in srgb, var(--fond) 88%, transparent);
   backdrop-filter: blur(8px);
@@ -89,8 +95,14 @@ body { font-family: var(--police); background: var(--fond); }
 
 /* Sélecteur de fonds — panneau flottant SOUS l'en-tête. Le décalage n'est
    pas décoratif : sans lui, l'en-tête fixe recouvre le contrôle et intercepte
-   les clics — mesuré par le test E2E avant d'être vu à l'œil. */
-#carte .maplibregl-ctrl-top-left { top: 62px; }  /* gagne sur la feuille MapLibre, chargée après */
+   les clics — mesuré par le test E2E avant d'être vu à l'œil. Il SUIT la
+   hauteur réelle de l'en-tête (variable posée par main.ts) : en dur, il ne
+   tenait que pour un en-tête d'une ligne, et le bandeau hors ligne passait
+   par-dessus les volets. Le repli de 45 px correspond à cet en-tête d'une
+   ligne, pour le premier rendu, avant la première mesure. */
+#carte .maplibregl-ctrl-top-left {
+  top: calc(var(--hauteur-entete, 45px) + 5px);  /* gagne sur la feuille MapLibre, chargée après */
+}
 .porte-fonds { pointer-events: auto; margin: 10px 0 0 12px !important; }
 .fonds { position: relative; }
 .fonds summary {
@@ -465,15 +477,20 @@ etapes-itineraire { display: grid; gap: 7px; }
 
 /* --- État de connexion et installation (PR #17) --- */
 etat-connexion { display: contents; }
+/* Le bandeau prend sa propre ligne dans l'en-tête enroulé : côte à côte avec
+   le champ de recherche, il l'écrasait sous sa largeur minimale. */
 .hors-ligne {
   display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+  flex: 1 1 100%;
   padding: 6px 12px; border-radius: 10px;
   background: color-mix(in srgb, var(--ambre) 26%, var(--fond-profond));
   border: 1px solid var(--ambre-fonce);
   font: 400 12.5px var(--police); color: #F3EFE7;
   max-width: 520px;
 }
-.hors-ligne[hidden] { display: none; }
+/* Vide, il n'existe pas : c'est le contenu qui apparaît et disparaît, pas
+   l'élément — sans quoi la région `role="status"` n'annoncerait rien. */
+.hors-ligne:empty { display: none; }
 .hors-ligne strong { color: var(--ambre); font-weight: 700; }
 .installer {
   padding: 7px 13px; border-radius: 9px;

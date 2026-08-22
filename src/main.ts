@@ -12,7 +12,22 @@ registerSW({ immediate: true });
 
 // L'état de connexion et l'invite d'installation vivent dans l'en-tête :
 // ils concernent l'application entière, pas la carte.
-document.querySelector('.entete')?.appendChild(new EtatConnexion());
+const entete = document.querySelector<HTMLElement>('.entete');
+if (entete) {
+  entete.appendChild(new EtatConnexion());
+  /* LA HAUTEUR DE L'EN-TÊTE EST PUBLIÉE EN VARIABLE CSS. Le décalage des
+     contrôles MapLibre était un « top: 62px » calibré sur un en-tête d'une
+     seule ligne. Dès que le bandeau hors ligne ou le bouton d'installation le
+     font grandir, l'en-tête recouvrait le sélecteur de fonds et le
+     planificateur d'itinéraire, et interceptait leurs clics — mesuré au
+     `elementFromPoint`, pas supposé. La CSS suit désormais la hauteur réelle. */
+  const publierHauteur = (): void => {
+    const hauteur = Math.round(entete.getBoundingClientRect().height);
+    document.documentElement.style.setProperty('--hauteur-entete', `${hauteur}px`);
+  };
+  new ResizeObserver(publierHauteur).observe(entete);
+  publierHauteur();
+}
 
 const conteneur = document.getElementById('carte');
 if (conteneur) creerCarte(conteneur);
