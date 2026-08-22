@@ -305,52 +305,42 @@ test('TRANSPORTS : une horloge en avance ne fait pas disparaître le réseau', a
   await expect.poll(() => nbPeints(page), { timeout: 10_000 }).toBe(1);
 });
 
-test('TRANSPORTS : un véhicule republié par deux réseaux n’est dessiné qu’une fois', async ({ page }) => {
-  /* MESURÉ SUR LE RÉSEAU RÉEL : l'agrégat normand republie les véhicules de
-     ses membres avec l'identifiant NeTEx EXACT et la même position — 52
-     doublons, écart médian nul. On les dédoublonne, MAIS bornés par la
-     distance : une clé par identifiant seul effaçait onze bus authentiques de
-     réseaux qui numérotent tous « 1, 2, 3 ». */
-  let n = 0;
-  await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => {
-    n += 1;
-    const rang = n;
-    return route.fulfill({
-      contentType: 'application/x-protobuf',
-      body: fluxSimule([
-        // LE MÊME BUS, republié à l'identique par chaque réseau interrogé.
-        { id: 'VM:ATOUMOD004:ServiceJourney:597455:LOC', lon: 1.15, lat: 49.025, ligne: 'T1', nom: 'Partagé' },
-        // Un bus propre à ce réseau, ailleurs dans la vue.
-        { id: `propre-${rang}`, lon: 1.15 + 0.004 * rang, lat: 49.031, ligne: 'B2', nom: 'Local' },
-      ]),
-    });
-  });
+test('TRANSPORTS : le doublon d’un agrégat est DIT, pas effacé', async ({ page }) => {
+  /* AUCUNE CLÉ NE PERMET DE LE RETIRER SÛREMENT (mesuré : l'identifiant est
+     celui de la COURSE chez certains producteurs — trois autocars la
+     partagent —, l'étiquette est absente des 57 paires agrégat/membre, et
+     l'écart de position croît avec la vitesse, jusqu'à 3,2 km relevés).
+     On dessine donc tout, ET on prévient. */
+  await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => route.fulfill({
+    contentType: 'application/x-protobuf',
+    body: fluxSimule([{ id: 'v1', lon: 1.078, lat: 49.922, ligne: 'T1', nom: 'Dieppe' }]),
+  }));
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
-  await allerA(page, 1.1500, 49.0280, 13);
+  // Dieppe : un seul réseau local, donc l'agrégat entre dans le plafond.
+  await allerA(page, 1.0780, 49.9220, 12);
   await page.locator('.transports summary').click();
   await page.locator('.transports-case').check();
-  await expect(page.locator('.transports-etat')).toContainText('véhicule', { timeout: 10_000 });
-  expect(n, 'un seul réseau interrogé : le test ne prouve rien').toBeGreaterThan(1);
-  // Les pastilles doivent être PEINTES avant qu'on les compte.
-  await expect.poll(() => nbPeints(page), { timeout: 10_000 }).toBeGreaterThan(0);
-
-  const compte = await page.evaluate(() => {
-    const f = (window as unknown as {
-      __carte: { queryRenderedFeatures(o: object): { geometry: GeoJSON.Point }[] };
-    }).__carte.queryRenderedFeatures({ layers: ['transports-vehicules'] });
-    const memePoint = (c: number[], lon: number, lat: number) =>
-      Math.abs(c[0]! - lon) < 1e-4 && Math.abs(c[1]! - lat) < 1e-4;
-    return {
-      partage: f.filter((x) => memePoint(x.geometry.coordinates, 1.15, 49.025)).length,
-      propres: f.filter((x) => !memePoint(x.geometry.coordinates, 1.15, 49.025)).length,
-    };
-  });
-  expect(compte.partage, 'le bus republié est dessiné plusieurs fois').toBe(1);
-  // Les bus propres, eux, portent le MÊME identifiant « propre » mais sont
-  // à des endroits différents : aucun ne doit disparaître.
-  expect(compte.propres, 'des bus distincts au même numéro ont été effacés').toBe(n);
+  const etat = page.locator('.transports-etat');
+  await expect(etat).toContainText('véhicule', { timeout: 10_000 });
+  await expect(etat).toContainText('peut apparaître deux fois');
 });
+
+test('TRANSPORTS : là où les réseaux locaux suffisent, aucun avertissement', async ({ page }) => {
+  await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => route.fulfill({
+    contentType: 'application/x-protobuf',
+    body: fluxSimule([{ id: 'v1', lon: 5.0415, lat: 47.3220, ligne: 'T1', nom: 'Gare' }]),
+  }));
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await allerA(page, DIJON[0], DIJON[1], 12);
+  await page.locator('.transports summary').click();
+  await page.locator('.transports-case').check();
+  const etat = page.locator('.transports-etat');
+  await expect(etat).toContainText('véhicule', { timeout: 10_000 });
+  await expect(etat).not.toContainText('peut apparaître deux fois');
+});
+
 
 
 
@@ -389,6 +379,33 @@ test('TRANSPORTS : décocher puis recocher réaffiche AUSSITÔT', async ({ page 
   expect(appels, 'le réaffichage a coûté une requête').toHaveLength(1);
 });
 
+test('TRANSPORTS : le volet ne reste JAMAIS muet, case cochée', async ({ page }) => {
+  /* MESURÉ AVANT CORRECTIF : décocher puis recocher AVANT la première réponse
+     laissait  à la chaîne vide pendant trente secondes —
+     case cochée, aucune requête en vol, aucune pastille. Le frein interdit à
+     juste titre de rappeler le service ; il n'autorise pas à se taire. */
+  // Une route qui ne répond JAMAIS : la première salve reste en vol.
+  await page.route('**/proxy.transport.data.gouv.fr/resource/**', () => { /* silence */ });
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await allerA(page, DIJON[0], DIJON[1], 12);
+  await page.locator('.transports summary').click();
+  const case_ = page.locator('.transports-case');
+  await case_.check();
+  await expect(page.locator('.transports-etat')).toContainText('Chargement', { timeout: 5_000 });
+  await case_.uncheck();
+  await case_.check();
+  /* CE QU'ON EXIGE : le volet reparle vite, et ne retombe pas muet. Un cadre
+     vide fugace pendant la bascule n'est pas le defaut ; trente secondes de
+     silence en sont un. */
+  await expect.poll(async () => ((await page.locator('.transports-etat').textContent()) ?? '').trim(),
+    { timeout: 5_000 }).not.toBe('');
+  for (let i = 0; i < 3; i += 1) {
+    await page.waitForTimeout(1_500);
+    const texte = ((await page.locator('.transports-etat').textContent()) ?? '').trim();
+    expect(texte, 'le volet est redevenu muet').not.toBe('');
+  }
+});
 test('TRANSPORTS : revenir au zoom rétablit la carte et corrige le message', async ({ page }) => {
   /* MESURÉ AVANT CORRECTIF : de retour au zoom 12, le volet affichait encore
      « Approchez pour voir les véhicules » et la carte restait vide 29 s. */

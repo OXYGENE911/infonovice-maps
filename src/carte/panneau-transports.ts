@@ -30,7 +30,7 @@ import { Popup } from 'maplibre-gl';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import {
   ageDuFlux, ageVehicule, aLArret, chargerFlux, ErreurTransports, INTERVALLE_MS,
-  memeVehicule, nombreDeReseaux, nomDeLigne, PLAFOND_RESEAUX, reseauxDansVue,
+  nombreDeReseaux, nomDeLigne, PLAFOND_RESEAUX, reseauxDansVue,
   trierParFraicheur, vitesseRenseignee, type Reseau, type Vehicule,
 } from '../lib/transports';
 import type { Bbox } from '../lib/poi';
@@ -193,8 +193,15 @@ export class PanneauTransports extends HTMLElement {
     const d = this.#dernier;
     if (!d || d.ids !== ids) {
       this.#donnees = { type: 'FeatureCollection', features: [] };
+      this.#popup?.remove();
+      this.#popup = null;
       this.#poser();
-      this.#ecrire(this.#enVol ? 'Chargement des véhicules…' : this.#dernierMessage);
+      /* JAMAIS LA CHAÎNE VIDE : décocher puis recocher avant la première
+         réponse laissait le volet sans un mot pendant trente secondes, case
+         cochée. On dit ce qui est vrai : on attend la prochaine actualisation. */
+      this.#ecrire(this.#enVol
+        ? 'Chargement des véhicules…'
+        : 'Actualisation dans quelques secondes…');
       return;
     }
     this.#donnees = d.donnees;
@@ -244,8 +251,17 @@ export class PanneauTransports extends HTMLElement {
        pour 3 réponses utiles), un échec général désarmait tout le frein — le
        service déjà en panne était martelé douze fois plus qu'un service sain —
        et un tic sur deux du minuteur tombait juste sous le seuil. */
+    const ancien = this.#serviIds;
     this.#serviIds = ids;
     this.#charge = Date.now();
+    /* LA LISTE A CHANGÉ : ce qui est à l'écran appartient à une autre ville.
+       Le garder pendant la requête donnerait les bus de Dieppe sur Rennes. */
+    if (ancien !== '' && ancien !== ids) {
+      this.#donnees = { type: 'FeatureCollection', features: [] };
+      this.#popup?.remove();
+      this.#popup = null;
+      this.#poser();
+    }
 
     this.#annulation?.abort();
     const annulation = new AbortController();
@@ -284,25 +300,17 @@ export class PanneauTransports extends HTMLElement {
       if (annulation.signal.aborted) return null;
       throw e;
     });
-    this.#enVol = false;
+    /* LE TÉMOIN NE S'ÉTEINT QUE POUR LA SALVE COURANTE. Placé avant le
+       garde, il était éteint par une salve PÉRIMÉE alors que la nouvelle
+       circulait encore : le volet devenait muet, case cochée, le temps de
+       la requête (mesuré 15 s). */
     if (resultats === null || annulation !== this.#annulation || !this.#actif) return;
+    this.#enVol = false;
 
     const vivants = resultats.filter((r): r is ResultatVivant => r.ok);
-    /* DÉDOUBLONNAGE BORNÉ : même identifiant ET moins de deux kilomètres.
-       Les agrégats republient leurs membres avec l'identifiant NeTEx exact et
-       la même position (52 doublons relevés, écart médian nul). Les collisions
-       entre réseaux sans lien, elles, ne portent que sur des entiers nus et
-       séparent des villes distantes de 65 km au moins. Une clé par identifiant
-       SEUL effaçait onze véhicules réels ; bornée par la distance, elle ne
-       touche plus qu'aux vrais doublons. Le premier arrivé — donc le réseau le
-       plus local — garde le véhicule. */
-    const gardes: Vehicule[] = [];
     this.#donnees = {
       type: 'FeatureCollection',
-      features: vivants.flatMap((r) => r.vehicules.flatMap((v, i) => {
-        if (gardes.some((g) => memeVehicule(g, v))) return [];
-        gardes.push(v);
-        return [{
+      features: vivants.flatMap((r) => r.vehicules.map((v, i) => ({
         type: 'Feature' as const,
         properties: {
           reseau: r.reseau.nom,
@@ -316,8 +324,7 @@ export class PanneauTransports extends HTMLElement {
             ? -1 : Math.max(0, r.ages[i]!),
         },
         geometry: { type: 'Point' as const, coordinates: [v.lon, v.lat] },
-        }];
-      })),
+      }))),
     };
     this.#dernier = { ids, donnees: this.#donnees, reseaux, resultats };
     this.#poser();
@@ -388,6 +395,14 @@ export class PanneauTransports extends HTMLElement {
     }
     if (muets.length > 0) notes.push(`sans réponse : ${muets.map((r) => r.reseau.nom).join(', ')}`);
     if (vivants.some((r) => r.tronque)) notes.push('liste écourtée, trop de véhicules');
+    /* LE DOUBLON EST DIT, PARCE QU'IL NE PEUT PAS ÊTRE ÔTÉ. Un agrégat
+       régional republie les véhicules de ses réseaux membres, et aucune clé ne
+       permet de les rapprocher sûrement (voir src/lib/transports.ts). Plutôt
+       que d'effacer au jugé des bus qui roulent, on prévient. */
+    if (vivants.some((r) => r.reseau.agregat) && vivants.length > 1) {
+      notes.push('un même véhicule peut apparaître deux fois : l’agrégat régional'
+        + ' republie les bus de ses réseaux membres');
+    }
 
     const futurs = vivants.reduce((s, r) => s + r.futurs, 0);
     if (futurs > 0) notes.push(`${futurs} position${futurs > 1 ? 's' : ''} datée${futurs > 1 ? 's' : ''} du futur, écartée${futurs > 1 ? 's' : ''}`);

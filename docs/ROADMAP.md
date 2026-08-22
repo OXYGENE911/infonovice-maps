@@ -107,7 +107,7 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       lignes s'affichaient en identifiant NeTEx ; trois réseaux sur neuf
       publient des km/h là où la spécification dit des m/s, si bien qu'AUCUNE
       vitesse chiffrée n'est affichée ; l'agrégat normand republie les
-      véhicules de ses membres et n'est donc plus jamais interrogé avec eux ;
+      véhicules de ses membres, dédoublonnés à l'affichage (voir plus bas) ;
       le rectangle d'une région couvrait des villes qu'elle ne dessert pas,
       remplacé par une couverture en bandes de 0,2°.
       TROIS REVUES ADVERSES, chacune trouvant des défauts DANS les correctifs
@@ -123,9 +123,16 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
         en « vue à l'instant » ;
       · la mémoire d'affichage rejouait la moisson d'une autre ville pendant
         qu'un appel était en vol.
-      Le dédoublonnage final est BORNÉ : même identifiant, identifiant
-      qualifié, moins de deux kilomètres. Morale consignée : corriger un défaut
-      est un changement comme un autre, il se relit avec la même sévérité.
+      · le dédoublonnage borné effaçait encore de vrais autocars : chez
+        certains producteurs l'identifiant d'entité est celui de la COURSE, et
+        trois cars la partagent.
+      DÉCISION FINALE, prise sur mesure : on NE dédoublonne PAS. Ni par
+      identifiant (c'est parfois une course), ni par étiquette (absente des 57
+      paires agrégat/membre), ni par distance (l'écart croît avec la vitesse,
+      3,2 km relevés). Le volet PRÉVIENT à la place. Morale consignée :
+      corriger un défaut est un changement comme un autre, il se relit avec la
+      même sévérité — et une correction élégante qui n'est pas mesurée sur les
+      données réelles est une régression qui s'ignore.
 
 ## Offline & PWA avancée
 - [x] PR #17 — Mode hors ligne : cache des tuiles IGN (CacheFirst, 14 jours,

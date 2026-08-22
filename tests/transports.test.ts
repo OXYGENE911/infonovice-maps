@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ageDuFlux, ageVehicule, AVANCE_MAX_S, dessert, FRAICHEUR_MAX_S, nombreDeReseaux,
   nomDeLigne, PAS_GRILLE, PLAFOND_RESEAUX, reseauxDansVue, trierParFraicheur,
-  urlFlux, vitesseRenseignee, aLArret, memeVehicule,
+  urlFlux, vitesseRenseignee, aLArret,
 } from '../src/lib/transports';
 import { RESEAUX_TEMPS_REEL } from '../src/donnees/reseaux-temps-reel';
 import type { FluxVehicules, Vehicule } from '../src/lib/gtfs-rt';
@@ -245,59 +245,11 @@ describe('ce que les producteurs publient vraiment', () => {
   });
 });
 
-describe('doublons entre agrégats et membres', () => {
+describe('doublons entre agrégats et membres — assumés, pas effacés', () => {
   it('marque l’agrégat dans la table — un seul des 44 en est un', () => {
     const agregats = RESEAUX_TEMPS_REEL.filter((r) => r.agregat);
     expect(agregats).toHaveLength(1);
     expect(agregats[0]!.id).toContain('atoumod');
-  });
-
-  it('reconnaît un doublon : même identifiant ET même endroit', () => {
-    /* MESURÉ LE 22/08 : les agrégats republient leurs membres avec
-       l'identifiant NeTEx EXACT — 52 doublons, écart médian nul, 658 m au
-       pire. On les reconnaît à ces deux conditions réunies. */
-    const a = { ...vehicule('VM:ATOUMOD004:ServiceJourney:597455:LOC', null), lon: 1.15, lat: 49.02 };
-    const b = { ...a, lon: 1.1505, lat: 49.0203 };  // ~50 m
-    expect(memeVehicule(a, b)).toBe(true);
-    const loin = { ...a, lon: 1.16, lat: 49.03 };   // ~1,3 km, encore le même
-    expect(memeVehicule(a, loin)).toBe(true);
-  });
-
-  it('n’efface PAS deux véhicules distincts qui portent le même numéro', () => {
-    /* LE DÉFAUT QUE CE TEST EMPÊCHE : une clé par identifiant seul a effacé
-       onze bus réels. Beaucoup de réseaux numérotent « 1, 2, 3 » — un « 3 »
-       de Montluçon et un « 3 » de Riom sont deux bus, à 65 km l'un de
-       l'autre. Les collisions sans lien commencent à 65 km ; les vrais
-       doublons s'arrêtent à 658 m. */
-    const montlucon = { ...vehicule('3', null), lon: 2.6050, lat: 46.3400 };
-    const riom = { ...vehicule('3', null), lon: 3.1130, lat: 45.8940 };
-    expect(memeVehicule(montlucon, riom)).toBe(false);
-    // Et même côte à côte : un identifiant NU n'identifie rien hors de son
-    // flux, donc on ne s'en sert jamais pour effacer quoi que ce soit.
-    const voisin = { ...vehicule('3', null), lon: 2.6051, lat: 46.3401 };
-    expect(memeVehicule(montlucon, voisin)).toBe(false);
-  });
-
-  it('ne fusionne pas deux relevés éloignés, même identifiant qualifié', () => {
-    /* Défense en profondeur : un identifiant qualifié reste un identifiant
-       choisi par un producteur, pas une garantie d'unicité mondiale. Deux
-       relevés à trois cents kilomètres sont deux véhicules, quoi qu'il
-       arrive. */
-    const a = { ...vehicule('VM:X:ServiceJourney:1:LOC', null), lon: 1.15, lat: 49.02 };
-    const b = { ...a, lon: 5.04, lat: 47.32 };
-    expect(memeVehicule(a, b)).toBe(false);
-  });
-
-  it('ne confond jamais deux identifiants différents, si proches soient-ils', () => {
-    const a = { ...vehicule('4', null), lon: 5.0415, lat: 47.3220 };
-    const b = { ...vehicule('5', null), lon: 5.0415, lat: 47.3220 };
-    expect(memeVehicule(a, b)).toBe(false);
-  });
-
-  it('ignore une entité sans identifiant plutôt que de tout confondre', () => {
-    const a = { ...vehicule('', null), lon: 5.0415, lat: 47.3220 };
-    const b = { ...vehicule('', null), lon: 5.0415, lat: 47.3220 };
-    expect(memeVehicule(a, b)).toBe(false);
   });
 
   it('garde l’agrégat parmi les candidats — l’écarter coûtait 100 véhicules', () => {
@@ -308,5 +260,16 @@ describe('doublons entre agrégats et membres', () => {
     const havre = autour(0.1079, 49.4938, 0.055);
     const ids = reseauxDansVue(havre).map((r) => r.id);
     expect(ids.some((i) => i.includes('atoumod')), 'l’agrégat est écarté du Havre').toBe(true);
+  });
+
+  it('classe l’agrégat en DERNIER : le plafond évince d’abord le plus vaste', () => {
+    /* C'est ce qui limite les doublons sans rien effacer : là où trois
+       réseaux locaux desservent, l'agrégat sort de lui-même. */
+    for (const [ville, lon, lat] of [['Évreux', 1.15, 49.025], ['Vernon', 1.483, 49.089]] as
+      [string, number, number][]) {
+      const choisis = reseauxDansVue(autour(lon, lat), 99);
+      const rang = choisis.findIndex((r) => r.agregat);
+      if (rang >= 0) expect(rang, ville).toBe(choisis.length - 1);
+    }
   });
 });

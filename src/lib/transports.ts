@@ -21,7 +21,6 @@
 import { decoderFlux, ErreurTransports, type FluxVehicules, type Vehicule } from './gtfs-rt';
 import { RESEAUX_TEMPS_REEL } from '../donnees/reseaux-temps-reel';
 import type { Bbox } from './poi';
-import { distanceM } from './le-long-du-trajet';
 
 export { ErreurTransports } from './gtfs-rt';
 export type { Vehicule } from './gtfs-rt';
@@ -96,7 +95,7 @@ function etendue(reseau: Reseau): number {
     sous les yeux de l'usager et le volet affichait « aucun véhicule », parce
     qu'un réseau de Honfleur — deux véhicules, à 20 km — effleurait la vue par
     arrondi de grille. Les doublons se traitent là où ils sont, à l'affichage
-    (voir `memeVehicule`), pas en amputant la couverture. */
+    (voir plus bas), pas en amputant la couverture. */
 function candidats(vue: Bbox): Reseau[] {
   return RESEAUX_TEMPS_REEL
     .filter((r) => dessert(r, vue))
@@ -108,31 +107,31 @@ export function reseauxDansVue(vue: Bbox, plafond = PLAFOND_RESEAUX): Reseau[] {
   return candidats(vue).slice(0, plafond);
 }
 
-/** Deux relevés désignent le MÊME véhicule s'ils portent le même identifiant
-    ET se trouvent à moins de deux kilomètres l'un de l'autre.
+/* ON NE DÉDOUBLONNE PAS, ET C'EST UN CONSTAT, PAS UN OUBLI.
+   L'agrégat normand republie les véhicules de ses réseaux membres : quand on
+   affiche les deux, le même bus apparaît deux fois. Trois clés ont été
+   essayées, et LES DONNÉES RÉELLES les ont toutes cassées :
 
-    LES DEUX CONDITIONS SONT NÉCESSAIRES, et la mesure le dit. Les agrégats
-    republient leurs membres avec l'identifiant NeTEx EXACT
-    (`VM:ATOUMOD004:ServiceJourney:…:LOC`) : 52 doublons relevés le 22/08,
-    écart médian nul, 658 m au pire. Les collisions entre réseaux SANS lien,
-    elles, ne portent que sur des entiers nus (« 3 », « 4 », « 59 ») et
-    séparent des villes distantes de 65 à 9 900 km — un « 3 » de Montluçon et
-    un « 3 » de Riom. L'identifiant seul effaçait onze véhicules réels ; la
-    distance seule confondrait deux bus voisins. Ensemble, ils tranchent. */
-export const DISTANCE_MEME_VEHICULE_M = 2000;
+   1. L'IDENTIFIANT SEUL. `FeedEntity.id` n'identifie pas un véhicule chez tout
+      le monde : Aléop y met l'identifiant de COURSE, et une course est servie
+      par plusieurs autocars — relevé le 22/08, `RTVP:T:2652202525` porté par
+      TROIS cars (parcs 40148, 40149, 25405) séparés de 70 à 736 m. Dédoublonner
+      là-dessus efface de vrais véhicules DANS UN SEUL FLUX. Et entre réseaux
+      sans lien, les identifiants nus (« 3 », « 4 ») se télescopent : onze bus
+      réels effacés, mesurés.
+   2. L'ÉTIQUETTE (`VehicleDescriptor`). Elle identifierait le véhicule, mais
+      les agrégats ne la publient PAS : sur les 57 paires agrégat/membre
+      relevées, 57 sans étiquette d'un côté. Elle n'est pas non plus unique
+      (trois doublons dans Aléop).
+   3. LA DISTANCE. L'écart entre l'agrégat et son membre n'est pas du bruit :
+      c'est un décalage d'échantillonnage (~210 s médian) multiplié par la
+      vitesse. Mesuré jusqu'à 3 187 m sur un car ; à 80 km/h il dépasse 4 km.
+      Aucun seuil ne tient.
 
-export function memeVehicule(a: Vehicule, b: Vehicule): boolean {
-  if (!a.id || a.id !== b.id) return false;
-  /* UN IDENTIFIANT NU N'IDENTIFIE RIEN hors de son flux. « 3 », « 214 » : deux
-     réseaux voisins peuvent numéroter ainsi deux bus différents le même jour,
-     et rien n'interdit qu'ils se croisent. Les republications d'agrégat, elles,
-     portent TOUTES un identifiant qualifié (« VM:ATOUMOD004:ServiceJourney:…
-     :LOC ») — vérifié sur les sept réseaux membres concernés. On ne
-     dédoublonne donc que sur un identifiant qualifié : effacer un vrai bus est
-     pire que d'en dessiner un en double. */
-  if (!/\D/.test(a.id)) return false;
-  return distanceM([a.lon, a.lat], [b.lon, b.lat]) <= DISTANCE_MEME_VEHICULE_M;
-}
+   Alors on dessine tout, et le volet DIT que des véhicules peuvent apparaître
+   deux fois quand un agrégat est affiché avec un de ses réseaux. Effacer un
+   bus qui roule est pire que d'en dessiner un en double — et se taire sur un
+   doublon connu serait pire que les deux. */
 
 /** Combien de réseaux desservent la vue, plafond compris ou non — pour dire
     honnêtement « 3 réseaux sur 5 » plutôt que de taire les autres. */

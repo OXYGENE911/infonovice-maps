@@ -253,29 +253,40 @@ témoin Aléop/SETRAM  27 véhicules, dont  0 en commun
 
 Sans traitement, chaque bus normand était dessiné deux fois et compté deux fois.
 
-**On les dédoublonne, mais BORNÉ** — et chaque borne vient d'une mesure :
+**ON NE LES DÉDOUBLONNE PAS** — trois clés essayées, les trois cassées par les
+données réelles :
 
-- **Même identifiant** : les republications d'agrégat portent l'identifiant
-  NeTEx EXACT du membre (`VM:ATOUMOD004:ServiceJourney:...:LOC`), sur les sept
-  réseaux concernés. 52 doublons relevés, **écart médian nul**, 658 m au pire.
-- **ET identifiant QUALIFIÉ** : les collisions entre réseaux SANS lien ne
-  portent que sur des entiers nus (« 3 », « 4 », « 59 »). Une clé par
-  identifiant seul a effacé **onze véhicules réels** sur cinq paires de
-  réseaux distincts (Kicéo/Lila, RLVmobilités/Maélis, Rubis/J'ybus, TGD
-  Dole/Divia, ZEST/Palm Bus), tous DANS la vue de l'usager.
-- **ET à moins de deux kilomètres** : défense en profondeur. Les vrais
-  doublons s'arrêtent à 658 m ; les collisions fortuites relevées vont de
-  65 km à 9 900 km.
+1. **L'identifiant** (`FeedEntity.id`). Il n'identifie pas un véhicule chez
+   tout le monde : Aléop y met l'identifiant de COURSE. Relevé le 22/08,
+   `RTVP:T:2652202525` est porté par **TROIS autocars** (parcs 40148, 40149,
+   25405) séparés de 70 à 736 m — dédoublonner là-dessus efface de vrais
+   véhicules DANS UN SEUL FLUX. MAT Saint-Malo présente le même cas. Et entre
+   réseaux sans lien, les identifiants nus (« 3 », « 4 ») se télescopent :
+   onze bus réels effacés, mesurés sur cinq paires de réseaux.
+2. **L'étiquette** (`VehicleDescriptor`). Elle identifierait le véhicule, mais
+   les agrégats ne la publient pas : sur les **57 paires agrégat/membre**
+   relevées, 57 sans étiquette d'un côté. Elle n'est pas non plus unique
+   (trois doublons d'étiquette dans Aléop).
+3. **La distance**. L'écart entre l'agrégat et son membre n'est pas du bruit
+   de position : c'est un décalage d'échantillonnage (**210 s de médiane**)
+   multiplié par la vitesse. Mesuré jusqu'à **3 187 m** sur un car ; à
+   80 km/h il dépasse 4 km. Aucun seuil ne tient.
 
-**ÉCARTER L'AGRÉGAT N'ÉTAIT PAS LA SOLUTION**, et la mesure l'a dit. Une
-écriture intermédiaire le retirait dès qu'un réseau propre desservait la même
-vue : elle coûtait **100 des 156 véhicules de l'agrégat** (64 %), qui n'ont
-aucun homologue chez un réseau propre. Au Havre, 44 bus roulaient et le volet
+Alors la carte dessine tout, et le volet PRÉVIENT quand un agrégat est affiché
+avec un autre réseau : « un même véhicule peut apparaître deux fois ».
+Effacer un bus qui roule est pire que d'en dessiner un en double ; se taire
+sur un doublon connu serait pire que les deux.
+
+**ÉCARTER L'AGRÉGAT N'ÉTAIT PAS LA SOLUTION NON PLUS.** Une écriture
+intermédiaire le retirait dès qu'un réseau propre desservait la même vue :
+elle coûtait **100 des 156 véhicules de l'agrégat** (64 %), qui n'ont aucun
+homologue chez un réseau propre. Au Havre, 44 bus roulaient et le volet
 affichait « aucun véhicule », parce qu'un réseau de Honfleur — deux véhicules,
-à 20 km — effleurait la vue par arrondi de grille. Sur un balayage de la
-Normandie, 160 vues sur 621 n'affichaient plus rien. Après correction, mesuré
-sur les flux du jour : Le Havre **46 véhicules dans la vue**, Évreux 244 relevés
-bruts ramenés à 214 (30 doublons ôtés), Dijon 79 → 79 (aucun faux positif).
+à 20 km — effleurait la vue par arrondi de grille ; sur un balayage de la
+Normandie, 160 vues sur 621 n'affichaient plus rien. L'agrégat est donc un
+candidat comme les autres, simplement classé DERNIER (plus vaste étendue) :
+là où trois réseaux locaux desservent, le plafond l'évince de lui-même, et
+aucun doublon n'apparaît.
 
 ## Emprises : pourquoi un rectangle ne suffit pas (mesuré 22/08/2026)
 `geo.api.gouv.fr` ne rend le contour que des communes et des EPCI ; pour un
