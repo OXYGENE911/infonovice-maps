@@ -9,11 +9,21 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - Décodeur protobuf écrit à la main, moins de 2 Ko : la bibliothèque de
   référence en aurait coûté 120, pour lire quatre champs.
 - Frugalité : rien tant que la case n'est pas cochée, jamais sous le zoom 10,
-  trois réseaux au plus par vue, un frein qui empêche un déplacement de
-  relancer un appel, et plus rien dès que l'onglet passe en arrière-plan.
-- Honnêteté : les positions de plus de dix minutes sont écartées, et le volet
-  DIT ce qu'il ne montre pas — ni horaires ni arrêts, faute de serveur pour
-  digérer des GTFS de plusieurs dizaines de mégaoctets.
+  trois réseaux au plus par vue, un frein qui empêche un déplacement, une
+  hésitation sur la case ou un aller-retour de zoom de relancer un appel, et
+  plus rien dès que l'onglet passe en arrière-plan. Un service en panne est
+  MOINS sollicité qu'un service sain, jamais plus.
+- Les réseaux sont choisis sur les communes qu'ils desservent, pas sur un
+  rectangle : regarder Rennes n'interroge plus le car des Pays de la Loire
+  garé à 97 km.
+- Honnêteté : les positions de plus de dix minutes sont écartées, un véhicule
+  publié par deux réseaux n'est dessiné qu'une fois, le compte distingue la
+  vue du réseau entier, une source qui ne répond pas n'est pas maquillée en
+  « aucun véhicule », et le volet DIT ce qu'il ne montre pas — ni horaires ni
+  arrêts, faute de serveur pour digérer des GTFS de dizaines de mégaoctets.
+- Aucune vitesse chiffrée : trois réseaux sur neuf publient des km/h là où la
+  spécification dit des m/s, et rien ne permet de les distinguer. Seul
+  « à l'arrêt » est affiché — il se lit pareil dans les deux unités.
 
 ## [0.18.0] — 2026-08-22 — Mode hors ligne
 - La carte déjà consultée s'ouvre sans réseau : tuiles en cache (14 jours,

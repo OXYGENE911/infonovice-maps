@@ -182,9 +182,23 @@ function lireVehicule(l: Lecteur, v: Vehicule): void {
     if (type === BLOC && numero === 1) { lireCourse(l.sousLecteur(l.bloc()), v); continue; }
     if (type === BLOC && numero === 2) { lirePosition(l.sousLecteur(l.bloc()), v); continue; }
     if (type === BLOC && numero === 8) { lireEngin(l.sousLecteur(l.bloc()), v); continue; }
-    if (type === VARINT && numero === 5) { v.horodate = l.varint(); continue; }
+    if (type === VARINT && numero === 5) {
+      const t = l.varint();
+      v.horodate = horodatePlausible(t) ? t : null;
+      continue;
+    }
     l.sauter(type);
   }
+}
+
+/** Une horodate Unix plausible : entre 2020 et 2100.
+    ZÉRO N'EST PAS UNE DATE. Bibus (Brest) publie `timestamp: 0` pour chacun
+    de ses 27 véhicules — mesuré le 22/08/2026 sur le flux réel. Pris au pied
+    de la lettre, cela les date de 1970, les vieillit de 56 ans, et la règle
+    de fraîcheur efface le réseau entier sans un mot. Le décodeur traduit donc
+    l'invraisemblable en « inconnu », qui est ce que le producteur veut dire. */
+function horodatePlausible(s: number): boolean {
+  return Number.isFinite(s) && s > 1_577_836_800 && s < 4_102_444_800;
 }
 
 /** Une position est retenue seulement si elle EXISTE et tombe sur Terre.
@@ -211,14 +225,17 @@ export function decoderFlux(octets: Uint8Array): FluxVehicules {
       const entete = l.sousLecteur(l.bloc());
       while (!entete.fini) {
         const c = entete.cle();
-        if (c.type === VARINT && c.numero === 3) { flux.horodate = entete.varint(); continue; }
+        if (c.type === VARINT && c.numero === 3) {
+          const t = entete.varint();
+          flux.horodate = horodatePlausible(t) ? t : null;
+          continue;
+        }
         entete.sauter(c.type);
       }
       continue;
     }
     if (type === BLOC && numero === 2) {
       const entite = l.sousLecteur(l.bloc());
-      if (flux.vehicules.length >= PLAFOND_VEHICULES) { flux.tronque = true; continue; }
       const v: Vehicule = {
         id: '', lon: Number.NaN, lat: Number.NaN,
         cap: null, vitesse: null, ligne: null, etiquette: null, horodate: null,
@@ -232,7 +249,14 @@ export function decoderFlux(octets: Uint8Array): FluxVehicules {
         }
         entite.sauter(c.type);
       }
-      if (positionUtilisable(v)) flux.vehicules.push(v);
+      /* LE PLAFOND SE JUGE SUR CE QUI S'AFFICHERAIT, pas sur ce qui se lit.
+         La première écriture levait le drapeau « liste écourtée » pour toute
+         entité au-delà du plafond, y compris celles qu'on écarte de toute
+         façon (sans position, en (0,0), hors du globe) : le volet annonçait
+         « trop de véhicules » sans qu'aucun véhicule affichable ait été perdu. */
+      if (!positionUtilisable(v)) continue;
+      if (flux.vehicules.length >= PLAFOND_VEHICULES) { flux.tronque = true; continue; }
+      flux.vehicules.push(v);
       continue;
     }
     l.sauter(type);

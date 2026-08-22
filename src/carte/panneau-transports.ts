@@ -8,11 +8,20 @@
 //
 // LE MODÈLE DE CHARGEMENT, ET POURQUOI. Les flux sont par RÉSEAU, pas par
 // emprise : impossible de demander « les véhicules de ce rectangle ». On
-// choisit donc les réseaux dont l'emprise touche la vue — trois au plus — et
-// on ne redemande que si cette liste change ou si la cadence l'exige. Jamais
-// sous le zoom 10 : plus loin, on solliciterait des services publics pour des
+// choisit donc les réseaux qui desservent la vue — trois au plus — et on ne
+// redemande que si cette liste change ou si la cadence l'exige. Jamais sous
+// le zoom 10 : plus loin, on solliciterait des services publics pour des
 // points d'un pixel. Rien tant que la case n'est pas cochée ; plus rien dès
 // que l'onglet passe en arrière-plan.
+//
+// LE FREIN EST COMPTABLE, PAS DÉCORATIF. Il compte les appels RÉELLEMENT
+// émis, et vit indépendamment de l'allumage de la couche : la première
+// écriture le remettait à zéro dans `#eteindre()` et `#vider()`, si bien que
+// dix hésitations sur la case valaient 33 requêtes au lieu de 3, et six
+// allers-retours de zoom 21 au lieu de 3 (mesuré). Il s'arme AVANT l'appel,
+// pas après : sinon une salve en vol ne freinait rien, et un tic sur deux du
+// minuteur se faisait avaler — la cadence réelle tombait à 60 s quand le
+// volet en promettait 30.
 //
 // Noms de lignes et étiquettes viennent des réseaux : ils entrent dans le DOM
 // en textContent EXCLUSIVEMENT (règle du projet).
@@ -20,9 +29,9 @@ import type { Map as CarteMapLibre, GeoJSONSource, MapGeoJSONFeature } from 'map
 import { Popup } from 'maplibre-gl';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import {
-  ageDuFlux, chargerFlux, ErreurTransports, FRAICHEUR_MAX_S, INTERVALLE_MS,
-  nombreDeReseaux, PLAFOND_RESEAUX, reseauxDansVue, vehiculesFrais,
-  type Reseau, type Vehicule,
+  ageDuFlux, ageVehicule, aLArret, chargerFlux, ErreurTransports, INTERVALLE_MS,
+  nombreDeReseaux, nomDeLigne, PLAFOND_RESEAUX, reseauxDansVue, trierParFraicheur,
+  vitesseRenseignee, type Reseau, type Vehicule,
 } from '../lib/transports';
 import type { Bbox } from '../lib/poi';
 
@@ -37,7 +46,12 @@ const COULEURS = ['#2272C4', '#E89C2C', '#1F7A55'];
 
 interface ResultatVivant {
   reseau: Reseau; rang: number; ok: true;
-  vehicules: Vehicule[]; tronque: boolean; age: number | null;
+  vehicules: Vehicule[];
+  ages: (number | null)[];
+  vitesseRenseignee: boolean;
+  tronque: boolean;
+  ageFlux: number | null;
+  perimes: number; futurs: number; sansHorodate: number;
 }
 interface ResultatMuet { reseau: Reseau; rang: number; ok: false; motif: string; }
 type Resultat = ResultatVivant | ResultatMuet;
@@ -49,9 +63,10 @@ export class PanneauTransports extends HTMLElement {
   #annulation: AbortController | null = null;
   #popup: Popup | null = null;
   #attente: ReturnType<typeof setTimeout> | undefined;
-  /** Les réseaux servis au dernier chargement — pour ne pas redemander pour rien. */
+  /* LE FREIN — deux champs, et rien d'autre ne les touche. Ils décrivent les
+     APPELS émis, pas ce qui est affiché : les remettre à zéro en éteignant la
+     couche rouvrait le robinet. */
   #serviIds = '';
-  /** Instant du dernier chargement abouti, pour ne pas harceler la source. */
   #charge = 0;
   #donnees: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 
@@ -121,12 +136,13 @@ export class PanneauTransports extends HTMLElement {
     }, INTERVALLE_MS);
   }
 
+  /** Éteindre efface ce qui est AFFICHÉ. Le frein, lui, garde la mémoire des
+      appels déjà émis : c'est tout son intérêt. */
   #eteindre(): void {
     clearInterval(this.#minuteur);
     this.#minuteur = undefined;
     clearTimeout(this.#attente);
     this.#annulation?.abort();
-    this.#serviIds = '';
     this.#donnees = { type: 'FeatureCollection', features: [] };
     this.#popup?.remove();
     this.#popup = null;
@@ -173,6 +189,13 @@ export class PanneauTransports extends HTMLElement {
     const ids = reseaux.map((r) => r.id).join('|');
     const age = this.#charge === 0 ? Infinity : Date.now() - this.#charge;
     if (ids === this.#serviIds && age < INTERVALLE_MS) return;
+    /* ARMÉ AVANT L'APPEL, et quoi qu'il advienne. Après, une salve en vol ne
+       freinait rien (cinq déplacements pendant un appel lent = 18 requêtes
+       pour 3 réponses utiles), un échec général désarmait tout le frein — le
+       service déjà en panne était martelé douze fois plus qu'un service sain —
+       et un tic sur deux du minuteur tombait juste sous le seuil. */
+    this.#serviIds = ids;
+    this.#charge = Date.now();
 
     this.#annulation?.abort();
     const annulation = new AbortController();
@@ -184,11 +207,15 @@ export class PanneauTransports extends HTMLElement {
       async (reseau, rang): Promise<Resultat> => {
         try {
           const flux = await chargerFlux(reseau, annulation.signal);
+          const tri = trierParFraicheur(flux, maintenant);
           return {
             reseau, rang, ok: true,
-            vehicules: vehiculesFrais(flux, maintenant),
+            vehicules: tri.frais,
+            ages: tri.frais.map((v) => ageVehicule(v, flux, maintenant)),
+            vitesseRenseignee: vitesseRenseignee(tri.frais),
             tronque: flux.tronque,
-            age: ageDuFlux(flux, maintenant),
+            ageFlux: ageDuFlux(flux, maintenant),
+            perimes: tri.perimes, futurs: tri.futurs, sansHorodate: tri.sansHorodate,
           };
         } catch (e) {
           if (annulation.signal.aborted) throw e;
@@ -205,63 +232,104 @@ export class PanneauTransports extends HTMLElement {
     if (resultats === null || annulation !== this.#annulation || !this.#actif) return;
 
     const vivants = resultats.filter((r): r is ResultatVivant => r.ok);
+    /* DÉDOUBLONNAGE PAR IDENTIFIANT D'ENTITÉ. Certains agrégats régionaux
+       republient les véhicules de leurs réseaux membres : mesuré le 22/08,
+       17 bus normands apparaissaient à la fois dans Atoumod et dans
+       Transurbain, Semo Bus ou Deep Mob — dessinés deux fois, comptés deux
+       fois. Les réseaux VRAIMENT distincts, eux, n'ont aucun identifiant en
+       commun (témoin Aléop/SETRAM : zéro collision sur 27 véhicules). Le plus
+       local passe en premier, c'est donc lui qui garde le véhicule. */
+    const vus = new Set<string>();
     this.#donnees = {
       type: 'FeatureCollection',
-      features: vivants.flatMap((r) => r.vehicules.map((v) => ({
-        type: 'Feature' as const,
-        properties: {
-          reseau: r.reseau.nom,
-          couleur: COULEURS[r.rang % COULEURS.length]!,
-          ligne: v.ligne ?? '', etiquette: v.etiquette ?? '',
-          vitesse: v.vitesse ?? -1,
-          age: v.horodate === null ? -1 : Math.max(0, maintenant - v.horodate),
-        },
-        geometry: { type: 'Point' as const, coordinates: [v.lon, v.lat] },
-      }))),
+      features: vivants.flatMap((r) => r.vehicules.flatMap((v, i) => {
+        const clef = v.id || `${r.reseau.id}:${v.lon},${v.lat}`;
+        if (vus.has(clef)) return [];
+        vus.add(clef);
+        return [{
+          type: 'Feature' as const,
+          properties: {
+            reseau: r.reseau.nom,
+            couleur: COULEURS[r.rang % COULEURS.length]!,
+            ligne: nomDeLigne(v.ligne) ?? '',
+            etiquette: v.etiquette ?? '',
+            arret: aLArret(v, r.vitesseRenseignee),
+            // -1 signifie « personne ne l'horodate ». Une horloge en avance
+            // donne un âge négatif : c'est « à l'instant », pas « inconnu ».
+            age: r.ages[i] === null || r.ages[i] === undefined
+              ? -1 : Math.max(0, r.ages[i]!),
+          },
+          geometry: { type: 'Point' as const, coordinates: [v.lon, v.lat] },
+        }];
+      })),
     };
-    this.#serviIds = ids;
-    /* L'horloge du frein ne repart QUE si un réseau a répondu : quand tout est
-       muet, l'actualisation suivante doit pouvoir réessayer sans attendre. */
-    if (vivants.length > 0) this.#charge = Date.now();
     this.#poser();
     this.#etat(this.#resumer(vue, reseaux, resultats));
   }
 
-  /** Le résumé DIT ce qui manque : les réseaux écartés par le plafond, ceux
-      qui n'ont pas répondu, un flux tronqué, un flux qui a pris de l'âge. */
-  #resumer(vue: Bbox, reseaux: Reseau[], resultats: Resultat[]): string {
-    const vivants = resultats.filter((r): r is ResultatVivant => r.ok);
-    const n = this.#donnees.features.length;
-    const parts: string[] = [];
-    parts.push(n === 0
-      ? 'Aucun véhicule en circulation en ce moment'
-      : `${n.toLocaleString('fr-FR')} véhicule${n > 1 ? 's' : ''} en circulation`);
-    if (vivants.length > 0) parts.push(vivants.map((r) => r.reseau.nom).join(', '));
-
-    const total = nombreDeReseaux(vue);
-    const notes: string[] = [];
-    if (total > reseaux.length) {
-      notes.push(`${reseaux.length} réseaux affichés sur ${total} — plafond de ${PLAFOND_RESEAUX}`);
-    }
-    const muets = resultats.filter((r): r is ResultatMuet => !r.ok);
-    if (muets.length > 0) {
-      // Quand TOUT est muet, l'usager a besoin de la RAISON, pas d'une liste
-      // de noms : c'est le seul cas où la carte ne montre rien du tout.
-      notes.push(vivants.length === 0 && muets[0]!.motif
-        ? muets[0]!.motif
-        : `sans réponse : ${muets.map((r) => r.reseau.nom).join(', ')}`);
-    }
-    if (vivants.some((r) => r.tronque === true)) notes.push('liste écourtée, trop de véhicules');
-    const ages = vivants.map((r) => r.age).filter((a): a is number => typeof a === 'number');
-    if (ages.length > 0 && Math.max(...ages) > FRAICHEUR_MAX_S) {
-      notes.push(`flux vieux de ${Math.round(Math.max(...ages) / 60)} min`);
-    }
-    return parts.join(' — ') + (notes.length > 0 ? ` (${notes.join(' ; ')})` : '');
+  /** Combien de véhicules tombent DANS la vue — le nombre que l'usager peut
+      compter à l'écran. Le flux, lui, couvre tout le réseau : annoncer 200
+      véhicules quand un seul est visible n'apprend rien à personne. */
+  #dansLaVue(vue: Bbox): number {
+    return this.#donnees.features.filter((f) => {
+      if (f.geometry.type !== 'Point') return false;
+      const [lon, lat] = f.geometry.coordinates as [number, number];
+      return lon >= vue.ouest && lon <= vue.est && lat >= vue.sud && lat <= vue.nord;
+    }).length;
   }
 
+  /** Le résumé DIT ce qu'il sait, et se tait sur ce qu'il ignore. */
+  #resumer(vue: Bbox, reseaux: Reseau[], resultats: Resultat[]): string {
+    const vivants = resultats.filter((r): r is ResultatVivant => r.ok);
+    const muets = resultats.filter((r): r is ResultatMuet => !r.ok);
+
+    /* AUCUN RÉSEAU N'A RÉPONDU : on ne peut RIEN dire des véhicules. La
+       première écriture annonçait « Aucun véhicule en circulation » après un
+       simple 404 — l'usager en concluait que les bus ne roulaient pas. */
+    if (vivants.length === 0) {
+      const motif = muets.find((m) => m.motif)?.motif;
+      return motif ?? 'Le temps réel est indisponible pour le moment.';
+    }
+
+    const dansVue = this.#dansLaVue(vue);
+    const total = this.#donnees.features.length;
+    const parts: string[] = [];
+    if (total === 0) {
+      // Des réseaux ont répondu, mais leur flux est vide : là, on SAIT.
+      parts.push('Aucun véhicule en circulation en ce moment');
+    } else if (dansVue === total) {
+      parts.push(`${total.toLocaleString('fr-FR')} véhicule${total > 1 ? 's' : ''} en circulation`);
+    } else {
+      parts.push(`${dansVue.toLocaleString('fr-FR')} véhicule${dansVue > 1 ? 's' : ''} dans la vue`
+        + `, ${total.toLocaleString('fr-FR')} sur le réseau`);
+    }
+    parts.push(vivants.map((r) => r.reseau.nom).join(', '));
+
+    const notes: string[] = [];
+    const nbTotal = nombreDeReseaux(vue);
+    if (nbTotal > reseaux.length) {
+      notes.push(`${reseaux.length} réseaux sur ${nbTotal} — plafond de ${PLAFOND_RESEAUX}`);
+    }
+    if (muets.length > 0) notes.push(`sans réponse : ${muets.map((r) => r.reseau.nom).join(', ')}`);
+    if (vivants.some((r) => r.tronque)) notes.push('liste écourtée, trop de véhicules');
+
+    const futurs = vivants.reduce((s, r) => s + r.futurs, 0);
+    if (futurs > 0) notes.push(`${futurs} position${futurs > 1 ? 's' : ''} datée${futurs > 1 ? 's' : ''} du futur, écartée${futurs > 1 ? 's' : ''}`);
+    const perimes = vivants.reduce((s, r) => s + r.perimes, 0);
+    if (perimes > 0) notes.push(`${perimes} position${perimes > 1 ? 's' : ''} trop ancienne${perimes > 1 ? 's' : ''}, écartée${perimes > 1 ? 's' : ''}`);
+    if (vivants.some((r) => r.sansHorodate > 0)) notes.push('fraîcheur inconnue pour certaines');
+
+    // L'horloge d'un producteur qui avance mérite d'être dite : c'est elle
+    // qui explique des positions écartées, ou un « direct » qui ne l'est pas.
+    const avance = Math.min(...vivants.map((r) => r.ageFlux ?? 0));
+    if (avance < -60) notes.push(`horloge du réseau en avance de ${Math.round(-avance / 60)} min`);
+
+    return parts.filter(Boolean).join(' — ') + (notes.length > 0 ? ` (${notes.join(' ; ')})` : '');
+  }
+
+  /** Vider n'efface QUE l'affichage — le frein garde sa mémoire. */
   #vider(): void {
     this.#donnees = { type: 'FeatureCollection', features: [] };
-    this.#serviIds = '';
     this.#popup?.remove();
     this.#popup = null;
     this.#poser();
@@ -277,7 +345,7 @@ export class PanneauTransports extends HTMLElement {
       carte.addLayer({
         id: 'transports-vehicules', type: 'circle', source: SOURCE,
         paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 4, 14, 7, 17, 10],
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 5, 14, 8, 17, 11],
           'circle-color': ['get', 'couleur'],
           'circle-stroke-width': 2,
           'circle-stroke-color': '#FFFFFF',
@@ -297,10 +365,8 @@ export class PanneauTransports extends HTMLElement {
     if (!f || f.geometry.type !== 'Point' || !this.#carte) return;
     const p = f.properties ?? {};
     const [lng, lat] = f.geometry.coordinates as [number, number];
-    const texte = (clef: string): string =>
-      (typeof p[clef] === 'string' ? p[clef] : '');
-    const nombre = (clef: string): number =>
-      (typeof p[clef] === 'number' ? p[clef] : -1);
+    const texte = (clef: string): string => (typeof p[clef] === 'string' ? p[clef] : '');
+    const nombre = (clef: string): number => (typeof p[clef] === 'number' ? p[clef] : -1);
 
     const bloc = document.createElement('div');
     bloc.className = 'transports-popup';
@@ -311,15 +377,17 @@ export class PanneauTransports extends HTMLElement {
 
     const etiquette = texte('etiquette');
     if (etiquette && etiquette !== ligne) {
-      const p2 = document.createElement('p');
-      p2.className = 'transports-detail';
-      p2.textContent = etiquette;
-      bloc.append(p2);
+      const detail = document.createElement('p');
+      detail.className = 'transports-detail';
+      detail.textContent = etiquette;
+      bloc.append(detail);
     }
 
     const faits: string[] = [texte('reseau')];
-    const vitesse = nombre('vitesse');
-    if (vitesse >= 0) faits.push(`${Math.round(vitesse * 3.6)} km/h`);
+    // Pas de vitesse chiffrée : l'unité publiée est indéchiffrable chez trois
+    // réseaux sur neuf (voir src/lib/transports.ts). Zéro, en revanche, veut
+    // dire la même chose dans toutes les unités.
+    if (p['arret'] === true) faits.push('à l’arrêt');
     const age = nombre('age');
     faits.push(age < 0 ? 'fraîcheur inconnue'
       : age < 60 ? 'vu à l’instant'

@@ -101,6 +101,15 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       empêche un déplacement de relancer un appel, arrêt en arrière-plan.
       Positions de plus de dix minutes écartées — une carte du direct ne
       montre pas des véhicules rentrés au dépôt.
+      CE QUE LA MESURE DU TERRAIN A CORRIGÉ (44 flux, 416 véhicules, le
+      22/08 à 06 h 15 — détail chiffré dans docs/apis.md) : Brest publie
+      `timestamp: 0` et disparaissait entièrement (0 sur 27) ; un quart des
+      lignes s'affichaient en identifiant NeTEx ; trois réseaux sur neuf
+      publient des km/h là où la spécification dit des m/s, si bien qu'AUCUNE
+      vitesse chiffrée n'est affichée ; l'agrégat normand republie les
+      véhicules de ses membres, dédoublonnés par identifiant (94 → 80 sur une
+      vue d'Évreux) ; le rectangle d'une région couvrait des villes qu'elle ne
+      dessert pas, remplacé par une couverture en bandes de 0,2°.
 
 ## Offline & PWA avancée
 - [x] PR #17 — Mode hors ligne : cache des tuiles IGN (CacheFirst, 14 jours,

@@ -186,3 +186,77 @@ describe('décodeur GTFS-RT — ce qu’il refuse d’afficher', () => {
     expect(f.tronque).toBe(true);
   });
 });
+
+describe('décodeur GTFS-RT — les horodates que les producteurs bricolent', () => {
+  it('traduit `timestamp: 0` en « je ne sais pas », pas en 1970', () => {
+    /* MESURÉ SUR LE RÉSEAU RÉEL : Bibus (Brest) publie `timestamp: 0` pour
+       CHACUN de ses 27 véhicules (22/08/2026, 06 h 12). Pris au pied de la
+       lettre, cela les date de 1970, et la règle de fraîcheur effaçait le
+       réseau entier — 0 véhicule affiché sur 27, sans un mot. */
+    const octets = new Uint8Array([
+      ...entete(1_787_000_000),
+      ...bloc(2, [
+        ...texte(1, 'brest-1'),
+        ...bloc(4, [...position(48.40, -4.52), ...cle(5, 0), ...varint(0)]),
+      ]),
+    ]);
+    const f = decoderFlux(octets);
+    expect(f.vehicules).toHaveLength(1);
+    expect(f.vehicules[0]!.horodate).toBeNull();
+  });
+
+  it('écarte aussi une horodate d’avant 2020 ou d’après 2100', () => {
+    const avec = (t: number) => decoderFlux(new Uint8Array([
+      ...entete(1_787_000_000),
+      ...bloc(2, [
+        ...texte(1, 'v'),
+        ...bloc(4, [...position(48.85, 2.35), ...cle(5, 0), ...varint(t)]),
+      ]),
+    ])).vehicules[0]!.horodate;
+    expect(avec(1)).toBeNull();
+    expect(avec(946_684_800)).toBeNull();          // 2000
+    expect(avec(4_200_000_000)).toBeNull();        // au-delà de 2100
+    expect(avec(1_787_000_000)).toBe(1_787_000_000);
+  });
+
+  it('écarte une horodate d’en-tête invraisemblable sans perdre les véhicules', () => {
+    const octets = new Uint8Array([
+      ...bloc(1, [...texte(1, '2.0'), ...cle(3, 0), ...varint(0)]),
+      ...entite('v', position(48.85, 2.35)),
+    ]);
+    const f = decoderFlux(octets);
+    expect(f.horodate).toBeNull();
+    expect(f.vehicules).toHaveLength(1);
+  });
+});
+
+describe('décodeur GTFS-RT — le plafond ne crie pas au loup', () => {
+  it('ne signale « liste écourtée » que si un véhicule AFFICHABLE est perdu', () => {
+    /* Le drapeau se levait pour toute entité au-delà du plafond, y compris
+       celles qu'on écarte de toute façon : le volet annonçait « trop de
+       véhicules » alors que rien d'affichable n'avait été jeté. */
+    const base: number[] = [...entete(1_787_000_000)];
+    for (let i = 0; i < PLAFOND_VEHICULES; i += 1) {
+      base.push(...entite(`bus-${i}`, position(48.85, 2.35)));
+    }
+    const sansPosition = [...base];
+    for (let i = 0; i < 40; i += 1) {
+      sansPosition.push(...entite(`fantome-${i}`, bloc(1, texte(5, '9'))));
+    }
+    const f1 = decoderFlux(new Uint8Array(sansPosition));
+    expect(f1.vehicules).toHaveLength(PLAFOND_VEHICULES);
+    expect(f1.tronque, 'fausse alerte : rien d’affichable n’a été perdu').toBe(false);
+
+    const auDepot = [...base];
+    for (let i = 0; i < 40; i += 1) auDepot.push(...entite(`depot-${i}`, position(0, 0)));
+    expect(decoderFlux(new Uint8Array(auDepot)).tronque).toBe(false);
+
+    const vraiment = [...base];
+    for (let i = 0; i < 40; i += 1) {
+      vraiment.push(...entite(`extra-${i}`, position(48.85, 2.35)));
+    }
+    const f3 = decoderFlux(new Uint8Array(vraiment));
+    expect(f3.vehicules).toHaveLength(PLAFOND_VEHICULES);
+    expect(f3.tronque, 'un véhicule affichable a bien été perdu').toBe(true);
+  });
+});

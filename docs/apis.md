@@ -210,5 +210,54 @@ Un navigateur ne digère pas cela à chaque visite, et le projet n'a pas de
 serveur pour le pré-mâcher. La couche livrée montre donc les VÉHICULES, pas
 les horaires, et le dit sur la page « À propos » comme dans le volet.
 
+
+## Ce que les producteurs GTFS-RT publient VRAIMENT (relevé 22/08/2026, 06 h 15)
+44 flux interrogés, 44 réponses 200. 21 portaient des véhicules, **416 au total**.
+Tailles : min 13 o, médiane 15 o, max 18 014 o (Atoumod, toute la Normandie).
+Quatre écarts à la spécification, tous mesurés, tous traités dans le code :
+
+- **`timestamp: 0`** — Bibus (Brest) le publie pour ses **27 véhicules sur 27**.
+  Pris pour une date, cela les situe en 1970 et la règle de fraîcheur efface le
+  réseau entier : mesuré, 0 affiché sur 27. Le décodeur traduit désormais toute
+  horodate hors [2020, 2100] en « inconnue ». Après correctif : 27 sur 27.
+- **Identifiants NeTEx en guise de nom de ligne** — `ATOUMOD003:Line:6xC7:LOC`,
+  sur **102 véhicules des 416** (atoumod, seine-eure-semo, transurbain-evreux,
+  deepmob-dieppe). Le segment qui suit `:Line:` est le nom attendu (6xC7, T1, 5).
+- **Vitesses indéchiffrables** — la spécification dit des m/s. Cohérents en m/s :
+  Metz 13,0 · Rennes 12,8 · Alterneo 13,0 · Amiens 11,0 · Cannes 9,0 · Aléop 19,6.
+  Incohérents : **Dijon 69,0 · Le Mans 62,0 · Bourg-en-Bresse 37,0** — soit 248,
+  223 et 133 km/h. Trois producteurs sur neuf publient vraisemblablement des
+  km/h, et rien dans le flux ne le dit. **Aucune vitesse chiffrée n'est donc
+  affichée** ; seul « à l'arrêt » l'est, et seulement quand le réseau remplit
+  vraiment le champ (10 réseaux sur 21 le font ; aucun ne publie que des zéros).
+- **Horloges en avance** — en-têtes relevés à -63 s (Atoumod) et -85 s (SETRAM).
+  Une tolérance d'une minute effaçait ces réseaux entiers. Portée à trois minutes,
+  et l'avance est DITE dans le volet.
+
+## Doublons entre agrégats et réseaux membres (mesuré 22/08/2026)
+L'agrégat normand `atoumod` republie les véhicules de ses réseaux membres, avec
+**le même identifiant d'entité** :
+
+```
+transurbain-evreux    4 véhicules, dont 3 déjà dans atoumod
+seine-eure-semo      11 véhicules, dont 11 déjà dans atoumod
+deepmob-dieppe        3 véhicules, dont  3 déjà dans atoumod
+témoin Aléop/SETRAM  27 véhicules, dont  0 en commun
+```
+
+Sans dédoublonnage, chaque bus normand était dessiné deux fois et compté deux
+fois. Le témoin montre que dédoublonner par identifiant ne coûte rien aux
+réseaux réellement distincts. Mesuré sur une vue d'Évreux : 94 → 80 véhicules.
+
+## Emprises : pourquoi un rectangle ne suffit pas (mesuré 22/08/2026)
+`geo.api.gouv.fr` ne rend le contour que des communes et des EPCI ; pour un
+département ou une région il faut passer par leurs communes. Le rectangle qui en
+résulte est deux fois plus vaste que le territoire : celui des Pays de la Loire
+**couvre Rennes**, à 97 km du car Aléop le plus proche. La table porte donc une
+`couverture` — des bandes [ligne, colonneMin, colonneMax] sur une grille de 0,2°
+(~22 km) déduite des communes desservies, 121 bandes pour 44 réseaux. Effet
+mesuré : Rennes n'interroge plus que le STAR (au lieu de STAR + Aléop +
+Atoumod), Saint-Malo que le MAT, Fougères deux réseaux au lieu de trois.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.
