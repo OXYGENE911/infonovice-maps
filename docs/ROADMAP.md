@@ -110,15 +110,22 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       véhicules de ses membres et n'est donc plus jamais interrogé avec eux ;
       le rectangle d'une région couvrait des villes qu'elle ne dessert pas,
       remplacé par une couverture en bandes de 0,2°.
-      DEUX REVUES ADVERSES, et la seconde a trouvé des défauts DANS les
-      correctifs de la première : le frein anti-rafale laissait la couche morte
-      trente secondes après une hésitation sur la case ou un aller-retour de
-      zoom (il borne désormais les requêtes, jamais l'affichage) ; le
-      dédoublonnage par identifiant effaçait onze véhicules réels de réseaux
-      distincts qui numérotent tous « 1, 2, 3 » ; et écarter les horodates
-      d'avant 2020 transformait une position de 2017 en « vue à l'instant ».
-      Morale consignée : corriger un défaut est un changement comme un autre,
-      il se relit avec la même sévérité.
+      TROIS REVUES ADVERSES, chacune trouvant des défauts DANS les correctifs
+      de la précédente — 17, puis 11, puis 10 :
+      · le frein anti-rafale laissait la couche morte trente secondes après une
+        hésitation sur la case ou un aller-retour de zoom (il borne désormais
+        les requêtes, jamais l'affichage) ;
+      · le dédoublonnage par identifiant SEUL effaçait onze véhicules réels de
+        réseaux distincts qui numérotent tous « 1, 2, 3 » ;
+      · écarter l'agrégat pour éviter ces doublons faisait perdre 64 % de ses
+        véhicules — au Havre, 44 bus roulaient et le volet disait « aucun » ;
+      · écarter les horodates d'avant 2020 transformait une position de 2017
+        en « vue à l'instant » ;
+      · la mémoire d'affichage rejouait la moisson d'une autre ville pendant
+        qu'un appel était en vol.
+      Le dédoublonnage final est BORNÉ : même identifiant, identifiant
+      qualifié, moins de deux kilomètres. Morale consignée : corriger un défaut
+      est un changement comme un autre, il se relit avec la même sévérité.
 
 ## Offline & PWA avancée
 - [x] PR #17 — Mode hors ligne : cache des tuiles IGN (CacheFirst, 14 jours,

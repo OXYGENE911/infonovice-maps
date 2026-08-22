@@ -478,16 +478,28 @@ etapes-itineraire { display: grid; gap: 7px; }
 /* L'ÉCHELLE N'EST PAS UN BOUTON, elle ne doit rien intercepter. En paysage
    667×375, la colonne de volets descend jusqu'au bas de l'écran et la barre
    d'échelle se posait SUR le bouton « Favoris » : `elementFromPoint` en son
-   centre rendait la barre, pas le bouton — le doigt n'atteignait plus rien. */
-.maplibregl-ctrl-scale { pointer-events: none; }
+   centre rendait la barre, pas le bouton — le doigt n'atteignait plus rien.
+   LE SÉLECTEUR EST PRÉFIXÉ PAR #carte, et il le faut : MapLibre pose
+   `.maplibregl-ctrl { pointer-events: auto }` à spécificité égale et PLUS LOIN
+   dans le paquet ; sans le préfixe, notre règle était purement décorative. */
+#carte .maplibregl-ctrl-scale { pointer-events: none; }
 
 /* ÉCRAN BAS (téléphone en paysage) : six volets de 46 px ne tiennent pas sous
    un en-tête qui s'enroule. On resserre les rangées et on laisse tomber la
-   mention décorative de l'en-tête — la colonne rentre alors tout entière. */
+   mention décorative de l'en-tête — la colonne rentre alors tout entière.
+   LE RESSERREMENT NE VISE QUE LES VOLETS DE TÊTE. Un sélecteur sur tous les
+   `summary` de la colonne frappait aussi les volets INTERNES du planificateur
+   (profil, feuille, trajet, météo), dessinés avec `padding: 3px 0` : ils s'en
+   trouvaient décalés et PLUS HAUTS, dans une règle censée gagner de la place. */
 @media (max-height: 480px) {
   .entete-note { display: none; }
   #carte .maplibregl-ctrl-top-left .maplibregl-ctrl { margin-top: 5px !important; }
-  #carte .maplibregl-ctrl-top-left summary { padding: 6px 14px; }
+  #carte .iti > summary,
+  #carte .fonds > summary,
+  #carte .poi > summary,
+  #carte .trafic > summary,
+  #carte .transports > summary,
+  #carte .favoris > summary { padding: 6px 14px; }
 }
 
 /* --- Transports en commun en direct (PR #16) — même grammaire visuelle que

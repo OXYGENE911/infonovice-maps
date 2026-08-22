@@ -305,35 +305,54 @@ test('TRANSPORTS : une horloge en avance ne fait pas disparaître le réseau', a
   await expect.poll(() => nbPeints(page), { timeout: 10_000 }).toBe(1);
 });
 
-test('TRANSPORTS : l’agrégat régional n’est jamais interrogé avec ses membres', async ({ page }) => {
-  /* MESURÉ SUR LE RÉSEAU RÉEL : l'Atoumod normand republie les véhicules de
-     ses vingt-deux réseaux membres — 17 bus dessinés et comptés deux fois.
-     On ne peut pas les dédoublonner après coup : ni par identifiant (deux
-     réseaux quelconques numérotent « 3 », onze vrais véhicules perdus en
-     revue), ni par position (jusqu'à 1 km d'écart entre les deux relevés).
-     On ne demande donc jamais les deux.
-     DIEPPE, ET PAS ÉVREUX : là-bas, un seul réseau local dessert, si bien que
-     l'agrégat entrerait dans le plafond de trois. À Évreux il en sortait de
-     toute façon, et le test restait vert même en désarmant la règle — vérifié
-     par mutation. */
-  const appels: string[] = [];
+test('TRANSPORTS : un véhicule republié par deux réseaux n’est dessiné qu’une fois', async ({ page }) => {
+  /* MESURÉ SUR LE RÉSEAU RÉEL : l'agrégat normand republie les véhicules de
+     ses membres avec l'identifiant NeTEx EXACT et la même position — 52
+     doublons, écart médian nul. On les dédoublonne, MAIS bornés par la
+     distance : une clé par identifiant seul effaçait onze bus authentiques de
+     réseaux qui numérotent tous « 1, 2, 3 ». */
+  let n = 0;
   await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => {
-    appels.push(route.request().url());
+    n += 1;
+    const rang = n;
     return route.fulfill({
       contentType: 'application/x-protobuf',
-      body: fluxSimule([{ id: 'v1', lon: 1.078, lat: 49.922, ligne: 'T1', nom: 'Dieppe' }]),
+      body: fluxSimule([
+        // LE MÊME BUS, republié à l'identique par chaque réseau interrogé.
+        { id: 'VM:ATOUMOD004:ServiceJourney:597455:LOC', lon: 1.15, lat: 49.025, ligne: 'T1', nom: 'Partagé' },
+        // Un bus propre à ce réseau, ailleurs dans la vue.
+        { id: `propre-${rang}`, lon: 1.15 + 0.004 * rang, lat: 49.031, ligne: 'B2', nom: 'Local' },
+      ]),
     });
   });
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
-  await allerA(page, 1.0780, 49.9220, 12);
+  await allerA(page, 1.1500, 49.0280, 13);
   await page.locator('.transports summary').click();
   await page.locator('.transports-case').check();
   await expect(page.locator('.transports-etat')).toContainText('véhicule', { timeout: 10_000 });
-  expect(appels.length, 'aucun réseau interrogé').toBeGreaterThan(0);
-  expect(appels.filter((u) => u.includes('atoumod')),
-    'l’agrégat a été interrogé en même temps que ses membres').toEqual([]);
+  expect(n, 'un seul réseau interrogé : le test ne prouve rien').toBeGreaterThan(1);
+  // Les pastilles doivent être PEINTES avant qu'on les compte.
+  await expect.poll(() => nbPeints(page), { timeout: 10_000 }).toBeGreaterThan(0);
+
+  const compte = await page.evaluate(() => {
+    const f = (window as unknown as {
+      __carte: { queryRenderedFeatures(o: object): { geometry: GeoJSON.Point }[] };
+    }).__carte.queryRenderedFeatures({ layers: ['transports-vehicules'] });
+    const memePoint = (c: number[], lon: number, lat: number) =>
+      Math.abs(c[0]! - lon) < 1e-4 && Math.abs(c[1]! - lat) < 1e-4;
+    return {
+      partage: f.filter((x) => memePoint(x.geometry.coordinates, 1.15, 49.025)).length,
+      propres: f.filter((x) => !memePoint(x.geometry.coordinates, 1.15, 49.025)).length,
+    };
+  });
+  expect(compte.partage, 'le bus republié est dessiné plusieurs fois').toBe(1);
+  // Les bus propres, eux, portent le MÊME identifiant « propre » mais sont
+  // à des endroits différents : aucun ne doit disparaître.
+  expect(compte.propres, 'des bus distincts au même numéro ont été effacés').toBe(n);
 });
+
+
 
 
 

@@ -21,6 +21,7 @@
 import { decoderFlux, ErreurTransports, type FluxVehicules, type Vehicule } from './gtfs-rt';
 import { RESEAUX_TEMPS_REEL } from '../donnees/reseaux-temps-reel';
 import type { Bbox } from './poi';
+import { distanceM } from './le-long-du-trajet';
 
 export { ErreurTransports } from './gtfs-rt';
 export type { Vehicule } from './gtfs-rt';
@@ -82,32 +83,55 @@ function etendue(reseau: Reseau): number {
   return reseau.couverture.reduce((s, b) => s + (b[2] - b[1] + 1), 0);
 }
 
-/** Les réseaux candidats pour une vue, DU PLUS LOCAL AU PLUS VASTE, et sans
-    agrégat redondant.
+/** Les réseaux qui desservent la vue, DU PLUS LOCAL AU PLUS VASTE.
     Le tri se fait sur l'étendue du réseau, pas sur sa surface commune avec la
     vue : celle-ci renversait l'ordre dès que la vue débordait d'un bord de
     l'agglomération — à Dieppe, l'agrégat régional passait devant le réseau de
     la ville. L'étendue, elle, ne dépend pas du cadrage.
 
-    UN AGRÉGAT EST ÉCARTÉ DÈS QU'UN RÉSEAU PROPRE DESSERT LA MÊME VUE. L'Atoumod
-    normand rediffuse les bus de ses vingt-deux réseaux membres : mesuré le
-    22/08, 17 véhicules apparaissaient deux fois. On ne peut les dédoublonner
-    ni par identifiant — deux réseaux quelconques numérotent « 3 » et « 4 », et
-    une clé globale en effaçait de VRAIS véhicules — ni par position, l'agrégat
-    et le membre échantillonnant le même bus jusqu'à un kilomètre d'écart. Le
-    lien est structurel ; on le traite comme tel. Là où AUCUN réseau propre ne
-    publie, l'agrégat reste la seule source, et il est gardé. */
+    ON NE RETIRE PLUS L'AGRÉGAT, et c'est une correction. Une écriture
+    précédente l'écartait dès qu'un réseau propre effleurait la vue : mesuré
+    sur les flux réels, cela coûtait 100 des 156 véhicules de l'agrégat, qui
+    n'ont AUCUN homologue chez un réseau propre. Au Havre, 44 bus roulaient
+    sous les yeux de l'usager et le volet affichait « aucun véhicule », parce
+    qu'un réseau de Honfleur — deux véhicules, à 20 km — effleurait la vue par
+    arrondi de grille. Les doublons se traitent là où ils sont, à l'affichage
+    (voir `memeVehicule`), pas en amputant la couverture. */
 function candidats(vue: Bbox): Reseau[] {
-  const desservants = RESEAUX_TEMPS_REEL
+  return RESEAUX_TEMPS_REEL
     .filter((r) => dessert(r, vue))
     .slice()
     .sort((a, b) => etendue(a) - etendue(b) || a.id.localeCompare(b.id, 'fr'));
-  const propres = desservants.filter((r) => !r.agregat);
-  return propres.length > 0 ? propres : desservants;
 }
 
 export function reseauxDansVue(vue: Bbox, plafond = PLAFOND_RESEAUX): Reseau[] {
   return candidats(vue).slice(0, plafond);
+}
+
+/** Deux relevés désignent le MÊME véhicule s'ils portent le même identifiant
+    ET se trouvent à moins de deux kilomètres l'un de l'autre.
+
+    LES DEUX CONDITIONS SONT NÉCESSAIRES, et la mesure le dit. Les agrégats
+    republient leurs membres avec l'identifiant NeTEx EXACT
+    (`VM:ATOUMOD004:ServiceJourney:…:LOC`) : 52 doublons relevés le 22/08,
+    écart médian nul, 658 m au pire. Les collisions entre réseaux SANS lien,
+    elles, ne portent que sur des entiers nus (« 3 », « 4 », « 59 ») et
+    séparent des villes distantes de 65 à 9 900 km — un « 3 » de Montluçon et
+    un « 3 » de Riom. L'identifiant seul effaçait onze véhicules réels ; la
+    distance seule confondrait deux bus voisins. Ensemble, ils tranchent. */
+export const DISTANCE_MEME_VEHICULE_M = 2000;
+
+export function memeVehicule(a: Vehicule, b: Vehicule): boolean {
+  if (!a.id || a.id !== b.id) return false;
+  /* UN IDENTIFIANT NU N'IDENTIFIE RIEN hors de son flux. « 3 », « 214 » : deux
+     réseaux voisins peuvent numéroter ainsi deux bus différents le même jour,
+     et rien n'interdit qu'ils se croisent. Les republications d'agrégat, elles,
+     portent TOUTES un identifiant qualifié (« VM:ATOUMOD004:ServiceJourney:…
+     :LOC ») — vérifié sur les sept réseaux membres concernés. On ne
+     dédoublonne donc que sur un identifiant qualifié : effacer un vrai bus est
+     pire que d'en dessiner un en double. */
+  if (!/\D/.test(a.id)) return false;
+  return distanceM([a.lon, a.lat], [b.lon, b.lat]) <= DISTANCE_MEME_VEHICULE_M;
 }
 
 /** Combien de réseaux desservent la vue, plafond compris ou non — pour dire

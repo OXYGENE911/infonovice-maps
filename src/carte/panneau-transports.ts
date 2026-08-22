@@ -30,8 +30,8 @@ import { Popup } from 'maplibre-gl';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import {
   ageDuFlux, ageVehicule, aLArret, chargerFlux, ErreurTransports, INTERVALLE_MS,
-  nombreDeReseaux, nomDeLigne, PLAFOND_RESEAUX, reseauxDansVue, trierParFraicheur,
-  vitesseRenseignee, type Reseau, type Vehicule,
+  memeVehicule, nombreDeReseaux, nomDeLigne, PLAFOND_RESEAUX, reseauxDansVue,
+  trierParFraicheur, vitesseRenseignee, type Reseau, type Vehicule,
 } from '../lib/transports';
 import type { Bbox } from '../lib/poi';
 
@@ -77,9 +77,17 @@ export class PanneauTransports extends HTMLElement {
      volet muet pendant trente secondes (mesuré), et un aller-retour de zoom
      laissait « Approchez pour voir les véhicules » alors qu'on était approché.
      Le frein borne les requêtes, pas ce que l'usager a le droit de revoir. */
-  #dernier: { donnees: GeoJSON.FeatureCollection; reseaux: Reseau[]; resultats: Resultat[] } | null = null;
-  /** Le dernier message affiché, pour ne jamais laisser le volet sans un mot. */
+  #dernier: {
+    /** Les réseaux dont elle provient — sans quoi on rejoue une autre ville. */
+    ids: string;
+    donnees: GeoJSON.FeatureCollection; reseaux: Reseau[]; resultats: Resultat[];
+  } | null = null;
+  /** Le dernier message de DONNÉES affiché, pour ne jamais laisser le volet
+      sans un mot. Les messages de vue (« Approchez… ») et de progression
+      (« Chargement… ») n'y entrent pas : les rejouer serait mentir. */
   #dernierMessage = '';
+  /** Une salve est-elle en vol ? Sert à ne dire « chargement » que si c'est vrai. */
+  #enVol = false;
 
   set carte(c: CarteMapLibre) {
     if (this.#carte) return;
@@ -154,6 +162,7 @@ export class PanneauTransports extends HTMLElement {
     this.#minuteur = undefined;
     clearTimeout(this.#attente);
     this.#annulation?.abort();
+    this.#enVol = false;
     this.#donnees = { type: 'FeatureCollection', features: [] };
     this.#popup?.remove();
     this.#popup = null;
@@ -174,10 +183,20 @@ export class PanneauTransports extends HTMLElement {
   }
 
   /** Repose la dernière moisson connue et redit ce qu'elle vaut POUR LA VUE
-      COURANTE — l'usager a pu se déplacer depuis. */
-  #reafficher(vue: Bbox): void {
+      COURANTE — l'usager a pu se déplacer depuis.
+      ELLE N'EST REJOUÉE QUE SI ELLE VIENT DES MÊMES RÉSEAUX. Le frein compare
+      la liste demandée à la dernière LANCÉE ; la moisson, elle, date de la
+      dernière ABOUTIE. Entre les deux — le temps d'un appel, jusqu'à seize
+      secondes — le volet décrivait Dieppe alors qu'on regardait Rennes, et
+      affirmait même une absence pour un réseau à trois cents kilomètres. */
+  #reafficher(vue: Bbox, ids: string): void {
     const d = this.#dernier;
-    if (!d) { this.#ecrire(this.#dernierMessage); return; }
+    if (!d || d.ids !== ids) {
+      this.#donnees = { type: 'FeatureCollection', features: [] };
+      this.#poser();
+      this.#ecrire(this.#enVol ? 'Chargement des véhicules…' : this.#dernierMessage);
+      return;
+    }
     this.#donnees = d.donnees;
     this.#poser();
     this.#etat(this.#resumer(vue, d.reseaux, d.resultats));
@@ -219,7 +238,7 @@ export class PanneauTransports extends HTMLElement {
        passé à une autre ville) ou si la cadence est échue. */
     const ids = reseaux.map((r) => r.id).join('|');
     const age = this.#charge === 0 ? Infinity : Date.now() - this.#charge;
-    if (ids === this.#serviIds && age < INTERVALLE_MS) { this.#reafficher(vue); return; }
+    if (ids === this.#serviIds && age < INTERVALLE_MS) { this.#reafficher(vue, ids); return; }
     /* ARMÉ AVANT L'APPEL, et quoi qu'il advienne. Après, une salve en vol ne
        freinait rien (cinq déplacements pendant un appel lent = 18 requêtes
        pour 3 réponses utiles), un échec général désarmait tout le frein — le
@@ -231,7 +250,11 @@ export class PanneauTransports extends HTMLElement {
     this.#annulation?.abort();
     const annulation = new AbortController();
     this.#annulation = annulation;
-    if (this.#donnees.features.length === 0) this.#etat('Chargement des véhicules…');
+    /* MESSAGE DE PROGRESSION, jamais mémorisé : rejoué plus tard alors
+       qu'aucune requête n'est en vol, il ferait mentir le volet sur son propre
+       état pendant trente secondes (mesuré). */
+    this.#enVol = true;
+    if (this.#donnees.features.length === 0) this.#ecrire('Chargement des véhicules…');
 
     const maintenant = Math.floor(Date.now() / 1000);
     const resultats = await Promise.all(reseaux.map(
@@ -261,18 +284,25 @@ export class PanneauTransports extends HTMLElement {
       if (annulation.signal.aborted) return null;
       throw e;
     });
+    this.#enVol = false;
     if (resultats === null || annulation !== this.#annulation || !this.#actif) return;
 
     const vivants = resultats.filter((r): r is ResultatVivant => r.ok);
-    /* AUCUN DÉDOUBLONNAGE ICI, et c'est voulu. Les seuls véritables doublons
-       viennent des agrégats qui republient leurs membres, et ceux-là ne sont
-       plus jamais choisis en même temps qu'eux (voir `reseauxDansVue`). Une
-       clé par identifiant d'entité, elle, effaçait de VRAIS véhicules : deux
-       réseaux quelconques numérotent « 3 » et « 4 » — onze bus réels perdus
-       sur cinq paires de réseaux authentiquement distincts, mesuré en revue. */
+    /* DÉDOUBLONNAGE BORNÉ : même identifiant ET moins de deux kilomètres.
+       Les agrégats republient leurs membres avec l'identifiant NeTEx exact et
+       la même position (52 doublons relevés, écart médian nul). Les collisions
+       entre réseaux sans lien, elles, ne portent que sur des entiers nus et
+       séparent des villes distantes de 65 km au moins. Une clé par identifiant
+       SEUL effaçait onze véhicules réels ; bornée par la distance, elle ne
+       touche plus qu'aux vrais doublons. Le premier arrivé — donc le réseau le
+       plus local — garde le véhicule. */
+    const gardes: Vehicule[] = [];
     this.#donnees = {
       type: 'FeatureCollection',
-      features: vivants.flatMap((r) => r.vehicules.map((v, i) => ({
+      features: vivants.flatMap((r) => r.vehicules.flatMap((v, i) => {
+        if (gardes.some((g) => memeVehicule(g, v))) return [];
+        gardes.push(v);
+        return [{
         type: 'Feature' as const,
         properties: {
           reseau: r.reseau.nom,
@@ -286,9 +316,10 @@ export class PanneauTransports extends HTMLElement {
             ? -1 : Math.max(0, r.ages[i]!),
         },
         geometry: { type: 'Point' as const, coordinates: [v.lon, v.lat] },
-      }))),
+        }];
+      })),
     };
-    this.#dernier = { donnees: this.#donnees, reseaux, resultats };
+    this.#dernier = { ids, donnees: this.#donnees, reseaux, resultats };
     this.#poser();
     this.#etat(this.#resumer(vue, reseaux, resultats));
   }

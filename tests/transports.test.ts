@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ageDuFlux, ageVehicule, AVANCE_MAX_S, dessert, FRAICHEUR_MAX_S, nombreDeReseaux,
   nomDeLigne, PAS_GRILLE, PLAFOND_RESEAUX, reseauxDansVue, trierParFraicheur,
-  urlFlux, vitesseRenseignee, aLArret,
+  urlFlux, vitesseRenseignee, aLArret, memeVehicule,
 } from '../src/lib/transports';
 import { RESEAUX_TEMPS_REEL } from '../src/donnees/reseaux-temps-reel';
 import type { FluxVehicules, Vehicule } from '../src/lib/gtfs-rt';
@@ -245,50 +245,68 @@ describe('ce que les producteurs publient vraiment', () => {
   });
 });
 
-describe('agrégats : jamais choisis en même temps que leurs membres', () => {
-  it('marque exactement les réseaux qui republient d’autres réseaux', () => {
+describe('doublons entre agrégats et membres', () => {
+  it('marque l’agrégat dans la table — un seul des 44 en est un', () => {
     const agregats = RESEAUX_TEMPS_REEL.filter((r) => r.agregat);
-    // Un seul des 44 en est un : l'Atoumod normand, 22 offres commerciales.
     expect(agregats).toHaveLength(1);
     expect(agregats[0]!.id).toContain('atoumod');
   });
 
-  it('écarte l’agrégat là où un réseau propre dessert aussi', () => {
-    /* MESURÉ LE 22/08 : 17 bus normands apparaissaient deux fois, une fois par
-       Atoumod, une fois par Transurbain, Semo Bus ou Deep Mob. Ils ne se
-       dédoublonnent ni par identifiant (deux réseaux quelconques numérotent
-       « 3 ») ni par position (jusqu'à 1 km d'écart entre les deux relevés). */
-    for (const [ville, lon, lat] of [
-      ['Évreux', 1.1500, 49.0250], ['Dieppe', 1.0780, 49.9220],
-      ['Louviers', 1.1700, 49.2150],
-    ] as [string, number, number][]) {
-      const choisis = reseauxDansVue(autour(lon, lat));
-      expect(choisis.length, ville).toBeGreaterThan(0);
-      expect(choisis.some((r) => r.agregat), `${ville} : l’agrégat est choisi`).toBe(false);
-    }
+  it('reconnaît un doublon : même identifiant ET même endroit', () => {
+    /* MESURÉ LE 22/08 : les agrégats republient leurs membres avec
+       l'identifiant NeTEx EXACT — 52 doublons, écart médian nul, 658 m au
+       pire. On les reconnaît à ces deux conditions réunies. */
+    const a = { ...vehicule('VM:ATOUMOD004:ServiceJourney:597455:LOC', null), lon: 1.15, lat: 49.02 };
+    const b = { ...a, lon: 1.1505, lat: 49.0203 };  // ~50 m
+    expect(memeVehicule(a, b)).toBe(true);
+    const loin = { ...a, lon: 1.16, lat: 49.03 };   // ~1,3 km, encore le même
+    expect(memeVehicule(a, loin)).toBe(true);
   });
 
-  it('garde l’agrégat là où il est la SEULE source', () => {
-    // Un point normand desservi par Atoumod et par aucun réseau propre.
-    const atoumod = par('atoumod');
-    const propres = RESEAUX_TEMPS_REEL.filter((r) => !r.agregat);
-    const seul = atoumod.couverture
-      .map((b) => ({ lon: (b[1] + 0.5) * PAS_GRILLE, lat: (b[0] + 0.5) * PAS_GRILLE }))
-      .find((p) => {
-        const v = autour(p.lon, p.lat, 0.01);
-        return !propres.some((r) => dessert(r, v));
-      });
-    expect(seul, 'aucune cellule normande sans réseau propre').toBeDefined();
-    const choisis = reseauxDansVue(autour(seul!.lon, seul!.lat, 0.01));
-    expect(choisis.map((r) => r.id)).toEqual([atoumod.id]);
+  it('n’efface PAS deux véhicules distincts qui portent le même numéro', () => {
+    /* LE DÉFAUT QUE CE TEST EMPÊCHE : une clé par identifiant seul a effacé
+       onze bus réels. Beaucoup de réseaux numérotent « 1, 2, 3 » — un « 3 »
+       de Montluçon et un « 3 » de Riom sont deux bus, à 65 km l'un de
+       l'autre. Les collisions sans lien commencent à 65 km ; les vrais
+       doublons s'arrêtent à 658 m. */
+    const montlucon = { ...vehicule('3', null), lon: 2.6050, lat: 46.3400 };
+    const riom = { ...vehicule('3', null), lon: 3.1130, lat: 45.8940 };
+    expect(memeVehicule(montlucon, riom)).toBe(false);
+    // Et même côte à côte : un identifiant NU n'identifie rien hors de son
+    // flux, donc on ne s'en sert jamais pour effacer quoi que ce soit.
+    const voisin = { ...vehicule('3', null), lon: 2.6051, lat: 46.3401 };
+    expect(memeVehicule(montlucon, voisin)).toBe(false);
   });
 
-  it('ne compte pas l’agrégat écarté comme un réseau « en plus »', () => {
-    // Le résumé annonce « N réseaux sur M » : M ne doit pas gonfler d'un
-    // agrégat qu'on a délibérément écarté.
-    const v = autour(1.1500, 49.0250);
-    expect(nombreDeReseaux(v)).toBe(
-      RESEAUX_TEMPS_REEL.filter((r) => !r.agregat && dessert(r, v)).length,
-    );
+  it('ne fusionne pas deux relevés éloignés, même identifiant qualifié', () => {
+    /* Défense en profondeur : un identifiant qualifié reste un identifiant
+       choisi par un producteur, pas une garantie d'unicité mondiale. Deux
+       relevés à trois cents kilomètres sont deux véhicules, quoi qu'il
+       arrive. */
+    const a = { ...vehicule('VM:X:ServiceJourney:1:LOC', null), lon: 1.15, lat: 49.02 };
+    const b = { ...a, lon: 5.04, lat: 47.32 };
+    expect(memeVehicule(a, b)).toBe(false);
+  });
+
+  it('ne confond jamais deux identifiants différents, si proches soient-ils', () => {
+    const a = { ...vehicule('4', null), lon: 5.0415, lat: 47.3220 };
+    const b = { ...vehicule('5', null), lon: 5.0415, lat: 47.3220 };
+    expect(memeVehicule(a, b)).toBe(false);
+  });
+
+  it('ignore une entité sans identifiant plutôt que de tout confondre', () => {
+    const a = { ...vehicule('', null), lon: 5.0415, lat: 47.3220 };
+    const b = { ...vehicule('', null), lon: 5.0415, lat: 47.3220 };
+    expect(memeVehicule(a, b)).toBe(false);
+  });
+
+  it('garde l’agrégat parmi les candidats — l’écarter coûtait 100 véhicules', () => {
+    /* Une écriture précédente le retirait dès qu'un réseau propre effleurait
+       la vue. Au Havre, 44 bus roulaient et le volet affichait « aucun
+       véhicule », parce qu'un réseau de Honfleur — 2 véhicules, à 20 km —
+       touchait la vue par arrondi de grille. */
+    const havre = autour(0.1079, 49.4938, 0.055);
+    const ids = reseauxDansVue(havre).map((r) => r.id);
+    expect(ids.some((i) => i.includes('atoumod')), 'l’agrégat est écarté du Havre').toBe(true);
   });
 });

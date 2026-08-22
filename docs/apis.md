@@ -253,21 +253,29 @@ témoin Aléop/SETRAM  27 véhicules, dont  0 en commun
 
 Sans traitement, chaque bus normand était dessiné deux fois et compté deux fois.
 
-**On ne les dédoublonne PAS après coup**, et c'est une décision mesurée :
-- **par identifiant** : les identifiants GTFS-RT ne sont uniques que DANS un
-  flux. Beaucoup de réseaux numérotent « 1, 2, 3… » (Maélis 1-6, RLVmobilités
-  4-9, Kicéo 70/79, Lila presqu'île 70/79, Rubis 1-5, TGD Dole 1-4). Une clé
-  globale a effacé **onze véhicules réels** sur cinq paires de réseaux
-  authentiquement distincts, tous DANS la vue de l'usager.
-- **par position** : l'agrégat et le membre échantillonnent le même bus à
-  quelques secondes d'écart. Sur les 17 doublons relevés, **3 seulement** ont
-  des coordonnées identiques ; les 14 autres diffèrent, jusqu'à **1 km**.
+**On les dédoublonne, mais BORNÉ** — et chaque borne vient d'une mesure :
 
-Le lien est STRUCTUREL, et il se lit dans le catalogue : un jeu qui déclare
-plus d'une offre commerciale est un agrégat. **Un seul des 44 en est un**
-(Atoumod, 22 offres). On ne choisit donc jamais un agrégat en même temps qu'un
-réseau propre desservant la même vue ; là où aucun réseau propre ne publie, il
-reste la seule source et il est gardé.
+- **Même identifiant** : les republications d'agrégat portent l'identifiant
+  NeTEx EXACT du membre (`VM:ATOUMOD004:ServiceJourney:...:LOC`), sur les sept
+  réseaux concernés. 52 doublons relevés, **écart médian nul**, 658 m au pire.
+- **ET identifiant QUALIFIÉ** : les collisions entre réseaux SANS lien ne
+  portent que sur des entiers nus (« 3 », « 4 », « 59 »). Une clé par
+  identifiant seul a effacé **onze véhicules réels** sur cinq paires de
+  réseaux distincts (Kicéo/Lila, RLVmobilités/Maélis, Rubis/J'ybus, TGD
+  Dole/Divia, ZEST/Palm Bus), tous DANS la vue de l'usager.
+- **ET à moins de deux kilomètres** : défense en profondeur. Les vrais
+  doublons s'arrêtent à 658 m ; les collisions fortuites relevées vont de
+  65 km à 9 900 km.
+
+**ÉCARTER L'AGRÉGAT N'ÉTAIT PAS LA SOLUTION**, et la mesure l'a dit. Une
+écriture intermédiaire le retirait dès qu'un réseau propre desservait la même
+vue : elle coûtait **100 des 156 véhicules de l'agrégat** (64 %), qui n'ont
+aucun homologue chez un réseau propre. Au Havre, 44 bus roulaient et le volet
+affichait « aucun véhicule », parce qu'un réseau de Honfleur — deux véhicules,
+à 20 km — effleurait la vue par arrondi de grille. Sur un balayage de la
+Normandie, 160 vues sur 621 n'affichaient plus rien. Après correction, mesuré
+sur les flux du jour : Le Havre **46 véhicules dans la vue**, Évreux 244 relevés
+bruts ramenés à 214 (30 doublons ôtés), Dijon 79 → 79 (aucun faux positif).
 
 ## Emprises : pourquoi un rectangle ne suffit pas (mesuré 22/08/2026)
 `geo.api.gouv.fr` ne rend le contour que des communes et des EPCI ; pour un

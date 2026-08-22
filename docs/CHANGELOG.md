@@ -19,8 +19,10 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - Le frein borne les REQUÊTES, jamais l'affichage : décocher puis recocher la
   case, ou revenir d'un zoom arrière, réaffiche aussitôt ce qu'on venait de
   voir, sans un appel de plus.
-- Un agrégat régional n'est jamais interrogé en même temps que les réseaux
-  qu'il republie : sinon les mêmes bus étaient dessinés et comptés deux fois.
+- Les véhicules qu'un agrégat régional republie ne sont dessinés qu'une fois,
+  mais le dédoublonnage est BORNÉ — même identifiant, identifiant qualifié, et
+  moins de deux kilomètres : une clé plus large effaçait de vrais bus, et
+  écarter l'agrégat en bloc faisait disparaître 64 % de ses véhicules.
 - Honnêteté : les positions de plus de dix minutes sont écartées, le compte
   distingue la vue du réseau entier et suit la carte, une source qui ne répond
   pas n'est pas maquillée en « aucun véhicule », tous les réseaux muets sont
