@@ -130,11 +130,26 @@ function accumulateur() {
    déclarent des dizaines : l'Atoumod normand en a 22, et prendre la première
    baptisait tout le flux de Normandie « Astrobus », du nom du réseau de
    Lisieux. Dans ce cas, c'est le titre du jeu qui est juste. */
+function offresDe(jeu) {
+  return [...new Set((jeu.offers ?? []).map((o) => o.nom_commercial).filter(Boolean))];
+}
+
 function nomLisible(jeu) {
-  const offres = (jeu.offers ?? []).filter((o) => o.nom_commercial);
-  if (offres.length === 1) return offres[0].nom_commercial.trim();
+  const offres = offresDe(jeu);
+  if (offres.length === 1) return offres[0].trim();
   return jeu.title.replace(/^R[ée]seau\s+(urbain|interurbain|national|européen)?\s*/i, '').trim();
 }
+
+/* UN AGRÉGAT REPUBLIE LES VÉHICULES DE SES MEMBRES. L'Atoumod normand déclare
+   22 offres commerciales et rediffuse les bus d'Astrobus, Ficibus, Vikibus,
+   Transurbain, Semo Bus, Deep Mob… Mesuré le 22/08 : 17 véhicules normands
+   apparaissaient DEUX FOIS, une fois par l'agrégat, une fois par leur réseau.
+   Ils ne se dédoublonnent pas par identifiant (deux réseaux quelconques
+   peuvent numéroter « 3 » et « 4 ») ni par position (l'agrégat et le membre
+   échantillonnent le même bus à une seconde d'écart : jusqu'à 1 km d'écart
+   mesuré). Le lien est STRUCTUREL, il se lit dans le catalogue : plus d'une
+   offre commerciale = agrégat. Un seul des 44 réseaux l'est. */
+const estAgregat = (jeu) => offresDe(jeu).length > 1;
 
 const jeux = await json('https://transport.data.gouv.fr/api/datasets?type=public-transit');
 console.log(`catalogue : ${jeux.length} jeux de données`);
@@ -181,6 +196,7 @@ for (const { jeu, id } of parReseau.values()) {
       id,
       nom: nomLisible(jeu),
       autorite: zones.map((z) => z.nom).join(', '),
+      agregat: estAgregat(jeu),
       bbox: acc.emprise(),
       couverture: acc.couverture(),
     };
@@ -219,7 +235,7 @@ reseaux.sort((a, b) => a.id.localeCompare(b.id, 'fr'));
 
 const jour = new Date().toISOString().slice(0, 10);
 const lignes = reseaux.map((r) => `  { id: '${r.id}', nom: ${JSON.stringify(r.nom)},\n`
-  + `    autorite: ${JSON.stringify(r.autorite)},\n`
+  + `    autorite: ${JSON.stringify(r.autorite)}, agregat: ${r.agregat},\n`
   + `    bbox: [${r.bbox.join(', ')}],\n`
   + `    couverture: [${r.couverture.map((b) => `[${b.join(',')}]`).join(', ')}] },`);
 

@@ -16,11 +16,16 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - Les réseaux sont choisis sur les communes qu'ils desservent, pas sur un
   rectangle : regarder Rennes n'interroge plus le car des Pays de la Loire
   garé à 97 km.
-- Honnêteté : les positions de plus de dix minutes sont écartées, un véhicule
-  publié par deux réseaux n'est dessiné qu'une fois, le compte distingue la
-  vue du réseau entier, une source qui ne répond pas n'est pas maquillée en
-  « aucun véhicule », et le volet DIT ce qu'il ne montre pas — ni horaires ni
-  arrêts, faute de serveur pour digérer des GTFS de dizaines de mégaoctets.
+- Le frein borne les REQUÊTES, jamais l'affichage : décocher puis recocher la
+  case, ou revenir d'un zoom arrière, réaffiche aussitôt ce qu'on venait de
+  voir, sans un appel de plus.
+- Un agrégat régional n'est jamais interrogé en même temps que les réseaux
+  qu'il republie : sinon les mêmes bus étaient dessinés et comptés deux fois.
+- Honnêteté : les positions de plus de dix minutes sont écartées, le compte
+  distingue la vue du réseau entier et suit la carte, une source qui ne répond
+  pas n'est pas maquillée en « aucun véhicule », tous les réseaux muets sont
+  nommés, et le volet DIT ce qu'il ne montre pas — ni horaires ni arrêts,
+  faute de serveur pour digérer des GTFS de dizaines de mégaoctets.
 - Aucune vitesse chiffrée : trois réseaux sur neuf publient des km/h là où la
   spécification dit des m/s, et rien ne permet de les distinguer. Seul
   « à l'arrêt » est affiché — il se lit pareil dans les deux unités.

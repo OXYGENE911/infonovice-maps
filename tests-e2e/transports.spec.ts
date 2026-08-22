@@ -305,32 +305,199 @@ test('TRANSPORTS : une horloge en avance ne fait pas disparaître le réseau', a
   await expect.poll(() => nbPeints(page), { timeout: 10_000 }).toBe(1);
 });
 
-test('TRANSPORTS : un véhicule publié deux fois n’est dessiné qu’une', async ({ page }) => {
-  /* MESURÉ SUR LE RÉSEAU RÉEL : 17 bus normands apparaissaient à la fois dans
-     l'agrégat Atoumod et dans Transurbain, Semo Bus ou Deep Mob — même
-     identifiant, mêmes coordonnées, deux pastilles, compteur doublé. */
+test('TRANSPORTS : l’agrégat régional n’est jamais interrogé avec ses membres', async ({ page }) => {
+  /* MESURÉ SUR LE RÉSEAU RÉEL : l'Atoumod normand republie les véhicules de
+     ses vingt-deux réseaux membres — 17 bus dessinés et comptés deux fois.
+     On ne peut pas les dédoublonner après coup : ni par identifiant (deux
+     réseaux quelconques numérotent « 3 », onze vrais véhicules perdus en
+     revue), ni par position (jusqu'à 1 km d'écart entre les deux relevés).
+     On ne demande donc jamais les deux.
+     DIEPPE, ET PAS ÉVREUX : là-bas, un seul réseau local dessert, si bien que
+     l'agrégat entrerait dans le plafond de trois. À Évreux il en sortait de
+     toute façon, et le test restait vert même en désarmant la règle — vérifié
+     par mutation. */
+  const appels: string[] = [];
+  await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => {
+    appels.push(route.request().url());
+    return route.fulfill({
+      contentType: 'application/x-protobuf',
+      body: fluxSimule([{ id: 'v1', lon: 1.078, lat: 49.922, ligne: 'T1', nom: 'Dieppe' }]),
+    });
+  });
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await allerA(page, 1.0780, 49.9220, 12);
+  await page.locator('.transports summary').click();
+  await page.locator('.transports-case').check();
+  await expect(page.locator('.transports-etat')).toContainText('véhicule', { timeout: 10_000 });
+  expect(appels.length, 'aucun réseau interrogé').toBeGreaterThan(0);
+  expect(appels.filter((u) => u.includes('atoumod')),
+    'l’agrégat a été interrogé en même temps que ses membres').toEqual([]);
+});
+
+
+
+/* ---- LE FREIN RETIENT L'APPEL, PAS L'AFFICHAGE ----
+   Trois parcours nés de la SECONDE revue adverse : le frein, corrigé pour ne
+   plus marteler les services publics, laissait la couche morte pendant trente
+   secondes. Il borne les requêtes ; il n'a pas à priver l'usager de ce qu'il
+   vient de voir. */
+
+test('TRANSPORTS : décocher puis recocher réaffiche AUSSITÔT', async ({ page }) => {
+  /* MESURÉ AVANT CORRECTIF : « FENÊTRE MORTE = 30 s » — case cochée, carte
+     vide, résumé vide, pendant exactement une cadence. */
+  const appels: string[] = [];
+  await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => {
+    appels.push(route.request().url());
+    return route.fulfill({
+      contentType: 'application/x-protobuf',
+      body: fluxSimule([{ id: 'v1', lon: 5.0415, lat: 47.3220, ligne: 'T1', nom: 'Gare' }]),
+    });
+  });
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await allerA(page, DIJON[0], DIJON[1], 12);
+  await page.locator('.transports summary').click();
+  const case_ = page.locator('.transports-case');
+  await case_.check();
+  await expect.poll(() => nbPeints(page), { timeout: 10_000 }).toBe(1);
+
+  await case_.uncheck();
+  await case_.check();
+  // Aussitôt : la pastille revient et le volet parle, SANS nouvelle requête.
+  await expect.poll(() => nbPeints(page), { timeout: 3_000 }).toBe(1);
+  await expect(page.locator('.transports-etat')).toContainText('véhicule');
+  expect(appels, 'le réaffichage a coûté une requête').toHaveLength(1);
+});
+
+test('TRANSPORTS : revenir au zoom rétablit la carte et corrige le message', async ({ page }) => {
+  /* MESURÉ AVANT CORRECTIF : de retour au zoom 12, le volet affichait encore
+     « Approchez pour voir les véhicules » et la carte restait vide 29 s. */
+  const appels: string[] = [];
+  await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => {
+    appels.push(route.request().url());
+    return route.fulfill({
+      contentType: 'application/x-protobuf',
+      body: fluxSimule([{ id: 'v1', lon: 5.0415, lat: 47.3220, ligne: 'T1', nom: 'Gare' }]),
+    });
+  });
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await allerA(page, DIJON[0], DIJON[1], 12);
+  await page.locator('.transports summary').click();
+  await page.locator('.transports-case').check();
+  await expect.poll(() => nbPeints(page), { timeout: 10_000 }).toBe(1);
+
+  await allerA(page, DIJON[0], DIJON[1], 8);
+  await expect(page.locator('.transports-etat')).toContainText('Approchez', { timeout: 5_000 });
+  await allerA(page, DIJON[0], DIJON[1], 12);
+  await expect.poll(() => nbPeints(page), { timeout: 5_000 }).toBe(1);
+  await expect(page.locator('.transports-etat')).toContainText('véhicule');
+  await expect(page.locator('.transports-etat')).not.toContainText('Approchez');
+  expect(appels, 'le retour au zoom a coûté une requête').toHaveLength(1);
+});
+
+test('TRANSPORTS : le compte « dans la vue » suit la carte', async ({ page }) => {
+  /* Le compte était figé à l'instant du chargement : il annonçait « 1 véhicule
+     dans la vue » alors que l'écran n'en montrait plus aucun. */
+  const loin: Faux[] = [];
+  for (let i = 0; i < 8; i += 1) {
+    loin.push({ id: `l${i}`, lon: 5.0415 + 0.01 * (i + 1), lat: 47.3220, ligne: 'B1', nom: 'Loin' });
+  }
+  await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => route.fulfill({
+    contentType: 'application/x-protobuf',
+    body: fluxSimule([{ id: 'ici', lon: 5.0415, lat: 47.3220, ligne: 'T1', nom: 'Gare' }, ...loin]),
+  }));
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await allerA(page, DIJON[0], DIJON[1], 16);
+  await page.locator('.transports summary').click();
+  await page.locator('.transports-case').check();
+  const etat = page.locator('.transports-etat');
+  await expect(etat).toContainText('1 véhicule dans la vue', { timeout: 10_000 });
+
+  // On s'éloigne de TOUS les véhicules : le compte doit suivre, sans un appel
+  // de plus (le frein tient toujours, il ne retient que les requêtes).
+  await allerA(page, 5.2000, 47.3220, 16);
+  await expect(etat).toContainText('Aucun véhicule dans cette vue', { timeout: 10_000 });
+  await expect(etat).toContainText('sur le réseau');
+});
+
+test('TRANSPORTS : « aucun véhicule » n’est dit que si TOUT a répondu', async ({ page }) => {
+  /* Le volet affirmait une absence alors qu'un réseau n'avait pas répondu et
+     que d'autres n'avaient jamais été interrogés. */
+  await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => {
+    if (route.request().url().includes('transurbain')) {
+      return route.fulfill({ status: 404, body: 'inconnu' });
+    }
+    return route.fulfill({
+      contentType: 'application/x-protobuf', body: fluxSimule([]),
+    });
+  });
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await allerA(page, 1.1500, 49.0250, 13);
+  await page.locator('.transports summary').click();
+  await page.locator('.transports-case').check();
+  const etat = page.locator('.transports-etat');
+  await expect(etat).toContainText('qui ont répondu', { timeout: 15_000 });
+  await expect(etat).not.toContainText('Aucun véhicule en circulation en ce moment');
+});
+
+test('TRANSPORTS : un flux entièrement périmé ne devient pas « aucun véhicule »', async ({ page }) => {
+  /* Le résumé se contredisait : « Aucun véhicule en circulation (2 positions
+     trop anciennes, écartées) ». Le producteur dit qu'il y a des bus. */
   await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => route.fulfill({
     contentType: 'application/x-protobuf',
     body: fluxSimule([
-      { id: 'partage', lon: 1.1500, lat: 49.0250, ligne: 'T1', nom: 'Évreux' },
-      // Bien à l'écart, pour ne pas se retrouver sous la même pastille.
-      { id: `propre-${route.request().url().slice(-8)}`, lon: 1.2100, lat: 49.0500, ligne: 'B2', nom: 'Local' },
+      { id: 'v1', lon: 5.0415, lat: 47.3220, ligne: 'T1', nom: 'Gare', ageS: 4000 },
+      { id: 'v2', lon: 5.0450, lat: 47.3250, ligne: 'T2', nom: 'Nord', ageS: 4000 },
     ]),
   }));
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
-  await allerA(page, 1.1500, 49.0250, 12);
+  await allerA(page, DIJON[0], DIJON[1], 12);
   await page.locator('.transports summary').click();
   await page.locator('.transports-case').check();
-  await expect(page.locator('.transports-etat')).toContainText('véhicule', { timeout: 10_000 });
+  const etat = page.locator('.transports-etat');
+  await expect(etat).toContainText('Aucune position récente', { timeout: 10_000 });
+  await expect(etat).toContainText('trop anciennes');
+  await expect(etat).not.toContainText('Aucun véhicule en circulation');
+});
 
-  // On compte les pastilles RÉELLEMENT peintes à la position partagée : deux
-  // cercles empilés y répondraient tous les deux.
-  await expect.poll(() => nbPeints(page), { timeout: 10_000 }).toBeGreaterThan(0);
-  const empiles = await page.evaluate(() => (window as unknown as {
-    __carte: { queryRenderedFeatures(o: object): { geometry: GeoJSON.Point }[] };
-  }).__carte.queryRenderedFeatures({ layers: ['transports-vehicules'] })
-    .filter((f) => Math.abs(f.geometry.coordinates[0]! - 1.15) < 1e-4
-      && Math.abs(f.geometry.coordinates[1]! - 49.025) < 1e-4).length);
-  expect(empiles, 'le véhicule partagé est dessiné plusieurs fois').toBe(1);
+test('TRANSPORTS : tous les réseaux muets sont NOMMÉS', async ({ page }) => {
+  /* Le volet n'en citait qu'un, laissant croire que les autres allaient bien. */
+  await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) =>
+    route.fulfill({ status: 404, body: 'inconnu' }));
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await allerA(page, 1.1500, 49.0250, 13);
+  await page.locator('.transports summary').click();
+  await page.locator('.transports-case').check();
+  const etat = page.locator('.transports-etat');
+  await expect(etat).toContainText('Aucune réponse de', { timeout: 15_000 });
+  const texte = (await etat.textContent()) ?? '';
+  // Trois réseaux desservent Évreux : les trois doivent être cités.
+  expect(texte.split(',').length, `un seul réseau nommé : ${texte}`).toBeGreaterThanOrEqual(3);
+});
+
+test('TRANSPORTS : en paysage, tous les volets restent atteignables', async ({ page }) => {
+  /* L'ajout d'une sixième rangée poussait « Favoris » sous la barre d'échelle,
+     qui interceptait le doigt en son centre (mesuré à 667×375). */
+  await page.setViewportSize({ width: 667, height: 375 });
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  const captes = await page.evaluate(() => [
+    ...document.querySelectorAll('#carte .maplibregl-ctrl-top-left summary'),
+  ].map((el) => {
+    const r = el.getBoundingClientRect();
+    if (r.height === 0) return null;
+    const dessus = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return { nom: el.textContent?.trim().slice(0, 12) ?? '', bas: r.bottom, ok: el.contains(dessus) };
+  }).filter(Boolean));
+  expect(captes.length).toBeGreaterThanOrEqual(6);
+  expect(captes.filter((c) => !c!.ok).map((c) => c!.nom),
+    'un volet ne reçoit plus son propre clic').toEqual([]);
+  expect(captes.filter((c) => c!.bas > 375).map((c) => c!.nom),
+    'un volet sort de l’écran').toEqual([]);
 });

@@ -205,7 +205,12 @@ describe('décodeur GTFS-RT — les horodates que les producteurs bricolent', ()
     expect(f.vehicules[0]!.horodate).toBeNull();
   });
 
-  it('écarte aussi une horodate d’avant 2020 ou d’après 2100', () => {
+  it('garde une date ANCIENNE : c’est à la fraîcheur de l’écarter, pas à lui', () => {
+    /* Une première écriture rejetait tout ce qui sortait de [2020, 2100].
+       Effet pervers mesuré en revue : une position datée de 2017 devenait
+       « horodate inconnue », retombait sur l’en-tête frais, et s’affichait
+       « vu à l’instant ». Une date ancienne est une INFORMATION — elle doit
+       vieillir et se faire écarter plus loin, pas se faire effacer ici. */
     const avec = (t: number) => decoderFlux(new Uint8Array([
       ...entete(1_787_000_000),
       ...bloc(2, [
@@ -213,10 +218,12 @@ describe('décodeur GTFS-RT — les horodates que les producteurs bricolent', ()
         ...bloc(4, [...position(48.85, 2.35), ...cle(5, 0), ...varint(t)]),
       ]),
     ])).vehicules[0]!.horodate;
-    expect(avec(1)).toBeNull();
-    expect(avec(946_684_800)).toBeNull();          // 2000
-    expect(avec(4_200_000_000)).toBeNull();        // au-delà de 2100
+    expect(avec(1_500_000_000), '2017 est une vraie date').toBe(1_500_000_000);
+    expect(avec(946_684_800), '2000 aussi').toBe(946_684_800);
+    expect(avec(1), 'même une seconde après 1970').toBe(1);
     expect(avec(1_787_000_000)).toBe(1_787_000_000);
+    // Seul le zéro protobuf — indiscernable d’un champ absent — devient null.
+    expect(avec(0)).toBeNull();
   });
 
   it('écarte une horodate d’en-tête invraisemblable sans perdre les véhicules', () => {

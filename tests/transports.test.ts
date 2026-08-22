@@ -244,3 +244,51 @@ describe('ce que les producteurs publient vraiment', () => {
     expect(aLArret(v(null), true)).toBe(false);
   });
 });
+
+describe('agrégats : jamais choisis en même temps que leurs membres', () => {
+  it('marque exactement les réseaux qui republient d’autres réseaux', () => {
+    const agregats = RESEAUX_TEMPS_REEL.filter((r) => r.agregat);
+    // Un seul des 44 en est un : l'Atoumod normand, 22 offres commerciales.
+    expect(agregats).toHaveLength(1);
+    expect(agregats[0]!.id).toContain('atoumod');
+  });
+
+  it('écarte l’agrégat là où un réseau propre dessert aussi', () => {
+    /* MESURÉ LE 22/08 : 17 bus normands apparaissaient deux fois, une fois par
+       Atoumod, une fois par Transurbain, Semo Bus ou Deep Mob. Ils ne se
+       dédoublonnent ni par identifiant (deux réseaux quelconques numérotent
+       « 3 ») ni par position (jusqu'à 1 km d'écart entre les deux relevés). */
+    for (const [ville, lon, lat] of [
+      ['Évreux', 1.1500, 49.0250], ['Dieppe', 1.0780, 49.9220],
+      ['Louviers', 1.1700, 49.2150],
+    ] as [string, number, number][]) {
+      const choisis = reseauxDansVue(autour(lon, lat));
+      expect(choisis.length, ville).toBeGreaterThan(0);
+      expect(choisis.some((r) => r.agregat), `${ville} : l’agrégat est choisi`).toBe(false);
+    }
+  });
+
+  it('garde l’agrégat là où il est la SEULE source', () => {
+    // Un point normand desservi par Atoumod et par aucun réseau propre.
+    const atoumod = par('atoumod');
+    const propres = RESEAUX_TEMPS_REEL.filter((r) => !r.agregat);
+    const seul = atoumod.couverture
+      .map((b) => ({ lon: (b[1] + 0.5) * PAS_GRILLE, lat: (b[0] + 0.5) * PAS_GRILLE }))
+      .find((p) => {
+        const v = autour(p.lon, p.lat, 0.01);
+        return !propres.some((r) => dessert(r, v));
+      });
+    expect(seul, 'aucune cellule normande sans réseau propre').toBeDefined();
+    const choisis = reseauxDansVue(autour(seul!.lon, seul!.lat, 0.01));
+    expect(choisis.map((r) => r.id)).toEqual([atoumod.id]);
+  });
+
+  it('ne compte pas l’agrégat écarté comme un réseau « en plus »', () => {
+    // Le résumé annonce « N réseaux sur M » : M ne doit pas gonfler d'un
+    // agrégat qu'on a délibérément écarté.
+    const v = autour(1.1500, 49.0250);
+    expect(nombreDeReseaux(v)).toBe(
+      RESEAUX_TEMPS_REEL.filter((r) => !r.agregat && dessert(r, v)).length,
+    );
+  });
+});

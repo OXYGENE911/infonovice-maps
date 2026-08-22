@@ -184,21 +184,27 @@ function lireVehicule(l: Lecteur, v: Vehicule): void {
     if (type === BLOC && numero === 8) { lireEngin(l.sousLecteur(l.bloc()), v); continue; }
     if (type === VARINT && numero === 5) {
       const t = l.varint();
-      v.horodate = horodatePlausible(t) ? t : null;
+      v.horodate = horodateRenseignee(t) ? t : null;
       continue;
     }
     l.sauter(type);
   }
 }
 
-/** Une horodate Unix plausible : entre 2020 et 2100.
-    ZÉRO N'EST PAS UNE DATE. Bibus (Brest) publie `timestamp: 0` pour chacun
-    de ses 27 véhicules — mesuré le 22/08/2026 sur le flux réel. Pris au pied
-    de la lettre, cela les date de 1970, les vieillit de 56 ans, et la règle
-    de fraîcheur efface le réseau entier sans un mot. Le décodeur traduit donc
-    l'invraisemblable en « inconnu », qui est ce que le producteur veut dire. */
-function horodatePlausible(s: number): boolean {
-  return Number.isFinite(s) && s > 1_577_836_800 && s < 4_102_444_800;
+/** ZÉRO N'EST PAS UNE DATE, C'EST UN CHAMP VIDE.
+    Bibus (Brest) publie `timestamp: 0` pour chacun de ses 27 véhicules —
+    mesuré le 22/08/2026 sur le flux réel. Pris au pied de la lettre, cela les
+    date de 1970, les vieillit de 56 ans, et la règle de fraîcheur efface le
+    réseau entier sans un mot. En protobuf, un entier à zéro est précisément
+    indiscernable d'un champ absent : le traduire en « inconnu » n'interprète
+    rien, c'est lire la spécification.
+    ON S'ARRÊTE LÀ, ET C'EST DÉLIBÉRÉ. Une première écriture écartait tout ce
+    qui sortait de [2020, 2100] — ce qui transformait une position datée de
+    2017 en « fraîcheur inconnue », donc en « vu à l'instant » après repli sur
+    l'en-tête. Une date ancienne EST une information : elle doit vieillir et se
+    faire écarter par la règle de fraîcheur, pas se faire effacer ici. */
+function horodateRenseignee(s: number): boolean {
+  return s !== 0;
 }
 
 /** Une position est retenue seulement si elle EXISTE et tombe sur Terre.
@@ -227,7 +233,7 @@ export function decoderFlux(octets: Uint8Array): FluxVehicules {
         const c = entete.cle();
         if (c.type === VARINT && c.numero === 3) {
           const t = entete.varint();
-          flux.horodate = horodatePlausible(t) ? t : null;
+          flux.horodate = horodateRenseignee(t) ? t : null;
           continue;
         }
         entete.sauter(c.type);

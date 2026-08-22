@@ -82,23 +82,38 @@ function etendue(reseau: Reseau): number {
   return reseau.couverture.reduce((s, b) => s + (b[2] - b[1] + 1), 0);
 }
 
-/** Les réseaux qui desservent la vue, DU PLUS LOCAL AU PLUS VASTE.
+/** Les réseaux candidats pour une vue, DU PLUS LOCAL AU PLUS VASTE, et sans
+    agrégat redondant.
     Le tri se fait sur l'étendue du réseau, pas sur sa surface commune avec la
     vue : celle-ci renversait l'ordre dès que la vue débordait d'un bord de
     l'agglomération — à Dieppe, l'agrégat régional passait devant le réseau de
-    la ville. L'étendue, elle, ne dépend pas du cadrage. */
-export function reseauxDansVue(vue: Bbox, plafond = PLAFOND_RESEAUX): Reseau[] {
-  return RESEAUX_TEMPS_REEL
+    la ville. L'étendue, elle, ne dépend pas du cadrage.
+
+    UN AGRÉGAT EST ÉCARTÉ DÈS QU'UN RÉSEAU PROPRE DESSERT LA MÊME VUE. L'Atoumod
+    normand rediffuse les bus de ses vingt-deux réseaux membres : mesuré le
+    22/08, 17 véhicules apparaissaient deux fois. On ne peut les dédoublonner
+    ni par identifiant — deux réseaux quelconques numérotent « 3 » et « 4 », et
+    une clé globale en effaçait de VRAIS véhicules — ni par position, l'agrégat
+    et le membre échantillonnant le même bus jusqu'à un kilomètre d'écart. Le
+    lien est structurel ; on le traite comme tel. Là où AUCUN réseau propre ne
+    publie, l'agrégat reste la seule source, et il est gardé. */
+function candidats(vue: Bbox): Reseau[] {
+  const desservants = RESEAUX_TEMPS_REEL
     .filter((r) => dessert(r, vue))
     .slice()
-    .sort((a, b) => etendue(a) - etendue(b) || a.id.localeCompare(b.id, 'fr'))
-    .slice(0, plafond);
+    .sort((a, b) => etendue(a) - etendue(b) || a.id.localeCompare(b.id, 'fr'));
+  const propres = desservants.filter((r) => !r.agregat);
+  return propres.length > 0 ? propres : desservants;
+}
+
+export function reseauxDansVue(vue: Bbox, plafond = PLAFOND_RESEAUX): Reseau[] {
+  return candidats(vue).slice(0, plafond);
 }
 
 /** Combien de réseaux desservent la vue, plafond compris ou non — pour dire
     honnêtement « 3 réseaux sur 5 » plutôt que de taire les autres. */
 export function nombreDeReseaux(vue: Bbox): number {
-  return RESEAUX_TEMPS_REEL.filter((r) => dessert(r, vue)).length;
+  return candidats(vue).length;
 }
 
 export function urlFlux(reseau: Reseau): string {

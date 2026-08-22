@@ -475,6 +475,21 @@ etapes-itineraire { display: grid; gap: 7px; }
   white-space: pre-line; max-height: 220px; overflow-y: auto; }
 .trafic-date { margin: 7px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); }
 
+/* L'ÉCHELLE N'EST PAS UN BOUTON, elle ne doit rien intercepter. En paysage
+   667×375, la colonne de volets descend jusqu'au bas de l'écran et la barre
+   d'échelle se posait SUR le bouton « Favoris » : `elementFromPoint` en son
+   centre rendait la barre, pas le bouton — le doigt n'atteignait plus rien. */
+.maplibregl-ctrl-scale { pointer-events: none; }
+
+/* ÉCRAN BAS (téléphone en paysage) : six volets de 46 px ne tiennent pas sous
+   un en-tête qui s'enroule. On resserre les rangées et on laisse tomber la
+   mention décorative de l'en-tête — la colonne rentre alors tout entière. */
+@media (max-height: 480px) {
+  .entete-note { display: none; }
+  #carte .maplibregl-ctrl-top-left .maplibregl-ctrl { margin-top: 5px !important; }
+  #carte .maplibregl-ctrl-top-left summary { padding: 6px 14px; }
+}
+
 /* --- Transports en commun en direct (PR #16) — même grammaire visuelle que
    le volet trafic : c'est la même colonne, ce doit être le même objet. --- */
 .porte-transports { pointer-events: auto; margin: 8px 0 0 12px !important; }

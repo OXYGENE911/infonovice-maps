@@ -218,8 +218,14 @@ Quatre écarts à la spécification, tous mesurés, tous traités dans le code :
 
 - **`timestamp: 0`** — Bibus (Brest) le publie pour ses **27 véhicules sur 27**.
   Pris pour une date, cela les situe en 1970 et la règle de fraîcheur efface le
-  réseau entier : mesuré, 0 affiché sur 27. Le décodeur traduit désormais toute
-  horodate hors [2020, 2100] en « inconnue ». Après correctif : 27 sur 27.
+  réseau entier : mesuré, 0 affiché sur 27. Le décodeur traduit donc **le zéro
+  et lui seul** en « inconnue » — en protobuf, un entier à zéro est
+  indiscernable d'un champ absent, ce n'est pas une interprétation.
+  ON NE VA PAS PLUS LOIN : une première écriture écartait tout ce qui sortait
+  de [2020, 2100], ce qui transformait une position datée de 2017 en
+  « fraîcheur inconnue » puis, par repli sur l'en-tête, en « vu à l'instant ».
+  Une date ancienne est une information : elle doit vieillir et se faire
+  écarter par la fraîcheur, pas effacer par le décodeur.
 - **Identifiants NeTEx en guise de nom de ligne** — `ATOUMOD003:Line:6xC7:LOC`,
   sur **102 véhicules des 416** (atoumod, seine-eure-semo, transurbain-evreux,
   deepmob-dieppe). Le segment qui suit `:Line:` est le nom attendu (6xC7, T1, 5).
@@ -245,9 +251,23 @@ deepmob-dieppe        3 véhicules, dont  3 déjà dans atoumod
 témoin Aléop/SETRAM  27 véhicules, dont  0 en commun
 ```
 
-Sans dédoublonnage, chaque bus normand était dessiné deux fois et compté deux
-fois. Le témoin montre que dédoublonner par identifiant ne coûte rien aux
-réseaux réellement distincts. Mesuré sur une vue d'Évreux : 94 → 80 véhicules.
+Sans traitement, chaque bus normand était dessiné deux fois et compté deux fois.
+
+**On ne les dédoublonne PAS après coup**, et c'est une décision mesurée :
+- **par identifiant** : les identifiants GTFS-RT ne sont uniques que DANS un
+  flux. Beaucoup de réseaux numérotent « 1, 2, 3… » (Maélis 1-6, RLVmobilités
+  4-9, Kicéo 70/79, Lila presqu'île 70/79, Rubis 1-5, TGD Dole 1-4). Une clé
+  globale a effacé **onze véhicules réels** sur cinq paires de réseaux
+  authentiquement distincts, tous DANS la vue de l'usager.
+- **par position** : l'agrégat et le membre échantillonnent le même bus à
+  quelques secondes d'écart. Sur les 17 doublons relevés, **3 seulement** ont
+  des coordonnées identiques ; les 14 autres diffèrent, jusqu'à **1 km**.
+
+Le lien est STRUCTUREL, et il se lit dans le catalogue : un jeu qui déclare
+plus d'une offre commerciale est un agrégat. **Un seul des 44 en est un**
+(Atoumod, 22 offres). On ne choisit donc jamais un agrégat en même temps qu'un
+réseau propre desservant la même vue ; là où aucun réseau propre ne publie, il
+reste la seule source et il est gardé.
 
 ## Emprises : pourquoi un rectangle ne suffit pas (mesuré 22/08/2026)
 `geo.api.gouv.fr` ne rend le contour que des communes et des EPCI ; pour un

@@ -47,6 +47,8 @@ const COULEURS = ['#2272C4', '#E89C2C', '#1F7A55'];
 interface ResultatVivant {
   reseau: Reseau; rang: number; ok: true;
   vehicules: Vehicule[];
+  /** Ce que le réseau a PUBLIÉ, avant le tri par fraîcheur. */
+  publies: number;
   ages: (number | null)[];
   vitesseRenseignee: boolean;
   tronque: boolean;
@@ -69,6 +71,15 @@ export class PanneauTransports extends HTMLElement {
   #serviIds = '';
   #charge = 0;
   #donnees: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+  /* LA DERNIÈRE MOISSON ABOUTIE, gardée même quand la couche est éteinte.
+     Sans elle, le frein — qui retient à juste titre l'APPEL — retenait aussi
+     l'AFFICHAGE : décocher puis recocher la case laissait la carte vide et le
+     volet muet pendant trente secondes (mesuré), et un aller-retour de zoom
+     laissait « Approchez pour voir les véhicules » alors qu'on était approché.
+     Le frein borne les requêtes, pas ce que l'usager a le droit de revoir. */
+  #dernier: { donnees: GeoJSON.FeatureCollection; reseaux: Reseau[]; resultats: Resultat[] } | null = null;
+  /** Le dernier message affiché, pour ne jamais laisser le volet sans un mot. */
+  #dernierMessage = '';
 
   set carte(c: CarteMapLibre) {
     if (this.#carte) return;
@@ -136,8 +147,8 @@ export class PanneauTransports extends HTMLElement {
     }, INTERVALLE_MS);
   }
 
-  /** Éteindre efface ce qui est AFFICHÉ. Le frein, lui, garde la mémoire des
-      appels déjà émis : c'est tout son intérêt. */
+  /** Éteindre efface ce qui est AFFICHÉ. Le frein garde la mémoire des appels
+      déjà émis, et `#dernier` celle de la moisson : c'est tout leur intérêt. */
   #eteindre(): void {
     clearInterval(this.#minuteur);
     this.#minuteur = undefined;
@@ -147,11 +158,29 @@ export class PanneauTransports extends HTMLElement {
     this.#popup?.remove();
     this.#popup = null;
     this.#poser();
-    this.#etat('');
+    this.#ecrire('');
   }
 
-  #etat(message: string): void {
+  /** Écrit dans le volet, sans rien mémoriser. */
+  #ecrire(message: string): void {
     (this.querySelector('.transports-etat') as HTMLElement).textContent = message;
+  }
+
+  /** Écrit ET retient : c'est ce message qu'on redonnera si le frein retient
+      l'appel suivant, plutôt que de laisser le volet muet. */
+  #etat(message: string): void {
+    this.#dernierMessage = message;
+    this.#ecrire(message);
+  }
+
+  /** Repose la dernière moisson connue et redit ce qu'elle vaut POUR LA VUE
+      COURANTE — l'usager a pu se déplacer depuis. */
+  #reafficher(vue: Bbox): void {
+    const d = this.#dernier;
+    if (!d) { this.#ecrire(this.#dernierMessage); return; }
+    this.#donnees = d.donnees;
+    this.#poser();
+    this.#etat(this.#resumer(vue, d.reseaux, d.resultats));
   }
 
   /** Bbox de la vue, longitudes ramenées dans [-180, 180] (même garde que les
@@ -170,14 +199,16 @@ export class PanneauTransports extends HTMLElement {
     if (!carte || !this.#actif) return;
     if (carte.getZoom() < ZOOM_MIN) {
       this.#vider();
-      this.#etat('Approchez pour voir les véhicules en circulation.');
+      // Message de VUE, pas de donnée : on ne le mémorise pas, sinon il
+      // resservirait à contretemps une fois la carte rapprochée.
+      this.#ecrire('Approchez pour voir les véhicules en circulation.');
       return;
     }
     const vue = this.#bbox();
     const reseaux = reseauxDansVue(vue);
     if (reseaux.length === 0) {
       this.#vider();
-      this.#etat('Aucun réseau ne publie le temps réel ici.');
+      this.#ecrire('Aucun réseau ne publie le temps réel ici.');
       return;
     }
 
@@ -188,7 +219,7 @@ export class PanneauTransports extends HTMLElement {
        passé à une autre ville) ou si la cadence est échue. */
     const ids = reseaux.map((r) => r.id).join('|');
     const age = this.#charge === 0 ? Infinity : Date.now() - this.#charge;
-    if (ids === this.#serviIds && age < INTERVALLE_MS) return;
+    if (ids === this.#serviIds && age < INTERVALLE_MS) { this.#reafficher(vue); return; }
     /* ARMÉ AVANT L'APPEL, et quoi qu'il advienne. Après, une salve en vol ne
        freinait rien (cinq déplacements pendant un appel lent = 18 requêtes
        pour 3 réponses utiles), un échec général désarmait tout le frein — le
@@ -211,6 +242,7 @@ export class PanneauTransports extends HTMLElement {
           return {
             reseau, rang, ok: true,
             vehicules: tri.frais,
+            publies: flux.vehicules.length,
             ages: tri.frais.map((v) => ageVehicule(v, flux, maintenant)),
             vitesseRenseignee: vitesseRenseignee(tri.frais),
             tronque: flux.tronque,
@@ -232,37 +264,31 @@ export class PanneauTransports extends HTMLElement {
     if (resultats === null || annulation !== this.#annulation || !this.#actif) return;
 
     const vivants = resultats.filter((r): r is ResultatVivant => r.ok);
-    /* DÉDOUBLONNAGE PAR IDENTIFIANT D'ENTITÉ. Certains agrégats régionaux
-       republient les véhicules de leurs réseaux membres : mesuré le 22/08,
-       17 bus normands apparaissaient à la fois dans Atoumod et dans
-       Transurbain, Semo Bus ou Deep Mob — dessinés deux fois, comptés deux
-       fois. Les réseaux VRAIMENT distincts, eux, n'ont aucun identifiant en
-       commun (témoin Aléop/SETRAM : zéro collision sur 27 véhicules). Le plus
-       local passe en premier, c'est donc lui qui garde le véhicule. */
-    const vus = new Set<string>();
+    /* AUCUN DÉDOUBLONNAGE ICI, et c'est voulu. Les seuls véritables doublons
+       viennent des agrégats qui republient leurs membres, et ceux-là ne sont
+       plus jamais choisis en même temps qu'eux (voir `reseauxDansVue`). Une
+       clé par identifiant d'entité, elle, effaçait de VRAIS véhicules : deux
+       réseaux quelconques numérotent « 3 » et « 4 » — onze bus réels perdus
+       sur cinq paires de réseaux authentiquement distincts, mesuré en revue. */
     this.#donnees = {
       type: 'FeatureCollection',
-      features: vivants.flatMap((r) => r.vehicules.flatMap((v, i) => {
-        const clef = v.id || `${r.reseau.id}:${v.lon},${v.lat}`;
-        if (vus.has(clef)) return [];
-        vus.add(clef);
-        return [{
-          type: 'Feature' as const,
-          properties: {
-            reseau: r.reseau.nom,
-            couleur: COULEURS[r.rang % COULEURS.length]!,
-            ligne: nomDeLigne(v.ligne) ?? '',
-            etiquette: v.etiquette ?? '',
-            arret: aLArret(v, r.vitesseRenseignee),
-            // -1 signifie « personne ne l'horodate ». Une horloge en avance
-            // donne un âge négatif : c'est « à l'instant », pas « inconnu ».
-            age: r.ages[i] === null || r.ages[i] === undefined
-              ? -1 : Math.max(0, r.ages[i]!),
-          },
-          geometry: { type: 'Point' as const, coordinates: [v.lon, v.lat] },
-        }];
-      })),
+      features: vivants.flatMap((r) => r.vehicules.map((v, i) => ({
+        type: 'Feature' as const,
+        properties: {
+          reseau: r.reseau.nom,
+          couleur: COULEURS[r.rang % COULEURS.length]!,
+          ligne: nomDeLigne(v.ligne) ?? '',
+          etiquette: v.etiquette ?? '',
+          arret: aLArret(v, r.vitesseRenseignee),
+          // -1 signifie « personne ne l'horodate ». Une horloge en avance
+          // donne un âge négatif : c'est « à l'instant », pas « inconnu ».
+          age: r.ages[i] === null || r.ages[i] === undefined
+            ? -1 : Math.max(0, r.ages[i]!),
+        },
+        geometry: { type: 'Point' as const, coordinates: [v.lon, v.lat] },
+      }))),
     };
+    this.#dernier = { donnees: this.#donnees, reseaux, resultats };
     this.#poser();
     this.#etat(this.#resumer(vue, reseaux, resultats));
   }
@@ -285,20 +311,39 @@ export class PanneauTransports extends HTMLElement {
 
     /* AUCUN RÉSEAU N'A RÉPONDU : on ne peut RIEN dire des véhicules. La
        première écriture annonçait « Aucun véhicule en circulation » après un
-       simple 404 — l'usager en concluait que les bus ne roulaient pas. */
+       simple 404 — l'usager en concluait que les bus ne roulaient pas.
+       Et on les nomme TOUS : n'en citer qu'un laissait croire que les autres
+       allaient bien. */
     if (vivants.length === 0) {
+      const noms = muets.map((m) => m.reseau.nom).join(', ');
       const motif = muets.find((m) => m.motif)?.motif;
+      if (muets.length > 1) {
+        return `Aucune réponse de ${noms} — le temps réel est indisponible pour le moment.`;
+      }
       return motif ?? 'Le temps réel est indisponible pour le moment.';
     }
 
     const dansVue = this.#dansLaVue(vue);
     const total = this.#donnees.features.length;
+    /* CE QUE LES RÉSEAUX ONT PUBLIÉ, avant notre propre tri. Sans ce chiffre,
+       le résumé se contredisait dans la même phrase : « Aucun véhicule en
+       circulation (2 positions trop anciennes, écartées) ». */
+    const publies = vivants.reduce((s, r) => s + r.publies, 0);
+    /* A-T-ON VRAIMENT TOUT DEMANDÉ ? Sinon on ne peut pas affirmer une absence :
+       des réseaux muets, ou écartés par le plafond, peuvent avoir des bus ici. */
+    const toutVu = muets.length === 0 && reseaux.length === nombreDeReseaux(vue);
     const parts: string[] = [];
-    if (total === 0) {
-      // Des réseaux ont répondu, mais leur flux est vide : là, on SAIT.
-      parts.push('Aucun véhicule en circulation en ce moment');
+    if (total === 0 && publies > 0) {
+      // Le producteur annonce des bus, mais aucune position n'est récente.
+      parts.push('Aucune position récente');
+    } else if (total === 0) {
+      parts.push(toutVu
+        ? 'Aucun véhicule en circulation en ce moment'
+        : 'Aucun véhicule chez les réseaux qui ont répondu');
     } else if (dansVue === total) {
       parts.push(`${total.toLocaleString('fr-FR')} véhicule${total > 1 ? 's' : ''} en circulation`);
+    } else if (dansVue === 0) {
+      parts.push(`Aucun véhicule dans cette vue, ${total.toLocaleString('fr-FR')} sur le réseau`);
     } else {
       parts.push(`${dansVue.toLocaleString('fr-FR')} véhicule${dansVue > 1 ? 's' : ''} dans la vue`
         + `, ${total.toLocaleString('fr-FR')} sur le réseau`);
