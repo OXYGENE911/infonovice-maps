@@ -2,6 +2,37 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.19.0] — 2026-08-22 — Transports en commun, en direct
+- Volet « Transports » : la position des bus, cars et trams telle que les
+  réseaux la publient (GTFS-RT), pour 44 réseaux français. Clic sur un
+  véhicule : ligne, destination, vitesse et fraîcheur de la position.
+- Décodeur protobuf écrit à la main, moins de 2 Ko : la bibliothèque de
+  référence en aurait coûté 120, pour lire quatre champs.
+- Frugalité : rien tant que la case n'est pas cochée, jamais sous le zoom 10,
+  trois réseaux au plus par vue, un frein qui empêche un déplacement, une
+  hésitation sur la case ou un aller-retour de zoom de relancer un appel, et
+  plus rien dès que l'onglet passe en arrière-plan. Un service en panne est
+  MOINS sollicité qu'un service sain, jamais plus.
+- Les réseaux sont choisis sur les communes qu'ils desservent, pas sur un
+  rectangle : regarder Rennes n'interroge plus le car des Pays de la Loire
+  garé à 97 km.
+- Le frein borne les REQUÊTES, jamais l'affichage : décocher puis recocher la
+  case, ou revenir d'un zoom arrière, réaffiche aussitôt ce qu'on venait de
+  voir, sans un appel de plus.
+- Un agrégat régional republie les véhicules de ses réseaux membres : quand les
+  deux sont affichés, le volet PRÉVIENT qu'un même véhicule peut apparaître
+  deux fois. On ne l'efface pas — aucune clé ne le permet sûrement, et trois
+  ont été essayées puis abandonnées sur mesure. Effacer un bus qui roule est
+  pire que d'en dessiner un en double.
+- Honnêteté : les positions de plus de dix minutes sont écartées, le compte
+  distingue la vue du réseau entier et suit la carte, une source qui ne répond
+  pas n'est pas maquillée en « aucun véhicule », tous les réseaux muets sont
+  nommés, et le volet DIT ce qu'il ne montre pas — ni horaires ni arrêts,
+  faute de serveur pour digérer des GTFS de dizaines de mégaoctets.
+- Aucune vitesse chiffrée : trois réseaux sur neuf publient des km/h là où la
+  spécification dit des m/s, et rien ne permet de les distinguer. Seul
+  « à l'arrêt » est affiché — il se lit pareil dans les deux unités.
+
 ## [0.18.0] — 2026-08-22 — Mode hors ligne
 - La carte déjà consultée s'ouvre sans réseau : tuiles en cache (14 jours,
   dans les bornes autorisées par l'IGN) et coquille complète précachée.

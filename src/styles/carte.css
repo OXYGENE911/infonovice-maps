@@ -475,6 +475,66 @@ etapes-itineraire { display: grid; gap: 7px; }
   white-space: pre-line; max-height: 220px; overflow-y: auto; }
 .trafic-date { margin: 7px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); }
 
+/* L'ÉCHELLE N'EST PAS UN BOUTON, elle ne doit rien intercepter. En paysage
+   667×375, la colonne de volets descend jusqu'au bas de l'écran et la barre
+   d'échelle se posait SUR le bouton « Favoris » : `elementFromPoint` en son
+   centre rendait la barre, pas le bouton — le doigt n'atteignait plus rien.
+   LE SÉLECTEUR EST PRÉFIXÉ PAR #carte, et il le faut : MapLibre pose
+   `.maplibregl-ctrl { pointer-events: auto }` à spécificité égale et PLUS LOIN
+   dans le paquet ; sans le préfixe, notre règle était purement décorative. */
+#carte .maplibregl-ctrl-scale { pointer-events: none; }
+
+/* ÉCRAN BAS (téléphone en paysage) : six volets de 46 px ne tiennent pas sous
+   un en-tête qui s'enroule. On resserre les rangées et on laisse tomber la
+   mention décorative de l'en-tête — la colonne rentre alors tout entière.
+   LE RESSERREMENT NE VISE QUE LES VOLETS DE TÊTE. Un sélecteur sur tous les
+   `summary` de la colonne frappait aussi les volets INTERNES du planificateur
+   (profil, feuille, trajet, météo), dessinés avec `padding: 3px 0` : ils s'en
+   trouvaient décalés et PLUS HAUTS, dans une règle censée gagner de la place. */
+@media (max-height: 480px) {
+  .entete-note { display: none; }
+  #carte .maplibregl-ctrl-top-left .maplibregl-ctrl { margin-top: 5px !important; }
+  #carte .iti > summary,
+  #carte .fonds > summary,
+  #carte .poi > summary,
+  #carte .trafic > summary,
+  #carte .transports > summary,
+  #carte .favoris > summary { padding: 6px 14px; }
+}
+
+/* --- Transports en commun en direct (PR #16) — même grammaire visuelle que
+   le volet trafic : c'est la même colonne, ce doit être le même objet. --- */
+.porte-transports { pointer-events: auto; margin: 8px 0 0 12px !important; }
+.transports { position: relative; }
+.transports summary {
+  list-style: none; cursor: pointer;
+  padding: 9px 16px; border-radius: 12px;
+  background: color-mix(in srgb, var(--fond) 92%, transparent);
+  border: 1px solid var(--bord);
+  box-shadow: var(--ombre-s);
+  font: 600 13.5px var(--police); color: var(--texte-1);
+}
+.transports summary::-webkit-details-marker { display: none; }
+.transports summary:focus-visible { outline: none; box-shadow: var(--focus); }
+.transports fieldset {
+  position: absolute; top: calc(100% + 8px); left: 0; min-width: 240px; max-width: 300px;
+  padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
+  background: var(--fond); box-shadow: var(--ombre-m);
+  display: grid; gap: 8px;
+}
+.transports legend { font: 700 11px var(--police); color: var(--texte-3);
+  text-transform: uppercase; letter-spacing: .08em; padding: 0 4px; }
+.transports label { display: flex; align-items: center; gap: 9px;
+  font: 400 14px var(--police); color: var(--texte-1); cursor: pointer; }
+.transports input:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+.transports-etat { margin: 0; font: 600 12.5px var(--police); color: var(--texte-2); }
+.transports-etat:empty { display: none; }
+.transports-source { margin: 0; font: 400 11.5px var(--police); color: var(--texte-3);
+  border-top: 1px solid var(--bord); padding-top: 8px; }
+.transports-popup strong { font: 650 13.5px var(--police); color: var(--texte-1); }
+.transports-detail { margin: 6px 0 0; font: 400 13px var(--police); color: var(--texte-2); }
+.transports-meta { margin: 7px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); }
+
 /* --- État de connexion et installation (PR #17) --- */
 etat-connexion { display: contents; }
 /* Le bandeau prend sa propre ligne dans l'en-tête enroulé : côte à côte avec

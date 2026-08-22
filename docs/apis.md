@@ -163,8 +163,140 @@ est « API publiques documentées », elle ne se contourne pas.
   cache navigateur, et en fixe la durée. Notre service worker s'arrête à
   14 jours, en deçà de ce que l'IGN accorde ; le cache vit dans le navigateur
   de l'usager, jamais sur un serveur partagé (ce que « private » exige).
-- Une tuile PNG du Plan IGN pèse ~80 Ko : le plafond de 800 entrées borne le
-  disque à ~60 Mo au pire, avec purge automatique sur erreur de quota.
+- Une tuile pèse ~47 Ko (mesuré) : les plafonds par couche — 400 plan, 250
+  satellite, 150 routes, 150 cadastre — bornent le disque à ~45 Mo au pire,
+  avec purge automatique sur erreur de quota.
+
+## Transports en commun temps réel — transport.data.gouv.fr (vérifié 22/08/2026)
+- Catalogue : `GET https://transport.data.gouv.fr/api/datasets?type=public-transit`
+  → 200, 2,4 Mo, **781 jeux de données**. Formats recensés : 551 GTFS,
+  377 GTFS-RT, 169 NeTEx, 84 SIRI.
+- Sur ces 377 ressources GTFS-RT, **150 déclarent `vehicle_positions`**, et
+  **47 seulement passent par `proxy.transport.data.gouv.fr`** — les autres
+  pointent des URL d'opérateurs SANS en-tête CORS, donc inatteignables depuis
+  un navigateur. Après regroupement par réseau : **44 flux exploitables**.
+- CORS et fraîcheur, mesurés flux par flux (`Origin: https://maps.infonovice.fr`) :
+  ```
+  star-rennes-integration-gtfs-rt-vehicle-position  200  access-control-allow-origin: *
+  divia-dijon-gtfs-rt-vehicle-position              200  application/octet-stream   108 o
+  bibus-brest-gtfs-rt-vehicle-position              200  15 o (flux vide)
+  lemet-metz-gtfs-rt-vehicle-position               200  15 o (flux vide)
+  aleop-pdl-gtfs-rt-vehicle-position                200  application/x-protobuf     157 o
+  ```
+  `cache-control: max-age=0, private, must-revalidate` partout : le producteur
+  demande explicitement qu'on ne garde rien. On ne garde rien.
+- **Les tailles minuscules ci-dessus sont l'heure, pas la source** : relevé à
+  03 h 57 (Paris), deux véhicules circulaient dans toute la France proxifiée.
+  Contrôlé à 04 h 22 sur Dijon depuis l'application : 4 véhicules Divia.
+- Contenu décodé, réellement obtenu (Aléop, Pays de la Loire) :
+  `id RTVP:T:2644377402`, ligne `206`, `47.8137 / -0.0871`, étiquette
+  « Malicorne-sur-Sarthe », horodate à la seconde. Et (Divia, Dijon) :
+  véhicule `3631`, ligne `4-93`, `47.3170 / 5.0748`, cap 323°, 17 m/s.
+- Emprises des réseaux : `geo.api.gouv.fr`. Les EPCI et communes rendent leur
+  contour (`?format=geojson&geometry=contour`) ; **les départements et régions
+  ne le rendent PAS** — leur emprise est calculée à partir des centres de
+  leurs communes (`/communes?codeRegion=..&fields=centre`), élargie de 0,1°.
+  Table engendrée par `node scripts/reseaux-temps-reel.mjs`, versionnée.
+
+## GTFS statique — écarté, avec la mesure (22/08/2026)
+La PR #15 visait « le GTFS des principales agglomérations ». Ce n'est pas
+tenable sans serveur, et le chiffre le dit :
+- Fichier national consolidé « Position des arrêts de transport et tracés de
+  lignes » (data.gouv.fr, `5f186dca05ac2c31888a2262`) :
+  **578 Mo en GeoPackage, 302 Mo en GeoJSON compressé**.
+- Un seul réseau moyen : `gtfs-citea-sept2024.zip` = **11,5 Mo**, à décompresser
+  et indexer dans le navigateur — pour une agglomération de 65 000 habitants.
+Un navigateur ne digère pas cela à chaque visite, et le projet n'a pas de
+serveur pour le pré-mâcher. La couche livrée montre donc les VÉHICULES, pas
+les horaires, et le dit sur la page « À propos » comme dans le volet.
+
+
+## Ce que les producteurs GTFS-RT publient VRAIMENT (relevé 22/08/2026, 06 h 15)
+44 flux interrogés, 44 réponses 200. 21 portaient des véhicules, **416 au total**.
+Tailles : min 13 o, médiane 15 o, max 18 014 o (Atoumod, toute la Normandie).
+Quatre écarts à la spécification, tous mesurés, tous traités dans le code :
+
+- **`timestamp: 0`** — Bibus (Brest) le publie pour ses **27 véhicules sur 27**.
+  Pris pour une date, cela les situe en 1970 et la règle de fraîcheur efface le
+  réseau entier : mesuré, 0 affiché sur 27. Le décodeur traduit donc **le zéro
+  et lui seul** en « inconnue » — en protobuf, un entier à zéro est
+  indiscernable d'un champ absent, ce n'est pas une interprétation.
+  ON NE VA PAS PLUS LOIN : une première écriture écartait tout ce qui sortait
+  de [2020, 2100], ce qui transformait une position datée de 2017 en
+  « fraîcheur inconnue » puis, par repli sur l'en-tête, en « vu à l'instant ».
+  Une date ancienne est une information : elle doit vieillir et se faire
+  écarter par la fraîcheur, pas effacer par le décodeur.
+- **Identifiants NeTEx en guise de nom de ligne** — `ATOUMOD003:Line:6xC7:LOC`,
+  sur **102 véhicules des 416** (atoumod, seine-eure-semo, transurbain-evreux,
+  deepmob-dieppe). Le segment qui suit `:Line:` est le nom attendu (6xC7, T1, 5).
+- **Vitesses indéchiffrables** — la spécification dit des m/s. Cohérents en m/s :
+  Metz 13,0 · Rennes 12,8 · Alterneo 13,0 · Amiens 11,0 · Cannes 9,0 · Aléop 19,6.
+  Incohérents : **Dijon 69,0 · Le Mans 62,0 · Bourg-en-Bresse 37,0** — soit 248,
+  223 et 133 km/h. Trois producteurs sur neuf publient vraisemblablement des
+  km/h, et rien dans le flux ne le dit. **Aucune vitesse chiffrée n'est donc
+  affichée** ; seul « à l'arrêt » l'est, et seulement quand le réseau remplit
+  vraiment le champ (10 réseaux sur 21 le font ; aucun ne publie que des zéros).
+- **Horloges en avance** — en-têtes relevés à -63 s (Atoumod) et -85 s (SETRAM).
+  Une tolérance d'une minute effaçait ces réseaux entiers. Portée à trois minutes,
+  et l'avance est DITE dans le volet.
+
+## Doublons entre agrégats et réseaux membres (mesuré 22/08/2026)
+L'agrégat normand `atoumod` republie les véhicules de ses réseaux membres, avec
+**le même identifiant d'entité** :
+
+```
+transurbain-evreux    4 véhicules, dont 3 déjà dans atoumod
+seine-eure-semo      11 véhicules, dont 11 déjà dans atoumod
+deepmob-dieppe        3 véhicules, dont  3 déjà dans atoumod
+témoin Aléop/SETRAM  27 véhicules, dont  0 en commun
+```
+
+Sans traitement, chaque bus normand était dessiné deux fois et compté deux fois.
+
+**ON NE LES DÉDOUBLONNE PAS** — trois clés essayées, les trois cassées par les
+données réelles :
+
+1. **L'identifiant** (`FeedEntity.id`). Il n'identifie pas un véhicule chez
+   tout le monde : Aléop y met l'identifiant de COURSE. Relevé le 22/08,
+   `RTVP:T:2652202525` est porté par **TROIS autocars** (parcs 40148, 40149,
+   25405) séparés de 70 à 736 m — dédoublonner là-dessus efface de vrais
+   véhicules DANS UN SEUL FLUX. MAT Saint-Malo présente le même cas. Et entre
+   réseaux sans lien, les identifiants nus (« 3 », « 4 ») se télescopent :
+   onze bus réels effacés, mesurés sur cinq paires de réseaux.
+2. **L'étiquette** (`VehicleDescriptor`). Elle identifierait le véhicule, mais
+   les agrégats ne la publient pas : sur les **57 paires agrégat/membre**
+   relevées, 57 sans étiquette d'un côté. Elle n'est pas non plus unique
+   (trois doublons d'étiquette dans Aléop).
+3. **La distance**. L'écart entre l'agrégat et son membre n'est pas du bruit
+   de position : c'est un décalage d'échantillonnage (**210 s de médiane**)
+   multiplié par la vitesse. Mesuré jusqu'à **3 187 m** sur un car ; à
+   80 km/h il dépasse 4 km. Aucun seuil ne tient.
+
+Alors la carte dessine tout, et le volet PRÉVIENT quand un agrégat est affiché
+avec un autre réseau : « un même véhicule peut apparaître deux fois ».
+Effacer un bus qui roule est pire que d'en dessiner un en double ; se taire
+sur un doublon connu serait pire que les deux.
+
+**ÉCARTER L'AGRÉGAT N'ÉTAIT PAS LA SOLUTION NON PLUS.** Une écriture
+intermédiaire le retirait dès qu'un réseau propre desservait la même vue :
+elle coûtait **100 des 156 véhicules de l'agrégat** (64 %), qui n'ont aucun
+homologue chez un réseau propre. Au Havre, 44 bus roulaient et le volet
+affichait « aucun véhicule », parce qu'un réseau de Honfleur — deux véhicules,
+à 20 km — effleurait la vue par arrondi de grille ; sur un balayage de la
+Normandie, 160 vues sur 621 n'affichaient plus rien. L'agrégat est donc un
+candidat comme les autres, simplement classé DERNIER (plus vaste étendue) :
+là où trois réseaux locaux desservent, le plafond l'évince de lui-même, et
+aucun doublon n'apparaît.
+
+## Emprises : pourquoi un rectangle ne suffit pas (mesuré 22/08/2026)
+`geo.api.gouv.fr` ne rend le contour que des communes et des EPCI ; pour un
+département ou une région il faut passer par leurs communes. Le rectangle qui en
+résulte est deux fois plus vaste que le territoire : celui des Pays de la Loire
+**couvre Rennes**, à 97 km du car Aléop le plus proche. La table porte donc une
+`couverture` — des bandes [ligne, colonneMin, colonneMax] sur une grille de 0,2°
+(~22 km) déduite des communes desservies, 121 bandes pour 44 réseaux. Effet
+mesuré : Rennes n'interroge plus que le STAR (au lieu de STAR + Aléop +
+Atoumod), Saint-Malo que le MAT, Fougères deux réseaux au lieu de trois.
 
 ## À vérifier avant leur PR (ne pas présumer)
-- transport.data.gouv.fr GTFS/GTFS-RT (PR #15-16)
+- Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.

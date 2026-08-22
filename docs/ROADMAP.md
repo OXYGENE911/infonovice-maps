@@ -83,8 +83,56 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       contrôle départemental. Détail au clic, réduit en texte.
       À FAIRE PLUS TARD : les fluidités d'agglomération (Bordeaux, Nantes,
       Rennes) fonctionnent aussi — sources listées dans docs/apis.md.
-- [ ] PR #15 — Transports en commun : GTFS des principales agglos
-- [ ] PR #16 — GTFS-RT temps réel là où disponible
+- [~] PR #15 — GTFS statique des agglos : ABANDONNÉ, avec la mesure. Le
+      fichier national consolidé des arrêts pèse 578 Mo (GeoPackage) ou 302 Mo
+      (GeoJSON compressé) ; un seul réseau moyen, 11,5 Mo à décompresser et
+      indexer dans le navigateur. Sans serveur pour le pré-mâcher — et le
+      projet n'en veut pas — horaires et arrêts ne sont pas tenables. Écrit
+      dans docs/apis.md, sur la page « À propos » et dans le volet lui-même,
+      plutôt que promis à moitié.
+- [x] PR #16 — Transports en commun EN DIRECT : la position des bus, cars et
+      trams (GTFS-RT), 44 réseaux relayés avec CORS par le Point d'Accès
+      National. Décodeur protobuf minimal écrit à la main (moins de 2 Ko,
+      contre ~120 Ko pour gtfs-realtime-bindings), éprouvé sur des captures
+      réelles ET sur des octets hostiles (varint sans fin, longueur
+      mensongère, type inconnu). Table des emprises engendrée par script et
+      versionnée : la CI ne dépend d'aucun tiers. Frugalité : rien sans la
+      case, jamais sous le zoom 10, trois réseaux au plus, un frein qui
+      empêche un déplacement de relancer un appel, arrêt en arrière-plan.
+      Positions de plus de dix minutes écartées — une carte du direct ne
+      montre pas des véhicules rentrés au dépôt.
+      CE QUE LA MESURE DU TERRAIN A CORRIGÉ (44 flux, 416 véhicules, le
+      22/08 à 06 h 15 — détail chiffré dans docs/apis.md) : Brest publie
+      `timestamp: 0` et disparaissait entièrement (0 sur 27) ; un quart des
+      lignes s'affichaient en identifiant NeTEx ; trois réseaux sur neuf
+      publient des km/h là où la spécification dit des m/s, si bien qu'AUCUNE
+      vitesse chiffrée n'est affichée ; l'agrégat normand republie les
+      véhicules de ses membres, dédoublonnés à l'affichage (voir plus bas) ;
+      le rectangle d'une région couvrait des villes qu'elle ne dessert pas,
+      remplacé par une couverture en bandes de 0,2°.
+      TROIS REVUES ADVERSES, chacune trouvant des défauts DANS les correctifs
+      de la précédente — 17, puis 11, puis 10 :
+      · le frein anti-rafale laissait la couche morte trente secondes après une
+        hésitation sur la case ou un aller-retour de zoom (il borne désormais
+        les requêtes, jamais l'affichage) ;
+      · le dédoublonnage par identifiant SEUL effaçait onze véhicules réels de
+        réseaux distincts qui numérotent tous « 1, 2, 3 » ;
+      · écarter l'agrégat pour éviter ces doublons faisait perdre 64 % de ses
+        véhicules — au Havre, 44 bus roulaient et le volet disait « aucun » ;
+      · écarter les horodates d'avant 2020 transformait une position de 2017
+        en « vue à l'instant » ;
+      · la mémoire d'affichage rejouait la moisson d'une autre ville pendant
+        qu'un appel était en vol.
+      · le dédoublonnage borné effaçait encore de vrais autocars : chez
+        certains producteurs l'identifiant d'entité est celui de la COURSE, et
+        trois cars la partagent.
+      DÉCISION FINALE, prise sur mesure : on NE dédoublonne PAS. Ni par
+      identifiant (c'est parfois une course), ni par étiquette (absente des 57
+      paires agrégat/membre), ni par distance (l'écart croît avec la vitesse,
+      3,2 km relevés). Le volet PRÉVIENT à la place. Morale consignée :
+      corriger un défaut est un changement comme un autre, il se relit avec la
+      même sévérité — et une correction élégante qui n'est pas mesurée sur les
+      données réelles est une régression qui s'ignore.
 
 ## Offline & PWA avancée
 - [x] PR #17 — Mode hors ligne : cache des tuiles IGN (CacheFirst, 14 jours,
