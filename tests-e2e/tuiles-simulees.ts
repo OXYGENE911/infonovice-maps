@@ -15,3 +15,20 @@ export async function simulerTuiles(page: Page): Promise<void> {
     contentType: 'image/png', body: PNG_1PX,
   }));
 }
+
+/* LE RÉPERTOIRE DES COMMUNES est simulé pour la même raison, et il le fallait :
+   depuis l'adressage en mots, chaque appui long l'interroge. Sans cette
+   simulation, la CI appellerait geo.api.gouv.fr à chaque poussée, pour trois
+   parcours qui ne cherchent même pas à l'éprouver. Le module a ses propres
+   tests unitaires, et le service a été vérifié par appels réels (docs/apis.md).
+   Un test qui veut VRAIMENT juger l'adressage pose sa propre route : la
+   dernière enregistrée l'emporte. */
+export async function simulerCommunes(page: Page): Promise<void> {
+  await page.route('**/geo.api.gouv.fr/communes**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([{
+      nom: 'Paris', code: '75056',
+      centre: { type: 'Point', coordinates: [2.3488, 48.8534] },
+    }]),
+  }));
+}

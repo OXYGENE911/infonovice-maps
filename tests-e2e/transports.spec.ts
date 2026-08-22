@@ -2,9 +2,12 @@
 // fichier : la spec d'accueil dépassait déjà de loin les 500 lignes que le
 // projet s'impose, et cette fonctionnalité se relit très bien seule.
 import { test, expect } from '@playwright/test';
-import { simulerTuiles } from './tuiles-simulees';
+import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
 
-test.beforeEach(async ({ page }) => { await simulerTuiles(page); });
+test.beforeEach(async ({ page }) => {
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+});
 
 /* ---- LE FLUX GTFS-RT EST SIMULÉ ----
    Comme les tuiles et pour la même raison : la CI ne doit
@@ -112,7 +115,16 @@ test('TRANSPORTS : rien sans la case, du direct avec, et un frein aux appels', a
   // LE ZOOM ARRIÈRE se tait, et le DIT — sans rien demander de plus.
   await allerA(page, 2.4, 46.6, 6);
   await expect(page.locator('.transports-etat')).toContainText('Approchez', { timeout: 10_000 });
-  expect(await nbPeints(page)).toBe(0);
+  /* ON SONDE, comme pour les deux véhicules plus haut. Le texte de l'état
+     change dès que le composant décide ; les PIXELS, eux, disparaissent à la
+     trame de rendu suivante. Lire une seule fois faisait rougir ce parcours
+     sur un coureur chargé, sans qu'aucun défaut du frein soit en cause
+     (CI, 22/08). Le sondage attend le balayage — il ne l'excuse pas : des
+     véhicules qui resteraient peints font toujours échouer le test. */
+  await expect.poll(() => nbPeints(page), {
+    message: 'des véhicules restent peints après le zoom arrière',
+    timeout: 10_000,
+  }).toBe(0);
   expect(appels).toHaveLength(1);
 });
 

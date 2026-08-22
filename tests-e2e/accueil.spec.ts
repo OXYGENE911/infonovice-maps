@@ -1,7 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { PNG_1PX, simulerTuiles } from './tuiles-simulees';
+import { PNG_1PX, simulerTuiles, simulerCommunes } from './tuiles-simulees';
 
-test.beforeEach(async ({ page }) => { await simulerTuiles(page); });
+test.beforeEach(async ({ page }) => {
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+});
 
 // Depuis la PR #2, la page EST la carte : on vérifie que MapLibre s'amorce,
 // que les contrôles parlent français, et que la souveraineté tient.
@@ -751,6 +754,15 @@ test('HORS LIGNE : la carte s’ouvre sans réseau, et le dit honnêtement', asy
      que vit un vrai visiteur : sa première visite prépare la seconde. */
   await page.reload();
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  /* ON OUBLIE LES TUILES DU PREMIER CHARGEMENT. Elles sont parties avant que
+     le service worker ne prenne les commandes : elles ne sont donc jamais
+     passées par lui, et ne sont en réserve que si le second chargement les
+     redemande — ce que rien ne garantit quand la machine est chargée et que
+     l'animation d'ouverture s'arrête sur d'autres tuiles. Les réclamer plus
+     bas faisait rougir ce test une fois sur trois, sans qu'aucun défaut du
+     mode hors ligne soit en cause (mesuré le 22/08). On ne garde donc que ce
+     que le worker a réellement vu passer. */
+  demandesReseau.length = 0;
   await expect.poll(async () => page.evaluate(async () => {
     const c = await caches.open('tuiles-plan');
     return (await c.keys()).length;
@@ -821,17 +833,23 @@ test('HORS LIGNE : la carte s’ouvre sans réseau, et le dit honnêtement', asy
      blocage rendue en « 200 text/html » par un portail captif passerait pour
      une tuile — c'est arrivé, reproduit en navigateur. Le canevas, lui,
      s'affiche même sans une seule tuile : il ne prouve rien tout seul. */
-  const enReserve = await page.evaluate(async (urls) => Promise.all(urls.map(async (u) => {
-    const rep = await caches.match(u);
-    if (!rep) return 'absente';
-    const octets = new Uint8Array((await rep.arrayBuffer()).slice(0, 8));
-    const png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-    return png.every((o, i) => octets[i] === o) ? 'png' : `contenu ${rep.headers.get('content-type')}`;
-  })), tuilesVues.slice(0, 6));
-  expect(
-    enReserve.filter((t) => t !== 'png'),
-    'des tuiles déjà vues ne sont pas en réserve, ou ne sont pas des images',
-  ).toEqual([]);
+  /* On SONDE : le service worker écrit dans sa réserve de façon asynchrone,
+     après la réponse. Lire une seule fois transformerait ce délai en échec.
+     Le sondage attend, il ne pardonne pas : une tuile jamais mise en réserve
+     fait toujours échouer le test au bout du délai. */
+  await expect.poll(async () => page.evaluate(async (urls) => {
+    const etats = await Promise.all(urls.map(async (u) => {
+      const rep = await caches.match(u);
+      if (!rep) return 'absente';
+      const octets = new Uint8Array((await rep.arrayBuffer()).slice(0, 8));
+      const png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+      return png.every((o, i) => octets[i] === o) ? 'png' : `contenu ${rep.headers.get('content-type')}`;
+    }));
+    return etats.filter((t) => t !== 'png');
+  }, tuilesVues.slice(0, 6)), {
+    message: 'des tuiles déjà vues ne sont pas en réserve, ou ne sont pas des images',
+    timeout: 15_000,
+  }).toEqual([]);
 });
 
 test('HORS LIGNE : l’en-tête ne pousse rien hors de l’écran, ni ne couvre les volets', async ({ page }) => {

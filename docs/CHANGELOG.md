@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.20.0] — 2026-08-22 — Adresse en mots
+
+- Tout point de France a désormais une adresse dictable : « Dijon-21 BAKE 4831 ».
+  Un appui long sur la carte la donne et la copie ; la barre de recherche la
+  comprend et y vole. Une cabane, un champ, une entrée de service : ce que la
+  Base Adresse Nationale ne nomme pas, ce format le désigne à 10 m près.
+- Le format tient en trois morceaux : la commune et son département, un mot
+  parmi 2 048 (consonne-voyelle, prononçables, sans mot malheureux ni doublon
+  visuel), et quatre chiffres. Rien d'autre à retenir, rien à installer.
+- Réversible et STABLE : l'adresse ne dépend que du centre officiel de la
+  commune. Une adresse dictée aujourd'hui désigne le même endroit dans dix ans,
+  sans serveur, sans compte, sans licence — contrairement aux formats
+  propriétaires équivalents.
+- La Corse écrit son département 2A et 2B, pas un nombre : le format le lit
+  comme les autres, en majuscule comme en minuscule.
+- Refuse plutôt que de mentir : au-delà de 20,48 km du centre de la commune, le
+  codage s'arrête et le dit. Les six couples nom/département ambigus (tous
+  outre-mer) sont proposés à l'usager, jamais arbitrés.
+- Le répertoire des communes vient de `geo.api.gouv.fr` : deux appels par
+  adresse, aucun tant que l'usager n'en demande pas. Les 34 969 communes
+  pèseraient 3,3 Mo — plus que le budget entier du paquet.
+
 ## [0.19.0] — 2026-08-22 — Transports en commun, en direct
 - Volet « Transports » : la position des bus, cars et trams telle que les
   réseaux la publient (GTFS-RT), pour 44 réseaux français. Clic sur un
