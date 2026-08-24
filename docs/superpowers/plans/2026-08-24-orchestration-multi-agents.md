@@ -46,11 +46,11 @@ Reprises verbatim du projet — elles s'appliquent à **toutes** les tâches :
 
 ## Blocages connus au 24/08/2026
 
-| # | Blocage | Lève quoi | Qui |
-|---|---|---|---|
-| ① | Gemini non authentifié | Tâches 2 et 3 | **Armelin** — `gemini` → « Login with Google » |
-| ② | Quota Codex épuisé jusqu'au 29/08 | Tâche 4 | attendre |
-| ③ | Outils MCP indisponibles avant redémarrage de session | Tâche 4 | redémarrer la session |
+| Blocage | Lève quoi | Qui |
+|---|---|---|
+| « authentification Gemini » non faite | Tâches 2 et 3 | **Armelin** — `gemini` → « Login with Google » |
+| « quota Codex » épuisé jusqu'au 29/08 | Tâche 4 | attendre |
+| « outils MCP » indisponibles avant redémarrage de session | Tâche 4 | redémarrer la session |
 
 **La tâche 1 ne dépend d'aucun d'eux** et peut être faite immédiatement.
 
@@ -69,7 +69,7 @@ Reprises verbatim du projet — elles s'appliquent à **toutes** les tâches :
 - Produit : `GEMINI.md` et `AGENTS.md`, lus automatiquement par les CLI
   respectifs à chaque session. Les tâches 3 et 4 en dépendent.
 
-- [ ] **Étape 1 : écrire le test qui échoue**
+- [x] **Étape 1 : écrire le test qui échoue**
 
 Créer `tests/consignes-agents.test.ts` :
 
@@ -128,7 +128,7 @@ describe('source unique des consignes', () => {
 });
 ```
 
-- [ ] **Étape 2 : lancer le test et vérifier qu'il échoue**
+- [x] **Étape 2 : lancer le test et vérifier qu'il échoue**
 
 ```bash
 npx vitest run tests/consignes-agents.test.ts
@@ -139,7 +139,7 @@ Attendu : **ÉCHEC**. Deux causes distinctes, toutes deux normales à ce stade �
 `AGENTS.md recopie « Coût de production : 0 € »` (c'est aujourd'hui une
 copie intégrale de `CLAUDE.md`).
 
-- [ ] **Étape 3 : créer `GEMINI.md`**
+- [x] **Étape 3 : créer `GEMINI.md`**
 
 ```markdown
 # GEMINI.md — mandat de Gemini sur Infonovice Maps
@@ -179,7 +179,7 @@ Ne propose pas de correctif : trouver le défaut est ton travail, le
 corriger est celui d'un autre. Réponds en français.
 ```
 
-- [ ] **Étape 4 : remplacer intégralement `AGENTS.md`**
+- [x] **Étape 4 : remplacer intégralement `AGENTS.md`**
 
 Écraser tout le contenu actuel par :
 
@@ -220,18 +220,19 @@ Ne propose pas de correctif : trouver le défaut est ton travail, le
 corriger est celui d'un autre. Réponds en français.
 ```
 
-- [ ] **Étape 5 : relancer le test et vérifier qu'il passe**
+- [x] **Étape 5 : relancer le test et vérifier qu'il passe**
 
 ```bash
 npx vitest run tests/consignes-agents.test.ts
 ```
 
-Attendu : **9 tests passent** (1 + 2 + 2 + 2 + 2).
+Attendu, d'après le fichier de test final (garde-fous ajoutés après cette
+étape compris) : **12 tests passent** (1 + 2 + 2 + 2 + 2 + 2 + 1).
 
 Si « reste court » échoue, retirer des lignes du fichier fautif — ne pas
 relever le seuil de 40 : ce seuil *est* le garde-fou.
 
-- [ ] **Étape 6 : lancer la suite complète et le lint**
+- [x] **Étape 6 : lancer la suite complète et le lint**
 
 ```bash
 npm test
@@ -241,7 +242,7 @@ npm run lint
 Attendu : tout vert. Aucun fichier `src/` n'a été touché, donc aucune
 régression attendue — si la suite casse, s'arrêter et comprendre.
 
-- [ ] **Étape 7 : entrée de changelog**
+- [x] **Étape 7 : entrée de changelog**
 
 Insérer dans `docs/CHANGELOG.md`, **juste après la ligne 3** (`Format :
 [semver] — date — résumé.`) et avant `## [0.21.0]` :
@@ -260,7 +261,7 @@ Insérer dans `docs/CHANGELOG.md`, **juste après la ligne 3** (`Format :
 - Aucun octet ajouté au bundle : c'est de la documentation et un test.
 ```
 
-- [ ] **Étape 8 : commit**
+- [x] **Étape 8 : commit**
 
 ```bash
 git add tests/consignes-agents.test.ts GEMINI.md AGENTS.md docs/CHANGELOG.md
@@ -271,8 +272,8 @@ git commit -m "docs(methode): une seule source de consignes, deux mandats de con
 
 ### Tâche 2 : Éprouver la garantie de lecture seule de Gemini
 
-**Prérequis : blocage ① levé** — Armelin a lancé `gemini` et s'est
-authentifié. Ne pas commencer avant.
+**Prérequis : blocage « authentification Gemini » levé** — Armelin a lancé
+`gemini` et s'est authentifié. Ne pas commencer avant.
 
 **Fichiers :**
 - Modifier (seulement si la garantie tombe) :
@@ -336,7 +337,9 @@ encore acquise — voir §8, blocage ② » par :
 aucun fichier. La garantie tient.
 ```
 
-et retirer le blocage ② du §8.
+et retirer du §8 le blocage nommé « Mode lecture seule non garanti »
+(numéroté ② dans la spec — numérotation propre à la spec, à ne pas
+confondre avec celle de ce plan).
 
 Si la garantie **tombe** : ne pas la maquiller. Réécrire le §3 en disant
 que Gemini est contraint par consigne et non par capacité, et ajouter au
@@ -462,8 +465,9 @@ git commit -m "docs(methode): epreuve a l'aveugle de Gemini sur la PR #16, chiff
 
 ### Tâche 4 : L'épreuve côté Codex, et la décision finale
 
-**Prérequis : blocages ② et ③ levés** — nous sommes le 29/08 ou après, et
-la session a été redémarrée pour que les outils MCP soient chargés.
+**Prérequis : blocages « quota Codex » et « outils MCP » levés** — nous
+sommes le 29/08 ou après, et la session a été redémarrée pour que les
+outils MCP soient chargés.
 
 **Fichiers :**
 - Modifier : la spec — §12 complété, §8 nettoyé

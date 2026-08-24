@@ -106,8 +106,8 @@ entre le commun et le propre à chaque rôle :
 | Fichier | Contenu | Taille |
 |---|---|---|
 | `CLAUDE.md` | **Canonique.** Contexte, contraintes absolues, stack, API, résilience, workflow Git, qualité. Seule source à maintenir. | inchangé |
-| `AGENTS.md` | Pointeur → `CLAUDE.md` + mandat de Codex (contester le diff, lecture seule, format de sortie) | ~15 lignes |
-| `GEMINI.md` | Pointeur → `CLAUDE.md` + mandat de Gemini (contester le plan, lecture seule, format de sortie) | ~15 lignes |
+| `AGENTS.md` | Pointeur → `CLAUDE.md` + mandat de Codex (contester le diff, lecture seule, format de sortie) | 37 lignes |
+| `GEMINI.md` | Pointeur → `CLAUDE.md` + mandat de Gemini (contester le plan, lecture seule, format de sortie) | 38 lignes |
 
 Chaque fichier ne contient que ce qui lui est irréductiblement propre :
 rien à synchroniser, donc rien qui dérive. Les mandats vivent là où la
@@ -153,9 +153,10 @@ Gemini ne s'expose pas en serveur MCP (`gemini mcp` ne fait que
 *consommer*). Un appel MCP revient typé dans le fil ; un `gemini -p` est
 un processus dont on ne récupère que la sortie standard.
 
-**Coût pour le dépôt :** deux fichiers de documentation. Zéro
-dépendance, zéro ligne de code, zéro octet de bundle. Ni le budget des
-300 Ko ni la contrainte 0 € ne sont entamés.
+**Coût pour le dépôt :** deux fichiers de documentation et un fichier de
+test (`tests/consignes-agents.test.ts`, le garde-fou anti-dérive du §5).
+Zéro dépendance, zéro ligne de code applicative, zéro octet de bundle. Ni
+le budget des 300 Ko ni la contrainte 0 € ne sont entamés.
 
 ---
 
@@ -253,6 +254,7 @@ On le saura avant d'avoir bâti dessus.
 | Claude convoque les contradicteurs | Armelin les lance lui-même depuis son terminal | **L'indépendance de la revue.** Compensé par le rapport brut (§7) |
 | Aucune image générée | Illustrations produites par modèle | Ergonomie limitée au CSS et au SVG écrit à la main |
 | Rôles assignés selon les outils exposés | Assignation selon une supériorité mesurée des modèles | Aucune mesure ne fonde l'assignation ; c'est un paramètre, pas une fondation |
+| `AGENTS.md` porte le mandat de lecture seule sans condition, alors que la convention `AGENTS.md` est lue par bien d'autres outils que Codex | Un fichier de mandat propre à Codex, distinct de la convention `AGENTS.md` | Tout agent tiers qu'un contributeur brancherait en écriture sur ce dépôt public lira le même mandat de relecteur — effet voulu (« un seul agent écrit »), assumé ici plutôt que subi comme un accident du nom de fichier |
 
 **Sur l'absence d'images :** décidé le 23/08. La PR #21 s'interdit tout
 « binaire opaque au dépôt » — une illustration produite par un modèle est
