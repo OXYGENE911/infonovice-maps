@@ -27,6 +27,10 @@ const CANONIQUES = [
 // Helper pour extraire une section markdown (d'un ## jusqu'au prochain ## ou fin du texte).
 // Vérifie que la section existe ; si absent, échoue avec un message clair plutôt que
 // de comparer deux chaînes vides (ce qui passerait silencieusement).
+// Normalise les fins de ligne (CRLF → LF, CR stray → LF) : le verrou porte sur la clause,
+// pas sur l'état de checkout. Avec git autocrlf=true, des fichiers fraîchement restaurés
+// arrivent CRLF tandis que des fichiers écrits par des outils arrivent LF. Cette
+// normalisation garantit que la comparaison fonctionne sur toute machine, clone ou branche.
 const extraireSectionMarkdown = (texte: string, titre: string, nomFichier: string): string => {
   const lignes = texte.split('\n');
   const indexDebut = lignes.findIndex(l => l.startsWith('## ') && l.includes(titre));
@@ -41,7 +45,7 @@ const extraireSectionMarkdown = (texte: string, titre: string, nomFichier: strin
   const indexFin = lignes.findIndex((l, i) => i > indexDebut && l.startsWith('## '));
   const fin = indexFin === -1 ? lignes.length : indexFin;
 
-  return lignes.slice(indexDebut, fin).join('\n').trimEnd();
+  return lignes.slice(indexDebut, fin).join('\n').trimEnd().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 };
 
 describe('source unique des consignes', () => {
@@ -75,6 +79,9 @@ describe('source unique des consignes', () => {
   // fichier pour connaître son contrat. Mais cette duplication intentionnelle doit
   // être verrouillée : si l'une des deux clauses change sans l'autre, un contradicteur
   // se retrouve sous un contrat silencieusement modifié, ce qui est une régression grave.
+  // La normalisation des fins de ligne dans extraireSectionMarkdown garantit que le verrou
+  // fonctionne indépendamment de l'état de checkout git ou de la machine : c'est la clause
+  // qui compte, pas le CRLF ou LF du disque.
   test('la clause « Tu es en LECTURE SEULE » est identique dans AGENTS.md et GEMINI.md', () => {
     const AGENTS_LECTURE_SEULE = extraireSectionMarkdown(lire('AGENTS.md'), 'Tu es en LECTURE SEULE', 'AGENTS.md');
     const GEMINI_LECTURE_SEULE = extraireSectionMarkdown(lire('GEMINI.md'), 'Tu es en LECTURE SEULE', 'GEMINI.md');
