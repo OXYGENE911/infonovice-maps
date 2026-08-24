@@ -197,11 +197,38 @@ Cette dernière ligne n'est pas une politesse : le jour où les deux quotas
 tombent ensemble, la tentation d'écrire « revu » et de passer est
 exactement ce qui vide la méthode.
 
-### Blocages ouverts au 23/08/2026
+### Blocages ouverts, au 24/08/2026
 
-- **① Gemini non authentifié.** `Please set an Auth method`. Action
-  interactive d'Armelin : `gemini` puis « Login with Google » (compte
-  Pro). La moitié amont est bloquée jusque-là.
+- **① Gemini inutilisable par connexion Google.** MESURÉ LE 24/08/2026,
+  après qu'Armelin s'est effectivement connecté (`oauth_creds.json`
+  rafraîchi à 13 h 45, `selectedType: "oauth-personal"`). Le service
+  refuse le client :
+
+  ```
+  IneligibleTierError: This client is no longer supported for Gemini Code
+  Assist for individuals. To continue using Gemini, please migrate to the
+  Antigravity suite of products.
+  ineligibleTiers: [ { tierId: 'free-tier', reasonCode: 'UNSUPPORTED_CLIENT' } ]
+  ```
+
+  L'abonnement Pro n'y change rien : le CLI s'authentifie contre *Gemini
+  Code Assist for individuals*, un produit développeur, tandis que Google
+  One AI Premium / Gemini Advanced est un produit grand public. Le compte
+  est résolu en `free-tier`, et Google a fermé ce tier à ce client.
+
+  Deux voies restent, et elles n'ont pas le même prix :
+  - **Clé API AI Studio** (`GEMINI_API_KEY`) — voie d'authentification
+    distincte, tier gratuit avec quotas. Demande une action d'Armelin
+    (création de la clé) ; ne coûte rien.
+  - **Vertex AI** — exige un projet GCP avec facturation. **Écarté :
+    incompatible avec la contrainte 0 €** dès que les quotas gratuits
+    sont dépassés, et lourd pour un simple contradicteur.
+
+  Tant qu'aucune des deux n'est faite, la moitié amont est bloquée et la
+  table de dégradation du §8 s'applique : Codex prendrait l'amont — mais
+  il est lui-même à sec jusqu'au 29/08 (blocage ③). **Les deux
+  contradicteurs sont donc indisponibles au 24/08**, cas de la dernière
+  ligne de la table : on le dit, et on ne présente rien comme contesté.
 - **② Mode lecture seule non garanti.** Message capté :
   `Approval mode overridden to "default" because the current folder is
   not trusted`. La garantie structurelle du §3 est conditionnelle à la
