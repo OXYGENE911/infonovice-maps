@@ -2,6 +2,115 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.31.1] — 2026-08-26 — Lighthouse : 100 sur les trois axes
+
+- Audit après une journée de changements d'interface, comme le projet l'exige
+  (« Lighthouse ≥ 90 »). Départ : 96 / 96 / 100. Arrivée : **100 / 100 / 100**.
+- UNE RÉGRESSION À MOI, corrigée : le bouton du menu affichait « Menu » mais
+  son nom accessible ne contenait pas ce mot. Critère WCAG « Label in Name » —
+  quelqu'un pilotant à la voix aurait dit « Menu » sans rien activer.
+- Les liens de l'attribution IGN ne se distinguaient que par leur couleur
+  (WCAG 1.4.1) : ils sont soulignés.
+- `frame-ancestors` est RETIRÉ des cinq pages. Le navigateur l'ignore quand il
+  vient d'une balise `<meta>` — il le dit lui-même dans la console. Il ne
+  protégeait donc de rien tout en polluant le journal, ce qui masque les vraies
+  erreurs. La protection contre l'encadrement demande un en-tête HTTP, que
+  GitHub Pages ne permet pas : limite écrite en commentaire plutôt que déguisée
+  en directive inopérante, et un test empêche son retour par bonne intention.
+
+## [0.31.0] — 2026-08-26 — Les panoramas 360 s'explorent (PR #31)
+
+- Les photos Panoramax équirectangulaires ne sont plus affichées à plat : on
+  fait glisser pour regarder autour, ou l'on utilise les flèches du clavier.
+  C'était une limite inscrite à la ROADMAP depuis la PR #12.
+- LA BIBLIOTHÈQUE N'ÉTAIT PAS NÉCESSAIRE : 2 Ko gzippés écrits à la main
+  (bundle 40,5 → 42,5 Ko sur 300 autorisés), contre environ deux cents pour un
+  visualiseur du commerce. Même arbitrage que le décodeur protobuf de la PR #16.
+- Une photo ORDINAIRE ne passe pas par WebGL : le rendu coûte une texture en
+  mémoire vidéo, on ne l'engage que pour ce qui est vraiment un panorama
+  (rapport 2:1, à deux pour cent près).
+- REPLI SOIGNÉ À CHAQUE ÉTAGE : sans WebGL, si la texture est refusée, ou si
+  l'image ne se charge pas en mode anonyme, la photo à plat reste affichée.
+  Mieux vaut une image dégradée que rien.
+- TROIS DÉFAUTS TROUVÉS PAR LES TESTS : une image d'une autre origine contamine
+  le canevas et WebGL la refuse — il faut la demander en mode anonyme
+  (Panoramax répond bien `Access-Control-Allow-Origin: *`, vérifié) ; l'erreur
+  s'échappait au lieu de retomber sur l'image à plat ; et `display: block`
+  l'emportait sur l'attribut `hidden`, si bien que la photo à plat restait
+  affichée sous le panorama.
+
+## [0.30.0] — 2026-08-26 — Filtrer les bornes par réseau (PR #22bis)
+
+- Les réseaux proposés sont ceux PRÉSENTS DANS LA VUE, avec leur nombre de
+  bornes, du plus fourni au moins fourni. Une liste figée de centaines
+  d'enseignes nationales — dont beaucoup sont un hôtel isolé — aurait proposé
+  des cases creuses.
+- Ils se chargent AVEC la couche, jamais à part : une facette de plus par
+  déplacement aurait doublé les appels au portail.
+- Une facette en panne N'EMPORTE PAS les bornes : elle n'est qu'un confort de
+  filtrage, et son échec ne doit pas priver l'usager de la couche.
+- Plafonnés à douze, mais un réseau DÉJÀ COCHÉ reste affiché même hors
+  plafond — sinon un filtre actif deviendrait invisible, donc impossible à
+  retirer.
+
+## [0.29.1] — 2026-08-26 — La marge d'arrivée se règle
+
+- « Arriver avec 30 % » n'est pas le même trajet qu'« arriver avec 5 % » : la
+  marge décide du nombre d'arrêts et du temps passé à charger. La laisser codée
+  en dur imposait une prudence à tout le monde.
+- Deux réglages : la charge voulue À L'ARRIVÉE, et la réserve qu'on refuse
+  d'entamer EN ROUTE. Ils refont le plan, mais seulement section ouverte.
+- Le garde-fou anti-recalcul est remis à zéro à chaque changement — sans quoi
+  il aurait avalé le réglage, exactement comme le seuil de vue l'avait fait
+  pour les filtres de bornes.
+
+## [0.29.0] — 2026-08-26 — Commodités des aires (PR #29)
+
+- Chaque arrêt de recharge peut dire ce qu'on trouve sur place : station-service,
+  restauration, café, toilettes, avec l'enseigne quand elle est connue.
+- L'ENSEIGNE N'EST PAS SUR L'AIRE — une aire sur 698 porte une balise `brand`.
+  Elle est sur les objets à l'intérieur, dont 74 % portent une identité. On
+  interroge donc autour du point d'arrêt, jamais l'aire.
+- Par le MIROIR FRANÇAIS d'OpenStreetMap France, pas l'instance allemande.
+- À LA DEMANDE, un arrêt à la fois : Overpass est un service bénévole, et on ne
+  l'interroge pas pour quatre arrêts au cas où l'usager regarderait.
+- En surcharge, Overpass rend du HTML et non du JSON. Le message reste français
+  et le bouton réessayable.
+- LA CSP A FAIT SON TRAVAIL : la requête était bloquée tant que l'origine
+  n'était pas déclarée. Ajoutée à `connect-src` ET à la liste blanche du
+  parcours de souveraineté — une origine ne s'ajoute jamais par accident.
+
+## [0.28.0] — 2026-08-25 — Arrêts de recharge suggérés (PR #28)
+
+- Les arrêts sont POSÉS SUR LA CARTE, et un clic sur leur nom y vole : une
+  liste qu'on ne peut pas situer oblige à chercher des yeux ce que
+  l'application sait déjà.
+
+- Le planificateur propose ses arrêts : où s'arrêter, avec quel pourcentage de
+  batterie on y arrive et on en repart, combien de minutes de charge, et le
+  pourcentage à l'arrivée. Le calcul est LOCAL ; le seul appel réseau cherche
+  les bornes le long du tracé, plafonné à six tronçons depuis la PR #11.
+- ON N'ARRIVE JAMAIS SOUS LA RÉSERVE. Arriver à une borne à 2 % n'est pas un
+  plan, c'est un pari.
+- ON NE FAIT PAS LE PLEIN : au-delà de 80 % la charge s'effondre, et remplir à
+  chaque arrêt fait perdre plus de temps qu'il n'en gagne. Mais le plan monte
+  au-delà quand le dernier tronçon l'exige — vingt minutes valent mieux qu'un
+  refus infondé.
+- ET IL SAIT DIRE NON, tôt, avec le kilomètre exact où la réserve serait
+  entamée. Un plan bancal qui laisse découvrir le trou à 8 % de batterie est
+  pire que l'aveu.
+- Le profil véhicule accepte désormais la PUISSANCE DE CHARGE MAXIMALE : sans
+  elle, on promettrait des temps de charge qu'aucun véhicule ne tient —
+  brancher une VF8 sur 350 kW ne charge pas plus vite que sur 150.
+- CE QUE LE MODÈLE IGNORE est écrit sous le plan : ni le relief, ni le vent,
+  ni le trafic, ni la vraie courbe de charge, qui dépend de la température de
+  la batterie et qu'aucune source publique ne donne.
+- DEUX DÉFAUTS TROUVÉS PAR LES TESTS : le rayon de recherche était passé en
+  kilomètres à un paramètre qui attend des MÈTRES — dix mètres au lieu de dix
+  kilomètres, aucune erreur, juste un résultat vide ; et une fixture annonçait
+  465 km sur un tracé en ligne droite de 390, si bien que les avancements et
+  la distance ne parlaient pas de la même échelle.
+
 ## [0.27.0] — 2026-08-25 — Deux points d'entrée, pas six (PR #27)
 
 - À GAUCHE LE TRAJET (itinéraire, véhicule) ; EN HAUT À DROITE LES RÉGLAGES,

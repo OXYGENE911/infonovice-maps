@@ -27,7 +27,10 @@ test('SOUVERAINETÉ : seules les origines déclarées sont contactées', async (
   // data.economie.gouv.fr et public.opendatasoft.com sont arrivées avec les
   // POI (PR #9) — et ne sont contactées QUE couche activée, zoom ≥ 12.
   const AUTORISEES = new Set(['localhost', 'data.geopf.fr', 'api-adresse.data.gouv.fr',
-    'data.economie.gouv.fr', 'public.opendatasoft.com']);
+    'data.economie.gouv.fr', 'public.opendatasoft.com',
+    // Overpass, par le miroir d'OpenStreetMap FRANCE — commodités des aires,
+    // À LA DEMANDE seulement (PR #29). L'instance de référence est allemande.
+    'overpass.openstreetmap.fr']);
   const intrus: string[] = [];
   page.on('request', (r) => {
     const h = new URL(r.url()).hostname;

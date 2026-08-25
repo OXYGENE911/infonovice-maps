@@ -98,17 +98,33 @@ test('décocher efface les anneaux — la carte redevient nue', async ({ page })
   await saisirVF8(page);
   const bascule = page.getByRole('checkbox', { name: 'Afficher mon rayon d’action' });
   await bascule.check();
-  await bascule.uncheck();
-
-  const nombre = await page.evaluate(async () => {
+  /* ON ATTEND QUE LES ANNEAUX SOIENT LÀ AVANT DE LES EFFACER. Décocher avant
+     que la pose soit finie faisait courir deux `setData` : le test vérifiait
+     alors la disparition de quelque chose qui n'était jamais apparu, et
+     rougissait une fois sur quatre. Une précondition qu'on n'attend pas est
+     une course qu'on parie. */
+  await expect.poll(async () => page.evaluate(async () => {
     const carte = (window as unknown as {
       __carte: { getSource(id: string): { getData(): unknown } | undefined };
     }).__carte;
     const d = await carte.getSource('rayon-action')?.getData() as
       GeoJSON.FeatureCollection | undefined;
     return d?.features.length ?? -1;
-  });
-  expect(nombre).toBe(0);
+  }), { message: 'les anneaux ne sont jamais apparus' }).toBe(3);
+
+  await bascule.uncheck();
+
+  /* ON ATTEND que la source se vide : `setData` est asynchrone, et lire trop
+     tôt rendait l'ancien jeu — un parcours rouge pour une raison qui n'avait
+     rien à voir avec le décochage. */
+  await expect.poll(async () => page.evaluate(async () => {
+    const carte = (window as unknown as {
+      __carte: { getSource(id: string): { getData(): unknown } | undefined };
+    }).__carte;
+    const d = await carte.getSource('rayon-action')?.getData() as
+      GeoJSON.FeatureCollection | undefined;
+    return d?.features.length ?? -1;
+  }), { message: 'les anneaux n’ont jamais disparu' }).toBe(0);
 });
 
 test('le profil survit au rechargement — sans compte, sans serveur', async ({ page }) => {

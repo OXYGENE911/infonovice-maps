@@ -348,5 +348,124 @@ l'interface, et la carte hors ligne n'en promet rien.
   couvre donc toutes les communes sauf les plus vastes, où `coder` refuse
   explicitement plutôt que de rendre une adresse fausse.
 
+## DATAtourisme — écarté POUR L'INSTANT, avec la mesure (25/08/2026)
+
+Armelin dispose d'une clé gratuite et souhaitait afficher les lieux culturels
+autour des arrêts de recharge et le long du trajet. Deux mesures ont suffi à
+suspendre l'idée.
+
+```
+GET https://api.datatourisme.fr/v1/catalog   (sans clé, Origin: maps.infonovice.fr)
+→ HTTP 401                          la clé est OBLIGATOIRE
+→ Access-Control-Allow-Origin: *    le CORS, lui, est ouvert
+```
+
+L'API est une recherche géographique — paramètres `latitude`, `longitude`,
+`radius`, `page`, `theme` relevés dans sa documentation — et non un flux en
+masse. Elle conviendrait donc parfaitement au besoin.
+
+**LE BLOCAGE N'EST PAS TECHNIQUE, IL EST STRUCTUREL.** Ce site est statique,
+servi depuis un dépôt public : une clé livrée au navigateur est lisible par
+quiconque ouvre les outils de développement. Le quota d'Armelin serait
+siphonnable et sa clé révocable. C'est exactement le motif qui a écarté huit
+sources météo françaises plus haut dans ce document.
+
+Deux voies existaient, et elles ont été présentées :
+
+| Voie | Ce qu'elle coûte |
+|---|---|
+| **Extraction au build** — clé en secret GitHub Actions, extrait statique par département servi à la demande (comme le répertoire des communes) | Un script à écrire et à maintenir ; données figées entre deux constructions — sans importance pour des musées |
+| **Clé dans le navigateur** | Une dérogation formelle : décision écrite ET mention publique, comme Open-Meteo le 22/08. Clé exposée. |
+
+**Décision d'Armelin du 25/08 : abandonner pour l'instant.** Ni l'une ni
+l'autre. Rien n'est promis dans l'interface, et le sujet reste ouvert : la
+mesure ci-dessus reste valable le jour où il le rouvrira.
+
+**Ce qui a aussi pesé :** la documentation ne publie qu'un schéma, pas de
+réponse réelle. Or ce dépôt exige des fixtures au format réel des services,
+vérifiées par appels réels. Sans clé, aucun décodeur ne pouvait être écrit
+honnêtement.
+
+## Commodités des aires — Overpass / OSM (mesuré 25-26/08/2026)
+
+L'étude EV promettait de mesurer la couverture avant de rien promettre. C'est
+fait, et le premier verdict était trompeur.
+
+**L'ENSEIGNE N'EST PAS SUR L'AIRE.** Sur les 698 aires de service françaises
+(`highway=services`, comptage Overpass du 25/08) :
+
+| Balise | Renseignée |
+|---|---|
+| `name` | 518 (74 %) |
+| `toilets` | 384 (55 %) |
+| `website` | 127 (18 %) |
+| `operator` | 89 (13 %) |
+| `opening_hours` | 20 (3 %) |
+| **`brand`** | **1 aire sur 698 (0 %)** |
+
+**MAIS ELLE EST SUR LES OBJETS À L'INTÉRIEUR.** Relevé sur le corridor
+Beaune-Chalon (emprise 46,6-47,2 / 4,6-5,2) : **9 aires sur 9** ont au moins
+une commodité à moins de 400 m. 43 commodités rattachées — 17 stations-service,
+11 toilettes, 7 restaurations rapides, 6 restaurants, 2 cafés — dont **74 %
+portent une identité** (`brand`, `operator` ou `name`).
+
+D'où le choix du module : on interroge AUTOUR du point d'arrêt, jamais l'aire.
+
+### Le miroir français (vérifié 26/08/2026)
+
+`overpass.openstreetmap.fr`, opéré par OpenStreetMap France, répond aussi bien
+que l'instance de référence allemande — HTTP 200, `Access-Control-Allow-Origin: *`,
+JSON. C'est lui que l'application interroge.
+
+### Overpass tombe, et il faut le prévoir
+
+Deux `Dispatcher_Client::request_read_and_idx::timeout` reçus pendant le
+développement même de ce module, après quelques requêtes rapprochées. C'est un
+service BÉNÉVOLE : la requête est étroite (cinq types nommés, jamais
+`["amenity"]` en entier), bornée à 25 s, et n'est émise QU'À LA DEMANDE — un
+clic sur un arrêt, jamais au fil de la carte.
+
+En surcharge, Overpass rend une page **HTML**, pas du JSON. La lire sans
+précaution lèverait une exception illisible : le module la traduit en message
+français, et le bouton reste réessayable.
+
+## Disponibilité des bornes en direct — ÉCARTÉE, avec la mesure (26/08/2026)
+
+Le jeu Belib' « Points de recharge — **disponibilité temps réel** » (Paris,
+`parisdata.opendatasoft.com`) est techniquement parfait : HTTP 200,
+`Access-Control-Allow-Origin: *`, aucune clé, filtre par emprise, et un
+`id_pdc` au format d'itinérance qui joint le jeu IRVE statique. Tout invitait
+à le brancher.
+
+**LA FRAÎCHEUR L'INTERDIT.** Comptage EXACT sur les 1 967 points du jeu, le
+26/08/2026 :
+
+| Âge du statut | Points | Part |
+|---|---|---|
+| moins d'**1 h** | 123 | **6 %** |
+| moins de 6 h | 1 090 | 55 % |
+| moins de 24 h | 1 910 | 97 % |
+
+Les extrêmes confirment que le flux est bien vivant pour une minorité : les
+plus frais datent de 0,0 h, les plus anciens de **13 474 h** — dix-huit mois,
+tous au statut « Inconnu ».
+
+**Pourquoi cela suffit à décliner.** Un « Disponible » vieux de cinq heures ne
+dit rien de l'instant : une borne libre à 9 h est prise à 14 h. Et l'erreur
+tomberait exactement quand elle coûte le plus cher — en arrivant à 8 % de
+batterie sur la foi d'un affichage. Rapporté au parc français, 6 % de
+fraîcheur dans UNE ville font environ **123 bornes fiables sur ~120 000**.
+
+Ce que cela aurait coûté par ailleurs : une origine de plus dans la CSP, un
+rapprochement à maintenir entre deux jeux, et une promesse d'interface que la
+donnée ne tient pas.
+
+**Décision du 26/08/2026 : écartée.** Rien n'est promis dans l'interface. Le
+jour où un producteur publiera un flux réellement continu — ou si Belib'
+resserre sa cadence —, cette mesure sera le point de comparaison.
+
+Répartition des statuts, pour mémoire : Disponible 65 %, Occupé 29 %,
+Inconnu 3 %, En maintenance 3 %.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.

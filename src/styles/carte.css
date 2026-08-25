@@ -431,6 +431,11 @@ etapes-itineraire { display: grid; gap: 7px; }
   display: block; max-width: 100%; max-height: 78vh;
   border-radius: var(--rayon); background: var(--fond-profond);
 }
+/* `display: block` L'EMPORTE SUR L'ATTRIBUT `hidden`, dont la règle du
+   navigateur n'est qu'un `display: none` de feuille par défaut. Sans cette
+   ligne, l'image à plat restait affichée SOUS le panorama 360 — attrapé par un
+   parcours E2E qui la voyait « visible » alors qu'elle portait l'attribut. */
+.photo-image[hidden] { display: none; }
 .photo-legende {
   margin: 10px 0 0; text-align: center;
   font: 500 13px var(--police); color: #E8EDF4;
@@ -804,3 +809,68 @@ etat-connexion { display: contents; }
   position: static; margin-top: 8px; min-width: 0; max-width: none;
   width: 100%; box-sizing: border-box; max-height: none;
 }
+
+/* ═══ ARRÊTS DE RECHARGE (PR #28bis) ═════════════════════════════════════ */
+.iti-recharge-corps { padding-top: 6px; font: 400 13px var(--police); color: var(--texte-2); }
+.recharge-resume { margin: 0; font: 600 13.5px var(--police); color: var(--texte-1); }
+.recharge-refus {
+  margin: 0; padding: 9px 11px; border-radius: 9px;
+  background: color-mix(in srgb, var(--fond) 88%, #C0392B 12%);
+  border: 1px solid color-mix(in srgb, var(--bord) 70%, #C0392B 30%);
+  font: 500 12.5px var(--police); color: var(--texte-1); line-height: 1.5;
+}
+.recharge-liste { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 7px;
+  max-height: 220px; overflow-y: auto; }
+.recharge-liste li { display: grid; gap: 1px; }
+.recharge-nom { font: 600 12.5px var(--police); color: var(--texte-1); }
+.recharge-detail { font: 400 11.5px var(--police); color: var(--texte-3); }
+.recharge-reserve { margin: 8px 0 0; font: 400 11.5px var(--police);
+  color: var(--texte-3); line-height: 1.45; }
+.recharge-aller {
+  display: block; width: 100%; text-align: left; padding: 0;
+  border: 0; background: none; cursor: pointer;
+  font: 600 12.5px var(--police); color: var(--accent);
+}
+.recharge-aller:hover { text-decoration: underline; }
+.recharge-aller:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+.recharge-commodites {
+  margin-top: 4px; padding: 4px 9px; border-radius: 7px;
+  border: 1px solid var(--bord); background: var(--fond); cursor: pointer;
+  font: 500 11.5px var(--police); color: var(--texte-2);
+}
+.recharge-commodites:disabled { opacity: .55; cursor: default; }
+.recharge-commodites:focus-visible { outline: none; box-shadow: var(--focus); }
+.recharge-commodites-corps:empty { display: none; }
+.recharge-commodites-corps { margin: 3px 0 0; font: 400 11.5px var(--police);
+  color: var(--texte-3); line-height: 1.45; }
+.iti-recharge-reglages { display: grid; gap: 6px; padding: 8px 0 2px; }
+.iti-recharge-reglages label { display: flex; align-items: center;
+  justify-content: space-between; gap: 10px;
+  font: 400 12.5px var(--police); color: var(--texte-2); }
+.iti-recharge-reglages select {
+  font: 500 12.5px var(--police); color: var(--texte-1);
+  padding: 4px 7px; border-radius: 7px; border: 1px solid var(--bord);
+  background: var(--fond);
+}
+.iti-recharge-reglages select:focus-visible { outline: none; box-shadow: var(--focus); }
+.poi-reseaux { display: grid; gap: 5px; max-height: 168px; overflow-y: auto; }
+.poi-reseaux label { display: flex; align-items: center; gap: 8px;
+  font: 400 12.5px var(--police); color: var(--texte-1); cursor: pointer; }
+.poi-reseaux input:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+
+/* ═══ PANORAMA 360 (PR #31) ═══════════════════════════════════════════════ */
+.photo-360 {
+  display: block; width: min(1100px, 96vw); height: min(620px, 70vh);
+  border-radius: var(--rayon); background: #000; cursor: grab; touch-action: none;
+}
+.photo-360:active { cursor: grabbing; }
+.photo-360[hidden] { display: none; }
+.photo-360:focus-visible { outline: none; box-shadow: var(--focus); }
+.photo-360-aide { margin: 6px 0 0; font: 400 12px var(--police); color: var(--texte-3); }
+.photo-360-aide[hidden] { display: none; }
+
+/* L'ATTRIBUTION SE LIT AUSSI SANS LA COULEUR. Ses liens (IGN, MapLibre) ne se
+   distinguaient que par leur teinte : critère WCAG 1.4.1, relevé par un audit
+   Lighthouse. Un soulignement suffit, et il ne coûte rien à la lisibilité
+   d'une mention déjà discrète. */
+.maplibregl-ctrl-attrib a { text-decoration: underline; }

@@ -28,6 +28,7 @@ const SOURCE = 'rayon-action';
 const VIDE: Vehicule = {
   nom: '', capaciteNominale: 0, soce: 100, soc: 80,
   consommations: { ville: 0, route: 0, autoroute: 0 },
+  puissanceMaxKw: 0,
 };
 
 /** Ce qu'on demande à l'usager : des kilomètres, pas des kWh/100 km. Personne
@@ -71,6 +72,7 @@ export class PanneauVehicule extends HTMLElement {
           ${champ('capaciteNominale', 'Batterie', 'kWh', '0.1')}
           ${champ('soce', 'Santé (SOCE)', '%')}
           ${champ('soc', 'Charge (SOC)', '%')}
+          ${champ('puissanceMaxKw', 'Charge max', 'kW')}
 
           <p class="veh-titre">Autonomie constatée à pleine charge</p>
           ${CONTEXTES.map((c) => champ(`essai-${c.cle}`, c.libelle, 'km')).join('')}
@@ -96,7 +98,8 @@ export class PanneauVehicule extends HTMLElement {
         const nombre = Number.isFinite(valeur) && valeur >= 0 ? valeur : 0;
         if (cle.startsWith('essai-')) {
           this.#essais[cle.slice(6) as CleContexte] = nombre;
-        } else if (cle === 'capaciteNominale' || cle === 'soce' || cle === 'soc') {
+        } else if (cle === 'capaciteNominale' || cle === 'soce' || cle === 'soc'
+          || cle === 'puissanceMaxKw') {
           this.#vehicule[cle] = nombre;
         }
         this.#recalculer();
@@ -144,6 +147,7 @@ export class PanneauVehicule extends HTMLElement {
       soce: nombre(v['soce'], 100),
       soc: nombre(v['soc'], 80),
       consommations: { ville: 0, route: 0, autoroute: 0 },
+      puissanceMaxKw: nombre(v['puissanceMaxKw']),
     };
     for (const { cle } of CONTEXTES) this.#essais[cle] = nombre(e[cle]);
     this.#actif = m['anneaux'] === true;
@@ -154,7 +158,7 @@ export class PanneauVehicule extends HTMLElement {
       const cle = c.dataset['cle'] ?? '';
       const valeur = cle.startsWith('essai-')
         ? this.#essais[cle.slice(6) as CleContexte]
-        : this.#vehicule[cle as 'capaciteNominale' | 'soce' | 'soc'];
+        : this.#vehicule[cle as 'capaciteNominale' | 'soce' | 'soc' | 'puissanceMaxKw'];
       if (valeur > 0) c.value = String(valeur);
     });
     const bascule = this.querySelector<HTMLInputElement>('.veh-anneaux');

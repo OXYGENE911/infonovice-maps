@@ -3,9 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- PAS DE `frame-ancestors` ICI, ET C'EST DÉLIBÉRÉ. Le navigateur
+         l'IGNORE lorsqu'il est livré par une balise <meta> — il le dit
+         lui-même dans la console : « The Content Security Policy directive
+         'frame-ancestors' is ignored when delivered via a <meta> element ».
+         Il ne protégeait donc de rien, tout en polluant la console, ce qui
+         masque les vraies erreurs et coûtait un point de « bonnes pratiques »
+         à l'audit. La protection contre l'encadrement demande un EN-TÊTE HTTP,
+         que GitHub Pages ne permet pas d'ajouter. Limite assumée, écrite ici
+         plutôt que déguisée en directive inopérante. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self';
     img-src 'self' data:; style-src 'self'; script-src 'none';
-    base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+    base-uri 'self'; form-action 'none'">
   <meta name="description" content="Mentions légales d’Infonovice Maps :
     éditeur, hébergeur, licences du code et des données.">
   <meta name="theme-color" content="#0F1B2D">

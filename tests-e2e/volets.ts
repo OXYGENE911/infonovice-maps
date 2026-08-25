@@ -13,7 +13,7 @@ import { expect, type Page } from '@playwright/test';
  * l'emplacement dans chaque test.
  */
 
-const MENU = 'summary[aria-label="Ouvrir les réglages et les couches"]';
+const MENU = 'summary[aria-label="Menu : réglages, couches et lieux"]';
 
 /** Ouvre le menu des réglages s'il ne l'est pas déjà. Idempotent. */
 export async function ouvrirMenu(page: Page): Promise<void> {
