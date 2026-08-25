@@ -190,6 +190,33 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
   visualiseur 360 demanderait une bibliothèque supplémentaire — à peser
   contre le budget bundle (< 300 Ko hors MapLibre).
 
+## Planificateur EV — étude faite, chantiers ordonnés
+Étude de faisabilité complète : docs/planificateur-ev.md (25/08/2026), chaque
+verdict adossé à un appel réel daté.
+- [ ] PR #22 — Filtres bornes : puissance, type de connecteur, réseau. Les
+      champs EXISTENT déjà dans le jeu IRVE consommé depuis la PR #9
+      (prise_type_combo_ccs, puissance_nominale, nom_operateur…) : meilleur
+      rapport valeur/risque de toute la liste.
+- [ ] PR #23 — Profil véhicule en IndexedDB (batterie, SOC, SOCE, conso).
+      Aucun compte, aucun serveur — comme les favoris de la PR #10.
+- [ ] PR #24 — Anneaux d'autonomie ville / route / autoroute, calculés en
+      local. Ils disent « au mieux, à plat » et l'interface doit le dire.
+- [ ] PR #25 — Adresses domicile et travail.
+- [ ] PR #26 — Arrêts suggérés avec pourcentage d'arrivée visé. LE cœur d'un
+      vrai planificateur, et un chantier à cadrer avant d'être codé.
+- [ ] PR #27 — Disponibilité temps réel, réseau par réseau (Belib' éprouvé le
+      25/08 : CORS *, sans clé, statut_pdc + identifiant d'itinérance).
+      COUVERTURE PARTIELLE À DIRE, comme les transports de la PR #16.
+
+ÉCARTÉS AVEC PREUVE, voir docs/planificateur-ev.md :
+- Comptes et base de données — heurtent les contraintes 1 et 4. Décision
+  d'Armelin en attente.
+- Filtre « éviter les péages » — mesuré impossible le 21/08 (PR #6) : aucun
+  moteur public ne l'expose. Éviter les autoroutes en est l'approximation.
+- Logos des réseaux — marques déposées, et « aucun binaire opaque au dépôt ».
+- Lecture OBD — Web Bluetooth absent d'iOS ; c'est le travail de l'app native
+  de la phase 2.
+
 ## Itérations suivantes (backlog ouvert)
-- PR #22+ — Signalements communautaires (premier backend, hors périmètre 0 €),
-  zones de danger, planificateur EV…
+- PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),
+  zones de danger…
