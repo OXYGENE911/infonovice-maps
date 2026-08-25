@@ -9,6 +9,7 @@ import {
   listerFavoris, retirerFavori, exporterDonnees, importerDonnees,
   ErreurFavoris, ErreurStockage,
 } from '../lib/favoris';
+import { REPERES, lireRepere, effacerRepere } from '../lib/reperes';
 import { telecharger } from '../lib/trace';
 
 export class PanneauFavoris extends HTMLElement {
@@ -22,6 +23,12 @@ export class PanneauFavoris extends HTMLElement {
       <details class="favoris">
         <summary aria-label="Ouvrir les favoris">Favoris</summary>
         <div class="favoris-corps">
+          <!-- LES REPÈRES D'ABORD : « rentrer chez moi » doit être un geste,
+               pas une recherche dans une liste. -->
+          <div class="fav-reperes">
+            <p class="fav-reperes-titre">Mes repères</p>
+            <div class="fav-reperes-liste"></div>
+          </div>
           <ul class="favoris-liste" aria-label="Lieux favoris"></ul>
           <p class="favoris-vide">Aucun favori. Appuyez longuement sur la carte
             pour en ajouter un.</p>
@@ -72,7 +79,63 @@ export class PanneauFavoris extends HTMLElement {
 
   /** Relit et raffiche la liste — appelée aussi par l'assemblage quand un
       favori naît ailleurs (popup d'appui long). */
+  /* LES REPÈRES SE REDESSINENT À CHAQUE RAFRAÎCHISSEMENT, y compris quand ils
+     sont ABSENTS : une ligne « non défini » apprend à l'usager que la
+     fonctionnalité existe, là où une section vide ne dit rien. */
+  async #rendreReperes(): Promise<void> {
+    const boite = this.querySelector('.fav-reperes-liste');
+    if (!boite) return;
+    boite.replaceChildren();
+
+    for (const { cle, libelle } of REPERES) {
+      const repere = await lireRepere(cle);
+      const ligne = document.createElement('div');
+      ligne.className = 'fav-repere';
+
+      const aller = document.createElement('button');
+      aller.type = 'button';
+      aller.className = 'fav-repere-aller';
+      if (repere) {
+        aller.textContent = libelle;
+        const lieu = document.createElement('span');
+        lieu.className = 'fav-repere-lieu';
+        lieu.textContent = ` — ${repere.libelle}`;
+        aller.appendChild(lieu);
+        aller.setAttribute('aria-label', `Aller à ${libelle} : ${repere.libelle}`);
+        aller.addEventListener('click', () => {
+          this.#carte?.flyTo({ center: [repere.lon, repere.lat], zoom: 16 });
+        });
+      } else {
+        aller.textContent = `${libelle} — non défini`;
+        aller.disabled = true;
+        aller.setAttribute('aria-label',
+          `${libelle} non défini. Appuyez longuement sur la carte pour le définir.`);
+      }
+      ligne.appendChild(aller);
+
+      if (repere) {
+        const oubli = document.createElement('button');
+        oubli.type = 'button';
+        oubli.className = 'fav-repere-oubli';
+        oubli.textContent = 'Oublier';
+        oubli.setAttribute('aria-label', `Oublier mon ${libelle.toLowerCase()}`);
+        oubli.addEventListener('click', () => {
+          void effacerRepere(cle).then(() => this.rafraichir()).then(() => {
+            // Le bouton focalisé vient d'être détruit : sans reprise, le focus
+            // retombe sur <body>. Même leçon que le retrait d'un favori.
+            const etat = this.querySelector('.favoris-etat');
+            if (etat) etat.textContent = `${libelle} oublié.`;
+            this.querySelector<HTMLButtonElement>('.fav-repere-aller')?.focus();
+          });
+        });
+        ligne.appendChild(oubli);
+      }
+      boite.appendChild(ligne);
+    }
+  }
+
   async rafraichir(): Promise<void> {
+    await this.#rendreReperes();
     const liste = this.querySelector('.favoris-liste') as HTMLUListElement;
     const vide = this.querySelector('.favoris-vide') as HTMLElement;
     const favoris = await listerFavoris();

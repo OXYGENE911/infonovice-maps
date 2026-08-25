@@ -2,6 +2,26 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.25.0] — 2026-08-25 — Domicile et travail (PR #25)
+
+- Deux repères à rôle unique, distincts des favoris : un favori est une
+  collection ouverte que l'usager nomme, un repère est un rôle que
+  l'application CONNAÎT. « Rentrer chez moi » doit être un geste, pas une
+  recherche dans une liste.
+- Ils se définissent par appui long, comme un favori, et le bouton n'ouvre
+  qu'une fois l'adresse tranchée — sans quoi « chez moi » se figerait sous des
+  coordonnées brutes.
+- Tant qu'un repère n'est pas défini, l'interface écrit « non défini » plutôt
+  que de se taire : une section vide n'apprend rien à personne.
+- Ils vivent dans les préférences locales, donc dans l'export/import JSON de
+  la PR #10 : ils suivent l'usager d'un appareil à l'autre sans qu'aucun
+  serveur n'apprenne où il habite. C'est précisément la donnée qu'on ne
+  confierait à personne.
+- La validation n'accepte QUE les propriétés propres : un objet forgé par
+  `Object.create({ lon, lat })` passait pour un repère valide. C'est le défaut
+  attrapé à la revue du 22/08 sur les préférences POI, et il se reproduit
+  partout où l'on lit une valeur venue du dehors.
+
 ## [0.24.0] — 2026-08-25 — Profil du véhicule et rayon d'action (PR #23-24)
 
 - Un panneau « Véhicule » : batterie, santé (SOCE), charge (SOC) et autonomies

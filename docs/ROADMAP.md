@@ -190,18 +190,25 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
   visualiseur 360 demanderait une bibliothèque supplémentaire — à peser
   contre le budget bundle (< 300 Ko hors MapLibre).
 
+## Ergonomie
+- [x] PR #21bis — Trois zones : rail à gauche, réglages d'affichage en bas à
+      droite, liens légaux en bas à gauche. Les panneaux poussent le rail au
+      lieu de le recouvrir ; Échap et un clic à côté referment. Six parcours
+      E2E comparent des BOÎTES ENGLOBANTES — ce que l'œil voit se prouve par
+      des rectangles.
+
 ## Planificateur EV — étude faite, chantiers ordonnés
 Étude de faisabilité complète : docs/planificateur-ev.md (25/08/2026), chaque
 verdict adossé à un appel réel daté.
-- [ ] PR #22 — Filtres bornes : puissance, type de connecteur, réseau. Les
+- [x] PR #22 — Filtres bornes : puissance, type de connecteur, réseau. Les
       champs EXISTENT déjà dans le jeu IRVE consommé depuis la PR #9
       (prise_type_combo_ccs, puissance_nominale, nom_operateur…) : meilleur
       rapport valeur/risque de toute la liste.
-- [ ] PR #23 — Profil véhicule en IndexedDB (batterie, SOC, SOCE, conso).
+- [x] PR #23 — Profil véhicule en IndexedDB (batterie, SOC, SOCE, conso).
       Aucun compte, aucun serveur — comme les favoris de la PR #10.
-- [ ] PR #24 — Anneaux d'autonomie ville / route / autoroute, calculés en
+- [x] PR #24 — Anneaux d'autonomie ville / route / autoroute, calculés en
       local. Ils disent « au mieux, à plat » et l'interface doit le dire.
-- [ ] PR #25 — Adresses domicile et travail.
+- [x] PR #25 — Adresses domicile et travail, en repères à rôle unique.
 - [ ] PR #26 — Arrêts suggérés avec pourcentage d'arrivée visé. LE cœur d'un
       vrai planificateur, et un chantier à cadrer avant d'être codé.
 - [ ] PR #27 — Disponibilité temps réel, réseau par réseau (Belib' éprouvé le

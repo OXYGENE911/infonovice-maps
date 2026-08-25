@@ -26,6 +26,7 @@ import { PanneauTrafic } from './panneau-trafic';
 import { PanneauTransports } from './panneau-transports';
 import { PanneauVehicule } from './panneau-vehicule';
 import { ajouterFavori } from '../lib/favoris';
+import { ecrireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { VisionneusePhoto } from './visionneuse-photo';
 import { chercherPhotos, plusProche, ErreurPhotos } from '../lib/panoramax';
 import { adresseInverse } from '../lib/adresse';
@@ -189,6 +190,8 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
         + '<p class="pa-mots" role="status"></p>'
         + '<button type="button" class="pa-copier-mots" hidden>Copier l’adresse en mots</button>'
         + '<button type="button" class="pa-favori" disabled>Ajouter aux favoris</button>'
+        + REPERES.map((r) => `<button type="button" class="pa-repere"`
+          + ` data-cle="${r.cle}" disabled>Définir comme ${r.libelle.toLowerCase()}</button>`).join('')
         + '<button type="button" class="pa-photo">Photos de rue</button>'
         + '<p class="pa-photo-etat" role="status"></p></div>')
       .addTo(carte);
@@ -204,6 +207,22 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     // des coordonnées, sans moyen de le renommer (revue du 22/08).
     const bouton = bloc.querySelector('.pa-favori') as HTMLButtonElement;
     let nomFavori = coords;
+
+    /* LES REPÈRES — domicile et travail. Mêmes règles que le favori : ils
+       naissent DÉSACTIVÉS et n'ouvrent qu'une fois l'adresse tranchée, sans
+       quoi on figerait « chez moi » sous des coordonnées brutes. */
+    const boutonsRepere = [...bloc.querySelectorAll<HTMLButtonElement>('.pa-repere')];
+    for (const b of boutonsRepere) {
+      b.addEventListener('click', () => {
+        const cle = b.dataset['cle'] as CleRepere;
+        b.disabled = true;
+        ecrireRepere(cle, point, nomFavori).then(
+          () => { b.textContent = 'Enregistré ✓'; void favoris.rafraichir(); },
+          () => { b.textContent = 'Enregistrement impossible (stockage local indisponible)'; },
+        );
+      });
+    }
+
     bouton.addEventListener('click', () => {
       bouton.disabled = true;
       ajouterFavori(nomFavori, point).then(
@@ -256,8 +275,9 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
       (bloc.querySelector('.pa-libelle') as HTMLElement).textContent =
         'Adresse indisponible pour le moment.';
     }
-    // Quel que soit le sort de la BAN, le nom est arrêté : le bouton s'ouvre.
+    // Quel que soit le sort de la BAN, le nom est arrêté : les boutons s'ouvrent.
     bouton.disabled = false;
+    for (const b of boutonsRepere) b.disabled = false;
 
     /* LES PHOTOS DE RUE ne partent QUE sur demande explicite : une photo
        coûte du réseau à un commun associatif, et personne n'en veut à chaque
