@@ -120,13 +120,21 @@ test('chaque borne porte le palier de SA puissance, frontières comprises', asyn
   }));
   await ouvrirBornes(page);
 
-  const paliers = await page.evaluate(async () => {
+  /* ON ATTEND QUE LA SOURCE PORTE LES QUATRE BORNES avant de juger. La couche
+     se remplit de façon asynchrone : lire `getData()` trop tôt rendait parfois
+     un jeu partiel, et le parcours rougissait pour une raison qui n'avait rien
+     à voir avec les paliers. Une CI plus lente le révélait, pas la machine de
+     développement. */
+  const lire = async (): Promise<unknown[][]> => page.evaluate(async () => {
     const c = (window as unknown as {
       __carte: { getSource(id: string): { getData(): unknown } | undefined };
     }).__carte;
     const d = await c.getSource('poi-bornes')?.getData() as GeoJSON.FeatureCollection | undefined;
     return (d?.features ?? []).map((f) => [f.properties?.['nom'], f.properties?.['icone']]);
   });
+  await expect.poll(async () => (await lire()).length,
+    { message: 'la couche n’a jamais porté les quatre bornes' }).toBe(4);
+  const paliers = await lire();
 
   expect(paliers).toEqual([
     ['Lente', 'borne-1'],
