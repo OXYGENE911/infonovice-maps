@@ -32,6 +32,19 @@ function dansUnComposant(element: Element | null): boolean {
   return false;
 }
 
+/* CERTAINES SURFACES NE SE FERMENT PAS AU CLIC SUR LA CARTE.
+   Le menu des réglages est consulté EN MANIPULANT la carte : on active une
+   couche, on inspecte un point, on en active une autre. Le refermer à chaque
+   clic obligerait à le rouvrir entre chaque geste — et cinq parcours
+   existants, écrits avant ce menu, encodaient déjà ce va-et-vient. Il se
+   ferme par son bouton, par Échap, ou en ouvrant un volet du rail.
+
+   Les volets du rail, eux, sont transitoires : ils recouvrent la carte à
+   gauche et le clic extérieur les referme, comme attendu. */
+function estSurfaceDeTravail(details: HTMLDetailsElement): boolean {
+  return details.classList.contains('reglages');
+}
+
 /** Un panneau est « principal » s'il est à nous et non imbriqué dans un autre. */
 function estPrincipal(details: HTMLDetailsElement): boolean {
   return dansUnComposant(details) && !details.parentElement?.closest('details');
@@ -97,7 +110,9 @@ export function installerPanneaux(racine: Document | HTMLElement = document): ()
     // doit pas passer pour un appui « dans un panneau ».
     const dansUnPanneau = element?.closest('details');
     if (dansUnPanneau && dansUnComposant(dansUnPanneau)) return;
-    for (const details of panneauxPrincipauxOuverts(cible)) details.open = false;
+    for (const details of panneauxPrincipauxOuverts(cible)) {
+      if (!estSurfaceDeTravail(details)) details.open = false;
+    }
   };
 
   cible.addEventListener('toggle', surBascule, true);

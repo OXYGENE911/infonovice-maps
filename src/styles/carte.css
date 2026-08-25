@@ -591,6 +591,13 @@ etat-connexion { display: contents; }
   scrollbar-width: thin;
 }
 #carte .maplibregl-ctrl-top-left .maplibregl-ctrl { margin: 0 0 8px 12px !important; }
+/* DIX PIXELS DE DÉGAGEMENT EN TÊTE DE RAIL, et ce n'est pas décoratif. La
+   hauteur de l'en-tête est publiée par mesure (ResizeObserver) : quand le
+   bandeau hors ligne le fait grandir, le rail suit — mais pas dans la même
+   image. L'ancienne marge de 10 px absorbait cet écart ; ma règle uniforme
+   l'avait supprimée, et « Itinéraire » passait sous l'en-tête. Mesuré par le
+   parcours HORS LIGNE, qui garde ce défaut depuis la PR #3. */
+#carte .maplibregl-ctrl-top-left .maplibregl-ctrl:first-child { margin-top: 10px !important; }
 
 /* Un panneau ouvert POUSSE ses voisins au lieu de les recouvrir. Le prix à
    payer est un rail qui s'allonge ; le bénéfice est qu'aucun bouton ne

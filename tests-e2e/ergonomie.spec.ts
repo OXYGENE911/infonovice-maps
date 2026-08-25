@@ -132,13 +132,33 @@ test('Échap referme aussi le menu des réglages', async ({ page }) => {
   await expect(page.locator('details.reglages[open]')).toHaveCount(0);
 });
 
-test('un clic sur la carte referme ce qui est ouvert', async ({ page }) => {
+test('un clic sur la carte referme un volet du rail', async ({ page }) => {
   await ouvrirLaCarte(page);
 
-  await ouvrirMenu(page);
+  await entree(page, 'Véhicule').click();
+  await expect(page.locator('.maplibregl-ctrl-top-left details[open]')).toHaveCount(1);
   await page.mouse.click(640, 500);   // plein centre, loin des contrôles
-  await expect(page.locator('details.reglages[open]'), 'cliquer à côté doit refermer')
-    .toHaveCount(0);
+  await expect(page.locator('.maplibregl-ctrl-top-left details[open]'),
+    'cliquer à côté doit refermer un volet transitoire').toHaveCount(0);
+});
+
+test('mais un clic sur la carte NE referme PAS le menu des réglages', async ({ page }) => {
+  /* LE MENU EST UNE SURFACE DE TRAVAIL, pas un volet transitoire. On y active
+     une couche, on inspecte un point sur la carte, on en active une autre :
+     le refermer à chaque clic obligerait à le rouvrir entre chaque geste.
+     Cinq parcours écrits AVANT ce menu encodaient déjà ce va-et-vient, et la
+     CI les a vus rougir le jour où le menu s'est mis à disparaître. */
+  await ouvrirLaCarte(page);
+  await ouvrirMenu(page);
+
+  await page.mouse.click(640, 500);
+  await expect(page.locator('details.reglages[open]'),
+    'le menu s’est évanoui au premier clic sur la carte').toHaveCount(1);
+
+  // Il se ferme par Échap, par son bouton, ou en ouvrant un volet du rail.
+  await entree(page, 'Véhicule').click();
+  await expect(page.locator('details.reglages[open]'),
+    'ouvrir un volet du rail devrait refermer le menu').toHaveCount(0);
 });
 
 test('ouvrir un panneau du rail referme le précédent', async ({ page }) => {

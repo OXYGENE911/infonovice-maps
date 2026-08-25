@@ -532,19 +532,26 @@ test('TRANSPORTS : tous les réseaux muets sont NOMMÉS', async ({ page }) => {
 
 test('TRANSPORTS : en paysage, tous les volets restent atteignables', async ({ page }) => {
   /* L'ajout d'une sixième rangée poussait « Favoris » sous la barre d'échelle,
-     qui interceptait le doigt en son centre (mesuré à 667×375). */
+     qui interceptait le doigt en son centre (mesuré à 667×375).
+
+     DEPUIS LE REGROUPEMENT (PR #27), le rail ne porte plus que le trajet et
+     les réglages vivent derrière un menu : on vérifie donc les DEUX points
+     d'entrée, pas six rangées. L'exigence, elle, n'a pas bougé — rien ne doit
+     sortir de l'écran ni intercepter le doigt. */
   await page.setViewportSize({ width: 667, height: 375 });
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   const captes = await page.evaluate(() => [
     ...document.querySelectorAll('#carte .maplibregl-ctrl-top-left summary'),
+    ...document.querySelectorAll('#carte .maplibregl-ctrl-top-right .reglages > summary'),
   ].map((el) => {
     const r = el.getBoundingClientRect();
     if (r.height === 0) return null;
     const dessus = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
     return { nom: el.textContent?.trim().slice(0, 12) ?? '', bas: r.bottom, ok: el.contains(dessus) };
   }).filter(Boolean));
-  expect(captes.length).toBeGreaterThanOrEqual(6);
+  // Deux volets de rail plus le menu : trois points d'entrée en paysage.
+  expect(captes.length, 'un point d’entrée a disparu').toBeGreaterThanOrEqual(3);
   expect(captes.filter((c) => !c!.ok).map((c) => c!.nom),
     'un volet ne reçoit plus son propre clic').toEqual([]);
   expect(captes.filter((c) => c!.bas > 375).map((c) => c!.nom),
