@@ -6,6 +6,17 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: 'tests-e2e',
   timeout: 30_000,
+  /* UN SEUL WORKER EN CI, ET C'EST DÉLIBÉRÉ. La suite compte désormais plus de
+     quatre-vingts parcours, dont plusieurs reposent sur des minutages réels :
+     un appui long de 500 ms, le remplissage asynchrone d'une couche, le seuil
+     anti-rechargement. À deux workers sur un runner partagé, ces timers se
+     font affamer et des parcours SANS RAPPORT rougissent — deux tests
+     différents sont tombés sur deux exécutions successives, tous deux verts
+     en local et dans les autres PR.
+     Une porte de fusion qui rougit au hasard ne garde plus rien : on préfère
+     quelques minutes de plus à un signal auquel on cesse de croire. En local,
+     Playwright garde son parallélisme. */
+  workers: process.env.CI ? 1 : undefined,
   use: { baseURL: 'http://localhost:4173' },
   webServer: {
     command: 'npm run preview',
