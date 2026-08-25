@@ -180,3 +180,32 @@ test('le pied de page ne recouvre rien', async ({ page }) => {
       `les liens légaux recouvrent un contrôle du bas (n° ${i})`).toBe(false);
   }
 });
+
+test('l’attribution de MapLibre n’est PAS traitée comme un de nos volets', async ({ page }) => {
+  /* MAPLIBRE REND SON ATTRIBUTION COMPACTE AVEC UN <details>. Une détection
+     purement structurelle — « un <details> sans <details> ancêtre » —
+     l'adoptait comme volet de tête. Deux conséquences, dont une grave :
+     ouvrir un volet refermait l'attribution (une OBLIGATION de la
+     Géoplateforme), et MapLibre l'ouvrant au chargement refermait le
+     planificateur — un lien partagé n'affichait alors plus rien.
+
+     La CI l'a attrapé, pas les essais locaux : le défaut dépend de l'ordre
+     dans lequel MapLibre bascule son attribution. */
+  await ouvrirLaCarte(page);
+
+  const attribution = page.locator('details.maplibregl-ctrl-attrib');
+  await expect(attribution, 'l’attribution devrait bien être un <details>').toHaveCount(1);
+
+  // 1. Ouvrir un volet ne doit pas refermer l'attribution.
+  await attribution.evaluate((d: HTMLDetailsElement) => { d.open = true; });
+  await entree(page, 'Véhicule').click();
+  await expect(attribution, 'ouvrir un volet a refermé l’attribution IGN')
+    .toHaveAttribute('open', '');
+
+  // 2. Ouvrir l'attribution ne doit pas refermer notre volet.
+  await attribution.evaluate((d: HTMLDetailsElement) => { d.open = false; });
+  await attribution.evaluate((d: HTMLDetailsElement) => { d.open = true; });
+  await expect(page.locator('.maplibregl-ctrl-top-left details[open]'),
+    'l’attribution a refermé le volet — un lien partagé n’afficherait plus rien')
+    .toHaveCount(1);
+});
