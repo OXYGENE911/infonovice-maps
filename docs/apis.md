@@ -348,5 +348,43 @@ l'interface, et la carte hors ligne n'en promet rien.
   couvre donc toutes les communes sauf les plus vastes, où `coder` refuse
   explicitement plutôt que de rendre une adresse fausse.
 
+## DATAtourisme — écarté POUR L'INSTANT, avec la mesure (25/08/2026)
+
+Armelin dispose d'une clé gratuite et souhaitait afficher les lieux culturels
+autour des arrêts de recharge et le long du trajet. Deux mesures ont suffi à
+suspendre l'idée.
+
+```
+GET https://api.datatourisme.fr/v1/catalog   (sans clé, Origin: maps.infonovice.fr)
+→ HTTP 401                          la clé est OBLIGATOIRE
+→ Access-Control-Allow-Origin: *    le CORS, lui, est ouvert
+```
+
+L'API est une recherche géographique — paramètres `latitude`, `longitude`,
+`radius`, `page`, `theme` relevés dans sa documentation — et non un flux en
+masse. Elle conviendrait donc parfaitement au besoin.
+
+**LE BLOCAGE N'EST PAS TECHNIQUE, IL EST STRUCTUREL.** Ce site est statique,
+servi depuis un dépôt public : une clé livrée au navigateur est lisible par
+quiconque ouvre les outils de développement. Le quota d'Armelin serait
+siphonnable et sa clé révocable. C'est exactement le motif qui a écarté huit
+sources météo françaises plus haut dans ce document.
+
+Deux voies existaient, et elles ont été présentées :
+
+| Voie | Ce qu'elle coûte |
+|---|---|
+| **Extraction au build** — clé en secret GitHub Actions, extrait statique par département servi à la demande (comme le répertoire des communes) | Un script à écrire et à maintenir ; données figées entre deux constructions — sans importance pour des musées |
+| **Clé dans le navigateur** | Une dérogation formelle : décision écrite ET mention publique, comme Open-Meteo le 22/08. Clé exposée. |
+
+**Décision d'Armelin du 25/08 : abandonner pour l'instant.** Ni l'une ni
+l'autre. Rien n'est promis dans l'interface, et le sujet reste ouvert : la
+mesure ci-dessus reste valable le jour où il le rouvrira.
+
+**Ce qui a aussi pesé :** la documentation ne publie qu'un schéma, pas de
+réponse réelle. Or ce dépôt exige des fixtures au format réel des services,
+vérifiées par appels réels. Sans clé, aucun décodeur ne pouvait être écrit
+honnêtement.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.

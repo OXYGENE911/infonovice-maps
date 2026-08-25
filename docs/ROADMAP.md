@@ -267,6 +267,14 @@ RÈGLE QUI NE BOUGE PAS : le mode gratuit reste entièrement utilisable SANS
 compte, en local, avec son export JSON. C'est ce qui distingue ce produit de
 celui qu'il concurrence.
 
+## Écarté pour l'instant, avec la mesure
+- [~] Lieux culturels DATAtourisme (autour des arrêts, le long du trajet) :
+      ABANDONNÉ le 25/08/2026 par décision d'Armelin. L'API convient (recherche
+      géographique, CORS ouvert) mais exige une CLÉ — invisible sur un serveur,
+      publique sur un site statique dans un dépôt public. Les deux voies
+      possibles (extrait au build, ou dérogation avec mention publique) ont été
+      présentées et écartées. Mesure conservée dans docs/apis.md.
+
 ## Itérations suivantes (backlog ouvert)
 - PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),
   zones de danger…
