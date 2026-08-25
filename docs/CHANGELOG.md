@@ -2,6 +2,19 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.22.1] — 2026-08-25 — Montées de version : sept sur huit
+
+- Vite 8, ESLint 10, `@types/node` 26 et les quatre actions GitHub
+  (checkout v7, setup-node v7, upload-pages-artifact v5, deploy-pages v5)
+  passent : 253 tests unitaires, 44 parcours E2E, lint et build verts.
+- Vite 8 a exigé une migration : Rollup n'accepte plus `manualChunks` en
+  objet. La forme fonction remplace `{ maplibre: ['maplibre-gl'] }`, et
+  MapLibre reste isolé dans son morceau (251,7 Ko gzippés) — le budget
+  applicatif des 300 Ko n'est pas entamé.
+- TYPESCRIPT 7 EST REFUSÉ, avec sa preuve : `typescript-eslint does not
+  support TS 7.0`. La chaîne de lint le bloque, pas notre code. La montée
+  attendra que `typescript-eslint` suive ; TypeScript reste en 5.9.3.
+
 ## [0.22.0] — 2026-08-25 — Ergonomie : trois zones, plus de superposition
 
 - Les six pastilles flottantes de gauche devenaient un piège : le panneau

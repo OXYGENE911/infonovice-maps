@@ -35,7 +35,12 @@ export default defineConfig({
         // MapLibre pèse ~230 Ko gzippé à lui seul : il vit dans son propre
         // morceau, exclu du budget bundle applicatif (< 300 Ko) que la CI
         // mesure — le budget surveille NOTRE code, pas la bibliothèque carte.
-        manualChunks: { maplibre: ['maplibre-gl'] },
+        //
+        // EN FONCTION, ET NON EN OBJET : Rollup (embarqué par Vite 8) n'accepte
+        // plus la forme `{ maplibre: ['maplibre-gl'] }`. Le typage l'a refusée
+        // à la compilation, pas au premier chargement en production — c'est la
+        // bonne façon de l'apprendre.
+        manualChunks: (id: string) => (id.includes('maplibre-gl') ? 'maplibre' : undefined),
       },
     },
   },
