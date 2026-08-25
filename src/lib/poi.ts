@@ -127,6 +127,46 @@ export function urlBornes(b: Bbox, filtres: FiltresBornes = {}): string {
     + PRISES.map((p) => `,${p.champ}`).join('');
 }
 
+/** Un réseau présent dans la vue, avec le nombre de bornes qu'il y exploite. */
+export interface Reseau { nom: string; nombre: number; }
+
+/* LES RÉSEAUX SE DEMANDENT AU PORTAIL, PAS À UNE LISTE FIGÉE. Le jeu IRVE
+   compte des centaines d'enseignes, dont beaucoup sont un hôtel ou un garage
+   isolé. Proposer une case « Ionity » là où il n'y en a aucune est une
+   promesse creuse ; on interroge donc la FACETTE, bornée à l'emprise, et l'on
+   n'affiche que ce qui s'y trouve vraiment — avec son compte. */
+export function urlFacettesReseaux(b: Bbox): string {
+  return 'https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/'
+    + 'mobilityref-france-irve-220/facets'
+    + `?where=${encodeURIComponent(odsBbox('point_geo', b))}`
+    + '&facet=nom_enseigne';
+}
+
+/** Décode la réponse de facettes. Défensive : la réponse vient du dehors. */
+export function versReseaux(brut: unknown): Reseau[] {
+  const groupes = (brut as { facets?: unknown })?.facets;
+  if (!Array.isArray(groupes)) return [];
+  const groupe = groupes.find(
+    (g) => typeof g === 'object' && g !== null
+      && (g as Record<string, unknown>)['name'] === 'nom_enseigne',
+  ) as { facets?: unknown } | undefined;
+  const entrees = groupe?.facets;
+  if (!Array.isArray(entrees)) return [];
+
+  const rendu: Reseau[] = [];
+  for (const e of entrees) {
+    if (typeof e !== 'object' || e === null) continue;
+    const r = e as Record<string, unknown>;
+    const nom = typeof r['name'] === 'string' ? r['name'].trim() : '';
+    const nombre = typeof r['count'] === 'number' ? r['count'] : NaN;
+    // Un nom vide ou un compte absent ne se montre pas : la case serait muette.
+    if (nom === '' || !Number.isFinite(nombre) || nombre <= 0) continue;
+    rendu.push({ nom, nombre });
+  }
+  // Du plus fourni au moins fourni : l'usager cherche d'abord les grands réseaux.
+  return rendu.sort((a, b) => b.nombre - a.nombre);
+}
+
 export function urlParkings(b: Bbox): string {
   const q = new URLSearchParams({
     SERVICE: 'WFS', VERSION: '2.0.0', REQUEST: 'GetFeature',
@@ -289,6 +329,10 @@ export async function chargerBornes(
   b: Bbox, signal?: AbortSignal, filtres: FiltresBornes = {},
 ): Promise<Charge<PoiBorne>> {
   return versBornes(await appel(urlBornes(b, filtres), 'bornes de recharge', signal));
+}
+
+export async function chargerReseaux(b: Bbox, signal?: AbortSignal): Promise<Reseau[]> {
+  return versReseaux(await appel(urlFacettesReseaux(b), 'réseaux de recharge', signal));
 }
 
 export async function chargerParkings(b: Bbox, signal?: AbortSignal): Promise<ChargeParkings> {

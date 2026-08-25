@@ -2,6 +2,20 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.30.0] — 2026-08-26 — Filtrer les bornes par réseau (PR #22bis)
+
+- Les réseaux proposés sont ceux PRÉSENTS DANS LA VUE, avec leur nombre de
+  bornes, du plus fourni au moins fourni. Une liste figée de centaines
+  d'enseignes nationales — dont beaucoup sont un hôtel isolé — aurait proposé
+  des cases creuses.
+- Ils se chargent AVEC la couche, jamais à part : une facette de plus par
+  déplacement aurait doublé les appels au portail.
+- Une facette en panne N'EMPORTE PAS les bornes : elle n'est qu'un confort de
+  filtrage, et son échec ne doit pas priver l'usager de la couche.
+- Plafonnés à douze, mais un réseau DÉJÀ COCHÉ reste affiché même hors
+  plafond — sinon un filtre actif deviendrait invisible, donc impossible à
+  retirer.
+
 ## [0.29.1] — 2026-08-26 — La marge d'arrivée se règle
 
 - « Arriver avec 30 % » n'est pas le même trajet qu'« arriver avec 5 % » : la

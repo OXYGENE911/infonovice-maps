@@ -203,6 +203,8 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
 ## Planificateur EV — étude faite, chantiers ordonnés
 Étude de faisabilité complète : docs/planificateur-ev.md (25/08/2026), chaque
 verdict adossé à un appel réel daté.
+- [x] PR #22bis — Filtre par RÉSEAU : les enseignes présentes dans la vue,
+      demandées en facette au portail, avec leur nombre.
 - [x] PR #22 — Filtres bornes : puissance, type de connecteur, réseau. Les
       champs EXISTENT déjà dans le jeu IRVE consommé depuis la PR #9
       (prise_type_combo_ccs, puissance_nominale, nom_operateur…) : meilleur

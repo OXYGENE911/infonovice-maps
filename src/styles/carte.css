@@ -848,3 +848,7 @@ etat-connexion { display: contents; }
   background: var(--fond);
 }
 .iti-recharge-reglages select:focus-visible { outline: none; box-shadow: var(--focus); }
+.poi-reseaux { display: grid; gap: 5px; max-height: 168px; overflow-y: auto; }
+.poi-reseaux label { display: flex; align-items: center; gap: 8px;
+  font: 400 12.5px var(--police); color: var(--texte-1); cursor: pointer; }
+.poi-reseaux input:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }

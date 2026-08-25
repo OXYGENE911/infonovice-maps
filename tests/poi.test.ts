@@ -7,6 +7,7 @@ import {
   versCarburants, versBornes, versParkings,
   chargerCarburants, chargerBornes, vueAChange, ErreurPoi, type Bbox,
   PRISES, type FiltresBornes,
+  urlFacettesReseaux, versReseaux,
 } from '../src/lib/poi';
 
 const B: Bbox = { ouest: 2.25, sud: 48.8, est: 2.42, nord: 48.9 };
@@ -278,5 +279,55 @@ describe('le catalogue des prises', () => {
       expect(p.libelle.length, `« ${p.cle} » sans libellé`).toBeGreaterThan(2);
       expect(p.libelle).not.toBe(p.cle);
     }
+  });
+});
+
+/* LES RÉSEAUX PRÉSENTS DANS LA VUE (PR #22bis) — on ne propose pas une liste
+   figée de 400 enseignes nationales : on demande au portail lesquelles se
+   trouvent DANS L'EMPRISE, avec leur nombre. Une case « Ionity » là où il n'y
+   en a aucune est une promesse creuse. */
+describe('les facettes de réseaux', () => {
+  test('l’URL interroge la facette nom_enseigne, dans l’emprise', () => {
+    const u = decodeURIComponent(urlFacettesReseaux(B));
+    expect(u).toContain('/facets');
+    expect(u).toContain('facet=nom_enseigne');
+    expect(u).toContain('in_bbox(point_geo,48.8,2.25,48.9,2.42)');
+  });
+
+  /* Fixture AU FORMAT RÉEL, relevée le 26/08/2026 sur Paris intra-muros. */
+  const REEL = {
+    facets: [{
+      name: 'nom_enseigne',
+      facets: [
+        { name: "Belib'", count: 4286, value: "Belib'" },
+        { name: 'Bump', count: 90, value: 'Bump' },
+        { name: 'ACCOR Hotels', count: 2, value: 'ACCOR Hotels' },
+      ],
+    }],
+  };
+
+  test('les réseaux sortent du PLUS FOURNI au moins fourni', () => {
+    expect(versReseaux(REEL).map((r) => r.nom)).toEqual(["Belib'", 'Bump', 'ACCOR Hotels']);
+  });
+
+  test('chaque réseau porte son nombre de bornes', () => {
+    expect(versReseaux(REEL)[0]).toEqual({ nom: "Belib'", nombre: 4286 });
+  });
+
+  test('une réponse illisible rend une liste vide, pas une exception', () => {
+    expect(versReseaux(null)).toEqual([]);
+    expect(versReseaux({ facets: 'non' })).toEqual([]);
+    expect(versReseaux({ facets: [] })).toEqual([]);
+    expect(versReseaux({ facets: [{ name: 'autre', facets: [] }] })).toEqual([]);
+  });
+
+  test('une entrée sans nom ou sans compte est écartée', () => {
+    const bancal = { facets: [{ name: 'nom_enseigne', facets: [
+      { name: 'Bon', count: 5, value: 'Bon' },
+      { count: 3, value: null },
+      { name: 'Sans compte', value: 'Sans compte' },
+      { name: '   ', count: 2, value: '   ' },
+    ] }] };
+    expect(versReseaux(bancal)).toEqual([{ nom: 'Bon', nombre: 5 }]);
   });
 });

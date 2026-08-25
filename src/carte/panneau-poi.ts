@@ -16,7 +16,8 @@ import { lirePreference, ecrirePreference } from '../lib/stockage';
 import { palierDe, libellePalier, PALIERS } from '../lib/puissance';
 import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import {
-  chargerCarburants, chargerBornes, chargerParkings, vueAChange,
+  chargerCarburants, chargerBornes, chargerParkings, chargerReseaux, vueAChange,
+  type Reseau,
   PRISES, type ClePrise, type FiltresBornes,
   type Bbox,
 } from '../lib/poi';
@@ -124,6 +125,9 @@ export class PanneauPoi extends HTMLElement {
           ${PRISES.map((p) => `
             <label><input type="checkbox" class="poi-prise" value="${p.cle}"> ${p.libelle}</label>`).join('')}
           <p class="poi-filtre-note">Sans connecteur coché, toutes les bornes sont montrées.</p>
+          <p class="poi-filtre-titre">Réseaux dans la vue</p>
+          <div class="poi-reseaux" role="group" aria-label="Filtrer par réseau"></div>
+
           <p class="poi-filtre-titre">Lecture de la carte</p>
           <ul class="poi-legende">
             ${PALIERS.map((p) => `
@@ -194,9 +198,11 @@ export class PanneauPoi extends HTMLElement {
       const prisesLues = Array.isArray(m['prises']) ? m['prises'] : [];
       const prises = prisesLues.filter(
         (v): v is ClePrise => typeof v === 'string' && PRISES.some((p) => p.cle === v));
+      const reseauxLus = Array.isArray(m['reseaux']) ? m['reseaux'] : [];
       this.#filtres = {
         puissanceMin: Number.isFinite(puissance) && puissance > 0 ? puissance : undefined,
         prises,
+        reseaux: reseauxLus.filter((v): v is string => typeof v === 'string' && v.trim() !== ''),
       };
       const select = this.querySelector<HTMLSelectElement>('.poi-puissance');
       if (select) select.value = String(this.#filtres.puissanceMin ?? 0);
@@ -205,6 +211,53 @@ export class PanneauPoi extends HTMLElement {
         if (c) c.checked = true;
       }
     });
+  }
+
+  /* LES RÉSEAUX PRÉSENTS DANS LA VUE, du plus fourni au moins fourni.
+     Plafonnés à douze : au-delà, la liste devient un annuaire où l'on ne
+     trouve plus rien, et le jeu IRVE compte des centaines d'enseignes dont
+     beaucoup sont un hôtel isolé. Les réseaux DÉJÀ COCHÉS restent affichés
+     même s'ils sortent du plafond — sinon un filtre actif deviendrait
+     invisible, donc impossible à retirer. */
+  #rendreReseaux(reseaux: Reseau[]): void {
+    const boite = this.querySelector('.poi-reseaux');
+    if (!boite) return;
+    boite.replaceChildren();
+
+    const coches = new Set(this.#filtres.reseaux ?? []);
+    const montres = [
+      ...reseaux.slice(0, 12),
+      ...reseaux.slice(12).filter((r) => coches.has(r.nom)),
+    ];
+
+    if (montres.length === 0) {
+      const vide = document.createElement('p');
+      vide.className = 'poi-filtre-note';
+      vide.textContent = 'Aucun réseau identifié dans cette vue.';
+      boite.appendChild(vide);
+      return;
+    }
+
+    for (const r of montres) {
+      const etiquette = document.createElement('label');
+      const case_ = document.createElement('input');
+      case_.type = 'checkbox';
+      case_.className = 'poi-reseau';
+      case_.value = r.nom;
+      case_.checked = coches.has(r.nom);
+      const texte = document.createElement('span');
+      texte.textContent = ` ${r.nom} (${r.nombre})`;
+      case_.addEventListener('change', () => {
+        const choisis = [...this.querySelectorAll<HTMLInputElement>('.poi-reseau:checked')]
+          .map((c) => c.value);
+        this.#filtres = { ...this.#filtres, reseaux: choisis };
+        this.#filtresTouches = true;
+        void ecrirePreference(PREF_FILTRES, this.#filtres);
+        void this.#charger('bornes', true);
+      });
+      etiquette.append(case_, texte);
+      boite.appendChild(etiquette);
+    }
   }
 
   /* Les filtres ne s'affichent qu'avec la couche qu'ils règlent. */
@@ -263,7 +316,16 @@ export class PanneauPoi extends HTMLElement {
         };
         this.#montres.carburants = c.elements.length; this.#totaux.carburants = c.total;
       } else if (couche === 'bornes') {
-        const c = await chargerBornes(bbox, controleur.signal, this.#filtres);
+        /* LES RÉSEAUX SE CHARGENT AVEC LA COUCHE, pas à part : une facette de
+           plus par déplacement doublerait les appels au portail. L'échec de la
+           facette ne doit PAS emporter les bornes — elle n'est qu'un confort
+           de filtrage. */
+        const [c, reseaux] = await Promise.all([
+          chargerBornes(bbox, controleur.signal, this.#filtres),
+          chargerReseaux(bbox, controleur.signal).catch(() => [] as Reseau[]),
+        ]);
+        if (controleur !== this.#controleurs[couche]) return;
+        this.#rendreReseaux(reseaux);
         if (controleur !== this.#controleurs[couche]) return;
         this.#bornes = {
           type: 'FeatureCollection',

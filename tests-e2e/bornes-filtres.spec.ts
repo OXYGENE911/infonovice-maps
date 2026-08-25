@@ -20,7 +20,14 @@ test.beforeEach(async ({ page }) => {
 async function espionnerIrve(page: import('@playwright/test').Page): Promise<string[]> {
   const vues: string[] = [];
   await page.route(IRVE, (route) => {
-    vues.push(decodeURIComponent(route.request().url()));
+    /* L'ESPION LAISSE PASSER LES FACETTES. Playwright donne la priorité au
+       calque enregistré EN DERNIER : ce motif large recouvrait sans le vouloir
+       la route des facettes de réseaux, qui recevait alors une réponse
+       d'enregistrements et rendait une liste vide. Le laisser dépendre de
+       l'ordre d'écriture des tests aurait été une bombe à retardement. */
+    const url = route.request().url();
+    if (url.includes('/facets')) return route.fallback();
+    vues.push(decodeURIComponent(url));
     return route.fulfill({ contentType: 'application/json',
       body: JSON.stringify({ total_count: 0, results: [] }) });
   });
@@ -142,4 +149,57 @@ test('chaque borne porte le palier de SA puissance, frontières comprises', asyn
     ['Très rapide', 'borne-3'],
     ['Inconnue', 'borne-inconnue'],
   ]);
+});
+
+/* LE FILTRE PAR RÉSEAU (PR #22bis) — on ne propose pas une liste figée : le
+   portail dit quels réseaux sont DANS LA VUE, avec leur nombre. Une case
+   « Ionity » là où il n'y en a aucune est une promesse creuse. */
+test('les réseaux proposés sont ceux de la vue, du plus fourni au moins', async ({ page }) => {
+  await page.route('**/mobilityref-france-irve-220/facets**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ facets: [{ name: 'nom_enseigne', facets: [
+      { name: 'Bump', count: 90, value: 'Bump' },
+      { name: "Belib'", count: 4286, value: "Belib'" },
+      { name: 'ACCOR Hotels', count: 2, value: 'ACCOR Hotels' },
+    ] }] }),
+  }));
+  await espionnerIrve(page);
+  await ouvrirBornes(page);
+
+  const cases_ = page.locator('.poi-reseau');
+  await expect(cases_).toHaveCount(3, { timeout: 15_000 });
+  await expect(page.locator('.poi-reseaux')).toContainText("Belib' (4286)");
+  // Du plus fourni au moins fourni : l'usager cherche d'abord les grands.
+  const valeurs = await cases_.evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value));
+  expect(valeurs).toEqual(["Belib'", 'Bump', 'ACCOR Hotels']);
+});
+
+test('cocher un réseau le fait partir DANS LA REQUÊTE', async ({ page }) => {
+  await page.route('**/mobilityref-france-irve-220/facets**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ facets: [{ name: 'nom_enseigne', facets: [
+      { name: "Belib'", count: 4286, value: "Belib'" },
+    ] }] }),
+  }));
+  const vues = await espionnerIrve(page);
+  await ouvrirBornes(page);
+  await expect(page.locator('.poi-reseau')).toHaveCount(1, { timeout: 15_000 });
+
+  await page.locator('.poi-reseau').check();
+  await expect.poll(() => vues.some((u) => u.includes('nom_enseigne = "Belib\'"')),
+    { message: 'le réseau n’est pas parti au service' }).toBe(true);
+});
+
+test('une facette en panne n’emporte PAS les bornes', async ({ page }) => {
+  /* La facette n'est qu'un confort de filtrage : son échec ne doit pas priver
+     l'usager de la couche elle-même. */
+  await page.route('**/mobilityref-france-irve-220/facets**',
+    (route) => route.fulfill({ status: 500, body: 'panne' }));
+  await espionnerIrve(page);
+  await ouvrirBornes(page);
+
+  await expect(page.locator('.poi-reseaux')).toContainText('Aucun réseau identifié',
+    { timeout: 15_000 });
+  // Et la couche des bornes, elle, a bien été demandée.
+  await expect(page.locator('.poi-filtres')).toBeVisible();
 });
