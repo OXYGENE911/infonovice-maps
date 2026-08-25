@@ -2,6 +2,29 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.24.0] — 2026-08-25 — Profil du véhicule et rayon d'action (PR #23-24)
+
+- Un panneau « Véhicule » : batterie, santé (SOCE), charge (SOC) et autonomies
+  constatées. TOUT RESTE DANS LE NAVIGATEUR — aucun compte, aucun serveur,
+  comme les favoris de la PR #10.
+- ON DEMANDE DES KILOMÈTRES, PAS DES kWh/100 km. Personne ne connaît sa
+  consommation ; tout le monde sait jusqu'où il va avec une charge. Les
+  consommations s'en déduisent, à un seul endroit — deux saisies pourraient se
+  contredire.
+- Trois anneaux d'autonomie sur la carte : ville, route, autoroute. Ce sont de
+  vrais cercles GÉODÉSIQUES, pas des cercles en pixels : chaque sommet est à
+  moins de 500 m du rayon demandé, vérifié jusqu'à la latitude de Dunkerque où
+  un cercle tracé à l'écran se serait effondré.
+- L'USURE SE DIT EN KILOMÈTRES : « 5,3 kWh perdus, soit environ 18 km
+  d'autoroute » plutôt que « SOCE 94 % », qui ne dit rien à personne.
+- ET CE QUE LE MODÈLE IGNORE EST ÉCRIT SOUS LE BILAN : ni le relief, ni le
+  vent, ni la conduite. Tant qu'aucun véhicule n'est saisi, aucun anneau n'est
+  dessiné — inventer une « voiture moyenne » afficherait un rayon crédible et
+  faux.
+- Le modèle est étalonné sur un véhicule RÉEL et ses relevés au compteur : une
+  VinFast VF8, 87,7 kWh, SOCE 94 %, 400 km en ville, 280 sur autoroute. Le
+  calcul les retrouve à quelques kilomètres près.
+
 ## [0.23.0] — 2026-08-25 — Filtres des bornes de recharge (PR #22)
 
 - Les bornes se filtrent par PUISSANCE minimale (22 / 50 / 150 / 300 kW) et

@@ -24,6 +24,7 @@ import { PanneauPoi } from './panneau-poi';
 import { PanneauFavoris } from './panneau-favoris';
 import { PanneauTrafic } from './panneau-trafic';
 import { PanneauTransports } from './panneau-transports';
+import { PanneauVehicule } from './panneau-vehicule';
 import { ajouterFavori } from '../lib/favoris';
 import { VisionneusePhoto } from './visionneuse-photo';
 import { chercherPhotos, plusProche, ErreurPhotos } from '../lib/panoramax';
@@ -112,6 +113,18 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      une modale doit couvrir la carte, pas vivre dedans. */
   const visionneuse = new VisionneusePhoto();
   document.body.appendChild(visionneuse);
+
+  /* LE VÉHICULE ÉLECTRIQUE — profil et rayon d'action. Tout reste local :
+     batterie, santé, charge, relevés d'autonomie ne sortent jamais du
+     navigateur, et aucun compte n'est demandé. */
+  const vehicule = new PanneauVehicule();
+  vehicule.carte = carte;
+  const porteVehicule = document.createElement('div');
+  porteVehicule.className = 'maplibregl-ctrl porte-vehicule';
+  porteVehicule.appendChild(vehicule);
+  carte.addControl(
+    { onAdd: () => porteVehicule, onRemove: () => porteVehicule.remove() }, 'top-left',
+  );
 
   /* LES FAVORIS — même colonne, sous les points d'intérêt. */
   const favoris = new PanneauFavoris();
