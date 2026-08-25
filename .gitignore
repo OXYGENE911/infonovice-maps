@@ -5,3 +5,7 @@ playwright-report/
 test-results/
 *.local
 .DS_Store
+
+# Secrets : ce depot est public. Aucune cle ne doit pouvoir y entrer.
+.env
+.env.*
