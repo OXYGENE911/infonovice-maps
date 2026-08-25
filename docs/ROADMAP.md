@@ -229,6 +229,27 @@ verdict adossé à un appel réel daté.
 - Lecture OBD — Web Bluetooth absent d'iOS ; c'est le travail de l'app native
   de la phase 2.
 
+## Premium, rallyes AFUVE et cortèges — CADRAGE, rien d'engagé
+Cadrage complet : docs/premium-et-evenements.md (25/08/2026). Trois projets
+distincts, pas trois fonctionnalités — ils ne partagent que le besoin d'un
+serveur.
+- [ ] Décider le modèle (six questions listées au §5 du cadrage)
+- [ ] Réécrire « Vie privée » en DEUX RÉGIMES — doit accompagner le premier
+      octet de backend, jamais le suivre : la page affirme aujourd'hui sans
+      nuance que rien ne quitte le navigateur.
+- [ ] Socle premium : compte, itinéraires sauvegardés, comparaison A/B,
+      historique de recharge. Le moins risqué, réutilisé par les deux autres.
+- [ ] Cortèges entre amis — AVANT les rallyes : un cortège s'essaie un
+      dimanche à trois voitures, un rallye est un événement daté qu'on ne peut
+      pas rater.
+- [ ] Événements AFUVE (rallyes, classement, signalement de panne) — dépend de
+      l'APP MOBILE de la phase 2 : un navigateur en arrière-plan n'émet pas de
+      position de façon fiable, et iOS l'arrête.
+
+RÈGLE QUI NE BOUGE PAS : le mode gratuit reste entièrement utilisable SANS
+compte, en local, avec son export JSON. C'est ce qui distingue ce produit de
+celui qu'il concurrence.
+
 ## Itérations suivantes (backlog ouvert)
 - PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),
   zones de danger…
