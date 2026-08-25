@@ -56,6 +56,10 @@ export class PanneauItineraire extends HTMLElement {
   #meteoLe: Date | null = null;
   #annulationTrajet: AbortController | null = null;
   #marqueursTrajet: Marker[] = [];
+  /* LES ARRÊTS ONT LEURS PROPRES MARQUEURS. Les mêler à ceux de « sur le
+     trajet » ferait disparaître un plan de recharge dès qu'on cherche une
+     station-service — deux fonctions distinctes, deux collections. */
+  #marqueursArrets: Marker[] = [];
   #marqueurs: Marker[] = [];
 
   set carte(c: CarteMapLibre) {
@@ -400,6 +404,8 @@ export class PanneauItineraire extends HTMLElement {
   #afficherRecharge(plan: PlanRecharge): void {
     const corps = this.querySelector('.iti-recharge-corps') as HTMLElement;
     corps.replaceChildren();
+    this.#marqueursArrets.forEach((m) => m.remove());
+    this.#marqueursArrets = [];
 
     if (!plan.faisable) {
       /* ON DIT NON, TÔT, AVEC LE MOTIF. Un plan bancal qui laisse découvrir le
@@ -425,17 +431,33 @@ export class PanneauItineraire extends HTMLElement {
       liste.className = 'recharge-liste';
       for (const a of plan.arrets) {
         const item = document.createElement('li');
-        const titre = document.createElement('span');
-        titre.className = 'recharge-nom';
-        titre.textContent = a.borne.nom;
+        /* LE NOM EST UN BOUTON : une liste d'arrêts qu'on ne peut pas situer
+           sur la carte oblige à chercher des yeux ce que l'application sait
+           déjà. Un clic y vole. */
+        const aller = document.createElement('button');
+        aller.type = 'button';
+        aller.className = 'recharge-aller';
+        aller.textContent = a.borne.nom;
+        aller.setAttribute('aria-label', `Voir ${a.borne.nom} sur la carte`);
+        aller.addEventListener('click', () => {
+          this.#carte?.flyTo({ center: [a.borne.lon, a.borne.lat], zoom: 14 });
+        });
         const detail = document.createElement('span');
         detail.className = 'recharge-detail';
         detail.textContent = `${Math.round(a.borne.avancementM / 1000)} km`
           + ` · arrivée ${Math.round(a.socArrivee)} % → départ ${Math.round(a.socDepart)} %`
           + ` · ${Math.round(a.dureeMin)} min`
           + (a.borne.puissanceKw ? ` · ${a.borne.puissanceKw} kW` : '');
-        item.append(titre, detail);
+        item.append(aller, detail);
         liste.append(item);
+
+        // Et le marqueur, dans le vert des bornes, avec son rang.
+        if (this.#carte) {
+          this.#marqueursArrets.push(
+            new Marker({ color: '#1E9E5A', scale: 0.8 })
+              .setLngLat([a.borne.lon, a.borne.lat]).addTo(this.#carte),
+          );
+        }
       }
       corps.append(liste);
     }
@@ -723,6 +745,7 @@ export class PanneauItineraire extends HTMLElement {
     this.#dernier = null; this.#calculPour = null; this.#depart = null; this.#arrivee = null;
     this.#marqueurs.forEach((m) => m.remove()); this.#marqueurs = [];
     this.#marqueursTrajet.forEach((m) => m.remove()); this.#marqueursTrajet = [];
+    this.#marqueursArrets.forEach((m) => m.remove()); this.#marqueursArrets = [];
     const carte = this.#carte;
     if (carte?.getSource(SOURCE)) {
       carte.removeLayer('itineraire-trait'); carte.removeLayer('itineraire-bord');

@@ -4,6 +4,10 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 
 ## [0.28.0] — 2026-08-25 — Arrêts de recharge suggérés (PR #28)
 
+- Les arrêts sont POSÉS SUR LA CARTE, et un clic sur leur nom y vole : une
+  liste qu'on ne peut pas situer oblige à chercher des yeux ce que
+  l'application sait déjà.
+
 - Le planificateur propose ses arrêts : où s'arrêter, avec quel pourcentage de
   batterie on y arrive et on en repart, combien de minutes de charge, et le
   pourcentage à l'arrivée. Le calcul est LOCAL ; le seul appel réseau cherche

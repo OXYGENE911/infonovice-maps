@@ -26,31 +26,44 @@ test.beforeEach(async ({ page }) => {
   }));
 });
 
-/** Pose un profil véhicule en IndexedDB avant le chargement de la page. */
-async function poserVehicule(page: Page, v: Record<string, unknown>): Promise<void> {
-  await page.addInitScript((vehicule) => {
-    const demande = indexedDB.open('infonovice-maps', 1);
-    demande.onupgradeneeded = () => {
-      const bdd = demande.result;
-      if (!bdd.objectStoreNames.contains('preferences')) bdd.createObjectStore('preferences');
-      if (!bdd.objectStoreNames.contains('favoris')) bdd.createObjectStore('favoris');
-    };
-    demande.onsuccess = () => {
-      const t = demande.result.transaction('preferences', 'readwrite');
-      t.objectStore('preferences').put({ vehicule, essais: {}, anneaux: false }, 'vehicule');
-    };
-  }, v);
+/* LE PROFIL SE SAISIT PAR L'INTERFACE, comme un usager le ferait.
+ *
+ * Deux versions antérieures poussaient directement dans IndexedDB. La
+ * première, par `addInitScript`, écrivait de façon asynchrone et
+ * l'application lisait parfois avant. La seconde chargeait la page d'abord —
+ * mais l'application y persiste un profil VIDE au démarrage, et les deux
+ * écritures se couraient après. Les deux produisaient le même faux négatif :
+ * « Renseignez d'abord votre véhicule », une fois sur trois, accusant le code
+ * au lieu du test.
+ *
+ * Passer par le formulaire supprime la course à sa racine, et éprouve au
+ * passage le chemin réel. */
+async function saisirVehicule(page: Page): Promise<void> {
+  await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Véhicule' }).click();
+  await page.getByLabel('Batterie').fill('87.7');
+  await page.getByLabel('Santé (SOCE)').fill('94');
+  await page.getByLabel('Charge (SOC)').fill('100');
+  await page.getByLabel('Charge max').fill('150');
+  await page.getByLabel('Sur autoroute').fill('280');
+  // Le bilan confirme que le profil est pris en compte AVANT de continuer.
+  await expect(page.locator('.veh-bilan-lignes')).toContainText('Sur autoroute');
+  /* ET ON ROUVRE LE PLANIFICATEUR. Ouvrir le volet « Véhicule » a refermé
+     celui de l'itinéraire — l'exclusion mutuelle du rail fonctionne comme
+     prévu, et la section des arrêts vit DEDANS. */
+  await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Itinéraire' }).click();
+  await expect(page.locator('.iti-recharge summary')).toBeVisible();
 }
 
-const VF8 = {
-  nom: 'VinFast VF8', capaciteNominale: 87.7, soce: 94, soc: 100,
-  consommations: { ville: 20.6, route: 22.9, autoroute: 29.4 },
-  puissanceMaxKw: 150,
-};
-
-async function ouvrirRecharge(page: Page): Promise<void> {
+async function ouvrirRecharge(page: Page, avecVehicule = true): Promise<void> {
   await page.goto(PARIS_LYON);
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  /* ON ATTEND QUE L'ITINÉRAIRE SOIT CALCULÉ avant d'ouvrir la section. Sans
+     cette attente, le clic pouvait précéder le calcul : la remise à zéro des
+     sections refermait alors ce que le clic venait d'ouvrir, et le parcours
+     rougissait sur un corps vide, une fois sur trois. Une précondition qu'on
+     n'attend pas est une course qu'on parie. */
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  if (avecVehicule) await saisirVehicule(page);
   await page.locator('.iti-recharge summary').click();
 }
 
@@ -58,13 +71,12 @@ test('sans véhicule renseigné, la section le DIT au lieu d’inventer', async 
   await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify({ total_count: 0, results: [] }),
   }));
-  await ouvrirRecharge(page);
+  await ouvrirRecharge(page, false);
   await expect(page.locator('.iti-recharge-corps'))
     .toContainText('Renseignez d’abord votre véhicule');
 });
 
 test('un trajet sans borne à portée est REFUSÉ, avec le kilomètre exact', async ({ page }) => {
-  await poserVehicule(page, VF8);
   // Aucune borne : la VF8 fait 280 km sur autoroute, le trajet en fait 390.
   await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify({ total_count: 0, results: [] }),
@@ -78,7 +90,6 @@ test('un trajet sans borne à portée est REFUSÉ, avec le kilomètre exact', as
 });
 
 test('avec une borne bien placée, le plan sort avec ses chiffres', async ({ page }) => {
-  await poserVehicule(page, VF8);
   await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({ total_count: 1, results: [
@@ -100,7 +111,6 @@ test('avec une borne bien placée, le plan sort avec ses chiffres', async ({ pag
 });
 
 test('la réserve du modèle est écrite sous le plan, jamais sous-entendue', async ({ page }) => {
-  await poserVehicule(page, VF8);
   await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify({ total_count: 0, results: [] }),
   }));
@@ -109,7 +119,6 @@ test('la réserve du modèle est écrite sous le plan, jamais sous-entendue', as
 });
 
 test('AUCUN appel tant que la section est repliée — les quotas sont un bien commun', async ({ page }) => {
-  await poserVehicule(page, VF8);
   let appels = 0;
   await page.route('**/public.opendatasoft.com/**', (route) => {
     appels += 1;
@@ -121,4 +130,39 @@ test('AUCUN appel tant que la section est repliée — les quotas sont un bien c
   await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 10_000 });
   await page.waitForTimeout(800);
   expect(appels, 'des bornes ont été cherchées sans que personne ne le demande').toBe(0);
+});
+
+test('les arrêts sont POSÉS SUR LA CARTE, et le clic y vole', async ({ page }) => {
+  /* Une liste d'arrêts qu'on ne peut pas situer oblige à chercher des yeux ce
+     que l'application sait déjà. Le marqueur répond « où », le clic « montre-
+     moi ». */
+  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ total_count: 1, results: [
+      { point_geo: { lon: 3.6, lat: 47.3 }, nom_station: 'Aire de Beaune',
+        puissance_nominale: 150, nbre_pdc: 8, prise_type_combo_ccs: '1' },
+    ] }),
+  }));
+  await ouvrirRecharge(page);
+  await expect(page.locator('.iti-recharge-corps')).toContainText('Aire de Beaune',
+    { timeout: 15_000 });
+
+  const bouton = page.getByRole('button', { name: 'Voir Aire de Beaune sur la carte' });
+  await expect(bouton).toBeVisible();
+
+  const avant = await page.evaluate(() => {
+    const c = (window as unknown as { __carte: { getZoom(): number } }).__carte;
+    return c.getZoom();
+  });
+  await bouton.click();
+  await page.waitForTimeout(1200);
+  const apres = await page.evaluate(() => {
+    const c = (window as unknown as {
+      __carte: { getZoom(): number; getCenter(): { lng: number; lat: number } };
+    }).__carte;
+    return { zoom: c.getZoom(), centre: c.getCenter() };
+  });
+  expect(apres.zoom, 'le clic n’a pas rapproché la carte').toBeGreaterThan(avant);
+  expect(Math.abs(apres.centre.lng - 3.6), 'la carte n’a pas volé vers la borne')
+    .toBeLessThan(0.5);
 });
