@@ -2,6 +2,22 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.26.0] — 2026-08-25 — Les bornes portent leur puissance (PR #26)
+
+- Un à trois éclairs sur chaque borne : jusqu'à 50 kW, de 50 à 150, au-delà.
+  Ce que l'usager cherche des yeux n'est pas l'enseigne mais « puis-je
+  recharger vite ici » — un logo de réseau l'oblige à savoir ce que ce réseau
+  déploie.
+- LES ICÔNES SONT DESSINÉES PAR LE CODE, sur un canevas, au démarrage. Le
+  style n'embarque ni glyphes ni sprites (choix de la PR #2), et un PNG déposé
+  au dépôt serait un binaire opaque — ce que la PR #21 s'interdit. Ce fichier
+  se relit, se corrige et se voit en revue.
+- Une puissance non déclarée porte une pastille NEUTRE, pas un éclair : une
+  borne dont le producteur n'a rien dit ne doit pas se déguiser en borne lente.
+- Le palier est écrit en toutes lettres dans la popup, avec le réseau et les
+  connecteurs : les éclairs se voient, un lecteur d'écran ne voit rien.
+- Une légende explique la lecture de la carte, sous les filtres.
+
 ## [0.25.0] — 2026-08-25 — Domicile et travail (PR #25)
 
 - Deux repères à rôle unique, distincts des favoris : un favori est une

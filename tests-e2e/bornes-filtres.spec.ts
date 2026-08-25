@@ -87,3 +87,50 @@ test('sans filtre, aucune clause parasite ne part', async ({ page }) => {
   expect(premiere).toContain('in_bbox(point_geo');
   expect(premiere, 'une clause vide fausse la requête').not.toContain(' AND ');
 });
+
+/* LES ÉCLAIRS DE PUISSANCE — un à trois selon le palier. Les icônes sont
+   DESSINÉES au démarrage sur un canevas : aucun binaire au dépôt, mais aussi
+   aucune garantie qu'elles existent si le contexte 2D échoue. On vérifie donc
+   qu'elles sont bien enregistrées, et que chaque borne porte le bon palier. */
+test('les quatre pastilles de puissance sont dessinées et posées', async ({ page }) => {
+  await espionnerIrve(page);
+  await ouvrirBornes(page);
+
+  const images = await page.evaluate(() => {
+    const c = (window as unknown as { __carte: { hasImage(n: string): boolean } }).__carte;
+    return ['borne-1', 'borne-2', 'borne-3', 'borne-inconnue'].map((n) => c.hasImage(n));
+  });
+  expect(images, 'une pastille manquante laisserait des bornes invisibles').toEqual(
+    [true, true, true, true]);
+});
+
+test('chaque borne porte le palier de SA puissance, frontières comprises', async ({ page }) => {
+  // Fixture au format réel, calibrée sur les BORNES des intervalles : 50 kW
+  // est « lent », 150 « rapide », 151 « très rapide ». C'est là que se logent
+  // les erreurs d'un cran, invisibles à l'œil sur une carte.
+  await page.route(IRVE, (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ total_count: 4, results: [
+      { point_geo: { lon: 2.35, lat: 48.856 }, nom_station: 'Lente', puissance_nominale: 50 },
+      { point_geo: { lon: 2.352, lat: 48.857 }, nom_station: 'Rapide', puissance_nominale: 150 },
+      { point_geo: { lon: 2.354, lat: 48.858 }, nom_station: 'Très rapide', puissance_nominale: 151 },
+      { point_geo: { lon: 2.356, lat: 48.859 }, nom_station: 'Inconnue' },
+    ] }),
+  }));
+  await ouvrirBornes(page);
+
+  const paliers = await page.evaluate(async () => {
+    const c = (window as unknown as {
+      __carte: { getSource(id: string): { getData(): unknown } | undefined };
+    }).__carte;
+    const d = await c.getSource('poi-bornes')?.getData() as GeoJSON.FeatureCollection | undefined;
+    return (d?.features ?? []).map((f) => [f.properties?.['nom'], f.properties?.['icone']]);
+  });
+
+  expect(paliers).toEqual([
+    ['Lente', 'borne-1'],
+    ['Rapide', 'borne-2'],
+    ['Très rapide', 'borne-3'],
+    ['Inconnue', 'borne-inconnue'],
+  ]);
+});
