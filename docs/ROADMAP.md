@@ -214,7 +214,17 @@ verdict adossé à un appel réel daté.
 - [x] PR #25 — Adresses domicile et travail, en repères à rôle unique.
 - [x] PR #26 — Éclairs de puissance : un à trois selon le palier, dessinés
       par le code. Ni marque déposée, ni binaire au dépôt.
-- [ ] PR #28 — Arrêts suggérés avec pourcentage d'arrivée visé. LE cœur d'un
+- [~] PR #28 — Arrêts suggérés : ALGORITHME LIVRÉ ET TESTÉ (src/lib/arrets.ts,
+      19 tests à sec). Il reste à le brancher à l'interface — le planificateur
+      d'itinéraire lui fournira le tracé, le profil véhicule sa consommation,
+      et « le long du trajet » (PR #11) ses bornes candidates.
+      CE QU'IL SAIT DIRE : combien d'arrêts, où, avec quel SOC on arrive et
+      repart, combien de minutes de charge. Et surtout DIRE NON, tôt, avec le
+      kilomètre exact où la réserve serait entamée.
+      CE QU'IL IGNORE, écrit en tête du fichier : relief, vent, trafic, et la
+      vraie courbe de charge du véhicule (qui dépend de la température de la
+      batterie et qu'aucune source publique ne donne).
+- [ ] PR #28bis — Brancher les arrêts suggérés à l'interface avec pourcentage d'arrivée visé. LE cœur d'un
       vrai planificateur, et un chantier à cadrer avant d'être codé.
 - [ ] PR #29 — Disponibilité temps réel, réseau par réseau (Belib' éprouvé le
       25/08 : CORS *, sans clé, statut_pdc + identifiant d'itinérance).
