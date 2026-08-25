@@ -2,6 +2,7 @@
 // fichier : la spec d'accueil dépassait déjà de loin les 500 lignes que le
 // projet s'impose, et cette fonctionnalité se relit très bien seule.
 import { test, expect } from '@playwright/test';
+import { ouvrirVolet } from './volets';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
 
 test.beforeEach(async ({ page }) => {
@@ -91,7 +92,7 @@ test('TRANSPORTS : rien sans la case, du direct avec, et un frein aux appels', a
   await allerA(page, DIJON[0], DIJON[1], 12);
 
   // RIEN tant que la case n'est pas cochée : la couche ne s'invite pas.
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await expect(page.locator('.transports-case')).not.toBeChecked();
   expect(appels, 'la couche a interrogé un service public sans qu’on le lui demande')
     .toEqual([]);
@@ -138,7 +139,7 @@ test('TRANSPORTS : le clic dit la ligne, la vitesse et la fraîcheur', async ({ 
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, DIJON[0], DIJON[1], 14);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await page.locator('.transports-case').check();
   await expect.poll(() => nbPeints(page), { timeout: 10_000 }).toBe(1);
 
@@ -181,7 +182,7 @@ test('TRANSPORTS : hésiter sur la case ne rouvre pas le robinet', async ({ page
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, DIJON[0], DIJON[1], 12);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   const case_ = page.locator('.transports-case');
   await case_.check();
   await expect(page.locator('.transports-etat')).toContainText('véhicule', { timeout: 10_000 });
@@ -211,7 +212,7 @@ test('TRANSPORTS : zoomer pour se repérer ne rouvre pas le robinet', async ({ p
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, DIJON[0], DIJON[1], 12);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await page.locator('.transports-case').check();
   await expect(page.locator('.transports-etat')).toContainText('véhicule', { timeout: 10_000 });
   expect(appels).toHaveLength(1);
@@ -242,7 +243,7 @@ test('TRANSPORTS : un service en panne est MOINS sollicité, pas plus', async ({
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, DIJON[0], DIJON[1], 12);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await page.locator('.transports-case').check();
   await expect(page.locator('.transports-etat'))
     .toContainText('indisponible', { timeout: 15_000 });
@@ -265,7 +266,7 @@ test('TRANSPORTS : un 404 ne se déguise pas en « aucun véhicule »', async ({
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, DIJON[0], DIJON[1], 12);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await page.locator('.transports-case').check();
   const etat = page.locator('.transports-etat');
   await expect(etat).toContainText('indisponible', { timeout: 15_000 });
@@ -289,7 +290,7 @@ test('TRANSPORTS : le compte distingue la vue du réseau entier', async ({ page 
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, DIJON[0], DIJON[1], 16);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await page.locator('.transports-case').check();
   const etat = page.locator('.transports-etat');
   await expect(etat).toContainText('dans la vue', { timeout: 10_000 });
@@ -310,7 +311,7 @@ test('TRANSPORTS : une horloge en avance ne fait pas disparaître le réseau', a
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, DIJON[0], DIJON[1], 12);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await page.locator('.transports-case').check();
   await expect(page.locator('.transports-etat'))
     .toContainText('1 véhicule en circulation', { timeout: 10_000 });
@@ -331,7 +332,7 @@ test('TRANSPORTS : le doublon d’un agrégat est DIT, pas effacé', async ({ pa
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   // Dieppe : un seul réseau local, donc l'agrégat entre dans le plafond.
   await allerA(page, 1.0780, 49.9220, 12);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await page.locator('.transports-case').check();
   const etat = page.locator('.transports-etat');
   await expect(etat).toContainText('véhicule', { timeout: 10_000 });
@@ -346,7 +347,7 @@ test('TRANSPORTS : là où les réseaux locaux suffisent, aucun avertissement', 
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, DIJON[0], DIJON[1], 12);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await page.locator('.transports-case').check();
   const etat = page.locator('.transports-etat');
   await expect(etat).toContainText('véhicule', { timeout: 10_000 });
@@ -378,7 +379,7 @@ test('TRANSPORTS : décocher puis recocher réaffiche AUSSITÔT', async ({ page 
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, DIJON[0], DIJON[1], 12);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   const case_ = page.locator('.transports-case');
   await case_.check();
   await expect.poll(() => nbPeints(page), { timeout: 10_000 }).toBe(1);
@@ -401,7 +402,7 @@ test('TRANSPORTS : le volet ne reste JAMAIS muet, case cochée', async ({ page }
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, DIJON[0], DIJON[1], 12);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   const case_ = page.locator('.transports-case');
   await case_.check();
   await expect(page.locator('.transports-etat')).toContainText('Chargement', { timeout: 5_000 });
@@ -432,7 +433,7 @@ test('TRANSPORTS : revenir au zoom rétablit la carte et corrige le message', as
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, DIJON[0], DIJON[1], 12);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await page.locator('.transports-case').check();
   await expect.poll(() => nbPeints(page), { timeout: 10_000 }).toBe(1);
 
@@ -459,7 +460,7 @@ test('TRANSPORTS : le compte « dans la vue » suit la carte', async ({ page }) 
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, DIJON[0], DIJON[1], 16);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await page.locator('.transports-case').check();
   const etat = page.locator('.transports-etat');
   await expect(etat).toContainText('1 véhicule dans la vue', { timeout: 10_000 });
@@ -485,7 +486,7 @@ test('TRANSPORTS : « aucun véhicule » n’est dit que si TOUT a répondu', as
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, 1.1500, 49.0250, 13);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await page.locator('.transports-case').check();
   const etat = page.locator('.transports-etat');
   await expect(etat).toContainText('qui ont répondu', { timeout: 15_000 });
@@ -505,7 +506,7 @@ test('TRANSPORTS : un flux entièrement périmé ne devient pas « aucun véhicu
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, DIJON[0], DIJON[1], 12);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await page.locator('.transports-case').check();
   const etat = page.locator('.transports-etat');
   await expect(etat).toContainText('Aucune position récente', { timeout: 10_000 });
@@ -520,7 +521,7 @@ test('TRANSPORTS : tous les réseaux muets sont NOMMÉS', async ({ page }) => {
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await allerA(page, 1.1500, 49.0250, 13);
-  await page.locator('.transports summary').click();
+  await ouvrirVolet(page, '.transports');
   await page.locator('.transports-case').check();
   const etat = page.locator('.transports-etat');
   await expect(etat).toContainText('Aucune réponse de', { timeout: 15_000 });
@@ -531,19 +532,26 @@ test('TRANSPORTS : tous les réseaux muets sont NOMMÉS', async ({ page }) => {
 
 test('TRANSPORTS : en paysage, tous les volets restent atteignables', async ({ page }) => {
   /* L'ajout d'une sixième rangée poussait « Favoris » sous la barre d'échelle,
-     qui interceptait le doigt en son centre (mesuré à 667×375). */
+     qui interceptait le doigt en son centre (mesuré à 667×375).
+
+     DEPUIS LE REGROUPEMENT (PR #27), le rail ne porte plus que le trajet et
+     les réglages vivent derrière un menu : on vérifie donc les DEUX points
+     d'entrée, pas six rangées. L'exigence, elle, n'a pas bougé — rien ne doit
+     sortir de l'écran ni intercepter le doigt. */
   await page.setViewportSize({ width: 667, height: 375 });
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   const captes = await page.evaluate(() => [
     ...document.querySelectorAll('#carte .maplibregl-ctrl-top-left summary'),
+    ...document.querySelectorAll('#carte .maplibregl-ctrl-top-right .reglages > summary'),
   ].map((el) => {
     const r = el.getBoundingClientRect();
     if (r.height === 0) return null;
     const dessus = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
     return { nom: el.textContent?.trim().slice(0, 12) ?? '', bas: r.bottom, ok: el.contains(dessus) };
   }).filter(Boolean));
-  expect(captes.length).toBeGreaterThanOrEqual(6);
+  // Deux volets de rail plus le menu : trois points d'entrée en paysage.
+  expect(captes.length, 'un point d’entrée a disparu').toBeGreaterThanOrEqual(3);
   expect(captes.filter((c) => !c!.ok).map((c) => c!.nom),
     'un volet ne reçoit plus son propre clic').toEqual([]);
   expect(captes.filter((c) => c!.bas > 375).map((c) => c!.nom),

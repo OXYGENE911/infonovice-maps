@@ -9,3 +9,8 @@ test-results/
 # Secrets : ce depot est public. Aucune cle ne doit pouvoir y entrer.
 .env
 .env.*
+
+# Sorties de Playwright MCP et captures de travail.
+.playwright-mcp/
+*.png
+!public/*.png

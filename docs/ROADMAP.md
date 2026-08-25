@@ -190,6 +190,71 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
   visualiseur 360 demanderait une bibliothèque supplémentaire — à peser
   contre le budget bundle (< 300 Ko hors MapLibre).
 
+## Ergonomie
+- [x] PR #21bis — Trois zones : rail à gauche, réglages d'affichage en bas à
+      droite, liens légaux en bas à gauche. Les panneaux poussent le rail au
+      lieu de le recouvrir ; Échap et un clic à côté referment. Six parcours
+      E2E comparent des BOÎTES ENGLOBANTES — ce que l'œil voit se prouve par
+      des rectangles.
+
+- [x] PR #27 — Deux points d'entrée : le trajet à gauche, les réglages
+      derrière un menu unique en haut à droite. Le rail ne s'allonge plus.
+
+## Planificateur EV — étude faite, chantiers ordonnés
+Étude de faisabilité complète : docs/planificateur-ev.md (25/08/2026), chaque
+verdict adossé à un appel réel daté.
+- [x] PR #22 — Filtres bornes : puissance, type de connecteur, réseau. Les
+      champs EXISTENT déjà dans le jeu IRVE consommé depuis la PR #9
+      (prise_type_combo_ccs, puissance_nominale, nom_operateur…) : meilleur
+      rapport valeur/risque de toute la liste.
+- [x] PR #23 — Profil véhicule en IndexedDB (batterie, SOC, SOCE, conso).
+      Aucun compte, aucun serveur — comme les favoris de la PR #10.
+- [x] PR #24 — Anneaux d'autonomie ville / route / autoroute, calculés en
+      local. Ils disent « au mieux, à plat » et l'interface doit le dire.
+- [x] PR #25 — Adresses domicile et travail, en repères à rôle unique.
+- [x] PR #26 — Éclairs de puissance : un à trois selon le palier, dessinés
+      par le code. Ni marque déposée, ni binaire au dépôt.
+- [ ] PR #28 — Arrêts suggérés avec pourcentage d'arrivée visé. LE cœur d'un
+      vrai planificateur, et un chantier à cadrer avant d'être codé.
+- [ ] PR #29 — Disponibilité temps réel, réseau par réseau (Belib' éprouvé le
+      25/08 : CORS *, sans clé, statut_pdc + identifiant d'itinérance).
+      COUVERTURE PARTIELLE À DIRE, comme les transports de la PR #16.
+
+ÉCARTÉS AVEC PREUVE, voir docs/planificateur-ev.md :
+- Comptes et base de données — heurtent les contraintes 1 et 4. Décision
+  d'Armelin en attente.
+- Filtre « éviter les péages » — mesuré impossible le 21/08 (PR #6) : aucun
+  moteur public ne l'expose. Éviter les autoroutes en est l'approximation.
+- Logos des réseaux — marques déposées, et « aucun binaire opaque au dépôt ».
+- Lecture OBD — Web Bluetooth absent d'iOS ; c'est le travail de l'app native
+  de la phase 2.
+
+## Premium, rallyes AFUVE et cortèges — CADRAGE, rien d'engagé
+Cadrage complet : docs/premium-et-evenements.md (25/08/2026). Trois projets
+distincts, pas trois fonctionnalités — ils ne partagent que le besoin d'un
+serveur.
+- [ ] Décider le modèle (six questions listées au §5 du cadrage)
+- [ ] Réécrire « Vie privée » en DEUX RÉGIMES — doit accompagner le premier
+      octet de backend, jamais le suivre : la page affirme aujourd'hui sans
+      nuance que rien ne quitte le navigateur.
+- [ ] Socle premium : compte, itinéraires sauvegardés, comparaison A/B,
+      historique de recharge. Le moins risqué, réutilisé par les deux autres.
+- [ ] Cortèges entre amis — AVANT les rallyes : un cortège s'essaie un
+      dimanche à trois voitures, un rallye est un événement daté qu'on ne peut
+      pas rater.
+- [~] Événements AFUVE (rallyes, classement, signalement de panne) :
+      ABANDONNÉ le 25/08/2026, avec son motif. Trois raisons — le suivi exige
+      l'app mobile de la PHASE 2 (un navigateur en arrière-plan n'émet pas de
+      position, iOS l'arrête) ; la responsabilité de responsable de traitement
+      est disproportionnée pour quelques week-ends par an ; et le motif
+      « sécurité » ne peut pas être tenu là où le réseau manque. Détail dans
+      docs/premium-et-evenements.md §2.B. Les CORTÈGES, eux, restent au
+      programme.
+
+RÈGLE QUI NE BOUGE PAS : le mode gratuit reste entièrement utilisable SANS
+compte, en local, avec son export JSON. C'est ce qui distingue ce produit de
+celui qu'il concurrence.
+
 ## Itérations suivantes (backlog ouvert)
-- PR #22+ — Signalements communautaires (premier backend, hors périmètre 0 €),
-  zones de danger, planificateur EV…
+- PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),
+  zones de danger…
