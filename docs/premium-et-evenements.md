@@ -53,7 +53,34 @@ comparaison d'un trajet A avec un trajet B.
   données personnelles, mais elles ne sont ni temps réel ni partagées
 - **Réutilisable :** oui, c'est le socle des deux autres
 
-### B — Événements AFUVE : rallyes suivis en direct
+### B — Événements AFUVE : rallyes suivis en direct — **ABANDONNÉ le 25/08/2026**
+
+**Décision d'Armelin, prise après cadrage.** Ce qui suit reste écrit parce que
+le motif compte autant que la décision : quelqu'un rouvrira ce dossier, et il
+doit savoir ce qui l'a fermé plutôt que de refaire l'analyse.
+
+Trois raisons, dans l'ordre de leur poids :
+
+1. **Le suivi exige une application mobile**, donc la PHASE 2 du projet
+   (Kotlin, dépôt séparé). Un navigateur en arrière-plan n'émet pas de
+   position de façon fiable, et iOS l'arrête. Ce n'est pas un obstacle
+   technique qu'on contourne : c'est une phase du projet qui n'a pas commencé.
+2. **La responsabilité juridique est disproportionnée** au regard du besoin.
+   Suivre en continu la position et la vitesse de participants identifiés fait
+   d'INFONOVICE — donc d'Armelin en personne — un responsable de traitement,
+   pour quelques week-ends par an.
+3. **Le motif « sécurité » ne peut pas être tenu.** Un rallye traverse des
+   vallons sans réseau ; une fonctionnalité de secours à laquelle on se fie et
+   qui échoue est pire que son absence, parce qu'elle a remplacé un réflexe.
+
+**Ce qui n'est PAS abandonné :** les cortèges (§C), plus courts, mutuels,
+volontaires et sans classement, restent au programme. Si le besoin AFUVE
+revient, il reviendra par eux — une fois la brique temps réel éprouvée sur un
+cercle restreint, et une fois l'app mobile de la phase 2 existante.
+
+---
+
+#### Ce que le cadrage disait (conservé pour mémoire)
 
 Le plus enthousiasmant, et le plus lourd. Le « 24 h en électrique » et les
 rallyes 1000 km demandent : départ géorepéré, chronomètre déclenché à
@@ -152,12 +179,14 @@ Trois questions à trancher avant, cependant :
 | 2 | **Réécrire « Vie privée »** en deux régimes | Doit accompagner le premier octet de backend, jamais suivre |
 | 3 | **Socle A : compte + itinéraires + historique** | Le moins risqué, réutilisé par B et C, et livrable seul |
 | 4 | **C : cortèges** avant **B : rallyes** | Plus simple, plus court, meilleur terrain d'essai du temps réel — et il éprouve la brique la plus délicate sur un cercle restreint |
-| 5 | **B : événements AFUVE** | Le plus lourd, et il dépend de l'app mobile de la phase 2 |
+| ~~5~~ | ~~**B : événements AFUVE**~~ | **ABANDONNÉ le 25/08** — voir §2.B pour le motif |
 
-**Une remarque sur le rang 4 :** l'ordre naturel semblerait B avant C, puisque
-l'AFUVE est le besoin réel. Mais un rallye est un événement daté qu'on ne peut
-pas rater ; un cortège s'essaie un dimanche à trois voitures. Livrer d'abord ce
-qui se répare sans conséquence.
+**Une remarque sur le rang 4, écrite avant l'abandon de B et conservée :**
+l'ordre naturel semblerait B avant C, puisque l'AFUVE est le besoin réel. Mais
+un rallye est un événement daté qu'on ne peut pas rater ; un cortège s'essaie
+un dimanche à trois voitures. Livrer d'abord ce qui se répare sans conséquence.
+B ayant été abandonné le 25/08, C devient le seul terrain d'essai du temps
+réel — et cet argument vaut d'autant plus.
 
 ---
 

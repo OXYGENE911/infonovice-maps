@@ -242,9 +242,14 @@ serveur.
 - [ ] Cortèges entre amis — AVANT les rallyes : un cortège s'essaie un
       dimanche à trois voitures, un rallye est un événement daté qu'on ne peut
       pas rater.
-- [ ] Événements AFUVE (rallyes, classement, signalement de panne) — dépend de
-      l'APP MOBILE de la phase 2 : un navigateur en arrière-plan n'émet pas de
-      position de façon fiable, et iOS l'arrête.
+- [~] Événements AFUVE (rallyes, classement, signalement de panne) :
+      ABANDONNÉ le 25/08/2026, avec son motif. Trois raisons — le suivi exige
+      l'app mobile de la PHASE 2 (un navigateur en arrière-plan n'émet pas de
+      position, iOS l'arrête) ; la responsabilité de responsable de traitement
+      est disproportionnée pour quelques week-ends par an ; et le motif
+      « sécurité » ne peut pas être tenu là où le réseau manque. Détail dans
+      docs/premium-et-evenements.md §2.B. Les CORTÈGES, eux, restent au
+      programme.
 
 RÈGLE QUI NE BOUGE PAS : le mode gratuit reste entièrement utilisable SANS
 compte, en local, avec son export JSON. C'est ce qui distingue ce produit de
