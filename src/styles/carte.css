@@ -732,3 +732,68 @@ etat-connexion { display: contents; }
 .poi-legende-inconnue { background: #7A8794; font-size: 13px; letter-spacing: 0; }
 .poi-palier { margin: 3px 0 0; font: 600 12.5px var(--police); color: var(--texte-1); }
 .poi-prises { margin: 2px 0 0; font: 400 12px var(--police); color: var(--texte-3); }
+
+/* ═══ LE MENU UNIQUE DU HAUT-DROIT (PR #27) ═══════════════════════════════
+   Deux points d'entrée, pas six : à gauche le TRAJET (itinéraire, véhicule),
+   en haut à droite les RÉGLAGES (couches, lieux, affichage). Les cartes qui
+   se font adopter rangent le reste derrière un menu — six pastilles de même
+   poids ne hiérarchisaient rien, et le rail débordait de l'écran. */
+.porte-menu { pointer-events: auto; margin: 10px 12px 0 0 !important; }
+.reglages { position: relative; }
+.reglages summary {
+  list-style: none; cursor: pointer;
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 15px; border-radius: 12px;
+  background: color-mix(in srgb, var(--fond) 94%, transparent);
+  border: 1px solid var(--bord); box-shadow: var(--ombre-s);
+  font: 600 13.5px var(--police); color: var(--texte-1);
+}
+.reglages summary::-webkit-details-marker { display: none; }
+.reglages summary:focus-visible { outline: none; box-shadow: var(--focus); }
+/* Les trois barres, dessinées en CSS : pas d'icône à héberger. */
+.reglages-barres {
+  width: 16px; height: 2px; background: var(--texte-1); border-radius: 2px;
+  position: relative; display: inline-block;
+}
+.reglages-barres::before, .reglages-barres::after {
+  content: ''; position: absolute; left: 0; width: 16px; height: 2px;
+  background: var(--texte-1); border-radius: 2px;
+}
+.reglages-barres::before { top: -5px; }
+.reglages-barres::after { top: 5px; }
+.reglages[open] .reglages-barres { background: transparent; }
+.reglages[open] .reglages-barres::before { top: 0; transform: rotate(45deg); }
+.reglages[open] .reglages-barres::after { top: 0; transform: rotate(-45deg); }
+
+/* LE PANNEAU S'OUVRE VERS LA GAUCHE, sous le bouton : ancré à droite, il
+   sortirait de l'écran. Il défile plutôt que de pousser quoi que ce soit. */
+.reglages-corps {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  width: min(330px, calc(100vw - 24px));
+  max-height: min(70vh, 560px); overflow-y: auto; overscroll-behavior: contain;
+  padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
+  background: var(--fond); box-shadow: var(--ombre-m);
+  display: grid; gap: 4px;
+}
+.reglages-section { display: grid; gap: 4px; }
+.reglages-etiquette {
+  margin: 8px 0 2px; font: 700 11px var(--police); color: var(--texte-3);
+  text-transform: uppercase; letter-spacing: .08em;
+}
+.reglages-etiquette:empty { display: none; }
+.reglages-section:first-child .reglages-etiquette { margin-top: 0; }
+
+/* DANS LE MENU, LES VOLETS SONT EN FLUX ET PLEINE LARGEUR : ils n'ont plus de
+   voisin à recouvrir, et leur ancien positionnement absolu les aurait sortis
+   du panneau. */
+.reglages-corps details { position: static; }
+.reglages-corps summary { width: 100%; box-sizing: border-box; }
+.reglages-corps .fonds fieldset,
+.reglages-corps .poi fieldset,
+.reglages-corps .trafic fieldset,
+.reglages-corps .transports fieldset,
+.reglages-corps .favoris-corps,
+.reglages-corps .poi-etat {
+  position: static; margin-top: 8px; min-width: 0; max-width: none;
+  width: 100%; box-sizing: border-box; max-height: none;
+}

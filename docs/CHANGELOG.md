@@ -2,6 +2,26 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.27.0] — 2026-08-25 — Deux points d'entrée, pas six (PR #27)
+
+- À GAUCHE LE TRAJET (itinéraire, véhicule) ; EN HAUT À DROITE LES RÉGLAGES,
+  derrière un menu unique : couches d'information, lieux enregistrés, fond de
+  carte. Six pastilles de même poids ne hiérarchisaient rien, et le rail
+  débordait de l'écran dès qu'un volet s'ouvrait.
+- Le menu est posé EN DERNIER dans la colonne de droite, et ce n'est pas un
+  détail d'ordre : son panneau s'ouvre sous son bouton. Placé avant, il
+  recouvrait « Me localiser » — une fonctionnalité rendue inatteignable par
+  une décoration. Un parcours E2E compare désormais sa boîte à celle de CHAQUE
+  contrôle.
+- Les trente-cinq parcours qui cliquaient un volet posé à même la carte
+  passent par un utilitaire indifférent au placement : un futur déménagement
+  ne touchera qu'un seul fichier.
+- DÉFAUT ATTRAPÉ AU PASSAGE : le menu construisait son squelette à l'attache
+  au DOM, alors que les panneaux venaient s'y ranger avant. Cinq volets
+  restaient ORPHELINS, hors du DOM, sans la moindre erreur — un `return`
+  silencieux avait avalé la panne. Le squelette se construit désormais à la
+  demande, et l'absence de conteneur lève au lieu de se taire.
+
 ## [0.26.0] — 2026-08-25 — Les bornes portent leur puissance (PR #26)
 
 - Un à trois éclairs sur chaque borne : jusqu'à 50 kW, de 50 à 150, au-delà.

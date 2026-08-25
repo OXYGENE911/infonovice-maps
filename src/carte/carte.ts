@@ -25,6 +25,7 @@ import { PanneauFavoris } from './panneau-favoris';
 import { PanneauTrafic } from './panneau-trafic';
 import { PanneauTransports } from './panneau-transports';
 import { PanneauVehicule } from './panneau-vehicule';
+import { MenuReglages } from './menu-reglages';
 import { ajouterFavori } from '../lib/favoris';
 import { ecrireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { VisionneusePhoto } from './visionneuse-photo';
@@ -64,7 +65,20 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     conteneur.classList.toggle('fond-sombre', sombre.matches && o.fond === 'plan');
   };
 
-  /* LE PLANIFICATEUR — sous le sélecteur de fonds, même colonne. */
+  /* LE MENU DES RÉGLAGES — un seul point d'entrée en haut à droite. Les
+     couches d'information, les lieux enregistrés et le fond de carte y sont
+     RANGÉS plutôt qu'exposés : six pastilles de même poids ne hiérarchisaient
+     rien, et le rail débordait de l'écran dès qu'un volet s'ouvrait. À gauche
+     ne reste que ce qui concerne le TRAJET. */
+  const menu = new MenuReglages();
+  const porteMenu = document.createElement('div');
+  porteMenu.className = 'maplibregl-ctrl porte-menu';
+  porteMenu.appendChild(menu);
+  // Le contrôle est POSÉ PLUS BAS (après la géolocalisation) : voir le
+  // commentaire à son ajout. L'objet, lui, existe dès maintenant car les
+  // panneaux viennent s'y ranger au fil de leur création.
+
+  /* LE PLANIFICATEUR — à gauche : c'est LA fonction d'une carte d'itinéraire. */
   const panneau = new PanneauItineraire();
   panneau.carte = carte;
   const porteIti = document.createElement('div');
@@ -72,43 +86,26 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   porteIti.appendChild(panneau);
   carte.addControl({ onAdd: () => porteIti, onRemove: () => porteIti.remove() }, 'top-left');
 
-  /* LE FOND DE CARTE VA EN BAS À DROITE, avec les réglages d'affichage —
-     là où les cartes grand public le placent, et là où l'usager le cherche.
-     Il encombrait le rail de gauche, qui doit rester une liste de
-     DESTINATIONS (où vais-je, que voir autour) et non un mélange de
-     destinations et de préférences d'affichage. */
+  /* LE FOND DE CARTE est une PRÉFÉRENCE D'AFFICHAGE : il appartient au menu,
+     pas au rail des destinations. */
   const selecteur = new SelecteurFonds();
   selecteur.surChangement = (o) => { carte.setStyle(styleCarte(o)); appliquerSombre(o); };
-  const support = document.createElement('div');
-  support.className = 'maplibregl-ctrl porte-fonds';
-  support.appendChild(selecteur);
-  carte.addControl({ onAdd: () => support, onRemove: () => support.remove() }, 'bottom-right');
+  menu.ajouter('Affichage', selecteur);
 
-  /* LES POINTS D'INTÉRÊT — sous le sélecteur de fonds, même colonne. */
+  /* LES COUCHES D'INFORMATION — points d'intérêt, trafic, transports. Elles
+     répondent à « que voir sur la carte », pas à « où vais-je » : leur place
+     est dans le menu. */
   const poi = new PanneauPoi();
   poi.carte = carte;
-  const portePoi = document.createElement('div');
-  portePoi.className = 'maplibregl-ctrl porte-poi';
-  portePoi.appendChild(poi);
-  carte.addControl({ onAdd: () => portePoi, onRemove: () => portePoi.remove() }, 'top-left');
+  menu.ajouter('Couches', poi);
 
-  /* L'INFO TRAFIC — couche nationale, sous les points d'intérêt. */
   const trafic = new PanneauTrafic();
   trafic.carte = carte;
-  const porteTrafic = document.createElement('div');
-  porteTrafic.className = 'maplibregl-ctrl porte-trafic';
-  porteTrafic.appendChild(trafic);
-  carte.addControl({ onAdd: () => porteTrafic, onRemove: () => porteTrafic.remove() }, 'top-left');
+  menu.ajouter('', trafic);
 
-  /* LES TRANSPORTS EN COMMUN — véhicules en direct, sous l'info trafic. */
   const transports = new PanneauTransports();
   transports.carte = carte;
-  const porteTransports = document.createElement('div');
-  porteTransports.className = 'maplibregl-ctrl porte-transports';
-  porteTransports.appendChild(transports);
-  carte.addControl(
-    { onAdd: () => porteTransports, onRemove: () => porteTransports.remove() }, 'top-left',
-  );
+  menu.ajouter('', transports);
 
   /* LA VISIONNEUSE DE PHOTOS — une seule pour l'application, posée au body :
      une modale doit couvrir la carte, pas vivre dedans. */
@@ -127,13 +124,10 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     { onAdd: () => porteVehicule, onRemove: () => porteVehicule.remove() }, 'top-left',
   );
 
-  /* LES FAVORIS — même colonne, sous les points d'intérêt. */
+  /* LES LIEUX ENREGISTRÉS — favoris, domicile, travail, et l'export RGPD. */
   const favoris = new PanneauFavoris();
   favoris.carte = carte;
-  const porteFavoris = document.createElement('div');
-  porteFavoris.className = 'maplibregl-ctrl porte-favoris';
-  porteFavoris.appendChild(favoris);
-  carte.addControl({ onAdd: () => porteFavoris, onRemove: () => porteFavoris.remove() }, 'top-left');
+  menu.ajouter('Mes lieux', favoris);
 
   /* UN SEUL volet ouvert à la fois, Échap et clic extérieur pour refermer.
      Le comportement vit dans panneaux.ts, et il reconnaît les volets de tête
@@ -149,6 +143,13 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     positionOptions: { enableHighAccuracy: true },
     trackUserLocation: true,
   }), 'top-right');
+
+  /* LE MENU EST POSÉ EN DERNIER dans la colonne de droite, et ce n'est pas un
+     détail d'ordre : son panneau s'ouvre SOUS son bouton. Placé avant, il
+     recouvrait le bouton « Me localiser » — mesuré à la capture, une
+     fonctionnalité rendue inatteignable par une décoration. En dernier, il ne
+     couvre que la carte. */
+  carte.addControl({ onAdd: () => porteMenu, onRemove: () => porteMenu.remove() }, 'top-right');
   carte.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
 
   /* LA RECHERCHE vit dans l'en-tête (elle EST la fonction principale d'une

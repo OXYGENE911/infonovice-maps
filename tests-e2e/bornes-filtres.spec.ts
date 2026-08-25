@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
+import { ouvrirVolet } from './volets';
 
 /* FILTRES DES BORNES — ce qui compte n'est pas ce que l'interface affiche,
    c'est CE QUI PART DANS LA REQUÊTE. Le portail plafonne à 100
@@ -35,7 +36,7 @@ async function ouvrirBornes(page: import('@playwright/test').Page): Promise<void
     (window as unknown as { __carte: { jumpTo(o: object): void } })
       .__carte.jumpTo({ center: [2.3522, 48.8566], zoom: 13 });
   });
-  await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Autour' }).click();
+  await ouvrirVolet(page, '.poi');
   await page.getByRole('checkbox', { name: 'Bornes électriques' }).check();
 }
 
@@ -43,7 +44,7 @@ test('les filtres ne paraissent qu’une fois la couche des bornes active', asyn
   await espionnerIrve(page);
   await page.goto('/');
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
-  await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Autour' }).click();
+  await ouvrirVolet(page, '.poi');
 
   const filtres = page.locator('.poi-filtres');
   await expect(filtres, 'des réglages sans objet encombrent').toBeHidden();

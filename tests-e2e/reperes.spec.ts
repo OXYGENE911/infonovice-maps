@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
+import { ouvrirVolet } from './volets';
 
 /* REPÈRES — domicile et travail. Ce qui compte n'est pas qu'ils s'affichent,
    c'est que « rentrer chez moi » soit UN GESTE : un appui long pour définir,
@@ -26,7 +27,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function ouvrirFavoris(page: Page): Promise<void> {
-  await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Favoris' }).click();
+  await ouvrirVolet(page, '.favoris');
 }
 
 async function appuiLong(page: Page): Promise<void> {

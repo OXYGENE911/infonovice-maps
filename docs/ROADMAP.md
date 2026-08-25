@@ -197,6 +197,9 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       E2E comparent des BOÎTES ENGLOBANTES — ce que l'œil voit se prouve par
       des rectangles.
 
+- [x] PR #27 — Deux points d'entrée : le trajet à gauche, les réglages
+      derrière un menu unique en haut à droite. Le rail ne s'allonge plus.
+
 ## Planificateur EV — étude faite, chantiers ordonnés
 Étude de faisabilité complète : docs/planificateur-ev.md (25/08/2026), chaque
 verdict adossé à un appel réel daté.
@@ -209,9 +212,11 @@ verdict adossé à un appel réel daté.
 - [x] PR #24 — Anneaux d'autonomie ville / route / autoroute, calculés en
       local. Ils disent « au mieux, à plat » et l'interface doit le dire.
 - [x] PR #25 — Adresses domicile et travail, en repères à rôle unique.
-- [ ] PR #26 — Arrêts suggérés avec pourcentage d'arrivée visé. LE cœur d'un
+- [x] PR #26 — Éclairs de puissance : un à trois selon le palier, dessinés
+      par le code. Ni marque déposée, ni binaire au dépôt.
+- [ ] PR #28 — Arrêts suggérés avec pourcentage d'arrivée visé. LE cœur d'un
       vrai planificateur, et un chantier à cadrer avant d'être codé.
-- [ ] PR #27 — Disponibilité temps réel, réseau par réseau (Belib' éprouvé le
+- [ ] PR #29 — Disponibilité temps réel, réseau par réseau (Belib' éprouvé le
       25/08 : CORS *, sans clé, statut_pdc + identifiant d'itinérance).
       COUVERTURE PARTIELLE À DIRE, comme les transports de la PR #16.
 
