@@ -2,6 +2,18 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.21.1] — 2026-08-24 — Consignes des agents : une seule source
+
+- `CLAUDE.md` devient la source unique des règles du projet. `AGENTS.md`
+  (Codex) et `GEMINI.md` (Gemini) n'y renvoient et ne portent plus que le
+  mandat propre à chaque contradicteur : Gemini attaque le plan avant le
+  code, Codex attaque le diff après.
+- Un test unitaire fait échouer la CI si l'un des deux pointeurs se remet à
+  recopier une contrainte : trois fichiers de consignes qui se ressemblent
+  finissent par diverger, et une règle corrigée à un seul endroit devient
+  un mensonge aux deux autres.
+- Aucun octet ajouté au bundle : c'est de la documentation et un test.
+
 ## [0.21.0] — 2026-08-22 — Page « Professionnels »
 
 - Une page pour les flottes et les équipes de terrain : ce que la carte sait

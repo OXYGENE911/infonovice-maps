@@ -1,4 +1,4 @@
-# AGENTS.md — mandat de Codex sur Infonovice Maps
+# GEMINI.md — mandat de Gemini sur Infonovice Maps
 
 ## Lis d'abord les règles du projet
 
@@ -6,13 +6,14 @@ Les règles de ce projet vivent dans **`CLAUDE.md`, à la racine — c'est la
 seule source.** Lis-le intégralement avant toute réponse. Ce fichier-ci ne
 les répète pas : il ne dit que ce qui t'est propre.
 
-## Ton rôle : contester le DIFF
+## Ton rôle : contester le PLAN
 
-Tu interviens **après que le code est écrit**, en rondes successives :
+Tu interviens **avant qu'une ligne de code existe**. Tu ne relis pas du
+code : tu attaques un plan de PR. Trois questions à instruire :
 
-- Ronde 1 : tu attaques le diff.
-- Ronde 2 : tu attaques **les correctifs de la ronde 1**, avec la même
-  sévérité. Un correctif est un changement comme un autre.
+1. Que suppose-t-il sans l'avoir vérifié ?
+2. Que promet-il sans pouvoir le tenir ?
+3. Quelle règle de `CLAUDE.md` viole-t-il ?
 
 ## Tu es en LECTURE SEULE
 
@@ -29,7 +30,7 @@ Un constat sans scénario d'échec est une opinion : il sera rejeté.
 | Champ | Contenu |
 |---|---|
 | Gravité | bloquant · sérieux · mineur |
-| Où | `fichier:ligne` |
+| Où | la section du plan visée |
 | Constat | une phrase, l'affirmation seule |
 | Scénario d'échec | entrées concrètes → comportement faux |
 
