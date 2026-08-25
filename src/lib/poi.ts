@@ -33,6 +33,44 @@ export interface PoiBorne {
   puissance: number | null;
   pdc: number | null;
   gratuit: boolean | null;
+  /** L'enseigne affichée sur la borne (« eborn »), à défaut l'opérateur. */
+  reseau: string | null;
+  /** Les standards réellement présents sur la station. */
+  prises: ClePrise[];
+}
+
+/* LES QUATRE STANDARDS RÉELS. Le jeu IRVE porte aussi `prise_type_autre`,
+   volontairement absent de ce catalogue : « autre » ne se choisit pas dans un
+   filtre — personne ne cherche une prise dont il ignore le nom. */
+export type ClePrise = 'combo_ccs' | 'type_2' | 'chademo' | 'ef';
+
+/* LE NOM DE CHAMP EST PORTÉ EXPLICITEMENT, et ce n'est pas de la verbosité :
+   la nomenclature du jeu IRVE est IRRÉGULIÈRE. Le Type 2 s'appelle
+   `prise_type_2` quand les autres suivent `prise_type_<clé>`. Déduire le champ
+   de la clé produisait `prise_type_type_2` — un champ inexistant, sur lequel
+   le service ne renvoie rien plutôt qu'une erreur. Attrapé par un test à sec,
+   pas en production. */
+export const PRISES: readonly { cle: ClePrise; champ: string; libelle: string }[] = [
+  { cle: 'combo_ccs', champ: 'prise_type_combo_ccs', libelle: 'CCS Combo' },
+  { cle: 'type_2', champ: 'prise_type_2', libelle: 'Type 2' },
+  { cle: 'chademo', champ: 'prise_type_chademo', libelle: 'CHAdeMO' },
+  { cle: 'ef', champ: 'prise_type_ef', libelle: 'Prise domestique' },
+] as const;
+
+const champDe = (cle: ClePrise): string =>
+  PRISES.find((p) => p.cle === cle)?.champ ?? `prise_type_${cle}`;
+
+/* `| undefined` EXPLICITE : le projet compile avec `exactOptionalPropertyTypes`,
+   qui distingue « propriété absente » de « propriété valant undefined ». Le
+   code veut les deux — remettre le filtre à « toutes » écrit undefined plutôt
+   que de reconstruire l'objet sans la clé. */
+export interface FiltresBornes {
+  /** En kW. Une borne sans puissance déclarée est écartée par le service. */
+  puissanceMin?: number | undefined;
+  /** Prises acceptées par le véhicule — au moins une suffit. */
+  prises?: ClePrise[] | undefined;
+  /** Enseignes retenues (« Ionity »…). Vide = toutes. */
+  reseaux?: string[] | undefined;
 }
 
 export interface Charge<T> { elements: T[]; total: number; }
@@ -50,11 +88,43 @@ export function urlCarburants(b: Bbox): string {
     + '&select=geom,adresse,ville,gazole_prix,sp95_prix,sp98_prix,e10_prix,e85_prix,gplc_prix';
 }
 
-export function urlBornes(b: Bbox): string {
+/* Une valeur littérale pour la clause `where` d'Opendatasoft. Le guillemet
+   est RETIRÉ, pas échappé : la syntaxe du portail n'a pas d'échappement, et un
+   nom d'enseigne qui en contient couperait la clause en deux — le service
+   répondrait une erreur, ou pire, autre chose que ce qu'on croit demander. */
+const citer = (valeur: string): string => `"${valeur.replace(/"/g, '')}"`;
+
+/* LES FILTRES PARTENT AU SERVICE, JAMAIS APRÈS COUP. Le portail plafonne à
+   100 enregistrements : filtrer localement trierait un ensemble DÉJÀ TRONQUÉ,
+   et l'on montrerait trois bornes CCS là où la zone en compte cinquante. Ce
+   n'est pas une optimisation, c'est une question de justesse.
+
+   Formats vérifiés par appel réel le 25/08/2026 : `puissance_nominale` est un
+   NOMBRE (une comparaison entre guillemets ne compare pas), les `prise_type_*`
+   sont des CHAÎNES « 0 »/« 1 ». */
+export function urlBornes(b: Bbox, filtres: FiltresBornes = {}): string {
+  const clauses = [odsBbox('point_geo', b)];
+
+  if (typeof filtres.puissanceMin === 'number' && filtres.puissanceMin > 0) {
+    clauses.push(`puissance_nominale >= ${filtres.puissanceMin}`);
+  }
+  // OU entre les prises : un véhicule accepte l'une OU l'autre. Exiger
+  // qu'une même borne les porte toutes ne rendrait presque rien.
+  const prises = filtres.prises ?? [];
+  if (prises.length > 0) {
+    clauses.push(`(${prises.map((p) => `${champDe(p)} = "1"`).join(' OR ')})`);
+  }
+  const reseaux = filtres.reseaux ?? [];
+  if (reseaux.length > 0) {
+    clauses.push(`(${reseaux.map((r) => `nom_enseigne = ${citer(r)}`).join(' OR ')})`);
+  }
+
   return 'https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/'
     + 'mobilityref-france-irve-220/records'
-    + `?where=${encodeURIComponent(odsBbox('point_geo', b))}&limit=${LIMITE_ODS}`
-    + '&select=point_geo,nom_station,puissance_nominale,nbre_pdc,gratuit';
+    + `?where=${encodeURIComponent(clauses.join(' AND '))}&limit=${LIMITE_ODS}`
+    + '&select=point_geo,nom_station,puissance_nominale,nbre_pdc,gratuit'
+    + ',nom_enseigne,nom_operateur'
+    + PRISES.map((p) => `,${p.champ}`).join('');
 }
 
 export function urlParkings(b: Bbox): string {
@@ -111,6 +181,9 @@ export function versCarburants(brut: unknown): Charge<PoiCarburant> {
   return { elements, total: Number(r.total_count) || elements.length };
 }
 
+const texteOuNull = (v: unknown): string | null =>
+  (typeof v === 'string' && v.trim() !== '' ? v : null);
+
 export function versBornes(brut: unknown): Charge<PoiBorne> {
   const r = brut as ReponseOds;
   if (!Array.isArray(r?.results)) {
@@ -130,6 +203,11 @@ export function versBornes(brut: unknown): Charge<PoiBorne> {
       puissance: Number.isFinite(puissance) && puissance > 0 ? puissance : null,
       pdc: Number.isFinite(pdc) && pdc > 0 ? pdc : null,
       gratuit: g === '1' || g === 1 ? true : g === '0' || g === 0 ? false : null,
+      // L'ENSEIGNE PRIME SUR L'OPÉRATEUR : c'est le nom peint sur la borne,
+      // celui que l'usager cherche des yeux depuis la route. L'opérateur est
+      // souvent une société technique dont le nom ne figure nulle part.
+      reseau: texteOuNull(l['nom_enseigne']) ?? texteOuNull(l['nom_operateur']),
+      prises: PRISES.filter((p) => l[p.champ] === '1' || l[p.champ] === 1).map((p) => p.cle),
     });
   }
   return { elements, total: Number(r.total_count) || elements.length };
@@ -207,8 +285,10 @@ export async function chargerCarburants(b: Bbox, signal?: AbortSignal): Promise<
   return versCarburants(await appel(urlCarburants(b), 'prix des carburants', signal));
 }
 
-export async function chargerBornes(b: Bbox, signal?: AbortSignal): Promise<Charge<PoiBorne>> {
-  return versBornes(await appel(urlBornes(b), 'bornes de recharge', signal));
+export async function chargerBornes(
+  b: Bbox, signal?: AbortSignal, filtres: FiltresBornes = {},
+): Promise<Charge<PoiBorne>> {
+  return versBornes(await appel(urlBornes(b, filtres), 'bornes de recharge', signal));
 }
 
 export async function chargerParkings(b: Bbox, signal?: AbortSignal): Promise<ChargeParkings> {

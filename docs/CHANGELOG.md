@@ -2,6 +2,31 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.23.0] — 2026-08-25 — Filtres des bornes de recharge (PR #22)
+
+- Les bornes se filtrent par PUISSANCE minimale (22 / 50 / 150 / 300 kW) et
+  par CONNECTEUR accepté (CCS Combo, Type 2, CHAdeMO, prise domestique). Les
+  champs existaient depuis toujours dans le jeu IRVE consommé par la PR #9 :
+  l'application ne les demandait simplement pas.
+- LES FILTRES PARTENT AU SERVICE, ils ne trient pas l'acquis. Le portail
+  plafonne à 100 enregistrements : filtrer localement aurait trié un ensemble
+  DÉJÀ TRONQUÉ et montré trois bornes CCS là où la zone en compte cinquante.
+  Ce n'est pas une optimisation, c'est une question de justesse.
+- Les connecteurs partent en OU : un véhicule accepte l'un OU l'autre, et
+  exiger qu'une même borne les porte tous ne rendrait presque rien.
+- Le réseau et les prises de chaque borne sont désormais rendus. L'ENSEIGNE
+  prime sur l'opérateur — c'est le nom peint sur la borne, celui qu'on cherche
+  des yeux depuis la route ; l'opérateur est souvent une société technique
+  dont le nom ne figure nulle part.
+- TROIS DÉFAUTS TROUVÉS PAR LES TESTS, aucun visible à l'œil : le champ du
+  Type 2 s'appelle `prise_type_2` et non `prise_type_2` déduit du motif — un
+  champ inexistant ne renvoie rien plutôt qu'une erreur ; la restauration
+  asynchrone des préférences écrasait un réglage fait entre-temps ; et le
+  seuil anti-rechargement avalait les changements de filtre, si bien que
+  cocher « CCS Combo » ne changeait rien à l'écran.
+- Le filtre par RÉSEAU n'est pas livré : il demande une requête de facettes
+  pour proposer les enseignes présentes dans la vue. Promis à personne.
+
 ## [0.22.1] — 2026-08-25 — Montées de version : sept sur huit
 
 - Vite 8, ESLint 10, `@types/node` 26 et les quatre actions GitHub

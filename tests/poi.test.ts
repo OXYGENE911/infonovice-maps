@@ -6,6 +6,7 @@ import {
   urlCarburants, urlBornes, urlParkings,
   versCarburants, versBornes, versParkings,
   chargerCarburants, chargerBornes, vueAChange, ErreurPoi, type Bbox,
+  PRISES, type FiltresBornes,
 } from '../src/lib/poi';
 
 const B: Bbox = { ouest: 2.25, sud: 48.8, est: 2.42, nord: 48.9 };
@@ -174,5 +175,108 @@ describe('chargerCarburants (fetch simulé)', () => {
     vi.stubGlobal('fetch', f);
     await expect(chargerCarburants(B)).rejects.toThrow('exploitables');
     expect(f).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+/* FILTRES DES BORNES (PR #22) — ils s'appliquent CÔTÉ SERVICE, jamais après
+   coup. Le portail plafonne à 100 enregistrements : filtrer localement
+   trierait un ensemble DÉJÀ TRONQUÉ, et l'on afficherait trois bornes CCS là
+   où la zone en compte cinquante. Ce n'est pas une optimisation, c'est une
+   question de justesse — et c'est la raison d'être de ces tests.
+
+   Format vérifié par appel réel le 25/08/2026 : `puissance_nominale` est un
+   NOMBRE, les `prise_type_*` sont des CHAÎNES « 0 »/« 1 ». */
+describe('les filtres de bornes voyagent dans l’URL', () => {
+  test('sans filtre, l’URL reste celle d’avant — aucune régression', () => {
+    const u = decodeURIComponent(urlBornes(B));
+    expect(u).toContain('in_bbox(point_geo,48.8,2.25,48.9,2.42)');
+    expect(u, 'aucune clause parasite quand rien n’est filtré').not.toContain(' AND ');
+  });
+
+  test('la puissance minimale part en comparaison NUMÉRIQUE', () => {
+    const u = decodeURIComponent(urlBornes(B, { puissanceMin: 150 }));
+    expect(u).toContain('puissance_nominale >= 150');
+    expect(u, 'un nombre entre guillemets ne compare pas').not.toContain('"150"');
+  });
+
+  test('les prises partent en comparaison de CHAÎNE, et en OU entre elles', () => {
+    const filtres: FiltresBornes = { prises: ['combo_ccs', 'chademo'] };
+    const u = decodeURIComponent(urlBornes(B, filtres));
+    expect(u).toContain('prise_type_combo_ccs = "1"');
+    expect(u).toContain('prise_type_chademo = "1"');
+    // Un véhicule accepte l'une OU l'autre : exiger les deux ne rendrait rien.
+    expect(u).toContain('OR');
+  });
+
+  test('les réseaux se filtrent sur l’enseigne, échappés contre l’injection', () => {
+    const u = decodeURIComponent(urlBornes(B, { reseaux: ['Ionity', 'e"born'] }));
+    expect(u).toContain('nom_enseigne = "Ionity"');
+    // Le guillemet du nom est neutralisé : sans cela, la clause se casse en
+    // deux et le service renvoie une erreur — ou pire, autre chose.
+    expect(u).not.toContain('"e"born"');
+  });
+
+  test('plusieurs familles de filtres se combinent en ET', () => {
+    const u = decodeURIComponent(urlBornes(B, { puissanceMin: 50, prises: ['type_2'] }));
+    expect(u).toContain('puissance_nominale >= 50');
+    // LE CHAMP RÉEL EST `prise_type_2`, pas `prise_type_type_2` : la
+    // nomenclature du jeu IRVE est irrégulière, et ce test est ce qui l'a
+    // révélé — un champ inexistant ne renvoie rien plutôt qu'une erreur.
+    expect(u).toContain('prise_type_2 = "1"');
+    expect(u.match(/ AND /g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+  });
+
+  test('un filtre vide ne produit pas de clause vide', () => {
+    const u = decodeURIComponent(urlBornes(B, { prises: [], reseaux: [] }));
+    expect(u).not.toContain('()');
+    expect(u).not.toContain(' AND ');
+  });
+});
+
+describe('la borne rend son réseau et ses prises', () => {
+  const REEL = {
+    total_count: 1,
+    results: [{
+      point_geo: { lon: 5.326985, lat: 45.117174 },
+      nom_station: 'SAINT-ROMANS - Carrefour Des 4 Routes',
+      puissance_nominale: 22, nbre_pdc: 2, gratuit: '0',
+      nom_enseigne: 'eborn', nom_operateur: 'EASYCHARGE',
+      prise_type_2: '1', prise_type_combo_ccs: '0',
+      prise_type_chademo: '0', prise_type_ef: '1', prise_type_autre: '0',
+    }],
+  };
+
+  test('l’enseigne prime sur l’opérateur — c’est le nom que l’usager voit sur la borne', () => {
+    const { elements } = versBornes(REEL);
+    expect(elements[0]!.reseau).toBe('eborn');
+  });
+
+  test('les prises présentes sont listées, les absentes écartées', () => {
+    const { elements } = versBornes(REEL);
+    expect(elements[0]!.prises).toEqual(['type_2', 'ef']);
+  });
+
+  test('une borne sans enseigne ni prise ne casse pas — trois états, pas deux', () => {
+    const { elements } = versBornes({ total_count: 1, results: [{
+      point_geo: { lon: 2, lat: 48 }, nom_station: 'X',
+    }] });
+    expect(elements[0]!.reseau).toBeNull();
+    expect(elements[0]!.prises).toEqual([]);
+  });
+});
+
+describe('le catalogue des prises', () => {
+  test('les quatre standards réels sont couverts, dans un ordre stable', () => {
+    expect(PRISES.map((p) => p.cle)).toEqual(['combo_ccs', 'type_2', 'chademo', 'ef']);
+    // Le champ réel du Type 2 échappe au motif : il vaut d'être verrouillé.
+    expect(PRISES.find((p) => p.cle === 'type_2')?.champ).toBe('prise_type_2');
+  });
+
+  test('chaque prise porte un libellé lisible, pas une clé technique', () => {
+    for (const p of PRISES) {
+      expect(p.libelle.length, `« ${p.cle} » sans libellé`).toBeGreaterThan(2);
+      expect(p.libelle).not.toBe(p.cle);
+    }
   });
 });

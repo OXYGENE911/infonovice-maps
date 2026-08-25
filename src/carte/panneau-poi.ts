@@ -15,10 +15,13 @@ import { Popup } from 'maplibre-gl';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import {
   chargerCarburants, chargerBornes, chargerParkings, vueAChange,
+  PRISES, type ClePrise, type FiltresBornes,
   type Bbox,
 } from '../lib/poi';
 
 export const PREF_POI = 'poi';
+/** Les filtres de bornes vivent à part : ils survivent au décochage de la couche. */
+export const PREF_FILTRES = 'poi-filtres-bornes';
 const ZOOM_MIN = 12;
 
 type Couche = 'carburants' | 'bornes' | 'parkings';
@@ -32,6 +35,13 @@ const COULEURS: Record<Couche, string> = {
 export class PanneauPoi extends HTMLElement {
   #carte: CarteMapLibre | null = null;
   #actives = new Set<Couche>();
+  #filtres: FiltresBornes = {};
+  /* LA RESTAURATION NE DOIT JAMAIS ÉCRASER UN CHOIX DÉJÀ FAIT. La lecture
+     IndexedDB est asynchrone : un usager rapide — ou un test — peut régler un
+     filtre AVANT qu'elle se résolve, et sans ce drapeau son réglage était
+     silencieusement remplacé par la valeur mémorisée. Attrapé par un parcours
+     E2E qui lisait l'URL émise, jamais par l'œil. */
+  #filtresTouches = false;
   #controleurs: Partial<Record<Couche, AbortController>> = {};
   /** La bbox pour laquelle chaque couche a été chargée — le seuil de vue. */
   #chargee: Partial<Record<Couche, Bbox>> = {};
@@ -94,14 +104,58 @@ export class PanneauPoi extends HTMLElement {
           ${(Object.keys(COUCHES) as Couche[]).map((c) => `
             <label><input type="checkbox" value="${c}"> ${COUCHES[c]}</label>`).join('')}
         </fieldset>
+
+        <!-- LES FILTRES DE BORNES NE PARAISSENT QUE COUCHE ACTIVE. Montrer des
+             réglages qui ne s'appliquent à rien encombre sans informer. -->
+        <fieldset class="poi-filtres" hidden>
+          <legend>Filtrer les bornes</legend>
+          <label class="poi-filtre-ligne">Puissance minimale
+            <select class="poi-puissance" aria-label="Puissance minimale des bornes">
+              <option value="0">toutes</option>
+              <option value="22">22 kW et plus</option>
+              <option value="50">50 kW et plus</option>
+              <option value="150">150 kW et plus</option>
+              <option value="300">300 kW et plus</option>
+            </select>
+          </label>
+          <p class="poi-filtre-titre">Connecteurs acceptés</p>
+          ${PRISES.map((p) => `
+            <label><input type="checkbox" class="poi-prise" value="${p.cle}"> ${p.libelle}</label>`).join('')}
+          <p class="poi-filtre-note">Sans connecteur coché, toutes les bornes sont montrées.</p>
+        </fieldset>
         <p class="poi-etat" role="status"></p>
       </details>`;
-    this.querySelectorAll('input').forEach((case_) => {
+    /* LES FILTRES REPARTENT AU SERVICE, ils ne trient pas l'existant. Le
+       portail plafonne à 100 enregistrements : filtrer ce qui est déjà chargé
+       montrerait trois bornes CCS là où la zone en compte cinquante. */
+    const surFiltre = (): void => {
+      this.#filtresTouches = true;
+      void ecrirePreference(PREF_FILTRES, this.#filtres);
+      // `force` : le seuil de vue ne doit pas avaler un changement de filtre.
+      if (this.#actives.has('bornes')) void this.#charger('bornes', true);
+    };
+    this.querySelector<HTMLSelectElement>('.poi-puissance')?.addEventListener('change', (e) => {
+      const v = Number((e.target as HTMLSelectElement).value);
+      this.#filtres = { ...this.#filtres, puissanceMin: Number.isFinite(v) && v > 0 ? v : undefined };
+      surFiltre();
+    });
+    this.querySelectorAll<HTMLInputElement>('.poi-prise').forEach((case_) => {
       case_.addEventListener('change', () => {
-        const couche = case_.value as Couche;
-        if (case_.checked) this.#actives.add(couche); else this.#actives.delete(couche);
+        const prises = [...this.querySelectorAll<HTMLInputElement>('.poi-prise:checked')]
+          .map((c) => c.value as ClePrise);
+        this.#filtres = { ...this.#filtres, prises };
+        surFiltre();
+      });
+    });
+
+    this.querySelectorAll('fieldset:not(.poi-filtres) input').forEach((case_) => {
+      case_.addEventListener('change', () => {
+        const couche = (case_ as HTMLInputElement).value as Couche;
+        const coche = (case_ as HTMLInputElement).checked;
+        if (coche) this.#actives.add(couche); else this.#actives.delete(couche);
         void ecrirePreference(PREF_POI, [...this.#actives]);
-        if (case_.checked) void this.#charger(couche);
+        this.#majVisibiliteFiltres();
+        if (coche) void this.#charger(couche);
         else { this.#vider(couche); this.#etat(); }
       });
     });
@@ -116,7 +170,36 @@ export class PanneauPoi extends HTMLElement {
         if (case_) (case_ as HTMLInputElement).checked = true;
         void this.#charger(couche as Couche);
       }
+      this.#majVisibiliteFiltres();
     });
+
+    /* LES FILTRES SE RÉTABLISSENT AUSSI. Un réglage oublié entre deux visites
+       est un réglage qu'on ne prend pas la peine de poser. La valeur relue se
+       VALIDE : c'est une frontière système, comme les couches ci-dessus. */
+    void lirePreference<unknown>(PREF_FILTRES).then((memo) => {
+      if (this.#filtresTouches) return;
+      const m = (memo ?? {}) as Record<string, unknown>;
+      const puissance = Number(m['puissanceMin']);
+      const prisesLues = Array.isArray(m['prises']) ? m['prises'] : [];
+      const prises = prisesLues.filter(
+        (v): v is ClePrise => typeof v === 'string' && PRISES.some((p) => p.cle === v));
+      this.#filtres = {
+        puissanceMin: Number.isFinite(puissance) && puissance > 0 ? puissance : undefined,
+        prises,
+      };
+      const select = this.querySelector<HTMLSelectElement>('.poi-puissance');
+      if (select) select.value = String(this.#filtres.puissanceMin ?? 0);
+      for (const cle of prises) {
+        const c = this.querySelector<HTMLInputElement>(`.poi-prise[value="${cle}"]`);
+        if (c) c.checked = true;
+      }
+    });
+  }
+
+  /* Les filtres ne s'affichent qu'avec la couche qu'ils règlent. */
+  #majVisibiliteFiltres(): void {
+    const bloc = this.querySelector<HTMLElement>('.poi-filtres');
+    if (bloc) bloc.hidden = !this.#actives.has('bornes');
   }
 
   #rechargerActives(): void {
@@ -136,7 +219,7 @@ export class PanneauPoi extends HTMLElement {
     return { ouest, sud: b.getSouth(), est, nord: b.getNorth() };
   }
 
-  async #charger(couche: Couche): Promise<void> {
+  async #charger(couche: Couche, force = false): Promise<void> {
     const carte = this.#carte;
     if (!carte || !this.#actives.has(couche)) return;
     if (carte.getZoom() < ZOOM_MIN) {
@@ -145,9 +228,13 @@ export class PanneauPoi extends HTMLElement {
       return;
     }
     const bbox = this.#bbox();
-    // Le SEUIL : une vue quasi identique ne se recharge pas.
+    /* LE SEUIL : une vue quasi identique ne se recharge pas — frugalité due
+       aux API publiques. MAIS IL NE DOIT PAS BLOQUER CE QUI NE VIENT PAS DE LA
+       VUE : changer un filtre ne déplace pas la carte, et sans cette porte
+       l'usager cochait « CCS Combo » pour voir… exactement la même chose.
+       Mesuré par un parcours E2E qui lit l'URL émise, pas par l'œil. */
     const deja = this.#chargee[couche];
-    if (deja && !vueAChange(deja, bbox)) return;
+    if (!force && deja && !vueAChange(deja, bbox)) return;
     this.#controleurs[couche]?.abort();
     const controleur = new AbortController();
     this.#controleurs[couche] = controleur;
@@ -165,13 +252,16 @@ export class PanneauPoi extends HTMLElement {
         };
         this.#montres.carburants = c.elements.length; this.#totaux.carburants = c.total;
       } else if (couche === 'bornes') {
-        const c = await chargerBornes(bbox, controleur.signal);
+        const c = await chargerBornes(bbox, controleur.signal, this.#filtres);
         if (controleur !== this.#controleurs[couche]) return;
         this.#bornes = {
           type: 'FeatureCollection',
           features: c.elements.map((p) => ({
             type: 'Feature',
-            properties: { nom: p.nom, puissance: p.puissance, pdc: p.pdc, gratuit: p.gratuit },
+            properties: {
+              nom: p.nom, puissance: p.puissance, pdc: p.pdc, gratuit: p.gratuit,
+              reseau: p.reseau, prises: p.prises.join(','),
+            },
             geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
           })),
         };

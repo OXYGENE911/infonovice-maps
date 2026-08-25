@@ -626,3 +626,25 @@ etat-connexion { display: contents; }
      la séparation est structurelle, il n'y a plus rien à arbitrer. */
   left: 12px !important; right: auto !important;
 }
+
+/* ═══ FILTRES DES BORNES (PR #22) ═════════════════════════════════════════ */
+.poi-filtres {
+  margin-top: 10px; padding: 11px 13px;
+  border: 1px solid var(--bord); border-radius: var(--rayon);
+  background: color-mix(in srgb, var(--fond) 96%, var(--accent) 4%);
+  display: grid; gap: 7px;
+}
+.poi-filtres[hidden] { display: none; }
+.poi-filtres legend { font: 700 11px var(--police); color: var(--texte-3);
+  text-transform: uppercase; letter-spacing: .08em; padding: 0 4px; }
+.poi-filtre-ligne { display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; font: 400 13.5px var(--police); color: var(--texte-1); }
+.poi-filtre-ligne select {
+  font: 500 13px var(--police); color: var(--texte-1);
+  padding: 5px 8px; border-radius: 8px; border: 1px solid var(--bord);
+  background: var(--fond);
+}
+.poi-filtre-ligne select:focus-visible { outline: none; box-shadow: var(--focus); }
+.poi-filtre-titre { margin: 4px 0 0; font: 700 11px var(--police); color: var(--texte-3);
+  text-transform: uppercase; letter-spacing: .08em; }
+.poi-filtre-note { margin: 2px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); }
