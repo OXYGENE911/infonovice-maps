@@ -49,8 +49,33 @@ Conséquence directe : aucun conflit de merge, aucun worktree séparé,
 aucun risque qu'un agent mal briefé committe du code violant les
 contraintes du projet. C'est ce qui rend ce montage peu coûteux.
 
-**Réserve ouverte :** la garantie de lecture seule côté Gemini n'est pas
-encore acquise — voir §8, blocage ②.
+**VÉRIFIÉ LE 25/08/2026, et la nuance compte.** Deux essais indépendants,
+en `--approval-mode plan` headless, avec une demande d'écriture explicite :
+aucun fichier n'est né, ni dans le dépôt, ni dans un répertoire vierge
+**dépourvu de `GEMINI.md`** — donc sans mandat pour le retenir.
+
+Mais le mécanisme n'est pas celui que ce paragraphe annonçait. Ce n'est
+pas une absence d'outils : c'est une **grille d'approbation**. Dans le
+dépôt, Gemini a répondu :
+
+> « Je constate que je PEUX écrire dans ce dépôt, mais mon mandat défini
+> dans `GEMINI.md` m'interdit formellement de le faire. »
+
+et dans le répertoire vierge :
+
+> « Comme je suis en mode Plan, je dois d'abord soumettre une stratégie
+> pour accord […] avant de l'exécuter. »
+
+La garantie tient donc **pour notre usage** — en headless, personne n'est
+là pour approuver, la grille ne s'ouvre jamais. Elle ne tient pas au sens
+fort de « les outils d'écriture sont absents ». La formule « par
+capacité, pas par consigne » reste vraie en pratique et fausse à la
+lettre : c'est une capacité *conditionnée*, pas *retirée*. Toute
+utilisation interactive de Gemini sortirait de cette garantie.
+
+À noter : la première citation est exactement ce que la clause de
+détection des deux pointeurs demande (« si tu constates que tu PEUX
+écrire, dis-le au lieu d'écrire »). Elle a fonctionné au premier essai.
 
 ---
 
@@ -229,11 +254,16 @@ exactement ce qui vide la méthode.
   il est lui-même à sec jusqu'au 29/08 (blocage ③). **Les deux
   contradicteurs sont donc indisponibles au 24/08**, cas de la dernière
   ligne de la table : on le dit, et on ne présente rien comme contesté.
-- **② Mode lecture seule non garanti.** Message capté :
-  `Approval mode overridden to "default" because the current folder is
-  not trusted`. La garantie structurelle du §3 est conditionnelle à la
-  confiance accordée au dossier. À revérifier après authentification ;
-  si elle ne tient pas, le §3 doit être révisé, pas maquillé.
+  **LEVÉ LE 25/08/2026** par la clé API AI Studio (`GEMINI_API_KEY` dans
+  `~/.gemini/.env`, hors du dépôt ; `selectedType: "gemini-api-key"`).
+  L'entrée reste consignée : la voie `oauth-personal` est fermée pour de
+  bon, et c'est ce qui explique que l'authentification passe par une clé.
+
+- **② Mode lecture seule.** ~~Non garanti~~ — **LEVÉ LE 25/08/2026, avec
+  une nuance écrite au §3** : deux essais headless en `--approval-mode
+  plan`, aucun fichier créé, y compris sans `GEMINI.md`. Le message
+  `Approval mode overridden […] not trusted` du 23/08 n'est pas réapparu.
+  Le mécanisme est une grille d'approbation, pas une absence d'outils.
 - **③ Quota Codex épuisé jusqu'au 29/08/2026.** La moitié aval est
   inéprouvable avant cette date.
 - **④ Outils MCP indisponibles avant redémarrage de session.**
@@ -303,3 +333,14 @@ reste que contradicteur.
   (ChatGPT Plus, Gemini Pro, Claude Max) utilisés aussi à d'autres fins.
   Adosser un plan de charge permanent à ces abonnements frotte avec
   leurs conditions d'usage.
+- **Le contradicteur amont tourne sur Flash, pas sur Pro.** MESURÉ LE
+  25/08/2026 sur deux essais : `gemini-3.1-pro-preview-customtools`
+  échoue à chaque appel (`ApiError`, 1 erreur sur 1 requête) et le CLI
+  se rabat sur `gemini-3-flash-preview`, qui répond. Cause probable : le
+  tier gratuit de la clé AI Studio n'ouvre pas le modèle Pro. La
+  contestation du plan sera donc l'œuvre d'un modèle rapide et non du
+  plus capable — à peser au moment de lire le chiffre du §12, car un
+  `n/N` faible pourrait tenir au modèle servi plutôt qu'à la méthode.
+- **La lecture seule de Gemini est conditionnelle, pas structurelle**
+  (§3) : elle repose sur le fait que rien ni personne n'approuve en
+  headless. Un usage interactif la ferait tomber.
