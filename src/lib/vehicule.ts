@@ -37,6 +37,11 @@ export interface Vehicule {
   soc: number;
   /** kWh pour 100 km, par régime. */
   consommations: Consommations;
+  /* CE QUE LE VÉHICULE ACCEPTE EN POINTE, en kW. Une borne plus rapide n'y
+     change rien : brancher une VF8 sur 350 kW ne charge pas plus vite que sur
+     150. Sans ce chiffre, un planificateur promet des temps de charge qu'aucun
+     véhicule ne tient. */
+  puissanceMaxKw: number;
 }
 
 /** Ramène une valeur dans [0, max] — les saisies humaines sont une frontière système. */

@@ -804,3 +804,20 @@ etat-connexion { display: contents; }
   position: static; margin-top: 8px; min-width: 0; max-width: none;
   width: 100%; box-sizing: border-box; max-height: none;
 }
+
+/* ═══ ARRÊTS DE RECHARGE (PR #28bis) ═════════════════════════════════════ */
+.iti-recharge-corps { padding-top: 6px; font: 400 13px var(--police); color: var(--texte-2); }
+.recharge-resume { margin: 0; font: 600 13.5px var(--police); color: var(--texte-1); }
+.recharge-refus {
+  margin: 0; padding: 9px 11px; border-radius: 9px;
+  background: color-mix(in srgb, var(--fond) 88%, #C0392B 12%);
+  border: 1px solid color-mix(in srgb, var(--bord) 70%, #C0392B 30%);
+  font: 500 12.5px var(--police); color: var(--texte-1); line-height: 1.5;
+}
+.recharge-liste { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 7px;
+  max-height: 220px; overflow-y: auto; }
+.recharge-liste li { display: grid; gap: 1px; }
+.recharge-nom { font: 600 12.5px var(--police); color: var(--texte-1); }
+.recharge-detail { font: 400 11.5px var(--police); color: var(--texte-3); }
+.recharge-reserve { margin: 8px 0 0; font: 400 11.5px var(--police);
+  color: var(--texte-3); line-height: 1.45; }

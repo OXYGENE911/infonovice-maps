@@ -2,6 +2,33 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.28.0] — 2026-08-25 — Arrêts de recharge suggérés (PR #28)
+
+- Le planificateur propose ses arrêts : où s'arrêter, avec quel pourcentage de
+  batterie on y arrive et on en repart, combien de minutes de charge, et le
+  pourcentage à l'arrivée. Le calcul est LOCAL ; le seul appel réseau cherche
+  les bornes le long du tracé, plafonné à six tronçons depuis la PR #11.
+- ON N'ARRIVE JAMAIS SOUS LA RÉSERVE. Arriver à une borne à 2 % n'est pas un
+  plan, c'est un pari.
+- ON NE FAIT PAS LE PLEIN : au-delà de 80 % la charge s'effondre, et remplir à
+  chaque arrêt fait perdre plus de temps qu'il n'en gagne. Mais le plan monte
+  au-delà quand le dernier tronçon l'exige — vingt minutes valent mieux qu'un
+  refus infondé.
+- ET IL SAIT DIRE NON, tôt, avec le kilomètre exact où la réserve serait
+  entamée. Un plan bancal qui laisse découvrir le trou à 8 % de batterie est
+  pire que l'aveu.
+- Le profil véhicule accepte désormais la PUISSANCE DE CHARGE MAXIMALE : sans
+  elle, on promettrait des temps de charge qu'aucun véhicule ne tient —
+  brancher une VF8 sur 350 kW ne charge pas plus vite que sur 150.
+- CE QUE LE MODÈLE IGNORE est écrit sous le plan : ni le relief, ni le vent,
+  ni le trafic, ni la vraie courbe de charge, qui dépend de la température de
+  la batterie et qu'aucune source publique ne donne.
+- DEUX DÉFAUTS TROUVÉS PAR LES TESTS : le rayon de recherche était passé en
+  kilomètres à un paramètre qui attend des MÈTRES — dix mètres au lieu de dix
+  kilomètres, aucune erreur, juste un résultat vide ; et une fixture annonçait
+  465 km sur un tracé en ligne droite de 390, si bien que les avancements et
+  la distance ne parlaient pas de la même échelle.
+
 ## [0.27.0] — 2026-08-25 — Deux points d'entrée, pas six (PR #27)
 
 - À GAUCHE LE TRAJET (itinéraire, véhicule) ; EN HAUT À DROITE LES RÉGLAGES,

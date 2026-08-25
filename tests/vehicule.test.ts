@@ -17,6 +17,7 @@ const VF8: Vehicule = {
   soce: 94,
   soc: 100,
   consommations: { ville: 20.6, route: 22.9, autoroute: 29.4 },
+  puissanceMaxKw: 150,
 };
 
 describe('la batterie vieillit, et le calcul le dit', () => {

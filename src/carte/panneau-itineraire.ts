@@ -18,6 +18,9 @@ import { versFragment, depuisFragment } from '../lib/partage-url';
 import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 import { chercherLeLongDuTrajet, type Categorie, type SurLeTrajet } from '../lib/le-long-du-trajet';
+import { planifierArrets, type PlanRecharge } from '../lib/arrets';
+import { lirePreference } from '../lib/stockage';
+import { PREF_VEHICULE } from './panneau-vehicule';
 import { ErreurPoi, type PoiCarburant, type PoiBorne } from '../lib/poi';
 import { meteoA, phraseMeteo, symboleTemps, heureArrivee, formaterHeure, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
 
@@ -45,6 +48,8 @@ export class PanneauItineraire extends HTMLElement {
   #feuillePour: Itineraire | null = null;
   /** Itinéraire dont la recherche « sur le trajet » est faite (ou en cours). */
   #trajetPour: Itineraire | null = null;
+  #rechargePour: Itineraire | null = null;
+  #annulationRecharge: AbortController | null = null;
   /** Itinéraire dont la météo d'arrivée est chargée (ou en cours), et QUAND :
       un bulletin d'arrivée périme avec l'horloge, pas avec l'itinéraire. */
   #meteoPour: Itineraire | null = null;
@@ -119,6 +124,10 @@ export class PanneauItineraire extends HTMLElement {
             <summary>Météo à l’arrivée</summary>
             <div class="iti-meteo-corps" role="status"></div>
           </details>
+          <details class="iti-recharge" hidden>
+            <summary>Arrêts de recharge</summary>
+            <div class="iti-recharge-corps" role="status"></div>
+          </details>
         </div>
       </details>`;
 
@@ -181,6 +190,9 @@ export class PanneauItineraire extends HTMLElement {
     this.querySelector('.iti-meteo')?.addEventListener('toggle', () => {
       void this.#chargerMeteo();
     });
+    this.querySelector('.iti-recharge')?.addEventListener('toggle', () => {
+      void this.#planifierRecharge();
+    });
     // Changer de catégorie ou de rayon relance la recherche — mais seulement
     // si la section est ouverte : un réglage invisible ne consomme rien.
     for (const cls of ['.trajet-quoi', '.trajet-rayon']) {
@@ -221,8 +233,11 @@ export class PanneauItineraire extends HTMLElement {
   #reinitialiserSections(cachees: boolean): void {
     this.#trajetPour = null;
     this.#annulationTrajet?.abort();
+    this.#rechargePour = null;
+    this.#annulationRecharge?.abort();
     this.#meteoPour = null; this.#meteoLe = null;
-    for (const cls of ['iti-alti', 'iti-feuille', 'iti-trajet', 'iti-meteo'] as const) {
+    for (const cls of
+      ['iti-alti', 'iti-feuille', 'iti-trajet', 'iti-meteo', 'iti-recharge'] as const) {
       const section = this.querySelector(`.${cls}`) as HTMLDetailsElement;
       section.hidden = cachees;
       section.open = false;
@@ -311,6 +326,126 @@ export class PanneauItineraire extends HTMLElement {
       corps.textContent = e instanceof ErreurPoi
         ? e.message : 'Recherche le long du trajet indisponible pour le moment.';
     }
+  }
+
+  /* LES ARRÊTS DE RECHARGE — À LA DEMANDE, comme tout le reste de ce panneau.
+     Le calcul est LOCAL (lib/arrets.ts) ; le seul appel réseau cherche les
+     bornes le long du tracé, et il est plafonné à six tronçons depuis la
+     PR #11. Le profil du véhicule vient d'IndexedDB : il n'a jamais quitté le
+     navigateur et ne le quitte pas ici non plus. */
+  async #planifierRecharge(): Promise<void> {
+    const section = this.querySelector('.iti-recharge') as HTMLDetailsElement;
+    const corps = this.querySelector('.iti-recharge-corps') as HTMLElement;
+    const iti = this.#dernier;
+    if (!section.open || !iti || this.#rechargePour === iti) return;
+    this.#rechargePour = iti;
+
+    const memo = await lirePreference<unknown>(PREF_VEHICULE);
+    const m = (memo ?? {}) as Record<string, unknown>;
+    const brut = (m['vehicule'] ?? {}) as Record<string, unknown>;
+    const nombre = (x: unknown): number =>
+      (typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x : 0);
+    const capacite = nombre(brut['capaciteNominale']) * (nombre(brut['soce']) || 100) / 100;
+    const conso = ((brut['consommations'] ?? {}) as Record<string, unknown>)['autoroute'];
+
+    if (!(capacite > 0) || !(nombre(conso) > 0)) {
+      corps.textContent = 'Renseignez d’abord votre véhicule (panneau « Véhicule ») :'
+        + ' batterie, santé et autonomie constatée.';
+      this.#rechargePour = null;   // réessayable une fois le profil rempli
+      return;
+    }
+
+    corps.textContent = 'Recherche des bornes le long du trajet…';
+    this.#annulationRecharge?.abort();
+    const annulation = new AbortController();
+    this.#annulationRecharge = annulation;
+
+    try {
+      /* DIX KILOMÈTRES, EN MÈTRES : au-delà, le détour coûte plus que la borne
+         ne rapporte. Le paramètre s'appelle `rayonM` — passer « 10 » cherchait
+         dans un rayon de dix MÈTRES et ne rendait jamais rien, sans la moindre
+         erreur. Le parcours E2E l'a vu ; un test à sec ne l'aurait pas vu. */
+      const trouves = await chercherLeLongDuTrajet(
+        iti.geometrie, 'bornes', 10_000, annulation.signal,
+      );
+      if (this.#dernier !== iti || annulation.signal.aborted) return;
+
+      const plan = planifierArrets({
+        vehicule: {
+          capaciteKwh: capacite,
+          consommationKwh100: nombre(conso),
+          // 150 kW par défaut : une valeur courante, et l'interface le dit.
+          puissanceMaxKw: nombre(brut['puissanceMaxKw']) || 150,
+        },
+        distanceM: iti.distance,
+        bornes: trouves.map((t) => ({
+          nom: (t.poi as PoiBorne).nom,
+          lon: t.poi.lon, lat: t.poi.lat,
+          avancementM: t.avancement, ecartM: t.ecart,
+          puissanceKw: (t.poi as PoiBorne).puissance,
+        })),
+        socDepart: nombre(brut['soc']) || 100,
+        socArrivee: 10,
+        reserve: 10,
+      });
+      this.#afficherRecharge(plan);
+    } catch (e) {
+      if (annulation.signal.aborted) return;
+      this.#rechargePour = null;
+      corps.textContent = e instanceof ErreurPoi
+        ? e.message : 'Recherche des bornes indisponible pour le moment.';
+    }
+  }
+
+  #afficherRecharge(plan: PlanRecharge): void {
+    const corps = this.querySelector('.iti-recharge-corps') as HTMLElement;
+    corps.replaceChildren();
+
+    if (!plan.faisable) {
+      /* ON DIT NON, TÔT, AVEC LE MOTIF. Un plan bancal qui laisse découvrir le
+         trou à 8 % de batterie est pire que l'aveu. */
+      const refus = document.createElement('p');
+      refus.className = 'recharge-refus';
+      refus.textContent = plan.motif ?? 'Trajet impossible avec ce véhicule.';
+      corps.append(refus);
+      return;
+    }
+
+    const resume = document.createElement('p');
+    resume.className = 'recharge-resume';
+    resume.textContent = plan.arrets.length === 0
+      ? `Aucun arrêt nécessaire — arrivée à ${Math.round(plan.socArrivee)} % de batterie.`
+      : `${plan.arrets.length} arrêt${plan.arrets.length > 1 ? 's' : ''}`
+        + ` · ${Math.round(plan.dureeRechargeMin)} min de charge`
+        + ` · arrivée à ${Math.round(plan.socArrivee)} %`;
+    corps.append(resume);
+
+    if (plan.arrets.length > 0) {
+      const liste = document.createElement('ol');
+      liste.className = 'recharge-liste';
+      for (const a of plan.arrets) {
+        const item = document.createElement('li');
+        const titre = document.createElement('span');
+        titre.className = 'recharge-nom';
+        titre.textContent = a.borne.nom;
+        const detail = document.createElement('span');
+        detail.className = 'recharge-detail';
+        detail.textContent = `${Math.round(a.borne.avancementM / 1000)} km`
+          + ` · arrivée ${Math.round(a.socArrivee)} % → départ ${Math.round(a.socDepart)} %`
+          + ` · ${Math.round(a.dureeMin)} min`
+          + (a.borne.puissanceKw ? ` · ${a.borne.puissanceKw} kW` : '');
+        item.append(titre, detail);
+        liste.append(item);
+      }
+      corps.append(liste);
+    }
+
+    const reserve = document.createElement('p');
+    reserve.className = 'recharge-reserve';
+    reserve.textContent = 'Estimation à plat, à consommation constante :'
+      + ' ni le relief, ni le vent, ni le trafic, ni la vraie courbe de charge'
+      + ' de votre véhicule ne sont pris en compte.';
+    corps.append(reserve);
   }
 
   /** Construit la liste EN textContent : les libellés viennent des services. */
