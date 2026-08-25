@@ -185,10 +185,13 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       naît hors du sitemap ou sans canonical fait échouer la CI.
 
 ## Limites connues, à traiter plus tard
-- Les photos Panoramax sont souvent des panoramas 360° (équirectangulaires) :
-  la visionneuse les affiche À PLAT, donc très larges et déformées. Un vrai
-  visualiseur 360 demanderait une bibliothèque supplémentaire — à peser
-  contre le budget bundle (< 300 Ko hors MapLibre).
+- [x] RÉSOLU le 26/08/2026 (PR #31) — les panoramas 360° s'explorent au lieu
+      d'être affichés à plat. LA BIBLIOTHÈQUE N'ÉTAIT PAS NÉCESSAIRE : un
+      visualiseur écrit à la main coûte 2 Ko gzippés (bundle 40,5 → 42,5 Ko
+      sur 300), là où un visualiseur du commerce en pèse deux cents. Même
+      arbitrage que le décodeur protobuf de la PR #16.
+      Repli soigné : sans WebGL, ou si la texture est refusée, l'image à plat
+      reste affichée. Et la navigation se fait aussi AUX FLÈCHES.
 
 ## Ergonomie
 - [x] PR #21bis — Trois zones : rail à gauche, réglages d'affichage en bas à

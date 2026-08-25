@@ -431,6 +431,11 @@ etapes-itineraire { display: grid; gap: 7px; }
   display: block; max-width: 100%; max-height: 78vh;
   border-radius: var(--rayon); background: var(--fond-profond);
 }
+/* `display: block` L'EMPORTE SUR L'ATTRIBUT `hidden`, dont la règle du
+   navigateur n'est qu'un `display: none` de feuille par défaut. Sans cette
+   ligne, l'image à plat restait affichée SOUS le panorama 360 — attrapé par un
+   parcours E2E qui la voyait « visible » alors qu'elle portait l'attribut. */
+.photo-image[hidden] { display: none; }
 .photo-legende {
   margin: 10px 0 0; text-align: center;
   font: 500 13px var(--police); color: #E8EDF4;
@@ -852,3 +857,14 @@ etat-connexion { display: contents; }
 .poi-reseaux label { display: flex; align-items: center; gap: 8px;
   font: 400 12.5px var(--police); color: var(--texte-1); cursor: pointer; }
 .poi-reseaux input:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+
+/* ═══ PANORAMA 360 (PR #31) ═══════════════════════════════════════════════ */
+.photo-360 {
+  display: block; width: min(1100px, 96vw); height: min(620px, 70vh);
+  border-radius: var(--rayon); background: #000; cursor: grab; touch-action: none;
+}
+.photo-360:active { cursor: grabbing; }
+.photo-360[hidden] { display: none; }
+.photo-360:focus-visible { outline: none; box-shadow: var(--focus); }
+.photo-360-aide { margin: 6px 0 0; font: 400 12px var(--police); color: var(--texte-3); }
+.photo-360-aide[hidden] { display: none; }

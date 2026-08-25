@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.31.0] — 2026-08-26 — Les panoramas 360 s'explorent (PR #31)
+
+- Les photos Panoramax équirectangulaires ne sont plus affichées à plat : on
+  fait glisser pour regarder autour, ou l'on utilise les flèches du clavier.
+  C'était une limite inscrite à la ROADMAP depuis la PR #12.
+- LA BIBLIOTHÈQUE N'ÉTAIT PAS NÉCESSAIRE : 2 Ko gzippés écrits à la main
+  (bundle 40,5 → 42,5 Ko sur 300 autorisés), contre environ deux cents pour un
+  visualiseur du commerce. Même arbitrage que le décodeur protobuf de la PR #16.
+- Une photo ORDINAIRE ne passe pas par WebGL : le rendu coûte une texture en
+  mémoire vidéo, on ne l'engage que pour ce qui est vraiment un panorama
+  (rapport 2:1, à deux pour cent près).
+- REPLI SOIGNÉ À CHAQUE ÉTAGE : sans WebGL, si la texture est refusée, ou si
+  l'image ne se charge pas en mode anonyme, la photo à plat reste affichée.
+  Mieux vaut une image dégradée que rien.
+- TROIS DÉFAUTS TROUVÉS PAR LES TESTS : une image d'une autre origine contamine
+  le canevas et WebGL la refuse — il faut la demander en mode anonyme
+  (Panoramax répond bien `Access-Control-Allow-Origin: *`, vérifié) ; l'erreur
+  s'échappait au lieu de retomber sur l'image à plat ; et `display: block`
+  l'emportait sur l'attribut `hidden`, si bien que la photo à plat restait
+  affichée sous le panorama.
+
 ## [0.30.0] — 2026-08-26 — Filtrer les bornes par réseau (PR #22bis)
 
 - Les réseaux proposés sont ceux PRÉSENTS DANS LA VUE, avec leur nombre de
