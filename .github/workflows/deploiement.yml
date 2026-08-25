@@ -15,15 +15,15 @@ jobs:
   construire:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: npm }
       - run: npm ci
       # maps.infonovice.fr est en service (21/08/2026) : le site vit à la
       # racine du domaine, la base par défaut du dépôt. L'époque du sous-chemin
       # github.io est consignée dans docs/DEPLOIEMENT.md.
       - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with: { path: dist }
   publier:
     needs: construire
@@ -33,4 +33,4 @@ jobs:
       url: ${{ steps.deploiement.outputs.page_url }}
     steps:
       - id: deploiement
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

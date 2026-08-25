@@ -2,6 +2,256 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.31.1] — 2026-08-26 — Lighthouse : 100 sur les trois axes
+
+- Audit après une journée de changements d'interface, comme le projet l'exige
+  (« Lighthouse ≥ 90 »). Départ : 96 / 96 / 100. Arrivée : **100 / 100 / 100**.
+- UNE RÉGRESSION À MOI, corrigée : le bouton du menu affichait « Menu » mais
+  son nom accessible ne contenait pas ce mot. Critère WCAG « Label in Name » —
+  quelqu'un pilotant à la voix aurait dit « Menu » sans rien activer.
+- Les liens de l'attribution IGN ne se distinguaient que par leur couleur
+  (WCAG 1.4.1) : ils sont soulignés.
+- `frame-ancestors` est RETIRÉ des cinq pages. Le navigateur l'ignore quand il
+  vient d'une balise `<meta>` — il le dit lui-même dans la console. Il ne
+  protégeait donc de rien tout en polluant le journal, ce qui masque les vraies
+  erreurs. La protection contre l'encadrement demande un en-tête HTTP, que
+  GitHub Pages ne permet pas : limite écrite en commentaire plutôt que déguisée
+  en directive inopérante, et un test empêche son retour par bonne intention.
+
+## [0.31.0] — 2026-08-26 — Les panoramas 360 s'explorent (PR #31)
+
+- Les photos Panoramax équirectangulaires ne sont plus affichées à plat : on
+  fait glisser pour regarder autour, ou l'on utilise les flèches du clavier.
+  C'était une limite inscrite à la ROADMAP depuis la PR #12.
+- LA BIBLIOTHÈQUE N'ÉTAIT PAS NÉCESSAIRE : 2 Ko gzippés écrits à la main
+  (bundle 40,5 → 42,5 Ko sur 300 autorisés), contre environ deux cents pour un
+  visualiseur du commerce. Même arbitrage que le décodeur protobuf de la PR #16.
+- Une photo ORDINAIRE ne passe pas par WebGL : le rendu coûte une texture en
+  mémoire vidéo, on ne l'engage que pour ce qui est vraiment un panorama
+  (rapport 2:1, à deux pour cent près).
+- REPLI SOIGNÉ À CHAQUE ÉTAGE : sans WebGL, si la texture est refusée, ou si
+  l'image ne se charge pas en mode anonyme, la photo à plat reste affichée.
+  Mieux vaut une image dégradée que rien.
+- TROIS DÉFAUTS TROUVÉS PAR LES TESTS : une image d'une autre origine contamine
+  le canevas et WebGL la refuse — il faut la demander en mode anonyme
+  (Panoramax répond bien `Access-Control-Allow-Origin: *`, vérifié) ; l'erreur
+  s'échappait au lieu de retomber sur l'image à plat ; et `display: block`
+  l'emportait sur l'attribut `hidden`, si bien que la photo à plat restait
+  affichée sous le panorama.
+
+## [0.30.0] — 2026-08-26 — Filtrer les bornes par réseau (PR #22bis)
+
+- Les réseaux proposés sont ceux PRÉSENTS DANS LA VUE, avec leur nombre de
+  bornes, du plus fourni au moins fourni. Une liste figée de centaines
+  d'enseignes nationales — dont beaucoup sont un hôtel isolé — aurait proposé
+  des cases creuses.
+- Ils se chargent AVEC la couche, jamais à part : une facette de plus par
+  déplacement aurait doublé les appels au portail.
+- Une facette en panne N'EMPORTE PAS les bornes : elle n'est qu'un confort de
+  filtrage, et son échec ne doit pas priver l'usager de la couche.
+- Plafonnés à douze, mais un réseau DÉJÀ COCHÉ reste affiché même hors
+  plafond — sinon un filtre actif deviendrait invisible, donc impossible à
+  retirer.
+
+## [0.29.1] — 2026-08-26 — La marge d'arrivée se règle
+
+- « Arriver avec 30 % » n'est pas le même trajet qu'« arriver avec 5 % » : la
+  marge décide du nombre d'arrêts et du temps passé à charger. La laisser codée
+  en dur imposait une prudence à tout le monde.
+- Deux réglages : la charge voulue À L'ARRIVÉE, et la réserve qu'on refuse
+  d'entamer EN ROUTE. Ils refont le plan, mais seulement section ouverte.
+- Le garde-fou anti-recalcul est remis à zéro à chaque changement — sans quoi
+  il aurait avalé le réglage, exactement comme le seuil de vue l'avait fait
+  pour les filtres de bornes.
+
+## [0.29.0] — 2026-08-26 — Commodités des aires (PR #29)
+
+- Chaque arrêt de recharge peut dire ce qu'on trouve sur place : station-service,
+  restauration, café, toilettes, avec l'enseigne quand elle est connue.
+- L'ENSEIGNE N'EST PAS SUR L'AIRE — une aire sur 698 porte une balise `brand`.
+  Elle est sur les objets à l'intérieur, dont 74 % portent une identité. On
+  interroge donc autour du point d'arrêt, jamais l'aire.
+- Par le MIROIR FRANÇAIS d'OpenStreetMap France, pas l'instance allemande.
+- À LA DEMANDE, un arrêt à la fois : Overpass est un service bénévole, et on ne
+  l'interroge pas pour quatre arrêts au cas où l'usager regarderait.
+- En surcharge, Overpass rend du HTML et non du JSON. Le message reste français
+  et le bouton réessayable.
+- LA CSP A FAIT SON TRAVAIL : la requête était bloquée tant que l'origine
+  n'était pas déclarée. Ajoutée à `connect-src` ET à la liste blanche du
+  parcours de souveraineté — une origine ne s'ajoute jamais par accident.
+
+## [0.28.0] — 2026-08-25 — Arrêts de recharge suggérés (PR #28)
+
+- Les arrêts sont POSÉS SUR LA CARTE, et un clic sur leur nom y vole : une
+  liste qu'on ne peut pas situer oblige à chercher des yeux ce que
+  l'application sait déjà.
+
+- Le planificateur propose ses arrêts : où s'arrêter, avec quel pourcentage de
+  batterie on y arrive et on en repart, combien de minutes de charge, et le
+  pourcentage à l'arrivée. Le calcul est LOCAL ; le seul appel réseau cherche
+  les bornes le long du tracé, plafonné à six tronçons depuis la PR #11.
+- ON N'ARRIVE JAMAIS SOUS LA RÉSERVE. Arriver à une borne à 2 % n'est pas un
+  plan, c'est un pari.
+- ON NE FAIT PAS LE PLEIN : au-delà de 80 % la charge s'effondre, et remplir à
+  chaque arrêt fait perdre plus de temps qu'il n'en gagne. Mais le plan monte
+  au-delà quand le dernier tronçon l'exige — vingt minutes valent mieux qu'un
+  refus infondé.
+- ET IL SAIT DIRE NON, tôt, avec le kilomètre exact où la réserve serait
+  entamée. Un plan bancal qui laisse découvrir le trou à 8 % de batterie est
+  pire que l'aveu.
+- Le profil véhicule accepte désormais la PUISSANCE DE CHARGE MAXIMALE : sans
+  elle, on promettrait des temps de charge qu'aucun véhicule ne tient —
+  brancher une VF8 sur 350 kW ne charge pas plus vite que sur 150.
+- CE QUE LE MODÈLE IGNORE est écrit sous le plan : ni le relief, ni le vent,
+  ni le trafic, ni la vraie courbe de charge, qui dépend de la température de
+  la batterie et qu'aucune source publique ne donne.
+- DEUX DÉFAUTS TROUVÉS PAR LES TESTS : le rayon de recherche était passé en
+  kilomètres à un paramètre qui attend des MÈTRES — dix mètres au lieu de dix
+  kilomètres, aucune erreur, juste un résultat vide ; et une fixture annonçait
+  465 km sur un tracé en ligne droite de 390, si bien que les avancements et
+  la distance ne parlaient pas de la même échelle.
+
+## [0.27.0] — 2026-08-25 — Deux points d'entrée, pas six (PR #27)
+
+- À GAUCHE LE TRAJET (itinéraire, véhicule) ; EN HAUT À DROITE LES RÉGLAGES,
+  derrière un menu unique : couches d'information, lieux enregistrés, fond de
+  carte. Six pastilles de même poids ne hiérarchisaient rien, et le rail
+  débordait de l'écran dès qu'un volet s'ouvrait.
+- Le menu est posé EN DERNIER dans la colonne de droite, et ce n'est pas un
+  détail d'ordre : son panneau s'ouvre sous son bouton. Placé avant, il
+  recouvrait « Me localiser » — une fonctionnalité rendue inatteignable par
+  une décoration. Un parcours E2E compare désormais sa boîte à celle de CHAQUE
+  contrôle.
+- Les trente-cinq parcours qui cliquaient un volet posé à même la carte
+  passent par un utilitaire indifférent au placement : un futur déménagement
+  ne touchera qu'un seul fichier.
+- DÉFAUT ATTRAPÉ AU PASSAGE : le menu construisait son squelette à l'attache
+  au DOM, alors que les panneaux venaient s'y ranger avant. Cinq volets
+  restaient ORPHELINS, hors du DOM, sans la moindre erreur — un `return`
+  silencieux avait avalé la panne. Le squelette se construit désormais à la
+  demande, et l'absence de conteneur lève au lieu de se taire.
+
+## [0.26.0] — 2026-08-25 — Les bornes portent leur puissance (PR #26)
+
+- Un à trois éclairs sur chaque borne : jusqu'à 50 kW, de 50 à 150, au-delà.
+  Ce que l'usager cherche des yeux n'est pas l'enseigne mais « puis-je
+  recharger vite ici » — un logo de réseau l'oblige à savoir ce que ce réseau
+  déploie.
+- LES ICÔNES SONT DESSINÉES PAR LE CODE, sur un canevas, au démarrage. Le
+  style n'embarque ni glyphes ni sprites (choix de la PR #2), et un PNG déposé
+  au dépôt serait un binaire opaque — ce que la PR #21 s'interdit. Ce fichier
+  se relit, se corrige et se voit en revue.
+- Une puissance non déclarée porte une pastille NEUTRE, pas un éclair : une
+  borne dont le producteur n'a rien dit ne doit pas se déguiser en borne lente.
+- Le palier est écrit en toutes lettres dans la popup, avec le réseau et les
+  connecteurs : les éclairs se voient, un lecteur d'écran ne voit rien.
+- Une légende explique la lecture de la carte, sous les filtres.
+
+## [0.25.0] — 2026-08-25 — Domicile et travail (PR #25)
+
+- Deux repères à rôle unique, distincts des favoris : un favori est une
+  collection ouverte que l'usager nomme, un repère est un rôle que
+  l'application CONNAÎT. « Rentrer chez moi » doit être un geste, pas une
+  recherche dans une liste.
+- Ils se définissent par appui long, comme un favori, et le bouton n'ouvre
+  qu'une fois l'adresse tranchée — sans quoi « chez moi » se figerait sous des
+  coordonnées brutes.
+- Tant qu'un repère n'est pas défini, l'interface écrit « non défini » plutôt
+  que de se taire : une section vide n'apprend rien à personne.
+- Ils vivent dans les préférences locales, donc dans l'export/import JSON de
+  la PR #10 : ils suivent l'usager d'un appareil à l'autre sans qu'aucun
+  serveur n'apprenne où il habite. C'est précisément la donnée qu'on ne
+  confierait à personne.
+- La validation n'accepte QUE les propriétés propres : un objet forgé par
+  `Object.create({ lon, lat })` passait pour un repère valide. C'est le défaut
+  attrapé à la revue du 22/08 sur les préférences POI, et il se reproduit
+  partout où l'on lit une valeur venue du dehors.
+
+## [0.24.0] — 2026-08-25 — Profil du véhicule et rayon d'action (PR #23-24)
+
+- Un panneau « Véhicule » : batterie, santé (SOCE), charge (SOC) et autonomies
+  constatées. TOUT RESTE DANS LE NAVIGATEUR — aucun compte, aucun serveur,
+  comme les favoris de la PR #10.
+- ON DEMANDE DES KILOMÈTRES, PAS DES kWh/100 km. Personne ne connaît sa
+  consommation ; tout le monde sait jusqu'où il va avec une charge. Les
+  consommations s'en déduisent, à un seul endroit — deux saisies pourraient se
+  contredire.
+- Trois anneaux d'autonomie sur la carte : ville, route, autoroute. Ce sont de
+  vrais cercles GÉODÉSIQUES, pas des cercles en pixels : chaque sommet est à
+  moins de 500 m du rayon demandé, vérifié jusqu'à la latitude de Dunkerque où
+  un cercle tracé à l'écran se serait effondré.
+- L'USURE SE DIT EN KILOMÈTRES : « 5,3 kWh perdus, soit environ 18 km
+  d'autoroute » plutôt que « SOCE 94 % », qui ne dit rien à personne.
+- ET CE QUE LE MODÈLE IGNORE EST ÉCRIT SOUS LE BILAN : ni le relief, ni le
+  vent, ni la conduite. Tant qu'aucun véhicule n'est saisi, aucun anneau n'est
+  dessiné — inventer une « voiture moyenne » afficherait un rayon crédible et
+  faux.
+- Le modèle est étalonné sur un véhicule RÉEL et ses relevés au compteur : une
+  VinFast VF8, 87,7 kWh, SOCE 94 %, 400 km en ville, 280 sur autoroute. Le
+  calcul les retrouve à quelques kilomètres près.
+
+## [0.23.0] — 2026-08-25 — Filtres des bornes de recharge (PR #22)
+
+- Les bornes se filtrent par PUISSANCE minimale (22 / 50 / 150 / 300 kW) et
+  par CONNECTEUR accepté (CCS Combo, Type 2, CHAdeMO, prise domestique). Les
+  champs existaient depuis toujours dans le jeu IRVE consommé par la PR #9 :
+  l'application ne les demandait simplement pas.
+- LES FILTRES PARTENT AU SERVICE, ils ne trient pas l'acquis. Le portail
+  plafonne à 100 enregistrements : filtrer localement aurait trié un ensemble
+  DÉJÀ TRONQUÉ et montré trois bornes CCS là où la zone en compte cinquante.
+  Ce n'est pas une optimisation, c'est une question de justesse.
+- Les connecteurs partent en OU : un véhicule accepte l'un OU l'autre, et
+  exiger qu'une même borne les porte tous ne rendrait presque rien.
+- Le réseau et les prises de chaque borne sont désormais rendus. L'ENSEIGNE
+  prime sur l'opérateur — c'est le nom peint sur la borne, celui qu'on cherche
+  des yeux depuis la route ; l'opérateur est souvent une société technique
+  dont le nom ne figure nulle part.
+- TROIS DÉFAUTS TROUVÉS PAR LES TESTS, aucun visible à l'œil : le champ du
+  Type 2 s'appelle `prise_type_2` et non `prise_type_2` déduit du motif — un
+  champ inexistant ne renvoie rien plutôt qu'une erreur ; la restauration
+  asynchrone des préférences écrasait un réglage fait entre-temps ; et le
+  seuil anti-rechargement avalait les changements de filtre, si bien que
+  cocher « CCS Combo » ne changeait rien à l'écran.
+- Le filtre par RÉSEAU n'est pas livré : il demande une requête de facettes
+  pour proposer les enseignes présentes dans la vue. Promis à personne.
+
+## [0.22.1] — 2026-08-25 — Montées de version : sept sur huit
+
+- Vite 8, ESLint 10, `@types/node` 26 et les quatre actions GitHub
+  (checkout v7, setup-node v7, upload-pages-artifact v5, deploy-pages v5)
+  passent : 253 tests unitaires, 44 parcours E2E, lint et build verts.
+- Vite 8 a exigé une migration : Rollup n'accepte plus `manualChunks` en
+  objet. La forme fonction remplace `{ maplibre: ['maplibre-gl'] }`, et
+  MapLibre reste isolé dans son morceau (251,7 Ko gzippés) — le budget
+  applicatif des 300 Ko n'est pas entamé.
+- TYPESCRIPT 7 EST REFUSÉ, avec sa preuve : `typescript-eslint does not
+  support TS 7.0`. La chaîne de lint le bloque, pas notre code. La montée
+  attendra que `typescript-eslint` suive ; TypeScript reste en 5.9.3.
+
+## [0.22.0] — 2026-08-25 — Ergonomie : trois zones, plus de superposition
+
+- Les six pastilles flottantes de gauche devenaient un piège : le panneau
+  ouvert se posait SUR les boutons voisins, au point qu'ils n'étaient plus
+  seulement masqués mais INATTEIGNABLES — Playwright n'arrivait plus à cliquer
+  « Favoris » quand « Autour » était ouvert. Les panneaux sont désormais en
+  flux : ils poussent la colonne au lieu de la recouvrir.
+- Échap et un clic à côté referment le panneau. Un menu qu'on ouvre à la
+  souris et qu'on ne peut pas fermer au clavier n'est pas accessible.
+- Le fond de carte rejoint le coin bas-droit, avec les réglages d'affichage.
+  Le rail de gauche ne répond plus qu'à « où vais-je, que voir autour ».
+- Les liens légaux ne se posent plus sur l'attribution IGN — obligation de la
+  Géoplateforme, pas un ornement. Leur décalage était un nombre magique calé
+  sur une attribution d'une ligne ; il est maintenant MESURÉ, comme l'est la
+  hauteur de l'en-tête depuis la PR #3.
+- Ce que la mesure a corrigé en cours de route : se caler sur la hauteur de
+  l'attribution laissait deux pixels de recouvrement (elle garde 10 px de
+  marge propre — c'est son SOMMET qu'il faut dégager) ; et dégager
+  l'attribution posait aussitôt le pied sur le bouton « Fonds » fraîchement
+  déplacé. Les liens sont passés à gauche : une séparation structurelle plutôt
+  qu'un équilibre de pixels entre trois voisins.
+- Six parcours E2E comparent des BOÎTES ENGLOBANTES : ce que l'œil voit se
+  prouve par des rectangles, pas par des captures d'écran.
+
 ## [0.21.1] — 2026-08-24 — Consignes des agents : une seule source
 
 - `CLAUDE.md` devient la source unique des règles du projet. `AGENTS.md`

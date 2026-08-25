@@ -185,11 +185,108 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       naît hors du sitemap ou sans canonical fait échouer la CI.
 
 ## Limites connues, à traiter plus tard
-- Les photos Panoramax sont souvent des panoramas 360° (équirectangulaires) :
-  la visionneuse les affiche À PLAT, donc très larges et déformées. Un vrai
-  visualiseur 360 demanderait une bibliothèque supplémentaire — à peser
-  contre le budget bundle (< 300 Ko hors MapLibre).
+- [x] RÉSOLU le 26/08/2026 (PR #31) — les panoramas 360° s'explorent au lieu
+      d'être affichés à plat. LA BIBLIOTHÈQUE N'ÉTAIT PAS NÉCESSAIRE : un
+      visualiseur écrit à la main coûte 2 Ko gzippés (bundle 40,5 → 42,5 Ko
+      sur 300), là où un visualiseur du commerce en pèse deux cents. Même
+      arbitrage que le décodeur protobuf de la PR #16.
+      Repli soigné : sans WebGL, ou si la texture est refusée, l'image à plat
+      reste affichée. Et la navigation se fait aussi AUX FLÈCHES.
+
+## Ergonomie
+- [x] PR #21bis — Trois zones : rail à gauche, réglages d'affichage en bas à
+      droite, liens légaux en bas à gauche. Les panneaux poussent le rail au
+      lieu de le recouvrir ; Échap et un clic à côté referment. Six parcours
+      E2E comparent des BOÎTES ENGLOBANTES — ce que l'œil voit se prouve par
+      des rectangles.
+
+- [x] PR #27 — Deux points d'entrée : le trajet à gauche, les réglages
+      derrière un menu unique en haut à droite. Le rail ne s'allonge plus.
+
+## Planificateur EV — étude faite, chantiers ordonnés
+Étude de faisabilité complète : docs/planificateur-ev.md (25/08/2026), chaque
+verdict adossé à un appel réel daté.
+- [x] PR #22bis — Filtre par RÉSEAU : les enseignes présentes dans la vue,
+      demandées en facette au portail, avec leur nombre.
+- [x] PR #22 — Filtres bornes : puissance, type de connecteur, réseau. Les
+      champs EXISTENT déjà dans le jeu IRVE consommé depuis la PR #9
+      (prise_type_combo_ccs, puissance_nominale, nom_operateur…) : meilleur
+      rapport valeur/risque de toute la liste.
+- [x] PR #23 — Profil véhicule en IndexedDB (batterie, SOC, SOCE, conso).
+      Aucun compte, aucun serveur — comme les favoris de la PR #10.
+- [x] PR #24 — Anneaux d'autonomie ville / route / autoroute, calculés en
+      local. Ils disent « au mieux, à plat » et l'interface doit le dire.
+- [x] PR #25 — Adresses domicile et travail, en repères à rôle unique.
+- [x] PR #26 — Éclairs de puissance : un à trois selon le palier, dessinés
+      par le code. Ni marque déposée, ni binaire au dépôt.
+- [x] PR #28 — Arrêts suggérés : algorithme livré et testé (src/lib/arrets.ts,
+      19 tests à sec). Il reste à le brancher à l'interface — le planificateur
+      d'itinéraire lui fournira le tracé, le profil véhicule sa consommation,
+      et « le long du trajet » (PR #11) ses bornes candidates.
+      CE QU'IL SAIT DIRE : combien d'arrêts, où, avec quel SOC on arrive et
+      repart, combien de minutes de charge. Et surtout DIRE NON, tôt, avec le
+      kilomètre exact où la réserve serait entamée.
+      CE QU'IL IGNORE, écrit en tête du fichier : relief, vent, trafic, et la
+      vraie courbe de charge du véhicule (qui dépend de la température de la
+      batterie et qu'aucune source publique ne donne).
+- [x] PR #28bis — Arrêts suggérés branchés au planificateur : section « Arrêts
+      de recharge », à la demande, avec le refus motivé quand le trajet n'est
+      pas faisable. avec pourcentage d'arrivée visé. LE cœur d'un
+      vrai planificateur, et un chantier à cadrer avant d'être codé.
+- [x] PR #29 — Commodités des aires via Overpass (miroir OSM France), à la
+      demande : enseigne, restauration, café, toilettes. Couverture MESURÉE
+      avant d'être promise — voir docs/apis.md.
+- [~] PR #30 — Disponibilité des bornes en direct : ÉCARTÉE le 26/08/2026,
+      avec la mesure. Le jeu Belib' est techniquement parfait (CORS *, sans
+      clé, identifiant d'itinérance qui joint l'IRVE) mais SEULS 6 % de ses
+      statuts ont moins d'une heure — 123 points sur 1 967, dans une seule
+      ville. Un « Disponible » vieux de cinq heures ne dit rien de l'instant,
+      et l'erreur tomberait en arrivant à 8 % de batterie. Détail chiffré
+      dans docs/apis.md.
+
+ÉCARTÉS AVEC PREUVE, voir docs/planificateur-ev.md :
+- Comptes et base de données — heurtent les contraintes 1 et 4. Décision
+  d'Armelin en attente.
+- Filtre « éviter les péages » — mesuré impossible le 21/08 (PR #6) : aucun
+  moteur public ne l'expose. Éviter les autoroutes en est l'approximation.
+- Logos des réseaux — marques déposées, et « aucun binaire opaque au dépôt ».
+- Lecture OBD — Web Bluetooth absent d'iOS ; c'est le travail de l'app native
+  de la phase 2.
+
+## Premium, rallyes AFUVE et cortèges — CADRAGE, rien d'engagé
+Cadrage complet : docs/premium-et-evenements.md (25/08/2026). Trois projets
+distincts, pas trois fonctionnalités — ils ne partagent que le besoin d'un
+serveur.
+- [ ] Décider le modèle (six questions listées au §5 du cadrage)
+- [ ] Réécrire « Vie privée » en DEUX RÉGIMES — doit accompagner le premier
+      octet de backend, jamais le suivre : la page affirme aujourd'hui sans
+      nuance que rien ne quitte le navigateur.
+- [ ] Socle premium : compte, itinéraires sauvegardés, comparaison A/B,
+      historique de recharge. Le moins risqué, réutilisé par les deux autres.
+- [ ] Cortèges entre amis — AVANT les rallyes : un cortège s'essaie un
+      dimanche à trois voitures, un rallye est un événement daté qu'on ne peut
+      pas rater.
+- [~] Événements AFUVE (rallyes, classement, signalement de panne) :
+      ABANDONNÉ le 25/08/2026, avec son motif. Trois raisons — le suivi exige
+      l'app mobile de la PHASE 2 (un navigateur en arrière-plan n'émet pas de
+      position, iOS l'arrête) ; la responsabilité de responsable de traitement
+      est disproportionnée pour quelques week-ends par an ; et le motif
+      « sécurité » ne peut pas être tenu là où le réseau manque. Détail dans
+      docs/premium-et-evenements.md §2.B. Les CORTÈGES, eux, restent au
+      programme.
+
+RÈGLE QUI NE BOUGE PAS : le mode gratuit reste entièrement utilisable SANS
+compte, en local, avec son export JSON. C'est ce qui distingue ce produit de
+celui qu'il concurrence.
+
+## Écarté pour l'instant, avec la mesure
+- [~] Lieux culturels DATAtourisme (autour des arrêts, le long du trajet) :
+      ABANDONNÉ le 25/08/2026 par décision d'Armelin. L'API convient (recherche
+      géographique, CORS ouvert) mais exige une CLÉ — invisible sur un serveur,
+      publique sur un site statique dans un dépôt public. Les deux voies
+      possibles (extrait au build, ou dérogation avec mention publique) ont été
+      présentées et écartées. Mesure conservée dans docs/apis.md.
 
 ## Itérations suivantes (backlog ouvert)
-- PR #22+ — Signalements communautaires (premier backend, hors périmètre 0 €),
-  zones de danger, planificateur EV…
+- PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),
+  zones de danger…

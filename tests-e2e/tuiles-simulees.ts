@@ -10,6 +10,14 @@ export const PNG_1PX = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
   'base64');
 
+/* UNE IMAGE 2:1 — la signature d'un panorama équirectangulaire. Le PNG d'un
+   pixel sert partout ailleurs ; il ne peut PAS servir ici, un carré n'étant
+   pas un panorama. 64×32, avec un motif pour que le rendu ait quelque chose
+   à montrer. */
+export const PNG_PANORAMA_2X1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAIAAAAt/+nTAAAB8klEQVR4nGNgSDyk3PLUbTlH5intnrd+6wUKLxlP+Rq2XaLylvWcv3H7FRofOS9hTTuu0fnKew1v3nmDiZ+Ct4iWXbeY+St6j2zdfYeFTMlHVNuee6zkyj6j2/c+YKNQ8RXTad8jdkpV37Gd9z/hoFLzE9dl7Bkntbrf+K7jL7hoNPlL6DbxiptWs//E7pNveOi0mCX1mHrHS6/VPLnn9Cd8DNosUnrNfMbPqN0ytffsFzAmHVZpfea+gjPrtE7vO/8NgkWXTaZ+C98hWXXbZu6/eAY62nVAsemxy1K29BOaXa991vLlXzCc9Dlkq1j5DctZv2P2ytU/cFzEnHJUrf2F5yrunLN6/R8CNwmXXDWb/iNyl3TNXbv5WMOagY520SReGehoF03ilYGe6ZUW8cpAz/RKi3hloGd6pUW8MtC1zKNBvDLQtcyjQbwy0LXMo0G8MtC13qR+vDLQt96kfrwy0LfepH68MtC57UX1eGWgc9uL6vHKQOe2F9XjlYHe7XdqxysDvdvv1I5XBnq336kdrwx07wNSOV4Z6N4HpHK8MtC9D0jleGWg/zgCdeOVgf7jCNSNVwb6jyNQN14ZBmAsiqrxyjAAY1FUjVeGARiLomq8MgzEeCY145VhIMYzqRmvDAMxnknNeGUYkDFxKsYrAO4s9KbeVcAzAAAAAElFTkSuQmCC',
+  'base64');
+
 export async function simulerTuiles(page: Page): Promise<void> {
   await page.route('**/data.geopf.fr/wmts**', (route) => route.fulfill({
     contentType: 'image/png', body: PNG_1PX,

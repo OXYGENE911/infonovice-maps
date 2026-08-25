@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ouvrirVolet } from './volets';
 import { PNG_1PX, simulerTuiles, simulerCommunes } from './tuiles-simulees';
 
 test.beforeEach(async ({ page }) => {
@@ -26,7 +27,10 @@ test('SOUVERAINETÉ : seules les origines déclarées sont contactées', async (
   // data.economie.gouv.fr et public.opendatasoft.com sont arrivées avec les
   // POI (PR #9) — et ne sont contactées QUE couche activée, zoom ≥ 12.
   const AUTORISEES = new Set(['localhost', 'data.geopf.fr', 'api-adresse.data.gouv.fr',
-    'data.economie.gouv.fr', 'public.opendatasoft.com']);
+    'data.economie.gouv.fr', 'public.opendatasoft.com',
+    // Overpass, par le miroir d'OpenStreetMap FRANCE — commodités des aires,
+    // À LA DEMANDE seulement (PR #29). L'instance de référence est allemande.
+    'overpass.openstreetmap.fr']);
   const intrus: string[] = [];
   page.on('request', (r) => {
     const h = new URL(r.url()).hostname;
@@ -55,7 +59,7 @@ test('le sélecteur de fonds bascule en satellite, et la préférence survit au 
 
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
-  await page.locator('.fonds summary').click();
+  await ouvrirVolet(page, '.fonds');
   await page.getByRole('radio', { name: 'Satellite', exact: true }).check();
   await expect.poll(() => ortho.length, { timeout: 15_000 }).toBeGreaterThan(0);
 
@@ -145,7 +149,7 @@ test('l’itinéraire A→B se calcule, se trace, et SURVIT au changement de fon
 
   // LE CHANGEMENT DE FOND NE MANGE PAS LE TRAJET : setStyle détruit les
   // sources ; le panneau doit reposer le tracé sur style.load.
-  await page.locator('.fonds summary').click();
+  await ouvrirVolet(page, '.fonds');
   await page.getByRole('radio', { name: 'Satellite', exact: true }).check();
   await page.waitForTimeout(1200);
   const traitPresent = await page.evaluate(() =>
@@ -476,7 +480,7 @@ test('les POI se chargent À LA DEMANDE : zoom respecté, prix en popup, choix p
 
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
-  await page.locator('.poi summary').click();
+  await ouvrirVolet(page, '.poi');
   await page.getByRole('checkbox', { name: 'Carburants' }).check();
   // Au zoom initial (5,4 : la France entière), AUCUN appel — on demande de zoomer.
   await expect(page.locator('.poi-etat')).toContainText('Zoomez', { timeout: 5_000 });
@@ -527,7 +531,7 @@ test('les POI se chargent À LA DEMANDE : zoom respecté, prix en popup, choix p
 
   // LES COUCHES SURVIVENT AU CHANGEMENT DE FOND — pixels à l'appui, le même
   // contrat que le tracé d'itinéraire.
-  await page.locator('.fonds summary').click();
+  await ouvrirVolet(page, '.fonds');
   await page.getByRole('radio', { name: 'Satellite', exact: true }).check();
   await expect.poll(() => page.evaluate(() =>
     (window as unknown as { __carte: { queryRenderedFeatures(o: object): unknown[] } })
@@ -540,7 +544,7 @@ test('les POI se chargent À LA DEMANDE : zoom respecté, prix en popup, choix p
   const appelsAvantReload = appelsCarbu;
   await page.reload();
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
-  await page.locator('.poi summary').click();
+  await ouvrirVolet(page, '.poi');
   await expect(page.getByRole('checkbox', { name: 'Carburants' })).toBeChecked();
   await expect(page.locator('.poi-etat')).toContainText('Zoomez', { timeout: 10_000 });
   expect(appelsCarbu, 'appel parti au zoom France entière après reload').toBe(appelsAvantReload);
@@ -576,7 +580,7 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
     (window as unknown as { __carte: { jumpTo(o: object): void } })
       .__carte.jumpTo({ center: [2.3540, 48.8570], zoom: 13 });
   });
-  await page.locator('.poi summary').click();
+  await ouvrirVolet(page, '.poi');
 
   // La panne d'UNE couche s'affiche pour elle, sans gêner les autres.
   await page.getByRole('checkbox', { name: 'Carburants' }).check();
@@ -656,14 +660,14 @@ test('FAVORIS : appui long → ajout, persistance, export JSON, retrait, import'
   await expect(page.getByRole('button', { name: /Ajouté aux favoris/ })).toBeVisible();
 
   // Le volet Favoris le liste, avec la promesse en toutes lettres.
-  await page.locator('.favoris summary').click();
+  await ouvrirVolet(page, '.favoris');
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
   await expect(page.locator('.favoris-promesse')).toContainText('ne quittent jamais ce navigateur');
 
   // Il SURVIT au rechargement (IndexedDB).
   await page.reload();
   await canevas.waitFor({ timeout: 15_000 });
-  await page.locator('.favoris summary').click();
+  await ouvrirVolet(page, '.favoris');
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
 
   // Cliquer le favori Y VOLE (zoom 16).
@@ -695,7 +699,7 @@ test('FAVORIS : appui long → ajout, persistance, export JSON, retrait, import'
   await expect(page.locator('.favoris-etat')).toContainText('Importé : 1 favori', { timeout: 10_000 });
   await page.waitForLoadState('load');
   await canevas.waitFor({ timeout: 15_000 });
-  await page.locator('.favoris summary').click();
+  await ouvrirVolet(page, '.favoris');
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris', { timeout: 10_000 });
 
   // UN FICHIER QUI N'EST PAS UNE SAUVEGARDE : message français, et le champ
@@ -734,7 +738,7 @@ test('FAVORIS : le bouton d’ajout attend que l’adresse soit tranchée', asyn
   // L'adresse arrive : le bouton s'ouvre, et le favori porte L'ADRESSE.
   await expect(ajouter).toBeEnabled({ timeout: 10_000 });
   await ajouter.click();
-  await page.locator('.favoris summary').click();
+  await ouvrirVolet(page, '.favoris');
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
 });
 
@@ -959,7 +963,7 @@ test('TRAFIC : couche nationale à la demande, popup au clic, détail assaini', 
   // RIEN tant que la couche n'est pas demandée.
   expect(appelsHorodate + appelsEvenements, 'trafic chargé sans être demandé').toBe(0);
 
-  await page.locator('.trafic summary').click();
+  await ouvrirVolet(page, '.trafic');
   await page.getByRole('checkbox', { name: /Événements routiers/ }).check();
   // Un seul événement retenu : le TERMINÉ est écarté.
   await expect(page.locator('.trafic-etat')).toContainText('1 événement en cours', { timeout: 15_000 });

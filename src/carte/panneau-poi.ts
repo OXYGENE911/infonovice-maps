@@ -13,12 +13,18 @@
 import type { Map as CarteMapLibre, GeoJSONSource, MapGeoJSONFeature } from 'maplibre-gl';
 import { Popup } from 'maplibre-gl';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
+import { palierDe, libellePalier, PALIERS } from '../lib/puissance';
+import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import {
-  chargerCarburants, chargerBornes, chargerParkings, vueAChange,
+  chargerCarburants, chargerBornes, chargerParkings, chargerReseaux, vueAChange,
+  type Reseau,
+  PRISES, type ClePrise, type FiltresBornes,
   type Bbox,
 } from '../lib/poi';
 
 export const PREF_POI = 'poi';
+/** Les filtres de bornes vivent à part : ils survivent au décochage de la couche. */
+export const PREF_FILTRES = 'poi-filtres-bornes';
 const ZOOM_MIN = 12;
 
 type Couche = 'carburants' | 'bornes' | 'parkings';
@@ -32,6 +38,13 @@ const COULEURS: Record<Couche, string> = {
 export class PanneauPoi extends HTMLElement {
   #carte: CarteMapLibre | null = null;
   #actives = new Set<Couche>();
+  #filtres: FiltresBornes = {};
+  /* LA RESTAURATION NE DOIT JAMAIS ÉCRASER UN CHOIX DÉJÀ FAIT. La lecture
+     IndexedDB est asynchrone : un usager rapide — ou un test — peut régler un
+     filtre AVANT qu'elle se résolve, et sans ce drapeau son réglage était
+     silencieusement remplacé par la valeur mémorisée. Attrapé par un parcours
+     E2E qui lisait l'URL émise, jamais par l'œil. */
+  #filtresTouches = false;
   #controleurs: Partial<Record<Couche, AbortController>> = {};
   /** La bbox pour laquelle chaque couche a été chargée — le seuil de vue. */
   #chargee: Partial<Record<Couche, Bbox>> = {};
@@ -94,14 +107,70 @@ export class PanneauPoi extends HTMLElement {
           ${(Object.keys(COUCHES) as Couche[]).map((c) => `
             <label><input type="checkbox" value="${c}"> ${COUCHES[c]}</label>`).join('')}
         </fieldset>
+
+        <!-- LES FILTRES DE BORNES NE PARAISSENT QUE COUCHE ACTIVE. Montrer des
+             réglages qui ne s'appliquent à rien encombre sans informer. -->
+        <fieldset class="poi-filtres" hidden>
+          <legend>Filtrer les bornes</legend>
+          <label class="poi-filtre-ligne">Puissance minimale
+            <select class="poi-puissance" aria-label="Puissance minimale des bornes">
+              <option value="0">toutes</option>
+              <option value="22">22 kW et plus</option>
+              <option value="50">50 kW et plus</option>
+              <option value="150">150 kW et plus</option>
+              <option value="300">300 kW et plus</option>
+            </select>
+          </label>
+          <p class="poi-filtre-titre">Connecteurs acceptés</p>
+          ${PRISES.map((p) => `
+            <label><input type="checkbox" class="poi-prise" value="${p.cle}"> ${p.libelle}</label>`).join('')}
+          <p class="poi-filtre-note">Sans connecteur coché, toutes les bornes sont montrées.</p>
+          <p class="poi-filtre-titre">Réseaux dans la vue</p>
+          <div class="poi-reseaux" role="group" aria-label="Filtrer par réseau"></div>
+
+          <p class="poi-filtre-titre">Lecture de la carte</p>
+          <ul class="poi-legende">
+            ${PALIERS.map((p) => `
+              <li><span class="poi-legende-pastille" style="background:${p.couleur}"
+                aria-hidden="true">${'⚡'.repeat(p.palier)}</span>
+                ${p.libelle} — ${p.borne}</li>`).join('')}
+            <li><span class="poi-legende-pastille poi-legende-inconnue"
+              aria-hidden="true">•</span> Puissance non déclarée</li>
+          </ul>
+        </fieldset>
         <p class="poi-etat" role="status"></p>
       </details>`;
-    this.querySelectorAll('input').forEach((case_) => {
+    /* LES FILTRES REPARTENT AU SERVICE, ils ne trient pas l'existant. Le
+       portail plafonne à 100 enregistrements : filtrer ce qui est déjà chargé
+       montrerait trois bornes CCS là où la zone en compte cinquante. */
+    const surFiltre = (): void => {
+      this.#filtresTouches = true;
+      void ecrirePreference(PREF_FILTRES, this.#filtres);
+      // `force` : le seuil de vue ne doit pas avaler un changement de filtre.
+      if (this.#actives.has('bornes')) void this.#charger('bornes', true);
+    };
+    this.querySelector<HTMLSelectElement>('.poi-puissance')?.addEventListener('change', (e) => {
+      const v = Number((e.target as HTMLSelectElement).value);
+      this.#filtres = { ...this.#filtres, puissanceMin: Number.isFinite(v) && v > 0 ? v : undefined };
+      surFiltre();
+    });
+    this.querySelectorAll<HTMLInputElement>('.poi-prise').forEach((case_) => {
       case_.addEventListener('change', () => {
-        const couche = case_.value as Couche;
-        if (case_.checked) this.#actives.add(couche); else this.#actives.delete(couche);
+        const prises = [...this.querySelectorAll<HTMLInputElement>('.poi-prise:checked')]
+          .map((c) => c.value as ClePrise);
+        this.#filtres = { ...this.#filtres, prises };
+        surFiltre();
+      });
+    });
+
+    this.querySelectorAll('fieldset:not(.poi-filtres) input').forEach((case_) => {
+      case_.addEventListener('change', () => {
+        const couche = (case_ as HTMLInputElement).value as Couche;
+        const coche = (case_ as HTMLInputElement).checked;
+        if (coche) this.#actives.add(couche); else this.#actives.delete(couche);
         void ecrirePreference(PREF_POI, [...this.#actives]);
-        if (case_.checked) void this.#charger(couche);
+        this.#majVisibiliteFiltres();
+        if (coche) void this.#charger(couche);
         else { this.#vider(couche); this.#etat(); }
       });
     });
@@ -116,7 +185,85 @@ export class PanneauPoi extends HTMLElement {
         if (case_) (case_ as HTMLInputElement).checked = true;
         void this.#charger(couche as Couche);
       }
+      this.#majVisibiliteFiltres();
     });
+
+    /* LES FILTRES SE RÉTABLISSENT AUSSI. Un réglage oublié entre deux visites
+       est un réglage qu'on ne prend pas la peine de poser. La valeur relue se
+       VALIDE : c'est une frontière système, comme les couches ci-dessus. */
+    void lirePreference<unknown>(PREF_FILTRES).then((memo) => {
+      if (this.#filtresTouches) return;
+      const m = (memo ?? {}) as Record<string, unknown>;
+      const puissance = Number(m['puissanceMin']);
+      const prisesLues = Array.isArray(m['prises']) ? m['prises'] : [];
+      const prises = prisesLues.filter(
+        (v): v is ClePrise => typeof v === 'string' && PRISES.some((p) => p.cle === v));
+      const reseauxLus = Array.isArray(m['reseaux']) ? m['reseaux'] : [];
+      this.#filtres = {
+        puissanceMin: Number.isFinite(puissance) && puissance > 0 ? puissance : undefined,
+        prises,
+        reseaux: reseauxLus.filter((v): v is string => typeof v === 'string' && v.trim() !== ''),
+      };
+      const select = this.querySelector<HTMLSelectElement>('.poi-puissance');
+      if (select) select.value = String(this.#filtres.puissanceMin ?? 0);
+      for (const cle of prises) {
+        const c = this.querySelector<HTMLInputElement>(`.poi-prise[value="${cle}"]`);
+        if (c) c.checked = true;
+      }
+    });
+  }
+
+  /* LES RÉSEAUX PRÉSENTS DANS LA VUE, du plus fourni au moins fourni.
+     Plafonnés à douze : au-delà, la liste devient un annuaire où l'on ne
+     trouve plus rien, et le jeu IRVE compte des centaines d'enseignes dont
+     beaucoup sont un hôtel isolé. Les réseaux DÉJÀ COCHÉS restent affichés
+     même s'ils sortent du plafond — sinon un filtre actif deviendrait
+     invisible, donc impossible à retirer. */
+  #rendreReseaux(reseaux: Reseau[]): void {
+    const boite = this.querySelector('.poi-reseaux');
+    if (!boite) return;
+    boite.replaceChildren();
+
+    const coches = new Set(this.#filtres.reseaux ?? []);
+    const montres = [
+      ...reseaux.slice(0, 12),
+      ...reseaux.slice(12).filter((r) => coches.has(r.nom)),
+    ];
+
+    if (montres.length === 0) {
+      const vide = document.createElement('p');
+      vide.className = 'poi-filtre-note';
+      vide.textContent = 'Aucun réseau identifié dans cette vue.';
+      boite.appendChild(vide);
+      return;
+    }
+
+    for (const r of montres) {
+      const etiquette = document.createElement('label');
+      const case_ = document.createElement('input');
+      case_.type = 'checkbox';
+      case_.className = 'poi-reseau';
+      case_.value = r.nom;
+      case_.checked = coches.has(r.nom);
+      const texte = document.createElement('span');
+      texte.textContent = ` ${r.nom} (${r.nombre})`;
+      case_.addEventListener('change', () => {
+        const choisis = [...this.querySelectorAll<HTMLInputElement>('.poi-reseau:checked')]
+          .map((c) => c.value);
+        this.#filtres = { ...this.#filtres, reseaux: choisis };
+        this.#filtresTouches = true;
+        void ecrirePreference(PREF_FILTRES, this.#filtres);
+        void this.#charger('bornes', true);
+      });
+      etiquette.append(case_, texte);
+      boite.appendChild(etiquette);
+    }
+  }
+
+  /* Les filtres ne s'affichent qu'avec la couche qu'ils règlent. */
+  #majVisibiliteFiltres(): void {
+    const bloc = this.querySelector<HTMLElement>('.poi-filtres');
+    if (bloc) bloc.hidden = !this.#actives.has('bornes');
   }
 
   #rechargerActives(): void {
@@ -136,7 +283,7 @@ export class PanneauPoi extends HTMLElement {
     return { ouest, sud: b.getSouth(), est, nord: b.getNorth() };
   }
 
-  async #charger(couche: Couche): Promise<void> {
+  async #charger(couche: Couche, force = false): Promise<void> {
     const carte = this.#carte;
     if (!carte || !this.#actives.has(couche)) return;
     if (carte.getZoom() < ZOOM_MIN) {
@@ -145,9 +292,13 @@ export class PanneauPoi extends HTMLElement {
       return;
     }
     const bbox = this.#bbox();
-    // Le SEUIL : une vue quasi identique ne se recharge pas.
+    /* LE SEUIL : une vue quasi identique ne se recharge pas — frugalité due
+       aux API publiques. MAIS IL NE DOIT PAS BLOQUER CE QUI NE VIENT PAS DE LA
+       VUE : changer un filtre ne déplace pas la carte, et sans cette porte
+       l'usager cochait « CCS Combo » pour voir… exactement la même chose.
+       Mesuré par un parcours E2E qui lit l'URL émise, pas par l'œil. */
     const deja = this.#chargee[couche];
-    if (deja && !vueAChange(deja, bbox)) return;
+    if (!force && deja && !vueAChange(deja, bbox)) return;
     this.#controleurs[couche]?.abort();
     const controleur = new AbortController();
     this.#controleurs[couche] = controleur;
@@ -165,13 +316,30 @@ export class PanneauPoi extends HTMLElement {
         };
         this.#montres.carburants = c.elements.length; this.#totaux.carburants = c.total;
       } else if (couche === 'bornes') {
-        const c = await chargerBornes(bbox, controleur.signal);
+        /* LES RÉSEAUX SE CHARGENT AVEC LA COUCHE, pas à part : une facette de
+           plus par déplacement doublerait les appels au portail. L'échec de la
+           facette ne doit PAS emporter les bornes — elle n'est qu'un confort
+           de filtrage. */
+        const [c, reseaux] = await Promise.all([
+          chargerBornes(bbox, controleur.signal, this.#filtres),
+          chargerReseaux(bbox, controleur.signal).catch(() => [] as Reseau[]),
+        ]);
+        if (controleur !== this.#controleurs[couche]) return;
+        this.#rendreReseaux(reseaux);
         if (controleur !== this.#controleurs[couche]) return;
         this.#bornes = {
           type: 'FeatureCollection',
           features: c.elements.map((p) => ({
             type: 'Feature',
-            properties: { nom: p.nom, puissance: p.puissance, pdc: p.pdc, gratuit: p.gratuit },
+            properties: {
+              nom: p.nom, puissance: p.puissance, pdc: p.pdc, gratuit: p.gratuit,
+              reseau: p.reseau, prises: p.prises.join(','),
+              // Le palier est calculé UNE FOIS, ici : une expression MapLibre
+              // le recalculerait à chaque image, et il serait invisible aux
+              // tests. La décision vit dans lib/puissance.ts, testée à sec.
+              icone: nomIcone(palierDe(p.puissance)),
+              palierLibelle: libellePalier(p.puissance),
+            },
             geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
           })),
         };
@@ -268,11 +436,27 @@ export class PanneauPoi extends HTMLElement {
       });
       return;
     }
-    const couche = id === 'poi-carburants' ? 'carburants' as const : 'bornes' as const;
+    if (id === 'poi-bornes') {
+      /* LES BORNES PORTENT LEUR PUISSANCE, pas leur enseigne. Un usager
+         cherche « puis-je recharger vite ici » ; un logo de réseau l'oblige à
+         savoir ce que ce réseau déploie. Un à trois éclairs répondent d'un
+         coup d'œil — et se dessinent sans republier aucune marque déposée. */
+      poserIconesPuissance(carte);
+      carte.addLayer({
+        id, type: 'symbol', source: id,
+        layout: {
+          'icon-image': ['get', 'icone'],
+          'icon-size': 0.62,
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+        },
+      });
+      return;
+    }
     carte.addLayer({
       id, type: 'circle', source: id,
       paint: {
-        'circle-radius': 7, 'circle-color': COULEURS[couche],
+        'circle-radius': 7, 'circle-color': COULEURS.carburants,
         'circle-stroke-width': 2, 'circle-stroke-color': '#FFFFFF',
       },
     });
@@ -321,8 +505,28 @@ export class PanneauPoi extends HTMLElement {
         Number.isFinite(puissance) && puissance > 0 ? `${puissance} kW` : null,
         Number.isFinite(pdc) && pdc > 0 ? `${pdc} point${pdc > 1 ? 's' : ''} de charge` : null,
         p['gratuit'] === true ? 'gratuit' : null,
+        typeof p['reseau'] === 'string' && p['reseau'] ? p['reseau'] : null,
       ].filter(Boolean).join(' · ');
       bloc.append(detail);
+
+      /* LE PALIER EN TOUTES LETTRES. Les éclairs se voient sur la carte ; un
+         lecteur d'écran, lui, ne voit rien — et « 22 kW » ne dit pas à tout le
+         monde si c'est rapide. */
+      const palier = document.createElement('p');
+      palier.className = 'poi-palier';
+      palier.textContent = typeof p['palierLibelle'] === 'string'
+        ? p['palierLibelle'] : '';
+      if (palier.textContent) bloc.append(palier);
+
+      const prises = typeof p['prises'] === 'string' && p['prises']
+        ? p['prises'].split(',') : [];
+      if (prises.length > 0) {
+        const ligne = document.createElement('p');
+        ligne.className = 'poi-prises';
+        ligne.textContent = 'Connecteurs : ' + prises
+          .map((c) => PRISES.find((x) => x.cle === c)?.libelle ?? c).join(', ');
+        bloc.append(ligne);
+      }
     }
     this.#monterPopup(couche, { lng, lat }, bloc);
   }

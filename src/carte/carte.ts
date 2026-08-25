@@ -17,13 +17,17 @@ import lienWorkerMaplibre from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&u
 setWorkerUrl(lienWorkerMaplibre);
 import { styleCarte, LOCALE_FR, type OptionsStyle } from './style-ign';
 import { SelecteurFonds } from './selecteur-fonds';
+import { installerPanneaux } from './panneaux';
 import { RechercheAdresse } from './recherche';
 import { PanneauItineraire } from './panneau-itineraire';
 import { PanneauPoi } from './panneau-poi';
 import { PanneauFavoris } from './panneau-favoris';
 import { PanneauTrafic } from './panneau-trafic';
 import { PanneauTransports } from './panneau-transports';
+import { PanneauVehicule } from './panneau-vehicule';
+import { MenuReglages } from './menu-reglages';
 import { ajouterFavori } from '../lib/favoris';
+import { ecrireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { VisionneusePhoto } from './visionneuse-photo';
 import { chercherPhotos, plusProche, ErreurPhotos } from '../lib/panoramax';
 import { adresseInverse } from '../lib/adresse';
@@ -61,7 +65,20 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     conteneur.classList.toggle('fond-sombre', sombre.matches && o.fond === 'plan');
   };
 
-  /* LE PLANIFICATEUR — sous le sélecteur de fonds, même colonne. */
+  /* LE MENU DES RÉGLAGES — un seul point d'entrée en haut à droite. Les
+     couches d'information, les lieux enregistrés et le fond de carte y sont
+     RANGÉS plutôt qu'exposés : six pastilles de même poids ne hiérarchisaient
+     rien, et le rail débordait de l'écran dès qu'un volet s'ouvrait. À gauche
+     ne reste que ce qui concerne le TRAJET. */
+  const menu = new MenuReglages();
+  const porteMenu = document.createElement('div');
+  porteMenu.className = 'maplibregl-ctrl porte-menu';
+  porteMenu.appendChild(menu);
+  // Le contrôle est POSÉ PLUS BAS (après la géolocalisation) : voir le
+  // commentaire à son ajout. L'objet, lui, existe dès maintenant car les
+  // panneaux viennent s'y ranger au fil de leur création.
+
+  /* LE PLANIFICATEUR — à gauche : c'est LA fonction d'une carte d'itinéraire. */
   const panneau = new PanneauItineraire();
   panneau.carte = carte;
   const porteIti = document.createElement('div');
@@ -69,74 +86,70 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   porteIti.appendChild(panneau);
   carte.addControl({ onAdd: () => porteIti, onRemove: () => porteIti.remove() }, 'top-left');
 
+  /* LE FOND DE CARTE est une PRÉFÉRENCE D'AFFICHAGE : il appartient au menu,
+     pas au rail des destinations. */
   const selecteur = new SelecteurFonds();
   selecteur.surChangement = (o) => { carte.setStyle(styleCarte(o)); appliquerSombre(o); };
-  const support = document.createElement('div');
-  support.className = 'maplibregl-ctrl porte-fonds';
-  support.appendChild(selecteur);
-  carte.addControl({ onAdd: () => support, onRemove: () => support.remove() }, 'top-left');
+  menu.ajouter('Affichage', selecteur);
 
-  /* LES POINTS D'INTÉRÊT — sous le sélecteur de fonds, même colonne. */
+  /* LES COUCHES D'INFORMATION — points d'intérêt, trafic, transports. Elles
+     répondent à « que voir sur la carte », pas à « où vais-je » : leur place
+     est dans le menu. */
   const poi = new PanneauPoi();
   poi.carte = carte;
-  const portePoi = document.createElement('div');
-  portePoi.className = 'maplibregl-ctrl porte-poi';
-  portePoi.appendChild(poi);
-  carte.addControl({ onAdd: () => portePoi, onRemove: () => portePoi.remove() }, 'top-left');
+  menu.ajouter('Couches', poi);
 
-  /* L'INFO TRAFIC — couche nationale, sous les points d'intérêt. */
   const trafic = new PanneauTrafic();
   trafic.carte = carte;
-  const porteTrafic = document.createElement('div');
-  porteTrafic.className = 'maplibregl-ctrl porte-trafic';
-  porteTrafic.appendChild(trafic);
-  carte.addControl({ onAdd: () => porteTrafic, onRemove: () => porteTrafic.remove() }, 'top-left');
+  menu.ajouter('', trafic);
 
-  /* LES TRANSPORTS EN COMMUN — véhicules en direct, sous l'info trafic. */
   const transports = new PanneauTransports();
   transports.carte = carte;
-  const porteTransports = document.createElement('div');
-  porteTransports.className = 'maplibregl-ctrl porte-transports';
-  porteTransports.appendChild(transports);
-  carte.addControl(
-    { onAdd: () => porteTransports, onRemove: () => porteTransports.remove() }, 'top-left',
-  );
+  menu.ajouter('', transports);
 
   /* LA VISIONNEUSE DE PHOTOS — une seule pour l'application, posée au body :
      une modale doit couvrir la carte, pas vivre dedans. */
   const visionneuse = new VisionneusePhoto();
   document.body.appendChild(visionneuse);
 
-  /* LES FAVORIS — même colonne, sous les points d'intérêt. */
+  /* LE VÉHICULE ÉLECTRIQUE — profil et rayon d'action. Tout reste local :
+     batterie, santé, charge, relevés d'autonomie ne sortent jamais du
+     navigateur, et aucun compte n'est demandé. */
+  const vehicule = new PanneauVehicule();
+  vehicule.carte = carte;
+  const porteVehicule = document.createElement('div');
+  porteVehicule.className = 'maplibregl-ctrl porte-vehicule';
+  porteVehicule.appendChild(vehicule);
+  carte.addControl(
+    { onAdd: () => porteVehicule, onRemove: () => porteVehicule.remove() }, 'top-left',
+  );
+
+  /* LES LIEUX ENREGISTRÉS — favoris, domicile, travail, et l'export RGPD. */
   const favoris = new PanneauFavoris();
   favoris.carte = carte;
-  const porteFavoris = document.createElement('div');
-  porteFavoris.className = 'maplibregl-ctrl porte-favoris';
-  porteFavoris.appendChild(favoris);
-  carte.addControl({ onAdd: () => porteFavoris, onRemove: () => porteFavoris.remove() }, 'top-left');
+  menu.ajouter('Mes lieux', favoris);
 
-  /* UN SEUL volet ouvert à la fois dans la colonne : leurs panneaux déroulés
-     se superposent — le volet POI ouvert interceptait les radios du sélecteur
-     de fonds (attrapé par Playwright, comme l'en-tête la première nuit).
-     Délégation en phase de CAPTURE : `toggle` ne bulle pas mais se capture,
-     et la délégation ne dépend pas du moment où les panneaux se rendent.
-     Les volets INTERNES du planificateur (profil, feuille) ne sont pas
-     concernés : seuls les volets de tête comptent. */
-  const VOLETS = 'details.iti, details.fonds, details.poi, details.trafic, details.transports, details.favoris';
-  document.addEventListener('toggle', (e) => {
-    const cible = e.target;
-    if (!(cible instanceof HTMLDetailsElement) || !cible.open) return;
-    if (!cible.matches(VOLETS)) return;
-    document.querySelectorAll<HTMLDetailsElement>(VOLETS).forEach((autre) => {
-      if (autre !== cible && autre.open) autre.open = false;
-    });
-  }, true);
+  /* UN SEUL volet ouvert à la fois, Échap et clic extérieur pour refermer.
+     Le comportement vit dans panneaux.ts, et il reconnaît les volets de tête
+     à leur STRUCTURE — un `<details>` sans `<details>` ancêtre — là où ce
+     fichier portait une liste de sélecteurs codée en dur. La liste marchait,
+     mais elle oubliait en silence tout panneau ajouté plus tard : le défaut
+     n'apparaissait qu'à l'usage, sous la forme de deux volets ouverts
+     ensemble. Les volets INTERNES du planificateur restent autonomes. */
+  installerPanneaux(document);
   appliquerSombre(selecteur.options);
   sombre.addEventListener('change', () => appliquerSombre(selecteur.options));
   carte.addControl(new GeolocateControl({
     positionOptions: { enableHighAccuracy: true },
     trackUserLocation: true,
   }), 'top-right');
+
+  /* LE MENU EST POSÉ EN DERNIER dans la colonne de droite, et ce n'est pas un
+     détail d'ordre : son panneau s'ouvre SOUS son bouton. Placé avant, il
+     recouvrait le bouton « Me localiser » — mesuré à la capture, une
+     fonctionnalité rendue inatteignable par une décoration. En dernier, il ne
+     couvre que la carte. */
+  carte.addControl({ onAdd: () => porteMenu, onRemove: () => porteMenu.remove() }, 'top-right');
   carte.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
 
   /* LA RECHERCHE vit dans l'en-tête (elle EST la fonction principale d'une
@@ -178,6 +191,8 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
         + '<p class="pa-mots" role="status"></p>'
         + '<button type="button" class="pa-copier-mots" hidden>Copier l’adresse en mots</button>'
         + '<button type="button" class="pa-favori" disabled>Ajouter aux favoris</button>'
+        + REPERES.map((r) => `<button type="button" class="pa-repere"`
+          + ` data-cle="${r.cle}" disabled>Définir comme ${r.libelle.toLowerCase()}</button>`).join('')
         + '<button type="button" class="pa-photo">Photos de rue</button>'
         + '<p class="pa-photo-etat" role="status"></p></div>')
       .addTo(carte);
@@ -193,6 +208,22 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     // des coordonnées, sans moyen de le renommer (revue du 22/08).
     const bouton = bloc.querySelector('.pa-favori') as HTMLButtonElement;
     let nomFavori = coords;
+
+    /* LES REPÈRES — domicile et travail. Mêmes règles que le favori : ils
+       naissent DÉSACTIVÉS et n'ouvrent qu'une fois l'adresse tranchée, sans
+       quoi on figerait « chez moi » sous des coordonnées brutes. */
+    const boutonsRepere = [...bloc.querySelectorAll<HTMLButtonElement>('.pa-repere')];
+    for (const b of boutonsRepere) {
+      b.addEventListener('click', () => {
+        const cle = b.dataset['cle'] as CleRepere;
+        b.disabled = true;
+        ecrireRepere(cle, point, nomFavori).then(
+          () => { b.textContent = 'Enregistré ✓'; void favoris.rafraichir(); },
+          () => { b.textContent = 'Enregistrement impossible (stockage local indisponible)'; },
+        );
+      });
+    }
+
     bouton.addEventListener('click', () => {
       bouton.disabled = true;
       ajouterFavori(nomFavori, point).then(
@@ -245,8 +276,9 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
       (bloc.querySelector('.pa-libelle') as HTMLElement).textContent =
         'Adresse indisponible pour le moment.';
     }
-    // Quel que soit le sort de la BAN, le nom est arrêté : le bouton s'ouvre.
+    // Quel que soit le sort de la BAN, le nom est arrêté : les boutons s'ouvrent.
     bouton.disabled = false;
+    for (const b of boutonsRepere) b.disabled = false;
 
     /* LES PHOTOS DE RUE ne partent QUE sur demande explicite : une photo
        coûte du réseau à un commun associatif, et personne n'en veut à chaque

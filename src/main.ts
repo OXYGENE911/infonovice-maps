@@ -30,4 +30,42 @@ if (entete) {
 }
 
 const conteneur = document.getElementById('carte');
-if (conteneur) creerCarte(conteneur);
+if (conteneur) {
+  creerCarte(conteneur);
+
+  /* LA HAUTEUR DE L'ATTRIBUTION EST PUBLIÉE, ELLE AUSSI. Le pied de page se
+     posait dessus dès qu'elle prenait deux lignes : son décalage était un
+     « bottom: 26px » calibré à l'œil sur une attribution d'une seule ligne.
+     Masquer la mention IGN, même à moitié, n'est pas un défaut cosmétique —
+     c'est une obligation de la Géoplateforme. C'est exactement le défaut que
+     l'en-tête avait, et le même remède : on mesure au lieu de deviner.
+
+     MapLibre pose son attribution après la construction de la carte, d'où
+     l'attente : on observe le conteneur jusqu'à ce qu'elle paraisse, puis on
+     suit sa taille réelle. */
+  const suivreAttribution = (attribution: HTMLElement): void => {
+    const publier = (): void => {
+      /* CE QU'ON PUBLIE EST LA DISTANCE DU BAS DE L'ÉCRAN AU SOMMET DE
+         L'ATTRIBUTION, pas sa hauteur. Mesuré : l'attribution ne touche pas
+         le bas — elle garde 10 px de marge propre. Se caler sur sa seule
+         hauteur laissait deux pixels de recouvrement, ce que le test E2E a
+         vu et pas l'œil. C'est le sommet qu'il faut dégager. */
+      const sommet = Math.round(window.innerHeight - attribution.getBoundingClientRect().top);
+      document.documentElement.style.setProperty('--attribution-sommet', `${sommet}px`);
+    };
+    new ResizeObserver(publier).observe(attribution);
+    publier();
+  };
+
+  const dejaLa = conteneur.querySelector<HTMLElement>('.maplibregl-ctrl-attrib');
+  if (dejaLa) suivreAttribution(dejaLa);
+  else {
+    const guetteur = new MutationObserver(() => {
+      const venue = conteneur.querySelector<HTMLElement>('.maplibregl-ctrl-attrib');
+      if (!venue) return;
+      guetteur.disconnect();
+      suivreAttribution(venue);
+    });
+    guetteur.observe(conteneur, { childList: true, subtree: true });
+  }
+}
