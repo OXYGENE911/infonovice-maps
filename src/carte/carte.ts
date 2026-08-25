@@ -17,6 +17,7 @@ import lienWorkerMaplibre from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&u
 setWorkerUrl(lienWorkerMaplibre);
 import { styleCarte, LOCALE_FR, type OptionsStyle } from './style-ign';
 import { SelecteurFonds } from './selecteur-fonds';
+import { installerPanneaux } from './panneaux';
 import { RechercheAdresse } from './recherche';
 import { PanneauItineraire } from './panneau-itineraire';
 import { PanneauPoi } from './panneau-poi';
@@ -69,12 +70,17 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   porteIti.appendChild(panneau);
   carte.addControl({ onAdd: () => porteIti, onRemove: () => porteIti.remove() }, 'top-left');
 
+  /* LE FOND DE CARTE VA EN BAS À DROITE, avec les réglages d'affichage —
+     là où les cartes grand public le placent, et là où l'usager le cherche.
+     Il encombrait le rail de gauche, qui doit rester une liste de
+     DESTINATIONS (où vais-je, que voir autour) et non un mélange de
+     destinations et de préférences d'affichage. */
   const selecteur = new SelecteurFonds();
   selecteur.surChangement = (o) => { carte.setStyle(styleCarte(o)); appliquerSombre(o); };
   const support = document.createElement('div');
   support.className = 'maplibregl-ctrl porte-fonds';
   support.appendChild(selecteur);
-  carte.addControl({ onAdd: () => support, onRemove: () => support.remove() }, 'top-left');
+  carte.addControl({ onAdd: () => support, onRemove: () => support.remove() }, 'bottom-right');
 
   /* LES POINTS D'INTÉRÊT — sous le sélecteur de fonds, même colonne. */
   const poi = new PanneauPoi();
@@ -115,22 +121,14 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   porteFavoris.appendChild(favoris);
   carte.addControl({ onAdd: () => porteFavoris, onRemove: () => porteFavoris.remove() }, 'top-left');
 
-  /* UN SEUL volet ouvert à la fois dans la colonne : leurs panneaux déroulés
-     se superposent — le volet POI ouvert interceptait les radios du sélecteur
-     de fonds (attrapé par Playwright, comme l'en-tête la première nuit).
-     Délégation en phase de CAPTURE : `toggle` ne bulle pas mais se capture,
-     et la délégation ne dépend pas du moment où les panneaux se rendent.
-     Les volets INTERNES du planificateur (profil, feuille) ne sont pas
-     concernés : seuls les volets de tête comptent. */
-  const VOLETS = 'details.iti, details.fonds, details.poi, details.trafic, details.transports, details.favoris';
-  document.addEventListener('toggle', (e) => {
-    const cible = e.target;
-    if (!(cible instanceof HTMLDetailsElement) || !cible.open) return;
-    if (!cible.matches(VOLETS)) return;
-    document.querySelectorAll<HTMLDetailsElement>(VOLETS).forEach((autre) => {
-      if (autre !== cible && autre.open) autre.open = false;
-    });
-  }, true);
+  /* UN SEUL volet ouvert à la fois, Échap et clic extérieur pour refermer.
+     Le comportement vit dans panneaux.ts, et il reconnaît les volets de tête
+     à leur STRUCTURE — un `<details>` sans `<details>` ancêtre — là où ce
+     fichier portait une liste de sélecteurs codée en dur. La liste marchait,
+     mais elle oubliait en silence tout panneau ajouté plus tard : le défaut
+     n'apparaissait qu'à l'usage, sous la forme de deux volets ouverts
+     ensemble. Les volets INTERNES du planificateur restent autonomes. */
+  installerPanneaux(document);
   appliquerSombre(selecteur.options);
   sombre.addEventListener('change', () => appliquerSombre(selecteur.options));
   carte.addControl(new GeolocateControl({

@@ -2,6 +2,30 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.22.0] — 2026-08-25 — Ergonomie : trois zones, plus de superposition
+
+- Les six pastilles flottantes de gauche devenaient un piège : le panneau
+  ouvert se posait SUR les boutons voisins, au point qu'ils n'étaient plus
+  seulement masqués mais INATTEIGNABLES — Playwright n'arrivait plus à cliquer
+  « Favoris » quand « Autour » était ouvert. Les panneaux sont désormais en
+  flux : ils poussent la colonne au lieu de la recouvrir.
+- Échap et un clic à côté referment le panneau. Un menu qu'on ouvre à la
+  souris et qu'on ne peut pas fermer au clavier n'est pas accessible.
+- Le fond de carte rejoint le coin bas-droit, avec les réglages d'affichage.
+  Le rail de gauche ne répond plus qu'à « où vais-je, que voir autour ».
+- Les liens légaux ne se posent plus sur l'attribution IGN — obligation de la
+  Géoplateforme, pas un ornement. Leur décalage était un nombre magique calé
+  sur une attribution d'une ligne ; il est maintenant MESURÉ, comme l'est la
+  hauteur de l'en-tête depuis la PR #3.
+- Ce que la mesure a corrigé en cours de route : se caler sur la hauteur de
+  l'attribution laissait deux pixels de recouvrement (elle garde 10 px de
+  marge propre — c'est son SOMMET qu'il faut dégager) ; et dégager
+  l'attribution posait aussitôt le pied sur le bouton « Fonds » fraîchement
+  déplacé. Les liens sont passés à gauche : une séparation structurelle plutôt
+  qu'un équilibre de pixels entre trois voisins.
+- Six parcours E2E comparent des BOÎTES ENGLOBANTES : ce que l'œil voit se
+  prouve par des rectangles, pas par des captures d'écran.
+
 ## [0.21.1] — 2026-08-24 — Consignes des agents : une seule source
 
 - `CLAUDE.md` devient la source unique des règles du projet. `AGENTS.md`

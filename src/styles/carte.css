@@ -286,7 +286,7 @@ etapes-itineraire { display: grid; gap: 7px; }
 .poi summary::-webkit-details-marker { display: none; }
 .poi summary:focus-visible { outline: none; box-shadow: var(--focus); }
 .poi fieldset {
-  position: absolute; top: calc(100% + 8px); left: 0; min-width: 210px;
+  position: static; margin-top: 8px; min-width: 210px;
   padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
   background: var(--fond); box-shadow: var(--ombre-m);
   display: grid; gap: 9px;
@@ -332,7 +332,7 @@ etapes-itineraire { display: grid; gap: 7px; }
 .favoris summary::-webkit-details-marker { display: none; }
 .favoris summary:focus-visible { outline: none; box-shadow: var(--focus); }
 .favoris-corps {
-  position: absolute; top: calc(100% + 8px); left: 0; min-width: 250px; max-width: 300px;
+  position: static; margin-top: 8px; min-width: 250px; max-width: 300px;
   padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
   background: var(--fond); box-shadow: var(--ombre-m);
   display: grid; gap: 9px;
@@ -469,7 +469,7 @@ etapes-itineraire { display: grid; gap: 7px; }
 .trafic summary::-webkit-details-marker { display: none; }
 .trafic summary:focus-visible { outline: none; box-shadow: var(--focus); }
 .trafic fieldset {
-  position: absolute; top: calc(100% + 8px); left: 0; min-width: 240px; max-width: 280px;
+  position: static; margin-top: 8px; min-width: 240px; max-width: 280px;
   padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
   background: var(--fond); box-shadow: var(--ombre-m);
   display: grid; gap: 8px;
@@ -530,7 +530,7 @@ etapes-itineraire { display: grid; gap: 7px; }
 .transports summary::-webkit-details-marker { display: none; }
 .transports summary:focus-visible { outline: none; box-shadow: var(--focus); }
 .transports fieldset {
-  position: absolute; top: calc(100% + 8px); left: 0; min-width: 240px; max-width: 300px;
+  position: static; margin-top: 8px; min-width: 240px; max-width: 300px;
   padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
   background: var(--fond); box-shadow: var(--ombre-m);
   display: grid; gap: 8px;
@@ -572,3 +572,57 @@ etat-connexion { display: contents; }
 }
 .installer[hidden] { display: none; }
 .installer:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* ═══ ERGONOMIE : TROIS ZONES, PLUS DE SUPERPOSITION ═══════════════════════
+   Le rail de gauche répond à « où vais-je / que voir autour » ; le bas-droit
+   porte les réglages d'affichage ; le haut-droit garde les commandes de vue
+   de MapLibre. Six pastilles flottantes de même poids ne hiérarchisaient
+   rien, et leurs panneaux déroulés se posaient sur les boutons voisins — au
+   point que Playwright ne pouvait plus CLIQUER « Favoris » quand « Autour »
+   était ouvert. Mesuré, pas supposé : tests-e2e/ergonomie.spec.ts compare des
+   boîtes englobantes. */
+
+/* LE RAIL — une seule surface, pas six pastilles éparpillées. */
+#carte .maplibregl-ctrl-top-left {
+  display: flex; flex-direction: column; align-items: flex-start;
+  /* Le rail ne descend jamais sous le pied de page : au-delà, il défile. */
+  max-height: calc(100vh - var(--hauteur-entete, 45px) - 64px);
+  overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: thin;
+}
+#carte .maplibregl-ctrl-top-left .maplibregl-ctrl { margin: 0 0 8px 12px !important; }
+
+/* Un panneau ouvert POUSSE ses voisins au lieu de les recouvrir. Le prix à
+   payer est un rail qui s'allonge ; le bénéfice est qu'aucun bouton ne
+   devient inatteignable. Le panneau lui-même défile s'il est trop haut. */
+#carte .maplibregl-ctrl-top-left details > :not(summary) {
+  max-height: min(58vh, 460px); overflow-y: auto;
+}
+
+/* ═══ BAS-DROITE : LES RÉGLAGES D'AFFICHAGE ═══════════════════════════════ */
+.porte-fonds { pointer-events: auto; margin: 0 12px 10px 0 !important; }
+/* Le panneau s'ouvre VERS LE HAUT : sous un bouton déjà collé au bas de
+   l'écran, il sortirait du cadre. */
+#carte .maplibregl-ctrl-bottom-right .fonds fieldset {
+  top: auto; bottom: calc(100% + 8px); left: auto; right: 0;
+}
+
+/* ═══ LE PIED DE PAGE NE SE POSE PLUS SUR L'ATTRIBUTION ═══════════════════
+   Son décalage était un « bottom: 26px » calibré à l'œil sur une attribution
+   d'une ligne. Dès qu'elle en prend deux — écran étroit, mention plus
+   longue — les liens légaux recouvraient la mention IGN, qui est une
+   OBLIGATION de la Géoplateforme et non un ornement. La grandeur publiée par
+   main.ts est la distance du BAS DE L'ÉCRAN AU SOMMET de l'attribution — pas
+   sa hauteur : elle garde 10 px de marge propre, et se caler sur la hauteur
+   seule laissait deux pixels de recouvrement. Même défaut que l'en-tête à la
+   PR #3, même remède : on mesure. */
+.pied-carte {
+  bottom: calc(var(--attribution-sommet, 34px) + 8px) !important;
+  /* ET ILS PASSENT À GAUCHE. Déplacer le sélecteur de fonds en bas-droite y a
+     mis trois occupants — fonds, liens légaux, attribution — qui se
+     disputaient la même bande : mesuré, le pied recouvrait le bouton Fonds.
+     Négocier des pixels entre trois voisins est un équilibre qui retombe au
+     premier ajout. Le coin gauche n'accueille que l'échelle, posée plus bas :
+     la séparation est structurelle, il n'y a plus rien à arbitrer. */
+  left: 12px !important; right: auto !important;
+}
