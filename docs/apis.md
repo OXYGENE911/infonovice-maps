@@ -429,5 +429,43 @@ En surcharge, Overpass rend une page **HTML**, pas du JSON. La lire sans
 précaution lèverait une exception illisible : le module la traduit en message
 français, et le bouton reste réessayable.
 
+## Disponibilité des bornes en direct — ÉCARTÉE, avec la mesure (26/08/2026)
+
+Le jeu Belib' « Points de recharge — **disponibilité temps réel** » (Paris,
+`parisdata.opendatasoft.com`) est techniquement parfait : HTTP 200,
+`Access-Control-Allow-Origin: *`, aucune clé, filtre par emprise, et un
+`id_pdc` au format d'itinérance qui joint le jeu IRVE statique. Tout invitait
+à le brancher.
+
+**LA FRAÎCHEUR L'INTERDIT.** Comptage EXACT sur les 1 967 points du jeu, le
+26/08/2026 :
+
+| Âge du statut | Points | Part |
+|---|---|---|
+| moins d'**1 h** | 123 | **6 %** |
+| moins de 6 h | 1 090 | 55 % |
+| moins de 24 h | 1 910 | 97 % |
+
+Les extrêmes confirment que le flux est bien vivant pour une minorité : les
+plus frais datent de 0,0 h, les plus anciens de **13 474 h** — dix-huit mois,
+tous au statut « Inconnu ».
+
+**Pourquoi cela suffit à décliner.** Un « Disponible » vieux de cinq heures ne
+dit rien de l'instant : une borne libre à 9 h est prise à 14 h. Et l'erreur
+tomberait exactement quand elle coûte le plus cher — en arrivant à 8 % de
+batterie sur la foi d'un affichage. Rapporté au parc français, 6 % de
+fraîcheur dans UNE ville font environ **123 bornes fiables sur ~120 000**.
+
+Ce que cela aurait coûté par ailleurs : une origine de plus dans la CSP, un
+rapprochement à maintenir entre deux jeux, et une promesse d'interface que la
+donnée ne tient pas.
+
+**Décision du 26/08/2026 : écartée.** Rien n'est promis dans l'interface. Le
+jour où un producteur publiera un flux réellement continu — ou si Belib'
+resserre sa cadence —, cette mesure sera le point de comparaison.
+
+Répartition des statuts, pour mémoire : Disponible 65 %, Occupé 29 %,
+Inconnu 3 %, En maintenance 3 %.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.

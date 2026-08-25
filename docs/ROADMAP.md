@@ -233,9 +233,13 @@ verdict adossé à un appel réel daté.
 - [x] PR #29 — Commodités des aires via Overpass (miroir OSM France), à la
       demande : enseigne, restauration, café, toilettes. Couverture MESURÉE
       avant d'être promise — voir docs/apis.md.
-- [ ] PR #30 — Disponibilité temps réel, réseau par réseau (Belib' éprouvé le
-      25/08 : CORS *, sans clé, statut_pdc + identifiant d'itinérance).
-      COUVERTURE PARTIELLE À DIRE, comme les transports de la PR #16.
+- [~] PR #30 — Disponibilité des bornes en direct : ÉCARTÉE le 26/08/2026,
+      avec la mesure. Le jeu Belib' est techniquement parfait (CORS *, sans
+      clé, identifiant d'itinérance qui joint l'IRVE) mais SEULS 6 % de ses
+      statuts ont moins d'une heure — 123 points sur 1 967, dans une seule
+      ville. Un « Disponible » vieux de cinq heures ne dit rien de l'instant,
+      et l'erreur tomberait en arrivant à 8 % de batterie. Détail chiffré
+      dans docs/apis.md.
 
 ÉCARTÉS AVEC PREUVE, voir docs/planificateur-ev.md :
 - Comptes et base de données — heurtent les contraintes 1 et 4. Décision
