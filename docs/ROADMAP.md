@@ -228,7 +228,10 @@ verdict adossé à un appel réel daté.
       de recharge », à la demande, avec le refus motivé quand le trajet n'est
       pas faisable. avec pourcentage d'arrivée visé. LE cœur d'un
       vrai planificateur, et un chantier à cadrer avant d'être codé.
-- [ ] PR #29 — Disponibilité temps réel, réseau par réseau (Belib' éprouvé le
+- [x] PR #29 — Commodités des aires via Overpass (miroir OSM France), à la
+      demande : enseigne, restauration, café, toilettes. Couverture MESURÉE
+      avant d'être promise — voir docs/apis.md.
+- [ ] PR #30 — Disponibilité temps réel, réseau par réseau (Belib' éprouvé le
       25/08 : CORS *, sans clé, statut_pdc + identifiant d'itinérance).
       COUVERTURE PARTIELLE À DIRE, comme les transports de la PR #16.
 

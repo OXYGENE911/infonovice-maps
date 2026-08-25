@@ -2,6 +2,22 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.29.0] — 2026-08-26 — Commodités des aires (PR #29)
+
+- Chaque arrêt de recharge peut dire ce qu'on trouve sur place : station-service,
+  restauration, café, toilettes, avec l'enseigne quand elle est connue.
+- L'ENSEIGNE N'EST PAS SUR L'AIRE — une aire sur 698 porte une balise `brand`.
+  Elle est sur les objets à l'intérieur, dont 74 % portent une identité. On
+  interroge donc autour du point d'arrêt, jamais l'aire.
+- Par le MIROIR FRANÇAIS d'OpenStreetMap France, pas l'instance allemande.
+- À LA DEMANDE, un arrêt à la fois : Overpass est un service bénévole, et on ne
+  l'interroge pas pour quatre arrêts au cas où l'usager regarderait.
+- En surcharge, Overpass rend du HTML et non du JSON. Le message reste français
+  et le bouton réessayable.
+- LA CSP A FAIT SON TRAVAIL : la requête était bloquée tant que l'origine
+  n'était pas déclarée. Ajoutée à `connect-src` ET à la liste blanche du
+  parcours de souveraineté — une origine ne s'ajoute jamais par accident.
+
 ## [0.28.0] — 2026-08-25 — Arrêts de recharge suggérés (PR #28)
 
 - Les arrêts sont POSÉS SUR LA CARTE, et un clic sur leur nom y vole : une

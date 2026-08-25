@@ -19,6 +19,7 @@ import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../l
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 import { chercherLeLongDuTrajet, type Categorie, type SurLeTrajet } from '../lib/le-long-du-trajet';
 import { planifierArrets, type PlanRecharge } from '../lib/arrets';
+import { chargerCommodites, TYPES_COMMODITE, ErreurCommodites } from '../lib/commodites';
 import { lirePreference } from '../lib/stockage';
 import { PREF_VEHICULE } from './panneau-vehicule';
 import { ErreurPoi, type PoiCarburant, type PoiBorne } from '../lib/poi';
@@ -401,6 +402,25 @@ export class PanneauItineraire extends HTMLElement {
     }
   }
 
+  /* UNE PHRASE, PAS UNE LISTE : sur une aire, trois lignes de plus dans un
+     volet déjà dense n'aident personne. On groupe par type et on nomme les
+     enseignes connues — un quart des commodités n'en portent aucune, et pour
+     celles-là le TYPE est déjà l'information utile. */
+  #phraseCommodites(trouvees: import('../lib/commodites').Commodite[]): string {
+    if (trouvees.length === 0) {
+      return 'Rien de cartographié autour de cet arrêt — ce qui ne veut pas'
+        + ' dire qu’il n’y a rien.';
+    }
+    const bouts: string[] = [];
+    for (const { cle, libelle } of TYPES_COMMODITE) {
+      const duType = trouvees.filter((c) => c.type === cle);
+      if (duType.length === 0) continue;
+      const noms = [...new Set(duType.map((c) => c.nom).filter((n): n is string => !!n))];
+      bouts.push(noms.length > 0 ? `${libelle} (${noms.join(', ')})` : libelle);
+    }
+    return `${bouts.join(' · ')}. Source OpenStreetMap.`;
+  }
+
   #afficherRecharge(plan: PlanRecharge): void {
     const corps = this.querySelector('.iti-recharge-corps') as HTMLElement;
     corps.replaceChildren();
@@ -448,7 +468,30 @@ export class PanneauItineraire extends HTMLElement {
           + ` · arrivée ${Math.round(a.socArrivee)} % → départ ${Math.round(a.socDepart)} %`
           + ` · ${Math.round(a.dureeMin)} min`
           + (a.borne.puissanceKw ? ` · ${a.borne.puissanceKw} kW` : '');
-        item.append(aller, detail);
+        /* LES COMMODITÉS SONT À LA DEMANDE, un arrêt à la fois. Overpass est
+           un service bénévole : on ne l'interroge pas pour les quatre arrêts
+           d'un coup au cas où l'usager regarderait. */
+        const voir = document.createElement('button');
+        voir.type = 'button';
+        voir.className = 'recharge-commodites';
+        voir.textContent = 'Commodités sur place';
+        voir.setAttribute('aria-label', `Voir les commodités à ${a.borne.nom}`);
+        const sortie = document.createElement('p');
+        sortie.className = 'recharge-commodites-corps';
+        sortie.setAttribute('role', 'status');
+        voir.addEventListener('click', () => {
+          voir.disabled = true;
+          sortie.textContent = 'Recherche des commodités…';
+          chargerCommodites(a.borne.lon, a.borne.lat).then(
+            (trouvees) => { sortie.textContent = this.#phraseCommodites(trouvees); },
+            (e: unknown) => {
+              voir.disabled = false;   // réessayable : Overpass tombe souvent
+              sortie.textContent = e instanceof ErreurCommodites
+                ? e.message : 'Les commodités ne sont pas disponibles pour le moment.';
+            },
+          );
+        });
+        item.append(aller, detail, voir, sortie);
         liste.append(item);
 
         // Et le marqueur, dans le vert des bornes, avec son rang.

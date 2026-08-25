@@ -386,5 +386,48 @@ réponse réelle. Or ce dépôt exige des fixtures au format réel des services,
 vérifiées par appels réels. Sans clé, aucun décodeur ne pouvait être écrit
 honnêtement.
 
+## Commodités des aires — Overpass / OSM (mesuré 25-26/08/2026)
+
+L'étude EV promettait de mesurer la couverture avant de rien promettre. C'est
+fait, et le premier verdict était trompeur.
+
+**L'ENSEIGNE N'EST PAS SUR L'AIRE.** Sur les 698 aires de service françaises
+(`highway=services`, comptage Overpass du 25/08) :
+
+| Balise | Renseignée |
+|---|---|
+| `name` | 518 (74 %) |
+| `toilets` | 384 (55 %) |
+| `website` | 127 (18 %) |
+| `operator` | 89 (13 %) |
+| `opening_hours` | 20 (3 %) |
+| **`brand`** | **1 aire sur 698 (0 %)** |
+
+**MAIS ELLE EST SUR LES OBJETS À L'INTÉRIEUR.** Relevé sur le corridor
+Beaune-Chalon (emprise 46,6-47,2 / 4,6-5,2) : **9 aires sur 9** ont au moins
+une commodité à moins de 400 m. 43 commodités rattachées — 17 stations-service,
+11 toilettes, 7 restaurations rapides, 6 restaurants, 2 cafés — dont **74 %
+portent une identité** (`brand`, `operator` ou `name`).
+
+D'où le choix du module : on interroge AUTOUR du point d'arrêt, jamais l'aire.
+
+### Le miroir français (vérifié 26/08/2026)
+
+`overpass.openstreetmap.fr`, opéré par OpenStreetMap France, répond aussi bien
+que l'instance de référence allemande — HTTP 200, `Access-Control-Allow-Origin: *`,
+JSON. C'est lui que l'application interroge.
+
+### Overpass tombe, et il faut le prévoir
+
+Deux `Dispatcher_Client::request_read_and_idx::timeout` reçus pendant le
+développement même de ce module, après quelques requêtes rapprochées. C'est un
+service BÉNÉVOLE : la requête est étroite (cinq types nommés, jamais
+`["amenity"]` en entier), bornée à 25 s, et n'est émise QU'À LA DEMANDE — un
+clic sur un arrêt, jamais au fil de la carte.
+
+En surcharge, Overpass rend une page **HTML**, pas du JSON. La lire sans
+précaution lèverait une exception illisible : le module la traduit en message
+français, et le bouton reste réessayable.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.

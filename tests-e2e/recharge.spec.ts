@@ -166,3 +166,71 @@ test('les arrêts sont POSÉS SUR LA CARTE, et le clic y vole', async ({ page })
   expect(Math.abs(apres.centre.lng - 3.6), 'la carte n’a pas volé vers la borne')
     .toBeLessThan(0.5);
 });
+
+test('les commodités sont À LA DEMANDE, et un seul arrêt à la fois', async ({ page }) => {
+  /* Overpass est un service bénévole : on ne l'interroge pas pour les quatre
+     arrêts d'un coup au cas où l'usager regarderait. Ce parcours compte les
+     appels RÉELLEMENT émis. */
+  let appels = 0;
+  await page.route('**overpass.openstreetmap.fr**', (route) => {
+    appels += 1;
+    /* L'EN-TÊTE CORS EST OBLIGATOIRE sur une réponse simulée vers une AUTRE
+       origine : sans lui, le navigateur bloque avant que le code voie quoi que
+       ce soit, et l'erreur remonte comme une panne réseau générique. */
+    return route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      contentType: 'application/json', body: JSON.stringify({ elements: [
+      { type: 'node', id: 1, lat: 47.3, lon: 3.6,
+        tags: { amenity: 'fuel', brand: 'TotalEnergies' } },
+      { type: 'node', id: 2, lat: 47.301, lon: 3.601, tags: { amenity: 'toilets' } },
+      { type: 'way', id: 3, center: { lat: 47.302, lon: 3.602 },
+        tags: { amenity: 'restaurant', name: 'L’Arche' } },
+    ] }) });
+  });
+  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ total_count: 1, results: [
+      { point_geo: { lon: 3.6, lat: 47.3 }, nom_station: 'Aire de Beaune',
+        puissance_nominale: 150, nbre_pdc: 8, prise_type_combo_ccs: '1' },
+    ] }),
+  }));
+  await ouvrirRecharge(page);
+  await expect(page.locator('.iti-recharge-corps')).toContainText('Aire de Beaune',
+    { timeout: 15_000 });
+
+  expect(appels, 'Overpass interrogé sans que personne ne le demande').toBe(0);
+
+  await page.getByRole('button', { name: 'Voir les commodités à Aire de Beaune' }).click();
+  const sortie = page.locator('.recharge-commodites-corps');
+  await expect(sortie).toContainText('Station-service (TotalEnergies)');
+  await expect(sortie).toContainText('Toilettes');
+  await expect(sortie).toContainText('L’Arche');
+  // L'attribution OSM est une obligation de la licence ODbL, pas un ornement.
+  await expect(sortie).toContainText('OpenStreetMap');
+  expect(appels, 'un arrêt demandé, un appel').toBe(1);
+});
+
+test('Overpass en panne parle français et reste réessayable', async ({ page }) => {
+  // En surcharge, Overpass rend une page HTML : la lire en JSON lèverait une
+  // exception illisible pour l'usager.
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    status: 200, contentType: 'text/html',
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    body: '<html><body>Dispatcher_Client::request_read_and_idx::timeout</body></html>',
+  }));
+  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ total_count: 1, results: [
+      { point_geo: { lon: 3.6, lat: 47.3 }, nom_station: 'Aire de Beaune',
+        puissance_nominale: 150, nbre_pdc: 8 },
+    ] }),
+  }));
+  await ouvrirRecharge(page);
+  await expect(page.locator('.iti-recharge-corps')).toContainText('Aire de Beaune',
+    { timeout: 15_000 });
+
+  const bouton = page.getByRole('button', { name: 'Voir les commodités à Aire de Beaune' });
+  await bouton.click();
+  await expect(page.locator('.recharge-commodites-corps')).toContainText('saturé');
+  await expect(bouton, 'un service qui tombe souvent doit rester réessayable').toBeEnabled();
+});

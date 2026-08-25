@@ -828,3 +828,13 @@ etat-connexion { display: contents; }
 }
 .recharge-aller:hover { text-decoration: underline; }
 .recharge-aller:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+.recharge-commodites {
+  margin-top: 4px; padding: 4px 9px; border-radius: 7px;
+  border: 1px solid var(--bord); background: var(--fond); cursor: pointer;
+  font: 500 11.5px var(--police); color: var(--texte-2);
+}
+.recharge-commodites:disabled { opacity: .55; cursor: default; }
+.recharge-commodites:focus-visible { outline: none; box-shadow: var(--focus); }
+.recharge-commodites-corps:empty { display: none; }
+.recharge-commodites-corps { margin: 3px 0 0; font: 400 11.5px var(--police);
+  color: var(--texte-3); line-height: 1.45; }
