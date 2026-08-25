@@ -46,15 +46,35 @@ async function ouvrirPhoto(page: Page): Promise<void> {
   await page.mouse.down();
   await page.waitForTimeout(700);            // le seuil d'appui long
   await page.mouse.up();
-  const bouton = page.getByRole('button', { name: 'Photos de rue' });
-  await expect(bouton).toBeEnabled({ timeout: 10_000 });
-  await bouton.click();
-  await expect(page.getByRole('dialog', { name: 'Photo de rue' })).toBeVisible();
+
+  /* ON ATTEND QUE LA POPUP AIT RÉSOLU SON ADRESSE avant de cliquer. Une
+     première version se contentait d'attendre que le bouton soit actif — or
+     il l'est dès sa naissance, contrairement à celui des favoris. Le clic
+     partait donc pendant que la fiche se construisait : vert sur une machine
+     rapide, rouge en CI. C'est le parcours Panoramax existant qui montrait la
+     bonne précondition. */
+  await expect(page.locator('.pa-libelle')).toContainText('Rue de Rivoli',
+    { timeout: 15_000 });
+
+  await page.getByRole('button', { name: 'Photos de rue' }).click();
+  await expect(page.getByRole('dialog', { name: 'Photo de rue' }))
+    .toBeVisible({ timeout: 10_000 });
 }
 
 test.beforeEach(async ({ page }) => {
   await simulerTuiles(page);
   await simulerCommunes(page);
+  /* LA BAN EST SIMULÉE : sans elle, la fiche d'appui long attend un service
+     tiers, et la CI dépendrait de sa disponibilité — ce que ce dépôt
+     s'interdit partout ailleurs. */
+  await page.route('**api-adresse.data.gouv.fr**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ features: [{
+      geometry: { type: 'Point', coordinates: [2.3522, 48.8566] },
+      properties: { label: '10 Rue de Rivoli 75004 Paris', type: 'housenumber',
+        postcode: '75004', city: 'Paris' },
+    }] }),
+  }));
 });
 
 test('une photo ORDINAIRE reste une image, elle ne passe pas par WebGL', async ({ page }) => {
