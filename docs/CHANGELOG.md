@@ -2,6 +2,17 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.29.1] — 2026-08-26 — La marge d'arrivée se règle
+
+- « Arriver avec 30 % » n'est pas le même trajet qu'« arriver avec 5 % » : la
+  marge décide du nombre d'arrêts et du temps passé à charger. La laisser codée
+  en dur imposait une prudence à tout le monde.
+- Deux réglages : la charge voulue À L'ARRIVÉE, et la réserve qu'on refuse
+  d'entamer EN ROUTE. Ils refont le plan, mais seulement section ouverte.
+- Le garde-fou anti-recalcul est remis à zéro à chaque changement — sans quoi
+  il aurait avalé le réglage, exactement comme le seuil de vue l'avait fait
+  pour les filtres de bornes.
+
 ## [0.29.0] — 2026-08-26 — Commodités des aires (PR #29)
 
 - Chaque arrêt de recharge peut dire ce qu'on trouve sur place : station-service,

@@ -838,3 +838,13 @@ etat-connexion { display: contents; }
 .recharge-commodites-corps:empty { display: none; }
 .recharge-commodites-corps { margin: 3px 0 0; font: 400 11.5px var(--police);
   color: var(--texte-3); line-height: 1.45; }
+.iti-recharge-reglages { display: grid; gap: 6px; padding: 8px 0 2px; }
+.iti-recharge-reglages label { display: flex; align-items: center;
+  justify-content: space-between; gap: 10px;
+  font: 400 12.5px var(--police); color: var(--texte-2); }
+.iti-recharge-reglages select {
+  font: 500 12.5px var(--police); color: var(--texte-1);
+  padding: 4px 7px; border-radius: 7px; border: 1px solid var(--bord);
+  background: var(--fond);
+}
+.iti-recharge-reglages select:focus-visible { outline: none; box-shadow: var(--focus); }

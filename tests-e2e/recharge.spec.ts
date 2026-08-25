@@ -40,7 +40,7 @@ test.beforeEach(async ({ page }) => {
  * passage le chemin réel. */
 async function saisirVehicule(page: Page): Promise<void> {
   await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Véhicule' }).click();
-  await page.getByLabel('Batterie').fill('87.7');
+  await page.getByLabel('Batterie', { exact: true }).fill('87.7');
   await page.getByLabel('Santé (SOCE)').fill('94');
   await page.getByLabel('Charge (SOC)').fill('100');
   await page.getByLabel('Charge max').fill('150');
@@ -233,4 +233,55 @@ test('Overpass en panne parle français et reste réessayable', async ({ page })
   await bouton.click();
   await expect(page.locator('.recharge-commodites-corps')).toContainText('saturé');
   await expect(bouton, 'un service qui tombe souvent doit rester réessayable').toBeEnabled();
+});
+
+test('la marge d’arrivée est RÉGLABLE, et elle change le plan', async ({ page }) => {
+  /* « Arriver avec 30 % » n'est pas le même trajet qu'« arriver avec 5 % » :
+     la marge décide du nombre d'arrêts et du temps passé à charger. La laisser
+     codée en dur revenait à imposer une prudence à tout le monde. */
+  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ total_count: 1, results: [
+      { point_geo: { lon: 3.6, lat: 47.3 }, nom_station: 'Aire de Beaune',
+        puissance_nominale: 150, nbre_pdc: 8 },
+    ] }),
+  }));
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('arrivée à', { timeout: 15_000 });
+
+  const lireArrivee = async (): Promise<number> => {
+    const t = await corps.locator('.recharge-resume').innerText();
+    return Number(/arrivée à (\d+)/.exec(t)?.[1] ?? -1);
+  };
+
+  await page.getByLabel('Charge voulue à l’arrivée').selectOption('5');
+  await expect.poll(lireArrivee).toBeGreaterThanOrEqual(5);
+  const petite = await lireArrivee();
+
+  await page.getByLabel('Charge voulue à l’arrivée').selectOption('30');
+  await expect.poll(lireArrivee, { message: 'la marge n’a pas changé le plan' })
+    .toBeGreaterThan(petite);
+});
+
+test('la réserve en route est réglable elle aussi', async ({ page }) => {
+  // Sans borne, une réserve plus haute rapproche le point de rupture.
+  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify({ total_count: 0, results: [] }),
+  }));
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aucune borne utilisable', { timeout: 15_000 });
+
+  const lireRupture = async (): Promise<number> => {
+    const t = await corps.innerText();
+    return Number(/avant (\d+) km/.exec(t)?.[1] ?? -1);
+  };
+  const basse = await lireRupture();
+  expect(basse).toBeGreaterThan(0);
+
+  await page.getByLabel('Réserve minimale en route').selectOption('20');
+  await expect.poll(lireRupture,
+    { message: 'une réserve plus haute doit rapprocher le point de rupture' })
+    .toBeLessThan(basse);
 });

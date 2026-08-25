@@ -131,6 +131,25 @@ export class PanneauItineraire extends HTMLElement {
           </details>
           <details class="iti-recharge" hidden>
             <summary>Arrêts de recharge</summary>
+            <div class="iti-recharge-reglages">
+              <label>Arriver avec
+                <select class="recharge-cible" aria-label="Charge voulue à l’arrivée">
+                  <option value="5">5 %</option>
+                  <option value="10" selected>10 %</option>
+                  <option value="15">15 %</option>
+                  <option value="20">20 %</option>
+                  <option value="30">30 %</option>
+                </select>
+              </label>
+              <label>Ne jamais descendre sous
+                <select class="recharge-reserve" aria-label="Réserve minimale en route">
+                  <option value="5">5 %</option>
+                  <option value="10" selected>10 %</option>
+                  <option value="15">15 %</option>
+                  <option value="20">20 %</option>
+                </select>
+              </label>
+            </div>
             <div class="iti-recharge-corps" role="status"></div>
           </details>
         </div>
@@ -198,6 +217,17 @@ export class PanneauItineraire extends HTMLElement {
     this.querySelector('.iti-recharge')?.addEventListener('toggle', () => {
       void this.#planifierRecharge();
     });
+    /* CHANGER LA MARGE REFAIT LE PLAN — mais seulement si la section est
+       ouverte : un réglage invisible ne consomme rien. Le `#rechargePour` est
+       remis à zéro, sans quoi le garde-fou anti-recalcul avalerait le
+       changement, exactement comme le seuil de vue l'avait fait pour les
+       filtres de bornes. */
+    for (const cls of ['.recharge-cible', '.recharge-reserve']) {
+      this.querySelector(cls)?.addEventListener('change', () => {
+        this.#rechargePour = null;
+        void this.#planifierRecharge();
+      });
+    }
     // Changer de catégorie ou de rayon relance la recherche — mais seulement
     // si la section est ouverte : un réglage invisible ne consomme rien.
     for (const cls of ['.trajet-quoi', '.trajet-rayon']) {
@@ -390,8 +420,8 @@ export class PanneauItineraire extends HTMLElement {
           puissanceKw: (t.poi as PoiBorne).puissance,
         })),
         socDepart: nombre(brut['soc']) || 100,
-        socArrivee: 10,
-        reserve: 10,
+        socArrivee: this.#valeurReglage('.recharge-cible', 10),
+        reserve: this.#valeurReglage('.recharge-reserve', 10),
       });
       this.#afficherRecharge(plan);
     } catch (e) {
@@ -419,6 +449,13 @@ export class PanneauItineraire extends HTMLElement {
       bouts.push(noms.length > 0 ? `${libelle} (${noms.join(', ')})` : libelle);
     }
     return `${bouts.join(' · ')}. Source OpenStreetMap.`;
+  }
+
+  /** Lit un réglage numérique du volet, avec son repli si l'élément manque. */
+  #valeurReglage(selecteur: string, repli: number): number {
+    const el = this.querySelector<HTMLSelectElement>(selecteur);
+    const v = Number(el?.value);
+    return Number.isFinite(v) && v >= 0 ? v : repli;
   }
 
   #afficherRecharge(plan: PlanRecharge): void {
