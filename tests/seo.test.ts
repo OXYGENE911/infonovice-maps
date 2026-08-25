@@ -62,3 +62,35 @@ describe('sitemap et robots', () => {
     expect(robots, 'aucune interdiction inattendue').not.toContain('Disallow: /');
   });
 });
+
+/* LA CSP NE PORTE PLUS DE DIRECTIVE INOPÉRANTE (26/08/2026).
+ *
+ * `frame-ancestors` est IGNORÉ par le navigateur lorsqu'il vient d'une balise
+ * <meta> — il le dit lui-même dans la console. Il ne protégeait donc de rien,
+ * tout en polluant le journal, ce qui masque les vraies erreurs. La protection
+ * contre l'encadrement demande un EN-TÊTE HTTP, que GitHub Pages ne permet pas.
+ *
+ * Ce test empêche son retour par bonne intention : une directive inerte donne
+ * l'illusion d'une protection, ce qui est pire que son absence assumée. */
+describe('la politique de sécurité ne promet que ce qu’elle applique', () => {
+  const politique = (page: string): string => {
+    const html = lire(page);
+    const m = /<meta http-equiv="Content-Security-Policy"[^>]*content="([^"]+)"/s.exec(html);
+    expect(m, `${page} : aucune CSP`).not.toBeNull();
+    return m![1]!;
+  };
+
+  test.each(PAGES)('%s ne déclare PAS frame-ancestors', (page) => {
+    expect(politique(page),
+      'directive ignorée en <meta> : elle ne protège rien et pollue la console')
+      .not.toContain('frame-ancestors');
+  });
+
+  test.each(PAGES)('%s garde ses directives qui, elles, s’appliquent', (page) => {
+    const p = politique(page);
+    for (const directive of ['default-src', 'img-src', 'style-src', 'script-src',
+      'base-uri', 'form-action']) {
+      expect(p, `${page} a perdu ${directive}`).toContain(directive);
+    }
+  });
+});

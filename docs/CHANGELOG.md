@@ -2,6 +2,22 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.31.1] — 2026-08-26 — Lighthouse : 100 sur les trois axes
+
+- Audit après une journée de changements d'interface, comme le projet l'exige
+  (« Lighthouse ≥ 90 »). Départ : 96 / 96 / 100. Arrivée : **100 / 100 / 100**.
+- UNE RÉGRESSION À MOI, corrigée : le bouton du menu affichait « Menu » mais
+  son nom accessible ne contenait pas ce mot. Critère WCAG « Label in Name » —
+  quelqu'un pilotant à la voix aurait dit « Menu » sans rien activer.
+- Les liens de l'attribution IGN ne se distinguaient que par leur couleur
+  (WCAG 1.4.1) : ils sont soulignés.
+- `frame-ancestors` est RETIRÉ des cinq pages. Le navigateur l'ignore quand il
+  vient d'une balise `<meta>` — il le dit lui-même dans la console. Il ne
+  protégeait donc de rien tout en polluant le journal, ce qui masque les vraies
+  erreurs. La protection contre l'encadrement demande un en-tête HTTP, que
+  GitHub Pages ne permet pas : limite écrite en commentaire plutôt que déguisée
+  en directive inopérante, et un test empêche son retour par bonne intention.
+
 ## [0.31.0] — 2026-08-26 — Les panoramas 360 s'explorent (PR #31)
 
 - Les photos Panoramax équirectangulaires ne sont plus affichées à plat : on

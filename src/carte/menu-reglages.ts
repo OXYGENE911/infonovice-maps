@@ -25,7 +25,12 @@ export class MenuReglages extends HTMLElement {
     if (this.firstElementChild) return;
     this.innerHTML = `
       <details class="reglages">
-        <summary aria-label="Ouvrir les réglages et les couches">
+        <!-- LE NOM ACCESSIBLE CONTIENT LE TEXTE VISIBLE, et ce n'est pas un
+             détail de rédaction : c'est le critère WCAG « Label in Name ».
+             Quelqu'un qui pilote à la voix dit ce qu'il LIT — « Menu ». Avec
+             un nom accessible qui ne contenait pas ce mot, la commande
+             n'activait rien. Relevé par un audit Lighthouse, pas à l'œil. -->
+        <summary aria-label="Menu : réglages, couches et lieux">
           <span class="reglages-barres" aria-hidden="true"></span>
           <span class="reglages-mot">Menu</span>
         </summary>

@@ -868,3 +868,9 @@ etat-connexion { display: contents; }
 .photo-360:focus-visible { outline: none; box-shadow: var(--focus); }
 .photo-360-aide { margin: 6px 0 0; font: 400 12px var(--police); color: var(--texte-3); }
 .photo-360-aide[hidden] { display: none; }
+
+/* L'ATTRIBUTION SE LIT AUSSI SANS LA COULEUR. Ses liens (IGN, MapLibre) ne se
+   distinguaient que par leur teinte : critère WCAG 1.4.1, relevé par un audit
+   Lighthouse. Un soulignement suffit, et il ne coûte rien à la lisibilité
+   d'une mention déjà discrète. */
+.maplibregl-ctrl-attrib a { text-decoration: underline; }
