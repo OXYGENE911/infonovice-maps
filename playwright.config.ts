@@ -15,8 +15,11 @@ export default defineConfig({
      en local et dans les autres PR.
      Une porte de fusion qui rougit au hasard ne garde plus rien : on préfère
      quelques minutes de plus à un signal auquel on cesse de croire. En local,
-     Playwright garde son parallélisme. */
-  workers: process.env.CI ? 1 : undefined,
+     Playwright garde son parallélisme — d'où la propriété POSÉE PAR ÉTALEMENT
+     plutôt qu'à `undefined` : le projet compile avec
+     `exactOptionalPropertyTypes`, qui distingue « clé absente » de « clé
+     valant undefined », et refuse la seconde. */
+  ...(process.env.CI ? { workers: 1 } : {}),
   use: { baseURL: 'http://localhost:4173' },
   webServer: {
     command: 'npm run preview',
