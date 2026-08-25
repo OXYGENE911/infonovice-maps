@@ -15,9 +15,26 @@
  * ouverts ensemble à l'intérieur de leur parent.
  */
 
-/** Un panneau est « principal » s'il n'est pas imbriqué dans un autre. */
+/* NOS PANNEAUX VIVENT TOUS DANS UN WEB COMPONENT — donc sous une balise à
+   trait d'union. Cette condition n'est pas décorative : MapLibre rend son
+   ATTRIBUTION COMPACTE avec un `<details>`, posé dans de simples `<div>`.
+
+   Sans cette distinction, la détection l'adoptait comme volet de tête, et
+   deux défauts en découlaient : ouvrir un volet refermait l'attribution — une
+   obligation de la Géoplateforme — et surtout, MapLibre l'ouvrant au
+   chargement REFERMAIT le planificateur d'itinéraire. Un lien partagé
+   n'affichait alors plus rien. Attrapé par la CI, pas en local : le défaut
+   dépend de l'ordre dans lequel MapLibre bascule son attribution. */
+function dansUnComposant(element: Element | null): boolean {
+  for (let n = element; n; n = n.parentElement) {
+    if (n.tagName.includes('-')) return true;
+  }
+  return false;
+}
+
+/** Un panneau est « principal » s'il est à nous et non imbriqué dans un autre. */
 function estPrincipal(details: HTMLDetailsElement): boolean {
-  return !details.parentElement?.closest('details');
+  return dansUnComposant(details) && !details.parentElement?.closest('details');
 }
 
 function panneauxPrincipauxOuverts(racine: ParentNode): HTMLDetailsElement[] {
@@ -75,10 +92,11 @@ export function installerPanneaux(racine: Document | HTMLElement = document): ()
   const surAppui = (e: Event): void => {
     const cibleAppui = e.target;
     if (!(cibleAppui instanceof Node)) return;
-    const dansUnPanneau = cibleAppui instanceof Element
-      ? cibleAppui.closest('details')
-      : cibleAppui.parentElement?.closest('details');
-    if (dansUnPanneau) return;
+    const element = cibleAppui instanceof Element ? cibleAppui : cibleAppui.parentElement;
+    // Même exigence qu'au-dessus : un appui sur l'attribution de MapLibre ne
+    // doit pas passer pour un appui « dans un panneau ».
+    const dansUnPanneau = element?.closest('details');
+    if (dansUnPanneau && dansUnComposant(dansUnPanneau)) return;
     for (const details of panneauxPrincipauxOuverts(cible)) details.open = false;
   };
 
