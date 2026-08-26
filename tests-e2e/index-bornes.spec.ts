@@ -390,6 +390,19 @@ test('un commerce à proximité se situe et se rejoint', async ({ page }) => {
       distance: 620, duration: 90,
     }),
   }));
+  /* LA BAN EST SIMULÉE DÈS LE DÉPART. Sans cela, le géocodage inverse partait
+     vers le VRAI service : le parcours dépendait alors d'une réponse qu'on ne
+     maîtrise pas, et il aurait rougi le jour où la BAN change un libellé. */
+  await page.route('**api-adresse.data.gouv.fr/reverse**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ features: [{
+      geometry: { type: 'Point', coordinates: [4.8405, 47.0205] },
+      properties: {
+        label: '2 route de Pommard, 21200 Beaune', type: 'housenumber',
+        postcode: '21200', city: 'Beaune', context: '21, Côte-d’Or',
+      },
+    }] }),
+  }));
   await ouvrirCartoucheBeaune(page);
 
   await page.getByRole('button', { name: 'Chercher les commerces et services' }).click();
@@ -410,10 +423,19 @@ test('un commerce à proximité se situe et se rejoint', async ({ page }) => {
   await expect(page.locator('[data-role="arrivee"] input'))
     .toHaveValue(/Le Relais des Grands Crus/);
 
-  /* SANS DÉPART, ON LE DIT. Le garde-fou du calcul rend la main en silence
-     quand une extrémité manque : le clic ne produisait alors RIEN, pas même un
-     message, et l'on pouvait croire l'application cassée. */
-  await expect(page.locator('.iti-erreur')).toContainText('point de départ');
+  /* L'ADRESSE VOYAGE AVEC LE NOM. Armelin, le 26/08/2026 : « le champ de
+     recherche affiche seulement le nom du commerce mais pas son adresse […]
+     il existe des milliers de Carrefour en France ». Le trajet partait bel et
+     bien des bonnes coordonnées — mais rien ne permettait de le vérifier. */
+  await expect(page.locator('[data-role="arrivee"] input'))
+    .toHaveValue(/route de Pommard/);
+
+  /* ET SANS DÉPART, ON PROPOSE LE PLUS PROBABLE plutôt que de renvoyer à un
+     champ vide : le garde-fou du calcul rend la main en silence quand une
+     extrémité manque. */
+  await expect(page.locator('.iti-erreur')).toContainText('Choisissez votre départ');
+  await expect(page.getByRole('button', { name: 'Partir de ma position actuelle' }))
+    .toBeVisible();
 
   // Et dès qu'un départ est posé, le trajet se calcule pour de bon.
   await page.route('**api-adresse.data.gouv.fr**', (route) => route.fulfill({
@@ -512,4 +534,53 @@ test('le cartouche et les volets ne se recouvrent JAMAIS : une surface a la fois
     .filter({ hasText: 'Recharge et services' }).click();
   await expect(page.locator('fiche-borne'),
     "le cartouche survit par-dessus le volet qu’on vient d’ouvrir").toBeHidden();
+});
+
+
+test('un bouton mène de la borne au planificateur', async ({ page }) => {
+  /* « Quand je clique sur une borne de recharge, je n'ai pas la possibilité de
+     cliquer sur un bouton pour démarrer un itinéraire vers cette dernière »
+     (Armelin, 26/08/2026). Le cartouche décrivait la station sans jamais
+     permettre d'y aller : il fallait relever son adresse et la retaper dans le
+     planificateur, pour un point qu'on désignait déjà du doigt. */
+  await simulerPortail(page, FRANCE, DETAIL_TYPE);
+  await ouvrirCartoucheBeaune(page);
+
+  const aller = page.getByRole('button', { name: 'Itinéraire vers cette borne' });
+  await expect(aller).toBeVisible();
+  await aller.click();
+
+  await expect(page.locator('fiche-borne')).toBeHidden();
+  await expect(page.locator('.iti')).toHaveAttribute('open', '');
+  /* LE LIBELLÉ PORTE L'ADRESSE : « Aire de Beaune » désigne peut-être deux
+     aires, « Aire de Beaune — Autoroute A6… » une seule. */
+  await expect(page.locator('[data-role="arrivee"] input'))
+    .toHaveValue(/Aire de Beaune — Autoroute A6/);
+});
+
+test('les titres de section restent DANS leur cadre', async ({ page }) => {
+  /* « J'ai toujours les titres des fenêtres qui se chevauchent » (Armelin,
+     26/08/2026, capture à l'appui). La cause est native : un `<legend>` est
+     rendu À CHEVAL SUR LA BORDURE de son `<fieldset>`, une demi-hauteur de
+     ligne au-dessus du cadre. Tant que les cadres étaient plats et jointifs
+     personne ne le voyait ; depuis que chaque section est une carte arrondie
+     avec son ombre, la légende sort de la carte et se pose sur celle du
+     dessus. */
+  await simulerPortail(page, FRANCE);
+  await ouvrirBornes(page);
+  await expect(page.locator('.poi-filtres')).toBeVisible();
+
+  const fautes = await page.evaluate(() => {
+    const mauvais: string[] = [];
+    for (const lg of document.querySelectorAll<HTMLElement>('#carte fieldset > legend')) {
+      const r = lg.getBoundingClientRect();
+      if (r.width === 0) continue;
+      const cadre = lg.closest('fieldset')!.getBoundingClientRect();
+      if (r.top < cadre.top - 0.5 || r.bottom > cadre.bottom + 0.5) {
+        mauvais.push(`${lg.textContent} déborde de son cadre`);
+      }
+    }
+    return mauvais;
+  });
+  expect(fautes).toEqual([]);
 });

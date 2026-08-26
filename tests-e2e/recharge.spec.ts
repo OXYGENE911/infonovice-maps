@@ -11,7 +11,7 @@ const PARIS_LYON = '/#iti=2.35220,48.85660;4.83570,45.76400;car';
 /** Une ligne de l'INDEX NATIONAL, telle que l'export agrégé la rend. */
 interface LigneIndex {
   nom: string; lon: number; lat: number; p: number;
-  reseau?: string; pdc?: number; acces?: string;
+  reseau?: string; operateur?: string; pdc?: number; acces?: string;
 }
 
 /**
@@ -38,6 +38,9 @@ async function simulerIndexBornes(page: Page, bornes: LigneIndex[]): Promise<voi
           id_station_itinerance: `FR${b.nom.replace(/\W/g, '').slice(0, 8).toUpperCase()}`,
           nom_station: b.nom,
           nom_enseigne: b.reseau ?? 'Réseau d’essai',
+          /* L'OPÉRATEUR PORTE LE FILTRE : l'enseigne écrit souvent le nom du
+             site, et le regroupement s'y perdait. */
+          nom_operateur: b.operateur ?? b.reseau ?? 'Réseau d’essai',
           condition_acces: b.acces ?? 'Accès libre',
           prise_type_combo_ccs: '1',
           prise_type_chademo: '0',
@@ -437,4 +440,40 @@ test('toutes les bornes du trajet sont listées, retenues ou non', async ({ page
      (WCAG 1.4.1) : « retenue par le plan » est écrit. */
   await expect(corps.locator('.recharge-toutes-liste li.est-retenue'))
     .toContainText('retenue par le plan');
+});
+
+
+test('les réseaux du trajet se groupent par EXPLOITANT, pas par site', async ({ page }) => {
+  /* Armelin, le 26/08/2026, capture à l'appui : la liste des réseaux préférés
+     affichait « Allego - Burger King Chelles Sud (1) », « Allego - Burger King
+     Massy Opéra (1) », « Allego - Burger King Orléans Ingré (1) »… deux cent
+     quatorze entrées d'une station chacune sur un seul trajet.
+     La cause est celle que la carte avait déjà connue : certains producteurs
+     écrivent le NOM DU SITE dans l'enseigne. J'avais corrigé le panneau des
+     couches et oublié celui-ci — deux listes, un seul défaut. */
+  const allego: LigneIndex[] = [
+    /* LES TROIS SONT POSÉES SUR LE TRACÉ simulé Paris-Lyon : une borne à
+       quarante kilomètres du trajet en serait écartée par le rayon de
+       recherche, et le parcours mesurerait alors le vide. */
+    { nom: 'Chelles Sud', lon: 2.725, lat: 48.393, p: 150,
+      reseau: 'Allego - Burger King Chelles Sud', operateur: 'Allego' },
+    { nom: 'Massy Opéra', lon: 3.098, lat: 47.929, p: 150,
+      reseau: 'Allego - Burger King Massy Opéra', operateur: 'Allego' },
+    { nom: 'Orléans Ingré', lon: 3.470, lat: 47.464, p: 150,
+      reseau: 'Allego - Burger King Orléans Ingré', operateur: 'Allego' },
+    { ...BEAUNE, reseau: 'Ionity', operateur: 'IONITY GmbH' },
+  ];
+  await simulerIndexBornes(page, allego);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de', { timeout: 15_000 });
+
+  await corps.locator('.recharge-reseaux > summary').click();
+  const cases_ = corps.locator('.recharge-reseaux-corps input[type="checkbox"]');
+  /* DEUX EXPLOITANTS, pas quatre sites. Le compte suit : Allego vaut pour ses
+     trois stations d'un bloc. */
+  await expect(cases_).toHaveCount(2);
+  await expect(corps.locator('.recharge-reseaux-corps')).toContainText('Allego (3)');
+  await expect(corps.locator('.recharge-reseaux-corps'))
+    .not.toContainText('Burger King');
 });

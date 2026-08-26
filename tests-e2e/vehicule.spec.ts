@@ -9,10 +9,24 @@ import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
 const VF8 = { batterie: '87.7', soce: '94', soc: '100',
   ville: '400', route: '360', autoroute: '280' };
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, context }) => {
   await simulerTuiles(page);
   await simulerCommunes(page);
+  /* LA POSITION EST AUTORISÉE, PAS DEMANDÉE. Depuis le 27/08 les anneaux
+     n'apparaissent qu'une fois le véhicule localisé — un rayon d'action
+     centré sur le regard répondait faussement à la seule question qu'il pose.
+     Les parcours doivent donc passer par « Me localiser », comme l'usager. */
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ longitude: 2.3522, latitude: 48.8566 });
 });
+
+/** Presse « Me localiser » et attend que le panneau ait reçu la position. */
+async function seLocaliser(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Me localiser' }).click();
+  await expect(page.locator('.veh-bilan-ancre'),
+    'le panneau n’a jamais reçu la position')
+    .toContainText('depuis votre position', { timeout: 20_000 });
+}
 
 async function ouvrirVehicule(page: Page): Promise<void> {
   await page.goto('/');
@@ -63,9 +77,34 @@ test('la réserve est écrite sous le bilan, jamais sous-entendue', async ({ pag
   await expect(page.locator('.veh-bilan-reserve')).toContainText('ni le relief');
 });
 
+test('sans position, AUCUN anneau — un cercle centré ailleurs répondrait faux', async ({ page }) => {
+  /* Armelin, le 26/08/2026 : « quand on coche la case sans avoir cliqué sur
+     "me localiser", la carte affiche un cercle en plein milieu de la carte car
+     elle ne sait pas où on est. Ce qui n'est pas logique. »
+     Il a raison, et j'avais défendu l'inverse : je pensais qu'un anneau centré
+     sur le regard, dûment annoncé, valait mieux que rien. C'est faux. Un rayon
+     d'action répond à « jusqu'où puis-je aller » — question qui n'a de sens
+     que depuis un endroit. Centré ailleurs, il ne répond pas à une AUTRE
+     question : il répond à la même, faussement. */
+  await ouvrirVehicule(page);
+  await saisirVF8(page);
+  await page.getByRole('checkbox', { name: 'Afficher mon rayon d’action' }).check();
+
+  await expect(page.locator('.veh-bilan-ancre')).toContainText('Me localiser');
+  await expect.poll(async () => page.evaluate(async () => {
+    const carte = (window as unknown as {
+      __carte: { getSource(id: string): { getData(): unknown } | undefined };
+    }).__carte;
+    const d = await carte.getSource('rayon-action')?.getData() as
+      GeoJSON.FeatureCollection | undefined;
+    return d?.features.length ?? 0;
+  }), { message: 'un anneau a été dessiné sans savoir où' }).toBe(0);
+});
+
 test('les trois anneaux se dessinent, et le plus petit reste visible', async ({ page }) => {
   await ouvrirVehicule(page);
   await saisirVF8(page);
+  await seLocaliser(page);
   await page.getByRole('checkbox', { name: 'Afficher mon rayon d’action' }).check();
 
   /* `getData()` est l'API PUBLIQUE de MapLibre 6 ; `_data` en était le champ
@@ -96,6 +135,7 @@ test('les trois anneaux se dessinent, et le plus petit reste visible', async ({ 
 test('décocher efface les anneaux — la carte redevient nue', async ({ page }) => {
   await ouvrirVehicule(page);
   await saisirVF8(page);
+  await seLocaliser(page);
   const bascule = page.getByRole('checkbox', { name: 'Afficher mon rayon d’action' });
   await bascule.check();
   /* ON ATTEND QUE LES ANNEAUX SOIENT LÀ AVANT DE LES EFFACER. Décocher avant

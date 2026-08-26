@@ -167,6 +167,17 @@ export function installerPanneaux(racine: Document | HTMLElement = document): ()
        MapLibre reste dehors, elle : elle vit dans de simples `<div>`, et
        c'est justement ce que `dansUnComposant` distingue. */
     if (element && dansUnComposant(element)) return;
+
+    /* NI SUR LES COMMANDES DE LA CARTE. Zoom, boussole et « Me localiser »
+       sont des BOUTONS de MapLibre, hors de nos composants : la règle les
+       comptait donc comme « un clic à côté » et refermait le volet ouvert.
+       C'était le plus absurde là où ça comptait le plus — le panneau du
+       véhicule écrit « pressez Me localiser » pour faire paraître les
+       anneaux, et le presser refermait ce panneau avant qu'ils paraissent.
+       L'ATTRIBUTION RESTE DEHORS, elle : son dépliant est un `<summary>` et
+       non un `<button>`, et l'ouvrir doit bien refermer les volets. */
+    if (element?.closest('.maplibregl-ctrl')?.querySelector('button')
+      && element.closest('button')) return;
     for (const details of panneauxPrincipauxOuverts(cible)) {
       if (!estSurfaceDeTravail(details)) details.open = false;
     }

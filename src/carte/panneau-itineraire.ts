@@ -12,7 +12,9 @@ import { RechercheAdresse } from './recherche';
 import { EtapesItineraire } from './etapes-itineraire';
 import { calculerItineraire, formaterDistance, formaterDuree, PROFILS, EVITEMENTS, ErreurItineraire, type Profil, type Itineraire, type Eviter } from '../lib/itineraire';
 import type { PointGeo } from '../lib/coordonnees';
-import type { ResultatAdresse } from '../lib/adresse';
+import { lireRepere, REPERES, type CleRepere } from '../lib/reperes';
+import { listerFavoris } from '../lib/favoris';
+import { adresseInverse, type ResultatAdresse } from '../lib/adresse';
 import { versGPX, versKML, telecharger } from '../lib/trace';
 import { versFragment, depuisFragment } from '../lib/partage-url';
 import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
@@ -24,7 +26,11 @@ import {
 import {
   planifierArrets, cleBorne, type PlanRecharge, type BorneCandidate,
 } from '../lib/arrets';
-import { indexNational, ErreurIndex, SEUIL_RAPIDE, POIDS_ANNONCE, type StationRapide } from '../lib/index-bornes';
+import {
+  indexNational, reseauxNationaux, chercherReseaux, cleReseau,
+  ErreurIndex, SEUIL_RAPIDE, POIDS_ANNONCE,
+  type StationRapide, type ReseauNational,
+} from '../lib/index-bornes';
 import { chargerCommodites, TYPES_COMMODITE, ErreurCommodites } from '../lib/commodites';
 import { lirePreference } from '../lib/stockage';
 import { PREF_VEHICULE } from './panneau-vehicule';
@@ -84,8 +90,10 @@ export class PanneauItineraire extends HTMLElement {
   /** Les clés que l'usager impose, et celles qu'il refuse. */
   #imposees = new Set<string>();
   #ecartees = new Set<string>();
-  /** Enseignes retenues pour ce trajet. Vide = toutes. */
+  /** Exploitants retenus pour ce trajet. Vide = tous. */
   #reseauxPreferes = new Set<string>();
+  /** Ce qui est tapé dans la recherche de réseau du plan. */
+  #rechercheReseau = '';
   /* L'ÉTAT DÉPLIÉ DES DEUX VOLETS SURVIT À LA RECONSTRUCTION DU PLAN.
      `#afficherRecharge` reconstruit tout son corps ; sans cette mémoire,
      imposer un arrêt refermait la liste d'où l'on venait de le choisir, et il
@@ -112,28 +120,24 @@ export class PanneauItineraire extends HTMLElement {
    * 48,7913 » ne dit à personne vers quoi il va.
    */
   allerVers(point: PointGeo, libelle: string): void {
-    this.#arrivee = point;
-    const champ = this.querySelector<RechercheAdresse>(
-      '[data-role="arrivee"] recherche-adresse',
-    );
-    if (champ) champ.libelle = libelle;
     (this.querySelector('details') as HTMLDetailsElement | null)?.setAttribute('open', '');
+    this.#poser('arrivee', point, libelle);
 
     /* SANS DÉPART, LE CALCUL NE PART PAS — ET IL FAUT LE DIRE. Le garde-fou de
        `#calculer` rend la main en silence quand une extrémité manque : le clic
        sur « Itinéraire » depuis un commerce ne produisait alors RIEN, pas même
-       un message, et l'on pouvait croire l'application cassée. Attrapé par un
-       parcours E2E qui attendait une distance, jamais à l'œil — on a
-       naturellement une adresse de départ en tête quand on teste. */
+       un message, et l'on pouvait croire l'application cassée.
+       Depuis le 27/08, on ne se contente plus de le dire : on PROPOSE le
+       départ le plus probable — la position actuelle — au lieu de renvoyer
+       l'usager à un champ vide. */
     if (!this.#depart) {
       const erreur = this.querySelector('.iti-erreur') as HTMLElement;
       erreur.textContent = `Destination posée sur « ${libelle} ».`
-        + ' Indiquez maintenant votre point de départ.';
+        + ' Choisissez votre départ : « Ma position », un lieu enregistré,'
+        + ' ou une adresse.';
       erreur.hidden = false;
-      this.querySelector<HTMLInputElement>('[data-role="depart"] input')?.focus();
-      return;
+      this.querySelector<HTMLButtonElement>('.iti-raccourci-gps')?.focus();
     }
-    void this.#calculer();
   }
 
   /* LE BANDEAU DE SUIVI, posé par carte.ts. Le panneau reste utilisable sans
@@ -161,8 +165,17 @@ export class PanneauItineraire extends HTMLElement {
         <div class="iti-corps">
           <div class="iti-champs">
             <label>Départ<span class="iti-porte" data-role="depart"></span></label>
+            <!-- LES RACCOURCIS, LÀ OÙ ILS SERVENT. Armelin, le 26/08/2026 :
+                 « il n'est pas proposé de sélectionner en départ sa position
+                 GPS actuelle, ni son adresse de domicile configuré dans son
+                 profil ». Retaper son adresse quand l'application la connaît
+                 déjà est un travail qu'on lui inflige sans raison. -->
+            <div class="iti-raccourcis" data-pour="depart"
+              role="group" aria-label="Choisir un départ enregistré"></div>
             <span class="iti-inter"></span>
             <label>Arrivée<span class="iti-porte" data-role="arrivee"></span></label>
+            <div class="iti-raccourcis" data-pour="arrivee"
+              role="group" aria-label="Choisir une arrivée enregistrée"></div>
           </div>
           <fieldset class="iti-eviter">
             <legend>Éviter</legend>
@@ -273,6 +286,14 @@ export class PanneauItineraire extends HTMLElement {
     this.querySelector('.iti-demarrer')?.addEventListener('click', () => {
       void this.#demarrerSuivi();
     });
+    /* À CHAQUE OUVERTURE : domicile, travail et favoris se définissent
+       ailleurs, et une liste figée au démarrage les aurait ignorés. */
+    this.querySelector('details')?.addEventListener('toggle', () => {
+      if ((this.querySelector('details') as HTMLDetailsElement).open) {
+        void this.#majRaccourcis();
+      }
+    });
+    void this.#majRaccourcis();
     this.querySelector('.iti-effacer')?.addEventListener('click', () => this.#effacer());
     this.querySelector('.iti-gpx')?.addEventListener('click', () => {
       if (this.#dernier) telecharger(versGPX(this.#dernier, this.#nomTrajet()),
@@ -537,12 +558,16 @@ export class PanneauItineraire extends HTMLElement {
       laisser passer pour les écarter ensuite ferait parler les messages
       d'échec de bornes que l'usager s'est interdites. */
   #candidates(): BorneCandidate[] {
-    const preferes = this.#reseauxPreferes;
+    /* LA COMPARAISON SE FAIT SUR LA CLÉ D'EXPLOITANT, jamais sur la chaîne :
+       cocher « Allego » doit retenir aussi les stations écrites « Allego -
+       Burger King Massy Opéra ». Même règle que le filtre de la carte. */
+    const preferes = new Set([...this.#reseauxPreferes].map(cleReseau));
     const retenues = preferes.size === 0
       ? this.#bornesTrajet
-      : this.#bornesTrajet.filter(
-        (t) => t.poi.reseau !== null && preferes.has(t.poi.reseau),
-      );
+      : this.#bornesTrajet.filter((t) => {
+        const brut = t.poi.operateur ?? t.poi.reseau;
+        return brut !== null && preferes.has(cleReseau(brut));
+      });
     return retenues.map((t) => ({
       nom: t.poi.nom,
       lon: t.poi.lon,
@@ -698,6 +723,111 @@ export class PanneauItineraire extends HTMLElement {
         : [],
     });
     this.#majBoutonDemarrer();
+  }
+
+  /**
+   * Pose une extrémité du trajet, et calcule si les deux sont là.
+   *
+   * UN SEUL CHEMIN pour toutes les façons de désigner un lieu — la saisie
+   * d'adresse, un raccourci, le cartouche d'une borne, un commerce voisin.
+   * Deux chemins parallèles auraient fini par diverger sur un détail : l'un
+   * ouvrirait le volet, l'autre non ; l'un nommerait le lieu, l'autre pas.
+   */
+  #poser(role: 'depart' | 'arrivee', point: PointGeo, libelle: string): void {
+    if (role === 'depart') this.#depart = point; else this.#arrivee = point;
+    const champ = this.querySelector<RechercheAdresse>(
+      `[data-role="${role}"] recherche-adresse`,
+    );
+    if (champ) champ.libelle = libelle;
+    void this.#calculer();
+  }
+
+  /* LES RACCOURCIS SE CONSTRUISENT À L'OUVERTURE ET À CHAQUE CHANGEMENT :
+     domicile et travail se définissent depuis un autre panneau, les favoris
+     s'ajoutent depuis la carte. Une liste figée au démarrage aurait ignoré
+     tout ce que l'usager fait ensuite. */
+  async #majRaccourcis(): Promise<void> {
+    const entrees: { libelle: string; point: PointGeo; titre: string }[] = [];
+    for (const { cle, libelle } of REPERES) {
+      const r = await lireRepere(cle as CleRepere);
+      if (r) entrees.push({ libelle, point: r, titre: r.libelle });
+    }
+    for (const f of (await listerFavoris()).slice(0, 6)) {
+      entrees.push({ libelle: f.nom, point: f, titre: f.nom });
+    }
+
+    for (const boite of this.querySelectorAll<HTMLElement>('.iti-raccourcis')) {
+      const role = boite.dataset['pour'] === 'arrivee' ? 'arrivee' : 'depart';
+      boite.replaceChildren();
+
+      /* « MA POSITION » N'EST PROPOSÉE QU'AU DÉPART, et c'est délibéré : on
+         part d'où l'on est, on ne s'y rend pas. La géolocalisation reste un
+         GESTE — le bouton la demande, l'application ne la prend jamais
+         d'elle-même (contrainte 4 du projet). */
+      if (role === 'depart') {
+        const ici = document.createElement('button');
+        ici.type = 'button';
+        ici.className = 'iti-raccourci iti-raccourci-gps';
+        ici.textContent = 'Ma position';
+        ici.setAttribute('aria-label', 'Partir de ma position actuelle');
+        ici.addEventListener('click', () => { void this.#partirDIci(ici); });
+        boite.append(ici);
+      }
+
+      for (const e of entrees) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'iti-raccourci';
+        b.textContent = e.libelle;
+        b.title = e.titre;
+        b.setAttribute('aria-label',
+          role === 'depart' ? `Partir de ${e.libelle}` : `Aller à ${e.libelle}`);
+        b.addEventListener('click', () => {
+          this.#poser(role, { lon: e.point.lon, lat: e.point.lat }, e.titre);
+        });
+        boite.append(b);
+      }
+      boite.hidden = boite.childElementCount === 0;
+    }
+  }
+
+  /**
+   * Demande la position et la pose en départ.
+   *
+   * L'ÉCHEC SE DIT. Une géolocalisation refusée ou indisponible ne doit pas
+   * laisser un bouton qui ne fait rien : c'est le genre de silence qui fait
+   * croire l'application cassée.
+   */
+  async #partirDIci(bouton: HTMLButtonElement): Promise<void> {
+    const erreur = this.querySelector('.iti-erreur') as HTMLElement;
+    if (!('geolocation' in navigator)) {
+      erreur.textContent = 'Ce navigateur ne sait pas donner votre position.';
+      erreur.hidden = false;
+      return;
+    }
+    bouton.disabled = true;
+    const avant = bouton.textContent;
+    bouton.textContent = 'Localisation…';
+    try {
+      const p = await new Promise<GeolocationPosition>((ok, non) => {
+        navigator.geolocation.getCurrentPosition(ok, non,
+          { enableHighAccuracy: true, timeout: 15_000, maximumAge: 30_000 });
+      });
+      const point = { lon: p.coords.longitude, lat: p.coords.latitude };
+      /* ON NOMME LE LIEU. « Ma position » suffirait à l'usager, mais une
+         adresse lui permet de VÉRIFIER que le GPS ne l'a pas placé ailleurs —
+         et l'échec de la BAN ne doit pas perdre la position pour autant. */
+      const adresse = await adresseInverse(point).catch(() => null);
+      erreur.hidden = true;
+      this.#poser('depart', point, adresse?.libelle ?? 'Ma position');
+    } catch {
+      erreur.textContent = 'Position indisponible. Autorisez la géolocalisation,'
+        + ' ou saisissez votre point de départ.';
+      erreur.hidden = false;
+    } finally {
+      bouton.disabled = false;
+      bouton.textContent = avant;
+    }
   }
 
   /** Lit un réglage numérique du volet, avec son repli si l'élément manque. */
@@ -866,12 +996,15 @@ export class PanneauItineraire extends HTMLElement {
     volet.addEventListener('toggle', () => { this.#voletsOuverts.reseaux = volet.open; });
     const titre = document.createElement('summary');
 
-    const compte = new Map<string, number>();
-    for (const t of this.#bornesTrajet) {
-      if (!t.poi.reseau) continue;
-      compte.set(t.poi.reseau, (compte.get(t.poi.reseau) ?? 0) + 1);
-    }
-    const reseaux = [...compte.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr'));
+    /* PAR EXPLOITANT, COMME LE FILTRE DE LA CARTE — et ce ne l'était pas.
+       Armelin, le 26/08/2026, capture à l'appui : la liste affichait
+       « Allego - Burger King Chelles Sud (1) », « Allego - Burger King Massy
+       Opéra (1) », « Allego - Burger King Orléans Ingré (1) »… deux cent
+       quatorze entrées d'une station chacune, sur un seul trajet. La cause est
+       celle que la carte avait déjà connue : certains producteurs écrivent le
+       NOM DU SITE dans l'enseigne. J'avais corrigé le panneau des couches et
+       oublié celui-ci — deux listes, un seul défaut, un seul remède. */
+    const reseaux = reseauxNationaux(this.#bornesTrajet.map((t) => t.poi));
 
     titre.textContent = this.#reseauxPreferes.size === 0
       ? `Réseaux préférés — tous (${reseaux.length} sur ce trajet)`
@@ -882,27 +1015,62 @@ export class PanneauItineraire extends HTMLElement {
     boite.className = 'recharge-reseaux-corps';
     boite.setAttribute('role', 'group');
     boite.setAttribute('aria-label', 'Réseaux retenus pour ce trajet');
-    for (const [nom, nombre] of reseaux) {
+
+    /* ET UNE RECHERCHE, pour la même raison qu'ailleurs : un long trajet croise
+       plusieurs dizaines d'exploitants, et faire défiler une liste pour trouver
+       le sien est un travail qu'un champ de saisie épargne. */
+    const cherche = document.createElement('input');
+    cherche.type = 'search';
+    cherche.className = 'recharge-reseau-recherche';
+    cherche.placeholder = 'Chercher un réseau…';
+    cherche.setAttribute('aria-label', 'Chercher un réseau sur ce trajet');
+    cherche.value = this.#rechercheReseau;
+    cherche.addEventListener('input', () => {
+      this.#rechercheReseau = cherche.value;
+      this.#majListeReseaux(boite, reseaux);
+    });
+    if (reseaux.length > 8) boite.append(cherche);
+
+    this.#majListeReseaux(boite, reseaux);
+    volet.append(boite);
+    return volet;
+  }
+
+  /** (Re)construit les cases des réseaux, sans toucher au champ de recherche. */
+  #majListeReseaux(boite: HTMLElement, reseaux: ReseauNational[]): void {
+    for (const vieux of [...boite.querySelectorAll('label, .recharge-note')]) vieux.remove();
+
+    const trouves = chercherReseaux(reseaux, this.#rechercheReseau);
+    const coches = this.#reseauxPreferes;
+    /* LES RÉSEAUX COCHÉS RESTENT VISIBLES quoi qu'il arrive : un filtre actif
+       mais invisible serait impossible à retirer. */
+    const montres = [
+      ...trouves.slice(0, 15),
+      ...trouves.slice(15).filter((r) => coches.has(r.nom)),
+      ...reseaux.filter((r) => coches.has(r.nom) && !trouves.includes(r)),
+    ];
+
+    for (const r of montres) {
       const etiquette = document.createElement('label');
       const case_ = document.createElement('input');
       case_.type = 'checkbox';
-      case_.checked = this.#reseauxPreferes.has(nom);
+      case_.checked = coches.has(r.nom);
       case_.addEventListener('change', () => {
-        if (case_.checked) this.#reseauxPreferes.add(nom);
-        else this.#reseauxPreferes.delete(nom);
+        if (case_.checked) coches.add(r.nom); else coches.delete(r.nom);
         this.#refairePlan();
       });
       const texte = document.createElement('span');
-      texte.textContent = ` ${nom} (${nombre})`;
+      texte.textContent = ` ${r.nom} (${r.nombre})`;
       etiquette.append(case_, texte);
       boite.append(etiquette);
     }
+
     const note = document.createElement('p');
     note.className = 'recharge-note';
-    note.textContent = 'Sans case cochée, tous les réseaux sont acceptés.';
+    note.textContent = montres.length < reseaux.length
+      ? `${montres.length} réseaux sur ${reseaux.length} — cherchez par leur nom.`
+      : 'Sans case cochée, tous les réseaux sont acceptés.';
     boite.append(note);
-    volet.append(boite);
-    return volet;
   }
 
   /**
@@ -1200,6 +1368,7 @@ export class PanneauItineraire extends HTMLElement {
       this.#imposees.clear();
       this.#ecartees.clear();
       this.#reseauxPreferes.clear();
+      this.#rechercheReseau = '';
       this.#voletsOuverts = { reseaux: false, toutes: false };
       this.#majResume();
       (this.querySelector('.iti-actions') as HTMLElement).hidden = false;
