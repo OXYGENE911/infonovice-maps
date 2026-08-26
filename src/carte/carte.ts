@@ -140,6 +140,9 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   conteneur.appendChild(fiche);
   poi.fiche = fiche;
   panneau.fiche = fiche;
+  /* ET LE CARTOUCHE SAIT DEMANDER UN ITINÉRAIRE. Sans ce lien, la liste des
+     commerces alentour se lisait sans qu'on puisse s'y rendre. */
+  fiche.itineraire = panneau;
 
   /* LE BANDEAU DE SUIVI — un seul, posé au conteneur de la carte. Il occupe le
      bas de l'écran pendant le trajet : c'est la zone qu'on regarde le moins

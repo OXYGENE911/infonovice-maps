@@ -69,8 +69,19 @@ export function anciennete(iso: string | null, maintenant = new Date()): string 
   return `il y a ${Math.floor(mois / 12)} ans`;
 }
 
+/** Ce que le cartouche sait demander au planificateur. */
+export interface PorteItineraire {
+  allerVers(point: { lon: number; lat: number }, libelle: string): void;
+}
+
 export class FicheBorne extends HTMLElement {
   #carte: CarteMapLibre | null = null;
+  /* LE PLANIFICATEUR, quand il est branché. Le cartouche reste utilisable
+     sans lui : le bouton « Itinéraire » ne paraît alors pas, plutôt que
+     d'échouer au clic. */
+  #itineraire: PorteItineraire | null = null;
+
+  set itineraire(p: PorteItineraire) { this.#itineraire = p; }
   #annulation: AbortController | null = null;
   /** La cible affichée — sert à ignorer les réponses hors d'ordre. */
   #cible: CibleBorne | null = null;
@@ -390,17 +401,49 @@ export class FicheBorne extends HTMLElement {
     liste.className = 'fb-liste-commodites';
     for (const { c, m } of avecDistance) {
       const li = document.createElement('li');
+      const libelleType = TYPES_COMMODITE.find((t) => t.cle === c.type)?.libelle ?? c.type;
+      // Un quart des commodités ne portent aucune identité : le type suffit.
+      const libelle = c.nom ?? libelleType;
+
       const type = document.createElement('span');
       type.className = 'fb-commodite-type';
-      type.textContent = TYPES_COMMODITE.find((t) => t.cle === c.type)?.libelle ?? c.type;
-      const nom = document.createElement('span');
+      type.textContent = libelleType;
+
+      /* LE NOM EST UN BOUTON : il montre le lieu sur la carte. Armelin, le
+         26/08 : « ça ne me donne pas la possibilité de cliquer dessus ». Une
+         liste qu'on lit sans pouvoir la situer oblige à chercher des yeux ce
+         que l'application sait déjà. */
+      const nom = document.createElement('button');
+      nom.type = 'button';
       nom.className = 'fb-commodite-nom';
-      // Un quart des commodités ne portent aucune identité : le type suffit.
-      nom.textContent = c.nom ?? '';
+      nom.textContent = libelle;
+      nom.setAttribute('aria-label', `Voir ${libelle} sur la carte`);
+      nom.addEventListener('click', () => {
+        this.#carte?.flyTo({ center: [c.lon, c.lat], zoom: 17 });
+      });
+
       const dist = document.createElement('span');
       dist.className = 'fb-commodite-distance';
       dist.textContent = `${m} m`;
+
       li.append(type, nom, dist);
+
+      /* ET UN ITINÉRAIRE VERS LUI. C'est l'autre moitié de la demande : on
+         regarde un restaurant à 62 m et l'on veut y aller, pas recopier son
+         nom dans un champ de recherche. */
+      if (this.#itineraire) {
+        const aller = document.createElement('button');
+        aller.type = 'button';
+        aller.className = 'fb-commodite-aller';
+        aller.textContent = 'Itinéraire';
+        aller.setAttribute('aria-label', `Itinéraire vers ${libelle}`);
+        aller.addEventListener('click', () => {
+          this.#itineraire?.allerVers({ lon: c.lon, lat: c.lat }, libelle);
+          // Le cartouche s'efface : on a obtenu ce qu'on venait y chercher.
+          this.fermer();
+        });
+        li.append(aller);
+      }
       liste.append(li);
     }
     const enveloppe = document.createElement('div');

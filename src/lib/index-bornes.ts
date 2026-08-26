@@ -16,12 +16,18 @@
  * L'index est donc AUSSI le choix frugal — les quotas publics sont un bien
  * commun, et ce module les ménage plutôt que de les user.
  *
- * SON SEUIL EST UNE DÉCISION, PAS UN HASARD. Cinquante kilowatts : en deçà,
- * on ne s'arrête pas en voyage, on se gare pour la nuit. Descendre à toutes
- * les bornes ferait 224 541 lignes — plusieurs mégaoctets pour des prises
- * domestiques que personne ne cherche sur une carte de France. L'interface DIT
- * ce seuil : un index muet sur ce qu'il omet serait le même mensonge que les
- * cent bornes au hasard.
+ * SON SEUIL EST UN DÉFAUT, PLUS UNE LIMITE. Cinquante kilowatts par défaut :
+ * en deçà, on ne s'arrête pas en voyage, on se gare pour la nuit. Mais Armelin
+ * l'a dit le 26/08 — « la carte n'affiche pas toutes les stations électriques
+ * de France » — et il avait raison de le prendre pour un manque. Le seuil est
+ * devenu un CHOIX, avec son prix affiché : « toutes les bornes » demande
+ * 56 781 stations pour 2,5 Mo, contre 14 133 pour 700 Ko.
+ *
+ * ET LES DEUX CHIFFRES SONT DITS. Un index muet sur ce qu'il omet serait le
+ * même mensonge que les cent bornes au hasard — d'autant que l'Avere annonce
+ * 200 045 POINTS DE RECHARGE ouverts au public au 31/07/2026, quand nous
+ * parlons de STATIONS. Comparer les deux sans le préciser fait croire à un
+ * trou de quatre-vingt-dix pour cent.
  *
  * ET IL RÉPOND HORS LIGNE. Une fois chargé, le réseau rapide français entier
  * tient dans le navigateur : la PR #17 a promis une carte utilisable sans
@@ -33,8 +39,41 @@ import type { Bbox, ClePrise, FiltresBornes } from './poi';
 /** Le seuil de l'index, en kW. Voir l'en-tête : c'est une décision. */
 export const SEUIL_RAPIDE = 50;
 
-/** Poids annoncé à l'usager. Mesuré, pas estimé (26/08/2026). */
-export const POIDS_ANNONCE = '≈ 700 Ko';
+/**
+ * LES DEUX ÉTENDUES QUE L'USAGER PEUT DEMANDER.
+ *
+ * Armelin, le 26/08/2026 : « la carte n'affiche pas toutes les stations
+ * électriques de France ». C'était vrai, et le seuil de 50 kW en était la
+ * cause. Il reste le défaut par jugement — en deçà on ne s'arrête pas en
+ * voyage — mais ce jugement n'est plus imposé : il devient un choix, avec son
+ * prix affiché. Chiffres MESURÉS le 26/08/2026, pas estimés.
+ */
+export const ETENDUES = [
+  {
+    cle: 'rapide' as const,
+    seuilKw: SEUIL_RAPIDE,
+    libelle: 'Recharge rapide (50 kW et plus)',
+    stations: 14_133,
+    points: 76_024,
+    poids: '≈ 700 Ko',
+  },
+  {
+    cle: 'toutes' as const,
+    seuilKw: 0,
+    libelle: 'Toutes les bornes',
+    stations: 56_781,
+    points: 200_000,
+    poids: '≈ 2,5 Mo',
+  },
+] as const;
+
+export type CleEtendue = (typeof ETENDUES)[number]['cle'];
+
+export const etendue = (cle: CleEtendue): (typeof ETENDUES)[number] =>
+  ETENDUES.find((e) => e.cle === cle) ?? ETENDUES[0];
+
+/** Poids annoncé à l'usager pour l'étendue par défaut. */
+export const POIDS_ANNONCE = ETENDUES[0].poids;
 
 /** Au-delà, l'index se recharge. Le fichier IRVE est consolidé chaque semaine ;
     un mois est un compromis entre fraîcheur et sobriété. */
@@ -48,6 +87,15 @@ export interface StationRapide {
   nom: string;
   /** L'enseigne peinte sur la borne. `null` quand le producteur n'a rien dit. */
   reseau: string | null;
+  /* L'EXPLOITANT — et c'est LUI qui sert de filtre, pas l'enseigne.
+     Mesuré le 26/08/2026 sur les 14 133 stations rapides : `nom_enseigne`
+     forme 1 799 groupes dont 1 314 d'UNE SEULE station, parce que certains
+     producteurs y écrivent le nom du site — « Fastned Yvré L'Evèque »,
+     « Atlante - Montauban - Aldi », « IONITY GmbH IONITY Vrigny ». Fastned
+     occupait ainsi quatre cents entrées d'une station chacune, et n'existait
+     nulle part sous son nom. `nom_operateur` en forme 140, dont 27
+     singletons : « Fastned France » y vaut pour ses 497 points d'un bloc. */
+  operateur: string | null;
   /** Puissance de la borne la plus puissante de la station, en kW. */
   puissance: number;
   /** Nombre de points de charge, `null` si non déclaré. */
@@ -77,13 +125,26 @@ const CHAMPS_PRISE: readonly (readonly [string, ClePrise])[] = [
  */
 export function urlIndexNational(seuilKw = SEUIL_RAPIDE): string {
   const groupes = [
-    'id_station_itinerance', 'nom_station', 'nom_enseigne', 'condition_acces',
+    'id_station_itinerance', 'nom_station', 'nom_enseigne', 'nom_operateur',
+    'condition_acces',
     ...CHAMPS_PRISE.map(([champ]) => champ),
   ].join(',');
   const q = new URLSearchParams({
-    where: `puissance_nominale>=${seuilKw}`,
+    /* SEUIL ZÉRO = AUCUNE CLAUSE. `puissance_nominale>=0` écarterait en
+       silence les lignes où la puissance n'est pas déclarée, qui existent :
+       demander « toutes les bornes » et en perdre serait le contraire de la
+       promesse. */
+    ...(seuilKw > 0 ? { where: `puissance_nominale>=${seuilKw}` } : {}),
     group_by: groupes,
-    select: 'max(puissance_nominale) as p, sum(nbre_pdc) as pdc,'
+    /* `max(nbre_pdc)` ET NON `sum` — LE DÉFAUT LE PLUS COÛTEUX DE CET INDEX,
+       livré le 26/08 et corrigé le jour même. `nbre_pdc` porte le total de la
+       STATION, répété à l'identique sur chacune de ses lignes : le sommer le
+       multiplie par le nombre de lignes. Mesuré sur « Brico - Hannut » :
+       6 points de charge réels, 36 annoncés. À l'échelle du pays,
+       496 886 points annoncés pour 76 024 réels — SIX FOIS ET DEMIE trop.
+       Le pire est qu'un tel nombre reste crédible : personne ne compte les
+       bornes d'une aire pour vérifier. */
+    select: 'max(puissance_nominale) as p, max(nbre_pdc) as pdc,'
       + ' max(consolidated_longitude) as lon, max(consolidated_latitude) as lat',
   });
   return 'https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/'
@@ -153,8 +214,13 @@ export function versStations(brut: unknown): StationRapide[] {
     // Sans position, la station serait posée au large du golfe de Guinée.
     if (lon === null || lat === null) continue;
     if (Math.abs(lon) > 180 || Math.abs(lat) > 90) continue;
-    const puissance = nombreOuNull(r['p']);
-    if (puissance === null || puissance <= 0) continue;
+    /* LA PUISSANCE PEUT MANQUER quand l'usager demande TOUTES les bornes :
+       le producteur ne la declare pas toujours. On garde la station avec
+       zero — `palierDe` rend alors `null` et la punaise porte une pastille
+       neutre, ce qui dit « je ne sais pas » plutot que de mentir. L'ecarter
+       reviendrait a promettre toutes les bornes et en perdre. */
+    const puissance = nombreOuNull(r['p']) ?? 0;
+    if (puissance < 0) continue;
 
     const id = texteOuNull(r['id_station_itinerance']);
     const cle = id ?? `${lon.toFixed(5)},${lat.toFixed(5)}`;
@@ -167,11 +233,12 @@ export function versStations(brut: unknown): StationRapide[] {
     if (deja) {
       // La station la plus puissante de ses lignes, et l'union des prises.
       deja.puissance = Math.max(deja.puissance, puissance);
+      if (!deja.operateur) deja.operateur = texteOuNull(r['nom_operateur']);
       for (const p of prises) if (!deja.prises.includes(p)) deja.prises.push(p);
-      /* LE NOMBRE DE POINTS NE S'ADDITIONNE PAS ENTRE LIGNES : le portail a
-         déjà sommé les points de chaque combinaison de prises, et un même
-         point compte dans plusieurs si la station est hétérogène. On garde le
-         plus grand — minorer vaut mieux que promettre des bornes en trop. */
+      /* LE NOMBRE DE POINTS NE S'ADDITIONNE PAS : `nbre_pdc` est le total de
+         la STATION, repete a l'identique sur chaque ligne. On garde le plus
+         grand. Voir le commentaire de `urlIndexNational` : l'avoir somme
+         cote portail annoncait six fois trop de bornes. */
       if (pdc !== null && pdc > 0) {
         deja.pdc = Math.max(deja.pdc ?? 0, pdc);
       }
@@ -183,6 +250,7 @@ export function versStations(brut: unknown): StationRapide[] {
       lat,
       nom: texteOuNull(r['nom_station']) ?? 'Station de recharge',
       reseau: texteOuNull(r['nom_enseigne']),
+      operateur: texteOuNull(r['nom_operateur']),
       puissance,
       pdc: pdc !== null && pdc > 0 ? pdc : null,
       ouvert: acces(r['condition_acces']),
@@ -219,8 +287,35 @@ export function versStations(brut: unknown): StationRapide[] {
 /** Les mots retires avant comparaison. « France », et rien d'autre. */
 const MOTS_IGNORES = new Set(['france']);
 
+/**
+ * La cle d'un reseau — ce qui permet de reconnaitre deux ecritures du meme.
+ *
+ * ELLE S'APPLIQUE A L'OPERATEUR, PAS A L'ENSEIGNE, et la mesure du
+ * 26/08/2026 dit pourquoi : sur les 14 133 stations rapides, `nom_enseigne`
+ * forme 1 799 groupes dont 1 314 d'UNE SEULE station. Certains producteurs y
+ * ecrivent le nom du site — Fastned occupait quatre cents entrees d'une
+ * station chacune et n'apparaissait nulle part sous son nom. `nom_operateur`
+ * en forme 140.
+ *
+ * LA COUPE AU SEPARATEUR acheve le travail : « Atlante | FR*ATL » (1 468) et
+ * « Atlante France » (1 552) sont le meme reseau, et « Freshmile | FR*FR1 »
+ * n'est pas un nom qu'on lit sur une liste.
+ *
+ * ELLE RESTE TIMIDE POUR LE RESTE : casse, accents, ponctuation, et le seul
+ * mot « France ». Fondre a tort deux reseaux distincts est un defaut PIRE que
+ * celui qu'on corrige, puisqu'il fait esperer une borne inaccessible.
+ */
+export function nomCourtReseau(nom: string): string {
+  /* Un separateur ENTOURE D'ESPACES, ou une barre verticale : « Atlante -
+     Montauban » se coupe, « Ze-Watt » et « E-Totem » NON. Sans cette
+     exigence, tous les reseaux a trait d'union perdaient leur seconde
+     moitie et se confondaient entre eux. */
+  const coupe = nom.split(/\s+[|]\s*|[|]|\s+[-–]\s+/)[0] ?? nom;
+  return coupe.trim() === '' ? nom.trim() : coupe.trim();
+}
+
 export function cleReseau(nom: string): string {
-  return nom
+  return nomCourtReseau(nom)
     // NFD separe la lettre de son accent ; l'intervalle des diacritiques
     // combinants l'efface : « Reveo » et « Révéo » se rejoignent.
     .normalize('NFD')
@@ -243,9 +338,9 @@ export interface ReseauNational {
   nombre: number;
   /* LES ÉCRITURES RÉELLES, et pourquoi elles voyagent avec le libellé : à
      partir du zoom 12, les bornes viennent du portail, et la clause envoyée
-     compare `nom_enseigne` à une CHAÎNE EXACTE. N'envoyer que le libellé
-     canonique rendrait les 446 Lidl et perdrait les 434 autres — le défaut
-     serait simplement déplacé du local vers le distant. */
+     compare `nom_operateur` à une CHAÎNE EXACTE. N'envoyer que le libellé
+     canonique rendrait « Atlante France » et perdrait « Atlante | FR*ATL » —
+     le défaut serait simplement déplacé du local vers le distant. */
   variantes: string[];
 }
 
@@ -260,11 +355,15 @@ export interface ReseauNational {
 export function reseauxNationaux(stations: StationRapide[]): ReseauNational[] {
   const groupes = new Map<string, Map<string, number>>();
   for (const s of stations) {
-    if (!s.reseau) continue;
-    const cle = cleReseau(s.reseau);
-    // Une enseigne réduite à rien par la normalisation garde son écriture.
+    /* L'OPÉRATEUR D'ABORD, L'ENSEIGNE EN SECOURS. Voir `cleReseau` : le
+       premier a une identité stable, la seconde porte souvent le nom du site.
+       Quand l'opérateur manque — c'est rare — l'enseigne vaut mieux que rien. */
+    const brut = s.operateur ?? s.reseau;
+    if (!brut) continue;
+    const cle = cleReseau(brut);
+    if (cle === '') continue;
     const groupe = groupes.get(cle) ?? new Map<string, number>();
-    groupe.set(s.reseau, (groupe.get(s.reseau) ?? 0) + 1);
+    groupe.set(brut, (groupe.get(brut) ?? 0) + 1);
     groupes.set(cle, groupe);
   }
 
@@ -273,11 +372,46 @@ export function reseauxNationaux(stations: StationRapide[]): ReseauNational[] {
     const paires = [...variantes.entries()]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr'));
     const nombre = paires.reduce((t, [, n]) => t + n, 0);
-    /* LE LIBELLÉ EST LA VARIANTE LA PLUS RÉPANDUE, pas la première rencontrée :
-       l'usager doit lire le nom qu'il verra le plus souvent sur la route. */
-    rendu.push({ nom: paires[0]![0], nombre, variantes: paires.map(([n]) => n) });
+    /* LE LIBELLÉ EST LA VARIANTE LA PLUS RÉPANDUE, RACCOURCIE : l'usager doit
+       lire « Freshmile », pas « Freshmile | FR*FR1 » — un identifiant
+       d'itinérance n'aide personne à reconnaître son réseau dans une liste. */
+    rendu.push({
+      nom: nomCourtReseau(paires[0]![0]),
+      nombre,
+      variantes: paires.map(([n]) => n),
+    });
   }
   return rendu.sort((a, b) => b.nombre - a.nombre || a.nom.localeCompare(b.nom, 'fr'));
+}
+
+/**
+ * Les réseaux dont le nom contient `recherche`. Insensible à la casse et aux
+ * accents — on tape « ionity » et l'on trouve « IONITY ».
+ *
+ * POURQUOI UNE RECHERCHE PLUTÔT QU'UNE LISTE PLUS LONGUE. Le filtre montrait
+ * les douze premiers réseaux. Armelin, le 26/08 : « plusieurs réseaux que
+ * j'ai l'habitude d'utiliser n'y figurent pas » — IZIVIA FAST était treizième,
+ * Atlante dix-huitième, ALLEGO vingt-deuxième. Rallonger la liste à cent
+ * quarante entrées la rendrait illisible ; la rendre cherchable la rend
+ * complète.
+ */
+export function chercherReseaux(
+  reseaux: ReseauNational[], recherche: string,
+): ReseauNational[] {
+  /* LA RECHERCHE NE COUPE PAS AU SÉPARATEUR, à la différence de la clé de
+     regroupement : quelqu'un qui tape « FR*ATL » — l'identifiant d'itinérance
+     qu'il lit dans son application — doit trouver Atlante. Grouper et
+     chercher sont deux gestes différents ; leur imposer la même normalisation
+     ferait perdre à la seconde ce que la première jette exprès. */
+  const brut = (n: string): string => n
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+  const q = brut(recherche);
+  if (q === '') return reseaux;
+  return reseaux.filter((r) => brut(r.nom).includes(q)
+    || r.variantes.some((v) => brut(v).includes(q)));
 }
 
 /** Applique les filtres de l'usager. Local : aucun plafond de 100 ne mord. */
@@ -294,7 +428,11 @@ export function filtrerStations(
     if (puissanceMin > 0 && s.puissance < puissanceMin) return false;
     // OU entre les prises : un véhicule accepte l'une OU l'autre.
     if (prises.length > 0 && !prises.some((p) => s.prises.includes(p))) return false;
-    if (reseaux.size > 0 && (!s.reseau || !reseaux.has(cleReseau(s.reseau)))) return false;
+    if (reseaux.size > 0) {
+      // Même ordre de préférence qu'à la construction de la liste.
+      const brut = s.operateur ?? s.reseau;
+      if (!brut || !reseaux.has(cleReseau(brut))) return false;
+    }
     return true;
   });
 }
@@ -317,10 +455,10 @@ export function versStationsGardees(brut: unknown): StationRapide[] {
     const r = s as Record<string, unknown>;
     const lon = nombreOuNull(r['lon']);
     const lat = nombreOuNull(r['lat']);
-    const puissance = nombreOuNull(r['puissance']);
+    const puissance = nombreOuNull(r['puissance']) ?? 0;
     if (lon === null || Math.abs(lon) > 180) continue;
     if (lat === null || Math.abs(lat) > 90) continue;
-    if (puissance === null || puissance <= 0) continue;
+    if (puissance < 0) continue;
     const pdc = nombreOuNull(r['pdc']);
     const prises = Array.isArray(r['prises'])
       ? r['prises'].filter(
@@ -332,6 +470,7 @@ export function versStationsGardees(brut: unknown): StationRapide[] {
       lat,
       nom: texteOuNull(r['nom']) ?? 'Station de recharge',
       reseau: texteOuNull(r['reseau']),
+      operateur: texteOuNull(r['operateur']),
       puissance,
       pdc: pdc !== null && pdc > 0 ? pdc : null,
       ouvert: typeof r['ouvert'] === 'boolean' ? r['ouvert'] : null,
@@ -365,10 +504,12 @@ export function perime(charge: number, maintenant: number): boolean {
    délai couvre une connexion mobile médiocre sans abandonner à tort. */
 const DELAI_MS = 60_000;
 
-async function telecharger(signal?: AbortSignal): Promise<StationRapide[]> {
+async function telecharger(
+  seuilKw: number, signal?: AbortSignal,
+): Promise<StationRapide[]> {
   let reponse: Response;
   try {
-    reponse = await fetch(urlIndexNational(), {
+    reponse = await fetch(urlIndexNational(seuilKw), {
       signal: signal
         ? AbortSignal.any([signal, AbortSignal.timeout(DELAI_MS)])
         : AbortSignal.timeout(DELAI_MS),
@@ -404,11 +545,12 @@ export interface ChargementIndex {
   local: boolean;
 }
 
-/* UN SEUL CHARGEMENT À LA FOIS. Sans ce verrou, ouvrir le planificateur et
-   dézoomer dans la même seconde émettait DEUX exports de sept cents kilo-octets
-   — le genre de gaspillage que la règle « ne jamais marteler les API publiques »
-   vise précisément. */
-let enCours: Promise<ChargementIndex> | null = null;
+/* UN SEUL CHARGEMENT À LA FOIS, PAR ÉTENDUE. Sans ce verrou, ouvrir le
+   planificateur et dézoomer dans la même seconde émettait DEUX exports — le
+   genre de gaspillage que la règle « ne jamais marteler les API publiques »
+   vise précisément. La clé est l'étendue : basculer de « rapide » à « toutes »
+   pendant un chargement ne doit pas rendre l'ancien résultat pour le nouveau. */
+const enCours = new Map<CleEtendue, Promise<ChargementIndex>>();
 
 /**
  * L'index, du cache s'il est frais, du réseau sinon.
@@ -418,12 +560,20 @@ let enCours: Promise<ChargementIndex> | null = null;
  * semaines restent des bornes ; une carte vide n'est rien.
  */
 export async function indexNational(
-  signal?: AbortSignal, maintenant = Date.now(),
+  signal?: AbortSignal, cle: CleEtendue = 'rapide', maintenant = Date.now(),
 ): Promise<ChargementIndex> {
-  if (enCours) return enCours;
+  const dejaEnCours = enCours.get(cle);
+  if (dejaEnCours) return dejaEnCours;
+
+  const quoi = etendue(cle);
+  /* CHAQUE ÉTENDUE A SON PROPRE CACHE. Les faire partager une clé ferait
+     passer l'index rapide pour l'index complet dès qu'on aurait basculé une
+     fois : la carte montrerait 14 133 stations en croyant en montrer 56 781,
+     sans qu'aucun message ne dise le contraire. */
+  const cleCache = `${CLE_INDEX}:${cle}`;
 
   const travail = (async (): Promise<ChargementIndex> => {
-    const memo = await lirePreference<unknown>(CLE_INDEX);
+    const memo = await lirePreference<unknown>(cleCache);
     const m = (memo ?? {}) as Record<string, unknown>;
     // Frontière système : ce qui revient du stockage se valide (règle du projet).
     const gardees = versStationsGardees(m['stations']);
@@ -433,8 +583,8 @@ export async function indexNational(
       return { stations: gardees, local: true };
     }
     try {
-      const stations = await telecharger(signal);
-      void ecrirePreference(CLE_INDEX, { stations, charge: maintenant });
+      const stations = await telecharger(quoi.seuilKw, signal);
+      void ecrirePreference(cleCache, { stations, charge: maintenant });
       return { stations, local: false };
     } catch (e) {
       if (gardees.length > 0) return { stations: gardees, local: true };
@@ -442,15 +592,15 @@ export async function indexNational(
     }
   })();
 
-  enCours = travail;
+  enCours.set(cle, travail);
   try {
     return await travail;
   } finally {
-    enCours = null;
+    enCours.delete(cle);
   }
 }
 
 /** Pour les tests : oublie le verrou de chargement entre deux cas. */
 export function reinitialiserIndex(): void {
-  enCours = null;
+  enCours.clear();
 }

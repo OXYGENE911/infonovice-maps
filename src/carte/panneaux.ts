@@ -77,6 +77,20 @@ function refermer(details: HTMLDetailsElement): void {
 }
 
 /**
+ * Referme tous les volets de tête ouverts.
+ *
+ * Sert au démarrage du suivi d'itinéraire : Armelin, le 26/08/2026, « quand on
+ * est en mode navigation, il y a trop de cartouches affichés qui masquent la
+ * navigation ». Un panneau de trois cents pixels sur une carte qu'on regarde
+ * en conduisant n'est pas un encombrement esthétique, c'est de la route qu'on
+ * ne voit pas. Les volets se referment donc — leurs boutons restent, on les
+ * rouvre d'un geste si besoin.
+ */
+export function refermerPanneaux(racine: ParentNode = document): void {
+  for (const details of panneauxPrincipauxOuverts(racine)) refermer(details);
+}
+
+/**
  * Installe le comportement sur une racine (le document en production, un
  * fragment en test). Rend une fonction de retrait : sans elle, deux appels
  * successifs empileraient les écouteurs.

@@ -2,6 +2,76 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.33.0] — 2026-08-26 — Quatre retours, et un compte faux (PR #44)
+
+Armelin a rouvert la production. Quatre remarques, dont une qui a fait tomber
+**un défaut grave livré la veille**.
+
+### Le compte des points de charge était faux — six fois et demie trop
+
+`nbre_pdc` porte le total de la STATION, répété à l'identique sur chacune de
+ses lignes. L'index le SOMMAIT. Mesuré sur « Brico - Hannut » : **6 points de
+charge réels, 36 annoncés**. À l'échelle du pays, **496 886 points annoncés
+pour 76 024 réels**. Le pire est qu'un tel nombre reste crédible — personne ne
+compte les bornes d'une aire pour vérifier. Corrigé en `max(nbre_pdc)`, et
+vérifié sur les données réelles : Brico-Hannut affiche 6, la médiane nationale
+est de 4 points par station.
+
+### « Plusieurs réseaux que j'ai l'habitude d'utiliser n'y figurent pas »
+
+Deux causes, mesurées.
+
+**La liste s'arrêtait aux douze premiers.** IZIVIA FAST était treizième,
+Atlante dix-huitième, ALLEGO vingt-deuxième. Un champ de recherche remplace la
+troncature muette, et le panneau DIT combien il en cache.
+
+**Et le regroupement portait sur le mauvais champ.** Sur les 14 133 stations
+rapides, `nom_enseigne` forme **1 799 groupes dont 1 314 d'une seule station** :
+certains producteurs y écrivent le nom du site — « Fastned Yvré L'Evèque »,
+« Atlante - Montauban - Aldi », « IONITY GmbH IONITY Vrigny ». Fastned occupait
+ainsi quatre cents entrées d'une station chacune et **n'apparaissait nulle part
+sous son nom**. `nom_operateur` en forme **140**. Le filtre groupe donc par
+exploitant, et la requête au portail interroge le même champ.
+
+Vérifié sur les vraies données : Fastned France (65), IZIVIA (1 290), R3 (155),
+Allego (691), Ionity (301) — tous trouvables, chacun d'un bloc.
+
+### « La carte n'affiche pas toutes les stations électriques de France »
+
+C'était vrai, et le seuil de 50 kW en était la cause. Il reste le défaut — en
+deçà on ne s'arrête pas en voyage — mais ce n'est plus une limite imposée :
+**« Toutes les bornes » charge les 56 781 stations** (2,5 Mo, une demi-minute,
+puis 190 ms en relecture). Le panneau annonce le poids ET l'attente.
+
+Et il donne le point de comparaison, parce qu'il sera fait de toute façon :
+l'Avere-France recensait **200 045 POINTS de recharge** au 31 juillet 2026,
+quand nous comptons des **STATIONS**. Sans le dire, l'écart passe pour un trou
+de quatre-vingt-dix pour cent.
+
+### Les commerces alentour se cliquent
+
+Leur nom mène à la carte, un second bouton au planificateur. Un défaut
+découvert en l'écrivant : sans point de départ, le clic ne produisait **rien du
+tout**, pas même un message — le garde-fou du calcul rendait la main en
+silence. Il le dit maintenant.
+
+### Le suivi dégage la vue
+
+« Trop de cartouches masquent la navigation, comme la recherche d'adresse. »
+Volets refermés, recherche d'adresse et pied de page effacés le temps du
+trajet ; les boutons restent atteignables, et tout revient à l'arrêt.
+
+### Et les textes qui se chevauchent
+
+Le piège classique de flexbox : un enfant flexible a `min-width: auto`, donc il
+refuse de descendre sous la largeur de son plus long mot. Une adresse
+d'autoroute débordait de sa colonne au lieu de revenir à la ligne — ce qui
+n'arrive qu'avec un texte assez long, d'où sa survie aux relectures. Un
+parcours mesure désormais les RECTANGLES de tous les textes du cartouche et
+échoue au moindre recouvrement.
+
+515 tests unitaires (497 avant), 129 parcours E2E (124 avant).
+
 ## [0.32.1] — 2026-08-26 — Un réseau, une case (PR #43)
 
 Défaut trouvé **dans ce qui venait d'être livré**, en regardant la production :

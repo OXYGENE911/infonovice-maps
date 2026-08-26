@@ -23,6 +23,7 @@ import {
   etatGuidage, distanceEnMots, heureArriveeEstimee, type OptionsGuidage,
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
+import { refermerPanneaux } from './panneaux';
 
 /** Un arrêt de recharge à annoncer pendant le trajet. */
 export interface ArretAAnnoncer {
@@ -84,6 +85,13 @@ export class BandeauGuidage extends HTMLElement {
     this.#options = o;
     this.hidden = false;
     this.#alerte('');
+    /* ON DÉGAGE LA VUE. Volets refermés, et une classe sur le document qui
+       efface ce qui ne sert pas au volant — la recherche d'adresse d'abord,
+       qui occupe le tiers de l'en-tête. Ce n'est pas un encombrement
+       esthétique : c'est de la route qu'on ne voit pas. Tout revient à
+       l'arrêt du suivi. */
+    refermerPanneaux(document);
+    document.body.classList.add('en-guidage');
     (this.querySelector('.bg-instruction') as HTMLElement).textContent =
       'Recherche de votre position…';
     (this.querySelector('.bg-distance') as HTMLElement).textContent = '';
@@ -109,6 +117,7 @@ export class BandeauGuidage extends HTMLElement {
     }
     this.#options = null;
     this.hidden = true;
+    document.body.classList.remove('en-guidage');
     this.dispatchEvent(new CustomEvent('guidage-arrete', { bubbles: true }));
   }
 

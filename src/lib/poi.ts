@@ -35,6 +35,8 @@ export interface PoiBorne {
   gratuit: boolean | null;
   /** L'enseigne affichée sur la borne (« eborn »), à défaut l'opérateur. */
   reseau: string | null;
+  /** L'identifiant d'itinérance, pour ouvrir le cartouche sans le chercher. */
+  id: string | null;
   /** Les standards réellement présents sur la station. */
   prises: ClePrise[];
 }
@@ -116,14 +118,21 @@ export function urlBornes(b: Bbox, filtres: FiltresBornes = {}): string {
   }
   const reseaux = filtres.reseaux ?? [];
   if (reseaux.length > 0) {
-    clauses.push(`(${reseaux.map((r) => `nom_enseigne = ${citer(r)}`).join(' OR ')})`);
+    /* SUR `nom_operateur`, ET NON `nom_enseigne`. Mesuré le 26/08/2026 : sur
+       les 14 133 stations rapides, l'enseigne forme 1 799 groupes dont 1 314
+       d'une seule station, parce que certains producteurs y écrivent le nom du
+       SITE — « Fastned Yvré L'Evèque », « Atlante - Montauban - Aldi ». Filtrer
+       là-dessus rendait la moitié d'un réseau. L'opérateur en forme 140.
+       La liste du panneau groupe donc par opérateur, et cette clause doit
+       interroger le MÊME champ : les deux se répondent, ou le filtre ment. */
+    clauses.push(`(${reseaux.map((r) => `nom_operateur = ${citer(r)}`).join(' OR ')})`);
   }
 
   return 'https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/'
     + 'mobilityref-france-irve-220/records'
     + `?where=${encodeURIComponent(clauses.join(' AND '))}&limit=${LIMITE_ODS}`
     + '&select=point_geo,nom_station,puissance_nominale,nbre_pdc,gratuit'
-    + ',nom_enseigne,nom_operateur'
+    + ',nom_enseigne,nom_operateur,id_station_itinerance'
     + PRISES.map((p) => `,${p.champ}`).join('');
 }
 
@@ -247,6 +256,7 @@ export function versBornes(brut: unknown): Charge<PoiBorne> {
       // celui que l'usager cherche des yeux depuis la route. L'opérateur est
       // souvent une société technique dont le nom ne figure nulle part.
       reseau: texteOuNull(l['nom_enseigne']) ?? texteOuNull(l['nom_operateur']),
+      id: texteOuNull(l['id_station_itinerance']),
       prises: PRISES.filter((p) => l[p.champ] === '1' || l[p.champ] === 1).map((p) => p.cle),
     });
   }

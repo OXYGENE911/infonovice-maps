@@ -17,13 +17,17 @@ import { ouvrirVolet } from './volets';
 /** Une station de l'index, dans la forme de l'export agrégé. */
 interface Station {
   nom: string; lon: number; lat: number; p: number;
-  reseau?: string; acces?: string; pdc?: number;
+  reseau?: string; operateur?: string; acces?: string; pdc?: number;
 }
 
 const ligneIndex = (st: Station, i: number): Record<string, unknown> => ({
   id_station_itinerance: `FRTEST${i}`,
   nom_station: st.nom,
   nom_enseigne: st.reseau ?? 'Réseau d’essai',
+  /* L'OPÉRATEUR PORTE LE FILTRE depuis le 26/08 : l'enseigne forme 1 799
+     groupes dont 1 314 d'une seule station, parce que certains producteurs y
+     écrivent le nom du site. La fixture suit le vrai modèle. */
+  nom_operateur: st.operateur ?? st.reseau ?? 'Réseau d’essai',
   condition_acces: st.acces ?? 'Accès libre',
   prise_type_combo_ccs: '1',
   prise_type_chademo: '0',
@@ -72,12 +76,12 @@ async function simulerPortail(
 
 /** Quelques stations réparties sur la France, pour que les amas aient un sens. */
 const FRANCE: Station[] = [
-  { nom: 'Ionity Beaune', lon: 4.84, lat: 47.02, p: 350, reseau: 'Ionity', pdc: 6 },
-  { nom: 'Ionity Mâcon', lon: 4.83, lat: 46.31, p: 350, reseau: 'Ionity' },
-  { nom: 'Tesla Nemours', lon: 2.69, lat: 48.26, p: 250, reseau: 'Tesla' },
-  { nom: 'Tesla Auxerre', lon: 3.57, lat: 47.80, p: 250, reseau: 'Tesla' },
-  { nom: 'Engie Lille', lon: 3.06, lat: 50.63, p: 150, reseau: 'ENGIE Vianeo' },
-  { nom: 'Flotte municipale', lon: 5.37, lat: 43.30, p: 50, reseau: 'Ville',
+  { nom: 'Ionity Beaune', lon: 4.84, lat: 47.02, p: 350, operateur: 'Ionity', pdc: 6 },
+  { nom: 'Ionity Mâcon', lon: 4.83, lat: 46.31, p: 350, operateur: 'Ionity' },
+  { nom: 'Tesla Nemours', lon: 2.69, lat: 48.26, p: 250, operateur: 'Tesla' },
+  { nom: 'Tesla Auxerre', lon: 3.57, lat: 47.80, p: 250, operateur: 'Tesla' },
+  { nom: 'Engie Lille', lon: 3.06, lat: 50.63, p: 150, operateur: 'ENGIE Vianeo' },
+  { nom: 'Flotte municipale', lon: 5.37, lat: 43.30, p: 50, operateur: 'Ville',
     acces: 'Accès réservé' },
 ];
 
@@ -109,7 +113,7 @@ test('sous le zoom 12, la carte montre le réseau national — et DIT son seuil'
      d'intérêt » et la carte restait nue. Elle annonce maintenant ce qu'elle
      montre, et surtout CE QU'ELLE OMET — les bornes sous 50 kW. */
   const etat = page.locator('.poi-etat');
-  await expect(etat).toContainText('stations rapides', { timeout: 20_000 });
+  await expect(etat).toContainText('stations dans la vue', { timeout: 20_000 });
   await expect(etat, 'un index muet sur son seuil ment par omission')
     .toContainText('50 kW et plus');
 
@@ -124,7 +128,7 @@ test('déplacer la carte sous le seuil ne retélécharge RIEN', async ({ page })
      le défaut corrigé. L'index est lu une fois, puis découpé en mémoire. */
   const compte = await simulerPortail(page, FRANCE);
   await ouvrirBornes(page);
-  await expect(page.locator('.poi-etat')).toContainText('stations rapides', { timeout: 20_000 });
+  await expect(page.locator('.poi-etat')).toContainText('stations dans la vue', { timeout: 20_000 });
   expect(compte.exports).toBe(1);
 
   for (const centre of [[3.0, 47.5], [5.4, 45.2], [1.4, 43.6]]) {
@@ -184,7 +188,7 @@ test('le filtre réseau est NATIONAL et survit au déplacement', async ({ page }
     const p = await compterRendus(page, 'poi-bornes');
     return n + p;
   }, { timeout: 10_000 }).toBeGreaterThan(0);
-  await expect(page.locator('.poi-etat')).toContainText('2 stations rapides');
+  await expect(page.locator('.poi-etat')).toContainText('2 stations dans la vue');
 });
 
 test('le cartouche dit l’ACCÈS RÉSERVÉ, le téléphone, et ce qu’il ignore', async ({ page }) => {
@@ -259,12 +263,12 @@ test('deux écritures d’un même réseau ne font qu’une case', async ({ page
        nationale. Une station posée à Lille sortait du cadre au zoom d'accueil
        et faisait échouer l'assertion pour une raison qui n'avait rien à voir
        avec la fusion des écritures. */
-    { nom: 'Lidl Beaune', lon: 4.84, lat: 47.02, p: 150, reseau: 'LIDL' },
-    { nom: 'Lidl Mâcon', lon: 4.83, lat: 46.31, p: 150, reseau: 'LIDL' },
-    { nom: 'Lidl Auxerre', lon: 3.57, lat: 47.80, p: 150, reseau: 'Lidl France' },
-    { nom: 'Lidl Nevers', lon: 3.16, lat: 46.99, p: 150, reseau: 'Lidl France' },
-    { nom: 'Lidl Bourges', lon: 2.40, lat: 47.08, p: 150, reseau: 'Lidl France' },
-    { nom: 'Ionity Dijon', lon: 5.04, lat: 47.32, p: 350, reseau: 'Ionity' },
+    { nom: 'Lidl Beaune', lon: 4.84, lat: 47.02, p: 150, operateur: 'LIDL' },
+    { nom: 'Lidl Mâcon', lon: 4.83, lat: 46.31, p: 150, operateur: 'LIDL' },
+    { nom: 'Lidl Auxerre', lon: 3.57, lat: 47.80, p: 150, operateur: 'Lidl France' },
+    { nom: 'Lidl Nevers', lon: 3.16, lat: 46.99, p: 150, operateur: 'Lidl France' },
+    { nom: 'Lidl Bourges', lon: 2.40, lat: 47.08, p: 150, operateur: 'Lidl France' },
+    { nom: 'Ionity Dijon', lon: 5.04, lat: 47.32, p: 350, operateur: 'Ionity' },
   ]);
   await ouvrirBornes(page);
 
@@ -276,6 +280,197 @@ test('deux écritures d’un même réseau ne font qu’une case', async ({ page
 
   // Et la cocher retient bien les CINQ stations, pas les trois d'une écriture.
   await page.locator('.poi-reseau').first().check();
-  await expect(page.locator('.poi-etat')).toContainText('5 stations rapides',
+  await expect(page.locator('.poi-etat')).toContainText('5 stations dans la vue',
     { timeout: 10_000 });
+});
+
+
+/** Le détail complet d'une station, avec les champs du cartouche. */
+const DETAIL_TYPE = [{
+  nom_station: 'Aire de Beaune',
+  adresse_station: 'Autoroute A6, aire de Beaune-Tailly, 21200 Merceuil',
+  nom_enseigne: 'Ionity', nom_operateur: 'IONITY GmbH | FR*ION',
+  telephone_operateur: 'tel:+33-1-23-45-67-89', condition_acces: 'Accès libre',
+  horaires: '24/7', implantation_station: 'Station dédiée à la recharge rapide',
+  accessibilite_pmr: 'Accessible mais non réservé PMR', paiement_cb: '1',
+  paiement_acte: '1', reservation: '0', station_deux_roues: '0',
+  tarification: 'Tarification au kWh plus frais de connexion éventuels en fonction de votre contrat de mobilité',
+  gratuit: '0', puissance_nominale: 350, nbre_pdc: 6,
+  id_station_itinerance: 'FRTEST0', id_pdc_itinerance: 'FRTEST0E1',
+  date_maj: '2026-06-01', prise_type_combo_ccs: '1', prise_type_2: '0',
+  prise_type_chademo: '0', prise_type_ef: '0',
+}];
+
+const COMMODITES = {
+  elements: [
+    { type: 'node', id: 1, lat: 47.0205, lon: 4.8405,
+      tags: { amenity: 'restaurant', name: 'Le Relais des Grands Crus de Bourgogne' } },
+    { type: 'node', id: 2, lat: 47.0202, lon: 4.8402,
+      tags: { amenity: 'fuel', brand: 'TotalEnergies' } },
+    // Sans nom NI marque : le type doit tenir lieu de libellé.
+    { type: 'node', id: 3, lat: 47.0208, lon: 4.8408, tags: { amenity: 'toilets' } },
+  ],
+};
+
+async function ouvrirCartoucheBeaune(page: Page): Promise<void> {
+  await ouvrirBornes(page);
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [4.84, 47.02], zoom: 11 });
+  });
+  await expect.poll(() => compterRendus(page, 'poi-bornes'), { timeout: 20_000 })
+    .toBeGreaterThan(0);
+  const point = await page.evaluate(() => (window as unknown as {
+    __carte: { project(c: [number, number]): { x: number; y: number } };
+  }).__carte.project([4.84, 47.02]));
+  const cadre = await page.locator('#carte canvas.maplibregl-canvas').boundingBox();
+  await page.mouse.click(cadre!.x + point.x, cadre!.y + point.y);
+  await expect(page.locator('fiche-borne')).toBeVisible({ timeout: 10_000 });
+}
+
+test('les textes du cartouche ne se chevauchent JAMAIS, adresse longue comprise', async ({ page }) => {
+  /* « Les textes des encarts se chevauchent encore » (Armelin, 26/08/2026).
+     La cause est le piège classique de flexbox : un enfant flexible a
+     `min-width: auto`, donc il refuse de descendre sous la largeur de son plus
+     long mot. Une adresse d'autoroute ou un tarif bavard débordait de sa
+     colonne et passait SOUS la voisine au lieu de revenir à la ligne — ce qui
+     n'arrive qu'avec un texte assez long, d'où sa survie aux relectures.
+     Ce parcours mesure des RECTANGLES, comme le reste de l'ergonomie du
+     projet : ce que l'œil voit se prouve, il ne se juge pas. */
+  await simulerPortail(page, FRANCE, DETAIL_TYPE);
+  await ouvrirCartoucheBeaune(page);
+  await expect(page.locator('fiche-borne')).toContainText('Merceuil', { timeout: 10_000 });
+
+  const chevauchements = await page.evaluate(() => {
+    const boites = [...document.querySelectorAll<HTMLElement>(
+      'fiche-borne .fb-intitule, fiche-borne .fb-valeur, fiche-borne .fb-titre,'
+      + ' fiche-borne .fb-pdc-titre, fiche-borne .fb-pdc-prises,'
+      + ' fiche-borne .fb-tarif, fiche-borne .fb-acces',
+    )].map((e) => ({ t: (e.textContent ?? '').slice(0, 24), r: e.getBoundingClientRect() }))
+      .filter((b) => b.r.width > 0 && b.r.height > 0);
+    const fautes: string[] = [];
+    for (let i = 0; i < boites.length; i += 1) {
+      for (let j = i + 1; j < boites.length; j += 1) {
+        const a = boites[i]!.r; const b = boites[j]!.r;
+        // Une marge d'un pixel évite de compter deux bords jointifs.
+        const croise = a.left < b.right - 1 && a.right - 1 > b.left
+          && a.top < b.bottom - 1 && a.bottom - 1 > b.top;
+        if (croise) fautes.push(`« ${boites[i]!.t} » sur « ${boites[j]!.t} »`);
+      }
+    }
+    return fautes;
+  });
+  expect(chevauchements, 'des textes du cartouche se recouvrent').toEqual([]);
+
+  // Et rien ne déborde du cartouche par la droite.
+  const deborde = await page.evaluate(() => {
+    const carte = document.querySelector('fiche-borne .fb')!.getBoundingClientRect();
+    return [...document.querySelectorAll<HTMLElement>('fiche-borne .fb-corps *')]
+      .filter((e) => e.getBoundingClientRect().right > carte.right + 1)
+      .map((e) => (e.textContent ?? '').slice(0, 30));
+  });
+  expect(deborde, 'du texte sort du cartouche').toEqual([]);
+});
+
+test('un commerce à proximité se situe et se rejoint', async ({ page }) => {
+  /* « Ça ne me donne pas la possibilité de cliquer dessus pour programmer un
+     itinéraire vers ce service » (Armelin, 26/08/2026). Une liste qu'on lit
+     sans pouvoir s'y rendre oblige à recopier un nom dans un champ de
+     recherche — pour un restaurant qu'on regarde déjà sur la carte. */
+  await simulerPortail(page, FRANCE, DETAIL_TYPE);
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    contentType: 'application/json',
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    body: JSON.stringify(COMMODITES),
+  }));
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[4.84, 47.02], [4.8405, 47.0205]] },
+      distance: 620, duration: 90,
+    }),
+  }));
+  await ouvrirCartoucheBeaune(page);
+
+  await page.getByRole('button', { name: 'Chercher les commerces et services' }).click();
+  const liste = page.locator('.fb-liste-commodites');
+  await expect(liste).toContainText('Le Relais des Grands Crus', { timeout: 15_000 });
+  // Une commodité SANS nom porte son type : la case ne reste pas vide, sans
+  // quoi la grille décalait la distance sous le libellé.
+  await expect(liste).toContainText('Toilettes');
+
+  await expect(page.getByRole('button', { name: /Voir Le Relais.*sur la carte/ })).toBeVisible();
+  await page.getByRole('button', { name: /Itinéraire vers Le Relais/ }).click();
+
+  /* LE CARTOUCHE S'EFFACE — on a obtenu ce qu'on venait y chercher — et le
+     planificateur porte le NOM du lieu : « itinéraire vers 4,84 ; 47,02 » ne
+     dirait à personne vers quoi il va. */
+  await expect(page.locator('fiche-borne')).toBeHidden();
+  await expect(page.locator('.iti')).toHaveAttribute('open', '');
+  await expect(page.locator('[data-role="arrivee"] input'))
+    .toHaveValue(/Le Relais des Grands Crus/);
+
+  /* SANS DÉPART, ON LE DIT. Le garde-fou du calcul rend la main en silence
+     quand une extrémité manque : le clic ne produisait alors RIEN, pas même un
+     message, et l'on pouvait croire l'application cassée. */
+  await expect(page.locator('.iti-erreur')).toContainText('point de départ');
+
+  // Et dès qu'un départ est posé, le trajet se calcule pour de bon.
+  await page.route('**api-adresse.data.gouv.fr**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ features: [{
+      geometry: { type: 'Point', coordinates: [4.84, 47.02] },
+      properties: {
+        label: 'Aire de Beaune-Tailly, Merceuil', type: 'street',
+        postcode: '21200', city: 'Merceuil', context: '21, Côte-d’Or',
+      },
+    }] }),
+  }));
+  await page.locator('[data-role="depart"] input').fill('Beaune');
+  await page.locator('[data-role="depart"] [role="option"]').first().click();
+  await expect(page.locator('.iti-resultat')).toContainText('620 m', { timeout: 15_000 });
+});
+
+test('l’étendue du réseau est un CHOIX, et son prix est affiché', async ({ page }) => {
+  /* « La carte n'affiche pas toutes les stations électriques de France »
+     (Armelin, 26/08/2026). C'était vrai : le seuil de 50 kW en était la cause.
+     Il reste le défaut — en deçà on ne s'arrête pas en voyage — mais ce n'est
+     plus une limite imposée. */
+  await simulerPortail(page, FRANCE);
+  await ouvrirBornes(page);
+
+  const note = page.locator('.poi-etendue-note');
+  await expect(note).toContainText('14 133 stations');
+  await expect(note, 'le poids doit être annoncé avant d’être payé').toContainText('700 Ko');
+  /* ET LE POINT DE COMPARAISON EST DONNÉ, parce qu'il sera fait de toute
+     façon : l'Avere compte des POINTS DE RECHARGE, nous des STATIONS. Sans le
+     dire, l'écart passe pour un trou de quatre-vingt-dix pour cent. */
+  await expect(note).toContainText('200 045');
+
+  await page.getByLabel('Étendue du réseau national chargé')
+    .selectOption({ label: 'Toutes les bornes' });
+  await expect(note).toContainText('56 781 stations');
+  await expect(note).toContainText('2,5 Mo');
+});
+
+test('on trouve un réseau qui n’est pas dans les douze premiers', async ({ page }) => {
+  /* « Plusieurs réseaux que j'ai l'habitude d'utiliser n'y figurent pas »
+     (Armelin, 26/08/2026). La liste s'arrêtait aux douze premiers : IZIVIA
+     FAST était treizième, Atlante dix-huitième, ALLEGO vingt-deuxième. */
+  const beaucoup: Station[] = Array.from({ length: 20 }, (_, i) => ({
+    nom: `Station ${i}`, lon: 2 + i * 0.05, lat: 46 + i * 0.05, p: 150,
+    operateur: i < 15 ? `Gros reseau ${i}` : 'Fastned France',
+  }));
+  await simulerPortail(page, beaucoup);
+  await ouvrirBornes(page);
+  await expect(page.locator('.poi-reseau').first()).toBeVisible({ timeout: 20_000 });
+
+  // Douze cases au plus, et le panneau DIT qu'il en cache.
+  await expect(page.locator('.poi-reseau')).toHaveCount(12);
+  await expect(page.locator('.poi-reseaux')).toContainText('sur 16');
+
+  // La recherche ouvre la liste à tout ce qui correspond.
+  await page.getByLabel('Chercher un réseau de recharge').fill('fastned');
+  await expect(page.locator('.poi-reseau')).toHaveCount(1);
+  await expect(page.locator('.poi-reseaux')).toContainText('Fastned France');
 });
