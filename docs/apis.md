@@ -467,5 +467,187 @@ resserre sa cadence —, cette mesure sera le point de comparaison.
 Répartition des statuts, pour mémoire : Disponible 65 %, Occupé 29 %,
 Inconnu 3 %, En maintenance 3 %.
 
+## Index national des bornes rapides — export agrégé (mesuré 26/08/2026)
+
+**Pourquoi cette route existe.** Les portails Opendatasoft plafonnent DUREMENT
+`limit` à 100 enregistrements. Demander les bornes de la France entière rendait
+donc cent bornes au hasard — un affichage qui ment sans le dire. C'est la cause
+unique des deux reproches d'Armelin du 25/08 : « les points de charge ne
+s'affichent qu'entre 0 et 1 km de zoom » et « le filtre réseau devrait
+fonctionner quel que soit le niveau de zoom ».
+
+**La route qui lève le plafond.** L'endpoint `/exports/json` du même portail
+n'est PAS plafonné, et il accepte `group_by` — donc une agrégation par station
+faite côté serveur.
+
+```
+https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/
+  mobilityref-france-irve-220/exports/json
+  ?where=puissance_nominale>=50
+  &group_by=id_station_itinerance,nom_station,nom_enseigne,condition_acces,
+           prise_type_combo_ccs,prise_type_chademo,prise_type_2
+  &select=max(puissance_nominale) as p, sum(nbre_pdc) as pdc,
+          max(consolidated_longitude) as lon, max(consolidated_latitude) as lat
+```
+
+| Mesure | Valeur |
+|---|---|
+| Lignes rendues | 21 555 (station × combinaison de prises) |
+| Stations après fusion locale | 14 133 |
+| Poids sur le fil (gzip du serveur) | **709 Ko** |
+| Durée | 1,7 s en fibre |
+| Comparaison seuil 150 kW | 10 136 lignes, 354 Ko |
+| Comparaison sans les prises | 17 290 lignes, 622 Ko |
+
+Les connecteurs coûtent donc 87 Ko (+14 %) et évitent une réserve dans
+l'interface : ils sont retenus.
+
+### Deux pièges, mesurés, à ne pas redécouvrir
+
+**1. `longitude` est typé TEXTE, `consolidated_longitude` est numérique.**
+Toute agrégation sur le premier est refusée :
+
+```
+ODSQLError : StatAggregation only supports numeric or date expression.
+```
+
+Deux champs d'apparence interchangeable, un seul qui marche. Un test verrouille
+le bon (`tests/index-bornes.test.ts`).
+
+**2. `group_by` sur un champ géographique est refusé.**
+
+```
+Aggregation on geo point field is not possible.
+Use the geo_cluster(point_geo, int_precision) aggregation function instead.
+```
+
+D'où l'agrégation sur les coordonnées consolidées. À noter pour plus tard :
+`geo_cluster(point_geo, précision)` existe et rendrait des amas calculés côté
+serveur — piste si l'index venait à trop peser.
+
+### Ce que le seuil de 50 kW omet, et pourquoi
+
+En deçà, on ne s'arrête pas en voyage : on se gare pour la nuit. Descendre à
+toutes les bornes ferait 224 541 lignes, plusieurs mégaoctets, pour des prises
+domestiques que personne ne cherche sur une carte de France. **L'interface
+annonce ce seuil** : un index muet sur ce qu'il omet serait le même mensonge
+que les cent bornes au hasard.
+
+---
+
+## Détail d'une station IRVE — ce que le fichier porte vraiment (mesuré 26/08/2026)
+
+La couche de la carte ne demandait que six champs. Le fichier consolidé en
+porte une quarantaine. Taux de remplissage relevés sur les **224 541** lignes :
+
+| Champ | Couverture | Ce qu'on y trouve |
+|---|---|---|
+| `condition_acces` | **100 %** | Accès libre 198 954 · **Accès réservé 23 901 (11 %)** |
+| `horaires` | 98 % | « 24/7 » 194 781 (87 %) |
+| `implantation_station` | 100 % | Voirie 79 814 · parking privé 63 665 · station rapide 27 287 |
+| `accessibilite_pmr` | 100 % | mais « inconnue » sur 144 646 (64 %) |
+| `paiement_acte` | 100 % | oui sur 181 021 (81 %) |
+| `paiement_cb` | 92 % | oui sur 74 257 (36 %) |
+| `telephone_operateur` | **76 %** | 170 072 lignes, préfixées `tel:` |
+| `reservation` | 100 % | oui sur 28 419 |
+| `station_deux_roues` | 100 % | oui sur 5 719 |
+| `gratuit` | 83 % | oui sur **679 seulement** |
+| `tarification` | **24 %** | texte libre : « 0,29 €/kWh », mais aussi `https://belib.paris` |
+
+**Trois conséquences pour l'interface.**
+
+1. **L'accès réservé passe en tête du cartouche.** Onze pour cent des stations
+   sont fermées à une flotte ou à des résidents ; les afficher comme les autres
+   envoie l'usager vers une borne où il ne pourra pas brancher.
+2. **Le téléphone de l'opérateur est affiché en lien `tel:`.** On le cherche
+   quand la borne refuse de démarrer, généralement depuis un téléphone.
+3. **La tarification est rendue TELLE QUELLE, avec sa provenance.** Un champ
+   rempli une fois sur quatre, en texte libre, ne se transforme pas en prix
+   affiché sans inventer une précision.
+
+### Doublons dans le fichier
+
+Une station relevée le 26/08 rendait **28 lignes pour 14 points de charge
+déclarés**. Le dédoublonnage se fait sur `id_pdc_itinerance` ; sans lui, le
+cartouche annonçait le double de bornes. Quand la somme comptée et la somme
+déclarée divergent malgré tout, l'interface montre **les deux** plutôt que de
+trancher pour le producteur.
+
+---
+
+## Caractéristiques des véhicules électriques — AUCUNE source publique (cherché 26/08/2026)
+
+Armelin, le 25/08 : « ABRP dispose d'une base de données des véhicules ».
+Recherche menée avant d'écrire quoi que ce soit à la main :
+
+- **data.gouv.fr** : 691 jeux répondent à « véhicules électriques ». Tous
+  portent sur le **parc** — immatriculations, points de charge, part dans les
+  ventes. Aucun sur les **modèles**.
+- **ADEME** : publie les consommations d'homologation (car labelling). La
+  **capacité de batterie n'est pas une donnée d'homologation** et n'y figure
+  donc pas.
+
+Sans capacité, un catalogue est inutile à un planificateur d'autonomie. D'où
+`src/lib/catalogue-vehicules.ts`, écrit à la main, quarante modèles, avec :
+
+- la capacité **utile** (et non brute, celle de la publicité) ;
+- l'autonomie **WLTP**, annoncée pour ce qu'elle est — un cycle de laboratoire ;
+- un coefficient autoroutier de **0,63**, calibré sur un relevé réel (VF 8 :
+  447 km WLTP annoncés, 280 km constatés) et présenté comme une **hypothèse du
+  projet**, pas comme une donnée constructeur.
+
+Le catalogue propose, la mesure dispose : chaque champ reste modifiable, et le
+premier trajet réellement parcouru remplace le WLTP.
+
+---
+
+## Données du véhicule en direct SANS dongle — comment ABRP fait, et pourquoi nous ne pouvons pas (cherché 26/08/2026)
+
+Armelin, le 26/08 : « ABRP propose de connecter l'application directement aux
+données de sa voiture avec la version payante. Mais je ne sais pas comment ils
+font sans dongle OBD. Il faut se renseigner s'il n'existe pas de service tiers
+proposant les mêmes services. »
+
+**Réponse : ils passent par les API constructeur, via des agrégateurs.**
+
+| Voie | Ce que c'est |
+|---|---|
+| **Tesla** | API constructeur directe ; le propriétaire lie son compte Tesla |
+| **Enode** | Agrégateur d'API constructeur ; ABRP le vend sous « Live Data » premium |
+| **Tronity** | Agrégateur concurrent ; couvre notamment le groupe VW (ID.3/4/5, Born, Enyaq) |
+
+Aucun dongle : le propriétaire **autorise l'application** sur son compte
+constructeur, et l'agrégateur lit l'état de charge et la position.
+
+**Pourquoi c'est hors de portée de ce projet en l'état — trois obstacles, dans
+l'ordre de leur poids :**
+
+1. **Il faut un secret client, donc un serveur.** L'authentification Enode se
+   fait en OAuth 2.0 *client credentials* : un `client_id` ET un
+   `client_secret`. Un site statique ne peut pas détenir un secret — le publier
+   dans le navigateur revient à le donner. C'est exactement l'obstacle qui a
+   fait écarter DATAtourisme le 25/08.
+2. **Ce n'est pas gratuit en production.** Le palier d'essai d'Enode est limité
+   (cinq véhicules, bac à sable) ; les identifiants de production se demandent
+   commercialement. Tronity est un abonnement. La contrainte 1 du projet est
+   « 0 € ».
+3. **Les données du véhicule sortiraient du navigateur.** Position et état de
+   charge transiteraient par un tiers. La page « Vie privée » affirme
+   aujourd'hui, sans nuance, que rien ne sort. Cette phrase deviendrait fausse.
+
+**Conclusion.** C'est faisable — mais seulement avec le backend qu'exige déjà
+le niveau premium (voir `docs/premium-et-evenements.md`, §A), et cela demande
+la même chose que la dérogation Open-Meteo : **une décision explicite
+d'Armelin ET une mention publique**. Ce n'est pas une fonctionnalité à glisser
+dans une PR ; c'est un changement de nature du produit.
+
+Sources : [ABRP — Live data via Enode](https://abrp.featurebase.app/help/articles/3872028-live-data-via-enode),
+[ABRP — Live data via Tesla](https://abrp.featurebase.app/en/help/articles/8025463-live-data-via-tesla),
+[Tronity — intégration ABRP](https://help.tronity.io/hc/en-us/articles/4621326224274-How-does-the-ABRP-integration-work-and-how-can-I-set-it-up-VW-ID-series),
+[Enode — tarifs](https://enode.com/pricing),
+[Enode — référence API](https://developers.enode.com/api/reference).
+
+---
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.

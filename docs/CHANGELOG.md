@@ -2,6 +2,111 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.32.0] — 2026-08-26 — Les onze retours du terrain (PR #32)
+
+Armelin a testé la production le 25/08 et rendu onze remarques, captures à
+l'appui. Elles sont toutes traitées ici. Trois d'entre elles étaient de vrais
+défauts, deux touchaient à la structure de l'interface, et l'ensemble a fait
+remonter **six défauts silencieux** que personne n'avait vus.
+
+### Les bornes se voient enfin partout
+
+- « Les points de charge ne s'affichent qu'entre 0 et 1 km de zoom » et « le
+  filtre réseau devrait fonctionner quel que soit le niveau de zoom » avaient
+  la **même cause** : les portails Opendatasoft plafonnent à 100
+  enregistrements. Demander la France entière rendait cent bornes au hasard —
+  pire qu'un refus, parce qu'un tel affichage ment sans le dire.
+- **UN INDEX NATIONAL** le remplace : 14 133 stations de 50 kW et plus,
+  **709 Ko en une seule requête** (mesuré), gardés en local, rafraîchis au
+  mois. Sous le zoom 12 la carte les montre en amas ; au-dessus, la couche par
+  emprise reprend la main. La liste des réseaux devient nationale et ne bouge
+  plus quand la carte bouge.
+- L'index est **aussi le choix frugal** : la couche par emprise émet une
+  requête par déplacement de carte, lui n'en émet qu'une par mois. Et il répond
+  **hors ligne**, ce qui prolonge la promesse de la PR #17.
+- Le planificateur s'en sert aussi. Il émettait six requêtes plafonnées à cent
+  et pouvait déclarer un trajet infaisable parce que la borne salvatrice était
+  la cent-unième de son tronçon.
+
+### Le cartouche de détail d'une borne
+
+- « On ne peut pas cliquer sur un point de charge pour avoir son détail, ni le
+  nom de l'opérateur ». La bulle faisait quatre lignes ; le fichier IRVE porte
+  quarante champs. Le cartouche en montre six rubriques espacées, sur le modèle
+  qu'Armelin a montré.
+- **L'accès réservé passe en tête** : 23 901 stations sur 224 541 (11 %) sont
+  fermées à une flotte ou à des résidents, et l'ancienne bulle les affichait
+  comme les autres — elle envoyait donc vers des bornes inutilisables.
+- **Le téléphone de l'opérateur** (renseigné 170 072 fois) devient un lien
+  `tel:` : on le cherche quand la borne refuse de démarrer.
+- **Les commodités alentour** avec leur distance, triées de la plus proche.
+- **Ce qui manque est ÉCRIT** : aucune occupation en direct (aucune source
+  publique française ne la diffuse nationalement), et un tarif renseigné sur
+  24 % des lignes seulement, en texte libre, rendu tel quel.
+
+### La main sur le plan de recharge
+
+- « Des + et des − pour choisir moi-même les arrêts » et « filtrer par réseaux
+  préférés » : les deux y sont, avec la liste complète des bornes du trajet.
+- Un arrêt **imposé peut ne rien charger** — on s'arrête aussi pour déjeuner —
+  et le plan ne charge plus que ce qu'il faut pour rallier le point de passage
+  suivant, là où il visait toujours la destination.
+
+### La durée ne ment plus
+
+- « La durée totale ne précise pas si le temps de charge est compris ». Elle
+  affichait le temps de **conduite seul**, sans le dire : sur un trajet
+  électrique long, l'écart se compte en heures. Le résumé annonce le total, sa
+  décomposition, et « hors recharge » tant qu'aucun plan n'existe.
+
+### Un catalogue de véhicules, et un suivi d'itinéraire
+
+- **Quarante modèles** pré-remplissent le profil. Aucune source publique
+  française ne donne les capacités de batterie (691 jeux data.gouv.fr vérifiés,
+  ADEME vérifiée) : la liste est écrite à la main et le dit. L'autonomie WLTP
+  est annoncée pour ce qu'elle est, et le coefficient autoroutier (0,63) est
+  présenté comme une hypothèse du projet, calibrée sur un relevé réel.
+- **« Démarrer le suivi »** existe enfin. Il s'appelle SUIVI et non navigation,
+  et il l'écrit à l'écran : ni voix, ni recalcul si l'on quitte la route.
+  Quitter la route **se dit**, plutôt que de continuer à guider sur une
+  instruction périmée. Il annonce le prochain arrêt de recharge — ce qu'aucune
+  application de navigation généraliste ne porte.
+
+### L'ergonomie : une frontière déplacée
+
+- « La recherche de point de charge devrait être dans le menu de gauche », et
+  « jongler entre les deux menus nuit à l'ergonomie ». Chercher une borne n'est
+  pas régler l'affichage de la carte, c'est préparer un trajet : le volet passe
+  à gauche, avec les stations-service et les parkings.
+- « Tous les menus sont des accordéons qui scrollent » : **un seul sous-volet à
+  la fois** dans le planificateur, qui en ouvrait cinq ensemble.
+- Les anneaux d'autonomie suivent la **position GPS** et non le centre de la
+  carte, et l'interface dit laquelle des deux ancres sert. Domicile et travail
+  se posent d'un bouton « Définir ici ». Le haut-droit ne porte plus que le
+  menu ; zoom, boussole et localisation descendent.
+
+### Six défauts silencieux, levés en chemin
+
+1. `Number(null)` vaut **zéro** : une ligne sans longitude posait la station au
+   large du golfe de Guinée, hors champ d'une carte de France, sans erreur.
+2. La restauration IndexedDB du panneau véhicule, asynchrone, **écrasait un
+   choix déjà fait** : la case du rayon d'action se recochait toute seule.
+3. `#poser()` **abandonnait en silence** quand le style n'était pas prêt :
+   décocher les anneaux ne faisait alors rien.
+4. Un refus de plan **effaçait les réglages qui l'avaient causé** : l'usager
+   voyait le mur et n'avait plus rien pour le contourner.
+5. Le volet des bornes **perdait sa nature de surface de travail** en changeant
+   de côté, et se refermait à chaque clic sur la carte.
+6. **Trois zones de défilement imbriquées** rendaient une case à cocher
+   inatteignable : son rectangle existait, mais le clic tombait à côté.
+
+Et une leçon de méthode, consignée : la suite E2E était **verte avant
+reconstruction de `dist/`**. Elle ne prouvait rien. Treize parcours ont ensuite
+rougi.
+
+**Chiffres.** 490 tests unitaires (386 avant), 124 parcours E2E (100 avant).
+Bundle hors MapLibre : 64 Ko gzippés sur 300 autorisés.
+
 ## [0.31.1] — 2026-08-26 — Lighthouse : 100 sur les trois axes
 
 - Audit après une journée de changements d'interface, comme le projet l'exige

@@ -28,7 +28,7 @@ test.beforeEach(async ({ page }) => {
 
    Le menu de droite garde ce qui répond vraiment à « que voir sur la carte » :
    le fond, le trafic, les transports — et « mes lieux ». */
-const RAIL = ['Itinéraire', 'Véhicule', 'Recharge & services'] as const;
+const RAIL = ['Itinéraire', 'Véhicule', 'Recharge et services'] as const;
 const RANGES_DANS_LE_MENU = ['.fonds', '.trafic', '.transports', '.favoris'] as const;
 
 const entree = (page: Page, nom: string): Locator =>

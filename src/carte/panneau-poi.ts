@@ -149,9 +149,14 @@ export class PanneauPoi extends HTMLElement {
         <!-- L'INTITULÉ DIT CE QU'ON Y CHERCHE. « Autour » était une position,
              pas une intention : on n'ouvre pas ce volet pour regarder autour,
              on l'ouvre pour trouver où recharger ou faire le plein. Et
-             l'étiquette accessible CONTIENT le texte visible — sans quoi la
-             commande vocale « cliquer sur Recharge » échoue (WCAG 2.5.3). -->
-        <summary aria-label="Recharge et services : bornes, carburants, parkings">Recharge &amp; services</summary>
+             l'étiquette accessible CONTIENT le texte visible, MOT POUR MOT.
+             Une première version écrivait « Recharge & services » à l'écran et
+             « Recharge et services… » dans l'étiquette : Lighthouse l'a relevé
+             aussitôt (label-content-name-mismatch, critère WCAG 2.5.3). Une
+             esperluette n'est pas le mot « et » pour un moteur de commande
+             vocale, et l'écart suffit à faire échouer « cliquer sur Recharge
+             et services ». -->
+        <summary aria-label="Recharge et services : bornes, carburants, parkings">Recharge et services</summary>
         <fieldset>
           <legend>Points d’intérêt</legend>
           ${(Object.keys(COUCHES) as Couche[]).map((c) => `
