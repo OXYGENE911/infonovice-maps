@@ -140,8 +140,18 @@ export class PanneauPoi extends HTMLElement {
   connectedCallback(): void {
     if (this.firstElementChild) return;
     this.innerHTML = `
-      <details class="poi">
-        <summary aria-label="Choisir les points d’intérêt">Autour</summary>
+      <!-- La classe « surface-de-travail » : ce volet se consulte EN
+           MANIPULANT la carte —
+           on coche une couche, on inspecte un point, on en coche une autre. Un
+           clic sur la carte ne le referme donc pas ; son propre résumé, la
+           touche Échap ou l'ouverture d'un autre volet du rail, si. -->
+      <details class="poi surface-de-travail">
+        <!-- L'INTITULÉ DIT CE QU'ON Y CHERCHE. « Autour » était une position,
+             pas une intention : on n'ouvre pas ce volet pour regarder autour,
+             on l'ouvre pour trouver où recharger ou faire le plein. Et
+             l'étiquette accessible CONTIENT le texte visible — sans quoi la
+             commande vocale « cliquer sur Recharge » échoue (WCAG 2.5.3). -->
+        <summary aria-label="Recharge et services : bornes, carburants, parkings">Recharge &amp; services</summary>
         <fieldset>
           <legend>Points d’intérêt</legend>
           ${(Object.keys(COUCHES) as Couche[]).map((c) => `

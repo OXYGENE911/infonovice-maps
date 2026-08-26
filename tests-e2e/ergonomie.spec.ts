@@ -17,9 +17,19 @@ test.beforeEach(async ({ page }) => {
 
 /* DEUX POINTS D'ENTRÉE, PAS SIX. À gauche ce qui concerne le TRAJET ; en haut
    à droite, derrière un menu, ce qui concerne les RÉGLAGES. Six pastilles de
-   même poids ne hiérarchisaient rien et débordaient de l'écran. */
-const RAIL = ['Itinéraire', 'Véhicule'] as const;
-const RANGES_DANS_LE_MENU = ['.fonds', '.poi', '.trafic', '.transports', '.favoris'] as const;
+   même poids ne hiérarchisaient rien et débordaient de l'écran.
+
+   LA FRONTIÈRE A BOUGÉ LE 26/08/2026, sur le retour d'Armelin : « la recherche
+   de point de charge devrait être dans le menu de gauche », et « jongler entre
+   le menu de gauche et celui de droite nuit à l'ergonomie ». Le volet des
+   bornes et services est donc passé à gauche — avec les stations-service et
+   les parkings, qui sont comme elles des endroits où l'on s'arrête EN ROUTE.
+   Chercher où recharger n'est pas régler l'affichage de la carte.
+
+   Le menu de droite garde ce qui répond vraiment à « que voir sur la carte » :
+   le fond, le trafic, les transports — et « mes lieux ». */
+const RAIL = ['Itinéraire', 'Véhicule', 'Recharge & services'] as const;
+const RANGES_DANS_LE_MENU = ['.fonds', '.trafic', '.transports', '.favoris'] as const;
 
 const entree = (page: Page, nom: string): Locator =>
   page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: nom }).first();
@@ -69,6 +79,18 @@ test('le menu range les couches, les lieux et l’affichage', async ({ page }) =
     await expect(page.locator(`.reglages-corps ${volet} summary`),
       `« ${volet} » devrait être rangé dans le menu`).toBeVisible();
   }
+});
+
+test('la recharge est à GAUCHE, avec le trajet — jamais dans le menu', async ({ page }) => {
+  /* CE TEST EXISTE POUR EMPÊCHER UN RETOUR EN ARRIÈRE. Le va-et-vient entre
+     les deux côtés de l'écran était le reproche, et il se réinstallerait sans
+     bruit le jour où quelqu'un rangerait « les couches » ensemble par souci de
+     symétrie. La symétrie n'est pas le critère : l'intention l'est. */
+  await ouvrirLaCarte(page);
+  await expect(page.locator('.maplibregl-ctrl-top-left .poi summary')).toBeVisible();
+  await ouvrirMenu(page);
+  await expect(page.locator('.reglages-corps .poi'),
+    'la recherche de bornes est retournée dans le menu de droite').toHaveCount(0);
 });
 
 test('le haut-droit ne porte QUE le menu', async ({ page }) => {

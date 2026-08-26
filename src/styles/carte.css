@@ -285,8 +285,17 @@ etapes-itineraire { display: grid; gap: 7px; }
 }
 .poi summary::-webkit-details-marker { display: none; }
 .poi summary:focus-visible { outline: none; box-shadow: var(--focus); }
+/* UNE LARGEUR PROPRE, ET NON CELLE DE SON CONTENANT.
+   Ce volet vivait dans le menu de droite, dont la boîte est large de 330 px :
+   il n'avait donc jamais eu besoin de se borner lui-même. Passé sur le rail de
+   gauche (25/08/2026), plus rien ne le retenait — il s'étalait jusqu'au MILIEU
+   de l'écran, et un clic visant une borne au centre de la carte tombait sur un
+   paragraphe du volet. Mesuré à `elementFromPoint`, pas à l'œil : le fond
+   translucide laissait croire que la carte était dessous.
+   La borne haute reprend celle du planificateur et du véhicule, pour que les
+   trois volets du rail aient la même assise. */
 .poi fieldset {
-  position: static; margin-top: 8px; min-width: 210px;
+  position: static; margin-top: 8px; min-width: 210px; max-width: 320px;
   padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
   background: var(--fond); box-shadow: var(--ombre-m);
   display: grid; gap: 9px;
@@ -853,7 +862,17 @@ etat-connexion { display: contents; }
   background: var(--fond);
 }
 .iti-recharge-reglages select:focus-visible { outline: none; box-shadow: var(--focus); }
-.poi-reseaux { display: grid; gap: 5px; max-height: 168px; overflow-y: auto; }
+/* JAMAIS DE TROISIÈME ZONE DE DÉFILEMENT.
+   Cette liste portait sa propre hauteur bornée. Empilée sous le rail — qui
+   défile — et sous le corps du volet — qui défile aussi — elle formait un
+   TROISIÈME niveau, et une case cochable devenait INATTEIGNABLE : son
+   rectangle existait, `elementFromPoint` rendait l'ancêtre, et le clic tombait
+   à côté. Mesuré à la sonde le 26/08/2026, après le passage du volet à gauche.
+
+   La règle tient en une phrase : au plus DEUX zones imbriquées — le rail, qui
+   ne sert que de filet, et le corps du volet qu'on lit. Toute liste interne se
+   contente de la hauteur qu'elle a. */
+.poi-reseaux { display: grid; gap: 5px; }
 .poi-reseaux label { display: flex; align-items: center; gap: 8px;
   font: 400 12.5px var(--police); color: var(--texte-1); cursor: pointer; }
 .poi-reseaux input:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
@@ -1072,9 +1091,11 @@ fiche-borne[hidden] { display: none; }
 /* LA LISTE COMPLÈTE PEUT COMPTER PLUSIEURS CENTAINES DE BORNES sur un
    Paris-Marseille : elle défile dans sa propre boîte plutôt que d'allonger
    sans fin le volet du planificateur. */
+/* Même règle qu'aux réseaux ci-dessus : pas de troisième défilement. Cette
+   liste peut compter plusieurs centaines de bornes sur un Paris-Marseille —
+   elle allonge donc le corps du volet, qui défile, et c'est le bon endroit. */
 .recharge-toutes-liste {
   margin: 6px 0 0; padding-left: 20px; display: grid; gap: 8px;
-  max-height: 320px; overflow-y: auto; overscroll-behavior: contain;
 }
 .recharge-toutes-liste li {
   display: grid; grid-template-columns: 1fr auto auto; gap: 4px 6px;

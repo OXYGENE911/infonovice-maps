@@ -97,12 +97,25 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   selecteur.surChangement = (o) => { carte.setStyle(styleCarte(o)); appliquerSombre(o); };
   menu.ajouter('Affichage', selecteur);
 
-  /* LES COUCHES D'INFORMATION — points d'intérêt, trafic, transports. Elles
-     répondent à « que voir sur la carte », pas à « où vais-je » : leur place
-     est dans le menu. */
+  /* LES BORNES ET LES SERVICES PASSENT À GAUCHE, AVEC LE TRAJET.
+     Armelin, le 25/08/2026 : « la recherche de point de charge devrait être
+     dans le menu de gauche », et « jongler entre le menu de gauche et celui de
+     droite nuit à l'ergonomie ». Il a raison, et la raison est plus profonde
+     qu'un déplacement de bouton : chercher une borne n'est PAS régler
+     l'affichage de la carte, c'est préparer un trajet. Ranger cette recherche
+     avec le fond de carte et les couches de trafic obligeait à traverser
+     l'écran entre deux gestes qui appartiennent à la même intention.
+
+     Les stations-service et les parkings suivent : ce sont, comme les bornes,
+     des endroits où l'on s'arrête en route. Le menu de droite garde ce qui
+     répond vraiment à « que voir sur la carte » — le fond, le trafic, les
+     transports — et « mes lieux ». */
   const poi = new PanneauPoi();
   poi.carte = carte;
-  menu.ajouter('Couches', poi);
+  const portePoi = document.createElement('div');
+  portePoi.className = 'maplibregl-ctrl porte-poi';
+  portePoi.appendChild(poi);
+  carte.addControl({ onAdd: () => portePoi, onRemove: () => portePoi.remove() }, 'top-left');
 
   const trafic = new PanneauTrafic();
   trafic.carte = carte;
