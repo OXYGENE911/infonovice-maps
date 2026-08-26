@@ -33,6 +33,7 @@ import {
 import { distanceM } from '../lib/le-long-du-trajet';
 import { PRISES } from '../lib/poi';
 import { palierDe, PALIERS } from '../lib/puissance';
+import { refermerPanneaux } from './panneaux';
 
 /** Ce qu'il faut pour aller chercher une station : peu de choses. */
 export interface CibleBorne {
@@ -109,6 +110,23 @@ export class FicheBorne extends HTMLElement {
     this.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { e.stopPropagation(); this.fermer(); }
     });
+
+    /* UNE SEULE SURFACE À LA FOIS DANS LA COLONNE DE GAUCHE.
+       Le cartouche et les volets du rail occupent le même bord de l'écran :
+       ouverts ensemble, le premier RECOUVRE le second — ses filtres passaient
+       sous la carte de détail, et c'est ce qu'Armelin voyait comme des encarts
+       qui se chevauchent. Mesurer les textes ne le montrait pas : ils ne se
+       recouvrent pas, c'est la surface entière qui masque l'autre.
+       On les rend donc exclusifs, dans les deux sens. L'événement `toggle` NE
+       REMONTE PAS : il faut l'écouter en capture. */
+    document.addEventListener('toggle', (e) => {
+      const cible = e.target;
+      if (!(cible instanceof HTMLDetailsElement) || !cible.open) return;
+      // Les volets IMBRIQUÉS ne comptent pas : ils vivent dans leur parent.
+      if (cible.parentElement?.closest('details')) return;
+      if (this.contains(cible)) return;
+      this.fermer();
+    }, true);
   }
 
   fermer(): void {
@@ -124,6 +142,8 @@ export class FicheBorne extends HTMLElement {
     const annulation = new AbortController();
     this.#annulation = annulation;
     this.#cible = cible;
+    // Voir `connectedCallback` : la colonne de gauche ne porte qu'une surface.
+    refermerPanneaux(document);
     this.hidden = false;
 
     const titre = this.querySelector('.fb-titre') as HTMLElement;
