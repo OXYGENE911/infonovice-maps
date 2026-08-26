@@ -1108,3 +1108,120 @@ fiche-borne[hidden] { display: none; }
   .recharge-toutes-liste li.est-retenue { background: #123227; }
   .recharge-toutes-liste li.est-imposee { background: #0F2740; }
 }
+
+/* LE CATALOGUE DE VÉHICULES. Il vient EN TÊTE du formulaire parce qu'il le
+   remplit : le placer après les champs qu'il écrase se lirait comme un
+   réglage avancé, alors que c'est le premier geste à faire. */
+.veh-ligne-catalogue select {
+  width: 100%; padding: 6px 8px; border-radius: 8px;
+  border: 1px solid var(--bord-2); background: var(--fond);
+  font: 400 12.5px var(--police); color: var(--texte-1);
+}
+.veh-ligne-catalogue select:focus-visible { outline: none; box-shadow: var(--focus); }
+.veh-note-catalogue {
+  margin: 4px 0 10px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--bord);
+}
+
+/* ==========================================================================
+   LE BANDEAU DE SUIVI (<bandeau-guidage>)
+   --------------------------------------------------------------------------
+   Il se lit EN ROULANT, c'est-à-dire par regards d'une demi-seconde. Trois
+   conséquences, et aucune n'est décorative :
+
+   1. L'INSTRUCTION EST GRANDE, le reste petit. Une hiérarchie molle oblige à
+      chercher la ligne utile ; une hiérarchie franche la donne d'un coup.
+   2. LE BANDEAU EST EN BAS. C'est la zone qu'on regarde le moins longtemps —
+      et celle qu'un support de téléphone place le plus près du pare-brise.
+   3. IL NE COUVRE PAS TOUTE LA CARTE. Voir la route qu'on suit est la moitié
+      de l'information ; un bandeau plein écran l'effacerait.
+   ========================================================================== */
+bandeau-guidage {
+  position: absolute; z-index: 6;
+  left: 12px; right: 12px;
+  bottom: calc(var(--attribution-sommet, 26px) + 12px);
+  display: block; pointer-events: none;
+}
+bandeau-guidage[hidden] { display: none; }
+
+.bg {
+  pointer-events: auto;
+  max-width: 520px; margin: 0 auto;
+  padding: 12px 14px;
+  background: var(--fond); border: 1px solid var(--bord-2);
+  border-radius: var(--rayon); box-shadow: var(--ombre-m);
+}
+
+.bg-manoeuvre {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding-bottom: 8px; border-bottom: 1px solid var(--bord);
+}
+.bg-instruction {
+  margin: 0; flex: 1 1 60%;
+  font: 700 17px var(--police); color: var(--texte-1); line-height: 1.25;
+}
+.bg-distance {
+  margin: 0; font: 700 15px var(--police); color: var(--accent);
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+
+.bg-restant {
+  margin: 8px 0 0; font: 400 13px var(--police); color: var(--texte-2);
+  font-variant-numeric: tabular-nums;
+}
+.bg-arret {
+  margin: 4px 0 0; font: 600 12.5px var(--police); color: var(--vert);
+}
+.bg-arret:empty { display: none; }
+
+.bg-alerte {
+  margin: 8px 0 0; padding: 7px 9px; border-radius: 8px;
+  background: #FDF0DC; color: #7A4A05;
+  font: 600 12.5px var(--police); line-height: 1.4;
+}
+.bg-alerte[hidden] { display: none; }
+
+/* CE QUE LE SUIVI N'EST PAS, écrit sous ce qu'il est. Discret mais présent :
+   on ne découvre pas l'absence de recalcul à la sortie d'autoroute. */
+.bg-limite {
+  margin: 8px 0 0; font: 400 11px var(--police); color: var(--texte-3);
+  line-height: 1.4;
+}
+
+.bg-arreter {
+  margin-top: 10px; width: 100%; padding: 8px 12px;
+  border: 1px solid var(--bord-2); border-radius: 8px; background: var(--fond-doux);
+  cursor: pointer; font: 600 13px var(--police); color: var(--texte-1);
+}
+.bg-arreter:hover { border-color: var(--accent); color: var(--accent); }
+.bg-arreter:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* LE BOUTON « DÉMARRER » PREND TOUTE LA LARGEUR de la barre d'actions : c'est
+   le geste qu'on cherche après avoir calculé un trajet, pas un export GPX. */
+/* `.iti-actions .iti-demarrer` ET NON `.iti-demarrer` SEUL : la règle générique
+   `.iti-actions button`, plus haut, a une spécificité de 0-1-1 contre 0-1-0.
+   Un sélecteur de classe simple perdait donc contre elle malgré sa position
+   plus bas dans la feuille, et le bouton restait gris comme les autres — sans
+   la moindre erreur pour le signaler. */
+.iti-actions .iti-demarrer {
+  flex-basis: 100%; padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--accent); background: var(--accent);
+  cursor: pointer; font: 700 13px var(--police); color: var(--blanc);
+}
+.iti-actions .iti-demarrer:hover {
+  background: var(--accent-vif); border-color: var(--accent-vif);
+}
+.iti-actions .iti-demarrer:disabled { opacity: .6; cursor: default; }
+.iti-actions .iti-demarrer:focus-visible { outline: none; box-shadow: var(--focus); }
+.iti-actions .iti-demarrer[hidden] { display: none; }
+
+@media (prefers-color-scheme: dark) {
+  .bg-alerte { background: #3A2A0E; color: #F2C879; }
+}
+
+/* Sur téléphone, le bandeau colle aux bords : chaque pixel de carte compte. */
+@media (max-width: 640px) {
+  bandeau-guidage { left: 8px; right: 8px; }
+  .bg { padding: 10px 12px; }
+  .bg-instruction { font-size: 16px; }
+}

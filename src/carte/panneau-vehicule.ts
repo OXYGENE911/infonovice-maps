@@ -18,6 +18,9 @@ import {
   CONTEXTES, type Vehicule, type CleContexte,
 } from '../lib/vehicule';
 import { collectionAnneaux } from '../lib/cercle';
+import {
+  CATALOGUE, libelleModele, modeleParCle, autonomiesProposees,
+} from '../lib/catalogue-vehicules';
 
 export const PREF_VEHICULE = 'vehicule';
 const SOURCE = 'rayon-action';
@@ -89,6 +92,23 @@ export class PanneauVehicule extends HTMLElement {
         <fieldset class="veh-corps">
           <legend>Mon véhicule électrique</legend>
 
+          <!-- LE CATALOGUE PRÉ-REMPLIT, IL NE VERROUILLE PAS. Saisir cinq
+               chiffres avant de pouvoir se servir du planificateur est un
+               péage à l'entrée : beaucoup ne le franchissent pas, et ceux qui
+               le franchissent y mettent des approximations. Chaque champ reste
+               modifiable après application. -->
+          <label class="veh-ligne veh-ligne-catalogue">Modèle
+            <span><select class="veh-catalogue" aria-label="Choisir un modèle de véhicule">
+              <option value="">— saisie manuelle —</option>
+              ${CATALOGUE.map((m) => `
+                <option value="${m.cle}">${libelleModele(m)}</option>`).join('')}
+            </select></span>
+          </label>
+          <p class="veh-note veh-note-catalogue">Valeurs constructeur
+            indicatives, pré-remplies puis modifiables. L’autonomie proposée
+            découle du cycle WLTP, optimiste sur autoroute : remplacez-la par
+            vos propres relevés dès votre premier long trajet.</p>
+
           <label class="veh-ligne">Nom
             <span><input type="text" class="veh-nom" placeholder="VinFast VF8"
               aria-label="Nom du véhicule"></span>
@@ -132,6 +152,30 @@ export class PanneauVehicule extends HTMLElement {
       });
     });
 
+    /* APPLIQUER UN MODÈLE remplit les champs ET l'état interne, puis
+       recalcule. Écrire dans les seuls champs du formulaire ne suffirait
+       pas : l'application lit son état, pas le DOM, et le bilan resterait
+       muet jusqu'à ce que l'usager touche une case au hasard. */
+    this.querySelector<HTMLSelectElement>('.veh-catalogue')?.addEventListener('change', (e) => {
+      this.#touche = true;
+      const modele = modeleParCle((e.target as HTMLSelectElement).value);
+      if (!modele) return;
+      const km = autonomiesProposees(modele);
+      this.#vehicule = {
+        ...this.#vehicule,
+        nom: libelleModele(modele),
+        capaciteNominale: modele.capaciteKwh,
+        /* LA SANTÉ REVIENT À 100 % : le catalogue décrit une voiture NEUVE.
+           Garder la santé d'un véhicule précédent appliquerait sa dégradation
+           à un modèle qui n'a rien à voir. L'usager corrige ensuite. */
+        soce: 100,
+        puissanceMaxKw: modele.puissanceMaxKw,
+      };
+      this.#essais = { ...km };
+      this.#refletChamps();
+      this.#recalculer();
+    });
+
     this.querySelector<HTMLInputElement>('.veh-anneaux')?.addEventListener('change', (e) => {
       this.#touche = true;
       this.#actif = (e.target as HTMLInputElement).checked;
@@ -151,6 +195,23 @@ export class PanneauVehicule extends HTMLElement {
     this.#enregistrer();
     this.#bilan();
     if (this.#actif) this.#poser();
+  }
+
+  /** Recopie l'état interne dans les champs. Une seule écriture du DOM, que
+      la restauration et le catalogue partagent — deux copies divergeraient. */
+  #refletChamps(): void {
+    const nom = this.querySelector<HTMLInputElement>('.veh-nom');
+    if (nom) nom.value = this.#vehicule.nom;
+    this.querySelectorAll<HTMLInputElement>('.veh-champ').forEach((c) => {
+      const cle = c.dataset['cle'] ?? '';
+      const valeur = cle.startsWith('essai-')
+        ? this.#essais[cle.slice(6) as CleContexte]
+        : this.#vehicule[cle as 'capaciteNominale' | 'soce' | 'soc' | 'puissanceMaxKw'];
+      /* ON N'ÉCRASE PAS UN CHAMP AVEC UN ZÉRO : le catalogue ne connaît pas
+         l'état de charge du jour, et l'effacer à chaque changement de modèle
+         obligerait à le ressaisir sans raison. */
+      if (valeur > 0) c.value = String(valeur);
+    });
   }
 
   #enregistrer(): void {
@@ -182,15 +243,7 @@ export class PanneauVehicule extends HTMLElement {
     for (const { cle } of CONTEXTES) this.#essais[cle] = nombre(e[cle]);
     this.#actif = m['anneaux'] === true;
 
-    const nom = this.querySelector<HTMLInputElement>('.veh-nom');
-    if (nom) nom.value = this.#vehicule.nom;
-    this.querySelectorAll<HTMLInputElement>('.veh-champ').forEach((c) => {
-      const cle = c.dataset['cle'] ?? '';
-      const valeur = cle.startsWith('essai-')
-        ? this.#essais[cle.slice(6) as CleContexte]
-        : this.#vehicule[cle as 'capaciteNominale' | 'soce' | 'soc' | 'puissanceMaxKw'];
-      if (valeur > 0) c.value = String(valeur);
-    });
+    this.#refletChamps();
     const bascule = this.querySelector<HTMLInputElement>('.veh-anneaux');
     if (bascule) bascule.checked = this.#actif;
 

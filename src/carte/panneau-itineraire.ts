@@ -31,6 +31,7 @@ import { PREF_VEHICULE } from './panneau-vehicule';
 import { ErreurPoi, type PoiCarburant, type PoiBorne } from '../lib/poi';
 import { meteoA, phraseMeteo, symboleTemps, heureArrivee, formaterHeure, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
 import type { FicheBorne } from './fiche-borne';
+import type { BandeauGuidage } from './bandeau-guidage';
 
 const SOURCE = 'itineraire';
 
@@ -97,6 +98,18 @@ export class PanneauItineraire extends HTMLElement {
 
   set fiche(f: FicheBorne) { this.#fiche = f; }
 
+  /* LE BANDEAU DE SUIVI, posé par carte.ts. Le panneau reste utilisable sans
+     lui : le bouton « Démarrer » ne paraît alors tout simplement pas, plutôt
+     que d'échouer au clic. */
+  #guidage: BandeauGuidage | null = null;
+
+  set guidage(b: BandeauGuidage) {
+    this.#guidage = b;
+    // Le bandeau se referme aussi de lui-même : le bouton doit le savoir.
+    b.addEventListener('guidage-arrete', () => { this.#majBoutonDemarrer(); });
+    this.#majBoutonDemarrer();
+  }
+
   set carte(c: CarteMapLibre) {
     this.#carte = c;
     // Repose le tracé après chaque changement de style (fond).
@@ -126,6 +139,11 @@ export class PanneauItineraire extends HTMLElement {
           <p class="iti-resultat" role="status" hidden></p>
           <p class="iti-erreur" role="alert" hidden></p>
           <div class="iti-actions" hidden>
+            <!-- « DÉMARRER » EN PREMIER ET EN PLEIN : c'est le geste qu'on
+                 cherche après avoir calculé un trajet, pas un export GPX.
+                 Armelin, le 25/08 : « il n'y a pas de bouton pour démarrer
+                 l'itinéraire ». -->
+            <button type="button" class="iti-demarrer" hidden>Démarrer le suivi</button>
             <button type="button" class="iti-gpx">GPX</button>
             <button type="button" class="iti-kml">KML</button>
             <button type="button" class="iti-lien">Copier le lien</button>
@@ -213,6 +231,9 @@ export class PanneauItineraire extends HTMLElement {
         this.#profil = (r as HTMLInputElement).value as Profil;
         void this.#calculer();
       });
+    });
+    this.querySelector('.iti-demarrer')?.addEventListener('click', () => {
+      void this.#demarrerSuivi();
     });
     this.querySelector('.iti-effacer')?.addEventListener('click', () => this.#effacer());
     this.querySelector('.iti-gpx')?.addEventListener('click', () => {
@@ -576,6 +597,69 @@ export class PanneauItineraire extends HTMLElement {
     resultat.textContent = `${formaterDistance(iti.distance)} —`
       + ` ${formaterDuree(total)} au total`
       + ` (${formaterDuree(iti.duree)} de route + ${formaterDuree(charge * 60)} de charge)`;
+  }
+
+  /** Le bouton ne paraît que s'il a de quoi faire : un trajet ET un bandeau. */
+  #majBoutonDemarrer(): void {
+    const bouton = this.querySelector<HTMLButtonElement>('.iti-demarrer');
+    if (!bouton) return;
+    bouton.hidden = !this.#guidage || !this.#dernier;
+    bouton.textContent = this.#guidage?.actif ? 'Arrêter le suivi' : 'Démarrer le suivi';
+  }
+
+  /**
+   * Démarre — ou arrête — le suivi de l'itinéraire.
+   *
+   * LA FEUILLE DE ROUTE EST CHARGÉE ICI SI ELLE MANQUE. Elle ne se calcule
+   * qu'à la demande (quotas publics) ; sans elle, le bandeau afficherait des
+   * distances sans jamais dire quand tourner. On l'attend donc — mais son
+   * échec n'EMPÊCHE PAS le suivi : rouler en sachant ce qui reste et où
+   * recharger vaut mieux que ne rien avoir parce qu'un service tiers est
+   * tombé. Le bandeau dit alors « Suivez l'itinéraire », ce qui est vrai.
+   */
+  async #demarrerSuivi(): Promise<void> {
+    const bandeau = this.#guidage;
+    const iti = this.#dernier;
+    if (!bandeau || !iti) return;
+    if (bandeau.actif) { bandeau.arreter(); this.#majBoutonDemarrer(); return; }
+
+    const bouton = this.querySelector<HTMLButtonElement>('.iti-demarrer');
+    if (bouton) { bouton.disabled = true; bouton.textContent = 'Préparation…'; }
+    /* LE CLICHÉ DU CALCUL RÉUSSI, jamais l'état vivant des champs : entre-temps
+       l'usager a pu changer d'adresse sans que le recalcul aboutisse, et le
+       suivi doit décrire le trajet TRACÉ. Même règle que la feuille de route.
+       Si aucune étape n'a pu être obtenue, le bandeau dira simplement
+       « Suivez l'itinéraire » — ce qui est vrai. */
+    const cliche = this.#calculPour;
+    let etapes: EtapeRoute[] = [];
+    if (cliche) {
+      try {
+        etapes = await etapesItineraire(
+          cliche.depart, cliche.arrivee, cliche.profil,
+          { etapes: cliche.etapes, eviter: cliche.eviter },
+        );
+      } catch { /* le suivi vaut mieux sans instructions que pas de suivi */ }
+    }
+    if (bouton) bouton.disabled = false;
+    // L'usager a pu effacer le trajet pendant le chargement de la feuille.
+    if (this.#dernier !== iti) { this.#majBoutonDemarrer(); return; }
+
+    const plan = this.#planCourant;
+    bandeau.demarrer({
+      trace: iti.geometrie.coordinates as [number, number][],
+      distanceTotaleM: iti.distance,
+      dureeTotaleS: iti.duree,
+      etapes,
+      arrets: plan?.faisable
+        ? plan.arrets.map((a) => ({
+          nom: a.borne.nom,
+          reseau: a.borne.reseau ?? null,
+          avancementM: a.borne.avancementM,
+          dureeMin: a.dureeMin,
+        }))
+        : [],
+    });
+    this.#majBoutonDemarrer();
   }
 
   /** Lit un réglage numérique du volet, avec son repli si l'élément manque. */
@@ -1081,6 +1165,7 @@ export class PanneauItineraire extends HTMLElement {
       this.#voletsOuverts = { reseaux: false, toutes: false };
       this.#majResume();
       (this.querySelector('.iti-actions') as HTMLElement).hidden = false;
+      this.#majBoutonDemarrer();
       // Nouveau trajet : profil et feuille de route réapparaissent repliés et
       // vidés — leurs contenus ne valent que pour l'itinéraire qui les a produits.
       this.#reinitialiserSections(false);
@@ -1165,6 +1250,10 @@ export class PanneauItineraire extends HTMLElement {
     }
     (this.querySelector('.iti-resultat') as HTMLElement).hidden = true;
     (this.querySelector('.iti-actions') as HTMLElement).hidden = true;
+    /* EFFACER LE TRAJET ARRÊTE LE SUIVI. Un bandeau qui continue de compter
+       les kilomètres d'un itinéraire qui n'existe plus consomme le GPS pour
+       rien — et ment. */
+    this.#guidage?.arreter();
     this.#reinitialiserSections(true);
     (this.querySelector('etapes-itineraire') as EtapesItineraire).points = [];
     this.#eviter.clear();

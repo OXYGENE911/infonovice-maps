@@ -106,10 +106,18 @@ export function installerPanneaux(racine: Document | HTMLElement = document): ()
     const cibleAppui = e.target;
     if (!(cibleAppui instanceof Node)) return;
     const element = cibleAppui instanceof Element ? cibleAppui : cibleAppui.parentElement;
-    // Même exigence qu'au-dessus : un appui sur l'attribution de MapLibre ne
-    // doit pas passer pour un appui « dans un panneau ».
-    const dansUnPanneau = element?.closest('details');
-    if (dansUnPanneau && dansUnComposant(dansUnPanneau)) return;
+    /* « À CÔTÉ » VEUT DIRE SUR LA CARTE, PAS SUR UNE AUTRE DE NOS SURFACES.
+       La règle exigeait auparavant un `<details>` sous une balise à trait
+       d'union. Elle a tenu tant que TOUTES nos surfaces étaient des volets ;
+       le cartouche de détail d'une borne et le bandeau de suivi n'en sont
+       pas. Presser « Chercher les commerces » dans le cartouche, ou
+       « Arrêter le suivi » dans le bandeau, refermait donc le planificateur
+       resté ouvert derrière — un effet que personne n'avait demandé, et que
+       rien n'expliquait.
+       La condition porte désormais sur le composant seul. L'attribution de
+       MapLibre reste dehors, elle : elle vit dans de simples `<div>`, et
+       c'est justement ce que `dansUnComposant` distingue. */
+    if (element && dansUnComposant(element)) return;
     for (const details of panneauxPrincipauxOuverts(cible)) {
       if (!estSurfaceDeTravail(details)) details.open = false;
     }

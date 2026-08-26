@@ -30,6 +30,7 @@ import { ajouterFavori } from '../lib/favoris';
 import { ecrireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { VisionneusePhoto } from './visionneuse-photo';
 import { FicheBorne } from './fiche-borne';
+import { BandeauGuidage } from './bandeau-guidage';
 import { chercherPhotos, plusProche, ErreurPhotos } from '../lib/panoramax';
 import { adresseInverse } from '../lib/adresse';
 import { formaterCoordonnees } from '../lib/coordonnees';
@@ -126,6 +127,14 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   conteneur.appendChild(fiche);
   poi.fiche = fiche;
   panneau.fiche = fiche;
+
+  /* LE BANDEAU DE SUIVI — un seul, posé au conteneur de la carte. Il occupe le
+     bas de l'écran pendant le trajet : c'est la zone qu'on regarde le moins
+     longtemps, donc celle qui convient à trois lignes qu'on lit d'un coup. */
+  const guidage = new BandeauGuidage();
+  guidage.carte = carte;
+  conteneur.appendChild(guidage);
+  panneau.guidage = guidage;
 
   /* LE VÉHICULE ÉLECTRIQUE — profil et rayon d'action. Tout reste local :
      batterie, santé, charge, relevés d'autonomie ne sortent jamais du
