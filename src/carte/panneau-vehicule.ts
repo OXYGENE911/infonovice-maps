@@ -18,6 +18,9 @@ import {
   CONTEXTES, type Vehicule, type CleContexte,
 } from '../lib/vehicule';
 import { collectionAnneaux } from '../lib/cercle';
+import {
+  CATALOGUE, libelleModele, modeleParCle, autonomiesProposees,
+} from '../lib/catalogue-vehicules';
 
 export const PREF_VEHICULE = 'vehicule';
 const SOURCE = 'rayon-action';
@@ -40,14 +43,38 @@ export class PanneauVehicule extends HTMLElement {
   #vehicule: Vehicule = { ...VIDE, consommations: { ...VIDE.consommations } };
   #essais: Essais = { ville: 0, route: 0, autoroute: 0 };
   #actif = false;
+  /* LA RESTAURATION NE DOIT JAMAIS ÉCRASER UN CHOIX DÉJÀ FAIT.
+     La lecture IndexedDB est ASYNCHRONE : un usager rapide — ou une machine
+     chargée — peut cocher « Afficher mon rayon d'action », le décocher, et
+     voir la case se RECOCHER toute seule quand la lecture, partie avant ses
+     gestes, se résout enfin avec l'ancienne valeur. Rien ne le signale ; on
+     croit avoir mal cliqué.
+     Attrapé par un parcours E2E qui ne rougissait QUE dans la suite complète,
+     c'est-à-dire quand la machine est assez chargée pour que la lecture arrive
+     en retard. Le panneau des points d'intérêt porte le même garde-fou, pour
+     la même raison. */
+  #touche = false;
+  /* LA POSITION DU VÉHICULE, quand la géolocalisation l'a donnée. Les anneaux
+     l'entourent ELLE, pas le centre de la carte : faire glisser la carte ne
+     déplace pas la voiture. Tant qu'aucune position n'est connue, ils
+     entourent le centre — et l'interface le DIT, plutôt que de laisser croire
+     à une mesure. */
+  #position: { lon: number; lat: number } | null = null;
+
+  set position(p: { lon: number; lat: number }) {
+    this.#position = p;
+    this.#bilan();
+    if (this.#actif) this.#poser();
+  }
 
   set carte(c: CarteMapLibre) {
     if (this.#carte) return;
     this.#carte = c;
     // setStyle détruit les sources : on repose, même contrat que les autres.
     c.on('style.load', () => { this.#poser(); });
-    // Les anneaux suivent le centre de la carte : ils entourent « d'ici ».
-    c.on('moveend', () => { if (this.#actif) this.#poser(); });
+    /* On ne suit le déplacement de la carte QUE tant qu'aucune position GPS
+       n'est connue — sinon les anneaux s'ancrent sur le véhicule. */
+    c.on('moveend', () => { if (this.#actif && !this.#position) this.#poser(); });
   }
 
   connectedCallback(): void {
@@ -64,6 +91,23 @@ export class PanneauVehicule extends HTMLElement {
         <summary aria-label="Mon véhicule électrique">Véhicule</summary>
         <fieldset class="veh-corps">
           <legend>Mon véhicule électrique</legend>
+
+          <!-- LE CATALOGUE PRÉ-REMPLIT, IL NE VERROUILLE PAS. Saisir cinq
+               chiffres avant de pouvoir se servir du planificateur est un
+               péage à l'entrée : beaucoup ne le franchissent pas, et ceux qui
+               le franchissent y mettent des approximations. Chaque champ reste
+               modifiable après application. -->
+          <label class="veh-ligne veh-ligne-catalogue">Modèle
+            <span><select class="veh-catalogue" aria-label="Choisir un modèle de véhicule">
+              <option value="">— saisie manuelle —</option>
+              ${CATALOGUE.map((m) => `
+                <option value="${m.cle}">${libelleModele(m)}</option>`).join('')}
+            </select></span>
+          </label>
+          <p class="veh-note veh-note-catalogue">Valeurs constructeur
+            indicatives, pré-remplies puis modifiables. L’autonomie proposée
+            découle du cycle WLTP, optimiste sur autoroute : remplacez-la par
+            vos propres relevés dès votre premier long trajet.</p>
 
           <label class="veh-ligne">Nom
             <span><input type="text" class="veh-nom" placeholder="VinFast VF8"
@@ -87,12 +131,14 @@ export class PanneauVehicule extends HTMLElement {
       </details>`;
 
     this.querySelector('.veh-nom')?.addEventListener('input', (e) => {
+      this.#touche = true;
       this.#vehicule.nom = (e.target as HTMLInputElement).value;
       this.#enregistrer();
     });
 
     this.querySelectorAll<HTMLInputElement>('.veh-champ').forEach((c) => {
       c.addEventListener('input', () => {
+        this.#touche = true;
         const valeur = Number(c.value);
         const cle = c.dataset['cle'] ?? '';
         const nombre = Number.isFinite(valeur) && valeur >= 0 ? valeur : 0;
@@ -106,7 +152,32 @@ export class PanneauVehicule extends HTMLElement {
       });
     });
 
+    /* APPLIQUER UN MODÈLE remplit les champs ET l'état interne, puis
+       recalcule. Écrire dans les seuls champs du formulaire ne suffirait
+       pas : l'application lit son état, pas le DOM, et le bilan resterait
+       muet jusqu'à ce que l'usager touche une case au hasard. */
+    this.querySelector<HTMLSelectElement>('.veh-catalogue')?.addEventListener('change', (e) => {
+      this.#touche = true;
+      const modele = modeleParCle((e.target as HTMLSelectElement).value);
+      if (!modele) return;
+      const km = autonomiesProposees(modele);
+      this.#vehicule = {
+        ...this.#vehicule,
+        nom: libelleModele(modele),
+        capaciteNominale: modele.capaciteKwh,
+        /* LA SANTÉ REVIENT À 100 % : le catalogue décrit une voiture NEUVE.
+           Garder la santé d'un véhicule précédent appliquerait sa dégradation
+           à un modèle qui n'a rien à voir. L'usager corrige ensuite. */
+        soce: 100,
+        puissanceMaxKw: modele.puissanceMaxKw,
+      };
+      this.#essais = { ...km };
+      this.#refletChamps();
+      this.#recalculer();
+    });
+
     this.querySelector<HTMLInputElement>('.veh-anneaux')?.addEventListener('change', (e) => {
+      this.#touche = true;
       this.#actif = (e.target as HTMLInputElement).checked;
       this.#enregistrer();
       this.#poser();
@@ -126,6 +197,23 @@ export class PanneauVehicule extends HTMLElement {
     if (this.#actif) this.#poser();
   }
 
+  /** Recopie l'état interne dans les champs. Une seule écriture du DOM, que
+      la restauration et le catalogue partagent — deux copies divergeraient. */
+  #refletChamps(): void {
+    const nom = this.querySelector<HTMLInputElement>('.veh-nom');
+    if (nom) nom.value = this.#vehicule.nom;
+    this.querySelectorAll<HTMLInputElement>('.veh-champ').forEach((c) => {
+      const cle = c.dataset['cle'] ?? '';
+      const valeur = cle.startsWith('essai-')
+        ? this.#essais[cle.slice(6) as CleContexte]
+        : this.#vehicule[cle as 'capaciteNominale' | 'soce' | 'soc' | 'puissanceMaxKw'];
+      /* ON N'ÉCRASE PAS UN CHAMP AVEC UN ZÉRO : le catalogue ne connaît pas
+         l'état de charge du jour, et l'effacer à chaque changement de modèle
+         obligerait à le ressaisir sans raison. */
+      if (valeur > 0) c.value = String(valeur);
+    });
+  }
+
   #enregistrer(): void {
     void ecrirePreference(PREF_VEHICULE, {
       vehicule: this.#vehicule, essais: this.#essais, anneaux: this.#actif,
@@ -135,6 +223,9 @@ export class PanneauVehicule extends HTMLElement {
   async #restaurer(): Promise<void> {
     // Frontière système : la valeur relue se valide, elle ne se croit pas.
     const memo = await lirePreference<unknown>(PREF_VEHICULE);
+    /* ET ELLE S'EFFACE DEVANT L'USAGER. Voir `#touche` : ce qui vient d'être
+       saisi ou décoché prime sur ce qui dormait en base. */
+    if (this.#touche) return;
     const m = (memo ?? {}) as Record<string, unknown>;
     const v = (m['vehicule'] ?? {}) as Record<string, unknown>;
     const e = (m['essais'] ?? {}) as Record<string, unknown>;
@@ -152,15 +243,7 @@ export class PanneauVehicule extends HTMLElement {
     for (const { cle } of CONTEXTES) this.#essais[cle] = nombre(e[cle]);
     this.#actif = m['anneaux'] === true;
 
-    const nom = this.querySelector<HTMLInputElement>('.veh-nom');
-    if (nom) nom.value = this.#vehicule.nom;
-    this.querySelectorAll<HTMLInputElement>('.veh-champ').forEach((c) => {
-      const cle = c.dataset['cle'] ?? '';
-      const valeur = cle.startsWith('essai-')
-        ? this.#essais[cle.slice(6) as CleContexte]
-        : this.#vehicule[cle as 'capaciteNominale' | 'soce' | 'soc' | 'puissanceMaxKw'];
-      if (valeur > 0) c.value = String(valeur);
-    });
+    this.#refletChamps();
     const bascule = this.querySelector<HTMLInputElement>('.veh-anneaux');
     if (bascule) bascule.checked = this.#actif;
 
@@ -211,16 +294,42 @@ export class PanneauVehicule extends HTMLElement {
     note.textContent = 'Au mieux, à plat, par temps doux : ni le relief,'
       + ' ni le vent, ni votre conduite ne sont pris en compte.';
     boite.appendChild(note);
+
+    /* D'OÙ PART LE RAYON ? La question n'est pas cosmétique : un anneau centré
+       sur le regard plutôt que sur la voiture donne une réponse fausse. On dit
+       donc lequel des deux sert d'ancre. */
+    const ancre = document.createElement('p');
+    ancre.className = 'veh-bilan-ancre';
+    ancre.textContent = this.#position
+      ? 'Rayon mesuré depuis votre position.'
+      : 'Rayon mesuré depuis le centre de la carte — activez « Me localiser »'
+        + ' pour le rattacher à votre position.';
+    boite.appendChild(ancre);
   }
 
   #poser(): void {
     const carte = this.#carte;
-    if (!carte || !carte.isStyleLoaded()) return;
+    if (!carte) return;
+    /* UNE DEMANDE ARRIVÉE TROP TÔT NE SE PERD PAS, ELLE ATTEND.
+       Ce garde-fou rendait `undefined` en silence quand le style n'était pas
+       prêt : décocher « Afficher mon rayon d'action » à cet instant ne faisait
+       RIEN, les anneaux restaient, et aucun message ne l'expliquait. Il ne
+       fallait qu'une machine chargée pour le déclencher — un parcours E2E ne
+       rougissait que dans la suite complète, jamais seul.
+       `style.load` ne suffit pas à rattraper : il ne se déclenche qu'au
+       CHANGEMENT de fond, pas quand un style déjà posé finit de se charger.
+       `idle` si. */
+    if (!carte.isStyleLoaded()) {
+      carte.once('idle', () => { this.#poser(); });
+      return;
+    }
 
-    const centre = carte.getCenter();
+    const ancre = this.#position ?? {
+      lon: carte.getCenter().lng, lat: carte.getCenter().lat,
+    };
     const a = autonomies(this.#vehicule);
     const donnees = this.#actif
-      ? collectionAnneaux(centre.lng, centre.lat, CONTEXTES.map((c) => ({
+      ? collectionAnneaux(ancre.lon, ancre.lat, CONTEXTES.map((c) => ({
         cle: c.cle, rayonKm: a[c.cle], couleur: c.couleur,
       })))
       : { type: 'FeatureCollection' as const, features: [] };

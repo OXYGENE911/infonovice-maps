@@ -138,3 +138,51 @@ test('le profil survit au rechargement — sans compte, sans serveur', async ({ 
   await expect(page.getByLabel('Batterie')).toHaveValue(VF8.batterie);
   await expect(page.locator('.veh-bilan-lignes')).toContainText('En ville : 400 km');
 });
+
+
+/* LE CATALOGUE DE VÉHICULES — « ABRP dispose d'une base de données des
+   véhicules » (Armelin, 25/08/2026). Saisir cinq chiffres avant de pouvoir se
+   servir du planificateur est un péage à l'entrée : beaucoup ne le
+   franchissent pas, et ceux qui le franchissent y mettent des approximations. */
+
+test('choisir un modèle remplit le formulaire, et le bilan suit', async ({ page }) => {
+  await ouvrirVehicule(page);
+
+  // Rien n'est prétendu tant que rien n'est choisi.
+  await expect(page.getByLabel('Batterie', { exact: true })).toHaveValue('');
+
+  await page.getByLabel('Choisir un modèle de véhicule')
+    .selectOption({ label: 'VinFast VF 8 (Eco)' });
+
+  await expect(page.getByLabel('Batterie', { exact: true })).toHaveValue('82.4');
+  await expect(page.getByLabel('Charge max')).toHaveValue('150');
+  await expect(page.getByLabel('Nom du véhicule')).toHaveValue('VinFast VF 8 (Eco)');
+  /* LA SANTÉ REVIENT À 100 % : le catalogue décrit une voiture neuve, et
+     garder la dégradation d'un véhicule précédent l'appliquerait à un modèle
+     qui n'a rien à voir. */
+  await expect(page.getByLabel('Santé (SOCE)')).toHaveValue('100');
+
+  // Et le bilan se recalcule tout seul : l'application lit son état, pas le DOM.
+  await expect(page.locator('.veh-bilan-lignes')).toContainText('Sur autoroute');
+});
+
+test('les valeurs du catalogue restent MODIFIABLES — il propose, il ne verrouille pas', async ({ page }) => {
+  await ouvrirVehicule(page);
+  await page.getByLabel('Choisir un modèle de véhicule')
+    .selectOption({ label: 'Dacia Spring' });
+  await expect(page.getByLabel('Batterie', { exact: true })).toHaveValue('26.8');
+
+  // L'usager corrige : c'est SA voiture, pas la fiche du constructeur.
+  await page.getByLabel('Sur autoroute').fill('150');
+  await page.getByLabel('Charge (SOC)').fill('100');
+  await expect(page.locator('.veh-bilan-lignes')).toContainText('150 km');
+});
+
+test('le catalogue annonce d’où viennent ses chiffres', async ({ page }) => {
+  /* Un formulaire pré-rempli sans provenance se lit comme une mesure. Le WLTP
+     est un cycle de laboratoire, optimiste sur autoroute : le dire est la
+     condition pour que l'usager pense à le corriger. */
+  await ouvrirVehicule(page);
+  await expect(page.locator('.veh-note-catalogue')).toContainText('WLTP');
+  await expect(page.locator('.veh-note-catalogue')).toContainText('vos propres relevés');
+});

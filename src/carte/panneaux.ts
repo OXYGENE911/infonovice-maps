@@ -41,8 +41,21 @@ function dansUnComposant(element: Element | null): boolean {
 
    Les volets du rail, eux, sont transitoires : ils recouvrent la carte à
    gauche et le clic extérieur les referme, comme attendu. */
+/** La marque, portée par le panneau lui-même : voir `estSurfaceDeTravail`. */
+export const CLASSE_SURFACE = 'surface-de-travail';
+
 function estSurfaceDeTravail(details: HTMLDetailsElement): boolean {
-  return details.classList.contains('reglages');
+  /* LA MARQUE EST EXPLICITE, ET NON DÉDUITE DE L'EMPLACEMENT.
+     La règle ne connaissait que `reglages`, le menu de droite. Quand le volet
+     des bornes et services est passé à gauche (25/08/2026, à la demande
+     d'Armelin), il a perdu EN SILENCE cette propriété : cocher « Bornes
+     électriques » puis cliquer sur la carte pour en inspecter une refermait le
+     volet, et il fallait le rouvrir pour cocher la couche suivante. Six
+     parcours l'ont vu du même coup.
+     Le comportement ne doit pas dépendre du côté de l'écran où l'on range un
+     panneau : il découle de son USAGE. On le déclare donc. */
+  return details.classList.contains('reglages')
+    || details.classList.contains(CLASSE_SURFACE);
 }
 
 /** Un panneau est « principal » s'il est à nous et non imbriqué dans un autre. */
@@ -75,9 +88,31 @@ export function installerPanneaux(racine: Document | HTMLElement = document): ()
      il faut l'écouter en phase de capture, sinon rien n'arrive jamais ici. */
   const surBascule = (e: Event): void => {
     const details = e.target;
-    if (!(details instanceof HTMLDetailsElement) || !details.open || !estPrincipal(details)) return;
-    for (const autre of panneauxPrincipauxOuverts(cible)) {
-      if (autre !== details) autre.open = false;
+    if (!(details instanceof HTMLDetailsElement) || !details.open) return;
+    if (!dansUnComposant(details)) return;
+
+    if (estPrincipal(details)) {
+      for (const autre of panneauxPrincipauxOuverts(cible)) {
+        if (autre !== details) autre.open = false;
+      }
+      return;
+    }
+
+    /* ET UN SEUL SOUS-VOLET À LA FOIS DANS SON PANNEAU.
+       Le planificateur en compte cinq — profil altimétrique, feuille de route,
+       sur le trajet, météo, arrêts de recharge — et ils pouvaient s'ouvrir
+       TOUS ENSEMBLE. Armelin, le 25/08/2026 : « tous les menus sont des
+       accordéons qui scrollent ». La colonne atteignait alors plusieurs fois
+       la hauteur de l'écran, et retrouver le résumé du trajet demandait de
+       remonter à l'aveugle.
+       L'exclusion ne porte que sur les FRÈRES DIRECTS : un sous-volet n'a
+       aucune raison de fermer celui d'un autre panneau, ni celui qui le
+       contient. Le rail garde ainsi sa règle, et chaque panneau la sienne. */
+    const parent = details.parentElement;
+    if (!parent) return;
+    for (const frere of parent.children) {
+      if (frere === details) continue;
+      if (frere instanceof HTMLDetailsElement && frere.open) frere.open = false;
     }
   };
 
@@ -106,10 +141,18 @@ export function installerPanneaux(racine: Document | HTMLElement = document): ()
     const cibleAppui = e.target;
     if (!(cibleAppui instanceof Node)) return;
     const element = cibleAppui instanceof Element ? cibleAppui : cibleAppui.parentElement;
-    // Même exigence qu'au-dessus : un appui sur l'attribution de MapLibre ne
-    // doit pas passer pour un appui « dans un panneau ».
-    const dansUnPanneau = element?.closest('details');
-    if (dansUnPanneau && dansUnComposant(dansUnPanneau)) return;
+    /* « À CÔTÉ » VEUT DIRE SUR LA CARTE, PAS SUR UNE AUTRE DE NOS SURFACES.
+       La règle exigeait auparavant un `<details>` sous une balise à trait
+       d'union. Elle a tenu tant que TOUTES nos surfaces étaient des volets ;
+       le cartouche de détail d'une borne et le bandeau de suivi n'en sont
+       pas. Presser « Chercher les commerces » dans le cartouche, ou
+       « Arrêter le suivi » dans le bandeau, refermait donc le planificateur
+       resté ouvert derrière — un effet que personne n'avait demandé, et que
+       rien n'expliquait.
+       La condition porte désormais sur le composant seul. L'attribution de
+       MapLibre reste dehors, elle : elle vit dans de simples `<div>`, et
+       c'est justement ce que `dansUnComposant` distingue. */
+    if (element && dansUnComposant(element)) return;
     for (const details of panneauxPrincipauxOuverts(cible)) {
       if (!estSurfaceDeTravail(details)) details.open = false;
     }

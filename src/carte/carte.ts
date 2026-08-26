@@ -29,6 +29,8 @@ import { MenuReglages } from './menu-reglages';
 import { ajouterFavori } from '../lib/favoris';
 import { ecrireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { VisionneusePhoto } from './visionneuse-photo';
+import { FicheBorne } from './fiche-borne';
+import { BandeauGuidage } from './bandeau-guidage';
 import { chercherPhotos, plusProche, ErreurPhotos } from '../lib/panoramax';
 import { adresseInverse } from '../lib/adresse';
 import { formaterCoordonnees } from '../lib/coordonnees';
@@ -52,7 +54,10 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     attributionControl: { compact: true },
   });
 
-  carte.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
+  /* LES COMMANDES DE VUE VONT EN BAS À DROITE, le menu reste SEUL en haut.
+     Mêler « où je regarde » et « ce que j'affiche » dans une même colonne
+     obligeait l'œil à trier ; les cartes grand public séparent les deux. */
+  carte.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-right');
 
   /* LE MODE SOMBRE DU FOND PLAN est un filtre CSS sur le canevas — le
      vectoriel ferait mieux, mais il exigerait glyphes et sprites hébergés ;
@@ -92,12 +97,25 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   selecteur.surChangement = (o) => { carte.setStyle(styleCarte(o)); appliquerSombre(o); };
   menu.ajouter('Affichage', selecteur);
 
-  /* LES COUCHES D'INFORMATION — points d'intérêt, trafic, transports. Elles
-     répondent à « que voir sur la carte », pas à « où vais-je » : leur place
-     est dans le menu. */
+  /* LES BORNES ET LES SERVICES PASSENT À GAUCHE, AVEC LE TRAJET.
+     Armelin, le 25/08/2026 : « la recherche de point de charge devrait être
+     dans le menu de gauche », et « jongler entre le menu de gauche et celui de
+     droite nuit à l'ergonomie ». Il a raison, et la raison est plus profonde
+     qu'un déplacement de bouton : chercher une borne n'est PAS régler
+     l'affichage de la carte, c'est préparer un trajet. Ranger cette recherche
+     avec le fond de carte et les couches de trafic obligeait à traverser
+     l'écran entre deux gestes qui appartiennent à la même intention.
+
+     Les stations-service et les parkings suivent : ce sont, comme les bornes,
+     des endroits où l'on s'arrête en route. Le menu de droite garde ce qui
+     répond vraiment à « que voir sur la carte » — le fond, le trafic, les
+     transports — et « mes lieux ». */
   const poi = new PanneauPoi();
   poi.carte = carte;
-  menu.ajouter('Couches', poi);
+  const portePoi = document.createElement('div');
+  portePoi.className = 'maplibregl-ctrl porte-poi';
+  portePoi.appendChild(poi);
+  carte.addControl({ onAdd: () => portePoi, onRemove: () => portePoi.remove() }, 'top-left');
 
   const trafic = new PanneauTrafic();
   trafic.carte = carte;
@@ -111,6 +129,25 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      une modale doit couvrir la carte, pas vivre dedans. */
   const visionneuse = new VisionneusePhoto();
   document.body.appendChild(visionneuse);
+
+  /* LE CARTOUCHE DE DÉTAIL D'UNE BORNE — UN SEUL pour l'application, posé au
+     conteneur de la carte. Deux appelants s'en servent : un clic sur une
+     punaise, et un clic sur un arrêt du plan de recharge. Le partager plutôt
+     que d'en donner un à chacun garantit qu'il n'y en a jamais deux ouverts,
+     et que le second clic remplace le premier au lieu de l'empiler. */
+  const fiche = new FicheBorne();
+  fiche.carte = carte;
+  conteneur.appendChild(fiche);
+  poi.fiche = fiche;
+  panneau.fiche = fiche;
+
+  /* LE BANDEAU DE SUIVI — un seul, posé au conteneur de la carte. Il occupe le
+     bas de l'écran pendant le trajet : c'est la zone qu'on regarde le moins
+     longtemps, donc celle qui convient à trois lignes qu'on lit d'un coup. */
+  const guidage = new BandeauGuidage();
+  guidage.carte = carte;
+  conteneur.appendChild(guidage);
+  panneau.guidage = guidage;
 
   /* LE VÉHICULE ÉLECTRIQUE — profil et rayon d'action. Tout reste local :
      batterie, santé, charge, relevés d'autonomie ne sortent jamais du
@@ -139,16 +176,27 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   installerPanneaux(document);
   appliquerSombre(selecteur.options);
   sombre.addEventListener('change', () => appliquerSombre(selecteur.options));
-  carte.addControl(new GeolocateControl({
+  /* LA POSITION GPS EST DIFFUSÉE AUX PANNEAUX QUI EN ONT BESOIN. Les anneaux
+     d'autonomie suivaient jusqu'ici le CENTRE DE LA CARTE : dès qu'on faisait
+     glisser la carte, le rayon d'action se déplaçait avec elle, ce qui n'a
+     aucun sens — il entoure la voiture, pas le regard. Signalé par Armelin
+     capture à l'appui. */
+  const geoloc = new GeolocateControl({
     positionOptions: { enableHighAccuracy: true },
     trackUserLocation: true,
-  }), 'top-right');
+  });
+  geoloc.on('geolocate', (e: unknown) => {
+    const p = (e as { coords?: { longitude?: number; latitude?: number } }).coords;
+    if (typeof p?.longitude === 'number' && typeof p?.latitude === 'number') {
+      vehicule.position = { lon: p.longitude, lat: p.latitude };
+    }
+  });
+  carte.addControl(geoloc, 'bottom-right');
 
-  /* LE MENU EST POSÉ EN DERNIER dans la colonne de droite, et ce n'est pas un
-     détail d'ordre : son panneau s'ouvre SOUS son bouton. Placé avant, il
-     recouvrait le bouton « Me localiser » — mesuré à la capture, une
-     fonctionnalité rendue inatteignable par une décoration. En dernier, il ne
-     couvre que la carte. */
+  /* LE MENU EST SEUL EN HAUT À DROITE. Les commandes de vue (zoom, boussole,
+     géolocalisation) sont descendues en bas de la même colonne : son panneau
+     n'a donc plus rien à recouvrir, et le coin haut-droit ne porte qu'une
+     seule chose. */
   carte.addControl({ onAdd: () => porteMenu, onRemove: () => porteMenu.remove() }, 'top-right');
   carte.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
 

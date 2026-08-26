@@ -17,9 +17,19 @@ test.beforeEach(async ({ page }) => {
 
 /* DEUX POINTS D'ENTRÉE, PAS SIX. À gauche ce qui concerne le TRAJET ; en haut
    à droite, derrière un menu, ce qui concerne les RÉGLAGES. Six pastilles de
-   même poids ne hiérarchisaient rien et débordaient de l'écran. */
-const RAIL = ['Itinéraire', 'Véhicule'] as const;
-const RANGES_DANS_LE_MENU = ['.fonds', '.poi', '.trafic', '.transports', '.favoris'] as const;
+   même poids ne hiérarchisaient rien et débordaient de l'écran.
+
+   LA FRONTIÈRE A BOUGÉ LE 26/08/2026, sur le retour d'Armelin : « la recherche
+   de point de charge devrait être dans le menu de gauche », et « jongler entre
+   le menu de gauche et celui de droite nuit à l'ergonomie ». Le volet des
+   bornes et services est donc passé à gauche — avec les stations-service et
+   les parkings, qui sont comme elles des endroits où l'on s'arrête EN ROUTE.
+   Chercher où recharger n'est pas régler l'affichage de la carte.
+
+   Le menu de droite garde ce qui répond vraiment à « que voir sur la carte » :
+   le fond, le trafic, les transports — et « mes lieux ». */
+const RAIL = ['Itinéraire', 'Véhicule', 'Recharge et services'] as const;
+const RANGES_DANS_LE_MENU = ['.fonds', '.trafic', '.transports', '.favoris'] as const;
 
 const entree = (page: Page, nom: string): Locator =>
   page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: nom }).first();
@@ -71,17 +81,44 @@ test('le menu range les couches, les lieux et l’affichage', async ({ page }) =
   }
 });
 
-test('le menu ouvert ne recouvre AUCUN contrôle de la carte', async ({ page }) => {
+test('la recharge est à GAUCHE, avec le trajet — jamais dans le menu', async ({ page }) => {
+  /* CE TEST EXISTE POUR EMPÊCHER UN RETOUR EN ARRIÈRE. Le va-et-vient entre
+     les deux côtés de l'écran était le reproche, et il se réinstallerait sans
+     bruit le jour où quelqu'un rangerait « les couches » ensemble par souci de
+     symétrie. La symétrie n'est pas le critère : l'intention l'est. */
   await ouvrirLaCarte(page);
+  await expect(page.locator('.maplibregl-ctrl-top-left .poi summary')).toBeVisible();
   await ouvrirMenu(page);
+  await expect(page.locator('.reglages-corps .poi'),
+    'la recherche de bornes est retournée dans le menu de droite').toHaveCount(0);
+});
 
+test('le haut-droit ne porte QUE le menu', async ({ page }) => {
+  /* Mêler « où je regarde » (zoom, boussole, localisation) et « ce que
+     j'affiche » (couches, lieux, fond) dans une même colonne obligeait l'œil à
+     trier. Les commandes de vue sont descendues en bas de la même colonne. */
+  await ouvrirLaCarte(page);
+  await expect(page.locator('.maplibregl-ctrl-top-right .maplibregl-ctrl'),
+    'un coin qui se remplit redevient un fouillis').toHaveCount(1);
+  await expect(page.locator('.maplibregl-ctrl-top-right .reglages')).toBeVisible();
+
+  // Et les commandes de vue sont bien en bas, atteignables.
+  await expect(page.getByRole('button', { name: 'Zoomer', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Me localiser' })).toBeVisible();
+});
+
+test('le menu ouvert ne recouvre AUCUN contrôle de la carte', async ({ page }) => {
   /* LE DÉFAUT EXACT QU'UNE CAPTURE A RÉVÉLÉ : posé avant la géolocalisation
      dans la colonne, le panneau recouvrait « Me localiser » — une
      fonctionnalité rendue inatteignable par une décoration. */
+  await ouvrirLaCarte(page);
+  await ouvrirMenu(page);
+
   const panneau = await boite(page.locator('.reglages-corps'));
-  const controles = page.locator('.maplibregl-ctrl-top-right button');
+  const controles = page.locator(
+    '.maplibregl-ctrl-top-right button, .maplibregl-ctrl-bottom-right button');
   const nombre = await controles.count();
-  expect(nombre, 'aucun contrôle à droite — la vérification serait vide').toBeGreaterThan(0);
+  expect(nombre, 'aucun contrôle — la vérification serait vide').toBeGreaterThan(0);
 
   for (let i = 0; i < nombre; i++) {
     const bouton = controles.nth(i);

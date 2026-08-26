@@ -4,7 +4,9 @@
 //
 // LE SERVICE LE PLUS UTILE EST PARFOIS DE DIRE NON, TÔT, AVEC LE MOTIF.
 import { describe, expect, test } from 'vitest';
-import { planifierArrets, type BorneCandidate, type OptionsPlan } from '../src/lib/arrets';
+import {
+  planifierArrets, cleBorne, type BorneCandidate, type OptionsPlan,
+} from '../src/lib/arrets';
 
 /** La VF8 d'Armelin, relevés réels : 82,44 kWh utilisables, 29,4 kWh/100 km
  *  sur autoroute — soit 280 km à pleine charge. */
@@ -15,7 +17,9 @@ const VF8: OptionsPlan['vehicule'] = {
 };
 
 const borne = (km: number, puissance: number, nom = `Borne ${km}`): BorneCandidate =>
-  ({ nom, avancementM: km * 1000, puissanceKw: puissance, ecartM: 200, lon: 0, lat: 0 });
+  // La longitude vaut le kilométrage : deux bornes distinctes ont ainsi deux
+  // clés distinctes, comme dans la vraie vie.
+  ({ nom, avancementM: km * 1000, puissanceKw: puissance, ecartM: 200, lon: km, lat: 0 });
 
 const plan = (o: Partial<OptionsPlan> & { distanceM: number; bornes: BorneCandidate[] }) =>
   planifierArrets({ vehicule: VF8, socDepart: 100, socArrivee: 10, reserve: 10, ...o });
@@ -159,5 +163,131 @@ describe('le choix de la borne privilégie les arrêts UTILES', () => {
     // plus que les dix kilomètres gagnés.
     const r = plan({ distanceM: 500_000, bornes: [borne(240, 150), borne(250, 22)] });
     expect(r.arrets[0]!.borne.nom).toBe('Borne 240');
+  });
+});
+
+
+/* CE QUE L'USAGER IMPOSE AU PLANIFICATEUR — la demande d'Armelin du
+   25/08/2026 : « des + et des - pour choisir moi-même les arrêts ». Un
+   planificateur qui décide seul est un planificateur qu'on subit. */
+describe('l’usager commande : arrêts imposés et bornes écartées', () => {
+  test('une borne écartée n’est jamais retenue', () => {
+    const rapide = borne(250, 350, 'Rapide');
+    const lente = borne(240, 50, 'Lente');
+    const r = plan({
+      distanceM: 450_000,
+      bornes: [lente, rapide],
+      ecartees: [cleBorne(rapide)],
+    });
+    expect(r.faisable).toBe(true);
+    expect(r.arrets.map((a) => a.borne.nom)).toEqual(['Lente']);
+  });
+
+  test('écarter TOUT ce qui est utilisable fait échouer le plan, avec le motif', () => {
+    const seule = borne(250, 150);
+    const r = plan({
+      distanceM: 450_000, bornes: [seule], ecartees: [cleBorne(seule)],
+    });
+    expect(r.faisable).toBe(false);
+    expect(r.motif).toMatch(/aucune borne utilisable/i);
+  });
+
+  test('un arrêt imposé est pris même si le modèle préférait un autre', () => {
+    /* Sans consigne, le planificateur choisit la borne rapide et lointaine :
+       c'est tout l'intérêt de son score. L'usager, lui, veut déjeuner à la
+       première — et il a des raisons que le modèle n'a pas. */
+    const tot = borne(120, 50, 'Le restaurant');
+    const r = plan({
+      distanceM: 450_000,
+      bornes: [tot, borne(250, 350, 'La rapide')],
+      imposees: [cleBorne(tot)],
+    });
+    expect(r.faisable).toBe(true);
+    expect(r.arrets[0]?.borne.nom).toBe('Le restaurant');
+  });
+
+  test('sans la consigne, le même trajet choisit AUTREMENT', () => {
+    // Le contraste fait la démonstration : sans le test jumeau ci-dessus, on
+    // ne saurait pas si la consigne a changé quoi que ce soit.
+    const r = plan({
+      distanceM: 450_000,
+      bornes: [borne(120, 50, 'Le restaurant'), borne(250, 350, 'La rapide')],
+    });
+    expect(r.arrets[0]?.borne.nom).toBe('La rapide');
+  });
+
+  /* AUCUNE BORNE NE PEUT DÉPASSER L'ARRÊT IMPOSÉ, et l'invariant qui le
+     garantit mérite d'être écrit : dès que l'arrêt imposé est À PORTÉE, il est
+     pris SANS EXAMEN des autres. Une borne plus loin et plus puissante ne peut
+     donc pas se glisser devant lui. C'est ce test, et non une clause dans le
+     code, qui tient cette propriété — la clause correspondante aurait été du
+     code mort (voir le commentaire dans `planifierArrets`). */
+  test('une borne au-delà, même bien meilleure, ne passe pas devant l’arrêt imposé', () => {
+    const impose = borne(200, 50, 'Imposée');
+    const r = plan({
+      distanceM: 400_000,
+      bornes: [borne(240, 350, 'Au-delà, et six fois plus rapide'), impose],
+      imposees: [cleBorne(impose)],
+    });
+    expect(r.faisable).toBe(true);
+    expect(r.arrets[0]?.borne.nom).toBe('Imposée');
+  });
+
+  /* ON NE CHARGE PAS POUR LA DESTINATION QUAND UN ARRÊT EST IMPOSÉ TRENTE
+     KILOMÈTRES PLUS LOIN : ce serait remplir une batterie qu'on s'apprête à
+     remplir de nouveau, et faire perdre des dizaines de minutes. */
+  test('on ne charge que ce qu’il faut pour rallier l’arrêt imposé suivant', () => {
+    const proche = borne(130, 150, 'Proche');
+    const r = plan({
+      distanceM: 500_000,
+      bornes: [borne(100, 150, 'Première'), proche, borne(350, 150, 'Ensuite')],
+      imposees: [cleBorne(proche)],
+      socDepart: 50,
+    });
+    expect(r.faisable).toBe(true);
+    const premier = r.arrets[0]!;
+    expect(premier.borne.nom).toBe('Première');
+    // Trente kilomètres à parcourir : inutile de dépasser la moitié de la
+    // batterie. Sans la règle, ce chiffre montait au plafond de confort.
+    expect(premier.socDepart).toBeLessThan(50);
+  });
+
+  test('un arrêt imposé hors de portée est refusé en le NOMMANT', () => {
+    const trop = borne(600, 150, 'Trop loin');
+    const r = plan({
+      distanceM: 700_000, bornes: [trop], imposees: [cleBorne(trop)],
+    });
+    expect(r.faisable).toBe(false);
+    expect(r.motif).toContain('Trop loin');
+    expect(r.motif).toMatch(/hors de portée/i);
+  });
+
+  /* UN ARRÊT IMPOSÉ SUR UN TRAJET QU'ON POUVAIT FAIRE D'UNE TRAITE reste un
+     arrêt : l'usager a demandé à s'y arrêter, pas demandé un conseil. */
+  test('un arrêt imposé s’impose même quand aucun arrêt n’était nécessaire', () => {
+    const halte = borne(100, 150, 'La halte');
+    const r = plan({
+      distanceM: 200_000, bornes: [halte], imposees: [cleBorne(halte)],
+    });
+    expect(r.faisable).toBe(true);
+    expect(r.arrets.map((a) => a.borne.nom)).toEqual(['La halte']);
+    // Et il est inscrit pour ce qu'il est : une pause, pas une charge.
+    expect(r.arrets[0]?.energieKwh).toBe(0);
+    expect(r.arrets[0]?.dureeMin).toBe(0);
+    expect(r.dureeRechargeMin).toBe(0);
+  });
+});
+
+describe('cleBorne', () => {
+  test('l’identifiant d’itinérance prime, quand il existe', () => {
+    expect(cleBorne({ ...borne(10, 50), id: 'FRXXXP1' })).toBe('FRXXXP1');
+  });
+
+  /* LE NOM NE PEUT PAS SERVIR DE CLÉ : « Lidl » désigne des centaines de
+     stations, et en imposer une les imposerait toutes. */
+  test('à défaut, la position — jamais le nom', () => {
+    const a = cleBorne({ ...borne(10, 50), nom: 'Lidl' });
+    const b = cleBorne({ ...borne(20, 50), nom: 'Lidl' });
+    expect(a).not.toBe(b);
   });
 });

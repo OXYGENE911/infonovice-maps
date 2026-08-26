@@ -193,6 +193,21 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       Repli soigné : sans WebGL, ou si la texture est refusée, l'image à plat
       reste affichée. Et la navigation se fait aussi AUX FLÈCHES.
 
+- [ ] `<main id="carte" role="application">` — relevé le 26/08/2026 par
+      l'audit « arbre d'accessibilité » de Lighthouse. `role="application"`
+      est le bon choix pour une carte : il demande au lecteur d'écran de
+      laisser passer les touches, sans quoi les flèches déplaceraient le
+      curseur de lecture au lieu de la carte. Mais posé sur `<main>`, il
+      ÉCRASE le point de repère principal de la page : un lecteur d'écran ne
+      trouve plus « le contenu principal ».
+      LE REMÈDE EST CONNU — garder `<main>` comme repère et poser
+      `role="application"` sur un conteneur interne — mais il déplace le
+      nœud que MapLibre reçoit et que trente parcours E2E désignent par
+      `#carte`. À faire dans sa propre PR, pas en fin de nuit.
+      Sans conséquence sur la note : les trois axes exigés par le projet
+      restent à 100 (l'audit appartient à la catégorie « navigation
+      agentique », hors périmètre).
+
 ## Ergonomie
 - [x] PR #21bis — Trois zones : rail à gauche, réglages d'affichage en bas à
       droite, liens légaux en bas à gauche. Les panneaux poussent le rail au
@@ -244,6 +259,27 @@ verdict adossé à un appel réel daté.
       et l'erreur tomberait en arrivant à 8 % de batterie. Détail chiffré
       dans docs/apis.md.
 
+- [x] PR #32 — LES ONZE RETOURS DU TERRAIN (26/08/2026). Armelin a testé la
+      production le 25/08 : onze remarques, captures à l'appui, toutes
+      traitées. Le détail vit dans docs/CHANGELOG.md ; ce qui mérite d'être
+      retenu ici est ce qui a changé de STRUCTURE :
+      · L'INDEX NATIONAL remplace la limite de zoom 12 pour les bornes. Les
+        portails Opendatasoft plafonnent à 100 enregistrements : demander la
+        France entière rendait cent bornes au hasard. L'export agrégé rend
+        14 133 stations de 50 kW et plus en 709 Ko, gardés en local. Il sert
+        aussi le planificateur, qui travaillait jusque-là sur un échantillon
+        sans savoir qu'il en était un.
+      · LA FRONTIÈRE GAUCHE/DROITE A BOUGÉ : chercher une borne n'est pas
+        régler l'affichage de la carte, c'est préparer un trajet. Le volet
+        « Recharge et services » rejoint le rail de gauche.
+      · LE SUIVI D'ITINÉRAIRE existe, et refuse de s'appeler navigation.
+      · SIX DÉFAUTS SILENCIEUX levés en chemin, listés au CHANGELOG.
+
+- [~] PR #22bis AMENDÉE le 26/08 — le filtre par réseau n'est plus borné à la
+      vue. La facette du portail ne proposait que ce que la carte montrait
+      déjà, et changeait de contenu à chaque déplacement. Il se calcule
+      désormais sur l'index national.
+
 ÉCARTÉS AVEC PREUVE, voir docs/planificateur-ev.md :
 - Comptes et base de données — heurtent les contraintes 1 et 4. Décision
   d'Armelin en attente.
@@ -252,6 +288,17 @@ verdict adossé à un appel réel daté.
 - Logos des réseaux — marques déposées, et « aucun binaire opaque au dépôt ».
 - Lecture OBD — Web Bluetooth absent d'iOS ; c'est le travail de l'app native
   de la phase 2.
+- Données du véhicule EN DIRECT SANS DONGLE — la question d'Armelin du 26/08,
+  cherchée et tranchée le jour même (docs/apis.md). ABRP passe par les API
+  CONSTRUCTEUR, via des agrégateurs (Enode, Tronity) ou l'API Tesla : le
+  propriétaire autorise l'application sur son compte constructeur. Hors de
+  portée ici pour trois raisons, dans l'ordre de leur poids : l'authentification
+  exige un SECRET CLIENT, donc un serveur — le même obstacle que DATAtourisme ;
+  la production n'est pas gratuite ; et la position et l'état de charge
+  sortiraient du navigateur, ce que la page « Vie privée » exclut aujourd'hui
+  sans nuance. Faisable AVEC le backend du niveau premium, et seulement au prix
+  d'une décision explicite ET d'une mention publique — comme la dérogation
+  Open-Meteo.
 
 ## Premium, rallyes AFUVE et cortèges — CADRAGE, rien d'engagé
 Cadrage complet : docs/premium-et-evenements.md (25/08/2026). Trois projets

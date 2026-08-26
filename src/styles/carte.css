@@ -285,8 +285,17 @@ etapes-itineraire { display: grid; gap: 7px; }
 }
 .poi summary::-webkit-details-marker { display: none; }
 .poi summary:focus-visible { outline: none; box-shadow: var(--focus); }
+/* UNE LARGEUR PROPRE, ET NON CELLE DE SON CONTENANT.
+   Ce volet vivait dans le menu de droite, dont la boîte est large de 330 px :
+   il n'avait donc jamais eu besoin de se borner lui-même. Passé sur le rail de
+   gauche (25/08/2026), plus rien ne le retenait — il s'étalait jusqu'au MILIEU
+   de l'écran, et un clic visant une borne au centre de la carte tombait sur un
+   paragraphe du volet. Mesuré à `elementFromPoint`, pas à l'œil : le fond
+   translucide laissait croire que la carte était dessous.
+   La borne haute reprend celle du planificateur et du véhicule, pour que les
+   trois volets du rail aient la même assise. */
 .poi fieldset {
-  position: static; margin-top: 8px; min-width: 210px;
+  position: static; margin-top: 8px; min-width: 210px; max-width: 320px;
   padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
   background: var(--fond); box-shadow: var(--ombre-m);
   display: grid; gap: 9px;
@@ -853,7 +862,17 @@ etat-connexion { display: contents; }
   background: var(--fond);
 }
 .iti-recharge-reglages select:focus-visible { outline: none; box-shadow: var(--focus); }
-.poi-reseaux { display: grid; gap: 5px; max-height: 168px; overflow-y: auto; }
+/* JAMAIS DE TROISIÈME ZONE DE DÉFILEMENT.
+   Cette liste portait sa propre hauteur bornée. Empilée sous le rail — qui
+   défile — et sous le corps du volet — qui défile aussi — elle formait un
+   TROISIÈME niveau, et une case cochable devenait INATTEIGNABLE : son
+   rectangle existait, `elementFromPoint` rendait l'ancêtre, et le clic tombait
+   à côté. Mesuré à la sonde le 26/08/2026, après le passage du volet à gauche.
+
+   La règle tient en une phrase : au plus DEUX zones imbriquées — le rail, qui
+   ne sert que de filet, et le corps du volet qu'on lit. Toute liste interne se
+   contente de la hauteur qu'elle a. */
+.poi-reseaux { display: grid; gap: 5px; }
 .poi-reseaux label { display: flex; align-items: center; gap: 8px;
   font: 400 12.5px var(--police); color: var(--texte-1); cursor: pointer; }
 .poi-reseaux input:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
@@ -874,3 +893,356 @@ etat-connexion { display: contents; }
    Lighthouse. Un soulignement suffit, et il ne coûte rien à la lisibilité
    d'une mention déjà discrète. */
 .maplibregl-ctrl-attrib a { text-decoration: underline; }
+.fav-repere-definir {
+  padding: 5px 10px; border-radius: 8px; border: 1px solid var(--accent);
+  background: var(--fond); cursor: pointer;
+  font: 600 12px var(--police); color: var(--accent); white-space: nowrap;
+}
+.fav-repere-definir:disabled { opacity: .6; cursor: default; }
+.fav-repere-definir:focus-visible { outline: none; box-shadow: var(--focus); }
+.veh-bilan-ancre { margin: 4px 0 0; font: 400 11.5px var(--police);
+  color: var(--texte-3); line-height: 1.45; }
+
+/* ==========================================================================
+   LE CARTOUCHE DE DÉTAIL D'UNE BORNE (<fiche-borne>)
+   --------------------------------------------------------------------------
+   Armelin, le 25/08/2026, ABRP en référence : « le détail s'affiche de façon
+   claire et espacée dans des cartouches aux couleurs distinguées ». D'où trois
+   partis pris :
+
+   1. UNE CARTE, PAS UNE BULLE. Une popup ancrée à la punaise tient dans deux
+      cent soixante pixels, se replace à chaque geste, et masque précisément ce
+      qu'on vient de désigner. Six rubriques demandent une surface stable.
+   2. CHAQUE RUBRIQUE EST UN BLOC À FOND PROPRE. Les séparateurs fins que
+      l'application emploie ailleurs conviennent à des listes courtes ; ici, ils
+      laissaient l'œil glisser d'un sujet à l'autre sans marche.
+   3. ELLE NE MONTE PAS PLUS HAUT QUE NÉCESSAIRE et défile en interne : sur
+      téléphone, elle occupe le bas de l'écran et laisse la carte visible —
+      choisir une borne suppose de voir où elle est.
+   ========================================================================== */
+fiche-borne {
+  position: absolute; z-index: 5;
+  left: 12px; bottom: calc(var(--attribution-sommet, 26px) + 12px);
+  width: min(360px, calc(100vw - 24px));
+  /* La hauteur cède devant la carte : mieux vaut un cartouche qui défile
+     qu'un cartouche qui la recouvre entièrement. */
+  max-height: min(70vh, 620px);
+  display: block;
+}
+fiche-borne[hidden] { display: none; }
+
+.fb {
+  display: flex; flex-direction: column; max-height: inherit;
+  background: var(--fond); border: 1px solid var(--bord-2);
+  border-radius: var(--rayon); box-shadow: var(--ombre-m); overflow: hidden;
+}
+.fb:focus-visible { outline: none; box-shadow: var(--ombre-m), var(--focus); }
+
+.fb-tete {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 12px 12px 10px; border-bottom: 1px solid var(--bord);
+  background: var(--fond-doux); flex: 0 0 auto;
+}
+.fb-titre {
+  margin: 0; flex: 1; font: 700 15px var(--police); color: var(--texte-1);
+  line-height: 1.3;
+}
+.fb-fermer {
+  flex: 0 0 auto; width: 28px; height: 28px; border: none; border-radius: 8px;
+  background: transparent; cursor: pointer; color: var(--texte-2);
+  font: 400 15px var(--police);
+}
+.fb-fermer:hover { background: var(--bord); color: var(--texte-1); }
+.fb-fermer:focus-visible { outline: none; box-shadow: var(--focus); }
+
+.fb-corps {
+  padding: 10px; display: grid; gap: 10px;
+  overflow-y: auto; overscroll-behavior: contain;
+}
+
+/* LE BANDEAU D'ACCÈS. Sa couleur aide, mais c'est son TEXTE qui porte
+   l'information : « Accès réservé — vous ne pourrez pas y recharger
+   librement » se lit sans distinguer l'orange du vert (WCAG 1.4.1). */
+.fb-acces {
+  margin: 0; padding: 9px 11px; border-radius: 10px;
+  font: 600 12.5px var(--police); line-height: 1.4;
+}
+.fb-acces-libre { background: #E8F6EE; color: #14663F; }
+.fb-acces-reserve { background: #FDF0DC; color: #7A4A05; }
+.fb-acces-inconnu { background: var(--gris-100); color: var(--texte-2); }
+
+.fb-bloc {
+  padding: 10px 11px; border-radius: 10px;
+  background: var(--fond-doux); border: 1px solid var(--bord);
+}
+.fb-bloc h3 {
+  margin: 0 0 7px; font: 700 11px var(--police); letter-spacing: .05em;
+  text-transform: uppercase; color: var(--texte-3);
+}
+.fb-ligne {
+  margin: 0 0 5px; display: flex; gap: 10px; align-items: baseline;
+  font: 400 12.5px var(--police); line-height: 1.45;
+}
+.fb-ligne:last-child { margin-bottom: 0; }
+.fb-intitule { flex: 0 0 34%; color: var(--texte-3); }
+.fb-valeur { flex: 1; color: var(--texte-1); }
+.fb-tel { color: var(--accent); text-decoration: underline; }
+.fb-tel:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+
+/* LA COMPOSITION DE LA STATION. La pastille reprend la couleur et les éclairs
+   de la carte : le même objet doit se lire de la même façon aux deux endroits. */
+.fb-points ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.fb-points li { display: flex; align-items: center; gap: 8px; }
+.fb-pastille {
+  flex: 0 0 auto; min-width: 34px; padding: 3px 6px; border-radius: 999px;
+  text-align: center; font: 400 10px var(--police); color: var(--blanc);
+  background: var(--gris-400);
+}
+.fb-pdc-titre { font: 700 12.5px var(--police); color: var(--texte-1); }
+.fb-pdc-prises { font: 400 12px var(--police); color: var(--texte-2); }
+
+.fb-tarif {
+  margin: 0; padding: 7px 9px; border-radius: 8px; background: var(--fond);
+  border: 1px solid var(--bord-2);
+  font: 400 12.5px var(--police); color: var(--texte-1); line-height: 1.45;
+  /* Un tarif est parfois une adresse web sans espace : elle ne doit pas
+     élargir le cartouche au-delà de l'écran. */
+  overflow-wrap: anywhere;
+}
+.fb-nuance {
+  margin: 6px 0 0; font: 400 11.5px var(--police); color: var(--texte-3);
+  line-height: 1.45;
+}
+.fb-bloc h3 + .fb-nuance { margin-top: 0; }
+
+.fb-commodites {
+  width: 100%; padding: 7px 10px; border-radius: 8px;
+  border: 1px solid var(--accent); background: var(--fond); cursor: pointer;
+  font: 600 12px var(--police); color: var(--accent);
+}
+.fb-commodites:disabled { opacity: .55; cursor: default; }
+.fb-commodites:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* LES DISTANCES SONT ALIGNÉES À DROITE, en colonne : « 60 m » et « 400 m »
+   doivent se comparer d'un coup d'œil, sans lire les noms. */
+.fb-liste-commodites {
+  margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px;
+}
+.fb-liste-commodites li {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 8px;
+  align-items: baseline; font: 400 12px var(--police);
+}
+.fb-commodite-type { color: var(--texte-3); }
+.fb-commodite-nom { color: var(--texte-1); font-weight: 600; }
+.fb-commodite-nom:empty { display: none; }
+.fb-commodite-distance {
+  color: var(--texte-2); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+.fb-attente, .fb-vide, .fb-erreur {
+  margin: 0; padding: 10px 2px; font: 400 12.5px var(--police); line-height: 1.5;
+}
+.fb-attente { color: var(--texte-2); }
+.fb-vide { color: var(--texte-2); }
+.fb-erreur { color: #8A2B1F; }
+.fb-source .fb-intitule { flex-basis: 42%; }
+
+/* Sur téléphone, le cartouche devient un bandeau bas : il laisse voir la
+   carte au-dessus, ce qu'une carte flottante centrée ne ferait pas. */
+@media (max-width: 640px) {
+  fiche-borne {
+    left: 8px; right: 8px; width: auto;
+    bottom: calc(var(--attribution-sommet, 26px) + 8px);
+    max-height: 62vh;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .fb-acces-libre { background: #143529; color: #8EE0B4; }
+  .fb-acces-reserve { background: #3A2A0E; color: #F2C879; }
+  .fb-erreur { color: #F2A79A; }
+}
+
+/* ==========================================================================
+   LE PLAN DE RECHARGE — réseaux préférés, et la main sur les arrêts
+   --------------------------------------------------------------------------
+   « Des + et des − pour choisir moi-même les arrêts » (Armelin, 25/08/2026).
+   Les deux boutons sont carrés, de même taille, et portent un `aria-pressed` :
+   leur état ne se devine pas à la couleur seule.
+   ========================================================================== */
+.recharge-reseau { font: 600 11.5px var(--police); color: var(--texte-2); }
+
+.recharge-reseaux, .recharge-toutes { margin-top: 10px; }
+.recharge-reseaux > summary, .recharge-toutes > summary {
+  cursor: pointer; font: 600 12px var(--police); color: var(--texte-2);
+  padding: 4px 0;
+}
+.recharge-reseaux > summary:focus-visible,
+.recharge-toutes > summary:focus-visible {
+  outline: none; box-shadow: var(--focus); border-radius: 6px;
+}
+.recharge-reseaux-corps { display: grid; gap: 4px; padding: 4px 0 2px; }
+.recharge-reseaux-corps label {
+  display: flex; align-items: center; gap: 6px;
+  font: 400 12px var(--police); color: var(--texte-1);
+}
+.recharge-note { margin: 4px 0 0; font: 400 11px var(--police); color: var(--texte-3); }
+
+/* LA LISTE COMPLÈTE PEUT COMPTER PLUSIEURS CENTAINES DE BORNES sur un
+   Paris-Marseille : elle défile dans sa propre boîte plutôt que d'allonger
+   sans fin le volet du planificateur. */
+/* Même règle qu'aux réseaux ci-dessus : pas de troisième défilement. Cette
+   liste peut compter plusieurs centaines de bornes sur un Paris-Marseille —
+   elle allonge donc le corps du volet, qui défile, et c'est le bon endroit. */
+.recharge-toutes-liste {
+  margin: 6px 0 0; padding-left: 20px; display: grid; gap: 8px;
+}
+.recharge-toutes-liste li {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 4px 6px;
+  align-items: center;
+  padding: 5px 6px; border-radius: 8px; border: 1px solid transparent;
+}
+.recharge-toutes-liste li > .recharge-aller { grid-column: 1; }
+.recharge-toutes-liste li > .recharge-detail { grid-column: 1 / -1; }
+.recharge-toutes-liste li.est-retenue { border-color: var(--vert); background: #F2FAF6; }
+.recharge-toutes-liste li.est-imposee { border-color: var(--accent); background: var(--bleu-50); }
+.recharge-toutes-liste li.est-ecartee { opacity: .55; }
+
+.recharge-plus, .recharge-retirer {
+  width: 28px; height: 28px; flex: 0 0 auto;
+  border: 1px solid var(--bord-2); border-radius: 8px; background: var(--fond);
+  cursor: pointer; font: 700 15px var(--police); color: var(--texte-2);
+  line-height: 1;
+}
+.recharge-plus:hover, .recharge-retirer:hover { border-color: var(--accent); color: var(--accent); }
+.recharge-plus:focus-visible, .recharge-retirer:focus-visible {
+  outline: none; box-shadow: var(--focus);
+}
+.recharge-plus[aria-pressed="true"] {
+  background: var(--accent); border-color: var(--accent); color: var(--blanc);
+}
+.recharge-retirer[aria-pressed="true"] {
+  background: var(--gris-400); border-color: var(--gris-400); color: var(--blanc);
+}
+
+@media (prefers-color-scheme: dark) {
+  .recharge-toutes-liste li.est-retenue { background: #123227; }
+  .recharge-toutes-liste li.est-imposee { background: #0F2740; }
+}
+
+/* LE CATALOGUE DE VÉHICULES. Il vient EN TÊTE du formulaire parce qu'il le
+   remplit : le placer après les champs qu'il écrase se lirait comme un
+   réglage avancé, alors que c'est le premier geste à faire. */
+.veh-ligne-catalogue select {
+  width: 100%; padding: 6px 8px; border-radius: 8px;
+  border: 1px solid var(--bord-2); background: var(--fond);
+  font: 400 12.5px var(--police); color: var(--texte-1);
+}
+.veh-ligne-catalogue select:focus-visible { outline: none; box-shadow: var(--focus); }
+.veh-note-catalogue {
+  margin: 4px 0 10px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--bord);
+}
+
+/* ==========================================================================
+   LE BANDEAU DE SUIVI (<bandeau-guidage>)
+   --------------------------------------------------------------------------
+   Il se lit EN ROULANT, c'est-à-dire par regards d'une demi-seconde. Trois
+   conséquences, et aucune n'est décorative :
+
+   1. L'INSTRUCTION EST GRANDE, le reste petit. Une hiérarchie molle oblige à
+      chercher la ligne utile ; une hiérarchie franche la donne d'un coup.
+   2. LE BANDEAU EST EN BAS. C'est la zone qu'on regarde le moins longtemps —
+      et celle qu'un support de téléphone place le plus près du pare-brise.
+   3. IL NE COUVRE PAS TOUTE LA CARTE. Voir la route qu'on suit est la moitié
+      de l'information ; un bandeau plein écran l'effacerait.
+   ========================================================================== */
+bandeau-guidage {
+  position: absolute; z-index: 6;
+  left: 12px; right: 12px;
+  bottom: calc(var(--attribution-sommet, 26px) + 12px);
+  display: block; pointer-events: none;
+}
+bandeau-guidage[hidden] { display: none; }
+
+.bg {
+  pointer-events: auto;
+  max-width: 520px; margin: 0 auto;
+  padding: 12px 14px;
+  background: var(--fond); border: 1px solid var(--bord-2);
+  border-radius: var(--rayon); box-shadow: var(--ombre-m);
+}
+
+.bg-manoeuvre {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding-bottom: 8px; border-bottom: 1px solid var(--bord);
+}
+.bg-instruction {
+  margin: 0; flex: 1 1 60%;
+  font: 700 17px var(--police); color: var(--texte-1); line-height: 1.25;
+}
+.bg-distance {
+  margin: 0; font: 700 15px var(--police); color: var(--accent);
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+
+.bg-restant {
+  margin: 8px 0 0; font: 400 13px var(--police); color: var(--texte-2);
+  font-variant-numeric: tabular-nums;
+}
+.bg-arret {
+  margin: 4px 0 0; font: 600 12.5px var(--police); color: var(--vert);
+}
+.bg-arret:empty { display: none; }
+
+.bg-alerte {
+  margin: 8px 0 0; padding: 7px 9px; border-radius: 8px;
+  background: #FDF0DC; color: #7A4A05;
+  font: 600 12.5px var(--police); line-height: 1.4;
+}
+.bg-alerte[hidden] { display: none; }
+
+/* CE QUE LE SUIVI N'EST PAS, écrit sous ce qu'il est. Discret mais présent :
+   on ne découvre pas l'absence de recalcul à la sortie d'autoroute. */
+.bg-limite {
+  margin: 8px 0 0; font: 400 11px var(--police); color: var(--texte-3);
+  line-height: 1.4;
+}
+
+.bg-arreter {
+  margin-top: 10px; width: 100%; padding: 8px 12px;
+  border: 1px solid var(--bord-2); border-radius: 8px; background: var(--fond-doux);
+  cursor: pointer; font: 600 13px var(--police); color: var(--texte-1);
+}
+.bg-arreter:hover { border-color: var(--accent); color: var(--accent); }
+.bg-arreter:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* LE BOUTON « DÉMARRER » PREND TOUTE LA LARGEUR de la barre d'actions : c'est
+   le geste qu'on cherche après avoir calculé un trajet, pas un export GPX. */
+/* `.iti-actions .iti-demarrer` ET NON `.iti-demarrer` SEUL : la règle générique
+   `.iti-actions button`, plus haut, a une spécificité de 0-1-1 contre 0-1-0.
+   Un sélecteur de classe simple perdait donc contre elle malgré sa position
+   plus bas dans la feuille, et le bouton restait gris comme les autres — sans
+   la moindre erreur pour le signaler. */
+.iti-actions .iti-demarrer {
+  flex-basis: 100%; padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--accent); background: var(--accent);
+  cursor: pointer; font: 700 13px var(--police); color: var(--blanc);
+}
+.iti-actions .iti-demarrer:hover {
+  background: var(--accent-vif); border-color: var(--accent-vif);
+}
+.iti-actions .iti-demarrer:disabled { opacity: .6; cursor: default; }
+.iti-actions .iti-demarrer:focus-visible { outline: none; box-shadow: var(--focus); }
+.iti-actions .iti-demarrer[hidden] { display: none; }
+
+@media (prefers-color-scheme: dark) {
+  .bg-alerte { background: #3A2A0E; color: #F2C879; }
+}
+
+/* Sur téléphone, le bandeau colle aux bords : chaque pixel de carte compte. */
+@media (max-width: 640px) {
+  bandeau-guidage { left: 8px; right: 8px; }
+  .bg { padding: 10px 12px; }
+  .bg-instruction { font-size: 16px; }
+}

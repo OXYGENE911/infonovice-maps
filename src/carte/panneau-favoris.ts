@@ -9,7 +9,9 @@ import {
   listerFavoris, retirerFavori, exporterDonnees, importerDonnees,
   ErreurFavoris, ErreurStockage,
 } from '../lib/favoris';
-import { REPERES, lireRepere, effacerRepere } from '../lib/reperes';
+import { REPERES, lireRepere, effacerRepere, ecrireRepere } from '../lib/reperes';
+import { adresseInverse } from '../lib/adresse';
+import { formaterCoordonnees } from '../lib/coordonnees';
 import { telecharger } from '../lib/trace';
 
 export class PanneauFavoris extends HTMLElement {
@@ -109,9 +111,49 @@ export class PanneauFavoris extends HTMLElement {
         aller.textContent = `${libelle} — non défini`;
         aller.disabled = true;
         aller.setAttribute('aria-label',
-          `${libelle} non défini. Appuyez longuement sur la carte pour le définir.`);
+          `${libelle} non défini. Utilisez le bouton Définir, ou appuyez`
+          + ' longuement sur la carte.');
       }
       ligne.appendChild(aller);
+
+      /* UN BOUTON POUR LE DÉFINIR, ET PAS SEULEMENT L'APPUI LONG. Un repère
+         grisé sans moyen visible de le renseigner est une impasse : rien
+         n'indiquait qu'il fallait presser la carte. On le pose donc depuis le
+         CENTRE DE LA CARTE — ce qu'on regarde est ce qu'on désigne — et son
+         adresse est demandée à la BAN pour qu'il porte un nom lisible. */
+      if (!repere) {
+        const definir = document.createElement('button');
+        definir.type = 'button';
+        definir.className = 'fav-repere-definir';
+        definir.textContent = 'Définir ici';
+        definir.setAttribute('aria-label',
+          `Définir mon ${libelle.toLowerCase()} au centre de la carte`);
+        definir.addEventListener('click', () => {
+          const carte = this.#carte;
+          if (!carte) return;
+          definir.disabled = true;
+          definir.textContent = 'Recherche de l’adresse…';
+          const c = carte.getCenter();
+          const point = { lon: c.lng, lat: c.lat };
+          /* L'ADRESSE EST UN CONFORT, PAS UNE CONDITION : si la BAN ne répond
+             pas, le repère est enregistré quand même, sous ses coordonnées.
+             Perdre le lieu parce qu'un service tiers hésite serait absurde. */
+          adresseInverse(point)
+            .catch(() => null)
+            .then((a) => ecrireRepere(cle, point, a?.libelle
+              ?? formaterCoordonnees(point)))
+            .then(() => this.rafraichir())
+            .then(() => {
+              const etat = this.querySelector('.favoris-etat');
+              if (etat) etat.textContent = `${libelle} enregistré.`;
+            })
+            .catch(() => {
+              definir.disabled = false;
+              definir.textContent = 'Enregistrement impossible';
+            });
+        });
+        ligne.appendChild(definir);
+      }
 
       if (repere) {
         const oubli = document.createElement('button');
