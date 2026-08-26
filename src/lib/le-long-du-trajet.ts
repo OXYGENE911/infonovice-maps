@@ -14,6 +14,7 @@ import {
   chargerCarburants, chargerBornes,
   type Bbox, type PoiCarburant, type PoiBorne,
 } from './poi';
+import type { StationRapide } from './index-bornes';
 
 /** Plafond DUR d'appels par couche — la frugalité est une contrainte, pas un réglage. */
 export const MAX_TRONCONS = 6;
@@ -111,6 +112,35 @@ export function retenir<T extends { lon: number; lat: number }>(
     if (ecart <= rayonM) gardes.push({ poi, ecart, avancement });
   }
   return gardes.sort((a, b) => a.avancement - b.avancement);
+}
+
+/** Un point est-il dans l'une des boîtes ? Pré-filtre grossier, mais efficace. */
+const dansUneBoite = (p: { lon: number; lat: number }, boites: Bbox[]): boolean =>
+  boites.some((b) => p.lon >= b.ouest && p.lon <= b.est && p.lat >= b.sud && p.lat <= b.nord);
+
+/**
+ * Les stations de l'index national qui bordent un trajet — SANS AUCUN APPEL.
+ *
+ * POURQUOI CETTE VOIE REMPLACE LA PRÉCÉDENTE pour les bornes. Chercher par
+ * emprise coûtait six requêtes plafonnées à cent résultats chacune : sur un
+ * Paris-Marseille, le plafond mordait et le planificateur travaillait donc sur
+ * un échantillon dont il ignorait qu'il en était un. Il pouvait déclarer un
+ * trajet infaisable parce que la borne salvatrice était la cent-unième d'un
+ * tronçon. L'index, lui, est complet à partir de 50 kW — exactement le domaine
+ * qui intéresse un trajet — et tient en mémoire.
+ *
+ * LE PRÉ-FILTRE PAR BOÎTES N'EST PAS UNE OPTIMISATION GRATUITE. `retenir`
+ * projette chaque candidat sur CHAQUE segment du tracé : quatorze mille
+ * stations contre trois mille segments feraient quarante millions de calculs
+ * à chaque ouverture du volet. Les boîtes ramènent les candidats à quelques
+ * centaines avant ce travail.
+ */
+export function stationsDuTrajet(
+  stations: StationRapide[], trace: [number, number][], rayonM: number,
+): SurLeTrajet<StationRapide>[] {
+  const boites = tronconner(trace, rayonM);
+  if (boites.length === 0) return [];
+  return retenir(stations.filter((s) => dansUneBoite(s, boites)), trace, rayonM);
 }
 
 export type Categorie = 'carburants' | 'bornes';

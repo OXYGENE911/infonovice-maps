@@ -16,16 +16,35 @@ import { lirePreference, ecrirePreference } from '../lib/stockage';
 import { palierDe, libellePalier, PALIERS } from '../lib/puissance';
 import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import {
-  chargerCarburants, chargerBornes, chargerParkings, chargerReseaux, vueAChange,
+  chargerCarburants, chargerBornes, chargerParkings, vueAChange,
   type Reseau,
   PRISES, type ClePrise, type FiltresBornes,
   type Bbox,
 } from '../lib/poi';
+import {
+  indexNational, stationsDans, filtrerStations, reseauxNationaux,
+  ErreurIndex, SEUIL_RAPIDE, POIDS_ANNONCE, type StationRapide,
+} from '../lib/index-bornes';
+import type { FicheBorne } from './fiche-borne';
 
 export const PREF_POI = 'poi';
 /** Les filtres de bornes vivent à part : ils survivent au décochage de la couche. */
 export const PREF_FILTRES = 'poi-filtres-bornes';
+/* SOUS CE ZOOM, LES SERVICES PAR EMPRISE NE SONT PLUS INTERROGEABLES : les
+   portails Opendatasoft plafonnent à 100 enregistrements, et demander la
+   France entière rendrait cent points au hasard — un affichage qui ment sans
+   le dire. Carburants et parkings s'y arrêtent donc.
+
+   LES BORNES, ELLES, NE S'Y ARRÊTENT PLUS. Armelin, le 25/08 : « les points de
+   charge ne s'affichent qu'entre 0 et 1 km de zoom ». En dessous du seuil,
+   elles viennent désormais de l'INDEX NATIONAL (lib/index-bornes.ts) : les
+   14 133 stations de 50 kW et plus, chargées une fois et gardées hors ligne,
+   groupées en amas. C'est l'unique couche à franchir cette frontière, parce
+   qu'elle est l'unique à disposer d'un index. */
 const ZOOM_MIN = 12;
+
+/** Au-delà, MapLibre défait les amas : une punaise par station. */
+const ZOOM_AMAS_MAX = ZOOM_MIN - 1;
 
 type Couche = 'carburants' | 'bornes' | 'parkings';
 const COUCHES: Record<Couche, string> = {
@@ -57,6 +76,14 @@ export class PanneauPoi extends HTMLElement {
   #minuteur: ReturnType<typeof setTimeout> | undefined;
   #popup: Popup | null = null;
   #popupDe: Couche | null = null;
+  /** L'index national, une fois chargé. Vide tant qu'il ne l'est pas. */
+  #index: StationRapide[] = [];
+  /* LE CARTOUCHE DE DÉTAIL, partagé avec le planificateur (voir carte.ts).
+     Tant qu'il n'est pas posé, le clic sur une borne retombe sur la bulle
+     d'autrefois : le panneau doit rester utilisable seul, notamment en test. */
+  #fiche: FicheBorne | null = null;
+
+  set fiche(f: FicheBorne) { this.#fiche = f; }
 
   /* Posé UNE fois à l'assemblage, pour la vie de l'application : le panneau
      n'est jamais détruit, on ne s'encombre pas d'un désabonnement (décision
@@ -89,6 +116,19 @@ export class PanneauPoi extends HTMLElement {
       c.on('mouseenter', `poi-${couche}`, () => { c.getCanvas().style.cursor = 'pointer'; });
       c.on('mouseleave', `poi-${couche}`, () => { c.getCanvas().style.cursor = ''; });
     }
+    /* UN AMAS SE DÉPLIE AU CLIC. Sans cela, un nombre au milieu de la carte
+       serait un cul-de-sac : on voit qu'il y a 240 stations et on n'a aucun
+       moyen d'y accéder. Deux niveaux de zoom suffisent à défaire un amas
+       sans dérouter — un saut direct au zoom 12 perdrait le contexte. */
+    c.on('click', 'poi-bornes-amas', (e) => {
+      const natif = e.originalEvent as Event & { __clicPris?: boolean };
+      if (natif.__clicPris) return;
+      natif.__clicPris = true;
+      c.easeTo({ center: e.lngLat, zoom: Math.min(c.getZoom() + 2, ZOOM_MIN + 1) });
+    });
+    c.on('mouseenter', 'poi-bornes-amas', () => { c.getCanvas().style.cursor = 'pointer'; });
+    c.on('mouseleave', 'poi-bornes-amas', () => { c.getCanvas().style.cursor = ''; });
+
     c.on('click', 'poi-parkings-fond', (e) => {
       const natif = e.originalEvent as Event & { __clicPris?: boolean };
       if (natif.__clicPris) return;
@@ -125,8 +165,10 @@ export class PanneauPoi extends HTMLElement {
           ${PRISES.map((p) => `
             <label><input type="checkbox" class="poi-prise" value="${p.cle}"> ${p.libelle}</label>`).join('')}
           <p class="poi-filtre-note">Sans connecteur coché, toutes les bornes sont montrées.</p>
-          <p class="poi-filtre-titre">Réseaux dans la vue</p>
+          <p class="poi-filtre-titre">Réseaux — France entière</p>
           <div class="poi-reseaux" role="group" aria-label="Filtrer par réseau"></div>
+          <p class="poi-filtre-note">Le compte est national : un réseau coché
+            peut n’avoir aucune borne dans la vue courante.</p>
 
           <p class="poi-filtre-titre">Lecture de la carte</p>
           <ul class="poi-legende">
@@ -137,6 +179,11 @@ export class PanneauPoi extends HTMLElement {
             <li><span class="poi-legende-pastille poi-legende-inconnue"
               aria-hidden="true">•</span> Puissance non déclarée</li>
           </ul>
+          <p class="poi-filtre-note">Sous le zoom 12, la carte montre le réseau
+            national de recharge rapide — les stations de ${SEUIL_RAPIDE} kW et
+            plus, groupées en amas. Cet index (${POIDS_ANNONCE}) est chargé une
+            fois, puis relu localement : il fonctionne hors ligne et n’interroge
+            plus aucun service. Les bornes plus lentes apparaissent en zoomant.</p>
         </fieldset>
         <p class="poi-etat" role="status"></p>
       </details>`;
@@ -283,12 +330,122 @@ export class PanneauPoi extends HTMLElement {
     return { ouest, sud: b.getSouth(), est, nord: b.getNorth() };
   }
 
+  /* ---- sous le zoom 12 : l'index national ---- */
+
+  /**
+   * Charge l'index UNIQUEMENT pour peupler la liste des réseaux, sans toucher
+   * à la carte. Appelée depuis le chemin par emprise, en tâche de fond.
+   *
+   * SON ÉCHEC EST MUET, ET C'EST VOULU : la liste des réseaux est un confort
+   * de filtrage. La faire remonter effacerait des bornes correctement
+   * affichées pour signaler qu'un filtre facultatif manque — le remède serait
+   * pire que le mal.
+   */
+  async #assurerReseauxNationaux(): Promise<void> {
+    if (this.#index.length > 0) return;
+    try {
+      const { stations } = await indexNational();
+      this.#index = stations;
+      this.#rendreReseaux(reseauxNationaux(stations));
+    } catch { /* confort de filtrage : son absence ne casse rien */ }
+  }
+
+  /**
+   * Les bornes vues de haut, depuis l'index local.
+   *
+   * AUCUN APPEL PAR DÉPLACEMENT. Le découpage, le filtrage et le comptage par
+   * réseau se font en mémoire : dézoomer sur la France entière ne coûte donc
+   * rien aux quotas publics, là où la couche par emprise émet une requête à
+   * chaque `moveend`. Le seul appel réseau possible est le tout premier
+   * téléchargement de l'index, et il ne se produit qu'une fois par mois.
+   */
+  async #chargerDepuisIndex(): Promise<void> {
+    const carte = this.#carte;
+    if (!carte) return;
+    this.#controleurs.bornes?.abort();
+    const controleur = new AbortController();
+    this.#controleurs.bornes = controleur;
+
+    /* DÉJÀ EN MÉMOIRE : on repose sans repasser par le stockage. Sans cette
+       porte, chaque `moveend` relisait quatorze mille stations depuis
+       IndexedDB pour un découpage qui, lui, prend une milliseconde. */
+    if (this.#index.length > 0) {
+      this.#poserIndex();
+      delete this.#erreurs.bornes;
+      this.#etat();
+      return;
+    }
+    this.#etat(`Chargement du réseau national de recharge (${POIDS_ANNONCE}, une seule fois)…`);
+    try {
+      const { stations } = await indexNational(controleur.signal);
+      if (controleur !== this.#controleurs.bornes) return;
+      this.#index = stations;
+      this.#rendreReseaux(reseauxNationaux(stations).map(
+        (r) => ({ nom: r.nom, nombre: r.nombre }),
+      ));
+      this.#poserIndex();
+      delete this.#erreurs.bornes;
+      this.#etat();
+    } catch (e) {
+      if (controleur.signal.aborted) return;
+      this.#purger('bornes');
+      this.#erreurs.bornes = true;
+      this.#poserTout();
+      this.#etat(e instanceof ErreurIndex ? e.message : undefined);
+    }
+  }
+
+  /** Découpe l'index sur la vue et le pose. Purement local, donc rejouable. */
+  #poserIndex(): void {
+    const carte = this.#carte;
+    if (!carte || this.#index.length === 0) return;
+    const visibles = filtrerStations(
+      stationsDans(this.#index, this.#bbox()), this.#filtres,
+    );
+    this.#bornes = {
+      type: 'FeatureCollection',
+      features: visibles.map((s) => ({
+        type: 'Feature',
+        properties: this.#proprietesStation(s),
+        geometry: { type: 'Point', coordinates: [s.lon, s.lat] },
+      })),
+    };
+    this.#montres.bornes = visibles.length;
+    this.#totaux.bornes = visibles.length;
+    /* PAS DE « 100 SUR N » ICI, et ce n'est pas un oubli : l'index n'est pas
+       tronqué. Ce que la carte montre EST ce que l'index contient pour cette
+       vue — le compteur peut donc être une simple égalité. */
+    this.#chargee.bornes = this.#bbox();
+    this.#poserTout();
+  }
+
+  /** Les propriétés portées par une punaise venue de l'index. */
+  #proprietesStation(s: StationRapide): Record<string, unknown> {
+    return {
+      nom: s.nom,
+      puissance: s.puissance,
+      pdc: s.pdc,
+      gratuit: null,
+      reseau: s.reseau,
+      prises: s.prises.join(','),
+      ouvert: s.ouvert,
+      id: s.id,
+      icone: nomIcone(palierDe(s.puissance)),
+      palierLibelle: libellePalier(s.puissance),
+    };
+  }
+
   async #charger(couche: Couche, force = false): Promise<void> {
     const carte = this.#carte;
     if (!carte || !this.#actives.has(couche)) return;
+
+    /* LES BORNES ONT LEUR PROPRE ROUTE SOUS LE SEUIL : l'index national.
+       Les deux autres couches n'ont pas d'index et s'arrêtent là — mieux vaut
+       le dire que rendre cent points au hasard. */
     if (carte.getZoom() < ZOOM_MIN) {
+      if (couche === 'bornes') { await this.#chargerDepuisIndex(); return; }
       this.#vider(couche);
-      this.#etat('Zoomez pour afficher les points d’intérêt.');
+      this.#etat();
       return;
     }
     const bbox = this.#bbox();
@@ -316,16 +473,15 @@ export class PanneauPoi extends HTMLElement {
         };
         this.#montres.carburants = c.elements.length; this.#totaux.carburants = c.total;
       } else if (couche === 'bornes') {
-        /* LES RÉSEAUX SE CHARGENT AVEC LA COUCHE, pas à part : une facette de
-           plus par déplacement doublerait les appels au portail. L'échec de la
-           facette ne doit PAS emporter les bornes — elle n'est qu'un confort
-           de filtrage. */
-        const [c, reseaux] = await Promise.all([
-          chargerBornes(bbox, controleur.signal, this.#filtres),
-          chargerReseaux(bbox, controleur.signal).catch(() => [] as Reseau[]),
-        ]);
-        if (controleur !== this.#controleurs[couche]) return;
-        this.#rendreReseaux(reseaux);
+        /* LA LISTE DES RÉSEAUX EST NATIONALE, et se charge en tâche de fond.
+           Elle venait de la FACETTE bornée à l'emprise : elle ne proposait
+           donc que ce que la vue montrait déjà, et son contenu changeait à
+           chaque déplacement — « le filtre réseau devrait fonctionner quel que
+           soit le niveau de zoom » (Armelin, 25/08). Son échec ne doit PAS
+           emporter les bornes : elle n'est qu'un confort de filtrage, d'où le
+           `void` et le `catch` muet. */
+        void this.#assurerReseauxNationaux();
+        const c = await chargerBornes(bbox, controleur.signal, this.#filtres);
         if (controleur !== this.#controleurs[couche]) return;
         this.#bornes = {
           type: 'FeatureCollection',
@@ -334,6 +490,11 @@ export class PanneauPoi extends HTMLElement {
             properties: {
               nom: p.nom, puissance: p.puissance, pdc: p.pdc, gratuit: p.gratuit,
               reseau: p.reseau, prises: p.prises.join(','),
+              /* L'ACCÈS N'EST PAS CONNU PAR CETTE ROUTE : la requête par
+                 emprise ne demande pas `condition_acces`. `null` le dit — et
+                 le cartouche de détail, lui, ira le chercher. */
+              ouvert: null,
+              id: null,
               // Le palier est calculé UNE FOIS, ici : une expression MapLibre
               // le recalculerait à chaque image, et il serait invisible aux
               // tests. La décision vit dans lib/puissance.ts, testée à sec.
@@ -381,17 +542,37 @@ export class PanneauPoi extends HTMLElement {
     this.#purger(couche);
     delete this.#erreurs[couche];
     if (this.#popupDe === couche) { this.#popup?.remove(); this.#popup = null; this.#popupDe = null; }
+    // Décocher « Bornes » doit aussi refermer le détail : un cartouche qui
+    // survit à la couche qu'il décrit décrit un point qui n'est plus là.
+    if (couche === 'bornes') this.#fiche?.fermer();
     this.#poserTout();
   }
 
   /** L'état, honnête : « 100 sur 11 950 » quand le plafond du portail mord,
-      « indisponibles » tant qu'une couche est en panne. */
+      « indisponibles » tant qu'une couche est en panne, et le rappel du seuil
+      quand une couche sans index a cessé de répondre au dézoom. */
   #etat(message?: string): void {
     const p = this.querySelector('.poi-etat') as HTMLElement;
     if (message) { p.textContent = message; return; }
     const fr = (n: number): string => n.toLocaleString('fr-FR');
     const bouts: string[] = [];
+    /* SOUS LE SEUIL, DIRE CE QU'ON MONTRE — et ce qu'on ne montre pas. Une
+       carte qui affiche les stations rapides sans annoncer son seuil laisse
+       croire qu'il n'existe rien d'autre. */
+    const sousLeSeuil = (this.#carte?.getZoom() ?? ZOOM_MIN) < ZOOM_MIN;
+    if (sousLeSeuil && this.#actives.has('bornes') && !this.#erreurs.bornes) {
+      const n = this.#montres.bornes;
+      bouts.push(n === undefined
+        ? `Réseau rapide national (${SEUIL_RAPIDE} kW et plus)`
+        : `${fr(n)} station${n > 1 ? 's' : ''} rapides (${SEUIL_RAPIDE} kW et plus)`);
+    }
     for (const couche of this.#actives) {
+      // Déjà dit ci-dessus, dans les termes de l'index.
+      if (couche === 'bornes' && sousLeSeuil && !this.#erreurs.bornes) continue;
+      if (couche !== 'bornes' && sousLeSeuil) {
+        bouts.push(`${COUCHES[couche]} : zoomez pour les afficher`);
+        continue;
+      }
       if (this.#erreurs[couche]) { bouts.push(`${COUCHES[couche]} : indisponibles`); continue; }
       const total = this.#totaux[couche];
       const montres = this.#montres[couche];
@@ -424,7 +605,19 @@ export class PanneauPoi extends HTMLElement {
     const carte = this.#carte!;
     const source = carte.getSource(id) as GeoJSONSource | undefined;
     if (source) { source.setData(donnees); return; }
-    carte.addSource(id, { type: 'geojson', data: donnees });
+    /* LES BORNES SE GROUPENT EN AMAS SOUS LE ZOOM 12, et elles seules.
+       Quatorze mille punaises sur une carte de France ne se lisent pas : elles
+       forment une tache. `clusterMaxZoom` est réglé JUSTE SOUS le seuil des
+       requêtes par emprise, si bien que les deux régimes se relaient sans
+       trou — au-dessus, une punaise par station ; en dessous, un nombre.
+       Le groupement se décide À LA CRÉATION de la source et ne se change plus
+       ensuite : c'est pourquoi il est posé ici, une fois pour toutes. */
+    carte.addSource(id, id === 'poi-bornes'
+      ? {
+        type: 'geojson', data: donnees,
+        cluster: true, clusterMaxZoom: ZOOM_AMAS_MAX, clusterRadius: 48,
+      }
+      : { type: 'geojson', data: donnees });
     if (id === 'poi-parkings') {
       carte.addLayer({
         id: 'poi-parkings-fond', type: 'fill', source: id,
@@ -442,8 +635,37 @@ export class PanneauPoi extends HTMLElement {
          savoir ce que ce réseau déploie. Un à trois éclairs répondent d'un
          coup d'œil — et se dessinent sans republier aucune marque déposée. */
       poserIconesPuissance(carte);
+      /* LES AMAS D'ABORD, LES PUNAISES ENSUITE : posées dans cet ordre, une
+         station isolée reste cliquable au-dessus d'un amas voisin. */
+      carte.addLayer({
+        id: 'poi-bornes-amas', type: 'circle', source: id,
+        filter: ['has', 'point_count'],
+        paint: {
+          // Le disque grandit avec le nombre, par paliers lisibles.
+          'circle-radius': ['step', ['get', 'point_count'], 14, 20, 19, 100, 25],
+          'circle-color': COULEURS.bornes,
+          'circle-opacity': 0.85,
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#FFFFFF',
+        },
+      });
+      carte.addLayer({
+        id: 'poi-bornes-amas-nombre', type: 'symbol', source: id,
+        filter: ['has', 'point_count'],
+        layout: {
+          'text-field': ['get', 'point_count_abbreviated'],
+          'text-size': 12,
+          'text-allow-overlap': true,
+          'text-ignore-placement': true,
+        },
+        paint: { 'text-color': '#FFFFFF' },
+      });
       carte.addLayer({
         id, type: 'symbol', source: id,
+        // Sans ce filtre, chaque amas porterait AUSSI une punaise : le nombre
+        // se lirait par-dessus une icône, et le clic tomberait sur l'une ou
+        // l'autre selon l'ordre de rendu.
+        filter: ['!', ['has', 'point_count']],
         layout: {
           'icon-image': ['get', 'icone'],
           'icon-size': 0.62,
@@ -476,6 +698,24 @@ export class PanneauPoi extends HTMLElement {
     if (!f || f.geometry.type !== 'Point') return;
     const p = f.properties ?? {};
     const [lng, lat] = f.geometry.coordinates as [number, number];
+
+    /* UNE BORNE OUVRE LE CARTOUCHE, PAS UNE BULLE. Le détail fait six
+       rubriques — accès, points de charge, horaires, paiement, commodités,
+       provenance — et ne tient pas dans les deux cent soixante pixels d'une
+       popup ancrée à la punaise. La bulle reste le repli quand le cartouche
+       n'est pas posé (panneau utilisé seul). */
+    if (couche === 'bornes' && this.#fiche) {
+      this.#popup?.remove();
+      this.#popup = null;
+      this.#popupDe = null;
+      this.#fiche.ouvrir({
+        id: typeof p['id'] === 'string' && p['id'] ? p['id'] : null,
+        lon: lng,
+        lat,
+        nom: typeof p['nom'] === 'string' && p['nom'] ? p['nom'] : 'Station de recharge',
+      });
+      return;
+    }
     const bloc = document.createElement('div');
     bloc.className = 'poi-popup';
     const titre = document.createElement('strong');

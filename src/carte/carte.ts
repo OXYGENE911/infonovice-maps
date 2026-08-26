@@ -29,6 +29,7 @@ import { MenuReglages } from './menu-reglages';
 import { ajouterFavori } from '../lib/favoris';
 import { ecrireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { VisionneusePhoto } from './visionneuse-photo';
+import { FicheBorne } from './fiche-borne';
 import { chercherPhotos, plusProche, ErreurPhotos } from '../lib/panoramax';
 import { adresseInverse } from '../lib/adresse';
 import { formaterCoordonnees } from '../lib/coordonnees';
@@ -114,6 +115,17 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      une modale doit couvrir la carte, pas vivre dedans. */
   const visionneuse = new VisionneusePhoto();
   document.body.appendChild(visionneuse);
+
+  /* LE CARTOUCHE DE DÉTAIL D'UNE BORNE — UN SEUL pour l'application, posé au
+     conteneur de la carte. Deux appelants s'en servent : un clic sur une
+     punaise, et un clic sur un arrêt du plan de recharge. Le partager plutôt
+     que d'en donner un à chacun garantit qu'il n'y en a jamais deux ouverts,
+     et que le second clic remplace le premier au lieu de l'empiler. */
+  const fiche = new FicheBorne();
+  fiche.carte = carte;
+  conteneur.appendChild(fiche);
+  poi.fiche = fiche;
+  panneau.fiche = fiche;
 
   /* LE VÉHICULE ÉLECTRIQUE — profil et rayon d'action. Tout reste local :
      batterie, santé, charge, relevés d'autonomie ne sortent jamais du

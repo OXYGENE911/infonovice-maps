@@ -40,6 +40,17 @@ export class PanneauVehicule extends HTMLElement {
   #vehicule: Vehicule = { ...VIDE, consommations: { ...VIDE.consommations } };
   #essais: Essais = { ville: 0, route: 0, autoroute: 0 };
   #actif = false;
+  /* LA RESTAURATION NE DOIT JAMAIS ÉCRASER UN CHOIX DÉJÀ FAIT.
+     La lecture IndexedDB est ASYNCHRONE : un usager rapide — ou une machine
+     chargée — peut cocher « Afficher mon rayon d'action », le décocher, et
+     voir la case se RECOCHER toute seule quand la lecture, partie avant ses
+     gestes, se résout enfin avec l'ancienne valeur. Rien ne le signale ; on
+     croit avoir mal cliqué.
+     Attrapé par un parcours E2E qui ne rougissait QUE dans la suite complète,
+     c'est-à-dire quand la machine est assez chargée pour que la lecture arrive
+     en retard. Le panneau des points d'intérêt porte le même garde-fou, pour
+     la même raison. */
+  #touche = false;
   /* LA POSITION DU VÉHICULE, quand la géolocalisation l'a donnée. Les anneaux
      l'entourent ELLE, pas le centre de la carte : faire glisser la carte ne
      déplace pas la voiture. Tant qu'aucune position n'est connue, ils
@@ -100,12 +111,14 @@ export class PanneauVehicule extends HTMLElement {
       </details>`;
 
     this.querySelector('.veh-nom')?.addEventListener('input', (e) => {
+      this.#touche = true;
       this.#vehicule.nom = (e.target as HTMLInputElement).value;
       this.#enregistrer();
     });
 
     this.querySelectorAll<HTMLInputElement>('.veh-champ').forEach((c) => {
       c.addEventListener('input', () => {
+        this.#touche = true;
         const valeur = Number(c.value);
         const cle = c.dataset['cle'] ?? '';
         const nombre = Number.isFinite(valeur) && valeur >= 0 ? valeur : 0;
@@ -120,6 +133,7 @@ export class PanneauVehicule extends HTMLElement {
     });
 
     this.querySelector<HTMLInputElement>('.veh-anneaux')?.addEventListener('change', (e) => {
+      this.#touche = true;
       this.#actif = (e.target as HTMLInputElement).checked;
       this.#enregistrer();
       this.#poser();
@@ -148,6 +162,9 @@ export class PanneauVehicule extends HTMLElement {
   async #restaurer(): Promise<void> {
     // Frontière système : la valeur relue se valide, elle ne se croit pas.
     const memo = await lirePreference<unknown>(PREF_VEHICULE);
+    /* ET ELLE S'EFFACE DEVANT L'USAGER. Voir `#touche` : ce qui vient d'être
+       saisi ou décoché prime sur ce qui dormait en base. */
+    if (this.#touche) return;
     const m = (memo ?? {}) as Record<string, unknown>;
     const v = (m['vehicule'] ?? {}) as Record<string, unknown>;
     const e = (m['essais'] ?? {}) as Record<string, unknown>;

@@ -19,6 +19,10 @@ export interface BorneCandidate {
   nom: string;
   lon: number;
   lat: number;
+  /** Enseigne du réseau, quand elle est connue — affichée dans le plan. */
+  reseau?: string | null | undefined;
+  /** Identifiant d'itinérance, pour ouvrir le cartouche de détail. */
+  id?: string | null | undefined;
   /** Distance depuis le départ, LE LONG du trajet, en mètres. */
   avancementM: number;
   /** Écart au tracé, en mètres — l'aller simple du détour. */
@@ -46,6 +50,24 @@ export interface OptionsPlan {
   socArrivee: number;
   /** Marge que l'on refuse d'entamer, en %. On arrive à une borne AVEC. */
   reserve: number;
+  /* CE QUE L'USAGER IMPOSE AU PLANIFICATEUR — sa demande du 25/08/2026 :
+     « avec des + et des - pour choisir moi-même les arrêts ». Deux listes de
+     clés (voir `cleBorne`) : celles où l'on VEUT s'arrêter, et celles dont on
+     ne veut à aucun prix. Un planificateur qui décide seul est un
+     planificateur qu'on subit. */
+  imposees?: readonly string[] | undefined;
+  ecartees?: readonly string[] | undefined;
+}
+
+/**
+ * La clé d'une borne, pour la désigner d'une liste à l'autre.
+ *
+ * L'IDENTIFIANT D'ITINÉRANCE QUAND IL EXISTE, LA POSITION SINON. Le nom seul
+ * ne peut pas servir : « Lidl » désigne des centaines de stations, et imposer
+ * l'une les imposerait toutes.
+ */
+export function cleBorne(b: BorneCandidate): string {
+  return b.id ?? `${b.lon.toFixed(5)},${b.lat.toFixed(5)}`;
 }
 
 export interface Arret {
@@ -147,7 +169,23 @@ const echec = (motif: string): PlanRecharge =>
 
 /** Planifie les arrêts. Aucun appel réseau : tout se calcule ici. */
 export function planifierArrets(o: OptionsPlan): PlanRecharge {
-  const { vehicule: v, bornes } = o;
+  const { vehicule: v } = o;
+
+  /* CE QUE L'USAGER ÉCARTE N'EXISTE PLUS POUR LE PLANIFICATEUR. On le retire
+     avant tout calcul plutôt que de le sauter au moment du choix : sans quoi
+     la portée annoncée dans un message d'échec parlerait de bornes qu'on
+     s'est interdit d'utiliser. */
+  const ecartees = new Set(o.ecartees ?? []);
+  const bornes = ecartees.size === 0
+    ? o.bornes
+    : o.bornes.filter((b) => !ecartees.has(cleBorne(b)));
+
+  /* LES ARRÊTS IMPOSÉS, DANS L'ORDRE DU TRAJET. L'usager peut les cocher dans
+     n'importe quel ordre ; c'est la route qui décide de leur succession. */
+  const imposees = new Set(o.imposees ?? []);
+  const etapesImposees = bornes
+    .filter((b) => imposees.has(cleBorne(b)))
+    .sort((a, b) => a.avancementM - b.avancementM);
 
   if (!(v.capaciteKwh > 0) || !Number.isFinite(v.capaciteKwh)) {
     return echec('Renseignez la capacité de votre batterie.');
@@ -172,8 +210,16 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
     const restantM = o.distanceM - positionM;
     const socFin = socApres(restantM, soc);
 
-    // Assez pour finir en gardant la cible ? On s'arrête là.
-    if (socFin >= cible) {
+    /* LE PROCHAIN POINT DE PASSAGE OBLIGÉ : l'arrêt imposé suivant, ou la
+       destination. Ce n'est PAS un détail de confort — sans lui, on chargerait
+       à chaque arrêt de quoi rallier la destination, y compris quand l'usager
+       a demandé de s'arrêter trente kilomètres plus loin. Le plan ferait
+       perdre des dizaines de minutes à remplir une batterie qu'on s'apprête à
+       remplir de nouveau. */
+    const prochaineImposee = etapesImposees.find((b) => b.avancementM > positionM);
+
+    // Assez pour finir en gardant la cible, et plus rien d'imposé devant ?
+    if (socFin >= cible && !prochaineImposee) {
       const duree = arrets.reduce((t, a) => t + a.dureeMin, 0);
       return { faisable: true, arrets, socArrivee: socFin, dureeRechargeMin: duree };
     }
@@ -184,13 +230,34 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
     const porteeM = energieUtile > 0
       ? (energieUtile / (v.consommationKwh100 / 100)) * 1000 : 0;
 
-    const aPortee = bornes.filter(
-      (b) => b.avancementM > positionM && b.avancementM <= positionM + porteeM,
-    );
-    const choisie = choisir(aPortee, positionM, v);
+    /* UN ARRÊT IMPOSÉ À PORTÉE EST PRIS, SANS DISCUSSION. C'est le sens même
+       du « + » : l'usager sait des choses que le modèle ignore — un repas, un
+       détour par chez sa sœur, une borne où il a ses habitudes. */
+    let choisie: BorneCandidate | null = null;
+    if (prochaineImposee && prochaineImposee.avancementM <= positionM + porteeM) {
+      choisie = prochaineImposee;
+    } else {
+      /* SINON, LA MEILLEURE À PORTÉE. Aucune borne ne peut ici dépasser
+         l'arrêt imposé suivant, et ce n'est pas un hasard : on n'arrive dans
+         cette branche QUE si l'arrêt imposé est hors de portée, donc au-delà
+         de toutes les candidates. Une clause « ne pas dépasser l'imposée »
+         serait du code mort — écrit, commenté, et jamais exécuté. */
+      const aPortee = bornes.filter(
+        (b) => b.avancementM > positionM && b.avancementM <= positionM + porteeM,
+      );
+      choisie = choisir(aPortee, positionM, v);
+    }
 
     if (!choisie) {
       const km = Math.round((positionM + porteeM) / 1000);
+      if (prochaineImposee) {
+        return echec(
+          `L’arrêt imposé « ${prochaineImposee.nom} » est à`
+          + ` ${Math.round(prochaineImposee.avancementM / 1000)} km, hors de portée,`
+          + ` et aucune borne utilisable ne le précède avant ${km} km.`
+          + ' Retirez cet arrêt, ou ajoutez-en un avant lui.',
+        );
+      }
       return echec(
         `Aucune borne utilisable avant ${km} km, où la réserve serait entamée.`
         + ' Élargissez les filtres, ou partez avec plus de charge.',
@@ -205,8 +272,13 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
        plein. Si le plafond de confort n'y suffit pas, on monte jusqu'au
        plafond dur : mieux vaut vingt minutes de plus qu'un trajet déclaré
        impossible. */
-    const restantApresM = o.distanceM - positionM;
-    const besoinKwh = energiePour(restantApresM, v) + v.capaciteKwh * (cible / 100);
+    const suivanteImposee = etapesImposees.find((b) => b.avancementM > positionM);
+    /* ON VISE LE PROCHAIN POINT DE PASSAGE OBLIGÉ, PAS SYSTÉMATIQUEMENT LA
+       DESTINATION : jusqu'à un arrêt imposé, il suffit d'y arriver avec la
+       réserve ; jusqu'à la destination, il faut y arriver avec la cible. */
+    const restantApresM = (suivanteImposee?.avancementM ?? o.distanceM) - positionM;
+    const socALArrivee = suivanteImposee ? reserve : cible;
+    const besoinKwh = energiePour(restantApresM, v) + v.capaciteKwh * (socALArrivee / 100);
     const socVoulu = (besoinKwh / v.capaciteKwh) * 100;
     const socRepart = borner(
       Math.max(socVoulu, socALaBorne),
@@ -215,8 +287,14 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
     );
 
     const energieKwh = v.capaciteKwh * ((socRepart - socALaBorne) / 100);
-    if (energieKwh <= 0) {
-      // La borne n'apporte rien : sans ce garde-fou, la boucle piétinerait.
+    /* UN ARRÊT IMPOSÉ PEUT NE RIEN CHARGER, ET C'EST LÉGITIME : on s'y arrête
+       pour déjeuner, pour retrouver quelqu'un, ou parce qu'on en a envie. Le
+       garde-fou ci-dessous vise le cas où le MODÈLE choisit une borne inutile
+       et piétine ; l'appliquer à une consigne de l'usager reviendrait à
+       refuser un trajet parfaitement faisable au motif qu'il comporte une
+       pause. L'arrêt est alors inscrit à zéro kilowattheure et zéro minute —
+       ce qu'il est. */
+    if (energieKwh <= 0 && choisie !== prochaineImposee) {
       return echec(
         `Le trajet n’avance plus à ${Math.round(positionM / 1000)} km :`
         + ' la borne retenue n’apporte pas d’autonomie utile.',
@@ -227,7 +305,7 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
       borne: choisie,
       socArrivee: socALaBorne,
       socDepart: socRepart,
-      energieKwh,
+      energieKwh: Math.max(energieKwh, 0),
       dureeMin: dureeChargeMin(energieKwh, choisie.puissanceKw, v, socALaBorne, socRepart),
     });
     soc = socRepart;

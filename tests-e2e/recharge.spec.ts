@@ -8,6 +8,57 @@ import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
 
 const PARIS_LYON = '/#iti=2.35220,48.85660;4.83570,45.76400;car';
 
+/** Une ligne de l'INDEX NATIONAL, telle que l'export agrégé la rend. */
+interface LigneIndex {
+  nom: string; lon: number; lat: number; p: number;
+  reseau?: string; pdc?: number; acces?: string;
+}
+
+/**
+ * Simule l'index national des bornes rapides.
+ *
+ * POURQUOI CE CHANGEMENT DE FIXTURE. Le planificateur n'interroge plus le
+ * portail par emprise — six requêtes plafonnées à cent résultats, sur
+ * lesquelles il travaillait sans savoir qu'il voyait un échantillon. Il lit
+ * désormais l'export agrégé PAR STATION, une fois, et découpe en mémoire.
+ * La forme de la réponse change donc : un TABLEAU nu, pas un objet
+ * `{ total_count, results }`.
+ *
+ * L'AUTRE ROUTE ODS RESTE SERVIE : le cartouche de détail interroge, lui, les
+ * enregistrements. Les confondre rendrait un tableau là où le cartouche attend
+ * un objet, et le détail paraîtrait introuvable sans qu'on sache pourquoi.
+ */
+async function simulerIndexBornes(page: Page, bornes: LigneIndex[]): Promise<void> {
+  await page.route('**/public.opendatasoft.com/**', (route) => {
+    const url = route.request().url();
+    if (url.includes('/exports/json')) {
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(bornes.map((b) => ({
+          id_station_itinerance: `FR${b.nom.replace(/\W/g, '').slice(0, 8).toUpperCase()}`,
+          nom_station: b.nom,
+          nom_enseigne: b.reseau ?? 'Réseau d’essai',
+          condition_acces: b.acces ?? 'Accès libre',
+          prise_type_combo_ccs: '1',
+          prise_type_chademo: '0',
+          prise_type_2: '0',
+          p: b.p,
+          pdc: b.pdc ?? 4,
+          lon: b.lon,
+          lat: b.lat,
+        }))),
+      });
+    }
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ total_count: 0, results: [] }),
+    });
+  });
+}
+
+/** Le trajet Paris-Lyon simulé passe par là : une borne à mi-parcours. */
+const BEAUNE: LigneIndex = { nom: 'Aire de Beaune', lon: 3.6, lat: 47.3, p: 150, pdc: 8 };
+
 test.beforeEach(async ({ page }) => {
   await simulerTuiles(page);
   await simulerCommunes(page);
@@ -77,10 +128,10 @@ test('sans véhicule renseigné, la section le DIT au lieu d’inventer', async 
 });
 
 test('un trajet sans borne à portée est REFUSÉ, avec le kilomètre exact', async ({ page }) => {
-  // Aucune borne : la VF8 fait 280 km sur autoroute, le trajet en fait 390.
-  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
-    contentType: 'application/json', body: JSON.stringify({ total_count: 0, results: [] }),
-  }));
+  /* Une seule borne, et hors du trajet : la VF8 fait 280 km sur autoroute, le
+     trajet en fait 390. Un index VIDE ne conviendrait pas — le module refuse
+     un index vide, à juste titre : mieux vaut l'échec que la carte muette. */
+  await simulerIndexBornes(page, [{ nom: 'Loin de tout', lon: -1.5, lat: 43.5, p: 150 }]);
   await ouvrirRecharge(page);
 
   const corps = page.locator('.iti-recharge-corps');
@@ -90,14 +141,7 @@ test('un trajet sans borne à portée est REFUSÉ, avec le kilomètre exact', as
 });
 
 test('avec une borne bien placée, le plan sort avec ses chiffres', async ({ page }) => {
-  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({ total_count: 1, results: [
-      // À mi-chemin environ, sur le tracé Paris-Lyon.
-      { point_geo: { lon: 3.6, lat: 47.3 }, nom_station: 'Aire de Beaune',
-        puissance_nominale: 150, nbre_pdc: 8, prise_type_combo_ccs: '1' },
-    ] }),
-  }));
+  await simulerIndexBornes(page, [BEAUNE]);
   await ouvrirRecharge(page);
 
   const corps = page.locator('.iti-recharge-corps');
@@ -111,11 +155,14 @@ test('avec une borne bien placée, le plan sort avec ses chiffres', async ({ pag
 });
 
 test('la réserve du modèle est écrite sous le plan, jamais sous-entendue', async ({ page }) => {
-  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
-    contentType: 'application/json', body: JSON.stringify({ total_count: 0, results: [] }),
-  }));
+  await simulerIndexBornes(page, [BEAUNE]);
   await ouvrirRecharge(page);
-  await expect(page.locator('.iti-recharge-corps')).toContainText('Aucune borne', { timeout: 15_000 });
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
+  /* CE QUE LE MODÈLE NE SAIT PAS DOIT ÊTRE ÉCRIT SOUS LE PLAN. Un plan qui
+     tait ses hypothèses se fait prendre pour une prévision. */
+  await expect(corps).toContainText('ni le relief, ni le vent');
+  await expect(corps, 'le seuil de l’index doit être annoncé').toContainText('50 kW et plus');
 });
 
 test('AUCUN appel tant que la section est repliée — les quotas sont un bien commun', async ({ page }) => {
@@ -136,18 +183,12 @@ test('les arrêts sont POSÉS SUR LA CARTE, et le clic y vole', async ({ page })
   /* Une liste d'arrêts qu'on ne peut pas situer oblige à chercher des yeux ce
      que l'application sait déjà. Le marqueur répond « où », le clic « montre-
      moi ». */
-  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({ total_count: 1, results: [
-      { point_geo: { lon: 3.6, lat: 47.3 }, nom_station: 'Aire de Beaune',
-        puissance_nominale: 150, nbre_pdc: 8, prise_type_combo_ccs: '1' },
-    ] }),
-  }));
+  await simulerIndexBornes(page, [BEAUNE]);
   await ouvrirRecharge(page);
   await expect(page.locator('.iti-recharge-corps')).toContainText('Aire de Beaune',
     { timeout: 15_000 });
 
-  const bouton = page.getByRole('button', { name: 'Voir Aire de Beaune sur la carte' });
+  const bouton = page.getByRole('button', { name: 'Détail de Aire de Beaune' }).first();
   await expect(bouton).toBeVisible();
 
   const avant = await page.evaluate(() => {
@@ -187,13 +228,7 @@ test('les commodités sont À LA DEMANDE, et un seul arrêt à la fois', async (
         tags: { amenity: 'restaurant', name: 'L’Arche' } },
     ] }) });
   });
-  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({ total_count: 1, results: [
-      { point_geo: { lon: 3.6, lat: 47.3 }, nom_station: 'Aire de Beaune',
-        puissance_nominale: 150, nbre_pdc: 8, prise_type_combo_ccs: '1' },
-    ] }),
-  }));
+  await simulerIndexBornes(page, [BEAUNE]);
   await ouvrirRecharge(page);
   await expect(page.locator('.iti-recharge-corps')).toContainText('Aire de Beaune',
     { timeout: 15_000 });
@@ -218,13 +253,7 @@ test('Overpass en panne parle français et reste réessayable', async ({ page })
     headers: { 'Access-Control-Allow-Origin': '*' },
     body: '<html><body>Dispatcher_Client::request_read_and_idx::timeout</body></html>',
   }));
-  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({ total_count: 1, results: [
-      { point_geo: { lon: 3.6, lat: 47.3 }, nom_station: 'Aire de Beaune',
-        puissance_nominale: 150, nbre_pdc: 8 },
-    ] }),
-  }));
+  await simulerIndexBornes(page, [BEAUNE]);
   await ouvrirRecharge(page);
   await expect(page.locator('.iti-recharge-corps')).toContainText('Aire de Beaune',
     { timeout: 15_000 });
@@ -239,13 +268,7 @@ test('la marge d’arrivée est RÉGLABLE, et elle change le plan', async ({ pag
   /* « Arriver avec 30 % » n'est pas le même trajet qu'« arriver avec 5 % » :
      la marge décide du nombre d'arrêts et du temps passé à charger. La laisser
      codée en dur revenait à imposer une prudence à tout le monde. */
-  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({ total_count: 1, results: [
-      { point_geo: { lon: 3.6, lat: 47.3 }, nom_station: 'Aire de Beaune',
-        puissance_nominale: 150, nbre_pdc: 8 },
-    ] }),
-  }));
+  await simulerIndexBornes(page, [BEAUNE]);
   await ouvrirRecharge(page);
   const corps = page.locator('.iti-recharge-corps');
   await expect(corps).toContainText('arrivée à', { timeout: 15_000 });
@@ -265,10 +288,8 @@ test('la marge d’arrivée est RÉGLABLE, et elle change le plan', async ({ pag
 });
 
 test('la réserve en route est réglable elle aussi', async ({ page }) => {
-  // Sans borne, une réserve plus haute rapproche le point de rupture.
-  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
-    contentType: 'application/json', body: JSON.stringify({ total_count: 0, results: [] }),
-  }));
+  // Aucune borne SUR LE TRAJET : une réserve plus haute rapproche la rupture.
+  await simulerIndexBornes(page, [{ nom: 'Loin de tout', lon: -1.5, lat: 43.5, p: 150 }]);
   await ouvrirRecharge(page);
   const corps = page.locator('.iti-recharge-corps');
   await expect(corps).toContainText('Aucune borne utilisable', { timeout: 15_000 });

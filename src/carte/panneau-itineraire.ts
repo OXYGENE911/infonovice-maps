@@ -17,13 +17,20 @@ import { versGPX, versKML, telecharger } from '../lib/trace';
 import { versFragment, depuisFragment } from '../lib/partage-url';
 import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
-import { chercherLeLongDuTrajet, type Categorie, type SurLeTrajet } from '../lib/le-long-du-trajet';
-import { planifierArrets, type PlanRecharge } from '../lib/arrets';
+import {
+  chercherLeLongDuTrajet, stationsDuTrajet,
+  type Categorie, type SurLeTrajet,
+} from '../lib/le-long-du-trajet';
+import {
+  planifierArrets, cleBorne, type PlanRecharge, type BorneCandidate,
+} from '../lib/arrets';
+import { indexNational, ErreurIndex, SEUIL_RAPIDE, POIDS_ANNONCE, type StationRapide } from '../lib/index-bornes';
 import { chargerCommodites, TYPES_COMMODITE, ErreurCommodites } from '../lib/commodites';
 import { lirePreference } from '../lib/stockage';
 import { PREF_VEHICULE } from './panneau-vehicule';
 import { ErreurPoi, type PoiCarburant, type PoiBorne } from '../lib/poi';
 import { meteoA, phraseMeteo, symboleTemps, heureArrivee, formaterHeure, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
+import type { FicheBorne } from './fiche-borne';
 
 const SOURCE = 'itineraire';
 
@@ -62,6 +69,27 @@ export class PanneauItineraire extends HTMLElement {
      station-service — deux fonctions distinctes, deux collections. */
   #marqueursArrets: Marker[] = [];
   #marqueurs: Marker[] = [];
+  /* LE CARTOUCHE DE DÉTAIL, partagé avec le panneau des couches (voir
+     carte.ts) : un seul pour l'application, jamais deux ouverts. */
+  #fiche: FicheBorne | null = null;
+  /** Le dernier plan de recharge, pour que le résumé du haut le prenne en
+      compte — voir `#majResume`. */
+  #planCourant: PlanRecharge | null = null;
+  /* TOUTES LES BORNES DU TRAJET, et non les seules retenues : Armelin, le
+     25/08, veut « afficher toutes les bornes présentes sur le trajet avec des
+     + et des - pour choisir moi-même les arrêts ». Elles sont calculées une
+     fois par itinéraire, puis relues à chaque changement de consigne. */
+  #bornesTrajet: SurLeTrajet<StationRapide>[] = [];
+  /** Les clés que l'usager impose, et celles qu'il refuse. */
+  #imposees = new Set<string>();
+  #ecartees = new Set<string>();
+  /** Enseignes retenues pour ce trajet. Vide = toutes. */
+  #reseauxPreferes = new Set<string>();
+  /** Le profil véhicule du dernier plan, pour rejouer sans relire IndexedDB. */
+  #vehiculeCourant: { capaciteKwh: number; consommationKwh100: number; puissanceMaxKw: number } | null = null;
+  #socDepart = 100;
+
+  set fiche(f: FicheBorne) { this.#fiche = f; }
 
   set carte(c: CarteMapLibre) {
     this.#carte = c;
@@ -224,6 +252,12 @@ export class PanneauItineraire extends HTMLElement {
        filtres de bornes. */
     for (const cls of ['.recharge-cible', '.recharge-reserve']) {
       this.querySelector(cls)?.addEventListener('change', () => {
+        /* LE PLAN SE REJOUE, IL NE SE RECHERCHE PAS. Les bornes du trajet sont
+           déjà en mémoire : remettre `#rechargePour` à zéro relancerait tout
+           le chargement de l'index pour un calcul qui prend une milliseconde.
+           Tant qu'aucune borne n'a été trouvée, en revanche, il faut bien
+           lancer la recherche. */
+        if (this.#bornesTrajet.length > 0) { this.#refairePlan(); return; }
         this.#rechargePour = null;
         void this.#planifierRecharge();
       });
@@ -390,46 +424,93 @@ export class PanneauItineraire extends HTMLElement {
       return;
     }
 
-    corps.textContent = 'Recherche des bornes le long du trajet…';
+    corps.textContent = `Chargement du réseau national de recharge (${POIDS_ANNONCE},`
+      + ' une seule fois, gardé hors ligne)…';
     this.#annulationRecharge?.abort();
     const annulation = new AbortController();
     this.#annulationRecharge = annulation;
 
+    this.#vehiculeCourant = {
+      capaciteKwh: capacite,
+      consommationKwh100: nombre(conso),
+      // 150 kW par défaut : une valeur courante, et l'interface le dit.
+      puissanceMaxKw: nombre(brut['puissanceMaxKw']) || 150,
+    };
+    this.#socDepart = nombre(brut['soc']) || 100;
+
     try {
-      /* DIX KILOMÈTRES, EN MÈTRES : au-delà, le détour coûte plus que la borne
+      /* LES BORNES DU TRAJET VIENNENT DE L'INDEX NATIONAL, PLUS DU PORTAIL.
+         L'ancienne voie découpait le trajet en six tronçons et interrogeait
+         chacun — six requêtes plafonnées à CENT résultats. Sur un
+         Paris-Marseille le plafond mordait, et le planificateur travaillait
+         donc sur un échantillon sans savoir qu'il en était un : il pouvait
+         déclarer un trajet infaisable parce que la borne salvatrice était la
+         cent-unième de son tronçon. L'index est complet à partir de
+         50 kW — exactement le domaine qui intéresse un trajet — et le
+         découpage se fait en mémoire, sans le moindre appel.
+
+         DIX KILOMÈTRES, EN MÈTRES : au-delà, le détour coûte plus que la borne
          ne rapporte. Le paramètre s'appelle `rayonM` — passer « 10 » cherchait
          dans un rayon de dix MÈTRES et ne rendait jamais rien, sans la moindre
          erreur. Le parcours E2E l'a vu ; un test à sec ne l'aurait pas vu. */
-      const trouves = await chercherLeLongDuTrajet(
-        iti.geometrie, 'bornes', 10_000, annulation.signal,
-      );
+      const { stations } = await indexNational(annulation.signal);
       if (this.#dernier !== iti || annulation.signal.aborted) return;
-
-      const plan = planifierArrets({
-        vehicule: {
-          capaciteKwh: capacite,
-          consommationKwh100: nombre(conso),
-          // 150 kW par défaut : une valeur courante, et l'interface le dit.
-          puissanceMaxKw: nombre(brut['puissanceMaxKw']) || 150,
-        },
-        distanceM: iti.distance,
-        bornes: trouves.map((t) => ({
-          nom: (t.poi as PoiBorne).nom,
-          lon: t.poi.lon, lat: t.poi.lat,
-          avancementM: t.avancement, ecartM: t.ecart,
-          puissanceKw: (t.poi as PoiBorne).puissance,
-        })),
-        socDepart: nombre(brut['soc']) || 100,
-        socArrivee: this.#valeurReglage('.recharge-cible', 10),
-        reserve: this.#valeurReglage('.recharge-reserve', 10),
-      });
-      this.#afficherRecharge(plan);
+      this.#bornesTrajet = stationsDuTrajet(
+        stations, iti.geometrie.coordinates as [number, number][], 10_000,
+      );
+      this.#refairePlan();
     } catch (e) {
       if (annulation.signal.aborted) return;
       this.#rechargePour = null;
-      corps.textContent = e instanceof ErreurPoi
+      corps.textContent = e instanceof ErreurIndex || e instanceof ErreurPoi
         ? e.message : 'Recherche des bornes indisponible pour le moment.';
     }
+  }
+
+  /** Les bornes du trajet, dans la forme attendue par le planificateur.
+      Les réseaux non préférés sont retirés ICI, avant tout calcul : les
+      laisser passer pour les écarter ensuite ferait parler les messages
+      d'échec de bornes que l'usager s'est interdites. */
+  #candidates(): BorneCandidate[] {
+    const preferes = this.#reseauxPreferes;
+    const retenues = preferes.size === 0
+      ? this.#bornesTrajet
+      : this.#bornesTrajet.filter(
+        (t) => t.poi.reseau !== null && preferes.has(t.poi.reseau),
+      );
+    return retenues.map((t) => ({
+      nom: t.poi.nom,
+      lon: t.poi.lon,
+      lat: t.poi.lat,
+      reseau: t.poi.reseau,
+      id: t.poi.id,
+      avancementM: t.avancement,
+      ecartM: t.ecart,
+      puissanceKw: t.poi.puissance,
+    }));
+  }
+
+  /**
+   * Rejoue le plan sur les bornes déjà trouvées — SANS RIEN RECHARGER.
+   *
+   * C'est ce qui rend les « + » et les « − » instantanés : cocher un arrêt ne
+   * doit pas relancer une recherche réseau. Tout le calcul est local
+   * (lib/arrets.ts), et les bornes sont déjà en mémoire.
+   */
+  #refairePlan(): void {
+    const iti = this.#dernier;
+    const v = this.#vehiculeCourant;
+    if (!iti || !v) return;
+    this.#afficherRecharge(planifierArrets({
+      vehicule: v,
+      distanceM: iti.distance,
+      bornes: this.#candidates(),
+      socDepart: this.#socDepart,
+      socArrivee: this.#valeurReglage('.recharge-cible', 10),
+      reserve: this.#valeurReglage('.recharge-reserve', 10),
+      imposees: [...this.#imposees],
+      ecartees: [...this.#ecartees],
+    }));
   }
 
   /* UNE PHRASE, PAS UNE LISTE : sur une aire, trois lignes de plus dans un
@@ -451,6 +532,46 @@ export class PanneauItineraire extends HTMLElement {
     return `${bouts.join(' · ')}. Source OpenStreetMap.`;
   }
 
+  /**
+   * Le résumé du haut : distance, temps de ROUTE, et le total quand un plan de
+   * recharge existe.
+   *
+   * LE DÉFAUT QU'IL CORRIGE. Armelin, le 25/08/2026 : « la durée totale ne
+   * précise pas si le temps de charge est compris ni le temps de charge à
+   * chaque arrêt ». La ligne affichait la durée rendue par le moteur
+   * d'itinéraire — c'est-à-dire le temps de conduite SEUL — sans le dire.
+   * Pour un trajet électrique long, l'écart se compte en heures : annoncer
+   * « 4 h 25 » quand il en faudra 5 h 40 n'est pas une approximation, c'est
+   * une erreur de planification que l'usager découvre en route.
+   *
+   * TANT QU'AUCUN PLAN N'EXISTE, ON LE DIT AUSSI : « hors recharge » vaut
+   * mieux qu'un nombre nu dont on ignore ce qu'il contient.
+   */
+  #majResume(): void {
+    const resultat = this.querySelector('.iti-resultat') as HTMLElement;
+    const iti = this.#dernier;
+    if (!iti) { resultat.hidden = true; return; }
+    resultat.hidden = false;
+
+    const base = `${formaterDistance(iti.distance)} — ${formaterDuree(iti.duree)}`;
+    const plan = this.#planCourant;
+    if (!plan || !plan.faisable) {
+      resultat.textContent = this.#profil === 'car'
+        ? `${base} de route, hors recharge`
+        : base;
+      return;
+    }
+    if (plan.arrets.length === 0) {
+      resultat.textContent = `${base} — aucun arrêt de recharge nécessaire`;
+      return;
+    }
+    const charge = Math.round(plan.dureeRechargeMin);
+    const total = iti.duree + charge * 60;
+    resultat.textContent = `${formaterDistance(iti.distance)} —`
+      + ` ${formaterDuree(total)} au total`
+      + ` (${formaterDuree(iti.duree)} de route + ${formaterDuree(charge * 60)} de charge)`;
+  }
+
   /** Lit un réglage numérique du volet, avec son repli si l'élément manque. */
   #valeurReglage(selecteur: string, repli: number): number {
     const el = this.querySelector<HTMLSelectElement>(selecteur);
@@ -461,6 +582,9 @@ export class PanneauItineraire extends HTMLElement {
   #afficherRecharge(plan: PlanRecharge): void {
     const corps = this.querySelector('.iti-recharge-corps') as HTMLElement;
     corps.replaceChildren();
+    // Le résumé du haut apprend le temps de charge : voir `#majResume`.
+    this.#planCourant = plan;
+    this.#majResume();
     this.#marqueursArrets.forEach((m) => m.remove());
     this.#marqueursArrets = [];
 
@@ -491,19 +615,42 @@ export class PanneauItineraire extends HTMLElement {
         /* LE NOM EST UN BOUTON : une liste d'arrêts qu'on ne peut pas situer
            sur la carte oblige à chercher des yeux ce que l'application sait
            déjà. Un clic y vole. */
+        /* LE NOM OUVRE LE CARTOUCHE DE DÉTAIL. Armelin, le 25/08 : « on ne
+           peut pas cliquer sur un point de charge suggéré pour avoir son
+           détail, ni le nom de l'opérateur du réseau ». Le clic vole aussi la
+           carte jusqu'à la borne : voir un détail sans savoir où il se trouve
+           laisse le travail à moitié fait. */
         const aller = document.createElement('button');
         aller.type = 'button';
         aller.className = 'recharge-aller';
         aller.textContent = a.borne.nom;
-        aller.setAttribute('aria-label', `Voir ${a.borne.nom} sur la carte`);
+        aller.setAttribute('aria-label', `Détail de ${a.borne.nom}`);
         aller.addEventListener('click', () => {
           this.#carte?.flyTo({ center: [a.borne.lon, a.borne.lat], zoom: 14 });
+          this.#fiche?.ouvrir({
+            id: a.borne.id ?? null,
+            lon: a.borne.lon,
+            lat: a.borne.lat,
+            nom: a.borne.nom,
+          });
         });
+        /* LE RÉSEAU EST NOMMÉ ICI, sur sa propre ligne : c'est ce qu'on
+           cherche des yeux depuis la route, et ce qui décide de la carte
+           d'abonnement qu'on sortira. */
+        const reseau = document.createElement('span');
+        reseau.className = 'recharge-reseau';
+        reseau.textContent = a.borne.reseau ?? 'réseau non déclaré';
+
         const detail = document.createElement('span');
         detail.className = 'recharge-detail';
+        /* LE TEMPS DE CHARGE EST NOMMÉ « de charge », pas laissé en « min »
+           nu au milieu d'autres nombres : la demande d'Armelin portait
+           précisément sur cette confusion. */
         detail.textContent = `${Math.round(a.borne.avancementM / 1000)} km`
           + ` · arrivée ${Math.round(a.socArrivee)} % → départ ${Math.round(a.socDepart)} %`
-          + ` · ${Math.round(a.dureeMin)} min`
+          + (a.dureeMin > 0
+            ? ` · ${Math.round(a.dureeMin)} min de charge`
+            : ' · arrêt imposé, sans recharge')
           + (a.borne.puissanceKw ? ` · ${a.borne.puissanceKw} kW` : '');
         /* LES COMMODITÉS SONT À LA DEMANDE, un arrêt à la fois. Overpass est
            un service bénévole : on ne l'interroge pas pour les quatre arrêts
@@ -528,7 +675,22 @@ export class PanneauItineraire extends HTMLElement {
             },
           );
         });
-        item.append(aller, detail, voir, sortie);
+        /* LE « − » RETIRE CET ARRÊT DU PLAN. Sans lui, un usager qui refuse
+           une borne — trop chère, mauvaise expérience, réseau qu'il n'a pas —
+           n'a aucun recours que de subir la proposition. */
+        const retirer = document.createElement('button');
+        retirer.type = 'button';
+        retirer.className = 'recharge-retirer';
+        retirer.textContent = '−';
+        retirer.title = 'Ne pas s’arrêter ici';
+        retirer.setAttribute('aria-label', `Écarter ${a.borne.nom} du plan`);
+        retirer.addEventListener('click', () => {
+          const cle = cleBorne(a.borne);
+          this.#ecartees.add(cle);
+          this.#imposees.delete(cle);
+          this.#refairePlan();
+        });
+        item.append(aller, reseau, detail, retirer, voir, sortie);
         liste.append(item);
 
         // Et le marqueur, dans le vert des bornes, avec son rang.
@@ -542,12 +704,153 @@ export class PanneauItineraire extends HTMLElement {
       corps.append(liste);
     }
 
+    // Toutes les bornes du trajet, et la main sur le plan.
+    if (this.#bornesTrajet.length > 0) {
+      corps.append(this.#voletReseaux(), this.#voletToutesBornes(plan));
+    }
+
     const reserve = document.createElement('p');
     reserve.className = 'recharge-reserve';
     reserve.textContent = 'Estimation à plat, à consommation constante :'
       + ' ni le relief, ni le vent, ni le trafic, ni la vraie courbe de charge'
-      + ' de votre véhicule ne sont pris en compte.';
+      + ' de votre véhicule ne sont pris en compte.'
+      + ` Bornes de ${SEUIL_RAPIDE} kW et plus, depuis le fichier national IRVE.`;
     corps.append(reserve);
+  }
+
+  /* LES RÉSEAUX PRÉSENTS SUR CE TRAJET — pas ceux de France entière. Proposer
+     une case « Ionity » sur un trajet qui n'en croise aucune est une promesse
+     creuse ; la liste se calcule sur les bornes déjà trouvées, donc sans le
+     moindre appel. */
+  #voletReseaux(): HTMLElement {
+    const volet = document.createElement('details');
+    volet.className = 'recharge-reseaux';
+    const titre = document.createElement('summary');
+
+    const compte = new Map<string, number>();
+    for (const t of this.#bornesTrajet) {
+      if (!t.poi.reseau) continue;
+      compte.set(t.poi.reseau, (compte.get(t.poi.reseau) ?? 0) + 1);
+    }
+    const reseaux = [...compte.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr'));
+
+    titre.textContent = this.#reseauxPreferes.size === 0
+      ? `Réseaux préférés — tous (${reseaux.length} sur ce trajet)`
+      : `Réseaux préférés — ${this.#reseauxPreferes.size} sur ${reseaux.length}`;
+    volet.append(titre);
+
+    const boite = document.createElement('div');
+    boite.className = 'recharge-reseaux-corps';
+    boite.setAttribute('role', 'group');
+    boite.setAttribute('aria-label', 'Réseaux retenus pour ce trajet');
+    for (const [nom, nombre] of reseaux) {
+      const etiquette = document.createElement('label');
+      const case_ = document.createElement('input');
+      case_.type = 'checkbox';
+      case_.checked = this.#reseauxPreferes.has(nom);
+      case_.addEventListener('change', () => {
+        if (case_.checked) this.#reseauxPreferes.add(nom);
+        else this.#reseauxPreferes.delete(nom);
+        this.#refairePlan();
+      });
+      const texte = document.createElement('span');
+      texte.textContent = ` ${nom} (${nombre})`;
+      etiquette.append(case_, texte);
+      boite.append(etiquette);
+    }
+    const note = document.createElement('p');
+    note.className = 'recharge-note';
+    note.textContent = 'Sans case cochée, tous les réseaux sont acceptés.';
+    boite.append(note);
+    volet.append(boite);
+    return volet;
+  }
+
+  /**
+   * Toutes les bornes du trajet, avec un « + » et un « − » par borne.
+   *
+   * POURQUOI UN VOLET REPLIÉ. Un Paris-Marseille en croise plusieurs
+   * centaines : les déplier d'office noierait le plan, qui est la réponse
+   * qu'on est venu chercher. On les range, on annonce leur nombre, et on
+   * laisse la main à qui la veut.
+   */
+  #voletToutesBornes(plan: PlanRecharge): HTMLElement {
+    const retenues = new Set(plan.arrets.map((a) => cleBorne(a.borne)));
+    const volet = document.createElement('details');
+    volet.className = 'recharge-toutes';
+    const titre = document.createElement('summary');
+    titre.textContent = `Toutes les bornes du trajet (${this.#bornesTrajet.length})`;
+    volet.append(titre);
+
+    const liste = document.createElement('ol');
+    liste.className = 'recharge-toutes-liste';
+    for (const t of this.#bornesTrajet) {
+      const cle = cleBorne({
+        nom: t.poi.nom, lon: t.poi.lon, lat: t.poi.lat, id: t.poi.id,
+        avancementM: t.avancement, ecartM: t.ecart, puissanceKw: t.poi.puissance,
+      });
+      const item = document.createElement('li');
+      const impose = this.#imposees.has(cle);
+      const ecarte = this.#ecartees.has(cle);
+      /* L'ÉTAT EST AUSSI UNE CLASSE ET UN TEXTE, jamais une couleur seule :
+         « retenue », « imposée », « écartée » doivent se lire sans distinguer
+         le vert de l'orange (WCAG 1.4.1). */
+      item.className = impose ? 'est-imposee' : ecarte ? 'est-ecartee'
+        : retenues.has(cle) ? 'est-retenue' : '';
+
+      const nom = document.createElement('button');
+      nom.type = 'button';
+      nom.className = 'recharge-aller';
+      nom.textContent = t.poi.nom;
+      nom.setAttribute('aria-label', `Détail de ${t.poi.nom}`);
+      nom.addEventListener('click', () => {
+        this.#carte?.flyTo({ center: [t.poi.lon, t.poi.lat], zoom: 14 });
+        this.#fiche?.ouvrir({
+          id: t.poi.id, lon: t.poi.lon, lat: t.poi.lat, nom: t.poi.nom,
+        });
+      });
+
+      const detail = document.createElement('span');
+      detail.className = 'recharge-detail';
+      detail.textContent = `${Math.round(t.avancement / 1000)} km`
+        + ` · ${t.poi.puissance} kW`
+        + ` · ${t.poi.reseau ?? 'réseau non déclaré'}`
+        + (t.ecart > 500 ? ` · à ${(t.ecart / 1000).toFixed(1)} km du trajet` : '')
+        + (t.poi.ouvert === false ? ' · ACCÈS RÉSERVÉ' : '')
+        + (impose ? ' · arrêt imposé' : ecarte ? ' · écartée'
+          : retenues.has(cle) ? ' · retenue par le plan' : '');
+
+      const plus = document.createElement('button');
+      plus.type = 'button';
+      plus.className = 'recharge-plus';
+      plus.textContent = '+';
+      plus.title = 'S’arrêter ici';
+      plus.setAttribute('aria-pressed', String(impose));
+      plus.setAttribute('aria-label', `Imposer un arrêt à ${t.poi.nom}`);
+      plus.addEventListener('click', () => {
+        if (impose) this.#imposees.delete(cle);
+        else { this.#imposees.add(cle); this.#ecartees.delete(cle); }
+        this.#refairePlan();
+      });
+
+      const moins = document.createElement('button');
+      moins.type = 'button';
+      moins.className = 'recharge-retirer';
+      moins.textContent = '−';
+      moins.title = 'Ne jamais s’arrêter ici';
+      moins.setAttribute('aria-pressed', String(ecarte));
+      moins.setAttribute('aria-label', `Écarter ${t.poi.nom}`);
+      moins.addEventListener('click', () => {
+        if (ecarte) this.#ecartees.delete(cle);
+        else { this.#ecartees.add(cle); this.#imposees.delete(cle); }
+        this.#refairePlan();
+      });
+
+      item.append(nom, detail, plus, moins);
+      liste.append(item);
+    }
+    volet.append(liste);
+    return volet;
   }
 
   /** Construit la liste EN textContent : les libellés viennent des services. */
@@ -747,7 +1050,16 @@ export class PanneauItineraire extends HTMLElement {
       // Le résumé AVANT la pose : distance et durée ne dépendent pas de la
       // carte, et la pose peut légitimement attendre (style en cours de
       // chargement) — l'utilisateur ne doit pas payer cette attente.
-      resultat.textContent = `${formaterDistance(iti.distance)} — ${formaterDuree(iti.duree)}`;
+      /* LE PLAN D'AVANT NE VAUT PLUS POUR CE TRAJET — ni ses consignes. Garder
+         « imposer Beaune » sur un Lille-Brest désignerait une borne qui n'est
+         plus sur la route, et le planificateur refuserait un trajet
+         parfaitement faisable sans que l'usager comprenne pourquoi. */
+      this.#planCourant = null;
+      this.#bornesTrajet = [];
+      this.#imposees.clear();
+      this.#ecartees.clear();
+      this.#reseauxPreferes.clear();
+      this.#majResume();
       (this.querySelector('.iti-actions') as HTMLElement).hidden = false;
       // Nouveau trajet : profil et feuille de route réapparaissent repliés et
       // vidés — leurs contenus ne valent que pour l'itinéraire qui les a produits.

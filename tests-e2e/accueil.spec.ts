@@ -463,13 +463,27 @@ test('les POI se chargent À LA DEMANDE : zoom respecté, prix en popup, choix p
         { geom: { lon: 2.36, lat: 48.86 }, adresse: '2 Avenue X', ville: 'Paris', sp98_prix: 2.05 },
       ] }) });
   });
-  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({ total_count: 11_950, results: [
-      { point_geo: { lon: 2.355, lat: 48.857 }, nom_station: 'Bercy Village',
-        puissance_nominale: 7, nbre_pdc: 30, gratuit: '1' },
-    ] }),
-  }));
+  await page.route('**/public.opendatasoft.com/**', (route) => {
+    /* L'INDEX NATIONAL ATTEND UN TABLEAU, la couche un objet
+       `{ total_count, results }`. Servir le second au premier rendait un index
+       vide — et l'application le DISAIT, à juste titre. Deux formes, deux
+       réponses. */
+    if (route.request().url().includes('/exports/json')) {
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify([
+        { id_station_itinerance: 'FRBERCY01', nom_station: 'Bercy Village',
+          nom_enseigne: 'Belib’', condition_acces: 'Accès libre',
+          prise_type_combo_ccs: '1', prise_type_chademo: '0', prise_type_2: '0',
+          p: 50, pdc: 30, lon: 2.355, lat: 48.857 },
+      ]) });
+    }
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ total_count: 11_950, results: [
+        { point_geo: { lon: 2.355, lat: 48.857 }, nom_station: 'Bercy Village',
+          puissance_nominale: 7, nbre_pdc: 30, gratuit: '1' },
+      ] }),
+    });
+  });
   await page.route('**/data.geopf.fr/wfs/**', (route) => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({ type: 'FeatureCollection', numberMatched: 1, features: [
@@ -482,8 +496,12 @@ test('les POI se chargent À LA DEMANDE : zoom respecté, prix en popup, choix p
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await ouvrirVolet(page, '.poi');
   await page.getByRole('checkbox', { name: 'Carburants' }).check();
-  // Au zoom initial (5,4 : la France entière), AUCUN appel — on demande de zoomer.
-  await expect(page.locator('.poi-etat')).toContainText('Zoomez', { timeout: 5_000 });
+  /* Au zoom initial (5,4 : la France entière), AUCUN appel — on demande de
+     zoomer. LE MESSAGE EST DÉSORMAIS PAR COUCHE : les bornes, elles, ont un
+     index national et franchissent ce seuil ; les carburants et les parkings
+     n'en ont pas et s'y arrêtent. Un message global les aurait confondus. */
+  await expect(page.locator('.poi-etat'))
+    .toContainText('Carburants : zoomez pour les afficher', { timeout: 5_000 });
   expect(appelsCarbu, 'appel parti sous le zoom minimal').toBe(0);
 
   // Zoom sur Paris : l'appel part (débounce 500 ms), les points se posent.
@@ -546,7 +564,8 @@ test('les POI se chargent À LA DEMANDE : zoom respecté, prix en popup, choix p
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await ouvrirVolet(page, '.poi');
   await expect(page.getByRole('checkbox', { name: 'Carburants' })).toBeChecked();
-  await expect(page.locator('.poi-etat')).toContainText('Zoomez', { timeout: 10_000 });
+  await expect(page.locator('.poi-etat'))
+    .toContainText('Carburants : zoomez pour les afficher', { timeout: 10_000 });
   expect(appelsCarbu, 'appel parti au zoom France entière après reload').toBe(appelsAvantReload);
   await page.evaluate(() => {
     (window as unknown as { __carte: { jumpTo(o: object): void } })
@@ -568,6 +587,38 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
   });
   await page.route('**/public.opendatasoft.com/**', (route) => {
     if (panneBornes) return route.abort('failed');
+    const url = route.request().url();
+    /* L'INDEX NATIONAL N'EST PAS DEMANDÉ ICI (on reste au-dessus du zoom 12) ;
+       s'il l'était, il attendrait un TABLEAU. Lui répondre des
+       enregistrements rendrait un index vide, silencieusement. */
+    if (url.includes('/exports/json')) {
+      return route.fulfill({ contentType: 'application/json', body: '[]' });
+    }
+    /* LE CARTOUCHE DE DÉTAIL interroge la station par son nom et sa position :
+       il reçoit une ligne PAR POINT DE CHARGE, avec les champs que la couche
+       de la carte ne demande pas — accès, horaires, paiement. */
+    /* L'AIGUILLAGE SE FAIT SUR LA CLAUSE `where`, PAS SUR LE SEUL NOM DE CHAMP.
+       La requête de la COUCHE porte elle aussi « nom_station » — dans son
+       `select`. Un test sur la simple présence du mot détournait donc la
+       couche vers la réponse du cartouche : un enregistrement sans
+       `point_geo`, donc zéro borne posée sur la carte, et un compteur
+       « 0 sur 1 » que rien n'expliquait. Le défaut était dans la simulation,
+       pas dans le code — mais il aurait fait accuser le code. */
+    if (decodeURIComponent(url).includes('nom_station =')) {
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+        total_count: 1, results: [
+          { nom_station: 'Bercy Village', adresse_station: '1 Cour Saint-Émilion, Paris',
+            nom_enseigne: 'Belib’', nom_operateur: 'Total Marketing France',
+            telephone_operateur: 'tel:+33-1-23-45-67-89', condition_acces: 'Accès libre',
+            horaires: '24/7', implantation_station: 'Parking public',
+            accessibilite_pmr: 'Accessibilité inconnue', paiement_cb: '1',
+            paiement_acte: '1', reservation: '0', station_deux_roues: '0',
+            tarification: null, gratuit: '1', puissance_nominale: 30, nbre_pdc: 30,
+            id_station_itinerance: 'FRBERCY01', id_pdc_itinerance: 'FRBERCYE1',
+            date_maj: '2026-05-02', prise_type_combo_ccs: '1', prise_type_2: '0',
+            prise_type_chademo: '0', prise_type_ef: '0' },
+        ] }) });
+    }
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
       total_count: 1, results: [
         { point_geo: { lon: 2.356, lat: 48.858 }, nom_station: 'Bercy Village',
@@ -617,8 +668,22 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
   });
   const cadre = await page.locator('#carte canvas.maplibregl-canvas').boundingBox();
   await page.mouse.click(cadre!.x + point.x, cadre!.y + point.y);
-  await expect(page.locator('.poi-popup')).toContainText('Bercy Village', { timeout: 5_000 });
-  await expect(page.locator('.poi-popup')).toContainText('7 kW · 30 points de charge · gratuit');
+  /* LE CLIC OUVRE LE CARTOUCHE, PLUS UNE BULLE. Quatre lignes dans deux cent
+     soixante pixels ne disaient ni les conditions d'accès, ni les horaires, ni
+     qui appeler quand la borne refuse de démarrer — Armelin, le 25/08 : « on
+     ne peut pas cliquer sur un point de charge pour avoir son détail ». */
+  const fiche = page.locator('fiche-borne');
+  await expect(fiche).toBeVisible({ timeout: 5_000 });
+  await expect(fiche.locator('.fb-titre')).toContainText('Bercy Village');
+  // Le détail vient d'une SECONDE requête, sur les enregistrements de la station.
+  await expect(fiche).toContainText('Ouvert à tous', { timeout: 10_000 });
+  await expect(fiche).toContainText('30 kW');
+  await expect(fiche, 'l’absence d’occupation en direct doit être DITE')
+    .toContainText('Occupation en direct indisponible');
+
+  // Et elle se referme, au clavier comme à la souris.
+  await page.getByRole('button', { name: 'Fermer le détail' }).click();
+  await expect(fiche).toBeHidden();
 
   // DÉCOCHER vide réellement la carte — pixels à l'appui.
   await page.getByRole('checkbox', { name: 'Bornes électriques' }).uncheck();
@@ -633,7 +698,8 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
     (window as unknown as { __carte: { jumpTo(o: object): void } })
       .__carte.jumpTo({ center: [2.4, 46.6], zoom: 5.4 });
   });
-  await expect(page.locator('.poi-etat')).toContainText('Zoomez', { timeout: 10_000 });
+  await expect(page.locator('.poi-etat'))
+    .toContainText('Carburants : zoomez pour les afficher', { timeout: 10_000 });
   expect(appelsCarbu, 'appel parti sous le zoom minimal').toBe(appelsAvant);
 });
 

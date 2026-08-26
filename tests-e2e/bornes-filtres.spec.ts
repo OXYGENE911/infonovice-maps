@@ -27,6 +27,11 @@ async function espionnerIrve(page: import('@playwright/test').Page): Promise<str
        l'ordre d'écriture des tests aurait été une bombe à retardement. */
     const url = route.request().url();
     if (url.includes('/facets')) return route.fallback();
+    /* ET IL LAISSE PASSER L'EXPORT DE L'INDEX NATIONAL, pour la même raison :
+       lui répondre une collection d'enregistrements rendrait un index vide,
+       donc une liste de réseaux vide, sans qu'aucune assertion ne dise
+       pourquoi. */
+    if (url.includes('/exports/json')) return route.fallback();
     vues.push(decodeURIComponent(url));
     return route.fulfill({ contentType: 'application/json',
       body: JSON.stringify({ total_count: 0, results: [] }) });
@@ -151,55 +156,119 @@ test('chaque borne porte le palier de SA puissance, frontières comprises', asyn
   ]);
 });
 
-/* LE FILTRE PAR RÉSEAU (PR #22bis) — on ne propose pas une liste figée : le
-   portail dit quels réseaux sont DANS LA VUE, avec leur nombre. Une case
-   « Ionity » là où il n'y en a aucune est une promesse creuse. */
-test('les réseaux proposés sont ceux de la vue, du plus fourni au moins', async ({ page }) => {
-  await page.route('**/mobilityref-france-irve-220/facets**', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({ facets: [{ name: 'nom_enseigne', facets: [
-      { name: 'Bump', count: 90, value: 'Bump' },
-      { name: "Belib'", count: 4286, value: "Belib'" },
-      { name: 'ACCOR Hotels', count: 2, value: 'ACCOR Hotels' },
-    ] }] }),
-  }));
+/* LE FILTRE PAR RÉSEAU — DEUXIÈME ÂGE.
+ *
+ * CE QUI A CHANGÉ, ET POURQUOI. La liste venait de la FACETTE du portail,
+ * bornée à l'emprise : elle ne proposait donc que ce que la vue montrait déjà,
+ * et son contenu changeait à chaque déplacement de carte. Armelin, le
+ * 25/08/2026 : « le filtre réseau devrait fonctionner quel que soit le niveau
+ * de zoom ». Elle se calcule désormais sur l'INDEX NATIONAL, en mémoire, sans
+ * le moindre appel — et le compte affiché est celui de la France entière.
+ *
+ * Ces parcours vérifient les deux propriétés qui en découlent : la liste est
+ * nationale, et elle ne bouge pas quand la carte bouge. */
+
+/** L'export agrégé simulé — la source de la liste des réseaux. */
+async function simulerIndexNational(
+  page: import('@playwright/test').Page,
+  stations: { nom: string; reseau: string; lon: number; lat: number; p?: number }[],
+): Promise<number> {
+  let appels = 0;
+  await page.route('**/mobilityref-france-irve-220/exports/json**', (route) => {
+    appels += 1;
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify(stations.map((st, i) => ({
+        id_station_itinerance: `FRTEST${i}`,
+        nom_station: st.nom,
+        nom_enseigne: st.reseau,
+        condition_acces: 'Accès libre',
+        prise_type_combo_ccs: '1',
+        prise_type_chademo: '0',
+        prise_type_2: '0',
+        p: st.p ?? 150,
+        pdc: 4,
+        lon: st.lon,
+        lat: st.lat,
+      }))),
+    });
+  });
+  // Un compteur par référence, pour que l'appelant lise la valeur à jour.
+  return appels;
+}
+
+const RESEAUX_ESSAI = [
+  { nom: 'Bump 1', reseau: 'Bump', lon: 2.35, lat: 48.85 },
+  { nom: 'Bump 2', reseau: 'Bump', lon: 2.36, lat: 48.86 },
+  { nom: 'Belib 1', reseau: "Belib'", lon: 2.34, lat: 48.84 },
+  { nom: 'Belib 2', reseau: "Belib'", lon: 2.33, lat: 48.83 },
+  { nom: 'Belib 3', reseau: "Belib'", lon: 2.32, lat: 48.82 },
+  // Loin de Paris : elle DOIT quand même paraître dans la liste.
+  { nom: 'Alpine', reseau: 'ACCOR Hotels', lon: 6.9, lat: 43.6 },
+];
+
+test('les réseaux proposés sont NATIONAUX, du plus fourni au moins', async ({ page }) => {
+  await simulerIndexNational(page, RESEAUX_ESSAI);
   await espionnerIrve(page);
   await ouvrirBornes(page);
 
   const cases_ = page.locator('.poi-reseau');
   await expect(cases_).toHaveCount(3, { timeout: 15_000 });
-  await expect(page.locator('.poi-reseaux')).toContainText("Belib' (4286)");
+  await expect(page.locator('.poi-reseaux')).toContainText("Belib' (3)");
   // Du plus fourni au moins fourni : l'usager cherche d'abord les grands.
   const valeurs = await cases_.evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value));
   expect(valeurs).toEqual(["Belib'", 'Bump', 'ACCOR Hotels']);
+
+  /* LA PREUVE DU CHANGEMENT : « ACCOR Hotels » est à Antibes, la carte est sur
+     Paris. L'ancienne facette, bornée à l'emprise, ne l'aurait jamais proposée. */
+  await expect(page.locator('.poi-reseaux'),
+    'un réseau hors de la vue doit rester proposable').toContainText('ACCOR Hotels');
+});
+
+test('la liste des réseaux ne bouge PAS quand la carte bouge', async ({ page }) => {
+  await simulerIndexNational(page, RESEAUX_ESSAI);
+  await espionnerIrve(page);
+  await ouvrirBornes(page);
+  await expect(page.locator('.poi-reseau')).toHaveCount(3, { timeout: 15_000 });
+
+  // Sept cents kilomètres plus loin : la liste doit être la même.
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [5.37, 43.29], zoom: 13 });
+  });
+  await page.waitForTimeout(1200);
+  await expect(page.locator('.poi-reseau'),
+    'la liste s’est remise à suivre la vue').toHaveCount(3);
+  await expect(page.locator('.poi-reseaux')).toContainText("Belib' (3)");
 });
 
 test('cocher un réseau le fait partir DANS LA REQUÊTE', async ({ page }) => {
-  await page.route('**/mobilityref-france-irve-220/facets**', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({ facets: [{ name: 'nom_enseigne', facets: [
-      { name: "Belib'", count: 4286, value: "Belib'" },
-    ] }] }),
-  }));
+  /* AU ZOOM 12 ET AU-DELÀ, les bornes viennent toujours du portail par
+     emprise : le filtre doit donc partir AU SERVICE, et non trier localement
+     un ensemble déjà tronqué à cent enregistrements. */
+  await simulerIndexNational(page, [
+    { nom: 'Belib 1', reseau: "Belib'", lon: 2.34, lat: 48.84 },
+  ]);
   const vues = await espionnerIrve(page);
   await ouvrirBornes(page);
   await expect(page.locator('.poi-reseau')).toHaveCount(1, { timeout: 15_000 });
 
   await page.locator('.poi-reseau').check();
-  await expect.poll(() => vues.some((u) => u.includes('nom_enseigne = "Belib\'"')),
+  await expect.poll(() => vues.some((u) => u.includes('nom_enseigne =') && u.includes('Belib')),
     { message: 'le réseau n’est pas parti au service' }).toBe(true);
 });
 
-test('une facette en panne n’emporte PAS les bornes', async ({ page }) => {
-  /* La facette n'est qu'un confort de filtrage : son échec ne doit pas priver
-     l'usager de la couche elle-même. */
-  await page.route('**/mobilityref-france-irve-220/facets**',
+test('un index en panne n’emporte PAS les bornes', async ({ page }) => {
+  /* L'index n'est qu'un confort de filtrage tant qu'on est au-dessus du zoom
+     12 : son échec ne doit pas priver l'usager de la couche elle-même. C'est
+     le même contrat que la facette d'autrefois. */
+  await page.route('**/mobilityref-france-irve-220/exports/json**',
     (route) => route.fulfill({ status: 500, body: 'panne' }));
   await espionnerIrve(page);
   await ouvrirBornes(page);
 
-  await expect(page.locator('.poi-reseaux')).toContainText('Aucun réseau identifié',
-    { timeout: 15_000 });
-  // Et la couche des bornes, elle, a bien été demandée.
-  await expect(page.locator('.poi-filtres')).toBeVisible();
+  // La couche est demandée, ses réglages sont là, et rien n'a explosé.
+  await expect(page.locator('.poi-filtres')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.poi-reseau')).toHaveCount(0);
+  await expect(page.locator('.poi-etat')).toContainText('Bornes électriques', { timeout: 15_000 });
 });
