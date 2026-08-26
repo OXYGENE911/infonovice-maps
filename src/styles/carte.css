@@ -1246,3 +1246,91 @@ bandeau-guidage[hidden] { display: none; }
   .bg { padding: 10px 12px; }
   .bg-instruction { font-size: 16px; }
 }
+
+/* ==========================================================================
+   CORRECTIONS DU 26/08/2026 — retours d'Armelin sur la production
+   ========================================================================== */
+
+/* LE PIÈGE CLASSIQUE DE FLEXBOX : un enfant flexible a `min-width: auto` par
+   défaut, ce qui l'empêche de descendre sous la largeur de son plus long mot.
+   Une adresse, un nom d'exploitant ou un tarif un peu long débordait donc de
+   son cartouche et passait SOUS la colonne voisine, au lieu de revenir à la
+   ligne. C'est ce qu'Armelin voit comme un chevauchement — et cela ne se
+   reproduit qu'avec un texte assez long, d'où sa survie aux relectures. */
+.fb-ligne { flex-wrap: wrap; }
+.fb-valeur { min-width: 0; overflow-wrap: anywhere; }
+.fb-intitule { min-width: 0; }
+.fb-titre { overflow-wrap: anywhere; min-width: 0; }
+.fb-points li { flex-wrap: wrap; }
+.fb-pdc-titre, .fb-pdc-prises { min-width: 0; overflow-wrap: anywhere; }
+
+/* LA LISTE DES COMMERCES devient cliquable : le nom mène à la carte, le second
+   bouton au planificateur. Quatre colonnes, et la distance garde sa place à
+   droite quoi qu'il arrive.
+
+   AUPARAVANT le nom était masqué quand il manquait (`:empty`), ce qui en
+   grille DÉCALAIT les colonnes suivantes : la distance d'une commodité anonyme
+   remontait sous le type. Le nom retombe désormais sur le TYPE plutôt que de
+   disparaître — une case vide dans une grille n'est pas une case absente. */
+.fb-liste-commodites li {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 6px 8px;
+  padding: 2px 0;
+}
+.fb-commodite-nom {
+  padding: 0; border: none; background: none; cursor: pointer;
+  font: 600 12px var(--police); color: var(--accent);
+  text-align: left; text-decoration: underline; min-width: 0;
+  overflow-wrap: anywhere;
+}
+.fb-commodite-nom:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+.fb-commodite-aller {
+  padding: 2px 8px; border: 1px solid var(--bord-2); border-radius: 999px;
+  background: var(--fond); cursor: pointer; white-space: nowrap;
+  font: 600 11px var(--police); color: var(--texte-2);
+}
+.fb-commodite-aller:hover { border-color: var(--accent); color: var(--accent); }
+.fb-commodite-aller:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* LA RECHERCHE D'UN RÉSEAU dans le filtre : un champ, pas une liste de cent
+   quarante entrées. */
+.poi-reseau-recherche {
+  width: 100%; box-sizing: border-box; margin: 2px 0 4px;
+  padding: 6px 9px; border-radius: 8px; border: 1px solid var(--bord-2);
+  background: var(--fond); font: 400 12px var(--police); color: var(--texte-1);
+}
+.poi-reseau-recherche:focus-visible { outline: none; box-shadow: var(--focus); }
+.poi-etendue-note { line-height: 1.5; }
+
+/* ==========================================================================
+   LE MODE SUIVI DÉGAGE LA VUE
+   --------------------------------------------------------------------------
+   « Quand on est en mode navigation, il y a trop de cartouches affichés qui
+   masquent la navigation, comme la recherche d'adresse » (Armelin, 26/08).
+   Ce n'est pas un encombrement esthétique : c'est de la route qu'on ne voit
+   pas, à un moment où l'on ne peut pas s'arrêter pour ranger l'écran.
+
+   CE QUI DISPARAÎT est ce dont on ne se sert pas au volant : la recherche
+   d'adresse, l'invite d'installation, le pied de page légal. CE QUI RESTE est
+   ce qui peut servir : les boutons des volets, réduits mais atteignables, et
+   les commandes de vue. Tout revient à l'arrêt du suivi.
+   ========================================================================== */
+body.en-guidage .entete recherche-adresse,
+body.en-guidage .entete etat-connexion .installer,
+body.en-guidage .pied-carte {
+  display: none;
+}
+/* Les volets sont refermés par le code au démarrage ; leurs boutons restent,
+   simplement effacés — on les retrouve du regard sans qu'ils appellent l'œil. */
+body.en-guidage #carte .maplibregl-ctrl-top-left summary,
+body.en-guidage #carte .maplibregl-ctrl-top-right summary {
+  opacity: .55;
+}
+body.en-guidage #carte .maplibregl-ctrl-top-left summary:hover,
+body.en-guidage #carte .maplibregl-ctrl-top-right summary:focus-visible,
+body.en-guidage #carte .maplibregl-ctrl-top-left summary:focus-visible,
+body.en-guidage #carte .maplibregl-ctrl-top-right summary:hover {
+  opacity: 1;
+}
+/* Le cartouche de détail d'une borne n'a rien à faire par-dessus le suivi. */
+body.en-guidage fiche-borne { display: none; }

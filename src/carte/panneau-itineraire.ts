@@ -98,6 +98,44 @@ export class PanneauItineraire extends HTMLElement {
 
   set fiche(f: FicheBorne) { this.#fiche = f; }
 
+  /**
+   * Pose une destination venue d'ailleurs, et calcule.
+   *
+   * LE POINT D'ENTRÉE DES AUTRES COMPOSANTS. Armelin, le 26/08/2026 : « les
+   * services à proximité sont affichés mais ça ne me donne pas la possibilité
+   * de cliquer dessus pour programmer un itinéraire vers ce service ». Une
+   * liste qu'on lit sans pouvoir y aller demande de recopier un nom dans un
+   * champ de recherche — pour un restaurant qu'on regarde déjà sur la carte.
+   *
+   * LE VOLET S'OUVRE, parce qu'un itinéraire calculé dans un panneau fermé ne
+   * se voit pas, et le champ porte le NOM du lieu : « itinéraire vers 2,4487 ;
+   * 48,7913 » ne dit à personne vers quoi il va.
+   */
+  allerVers(point: PointGeo, libelle: string): void {
+    this.#arrivee = point;
+    const champ = this.querySelector<RechercheAdresse>(
+      '[data-role="arrivee"] recherche-adresse',
+    );
+    if (champ) champ.libelle = libelle;
+    (this.querySelector('details') as HTMLDetailsElement | null)?.setAttribute('open', '');
+
+    /* SANS DÉPART, LE CALCUL NE PART PAS — ET IL FAUT LE DIRE. Le garde-fou de
+       `#calculer` rend la main en silence quand une extrémité manque : le clic
+       sur « Itinéraire » depuis un commerce ne produisait alors RIEN, pas même
+       un message, et l'on pouvait croire l'application cassée. Attrapé par un
+       parcours E2E qui attendait une distance, jamais à l'œil — on a
+       naturellement une adresse de départ en tête quand on teste. */
+    if (!this.#depart) {
+      const erreur = this.querySelector('.iti-erreur') as HTMLElement;
+      erreur.textContent = `Destination posée sur « ${libelle} ».`
+        + ' Indiquez maintenant votre point de départ.';
+      erreur.hidden = false;
+      this.querySelector<HTMLInputElement>('[data-role="depart"] input')?.focus();
+      return;
+    }
+    void this.#calculer();
+  }
+
   /* LE BANDEAU DE SUIVI, posé par carte.ts. Le panneau reste utilisable sans
      lui : le bouton « Démarrer » ne paraît alors tout simplement pas, plutôt
      que d'échouer au clic. */

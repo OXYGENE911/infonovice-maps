@@ -210,9 +210,9 @@ describe('les filtres de bornes voyagent dans l’URL', () => {
     expect(u).toContain('OR');
   });
 
-  test('les réseaux se filtrent sur l’enseigne, échappés contre l’injection', () => {
+  test('les réseaux se filtrent sur l’OPÉRATEUR, échappés contre l’injection', () => {
     const u = decodeURIComponent(urlBornes(B, { reseaux: ['Ionity', 'e"born'] }));
-    expect(u).toContain('nom_enseigne = "Ionity"');
+    expect(u).toContain('nom_operateur = "Ionity"');
     // Le guillemet du nom est neutralisé : sans cela, la clause se casse en
     // deux et le service renvoie une erreur — ou pire, autre chose.
     expect(u).not.toContain('"e"born"');

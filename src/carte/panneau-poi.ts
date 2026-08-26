@@ -22,14 +22,16 @@ import {
 } from '../lib/poi';
 import {
   indexNational, stationsDans, filtrerStations, reseauxNationaux,
-  ErreurIndex, SEUIL_RAPIDE, POIDS_ANNONCE,
-  type StationRapide, type ReseauNational,
+  chercherReseaux, ErreurIndex, ETENDUES, etendue,
+  type StationRapide, type ReseauNational, type CleEtendue,
 } from '../lib/index-bornes';
 import type { FicheBorne } from './fiche-borne';
 
 export const PREF_POI = 'poi';
 /** Les filtres de bornes vivent à part : ils survivent au décochage de la couche. */
 export const PREF_FILTRES = 'poi-filtres-bornes';
+/** L'étendue du réseau national chargé — un choix, donc une préférence. */
+export const PREF_ETENDUE = 'poi-etendue-bornes';
 /* SOUS CE ZOOM, LES SERVICES PAR EMPRISE NE SONT PLUS INTERROGEABLES : les
    portails Opendatasoft plafonnent à 100 enregistrements, et demander la
    France entière rendrait cent points au hasard — un affichage qui ment sans
@@ -84,6 +86,10 @@ export class PanneauPoi extends HTMLElement {
      cette table garde de quoi les redéployer quand la requête part au portail,
      qui compare, lui, des chaînes exactes. */
   #variantes = new Map<string, string[]>();
+  /** Les réseaux calculés, gardés pour que la recherche filtre sans recalculer. */
+  #reseaux: ReseauNational[] = [];
+  /** L'étendue demandée : « rapide » par défaut, « toutes » sur demande. */
+  #etendue: CleEtendue = 'rapide';
   /* LE CARTOUCHE DE DÉTAIL, partagé avec le planificateur (voir carte.ts).
      Tant qu'il n'est pas posé, le clic sur une borne retombe sur la bulle
      d'autrefois : le panneau doit rester utilisable seul, notamment en test. */
@@ -187,9 +193,29 @@ export class PanneauPoi extends HTMLElement {
             <label><input type="checkbox" class="poi-prise" value="${p.cle}"> ${p.libelle}</label>`).join('')}
           <p class="poi-filtre-note">Sans connecteur coché, toutes les bornes sont montrées.</p>
           <p class="poi-filtre-titre">Réseaux — France entière</p>
+          <!-- UN CHAMP DE RECHERCHE PLUTÔT QU'UNE LISTE PLUS LONGUE. Le filtre
+               montrait les douze premiers réseaux ; Armelin, le 26/08 :
+               « plusieurs réseaux que j'ai l'habitude d'utiliser n'y figurent
+               pas ». IZIVIA FAST était treizième, Atlante dix-huitième, ALLEGO
+               vingt-deuxième. Cent quarante entrées dépliées seraient
+               illisibles ; cherchables, elles sont complètes. -->
+          <input type="search" class="poi-reseau-recherche"
+            placeholder="Chercher un réseau (Fastned, Izivia…)"
+            aria-label="Chercher un réseau de recharge">
           <div class="poi-reseaux" role="group" aria-label="Filtrer par réseau"></div>
           <p class="poi-filtre-note">Le compte est national : un réseau coché
-            peut n’avoir aucune borne dans la vue courante.</p>
+            peut n’avoir aucune borne dans la vue courante. Les réseaux sont
+            groupés par EXPLOITANT — c’est lui qui porte une identité stable,
+            là où l’enseigne écrit souvent le nom du site.</p>
+
+          <p class="poi-filtre-titre">Étendue du réseau national</p>
+          <label class="poi-filtre-ligne">Charger
+            <select class="poi-etendue" aria-label="Étendue du réseau national chargé">
+              ${ETENDUES.map((e) => `
+                <option value="${e.cle}">${e.libelle}</option>`).join('')}
+            </select>
+          </label>
+          <p class="poi-filtre-note poi-etendue-note"></p>
 
           <p class="poi-filtre-titre">Lecture de la carte</p>
           <ul class="poi-legende">
@@ -201,10 +227,11 @@ export class PanneauPoi extends HTMLElement {
               aria-hidden="true">•</span> Puissance non déclarée</li>
           </ul>
           <p class="poi-filtre-note">Sous le zoom 12, la carte montre le réseau
-            national de recharge rapide — les stations de ${SEUIL_RAPIDE} kW et
-            plus, groupées en amas. Cet index (${POIDS_ANNONCE}) est chargé une
-            fois, puis relu localement : il fonctionne hors ligne et n’interroge
-            plus aucun service. Les bornes plus lentes apparaissent en zoomant.</p>
+            national ci-dessus, groupé en amas : il est chargé une fois, puis
+            relu localement — il fonctionne hors ligne et n’interroge plus aucun
+            service. Au-delà du zoom 12, la carte interroge le fichier national
+            en direct et montre TOUTES les bornes de la vue, quelle que soit
+            l’étendue choisie ici.</p>
         </fieldset>
         <p class="poi-etat" role="status"></p>
       </details>`;
@@ -222,6 +249,33 @@ export class PanneauPoi extends HTMLElement {
       this.#filtres = { ...this.#filtres, puissanceMin: Number.isFinite(v) && v > 0 ? v : undefined };
       surFiltre();
     });
+    /* LA RECHERCHE NE TOUCHE NI AUX FILTRES NI À LA CARTE : elle ne fait que
+       réduire ce que la liste montre. Un réseau DÉJÀ COCHÉ reste affiché même
+       s'il ne correspond pas à la recherche — sinon un filtre actif
+       deviendrait invisible, donc impossible à retirer. */
+    this.querySelector('.poi-reseau-recherche')?.addEventListener('input', () => {
+      this.#rendreReseaux(this.#reseaux);
+    });
+
+    this.querySelector<HTMLSelectElement>('.poi-etendue')?.addEventListener('change', (e) => {
+      const choix = (e.target as HTMLSelectElement).value as CleEtendue;
+      this.#etendue = etendue(choix).cle;
+      this.#index = [];        // l'index d'avant décrit une autre étendue
+      this.#majNoteEtendue();
+      void ecrirePreference(PREF_ETENDUE, this.#etendue);
+      if (this.#actives.has('bornes')) void this.#charger('bornes', true);
+    });
+    this.#majNoteEtendue();
+    void lirePreference<unknown>(PREF_ETENDUE).then((memo) => {
+      if (typeof memo !== 'string') return;
+      const connue = ETENDUES.find((x) => x.cle === memo);
+      if (!connue) return;
+      this.#etendue = connue.cle;
+      const select = this.querySelector<HTMLSelectElement>('.poi-etendue');
+      if (select) select.value = connue.cle;
+      this.#majNoteEtendue();
+    });
+
     this.querySelectorAll<HTMLInputElement>('.poi-prise').forEach((case_) => {
       case_.addEventListener('change', () => {
         const prises = [...this.querySelectorAll<HTMLInputElement>('.poi-prise:checked')]
@@ -291,20 +345,44 @@ export class PanneauPoi extends HTMLElement {
     const boite = this.querySelector('.poi-reseaux');
     if (!boite) return;
     boite.replaceChildren();
+    this.#reseaux = reseaux;
     this.#variantes = new Map(reseaux.map((r) => [r.nom, r.variantes]));
 
     const coches = new Set(this.#filtres.reseaux ?? []);
+    const recherche = this.querySelector<HTMLInputElement>('.poi-reseau-recherche')?.value ?? '';
+    const trouves = chercherReseaux(reseaux, recherche);
+    /* SANS RECHERCHE, LES DOUZE PREMIERS : cent quarante entrées dépliées
+       d'office noieraient les réglages voisins. Dès qu'on tape, la liste
+       s'ouvre à TOUT ce qui correspond — c'est là que se trouvent Fastned,
+       Izivia ou Allego, treizième et au-delà.
+       LES RÉSEAUX COCHÉS RESTENT AFFICHÉS quoi qu'il arrive : un filtre actif
+       mais invisible serait impossible à retirer. */
+    const limite = recherche.trim() === '' ? 12 : 40;
     const montres = [
-      ...reseaux.slice(0, 12),
-      ...reseaux.slice(12).filter((r) => coches.has(r.nom)),
+      ...trouves.slice(0, limite),
+      ...trouves.slice(limite).filter((r) => coches.has(r.nom)),
+      ...reseaux.filter((r) => coches.has(r.nom) && !trouves.includes(r)),
     ];
 
     if (montres.length === 0) {
       const vide = document.createElement('p');
       vide.className = 'poi-filtre-note';
-      vide.textContent = 'Aucun réseau identifié dans cette vue.';
+      vide.textContent = recherche.trim() === ''
+        ? 'Aucun réseau identifié.'
+        : `Aucun réseau ne correspond à « ${recherche.trim()} ».`;
       boite.appendChild(vide);
       return;
+    }
+
+    /* ON DIT COMBIEN ON MONTRE SUR COMBIEN. Sans ce compte, une liste tronquée
+       à douze passe pour une liste complète — c'est exactement ce qui a fait
+       croire que Fastned ou Allego n'existaient pas. */
+    if (montres.length < reseaux.length) {
+      const compte = document.createElement('p');
+      compte.className = 'poi-filtre-note';
+      compte.textContent = `${montres.length} réseaux sur ${reseaux.length}`
+        + ' — cherchez par leur nom pour trouver les autres.';
+      boite.appendChild(compte);
     }
 
     for (const r of montres) {
@@ -344,6 +422,22 @@ export class PanneauPoi extends HTMLElement {
     return { ...this.#filtres, reseaux: [...new Set(deployes)] };
   }
 
+  /** Dit ce que l'étendue choisie contient, ET ce qu'elle coûte. */
+  #majNoteEtendue(): void {
+    const note = this.querySelector<HTMLElement>('.poi-etendue-note');
+    if (!note) return;
+    const e = etendue(this.#etendue);
+    const fr = (n: number): string => n.toLocaleString('fr-FR');
+    /* LE POINT DE COMPARAISON EST DONNÉ, parce qu'il sera fait de toute façon.
+       L'Avere annonce 200 045 POINTS DE RECHARGE ouverts au public ; nous
+       comptons des STATIONS. Sans le dire, l'écart passe pour un trou. */
+    note.textContent = `${fr(e.stations)} stations, soit environ`
+      + ` ${fr(e.points)} points de charge (${e.poids}, chargé une fois puis`
+      + ' gardé hors ligne). Repère : l’Avere-France recensait 200 045 points'
+      + ' de recharge ouverts au public au 31 juillet 2026 — une station en'
+      + ' compte plusieurs.';
+  }
+
   /* Les filtres ne s'affichent qu'avec la couche qu'ils règlent. */
   #majVisibiliteFiltres(): void {
     const bloc = this.querySelector<HTMLElement>('.poi-filtres');
@@ -381,7 +475,7 @@ export class PanneauPoi extends HTMLElement {
   async #assurerReseauxNationaux(): Promise<void> {
     if (this.#index.length > 0) return;
     try {
-      const { stations } = await indexNational();
+      const { stations } = await indexNational(undefined, this.#etendue);
       this.#index = stations;
       this.#rendreReseaux(reseauxNationaux(stations));
     } catch { /* confort de filtrage : son absence ne casse rien */ }
@@ -412,9 +506,18 @@ export class PanneauPoi extends HTMLElement {
       this.#etat();
       return;
     }
-    this.#etat(`Chargement du réseau national de recharge (${POIDS_ANNONCE}, une seule fois)…`);
+    /* ON ANNONCE L'ATTENTE, PAS SEULEMENT LE POIDS. « Toutes les bornes » a
+       demandé 26 secondes à la mesure du 26/08/2026 — 2,5 Mo à recevoir, puis
+       84 299 lignes à fondre en 56 781 stations. Un « chargement… » muet
+       pendant une demi-minute se lit comme une panne, et l'on recharge la page
+       au pire moment. La relecture, elle, prend 190 ms : l'attente ne se paie
+       qu'une fois par mois, et cela aussi mérite d'être dit. */
+    const quoi = etendue(this.#etendue);
+    this.#etat(`Chargement du réseau national (${quoi.poids})`
+      + `${quoi.cle === 'toutes' ? ' — comptez une demi-minute' : ''} :`
+      + ' une seule fois, puis gardé hors ligne…');
     try {
-      const { stations } = await indexNational(controleur.signal);
+      const { stations } = await indexNational(controleur.signal, this.#etendue);
       if (controleur !== this.#controleurs.bornes) return;
       this.#index = stations;
       this.#rendreReseaux(reseauxNationaux(stations));
@@ -529,7 +632,7 @@ export class PanneauPoi extends HTMLElement {
                  emprise ne demande pas `condition_acces`. `null` le dit — et
                  le cartouche de détail, lui, ira le chercher. */
               ouvert: null,
-              id: null,
+              id: p.id,
               // Le palier est calculé UNE FOIS, ici : une expression MapLibre
               // le recalculerait à chaque image, et il serait invisible aux
               // tests. La décision vit dans lib/puissance.ts, testée à sec.
@@ -597,9 +700,12 @@ export class PanneauPoi extends HTMLElement {
     const sousLeSeuil = (this.#carte?.getZoom() ?? ZOOM_MIN) < ZOOM_MIN;
     if (sousLeSeuil && this.#actives.has('bornes') && !this.#erreurs.bornes) {
       const n = this.#montres.bornes;
+      const quoi = etendue(this.#etendue);
+      const domaine = quoi.seuilKw > 0
+        ? `${quoi.seuilKw} kW et plus` : 'toutes puissances';
       bouts.push(n === undefined
-        ? `Réseau rapide national (${SEUIL_RAPIDE} kW et plus)`
-        : `${fr(n)} station${n > 1 ? 's' : ''} rapides (${SEUIL_RAPIDE} kW et plus)`);
+        ? `Réseau national (${domaine})`
+        : `${fr(n)} station${n > 1 ? 's' : ''} dans la vue (${domaine})`);
     }
     for (const couche of this.#actives) {
       // Déjà dit ci-dessus, dans les termes de l'index.

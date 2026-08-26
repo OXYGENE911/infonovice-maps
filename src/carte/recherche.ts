@@ -23,6 +23,19 @@ export class RechercheAdresse extends HTMLElement {
 
   set surSelection(f: (r: ResultatAdresse) => void) { this.#surSelection = f; }
 
+  /**
+   * Inscrit un libellé dans le champ SANS relancer une recherche.
+   *
+   * Sert quand un autre composant désigne la destination — un commerce choisi
+   * dans le cartouche d'une borne, par exemple. Le champ doit alors montrer ce
+   * qui a été choisi : le laisser vide donnerait un itinéraire vers un point
+   * que rien ne nomme, et l'usager ne saurait plus vers quoi il va.
+   */
+  set libelle(texte: string) {
+    const champ = this.querySelector('input');
+    if (champ) champ.value = texte;
+  }
+
   connectedCallback(): void {
     /* IDEMPOTENT : déplacer une ligne d'étape (insertBefore) déconnecte puis
        reconnecte le composant — reconstruire le DOM ici effaçait la saisie de

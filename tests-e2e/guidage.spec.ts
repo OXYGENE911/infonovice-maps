@@ -113,22 +113,41 @@ test('quitter la route se DIT, l’instruction ne continue pas comme si de rien'
   await expect(bandeau.locator('.bg-alerte')).toContainText('Recalculez');
 });
 
-test('« Arrêter » referme le bandeau et rend son nom au bouton', async ({ page }) => {
+test('démarrer DÉGAGE la vue : volets refermés, recherche d’adresse effacée', async ({ page }) => {
+  /* Armelin, le 26/08/2026 : « quand on est en mode navigation, il y a trop de
+     cartouches affichés qui masquent la navigation, comme la recherche
+     d'adresse ». Ce n'est pas un encombrement esthétique : c'est de la route
+     qu'on ne voit pas, à un moment où l'on ne peut pas ranger l'écran. */
+  await ouvrirTrajet(page);
+  await expect(page.locator('.iti')).toHaveAttribute('open', '');
+  await expect(page.locator('.entete recherche-adresse input')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+
+  await expect(page.locator('.iti'), 'le planificateur masque la route')
+    .not.toHaveAttribute('open', '');
+  await expect(page.locator('.entete recherche-adresse input')).toBeHidden();
+  await expect(page.locator('.pied-carte')).toBeHidden();
+});
+
+test('« Arrêter » referme le bandeau, et la vue redevient elle-même', async ({ page }) => {
   /* Un `watchPosition` oublié viderait la batterie de celui qui est arrivé
-     depuis une heure : l'arrêt doit être atteignable et évident. */
+     depuis une heure : l'arrêt doit être atteignable et évident. Et tout ce
+     que le suivi a effacé doit revenir — un mode qui ne se défait pas est un
+     piège. */
   await ouvrirTrajet(page);
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   const bandeau = page.locator('bandeau-guidage');
   await expect(bandeau).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole('button', { name: 'Arrêter le suivi' })).toHaveCount(2);
 
-  /* PRESSER LE BANDEAU NE DOIT PAS REFERMER LE PLANIFICATEUR derrière lui.
-     La règle du clic extérieur ne reconnaissait que les volets ; le bandeau
-     n'en est pas un, et le panneau se refermait sous le doigt — au point que
-     le bouton « Démarrer » disparaissait de l'arbre d'accessibilité. */
   await bandeau.getByRole('button', { name: 'Arrêter le suivi' }).click();
   await expect(bandeau).toBeHidden();
-  await expect(page.locator('.iti')).toHaveAttribute('open', '');
+  await expect(page.locator('.entete recherche-adresse input')).toBeVisible();
+  await expect(page.locator('.pied-carte')).toBeVisible();
+
+  // Et le planificateur se rouvre sur son bouton, rendu à son nom d'origine.
+  await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Itinéraire' }).click();
   await expect(page.getByRole('button', { name: 'Démarrer le suivi' })).toBeVisible();
 });
 
@@ -137,6 +156,9 @@ test('effacer le trajet arrête le suivi — il ne compte pas les kilomètres d�
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
 
+  /* Le suivi a refermé le planificateur : on le rouvre pour atteindre
+     « Effacer », comme le ferait un usager qui renonce à son trajet. */
+  await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Itinéraire' }).click();
   await page.getByRole('button', { name: 'Effacer' }).click();
   await expect(page.locator('bandeau-guidage')).toBeHidden();
   await expect(page.locator('.iti-demarrer')).toBeHidden();

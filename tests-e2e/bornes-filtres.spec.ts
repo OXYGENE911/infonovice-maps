@@ -182,6 +182,7 @@ async function simulerIndexNational(
         id_station_itinerance: `FRTEST${i}`,
         nom_station: st.nom,
         nom_enseigne: st.reseau,
+        nom_operateur: st.reseau,
         condition_acces: 'Accès libre',
         prise_type_combo_ccs: '1',
         prise_type_chademo: '0',
@@ -254,7 +255,10 @@ test('cocher un réseau le fait partir DANS LA REQUÊTE', async ({ page }) => {
   await expect(page.locator('.poi-reseau')).toHaveCount(1, { timeout: 15_000 });
 
   await page.locator('.poi-reseau').check();
-  await expect.poll(() => vues.some((u) => u.includes('nom_enseigne =') && u.includes('Belib')),
+  /* SUR `nom_operateur` DEPUIS LE 26/08. La liste groupe par exploitant — voir
+     la mesure dans lib/index-bornes.ts — et la clause envoyée au portail doit
+     interroger LE MÊME CHAMP : les deux se répondent, ou le filtre ment. */
+  await expect.poll(() => vues.some((u) => u.includes('nom_operateur =') && u.includes('Belib')),
     { message: 'le réseau n’est pas parti au service' }).toBe(true);
 });
 
