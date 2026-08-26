@@ -874,3 +874,12 @@ etat-connexion { display: contents; }
    Lighthouse. Un soulignement suffit, et il ne coûte rien à la lisibilité
    d'une mention déjà discrète. */
 .maplibregl-ctrl-attrib a { text-decoration: underline; }
+.fav-repere-definir {
+  padding: 5px 10px; border-radius: 8px; border: 1px solid var(--accent);
+  background: var(--fond); cursor: pointer;
+  font: 600 12px var(--police); color: var(--accent); white-space: nowrap;
+}
+.fav-repere-definir:disabled { opacity: .6; cursor: default; }
+.fav-repere-definir:focus-visible { outline: none; box-shadow: var(--focus); }
+.veh-bilan-ancre { margin: 4px 0 0; font: 400 11.5px var(--police);
+  color: var(--texte-3); line-height: 1.45; }

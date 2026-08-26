@@ -40,14 +40,27 @@ export class PanneauVehicule extends HTMLElement {
   #vehicule: Vehicule = { ...VIDE, consommations: { ...VIDE.consommations } };
   #essais: Essais = { ville: 0, route: 0, autoroute: 0 };
   #actif = false;
+  /* LA POSITION DU VÉHICULE, quand la géolocalisation l'a donnée. Les anneaux
+     l'entourent ELLE, pas le centre de la carte : faire glisser la carte ne
+     déplace pas la voiture. Tant qu'aucune position n'est connue, ils
+     entourent le centre — et l'interface le DIT, plutôt que de laisser croire
+     à une mesure. */
+  #position: { lon: number; lat: number } | null = null;
+
+  set position(p: { lon: number; lat: number }) {
+    this.#position = p;
+    this.#bilan();
+    if (this.#actif) this.#poser();
+  }
 
   set carte(c: CarteMapLibre) {
     if (this.#carte) return;
     this.#carte = c;
     // setStyle détruit les sources : on repose, même contrat que les autres.
     c.on('style.load', () => { this.#poser(); });
-    // Les anneaux suivent le centre de la carte : ils entourent « d'ici ».
-    c.on('moveend', () => { if (this.#actif) this.#poser(); });
+    /* On ne suit le déplacement de la carte QUE tant qu'aucune position GPS
+       n'est connue — sinon les anneaux s'ancrent sur le véhicule. */
+    c.on('moveend', () => { if (this.#actif && !this.#position) this.#poser(); });
   }
 
   connectedCallback(): void {
@@ -211,16 +224,29 @@ export class PanneauVehicule extends HTMLElement {
     note.textContent = 'Au mieux, à plat, par temps doux : ni le relief,'
       + ' ni le vent, ni votre conduite ne sont pris en compte.';
     boite.appendChild(note);
+
+    /* D'OÙ PART LE RAYON ? La question n'est pas cosmétique : un anneau centré
+       sur le regard plutôt que sur la voiture donne une réponse fausse. On dit
+       donc lequel des deux sert d'ancre. */
+    const ancre = document.createElement('p');
+    ancre.className = 'veh-bilan-ancre';
+    ancre.textContent = this.#position
+      ? 'Rayon mesuré depuis votre position.'
+      : 'Rayon mesuré depuis le centre de la carte — activez « Me localiser »'
+        + ' pour le rattacher à votre position.';
+    boite.appendChild(ancre);
   }
 
   #poser(): void {
     const carte = this.#carte;
     if (!carte || !carte.isStyleLoaded()) return;
 
-    const centre = carte.getCenter();
+    const ancre = this.#position ?? {
+      lon: carte.getCenter().lng, lat: carte.getCenter().lat,
+    };
     const a = autonomies(this.#vehicule);
     const donnees = this.#actif
-      ? collectionAnneaux(centre.lng, centre.lat, CONTEXTES.map((c) => ({
+      ? collectionAnneaux(ancre.lon, ancre.lat, CONTEXTES.map((c) => ({
         cle: c.cle, rayonKm: a[c.cle], couleur: c.couleur,
       })))
       : { type: 'FeatureCollection' as const, features: [] };

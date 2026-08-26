@@ -91,3 +91,31 @@ test('« Oublier » efface le repère et le dit à voix haute', async ({ page })
   // Le changement est ANNONCÉ : un lecteur d'écran doit l'entendre.
   await expect(page.locator('.favoris-etat')).toContainText('Travail oublié');
 });
+
+test('un repère se définit DEPUIS LE PANNEAU, pas seulement par appui long', async ({ page }) => {
+  /* Un repère grisé sans moyen visible de le renseigner est une impasse : rien
+     n'indiquait qu'il fallait presser la carte. Signalé par Armelin. */
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await ouvrirFavoris(page);
+
+  const definir = page.getByRole('button', { name: 'Définir mon domicile au centre de la carte' });
+  await expect(definir, 'aucun moyen visible de définir le domicile').toBeVisible();
+  await definir.click();
+
+  await expect(page.locator('.fav-reperes')).toContainText('Rue de Rivoli', { timeout: 15_000 });
+  await expect(page.locator('.favoris-etat')).toContainText('Domicile enregistré');
+});
+
+test('la BAN muette n’empêche PAS d’enregistrer le repère', async ({ page }) => {
+  /* L'adresse est un confort, pas une condition : perdre le lieu parce qu'un
+     service tiers hésite serait absurde. */
+  await page.route('**api-adresse.data.gouv.fr**', (route) => route.abort('failed'));
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await ouvrirFavoris(page);
+
+  await page.getByRole('button', { name: 'Définir mon travail au centre de la carte' }).click();
+  // Enregistré sous ses coordonnées, faute d'adresse.
+  await expect(page.locator('.fav-reperes')).toContainText(/Travail — \d/, { timeout: 15_000 });
+});

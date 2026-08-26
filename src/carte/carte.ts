@@ -52,7 +52,10 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     attributionControl: { compact: true },
   });
 
-  carte.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
+  /* LES COMMANDES DE VUE VONT EN BAS À DROITE, le menu reste SEUL en haut.
+     Mêler « où je regarde » et « ce que j'affiche » dans une même colonne
+     obligeait l'œil à trier ; les cartes grand public séparent les deux. */
+  carte.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-right');
 
   /* LE MODE SOMBRE DU FOND PLAN est un filtre CSS sur le canevas — le
      vectoriel ferait mieux, mais il exigerait glyphes et sprites hébergés ;
@@ -139,16 +142,27 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   installerPanneaux(document);
   appliquerSombre(selecteur.options);
   sombre.addEventListener('change', () => appliquerSombre(selecteur.options));
-  carte.addControl(new GeolocateControl({
+  /* LA POSITION GPS EST DIFFUSÉE AUX PANNEAUX QUI EN ONT BESOIN. Les anneaux
+     d'autonomie suivaient jusqu'ici le CENTRE DE LA CARTE : dès qu'on faisait
+     glisser la carte, le rayon d'action se déplaçait avec elle, ce qui n'a
+     aucun sens — il entoure la voiture, pas le regard. Signalé par Armelin
+     capture à l'appui. */
+  const geoloc = new GeolocateControl({
     positionOptions: { enableHighAccuracy: true },
     trackUserLocation: true,
-  }), 'top-right');
+  });
+  geoloc.on('geolocate', (e: unknown) => {
+    const p = (e as { coords?: { longitude?: number; latitude?: number } }).coords;
+    if (typeof p?.longitude === 'number' && typeof p?.latitude === 'number') {
+      vehicule.position = { lon: p.longitude, lat: p.latitude };
+    }
+  });
+  carte.addControl(geoloc, 'bottom-right');
 
-  /* LE MENU EST POSÉ EN DERNIER dans la colonne de droite, et ce n'est pas un
-     détail d'ordre : son panneau s'ouvre SOUS son bouton. Placé avant, il
-     recouvrait le bouton « Me localiser » — mesuré à la capture, une
-     fonctionnalité rendue inatteignable par une décoration. En dernier, il ne
-     couvre que la carte. */
+  /* LE MENU EST SEUL EN HAUT À DROITE. Les commandes de vue (zoom, boussole,
+     géolocalisation) sont descendues en bas de la même colonne : son panneau
+     n'a donc plus rien à recouvrir, et le coin haut-droit ne porte qu'une
+     seule chose. */
   carte.addControl({ onAdd: () => porteMenu, onRemove: () => porteMenu.remove() }, 'top-right');
   carte.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
 

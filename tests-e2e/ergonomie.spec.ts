@@ -71,17 +71,32 @@ test('le menu range les couches, les lieux et l’affichage', async ({ page }) =
   }
 });
 
-test('le menu ouvert ne recouvre AUCUN contrôle de la carte', async ({ page }) => {
+test('le haut-droit ne porte QUE le menu', async ({ page }) => {
+  /* Mêler « où je regarde » (zoom, boussole, localisation) et « ce que
+     j'affiche » (couches, lieux, fond) dans une même colonne obligeait l'œil à
+     trier. Les commandes de vue sont descendues en bas de la même colonne. */
   await ouvrirLaCarte(page);
-  await ouvrirMenu(page);
+  await expect(page.locator('.maplibregl-ctrl-top-right .maplibregl-ctrl'),
+    'un coin qui se remplit redevient un fouillis').toHaveCount(1);
+  await expect(page.locator('.maplibregl-ctrl-top-right .reglages')).toBeVisible();
 
+  // Et les commandes de vue sont bien en bas, atteignables.
+  await expect(page.getByRole('button', { name: 'Zoomer', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Me localiser' })).toBeVisible();
+});
+
+test('le menu ouvert ne recouvre AUCUN contrôle de la carte', async ({ page }) => {
   /* LE DÉFAUT EXACT QU'UNE CAPTURE A RÉVÉLÉ : posé avant la géolocalisation
      dans la colonne, le panneau recouvrait « Me localiser » — une
      fonctionnalité rendue inatteignable par une décoration. */
+  await ouvrirLaCarte(page);
+  await ouvrirMenu(page);
+
   const panneau = await boite(page.locator('.reglages-corps'));
-  const controles = page.locator('.maplibregl-ctrl-top-right button');
+  const controles = page.locator(
+    '.maplibregl-ctrl-top-right button, .maplibregl-ctrl-bottom-right button');
   const nombre = await controles.count();
-  expect(nombre, 'aucun contrôle à droite — la vérification serait vide').toBeGreaterThan(0);
+  expect(nombre, 'aucun contrôle — la vérification serait vide').toBeGreaterThan(0);
 
   for (let i = 0; i < nombre; i++) {
     const bouton = controles.nth(i);
