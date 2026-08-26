@@ -196,6 +196,60 @@ export function versStations(brut: unknown): StationRapide[] {
 /* ---- exploitation locale : pure, instantanée, sans réseau ---- */
 
 /**
+ * La clé d'une enseigne — ce qui permet de reconnaître deux écritures du même
+ * réseau.
+ *
+ * LE DÉFAUT MESURÉ LE 26/08/2026, sur l'index lui-même : 14 133 stations
+ * portent 2 615 écritures d'enseigne, dont ONZE GROUPES désignent visiblement
+ * le même réseau sous deux ou trois orthographes — 2 098 stations, soit 15 %
+ * du réseau rapide français. Les plus gros :
+ *   « LIDL » (446) et « Lidl France » (434) ;
+ *   « Freshmile France » (473) et « Freshmile » (2) ;
+ *   « SOWATT SOLUTIONS » (114) et « Sowatt Solutions » (86) ;
+ *   « REVEO » (52), « Reveo » (41) et « Révéo » (1).
+ * Cocher « LIDL » écartait donc 434 stations Lidl — un filtre qui ment sans
+ * le dire, exactement le défaut que l'index venait de corriger ailleurs.
+ *
+ * LA NORMALISATION EST VOLONTAIREMENT TIMIDE : casse, accents, ponctuation,
+ * espaces, et le seul suffixe « France ». Rien de plus. Fondre « X » et
+ * « X Mobility » serait présumer qu'il s'agit de la même société, ce que rien
+ * ne prouve — et fondre à tort deux réseaux distincts est un défaut PIRE que
+ * celui qu'on corrige, puisqu'il fait espérer une borne inaccessible.
+ */
+/** Les mots retires avant comparaison. « France », et rien d'autre. */
+const MOTS_IGNORES = new Set(['france']);
+
+export function cleReseau(nom: string): string {
+  return nom
+    // NFD separe la lettre de son accent ; l'intervalle des diacritiques
+    // combinants l'efface : « Reveo » et « Révéo » se rejoignent.
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    /* LE DECOUPAGE EN MOTS PLUTOT QU'UN REMPLACEMENT DE CHAINE. Retirer
+       « france » par simple substitution amputerait « Francelec » de ses six
+       premieres lettres et le confondrait avec « Elec ». En decoupant
+       d'abord, seul le MOT entier disparait. */
+    .split(/[^a-z0-9]+/)
+    .filter((mot) => mot !== '' && !MOTS_IGNORES.has(mot))
+    .join('');
+}
+
+/** Un réseau tel qu'il est proposé au filtre. */
+export interface ReseauNational {
+  /** Le libellé montré : la variante la plus répandue. */
+  nom: string;
+  /** Le nombre de stations, TOUTES variantes confondues. */
+  nombre: number;
+  /* LES ÉCRITURES RÉELLES, et pourquoi elles voyagent avec le libellé : à
+     partir du zoom 12, les bornes viennent du portail, et la clause envoyée
+     compare `nom_enseigne` à une CHAÎNE EXACTE. N'envoyer que le libellé
+     canonique rendrait les 446 Lidl et perdrait les 434 autres — le défaut
+     serait simplement déplacé du local vers le distant. */
+  variantes: string[];
+}
+
+/**
  * Les réseaux de l'index, avec leur nombre de stations.
  *
  * NATIONAL, ET C'EST TOUT L'INTÉRÊT. La facette du portail est bornée à
@@ -203,17 +257,27 @@ export function versStations(brut: unknown): StationRapide[] {
  * déjà, et changeait de contenu à chaque déplacement. Calculée ici, la liste
  * est stable et complète — c'était la demande d'Armelin du 25/08.
  */
-export function reseauxNationaux(
-  stations: StationRapide[],
-): { nom: string; nombre: number }[] {
-  const compte = new Map<string, number>();
+export function reseauxNationaux(stations: StationRapide[]): ReseauNational[] {
+  const groupes = new Map<string, Map<string, number>>();
   for (const s of stations) {
     if (!s.reseau) continue;
-    compte.set(s.reseau, (compte.get(s.reseau) ?? 0) + 1);
+    const cle = cleReseau(s.reseau);
+    // Une enseigne réduite à rien par la normalisation garde son écriture.
+    const groupe = groupes.get(cle) ?? new Map<string, number>();
+    groupe.set(s.reseau, (groupe.get(s.reseau) ?? 0) + 1);
+    groupes.set(cle, groupe);
   }
-  return [...compte.entries()]
-    .map(([nom, nombre]) => ({ nom, nombre }))
-    .sort((a, b) => b.nombre - a.nombre || a.nom.localeCompare(b.nom, 'fr'));
+
+  const rendu: ReseauNational[] = [];
+  for (const variantes of groupes.values()) {
+    const paires = [...variantes.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr'));
+    const nombre = paires.reduce((t, [, n]) => t + n, 0);
+    /* LE LIBELLÉ EST LA VARIANTE LA PLUS RÉPANDUE, pas la première rencontrée :
+       l'usager doit lire le nom qu'il verra le plus souvent sur la route. */
+    rendu.push({ nom: paires[0]![0], nombre, variantes: paires.map(([n]) => n) });
+  }
+  return rendu.sort((a, b) => b.nombre - a.nombre || a.nom.localeCompare(b.nom, 'fr'));
 }
 
 /** Applique les filtres de l'usager. Local : aucun plafond de 100 ne mord. */
@@ -222,12 +286,15 @@ export function filtrerStations(
 ): StationRapide[] {
   const puissanceMin = filtres.puissanceMin ?? 0;
   const prises = filtres.prises ?? [];
-  const reseaux = new Set(filtres.reseaux ?? []);
+  /* LA COMPARAISON SE FAIT SUR LA CLÉ, pas sur la chaîne : cocher « LIDL »
+     doit retenir aussi les stations écrites « Lidl France ». Voir `cleReseau`
+     et la mesure qui l'a motivée. */
+  const reseaux = new Set((filtres.reseaux ?? []).map(cleReseau));
   return stations.filter((s) => {
     if (puissanceMin > 0 && s.puissance < puissanceMin) return false;
     // OU entre les prises : un véhicule accepte l'une OU l'autre.
     if (prises.length > 0 && !prises.some((p) => s.prises.includes(p))) return false;
-    if (reseaux.size > 0 && (!s.reseau || !reseaux.has(s.reseau))) return false;
+    if (reseaux.size > 0 && (!s.reseau || !reseaux.has(cleReseau(s.reseau)))) return false;
     return true;
   });
 }

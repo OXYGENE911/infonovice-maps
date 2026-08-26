@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   urlIndexNational, versStations, versStationsGardees, acces,
-  reseauxNationaux, filtrerStations, stationsDans, perime,
+  reseauxNationaux, filtrerStations, stationsDans, perime, cleReseau,
   SEUIL_RAPIDE, PEREMPTION_MS, type StationRapide,
 } from '../src/lib/index-bornes';
 
@@ -181,7 +181,10 @@ describe('reseauxNationaux', () => {
   it('compte les stations par enseigne, la plus fournie d’abord', () => {
     expect(reseauxNationaux([
       st({ reseau: 'Ionity' }), st({ reseau: 'Tesla' }), st({ reseau: 'Tesla' }),
-    ])).toEqual([{ nom: 'Tesla', nombre: 2 }, { nom: 'Ionity', nombre: 1 }]);
+    ])).toEqual([
+      { nom: 'Tesla', nombre: 2, variantes: ['Tesla'] },
+      { nom: 'Ionity', nombre: 1, variantes: ['Ionity'] },
+    ]);
   });
 
   it('départage les ex æquo par ordre alphabétique, pour une liste stable', () => {
@@ -191,7 +194,43 @@ describe('reseauxNationaux', () => {
 
   it('ignore les stations sans enseigne plutôt que d’inventer une case vide', () => {
     expect(reseauxNationaux([st({ reseau: null }), st({ reseau: 'Ionity' })]))
-      .toEqual([{ nom: 'Ionity', nombre: 1 }]);
+      .toEqual([{ nom: 'Ionity', nombre: 1, variantes: ['Ionity'] }]);
+  });
+
+  /* LE DÉFAUT MESURÉ LE 26/08/2026 sur l'index lui-même : 14 133 stations
+     portent 2 615 écritures d'enseigne, dont onze groupes désignent le même
+     réseau sous deux ou trois orthographes — 2 098 stations, 15 % du réseau
+     rapide français. Cocher « LIDL » écartait les 434 « Lidl France ». */
+  it('fond les écritures d’un même réseau, et garde la plus répandue', () => {
+    const jeu = [
+      ...Array.from({ length: 3 }, () => st({ reseau: 'LIDL' })),
+      ...Array.from({ length: 5 }, () => st({ reseau: 'Lidl France' })),
+    ];
+    expect(reseauxNationaux(jeu)).toEqual([
+      { nom: 'Lidl France', nombre: 8, variantes: ['Lidl France', 'LIDL'] },
+    ]);
+  });
+
+  it('fond aussi les accents et la ponctuation', () => {
+    const jeu = [
+      st({ reseau: 'REVEO' }), st({ reseau: 'REVEO' }),
+      st({ reseau: 'Révéo' }), st({ reseau: 'Reveo' }),
+    ];
+    const [r] = reseauxNationaux(jeu);
+    expect(r?.nombre).toBe(4);
+    expect(r?.variantes.sort()).toEqual(['REVEO', 'Reveo', 'Révéo']);
+  });
+
+  /* ET ELLE NE FOND PAS N'IMPORTE QUOI. Réunir à tort deux réseaux distincts
+     est un défaut PIRE que celui qu'on corrige : il fait espérer une borne
+     inaccessible. La normalisation reste donc timide. */
+  it('ne fond PAS deux réseaux réellement différents', () => {
+    expect(reseauxNationaux([
+      st({ reseau: 'Ionity' }), st({ reseau: 'Ionity Plus' }),
+    ])).toHaveLength(2);
+    expect(reseauxNationaux([
+      st({ reseau: 'Allego' }), st({ reseau: 'Alego' }),
+    ])).toHaveLength(2);
   });
 });
 
@@ -220,6 +259,20 @@ describe('filtrerStations', () => {
 
   it('filtre par réseau', () => {
     expect(filtrerStations(jeu, { reseaux: ['B'] })).toHaveLength(2);
+  });
+
+  /* LA COMPARAISON SE FAIT SUR LA CLÉ : cocher « LIDL » doit retenir aussi
+     les stations écrites « Lidl France » — 434 d'entre elles, mesurées. */
+  it('retient toutes les écritures d’un même réseau', () => {
+    const lidl = [
+      st({ nom: 'a', reseau: 'LIDL' }),
+      st({ nom: 'b', reseau: 'Lidl France' }),
+      st({ nom: 'c', reseau: 'Ionity' }),
+    ];
+    expect(filtrerStations(lidl, { reseaux: ['LIDL'] }).map((s) => s.nom))
+      .toEqual(['a', 'b']);
+    // Et dans l'autre sens : la variante cochée n'a pas d'importance.
+    expect(filtrerStations(lidl, { reseaux: ['Lidl France'] })).toHaveLength(2);
   });
 
   it('cumule les filtres', () => {
@@ -260,5 +313,29 @@ describe('perime', () => {
      horodatage très futur passerait autrement tous les contrôles à vie. */
   it('un horodatage venu du futur vaut périmé', () => {
     expect(perime(t + PEREMPTION_MS + 1, t)).toBe(true);
+  });
+});
+
+
+describe('cleReseau', () => {
+  it('efface la casse, les accents, la ponctuation et le suffixe France', () => {
+    expect(cleReseau('LIDL')).toBe(cleReseau('Lidl France'));
+    expect(cleReseau('REVEO')).toBe(cleReseau('Révéo'));
+    expect(cleReseau('bp pulse')).toBe(cleReseau('bp Pulse'));
+    expect(cleReseau('SOWATT SOLUTIONS')).toBe(cleReseau('Sowatt Solutions'));
+    expect(cleReseau('Atlante')).toBe(cleReseau('Atlante France'));
+  });
+
+  /* LA TIMIDITÉ EST LE POINT. Fondre « X » et « X Mobility » présumerait qu'il
+     s'agit de la même société, ce que rien ne prouve. */
+  it('ne rapproche PAS ce qui diffère vraiment', () => {
+    expect(cleReseau('Ionity')).not.toBe(cleReseau('Ionity Plus'));
+    expect(cleReseau('Allego')).not.toBe(cleReseau('Alego'));
+    expect(cleReseau('Engie')).not.toBe(cleReseau('Engie Vianeo'));
+  });
+
+  it('ne lève pas sur une enseigne réduite à rien par la normalisation', () => {
+    expect(cleReseau('France')).toBe('');
+    expect(cleReseau('---')).toBe('');
   });
 });

@@ -243,3 +243,39 @@ test('le cartouche dit l’ACCÈS RÉSERVÉ, le téléphone, et ce qu’il ignor
   await page.keyboard.press('Escape');
   await expect(fiche).toBeHidden();
 });
+
+
+test('deux écritures d’un même réseau ne font qu’une case', async ({ page }) => {
+  /* MESURÉ SUR L'INDEX LUI-MÊME le 26/08/2026 : 14 133 stations portent
+     2 615 écritures d'enseigne, dont onze groupes désignent le même réseau
+     sous deux ou trois orthographes — 2 098 stations, 15 % du réseau rapide
+     français. « LIDL » (446) et « Lidl France » (434) en tête.
+     Cocher l'une écartait donc les stations de l'autre : un filtre qui ment
+     sans le dire, exactement le défaut que l'index venait de corriger
+     ailleurs. */
+  await simulerPortail(page, [
+    /* TOUTES AU CENTRE DE LA FRANCE, à dessein : le compteur de la carte ne
+       compte que ce que la VUE contient, quand la liste des réseaux, elle, est
+       nationale. Une station posée à Lille sortait du cadre au zoom d'accueil
+       et faisait échouer l'assertion pour une raison qui n'avait rien à voir
+       avec la fusion des écritures. */
+    { nom: 'Lidl Beaune', lon: 4.84, lat: 47.02, p: 150, reseau: 'LIDL' },
+    { nom: 'Lidl Mâcon', lon: 4.83, lat: 46.31, p: 150, reseau: 'LIDL' },
+    { nom: 'Lidl Auxerre', lon: 3.57, lat: 47.80, p: 150, reseau: 'Lidl France' },
+    { nom: 'Lidl Nevers', lon: 3.16, lat: 46.99, p: 150, reseau: 'Lidl France' },
+    { nom: 'Lidl Bourges', lon: 2.40, lat: 47.08, p: 150, reseau: 'Lidl France' },
+    { nom: 'Ionity Dijon', lon: 5.04, lat: 47.32, p: 350, reseau: 'Ionity' },
+  ]);
+  await ouvrirBornes(page);
+
+  // UNE case pour Lidl, et son compte est le TOTAL des deux écritures.
+  await expect(page.locator('.poi-reseau')).toHaveCount(2, { timeout: 20_000 });
+  await expect(page.locator('.poi-reseaux'), 'les deux écritures n’ont pas fusionné')
+    .toContainText('Lidl France (5)');
+  await expect(page.locator('.poi-reseaux')).toContainText('Ionity (1)');
+
+  // Et la cocher retient bien les CINQ stations, pas les trois d'une écriture.
+  await page.locator('.poi-reseau').first().check();
+  await expect(page.locator('.poi-etat')).toContainText('5 stations rapides',
+    { timeout: 10_000 });
+});
