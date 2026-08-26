@@ -17,13 +17,13 @@ import { palierDe, libellePalier, PALIERS } from '../lib/puissance';
 import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import {
   chargerCarburants, chargerBornes, chargerParkings, vueAChange,
-  type Reseau,
   PRISES, type ClePrise, type FiltresBornes,
   type Bbox,
 } from '../lib/poi';
 import {
   indexNational, stationsDans, filtrerStations, reseauxNationaux,
-  ErreurIndex, SEUIL_RAPIDE, POIDS_ANNONCE, type StationRapide,
+  ErreurIndex, SEUIL_RAPIDE, POIDS_ANNONCE,
+  type StationRapide, type ReseauNational,
 } from '../lib/index-bornes';
 import type { FicheBorne } from './fiche-borne';
 
@@ -78,6 +78,12 @@ export class PanneauPoi extends HTMLElement {
   #popupDe: Couche | null = null;
   /** L'index national, une fois chargé. Vide tant qu'il ne l'est pas. */
   #index: StationRapide[] = [];
+  /* LES ÉCRITURES RÉELLES DE CHAQUE ENSEIGNE, par libellé affiché. Le fichier
+     IRVE écrit un même réseau de plusieurs façons — « LIDL » et « Lidl
+     France », 446 et 434 stations. La liste les fond sous un libellé unique ;
+     cette table garde de quoi les redéployer quand la requête part au portail,
+     qui compare, lui, des chaînes exactes. */
+  #variantes = new Map<string, string[]>();
   /* LE CARTOUCHE DE DÉTAIL, partagé avec le planificateur (voir carte.ts).
      Tant qu'il n'est pas posé, le clic sur une borne retombe sur la bulle
      d'autrefois : le panneau doit rester utilisable seul, notamment en test. */
@@ -281,10 +287,11 @@ export class PanneauPoi extends HTMLElement {
      beaucoup sont un hôtel isolé. Les réseaux DÉJÀ COCHÉS restent affichés
      même s'ils sortent du plafond — sinon un filtre actif deviendrait
      invisible, donc impossible à retirer. */
-  #rendreReseaux(reseaux: Reseau[]): void {
+  #rendreReseaux(reseaux: ReseauNational[]): void {
     const boite = this.querySelector('.poi-reseaux');
     if (!boite) return;
     boite.replaceChildren();
+    this.#variantes = new Map(reseaux.map((r) => [r.nom, r.variantes]));
 
     const coches = new Set(this.#filtres.reseaux ?? []);
     const montres = [
@@ -320,6 +327,21 @@ export class PanneauPoi extends HTMLElement {
       etiquette.append(case_, texte);
       boite.appendChild(etiquette);
     }
+  }
+
+  /**
+   * Les filtres tels qu'ils partent AU PORTAIL — enseignes redéployées.
+   *
+   * Le portail compare `nom_enseigne` à une chaîne EXACTE. Cocher « LIDL » et
+   * n'envoyer que ce libellé rendrait 446 stations et en perdrait 434, écrites
+   * « Lidl France » : le défaut serait simplement déplacé du calcul local vers
+   * la requête distante. On envoie donc toutes les écritures du groupe.
+   */
+  #filtresService(): FiltresBornes {
+    const choisis = this.#filtres.reseaux ?? [];
+    if (choisis.length === 0) return this.#filtres;
+    const deployes = choisis.flatMap((nom) => this.#variantes.get(nom) ?? [nom]);
+    return { ...this.#filtres, reseaux: [...new Set(deployes)] };
   }
 
   /* Les filtres ne s'affichent qu'avec la couche qu'ils règlent. */
@@ -395,9 +417,7 @@ export class PanneauPoi extends HTMLElement {
       const { stations } = await indexNational(controleur.signal);
       if (controleur !== this.#controleurs.bornes) return;
       this.#index = stations;
-      this.#rendreReseaux(reseauxNationaux(stations).map(
-        (r) => ({ nom: r.nom, nombre: r.nombre }),
-      ));
+      this.#rendreReseaux(reseauxNationaux(stations));
       this.#poserIndex();
       delete this.#erreurs.bornes;
       this.#etat();
@@ -496,7 +516,7 @@ export class PanneauPoi extends HTMLElement {
            emporter les bornes : elle n'est qu'un confort de filtrage, d'où le
            `void` et le `catch` muet. */
         void this.#assurerReseauxNationaux();
-        const c = await chargerBornes(bbox, controleur.signal, this.#filtres);
+        const c = await chargerBornes(bbox, controleur.signal, this.#filtresService());
         if (controleur !== this.#controleurs[couche]) return;
         this.#bornes = {
           type: 'FeatureCollection',

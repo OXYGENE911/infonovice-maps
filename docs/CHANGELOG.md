@@ -2,6 +2,33 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.32.1] — 2026-08-26 — Un réseau, une case (PR #43)
+
+Défaut trouvé **dans ce qui venait d'être livré**, en regardant la production :
+la liste des réseaux proposait « LIDL (446) » ET « Lidl France (434) ».
+
+**Mesuré sur l'index lui-même** : les 14 133 stations portent **2 615
+écritures** d'enseigne, dont **onze groupes** désignent le même réseau sous
+deux ou trois orthographes — **2 098 stations, 15 %** du réseau rapide
+français. Cocher « LIDL » écartait donc 434 stations Lidl : un filtre qui ment
+sans le dire, exactement le défaut que l'index venait de corriger ailleurs.
+
+- Les écritures d'un même réseau **fondent en une case**, sous la variante la
+  plus répandue, avec le compte cumulé.
+- **La normalisation est volontairement timide** : casse, accents, ponctuation,
+  et le seul mot « France ». Fondre à tort deux réseaux distincts serait un
+  défaut PIRE que celui qu'on corrige — il ferait espérer une borne
+  inaccessible. Vérifié sur les données réelles : 2 615 écritures deviennent
+  2 603 groupes, soit exactement les onze fusions attendues et aucune autre.
+- « France » est retiré **en tant que mot**, par découpage : une substitution
+  de chaîne aurait amputé « Francelec » de ses six premières lettres.
+- **Les écritures voyagent avec le libellé.** À partir du zoom 12 les bornes
+  viennent du portail, qui compare des chaînes exactes : n'envoyer que le
+  libellé canonique aurait simplement déplacé le défaut du local vers le
+  distant.
+
+497 tests unitaires, 124 parcours E2E.
+
 ## [0.32.0] — 2026-08-26 — Les onze retours du terrain (PR #32)
 
 Armelin a testé la production le 25/08 et rendu onze remarques, captures à
