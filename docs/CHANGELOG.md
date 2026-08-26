@@ -2,6 +2,20 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.33.1] — 2026-08-26 — Une seule surface dans la colonne de gauche (PR #45)
+
+Ce que les mesures de texte ne voyaient pas. Le cartouche de détail et les
+volets du rail occupent le **même bord de l'écran** : ouverts ensemble, le
+premier recouvre le second — les filtres des bornes passaient sous la carte de
+détail. Leurs textes ne se recouvrent pas ; c'est la **surface entière** qui
+masque l'autre, et c'est aussi un chevauchement.
+
+Les deux sont désormais exclusifs, dans les deux sens : ouvrir le cartouche
+referme le volet, ouvrir un volet referme le cartouche. Un parcours mesure le
+croisement des rectangles et échoue s'il revient.
+
+515 tests unitaires, 130 parcours E2E.
+
 ## [0.33.0] — 2026-08-26 — Quatre retours, et un compte faux (PR #44)
 
 Armelin a rouvert la production. Quatre remarques, dont une qui a fait tomber

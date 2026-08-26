@@ -474,3 +474,42 @@ test('on trouve un réseau qui n’est pas dans les douze premiers', async ({ pa
   await expect(page.locator('.poi-reseau')).toHaveCount(1);
   await expect(page.locator('.poi-reseaux')).toContainText('Fastned France');
 });
+
+test('le cartouche et les volets ne se recouvrent JAMAIS : une surface a la fois', async ({ page }) => {
+  /* CE QUE LES MESURES DE TEXTE NE VOYAIENT PAS. Le cartouche et les volets du
+     rail occupent le meme bord de l'ecran : ouverts ensemble, le premier
+     RECOUVRE le second — les filtres des bornes passaient sous la carte de
+     detail. Leurs textes ne se recouvrent pas ; c'est la surface entiere qui
+     masque l'autre, et c'est aussi un chevauchement. */
+  await simulerPortail(page, FRANCE, DETAIL_TYPE);
+  await ouvrirCartoucheBeaune(page);
+
+  // Ouvrir le cartouche a referme le volet des bornes.
+  await expect(page.locator('.poi'), 'le volet reste ouvert SOUS le cartouche')
+    .not.toHaveAttribute('open', '');
+
+  // Et aucune boite ne croise l'autre — la preuve par les rectangles.
+  const croisement = await page.evaluate(() => {
+    const carte = document.querySelector('fiche-borne .fb')?.getBoundingClientRect();
+    if (!carte) return 'cartouche absent';
+    const fautes: string[] = [];
+    for (const v of document.querySelectorAll<HTMLElement>(
+      '#carte .maplibregl-ctrl-top-left details[open] > *:not(summary)',
+    )) {
+      const r = v.getBoundingClientRect();
+      if (r.width === 0) continue;
+      if (r.left < carte.right - 1 && r.right - 1 > carte.left
+        && r.top < carte.bottom - 1 && r.bottom - 1 > carte.top) {
+        fautes.push(v.className || v.tagName);
+      }
+    }
+    return fautes;
+  });
+  expect(croisement).toEqual([]);
+
+  // Et dans l'autre sens : rouvrir un volet referme le cartouche.
+  await page.locator('.maplibregl-ctrl-top-left summary')
+    .filter({ hasText: 'Recharge et services' }).click();
+  await expect(page.locator('fiche-borne'),
+    "le cartouche survit par-dessus le volet qu’on vient d’ouvrir").toBeHidden();
+});

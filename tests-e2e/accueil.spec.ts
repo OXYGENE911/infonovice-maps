@@ -685,6 +685,12 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
   await page.getByRole('button', { name: 'Fermer le détail' }).click();
   await expect(fiche).toBeHidden();
 
+  /* ON ROUVRE LE VOLET : ouvrir le cartouche l'a refermé. Les deux occupent le
+     même bord de l'écran, et depuis le 26/08 ils sont EXCLUSIFS — le cartouche
+     recouvrait les filtres, ce qu'aucune mesure de texte ne montrait puisque
+     c'est la surface entière qui masquait l'autre. */
+  await ouvrirVolet(page, '.poi');
+
   // DÉCOCHER vide réellement la carte — pixels à l'appui.
   await page.getByRole('checkbox', { name: 'Bornes électriques' }).uncheck();
   await expect.poll(() => page.evaluate(() =>
