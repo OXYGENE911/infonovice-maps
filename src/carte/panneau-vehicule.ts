@@ -256,7 +256,20 @@ export class PanneauVehicule extends HTMLElement {
 
   #poser(): void {
     const carte = this.#carte;
-    if (!carte || !carte.isStyleLoaded()) return;
+    if (!carte) return;
+    /* UNE DEMANDE ARRIVÉE TROP TÔT NE SE PERD PAS, ELLE ATTEND.
+       Ce garde-fou rendait `undefined` en silence quand le style n'était pas
+       prêt : décocher « Afficher mon rayon d'action » à cet instant ne faisait
+       RIEN, les anneaux restaient, et aucun message ne l'expliquait. Il ne
+       fallait qu'une machine chargée pour le déclencher — un parcours E2E ne
+       rougissait que dans la suite complète, jamais seul.
+       `style.load` ne suffit pas à rattraper : il ne se déclenche qu'au
+       CHANGEMENT de fond, pas quand un style déjà posé finit de se charger.
+       `idle` si. */
+    if (!carte.isStyleLoaded()) {
+      carte.once('idle', () => { this.#poser(); });
+      return;
+    }
 
     const ancre = this.#position ?? {
       lon: carte.getCenter().lng, lat: carte.getCenter().lat,

@@ -85,6 +85,12 @@ export class PanneauItineraire extends HTMLElement {
   #ecartees = new Set<string>();
   /** Enseignes retenues pour ce trajet. Vide = toutes. */
   #reseauxPreferes = new Set<string>();
+  /* L'ÉTAT DÉPLIÉ DES DEUX VOLETS SURVIT À LA RECONSTRUCTION DU PLAN.
+     `#afficherRecharge` reconstruit tout son corps ; sans cette mémoire,
+     imposer un arrêt refermait la liste d'où l'on venait de le choisir, et il
+     fallait la rouvrir pour le suivant. Un réglage qui se referme à chaque
+     usage est un réglage qu'on cesse d'utiliser. */
+  #voletsOuverts: { reseaux: boolean; toutes: boolean } = { reseaux: false, toutes: false };
   /** Le profil véhicule du dernier plan, pour rejouer sans relire IndexedDB. */
   #vehiculeCourant: { capaciteKwh: number; consommationKwh100: number; puissanceMaxKw: number } | null = null;
   #socDepart = 100;
@@ -595,6 +601,15 @@ export class PanneauItineraire extends HTMLElement {
       refus.className = 'recharge-refus';
       refus.textContent = plan.motif ?? 'Trajet impossible avec ce véhicule.';
       corps.append(refus);
+      /* MAIS LES COMMANDES RESTENT. Un refus vient souvent d'une consigne trop
+         serrée — un réseau préféré qui ne dessert pas la route, une borne
+         écartée de trop. Effacer les réglages en même temps qu'on annonce
+         l'échec enferme l'usager : il voit le mur, et plus rien pour le
+         contourner. Attrapé par un parcours E2E qui cochait « Tesla » sur un
+         trajet sans Tesla, puis ne retrouvait plus la case pour la décocher. */
+      if (this.#bornesTrajet.length > 0) {
+        corps.append(this.#voletReseaux(), this.#voletToutesBornes(plan));
+      }
       return;
     }
 
@@ -725,6 +740,8 @@ export class PanneauItineraire extends HTMLElement {
   #voletReseaux(): HTMLElement {
     const volet = document.createElement('details');
     volet.className = 'recharge-reseaux';
+    volet.open = this.#voletsOuverts.reseaux;
+    volet.addEventListener('toggle', () => { this.#voletsOuverts.reseaux = volet.open; });
     const titre = document.createElement('summary');
 
     const compte = new Map<string, number>();
@@ -778,6 +795,8 @@ export class PanneauItineraire extends HTMLElement {
     const retenues = new Set(plan.arrets.map((a) => cleBorne(a.borne)));
     const volet = document.createElement('details');
     volet.className = 'recharge-toutes';
+    volet.open = this.#voletsOuverts.toutes;
+    volet.addEventListener('toggle', () => { this.#voletsOuverts.toutes = volet.open; });
     const titre = document.createElement('summary');
     titre.textContent = `Toutes les bornes du trajet (${this.#bornesTrajet.length})`;
     volet.append(titre);
@@ -1059,6 +1078,7 @@ export class PanneauItineraire extends HTMLElement {
       this.#imposees.clear();
       this.#ecartees.clear();
       this.#reseauxPreferes.clear();
+      this.#voletsOuverts = { reseaux: false, toutes: false };
       this.#majResume();
       (this.querySelector('.iti-actions') as HTMLElement).hidden = false;
       // Nouveau trajet : profil et feuille de route réapparaissent repliés et

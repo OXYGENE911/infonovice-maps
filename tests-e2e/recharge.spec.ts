@@ -306,3 +306,135 @@ test('la réserve en route est réglable elle aussi', async ({ page }) => {
     { message: 'une réserve plus haute doit rapprocher le point de rupture' })
     .toBeLessThan(basse);
 });
+
+
+/* LA MAIN SUR LE PLAN — « des + et des - pour choisir moi-même les arrêts »,
+   et « filtrer par réseaux préférés » (Armelin, 25/08/2026). Un planificateur
+   qui décide seul est un planificateur qu'on subit. */
+
+/** Trois bornes échelonnées sur le Paris-Lyon simulé (390 km en ligne droite). */
+const TROIS: LigneIndex[] = [
+  { nom: 'Aire du Tiers', lon: 3.2, lat: 47.8, p: 150, reseau: 'Ionity' },
+  { nom: 'Aire de Beaune', lon: 3.6, lat: 47.3, p: 150, reseau: 'Ionity' },
+  { nom: 'Aire des Deux Tiers', lon: 4.2, lat: 46.6, p: 50, reseau: 'Tesla' },
+];
+
+test('la durée dit si la charge est comprise — et le détail dit combien', async ({ page }) => {
+  /* LE DÉFAUT : « 4 h 25 » était le temps de CONDUITE seul, sans le dire. Sur
+     un trajet électrique long, l'écart se compte en heures — une erreur de
+     planification qu'on découvre en route. */
+  await simulerIndexBornes(page, [BEAUNE]);
+  await page.goto(PARIS_LYON);
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  const resume = page.locator('.iti-resultat');
+  await expect(resume).toContainText('390 km', { timeout: 15_000 });
+  // Tant qu'aucun plan n'existe, on le DIT plutôt que de laisser un nombre nu.
+  await expect(resume, 'une durée sans mention de la recharge se lit comme un total')
+    .toContainText('hors recharge');
+
+  await saisirVehicule(page);
+  await page.locator('.iti-recharge summary').click();
+  await expect(page.locator('.iti-recharge-corps')).toContainText('Aire de Beaune',
+    { timeout: 15_000 });
+
+  // Le plan calculé, le résumé porte le TOTAL et sa décomposition.
+  await expect(resume).toContainText('au total');
+  await expect(resume).toContainText('de route +');
+  await expect(resume).toContainText('de charge');
+  // Et l'arrêt dit son temps de charge en toutes lettres, pas en « min » nu.
+  await expect(page.locator('.recharge-liste')).toContainText('min de charge');
+});
+
+test('le « − » écarte un arrêt, et le plan se refait SANS rien recharger', async ({ page }) => {
+  await simulerIndexBornes(page, TROIS);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
+
+  await page.getByRole('button', { name: 'Écarter Aire de Beaune du plan' }).first().click();
+
+  /* LE PLAN CHANGE : Beaune écartée, le modèle doit se rabattre ailleurs. On
+     n'affirme pas QUELLE borne il prend — c'est son travail — mais qu'il ne
+     prend plus celle qu'on a refusée. */
+  await expect(corps.locator('.recharge-liste'))
+    .not.toContainText('Aire de Beaune', { timeout: 10_000 });
+  await expect(corps.locator('.recharge-liste'), 'le plan doit rester faisable')
+    .toContainText('km');
+});
+
+test('le « + » impose un arrêt que le modèle n’aurait pas choisi', async ({ page }) => {
+  await simulerIndexBornes(page, TROIS);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de', { timeout: 15_000 });
+
+  // Le plan de départ ne retient PAS la borne lente des deux tiers.
+  const listeRetenue = corps.locator('.recharge-liste');
+  await expect(listeRetenue).not.toContainText('Aire des Deux Tiers');
+
+  // On déplie la liste complète et on l'impose.
+  await corps.locator('.recharge-toutes > summary').click();
+  await expect(corps.locator('.recharge-toutes-liste li')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Imposer un arrêt à Aire des Deux Tiers' }).click();
+
+  await expect(listeRetenue, 'l’arrêt imposé n’est pas entré dans le plan')
+    .toContainText('Aire des Deux Tiers', { timeout: 10_000 });
+
+  /* ET LA LISTE RESTE DÉPLIÉE. Le plan est reconstruit à chaque consigne ;
+     sans mémoire de l'état, elle se refermait sous le doigt et il fallait la
+     rouvrir pour choisir l'arrêt suivant. */
+  await expect(corps.locator('.recharge-toutes'),
+    'la liste s’est refermée sous le doigt').toHaveAttribute('open', '');
+});
+
+test('les réseaux préférés se cochent, et ils bornent le plan', async ({ page }) => {
+  await simulerIndexBornes(page, TROIS);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de', { timeout: 15_000 });
+
+  await corps.locator('.recharge-reseaux > summary').click();
+  const cases_ = corps.locator('.recharge-reseaux-corps input[type="checkbox"]');
+  await expect(cases_).toHaveCount(2);
+
+  /* NE GARDER QUE TESLA : les deux bornes Ionity disparaissent du calcul, et
+     le trajet devient infaisable — ce que le planificateur doit DIRE, avec le
+     kilomètre, plutôt que de proposer un plan bancal. */
+  await corps.locator('.recharge-reseaux-corps label').filter({ hasText: 'Tesla' })
+    .locator('input').check();
+  await expect(corps).toContainText('Aucune borne utilisable', { timeout: 10_000 });
+  await expect(corps).toContainText(/\d+\s*km/);
+
+  /* ET ON PEUT REVENIR EN ARRIÈRE. Un refus qui efface les réglages qui l'ont
+     causé enferme l'usager : il voit le mur, et plus rien pour le contourner. */
+  const tesla = corps.locator('.recharge-reseaux-corps label').filter({ hasText: 'Tesla' })
+    .locator('input');
+  await expect(tesla, 'les réglages ont disparu avec le plan').toBeChecked();
+  await tesla.uncheck();
+  await expect(corps.locator('.recharge-liste'))
+    .toContainText('Aire de', { timeout: 10_000 });
+});
+
+test('toutes les bornes du trajet sont listées, retenues ou non', async ({ page }) => {
+  /* « Le planificateur devrait afficher toutes les bornes présentes sur le
+     trajet » : le plan répond à « où m'arrêter », la liste à « qu'y a-t-il ». */
+  await simulerIndexBornes(page, TROIS);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de', { timeout: 15_000 });
+
+  await corps.locator('.recharge-toutes > summary').click();
+  await expect(corps.locator('.recharge-toutes > summary'))
+    .toHaveText('Toutes les bornes du trajet (3)');
+  const lignes = corps.locator('.recharge-toutes-liste li');
+  await expect(lignes).toHaveCount(3);
+  // Chacune porte son kilométrage, sa puissance et son réseau.
+  await expect(lignes.first()).toContainText('km');
+  await expect(lignes.first()).toContainText('kW');
+  await expect(corps.locator('.recharge-toutes-liste')).toContainText('Ionity');
+  /* ET L'ÉTAT SE LIT EN TOUTES LETTRES, pas seulement à la couleur du cadre
+     (WCAG 1.4.1) : « retenue par le plan » est écrit. */
+  await expect(corps.locator('.recharge-toutes-liste li.est-retenue'))
+    .toContainText('retenue par le plan');
+});
