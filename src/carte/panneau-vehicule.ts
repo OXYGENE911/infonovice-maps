@@ -19,7 +19,8 @@ import {
 } from '../lib/vehicule';
 import { collectionAnneaux } from '../lib/cercle';
 import {
-  CATALOGUE, libelleModele, modeleParCle, autonomiesProposees,
+  CATALOGUE, libelleModele, libelleDansMarque, parMarque,
+  modeleParCle, autonomiesProposees,
 } from '../lib/catalogue-vehicules';
 
 export const PREF_VEHICULE = 'vehicule';
@@ -101,14 +102,22 @@ export class PanneauVehicule extends HTMLElement {
           <label class="veh-ligne veh-ligne-catalogue">Modèle
             <span><select class="veh-catalogue" aria-label="Choisir un modèle de véhicule">
               <option value="">— saisie manuelle —</option>
-              ${CATALOGUE.map((m) => `
-                <option value="${m.cle}">${libelleModele(m)}</option>`).join('')}
+              <!-- GROUPÉ PAR MARQUE. Cent trente modèles à plat forment un
+                   mur ; sous leur marque, on descend à la sienne et l'on
+                   s'arrête. La balise optgroup fait cela nativement, sans
+                   la moindre ligne de script. -->
+              ${parMarque().map((g) => `
+                <optgroup label="${g.marque}">
+                  ${g.modeles.map((m) => `
+                    <option value="${m.cle}">${libelleDansMarque(m)}</option>`).join('')}
+                </optgroup>`).join('')}
             </select></span>
           </label>
-          <p class="veh-note veh-note-catalogue">Valeurs constructeur
-            indicatives, pré-remplies puis modifiables. L’autonomie proposée
-            découle du cycle WLTP, optimiste sur autoroute : remplacez-la par
-            vos propres relevés dès votre premier long trajet.</p>
+          <p class="veh-note veh-note-catalogue">${CATALOGUE.length} modèles,
+            valeurs constructeur indicatives, pré-remplies puis modifiables.
+            L’autonomie proposée découle du cycle WLTP, optimiste sur
+            autoroute : remplacez-la par vos propres relevés dès votre premier
+            long trajet.</p>
 
           <label class="veh-ligne">Nom
             <span><input type="text" class="veh-nom" placeholder="VinFast VF8"

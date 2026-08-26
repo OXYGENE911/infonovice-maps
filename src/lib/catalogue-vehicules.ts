@@ -53,55 +53,243 @@ export interface ModeleVehicule {
    plus quelques-uns rares mais demandés. Elle n'a pas vocation à
    l'exhaustivité : un catalogue de six cents lignes serait ingérable à la
    main, et illisible dans une liste déroulante. */
+/* LA LISTE COUVRE LES MODÈLES VENDUS EN FRANCE, groupés par marque.
+   Armelin, le 26/08/2026 : « augmente la liste des constructeurs
+   automobiles et augmente le nombre de voitures et regroupe-les par
+   marques ». Il manquait notamment XPENG, Mercedes, ZEEKR, les VF 6 et
+   VF 8 Plus de VinFast, la gamme ID de Volkswagen et les e-2008/e-5008
+   de Peugeot — c'est-à-dire, pour plusieurs d'entre eux, des voitures
+   qu'on croise tous les jours.
+
+   ELLE N'A TOUJOURS PAS VOCATION À L'EXHAUSTIVITÉ : un catalogue de six
+   cents lignes serait ingérable à la main et illisible dans une liste.
+   Mais elle doit couvrir ce qu'on voit sur les routes, et l'ordre
+   alphabétique par marque permet d'y retrouver la sienne sans lire tout. */
 export const CATALOGUE: readonly ModeleVehicule[] = [
-  // — Citadines et petites polyvalentes —
+  // — Alpine —
+  { cle: 'alpine-a290', marque: 'Alpine', modele: 'A290', capaciteKwh: 52, puissanceMaxKw: 100, wltpKm: 380, prise: 'combo_ccs' },
+
+  // — Audi —
+  { cle: 'audi-q4-45', marque: 'Audi', modele: 'Q4 e-tron', variante: '45', capaciteKwh: 77, puissanceMaxKw: 175, wltpKm: 562, prise: 'combo_ccs' },
+  { cle: 'audi-q6-etron', marque: 'Audi', modele: 'Q6 e-tron', capaciteKwh: 94.9, puissanceMaxKw: 260, wltpKm: 625, prise: 'combo_ccs' },
+  { cle: 'audi-q8-etron', marque: 'Audi', modele: 'Q8 e-tron', variante: '55', capaciteKwh: 106, puissanceMaxKw: 170, wltpKm: 582, prise: 'combo_ccs' },
+  { cle: 'audi-a6-etron', marque: 'Audi', modele: 'A6 e-tron', capaciteKwh: 94.9, puissanceMaxKw: 270, wltpKm: 720, prise: 'combo_ccs' },
+
+  // — BMW —
+  { cle: 'bmw-i3-42', marque: 'BMW', modele: 'i3', variante: '120 Ah', capaciteKwh: 37.9, puissanceMaxKw: 50, wltpKm: 310, prise: 'combo_ccs' },
+  { cle: 'bmw-ix1', marque: 'BMW', modele: 'iX1', variante: 'xDrive30', capaciteKwh: 64.7, puissanceMaxKw: 130, wltpKm: 440, prise: 'combo_ccs' },
+  { cle: 'bmw-ix3', marque: 'BMW', modele: 'iX3', capaciteKwh: 74, puissanceMaxKw: 150, wltpKm: 460, prise: 'combo_ccs' },
+  { cle: 'bmw-i4-40', marque: 'BMW', modele: 'i4', variante: 'eDrive40', capaciteKwh: 80.7, puissanceMaxKw: 205, wltpKm: 590, prise: 'combo_ccs' },
+  { cle: 'bmw-i5-40', marque: 'BMW', modele: 'i5', variante: 'eDrive40', capaciteKwh: 81.2, puissanceMaxKw: 205, wltpKm: 582, prise: 'combo_ccs' },
+  { cle: 'bmw-ix-xdrive50', marque: 'BMW', modele: 'iX', variante: 'xDrive50', capaciteKwh: 105.2, puissanceMaxKw: 195, wltpKm: 630, prise: 'combo_ccs' },
+
+  // — BYD —
+  { cle: 'byd-dolphin', marque: 'BYD', modele: 'Dolphin', variante: 'Comfort', capaciteKwh: 60.4, puissanceMaxKw: 88, wltpKm: 427, prise: 'combo_ccs' },
+  { cle: 'byd-atto3', marque: 'BYD', modele: 'Atto 3', capaciteKwh: 60.4, puissanceMaxKw: 88, wltpKm: 420, prise: 'combo_ccs' },
+  { cle: 'byd-seal', marque: 'BYD', modele: 'Seal', variante: 'Design', capaciteKwh: 82.5, puissanceMaxKw: 150, wltpKm: 570, prise: 'combo_ccs' },
+  { cle: 'byd-sealion7', marque: 'BYD', modele: 'Sealion 7', capaciteKwh: 82.5, puissanceMaxKw: 150, wltpKm: 502, prise: 'combo_ccs' },
+
+  // — Citroën —
+  { cle: 'citroen-ec3', marque: 'Citroën', modele: 'ë-C3', capaciteKwh: 44, puissanceMaxKw: 100, wltpKm: 320, prise: 'combo_ccs' },
+  { cle: 'citroen-ec3-aircross', marque: 'Citroën', modele: 'ë-C3 Aircross', capaciteKwh: 44, puissanceMaxKw: 100, wltpKm: 300, prise: 'combo_ccs' },
+  { cle: 'citroen-ec4', marque: 'Citroën', modele: 'ë-C4', variante: '50 kWh', capaciteKwh: 46.3, puissanceMaxKw: 100, wltpKm: 357, prise: 'combo_ccs' },
+  { cle: 'citroen-ec4-54', marque: 'Citroën', modele: 'ë-C4', variante: '54 kWh', capaciteKwh: 50, puissanceMaxKw: 100, wltpKm: 420, prise: 'combo_ccs' },
+  { cle: 'citroen-ec5-aircross', marque: 'Citroën', modele: 'ë-C5 Aircross', capaciteKwh: 73, puissanceMaxKw: 160, wltpKm: 520, prise: 'combo_ccs' },
+
+  // — Cupra —
+  { cle: 'cupra-born-58', marque: 'Cupra', modele: 'Born', variante: '58 kWh', capaciteKwh: 58, puissanceMaxKw: 120, wltpKm: 420, prise: 'combo_ccs' },
+  { cle: 'cupra-born-77', marque: 'Cupra', modele: 'Born', variante: '77 kWh', capaciteKwh: 77, puissanceMaxKw: 170, wltpKm: 548, prise: 'combo_ccs' },
+  { cle: 'cupra-tavascan', marque: 'Cupra', modele: 'Tavascan', capaciteKwh: 77, puissanceMaxKw: 135, wltpKm: 549, prise: 'combo_ccs' },
+
+  // — Dacia —
   { cle: 'dacia-spring', marque: 'Dacia', modele: 'Spring', capaciteKwh: 26.8, puissanceMaxKw: 30, wltpKm: 225, prise: 'combo_ccs' },
+
+  // — DS —
+  { cle: 'ds-n4', marque: 'DS', modele: 'N°4', variante: '54 kWh', capaciteKwh: 50, puissanceMaxKw: 100, wltpKm: 450, prise: 'combo_ccs' },
+  { cle: 'ds-n8', marque: 'DS', modele: 'N°8', capaciteKwh: 97.2, puissanceMaxKw: 160, wltpKm: 750, prise: 'combo_ccs' },
+
+  // — Fiat —
   { cle: 'fiat-500e-24', marque: 'Fiat', modele: '500e', variante: '24 kWh', capaciteKwh: 21.3, puissanceMaxKw: 50, wltpKm: 190, prise: 'combo_ccs' },
   { cle: 'fiat-500e-42', marque: 'Fiat', modele: '500e', variante: '42 kWh', capaciteKwh: 37.3, puissanceMaxKw: 85, wltpKm: 320, prise: 'combo_ccs' },
-  { cle: 'renault-twingo-e', marque: 'Renault', modele: 'Twingo E-Tech', capaciteKwh: 21.3, puissanceMaxKw: 22, wltpKm: 190, prise: 'type_2' },
-  { cle: 'renault-5-40', marque: 'Renault', modele: 'R5 E-Tech', variante: '40 kWh', capaciteKwh: 40, puissanceMaxKw: 80, wltpKm: 312, prise: 'combo_ccs' },
-  { cle: 'renault-5-52', marque: 'Renault', modele: 'R5 E-Tech', variante: '52 kWh', capaciteKwh: 52, puissanceMaxKw: 100, wltpKm: 410, prise: 'combo_ccs' },
-  { cle: 'renault-zoe-52', marque: 'Renault', modele: 'Zoe', variante: 'R135 52 kWh', capaciteKwh: 52, puissanceMaxKw: 46, wltpKm: 395, prise: 'combo_ccs' },
-  { cle: 'peugeot-e208-50', marque: 'Peugeot', modele: 'e-208', variante: '50 kWh', capaciteKwh: 46.3, puissanceMaxKw: 100, wltpKm: 362, prise: 'combo_ccs' },
-  { cle: 'peugeot-e208-51', marque: 'Peugeot', modele: 'e-208', variante: '51 kWh', capaciteKwh: 48.1, puissanceMaxKw: 100, wltpKm: 410, prise: 'combo_ccs' },
-  { cle: 'opel-corsa-e', marque: 'Opel', modele: 'Corsa Electric', capaciteKwh: 46.3, puissanceMaxKw: 100, wltpKm: 357, prise: 'combo_ccs' },
-  { cle: 'citroen-ec3', marque: 'Citroën', modele: 'ë-C3', capaciteKwh: 44, puissanceMaxKw: 100, wltpKm: 320, prise: 'combo_ccs' },
+  { cle: 'fiat-600e', marque: 'Fiat', modele: '600e', capaciteKwh: 50.8, puissanceMaxKw: 100, wltpKm: 409, prise: 'combo_ccs' },
+  { cle: 'fiat-grande-panda', marque: 'Fiat', modele: 'Grande Panda', capaciteKwh: 44, puissanceMaxKw: 100, wltpKm: 320, prise: 'combo_ccs' },
+
+  // — Ford —
+  { cle: 'ford-explorer-ev', marque: 'Ford', modele: 'Explorer EV', variante: 'Extended', capaciteKwh: 77, puissanceMaxKw: 135, wltpKm: 602, prise: 'combo_ccs' },
+  { cle: 'ford-capri-ev', marque: 'Ford', modele: 'Capri EV', variante: 'Extended', capaciteKwh: 77, puissanceMaxKw: 135, wltpKm: 627, prise: 'combo_ccs' },
+  { cle: 'ford-mustang-mache', marque: 'Ford', modele: 'Mustang Mach-E', variante: 'Extended', capaciteKwh: 91, puissanceMaxKw: 150, wltpKm: 600, prise: 'combo_ccs' },
+
+  // — Honda —
+  { cle: 'honda-e-ny1', marque: 'Honda', modele: 'e:Ny1', capaciteKwh: 61.9, puissanceMaxKw: 78, wltpKm: 412, prise: 'combo_ccs' },
+
+  // — Hyundai —
+  { cle: 'hyundai-inster', marque: 'Hyundai', modele: 'Inster', variante: 'Long Range', capaciteKwh: 49, puissanceMaxKw: 85, wltpKm: 370, prise: 'combo_ccs' },
+  { cle: 'hyundai-kona-65', marque: 'Hyundai', modele: 'Kona Electric', variante: '65 kWh', capaciteKwh: 65.4, puissanceMaxKw: 102, wltpKm: 514, prise: 'combo_ccs' },
+  { cle: 'hyundai-ioniq5-77', marque: 'Hyundai', modele: 'Ioniq 5', variante: '77,4 kWh', capaciteKwh: 77.4, puissanceMaxKw: 235, wltpKm: 507, prise: 'combo_ccs' },
+  { cle: 'hyundai-ioniq5-84', marque: 'Hyundai', modele: 'Ioniq 5', variante: '84 kWh', capaciteKwh: 84, puissanceMaxKw: 257, wltpKm: 570, prise: 'combo_ccs' },
+  { cle: 'hyundai-ioniq6', marque: 'Hyundai', modele: 'Ioniq 6', variante: '77,4 kWh', capaciteKwh: 77.4, puissanceMaxKw: 233, wltpKm: 614, prise: 'combo_ccs' },
+  { cle: 'hyundai-ioniq9', marque: 'Hyundai', modele: 'Ioniq 9', capaciteKwh: 110.3, puissanceMaxKw: 233, wltpKm: 620, prise: 'combo_ccs' },
+
+  // — Jeep —
+  { cle: 'jeep-avenger-ev', marque: 'Jeep', modele: 'Avenger', variante: 'Electric', capaciteKwh: 50.8, puissanceMaxKw: 100, wltpKm: 400, prise: 'combo_ccs' },
+
+  // — Kia —
+  { cle: 'kia-ev3-58', marque: 'Kia', modele: 'EV3', variante: '58,3 kWh', capaciteKwh: 58.3, puissanceMaxKw: 100, wltpKm: 436, prise: 'combo_ccs' },
+  { cle: 'kia-ev3-81', marque: 'Kia', modele: 'EV3', variante: '81,4 kWh', capaciteKwh: 81.4, puissanceMaxKw: 128, wltpKm: 605, prise: 'combo_ccs' },
+  { cle: 'kia-niro-ev', marque: 'Kia', modele: 'Niro EV', capaciteKwh: 64.8, puissanceMaxKw: 80, wltpKm: 460, prise: 'combo_ccs' },
+  { cle: 'kia-ev6-77', marque: 'Kia', modele: 'EV6', variante: '77,4 kWh', capaciteKwh: 77.4, puissanceMaxKw: 240, wltpKm: 528, prise: 'combo_ccs' },
+  { cle: 'kia-ev6-84', marque: 'Kia', modele: 'EV6', variante: '84 kWh', capaciteKwh: 84, puissanceMaxKw: 258, wltpKm: 582, prise: 'combo_ccs' },
+  { cle: 'kia-ev9', marque: 'Kia', modele: 'EV9', variante: '99,8 kWh', capaciteKwh: 99.8, puissanceMaxKw: 233, wltpKm: 563, prise: 'combo_ccs' },
+
+  // — Leapmotor —
+  { cle: 'leapmotor-t03', marque: 'Leapmotor', modele: 'T03', capaciteKwh: 37.3, puissanceMaxKw: 48, wltpKm: 265, prise: 'combo_ccs' },
+  { cle: 'leapmotor-c10', marque: 'Leapmotor', modele: 'C10', capaciteKwh: 69.9, puissanceMaxKw: 84, wltpKm: 420, prise: 'combo_ccs' },
+
+  // — Mercedes-Benz —
+  { cle: 'mercedes-eqa-250', marque: 'Mercedes-Benz', modele: 'EQA', variante: '250+', capaciteKwh: 70.5, puissanceMaxKw: 110, wltpKm: 560, prise: 'combo_ccs' },
+  { cle: 'mercedes-eqb-250', marque: 'Mercedes-Benz', modele: 'EQB', variante: '250+', capaciteKwh: 70.5, puissanceMaxKw: 100, wltpKm: 536, prise: 'combo_ccs' },
+  { cle: 'mercedes-eqe-350', marque: 'Mercedes-Benz', modele: 'EQE', variante: '350+', capaciteKwh: 89, puissanceMaxKw: 170, wltpKm: 639, prise: 'combo_ccs' },
+  { cle: 'mercedes-eqe-suv', marque: 'Mercedes-Benz', modele: 'EQE SUV', variante: '350+', capaciteKwh: 89, puissanceMaxKw: 170, wltpKm: 590, prise: 'combo_ccs' },
+  { cle: 'mercedes-eqs-450', marque: 'Mercedes-Benz', modele: 'EQS', variante: '450+', capaciteKwh: 118, puissanceMaxKw: 200, wltpKm: 799, prise: 'combo_ccs' },
+  { cle: 'mercedes-eqs-suv', marque: 'Mercedes-Benz', modele: 'EQS SUV', variante: '450 4MATIC', capaciteKwh: 118, puissanceMaxKw: 200, wltpKm: 656, prise: 'combo_ccs' },
+  { cle: 'mercedes-cla-ev', marque: 'Mercedes-Benz', modele: 'CLA', variante: 'EQ 250+', capaciteKwh: 85, puissanceMaxKw: 320, wltpKm: 792, prise: 'combo_ccs' },
+
+  // — MG —
   { cle: 'mg4-51', marque: 'MG', modele: 'MG4', variante: 'Standard 51 kWh', capaciteKwh: 50.8, puissanceMaxKw: 117, wltpKm: 350, prise: 'combo_ccs' },
   { cle: 'mg4-64', marque: 'MG', modele: 'MG4', variante: 'Comfort 64 kWh', capaciteKwh: 61.7, puissanceMaxKw: 140, wltpKm: 435, prise: 'combo_ccs' },
-  { cle: 'bmw-i3-42', marque: 'BMW', modele: 'i3', variante: '120 Ah', capaciteKwh: 37.9, puissanceMaxKw: 50, wltpKm: 310, prise: 'combo_ccs' },
+  { cle: 'mg-zs-ev', marque: 'MG', modele: 'ZS EV', variante: 'Long Range', capaciteKwh: 68.3, puissanceMaxKw: 92, wltpKm: 440, prise: 'combo_ccs' },
+  { cle: 'mg-mg5', marque: 'MG', modele: 'MG5', variante: 'Long Range', capaciteKwh: 57.4, puissanceMaxKw: 87, wltpKm: 400, prise: 'combo_ccs' },
+  { cle: 'mg-s5', marque: 'MG', modele: 'S5 EV', variante: '64 kWh', capaciteKwh: 62, puissanceMaxKw: 139, wltpKm: 480, prise: 'combo_ccs' },
+
+  // — Mini —
+  { cle: 'mini-cooper-se', marque: 'Mini', modele: 'Cooper SE', capaciteKwh: 49.2, puissanceMaxKw: 95, wltpKm: 402, prise: 'combo_ccs' },
+  { cle: 'mini-countryman-e', marque: 'Mini', modele: 'Countryman E', capaciteKwh: 64.7, puissanceMaxKw: 130, wltpKm: 462, prise: 'combo_ccs' },
+
+  // — Nissan —
   { cle: 'nissan-leaf-40', marque: 'Nissan', modele: 'Leaf', variante: '40 kWh', capaciteKwh: 39, puissanceMaxKw: 46, wltpKm: 270, prise: 'chademo' },
   { cle: 'nissan-leaf-62', marque: 'Nissan', modele: 'Leaf', variante: 'e+ 62 kWh', capaciteKwh: 59, puissanceMaxKw: 100, wltpKm: 385, prise: 'chademo' },
+  { cle: 'nissan-ariya-87', marque: 'Nissan', modele: 'Ariya', variante: '87 kWh', capaciteKwh: 87, puissanceMaxKw: 130, wltpKm: 533, prise: 'combo_ccs' },
+  { cle: 'nissan-micra-ev', marque: 'Nissan', modele: 'Micra', variante: '52 kWh', capaciteKwh: 52, puissanceMaxKw: 100, wltpKm: 408, prise: 'combo_ccs' },
 
-  // — Compactes et berlines —
-  { cle: 'vw-id3-58', marque: 'Volkswagen', modele: 'ID.3', variante: 'Pro 58 kWh', capaciteKwh: 58, puissanceMaxKw: 120, wltpKm: 425, prise: 'combo_ccs' },
-  { cle: 'vw-id3-77', marque: 'Volkswagen', modele: 'ID.3', variante: 'Pro S 77 kWh', capaciteKwh: 77, puissanceMaxKw: 170, wltpKm: 557, prise: 'combo_ccs' },
-  { cle: 'cupra-born-58', marque: 'Cupra', modele: 'Born', variante: '58 kWh', capaciteKwh: 58, puissanceMaxKw: 120, wltpKm: 420, prise: 'combo_ccs' },
-  { cle: 'renault-megane-60', marque: 'Renault', modele: 'Mégane E-Tech', variante: 'EV60', capaciteKwh: 60, puissanceMaxKw: 130, wltpKm: 470, prise: 'combo_ccs' },
+  // — Opel —
+  { cle: 'opel-corsa-e', marque: 'Opel', modele: 'Corsa Electric', capaciteKwh: 46.3, puissanceMaxKw: 100, wltpKm: 357, prise: 'combo_ccs' },
+  { cle: 'opel-mokka-e', marque: 'Opel', modele: 'Mokka Electric', capaciteKwh: 50, puissanceMaxKw: 100, wltpKm: 403, prise: 'combo_ccs' },
+  { cle: 'opel-astra-e', marque: 'Opel', modele: 'Astra Electric', capaciteKwh: 51, puissanceMaxKw: 100, wltpKm: 418, prise: 'combo_ccs' },
+  { cle: 'opel-frontera-e', marque: 'Opel', modele: 'Frontera Electric', capaciteKwh: 44, puissanceMaxKw: 100, wltpKm: 305, prise: 'combo_ccs' },
+
+  // — Peugeot —
+  { cle: 'peugeot-e208-50', marque: 'Peugeot', modele: 'e-208', variante: '50 kWh', capaciteKwh: 46.3, puissanceMaxKw: 100, wltpKm: 362, prise: 'combo_ccs' },
+  { cle: 'peugeot-e208-51', marque: 'Peugeot', modele: 'e-208', variante: '51 kWh', capaciteKwh: 48.1, puissanceMaxKw: 100, wltpKm: 410, prise: 'combo_ccs' },
+  { cle: 'peugeot-e2008-50', marque: 'Peugeot', modele: 'e-2008', variante: '50 kWh', capaciteKwh: 46.3, puissanceMaxKw: 100, wltpKm: 345, prise: 'combo_ccs' },
+  { cle: 'peugeot-e2008-54', marque: 'Peugeot', modele: 'e-2008', variante: '54 kWh', capaciteKwh: 51, puissanceMaxKw: 100, wltpKm: 406, prise: 'combo_ccs' },
   { cle: 'peugeot-e308', marque: 'Peugeot', modele: 'e-308', capaciteKwh: 51, puissanceMaxKw: 100, wltpKm: 410, prise: 'combo_ccs' },
+  { cle: 'peugeot-e3008-73', marque: 'Peugeot', modele: 'e-3008', variante: '73 kWh', capaciteKwh: 73, puissanceMaxKw: 160, wltpKm: 525, prise: 'combo_ccs' },
+  { cle: 'peugeot-e3008-98', marque: 'Peugeot', modele: 'e-3008', variante: '98 kWh', capaciteKwh: 96.9, puissanceMaxKw: 160, wltpKm: 700, prise: 'combo_ccs' },
+  { cle: 'peugeot-e5008-73', marque: 'Peugeot', modele: 'e-5008', variante: '73 kWh', capaciteKwh: 73, puissanceMaxKw: 160, wltpKm: 502, prise: 'combo_ccs' },
+  { cle: 'peugeot-e5008-98', marque: 'Peugeot', modele: 'e-5008', variante: '98 kWh', capaciteKwh: 96.9, puissanceMaxKw: 160, wltpKm: 668, prise: 'combo_ccs' },
+  { cle: 'peugeot-eexpert', marque: 'Peugeot', modele: 'e-Expert', variante: '75 kWh', capaciteKwh: 75, puissanceMaxKw: 100, wltpKm: 350, prise: 'combo_ccs' },
+
+  // — Polestar —
+  { cle: 'polestar-2-lr', marque: 'Polestar', modele: '2', variante: 'Long Range', capaciteKwh: 79, puissanceMaxKw: 205, wltpKm: 654, prise: 'combo_ccs' },
+  { cle: 'polestar-3', marque: 'Polestar', modele: '3', variante: 'Long Range', capaciteKwh: 107, puissanceMaxKw: 250, wltpKm: 631, prise: 'combo_ccs' },
+  { cle: 'polestar-4', marque: 'Polestar', modele: '4', variante: 'Long Range', capaciteKwh: 100, puissanceMaxKw: 200, wltpKm: 620, prise: 'combo_ccs' },
+
+  // — Renault —
+  { cle: 'renault-twingo-e', marque: 'Renault', modele: 'Twingo E-Tech', capaciteKwh: 21.3, puissanceMaxKw: 22, wltpKm: 190, prise: 'type_2' },
+  { cle: 'renault-zoe-52', marque: 'Renault', modele: 'Zoe', variante: 'R135 52 kWh', capaciteKwh: 52, puissanceMaxKw: 46, wltpKm: 395, prise: 'combo_ccs' },
+  { cle: 'renault-5-40', marque: 'Renault', modele: 'R5 E-Tech', variante: '40 kWh', capaciteKwh: 40, puissanceMaxKw: 80, wltpKm: 312, prise: 'combo_ccs' },
+  { cle: 'renault-5-52', marque: 'Renault', modele: 'R5 E-Tech', variante: '52 kWh', capaciteKwh: 52, puissanceMaxKw: 100, wltpKm: 410, prise: 'combo_ccs' },
+  { cle: 'renault-4-52', marque: 'Renault', modele: 'R4 E-Tech', variante: '52 kWh', capaciteKwh: 52, puissanceMaxKw: 100, wltpKm: 409, prise: 'combo_ccs' },
+  { cle: 'renault-megane-60', marque: 'Renault', modele: 'Mégane E-Tech', variante: 'EV60', capaciteKwh: 60, puissanceMaxKw: 130, wltpKm: 470, prise: 'combo_ccs' },
+  { cle: 'renault-scenic-87', marque: 'Renault', modele: 'Scénic E-Tech', variante: 'Grande Autonomie', capaciteKwh: 87, puissanceMaxKw: 150, wltpKm: 625, prise: 'combo_ccs' },
+  { cle: 'renault-kangoo-ev', marque: 'Renault', modele: 'Kangoo E-Tech', capaciteKwh: 45, puissanceMaxKw: 80, wltpKm: 285, prise: 'combo_ccs' },
+
+  // — Škoda —
+  { cle: 'skoda-elroq-60', marque: 'Škoda', modele: 'Elroq', variante: '60', capaciteKwh: 59, puissanceMaxKw: 165, wltpKm: 400, prise: 'combo_ccs' },
+  { cle: 'skoda-elroq-85', marque: 'Škoda', modele: 'Elroq', variante: '85', capaciteKwh: 77, puissanceMaxKw: 175, wltpKm: 581, prise: 'combo_ccs' },
+  { cle: 'skoda-enyaq-85', marque: 'Škoda', modele: 'Enyaq', variante: '85', capaciteKwh: 77, puissanceMaxKw: 175, wltpKm: 570, prise: 'combo_ccs' },
+
+  // — Smart —
+  { cle: 'smart-1', marque: 'Smart', modele: '#1', variante: 'Premium', capaciteKwh: 62, puissanceMaxKw: 150, wltpKm: 440, prise: 'combo_ccs' },
+  { cle: 'smart-3', marque: 'Smart', modele: '#3', variante: 'Premium', capaciteKwh: 62, puissanceMaxKw: 150, wltpKm: 455, prise: 'combo_ccs' },
+
+  // — Tesla —
   { cle: 'tesla-m3-sr', marque: 'Tesla', modele: 'Model 3', variante: 'Propulsion', capaciteKwh: 57.5, puissanceMaxKw: 170, wltpKm: 513, prise: 'combo_ccs' },
   { cle: 'tesla-m3-lr', marque: 'Tesla', modele: 'Model 3', variante: 'Grande Autonomie', capaciteKwh: 75, puissanceMaxKw: 250, wltpKm: 629, prise: 'combo_ccs' },
-  { cle: 'bmw-i4-40', marque: 'BMW', modele: 'i4', variante: 'eDrive40', capaciteKwh: 80.7, puissanceMaxKw: 205, wltpKm: 590, prise: 'combo_ccs' },
-  { cle: 'polestar-2-lr', marque: 'Polestar', modele: '2', variante: 'Long Range', capaciteKwh: 79, puissanceMaxKw: 205, wltpKm: 654, prise: 'combo_ccs' },
-
-  // — SUV et familiales —
   { cle: 'tesla-my-sr', marque: 'Tesla', modele: 'Model Y', variante: 'Propulsion', capaciteKwh: 57.5, puissanceMaxKw: 170, wltpKm: 455, prise: 'combo_ccs' },
   { cle: 'tesla-my-lr', marque: 'Tesla', modele: 'Model Y', variante: 'Grande Autonomie', capaciteKwh: 75, puissanceMaxKw: 250, wltpKm: 600, prise: 'combo_ccs' },
-  { cle: 'renault-scenic', marque: 'Renault', modele: 'Scénic E-Tech', variante: 'Grande Autonomie', capaciteKwh: 87, puissanceMaxKw: 150, wltpKm: 625, prise: 'combo_ccs' },
-  { cle: 'peugeot-e3008', marque: 'Peugeot', modele: 'e-3008', variante: '73 kWh', capaciteKwh: 73, puissanceMaxKw: 160, wltpKm: 525, prise: 'combo_ccs' },
-  { cle: 'vw-id4-77', marque: 'Volkswagen', modele: 'ID.4', variante: 'Pro 77 kWh', capaciteKwh: 77, puissanceMaxKw: 175, wltpKm: 550, prise: 'combo_ccs' },
-  { cle: 'skoda-enyaq-82', marque: 'Škoda', modele: 'Enyaq', variante: '85', capaciteKwh: 77, puissanceMaxKw: 175, wltpKm: 570, prise: 'combo_ccs' },
-  { cle: 'kia-ev6-77', marque: 'Kia', modele: 'EV6', variante: '77,4 kWh', capaciteKwh: 77.4, puissanceMaxKw: 240, wltpKm: 528, prise: 'combo_ccs' },
-  { cle: 'hyundai-ioniq5-77', marque: 'Hyundai', modele: 'Ioniq 5', variante: '77,4 kWh', capaciteKwh: 77.4, puissanceMaxKw: 235, wltpKm: 507, prise: 'combo_ccs' },
-  { cle: 'kia-niro-ev', marque: 'Kia', modele: 'Niro EV', capaciteKwh: 64.8, puissanceMaxKw: 80, wltpKm: 460, prise: 'combo_ccs' },
-  { cle: 'hyundai-kona-65', marque: 'Hyundai', modele: 'Kona Electric', variante: '65 kWh', capaciteKwh: 65.4, puissanceMaxKw: 102, wltpKm: 514, prise: 'combo_ccs' },
-  { cle: 'mg-zs-ev', marque: 'MG', modele: 'ZS EV', variante: 'Long Range', capaciteKwh: 68.3, puissanceMaxKw: 92, wltpKm: 440, prise: 'combo_ccs' },
-  { cle: 'citroen-ec4', marque: 'Citroën', modele: 'ë-C4', variante: '50 kWh', capaciteKwh: 46.3, puissanceMaxKw: 100, wltpKm: 357, prise: 'combo_ccs' },
-  { cle: 'vinfast-vf8', marque: 'VinFast', modele: 'VF 8', variante: 'Eco', capaciteKwh: 82.4, puissanceMaxKw: 150, wltpKm: 447, prise: 'combo_ccs' },
+  { cle: 'tesla-ms-lr', marque: 'Tesla', modele: 'Model S', variante: 'Grande Autonomie', capaciteKwh: 95, puissanceMaxKw: 250, wltpKm: 634, prise: 'combo_ccs' },
+  { cle: 'tesla-mx-lr', marque: 'Tesla', modele: 'Model X', variante: 'Grande Autonomie', capaciteKwh: 95, puissanceMaxKw: 250, wltpKm: 576, prise: 'combo_ccs' },
 
-  // — Utilitaires —
-  { cle: 'renault-kangoo-ev', marque: 'Renault', modele: 'Kangoo E-Tech', capaciteKwh: 45, puissanceMaxKw: 80, wltpKm: 285, prise: 'combo_ccs' },
-  { cle: 'peugeot-eexpert', marque: 'Peugeot', modele: 'e-Expert', variante: '75 kWh', capaciteKwh: 75, puissanceMaxKw: 100, wltpKm: 350, prise: 'combo_ccs' },
+  // — Toyota —
+  { cle: 'toyota-bz4x', marque: 'Toyota', modele: 'bZ4X', capaciteKwh: 64, puissanceMaxKw: 150, wltpKm: 516, prise: 'combo_ccs' },
+  { cle: 'toyota-urban-cruiser', marque: 'Toyota', modele: 'Urban Cruiser', variante: '61 kWh', capaciteKwh: 61, puissanceMaxKw: 67, wltpKm: 430, prise: 'combo_ccs' },
+
+  // — VinFast —
+  { cle: 'vinfast-vf6-eco', marque: 'VinFast', modele: 'VF 6', variante: 'Eco', capaciteKwh: 59.6, puissanceMaxKw: 60, wltpKm: 399, prise: 'combo_ccs' },
+  { cle: 'vinfast-vf6-plus', marque: 'VinFast', modele: 'VF 6', variante: 'Plus', capaciteKwh: 59.6, puissanceMaxKw: 60, wltpKm: 381, prise: 'combo_ccs' },
+  { cle: 'vinfast-vf7-eco', marque: 'VinFast', modele: 'VF 7', variante: 'Eco', capaciteKwh: 70.8, puissanceMaxKw: 100, wltpKm: 450, prise: 'combo_ccs' },
+  { cle: 'vinfast-vf8', marque: 'VinFast', modele: 'VF 8', variante: 'Eco', capaciteKwh: 82.4, puissanceMaxKw: 150, wltpKm: 447, prise: 'combo_ccs' },
+  { cle: 'vinfast-vf8-plus', marque: 'VinFast', modele: 'VF 8', variante: 'Plus', capaciteKwh: 87.7, puissanceMaxKw: 150, wltpKm: 457, prise: 'combo_ccs' },
+  { cle: 'vinfast-vf9', marque: 'VinFast', modele: 'VF 9', variante: 'Eco', capaciteKwh: 123, puissanceMaxKw: 150, wltpKm: 594, prise: 'combo_ccs' },
+
+  // — Volkswagen —
+  { cle: 'vw-id3-58', marque: 'Volkswagen', modele: 'ID.3', variante: 'Pro 58 kWh', capaciteKwh: 58, puissanceMaxKw: 120, wltpKm: 425, prise: 'combo_ccs' },
+  { cle: 'vw-id3-77', marque: 'Volkswagen', modele: 'ID.3', variante: 'Pro S 77 kWh', capaciteKwh: 77, puissanceMaxKw: 170, wltpKm: 557, prise: 'combo_ccs' },
+  { cle: 'vw-id4-52', marque: 'Volkswagen', modele: 'ID.4', variante: 'Pure 52 kWh', capaciteKwh: 52, puissanceMaxKw: 115, wltpKm: 357, prise: 'combo_ccs' },
+  { cle: 'vw-id4-77', marque: 'Volkswagen', modele: 'ID.4', variante: 'Pro 77 kWh', capaciteKwh: 77, puissanceMaxKw: 175, wltpKm: 550, prise: 'combo_ccs' },
+  { cle: 'vw-id5-77', marque: 'Volkswagen', modele: 'ID.5', variante: 'Pro 77 kWh', capaciteKwh: 77, puissanceMaxKw: 175, wltpKm: 559, prise: 'combo_ccs' },
+  { cle: 'vw-id7-77', marque: 'Volkswagen', modele: 'ID.7', variante: 'Pro 77 kWh', capaciteKwh: 77, puissanceMaxKw: 175, wltpKm: 621, prise: 'combo_ccs' },
+  { cle: 'vw-id7-86', marque: 'Volkswagen', modele: 'ID.7', variante: 'Pro S 86 kWh', capaciteKwh: 86, puissanceMaxKw: 200, wltpKm: 709, prise: 'combo_ccs' },
+  { cle: 'vw-idbuzz-79', marque: 'Volkswagen', modele: 'ID. Buzz', variante: 'Pro 79 kWh', capaciteKwh: 79, puissanceMaxKw: 185, wltpKm: 481, prise: 'combo_ccs' },
+  { cle: 'vw-idbuzz-86', marque: 'Volkswagen', modele: 'ID. Buzz', variante: 'LWB 86 kWh', capaciteKwh: 86, puissanceMaxKw: 200, wltpKm: 484, prise: 'combo_ccs' },
+
+  // — Volvo —
+  { cle: 'volvo-ex30-69', marque: 'Volvo', modele: 'EX30', variante: 'Extended Range', capaciteKwh: 64, puissanceMaxKw: 153, wltpKm: 476, prise: 'combo_ccs' },
+  { cle: 'volvo-ex40', marque: 'Volvo', modele: 'EX40', variante: 'Extended Range', capaciteKwh: 78, puissanceMaxKw: 200, wltpKm: 573, prise: 'combo_ccs' },
+  { cle: 'volvo-ec40', marque: 'Volvo', modele: 'EC40', variante: 'Extended Range', capaciteKwh: 78, puissanceMaxKw: 200, wltpKm: 573, prise: 'combo_ccs' },
+  { cle: 'volvo-ex90', marque: 'Volvo', modele: 'EX90', capaciteKwh: 107, puissanceMaxKw: 250, wltpKm: 614, prise: 'combo_ccs' },
+
+  // — XPENG —
+  { cle: 'xpeng-g6-66', marque: 'XPENG', modele: 'G6', variante: 'Standard Range', capaciteKwh: 66, puissanceMaxKw: 215, wltpKm: 435, prise: 'combo_ccs' },
+  { cle: 'xpeng-g6-87', marque: 'XPENG', modele: 'G6', variante: 'Long Range', capaciteKwh: 87.5, puissanceMaxKw: 280, wltpKm: 570, prise: 'combo_ccs' },
+  { cle: 'xpeng-g9-78', marque: 'XPENG', modele: 'G9', variante: 'Standard Range', capaciteKwh: 78.2, puissanceMaxKw: 300, wltpKm: 460, prise: 'combo_ccs' },
+  { cle: 'xpeng-g9-98', marque: 'XPENG', modele: 'G9', variante: 'Long Range', capaciteKwh: 98, puissanceMaxKw: 300, wltpKm: 570, prise: 'combo_ccs' },
+  { cle: 'xpeng-p7-plus', marque: 'XPENG', modele: 'P7+', variante: 'Long Range', capaciteKwh: 76.3, puissanceMaxKw: 230, wltpKm: 550, prise: 'combo_ccs' },
+  { cle: 'xpeng-x9', marque: 'XPENG', modele: 'X9', variante: 'Long Range', capaciteKwh: 84.5, puissanceMaxKw: 260, wltpKm: 500, prise: 'combo_ccs' },
+
+  // — ZEEKR —
+  { cle: 'zeekr-x-66', marque: 'ZEEKR', modele: 'X', variante: 'Long Range', capaciteKwh: 66, puissanceMaxKw: 150, wltpKm: 440, prise: 'combo_ccs' },
+  { cle: 'zeekr-001-100', marque: 'ZEEKR', modele: '001', variante: 'Long Range', capaciteKwh: 100, puissanceMaxKw: 200, wltpKm: 620, prise: 'combo_ccs' },
+  { cle: 'zeekr-7x-75', marque: 'ZEEKR', modele: '7X', variante: 'Standard', capaciteKwh: 75, puissanceMaxKw: 360, wltpKm: 480, prise: 'combo_ccs' },
+  { cle: 'zeekr-7x-100', marque: 'ZEEKR', modele: '7X', variante: 'Long Range', capaciteKwh: 100, puissanceMaxKw: 360, wltpKm: 615, prise: 'combo_ccs' },
+  { cle: 'zeekr-7gt', marque: 'ZEEKR', modele: '7 GT', variante: 'Long Range', capaciteKwh: 100, puissanceMaxKw: 360, wltpKm: 610, prise: 'combo_ccs' },
+  { cle: 'zeekr-9x', marque: 'ZEEKR', modele: '9X', capaciteKwh: 116, puissanceMaxKw: 400, wltpKm: 630, prise: 'combo_ccs' },
 ] as const;
+
+/**
+ * Les marques du catalogue, dans l'ordre alphabétique, avec leurs modèles.
+ *
+ * POUR QUE LA LISTE SE PARCOURE. Cent trente modèles à plat forment un mur ;
+ * groupés sous leur marque, on descend à la sienne et l'on s'arrête. C'est
+ * exactement ce que `<optgroup>` sait faire, et cela ne coûte aucun script.
+ */
+export function parMarque(): { marque: string; modeles: ModeleVehicule[] }[] {
+  const groupes = new Map<string, ModeleVehicule[]>();
+  for (const m of CATALOGUE) {
+    const liste = groupes.get(m.marque) ?? [];
+    liste.push(m);
+    groupes.set(m.marque, liste);
+  }
+  return [...groupes.entries()]
+    .map(([marque, modeles]) => ({ marque, modeles }))
+    .sort((a, b) => a.marque.localeCompare(b.marque, 'fr'));
+}
+
+/** Le libellé affiché DANS un groupe de marque : la marque y est déjà dite. */
+export function libelleDansMarque(m: ModeleVehicule): string {
+  return m.variante ? `${m.modele} (${m.variante})` : m.modele;
+}
 
 /** Le libellé affiché dans la liste : « Renault Mégane E-Tech (EV60) ». */
 export function libelleModele(m: ModeleVehicule): string {

@@ -192,11 +192,16 @@ test('choisir un modèle remplit le formulaire, et le bilan suit', async ({ page
   await expect(page.getByLabel('Batterie', { exact: true })).toHaveValue('');
 
   await page.getByLabel('Choisir un modèle de véhicule')
-    .selectOption({ label: 'VinFast VF 8 (Eco)' });
+    .selectOption({ label: 'VF 8 (Eco)' });
 
   await expect(page.getByLabel('Batterie', { exact: true })).toHaveValue('82.4');
   await expect(page.getByLabel('Charge max')).toHaveValue('150');
   await expect(page.getByLabel('Nom du véhicule')).toHaveValue('VinFast VF 8 (Eco)');
+  /* GROUPÉ PAR MARQUE : dans la liste, on lit « VF 8 (Eco) » sous « VinFast »,
+     et non « VinFast VF 8 (Eco) » — répéter la marque sous elle-même serait du
+     bruit. Le NOM enregistré, lui, la garde : il vit hors de tout groupe. */
+  await expect(page.locator('.veh-catalogue optgroup[label="VinFast"]')).toHaveCount(1);
+  await expect(page.locator('.veh-catalogue optgroup').first()).toBeAttached();
   /* LA SANTÉ REVIENT À 100 % : le catalogue décrit une voiture neuve, et
      garder la dégradation d'un véhicule précédent l'appliquerait à un modèle
      qui n'a rien à voir. */
@@ -209,7 +214,7 @@ test('choisir un modèle remplit le formulaire, et le bilan suit', async ({ page
 test('les valeurs du catalogue restent MODIFIABLES — il propose, il ne verrouille pas', async ({ page }) => {
   await ouvrirVehicule(page);
   await page.getByLabel('Choisir un modèle de véhicule')
-    .selectOption({ label: 'Dacia Spring' });
+    .selectOption({ label: 'Spring' });
   await expect(page.getByLabel('Batterie', { exact: true })).toHaveValue('26.8');
 
   // L'usager corrige : c'est SA voiture, pas la fiche du constructeur.
