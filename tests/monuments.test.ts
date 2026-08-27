@@ -10,9 +10,30 @@ const TRACE: [number, number][] =
   Array.from({ length: 101 }, (_, i) => [3 + i * 0.01, 47] as [number, number]);
 
 describe('versMonuments', () => {
-  test('lit la forme engendrée — des tuples [lon, lat, titre, commune]', () => {
-    const m = versMonuments([[4.83, 45.76, 'Basilique de Fourvière', 'Lyon']]);
-    expect(m).toEqual([{ lon: 4.83, lat: 45.76, titre: 'Basilique de Fourvière', commune: 'Lyon' }]);
+  test('lit la forme engendrée — tuples [lon, lat, titre, commune, réf, siècle, adresse]', () => {
+    const m = versMonuments([
+      [4.83, 45.76, 'Basilique de Fourvière', 'Lyon', 'PA00117731', '19e s.', '8 place de Fourvière'],
+    ]);
+    expect(m).toEqual([{
+      lon: 4.83, lat: 45.76, titre: 'Basilique de Fourvière', commune: 'Lyon',
+      reference: 'PA00117731', siecle: '19e s.', adresse: '8 place de Fourvière',
+    }]);
+  });
+
+  test('les anciens tuples courts restent lisibles — champs enrichis vides', () => {
+    const m = versMonuments([[4.83, 45.76, 'Basilique', 'Lyon']]);
+    expect(m[0]).toMatchObject({ titre: 'Basilique', reference: '', siecle: '', adresse: '' });
+  });
+
+  /* LA RÉFÉRENCE DEVIENT UNE URL vers pop.culture.gouv.fr : un index altéré
+     ne doit pas fabriquer un lien vers n'importe quoi. Motif strict. */
+  test('une référence difforme est tue, jamais transformée en lien', () => {
+    const m = versMonuments([
+      [4.8, 45.7, 'A', 'X', 'PA00078023', '', ''],
+      [4.8, 45.7, 'B', 'X', '../evil', '', ''],
+      [4.8, 45.7, 'C', 'X', 'pa minuscule', '', ''],
+    ]);
+    expect(m.map((x) => x.reference)).toEqual(['PA00078023', '', '']);
   });
 
   test('écarte le difforme et le hors-globe, sans exception', () => {

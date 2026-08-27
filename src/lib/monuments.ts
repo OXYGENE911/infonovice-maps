@@ -27,6 +27,13 @@ export interface Monument {
   lat: number;
   titre: string;
   commune: string;
+  /** Référence Mérimée (« PA00078023 ») — 100 % des classés en portent une :
+      elle ouvre la notice officielle sur pop.culture.gouv.fr. */
+  reference: string;
+  /** « 12e s.;16e s. » — 85 % de couverture ; '' sinon. */
+  siecle: string;
+  /** Adresse déclarée — 27 % de couverture ; '' sinon. */
+  adresse: string;
 }
 
 /** Km parcourus par minute de détour — 60 km/h d'approche moyenne : on
@@ -41,13 +48,20 @@ export function versMonuments(brut: unknown): Monument[] {
   const rendu: Monument[] = [];
   for (const l of brut) {
     if (!Array.isArray(l) || l.length < 4) continue;
-    const [lon, lat, titre, commune] = l as unknown[];
+    const [lon, lat, titre, commune, reference, siecle, adresse] = l as unknown[];
     if (typeof lon !== 'number' || typeof lat !== 'number') continue;
     if (Math.abs(lon) > 180 || Math.abs(lat) > 90) continue;
     if (typeof titre !== 'string' || titre.trim() === '') continue;
+    const texte = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
     rendu.push({
       lon, lat, titre: titre.trim(),
-      commune: typeof commune === 'string' ? commune.trim() : '',
+      commune: texte(commune),
+      /* LA RÉFÉRENCE EST VÉRIFIÉE PAR MOTIF : elle devient un LIEN vers
+         pop.culture.gouv.fr — un index altéré ne doit pas fabriquer d'URL
+         vers n'importe quoi. Deux lettres, des chiffres, rien d'autre. */
+      reference: /^[A-Z]{2}[0-9A-Z]{6,10}$/.test(texte(reference)) ? texte(reference) : '',
+      siecle: texte(siecle),
+      adresse: texte(adresse),
     });
   }
   return rendu;

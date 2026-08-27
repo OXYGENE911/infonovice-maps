@@ -45,6 +45,7 @@ import {
 import { svgCommodite } from './icone-commodite';
 import { meteoA, phraseMeteo, symboleTemps, heureArrivee, formaterHeure, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
 import type { FicheBorne } from './fiche-borne';
+import type { FicheLieu } from './fiche-lieu';
 import type { BandeauGuidage } from './bandeau-guidage';
 
 const SOURCE = 'itineraire';
@@ -124,6 +125,8 @@ export class PanneauItineraire extends HTMLElement {
   /* LE CARTOUCHE DE DÉTAIL, partagé avec le panneau des couches (voir
      carte.ts) : un seul pour l'application, jamais deux ouverts. */
   #fiche: FicheBorne | null = null;
+  /** Le cartouche des lieux d'exception, posé par carte.ts. */
+  #ficheLieu: FicheLieu | null = null;
   /** Le dernier plan de recharge, pour que le résumé du haut le prenne en
       compte — voir `#majResume`. */
   #planCourant: PlanRecharge | null = null;
@@ -152,6 +155,8 @@ export class PanneauItineraire extends HTMLElement {
   #socDepart = 100;
 
   set fiche(f: FicheBorne) { this.#fiche = f; }
+
+  set ficheLieu(f: FicheLieu) { this.#ficheLieu = f; }
 
   /* LA POSITION DU VÉHICULE, quand la géolocalisation l'a donnée — la même
      que celle du panneau du véhicule, posée par carte.ts. Elle sert de départ
@@ -1316,6 +1321,20 @@ export class PanneauItineraire extends HTMLElement {
     }
   }
 
+  /**
+   * Fait du lieu une ÉTAPE du trajet et recalcule — le geste commun de la
+   * liste des lieux et de leur fiche. Rend `false` quand les six étapes sont
+   * prises : l'appelant le dit à sa façon.
+   */
+  detourParLieu(lieu: Monument): boolean {
+    const etapes = this.querySelector('etapes-itineraire') as EtapesItineraire;
+    if (etapes.points.length >= MAX_ETAPES) return false;
+    etapes.points = [...etapes.points, { lon: lieu.lon, lat: lieu.lat }];
+    void this.#calculer();
+    this.#allerA('accueil');
+    return true;
+  }
+
   #afficherLieux(trouves: SurLeTrajet<Monument>[], detourMin: number): void {
     const corps = this.querySelector('.iti-monuments-corps') as HTMLElement;
     corps.replaceChildren();
@@ -1344,13 +1363,19 @@ export class PanneauItineraire extends HTMLElement {
     for (const t of montres) {
       const item = document.createElement('li');
 
+      /* LE NOM OUVRE LA FICHE — le retour d'Armelin du 27/08 au soir :
+         « impossible de cliquer dessus pour avoir le détail à l'identique
+         d'une station de recharge ». Le clic vole AUSSI vers le lieu : un
+         détail sans savoir où laisse le travail à moitié fait — la même
+         leçon que les arrêts de recharge. */
       const voir = document.createElement('button');
       voir.type = 'button';
       voir.className = 'monuments-voir';
       voir.textContent = t.poi.titre;
-      voir.setAttribute('aria-label', `Voir ${t.poi.titre} sur la carte`);
+      voir.setAttribute('aria-label', `Détail de ${t.poi.titre}`);
       voir.addEventListener('click', () => {
         this.#carte?.flyTo({ center: [t.poi.lon, t.poi.lat], zoom: 15 });
+        this.#ficheLieu?.ouvrir(t.poi);
       });
 
       const detail = document.createElement('span');
@@ -1371,25 +1396,29 @@ export class PanneauItineraire extends HTMLElement {
       detour.textContent = 'Passer par là';
       detour.setAttribute('aria-label', `Faire un détour par ${t.poi.titre}`);
       detour.addEventListener('click', () => {
-        const etapes = this.querySelector('etapes-itineraire') as EtapesItineraire;
-        if (etapes.points.length >= MAX_ETAPES) {
+        if (!this.detourParLieu(t.poi)) {
           detail.textContent = `Le trajet porte déjà ${MAX_ETAPES} étapes —`
             + ' retirez-en une pour ajouter ce détour.';
-          return;
         }
-        etapes.points = [...etapes.points, { lon: t.poi.lon, lat: t.poi.lat }];
-        void this.#calculer();
-        this.#allerA('accueil');
       });
 
       item.append(voir, detail, detour);
       liste.append(item);
 
       if (this.#carte) {
-        this.#marqueursMonuments.push(
-          new Marker({ color: '#8A5AC2', scale: 0.72 })
-            .setLngLat([t.poi.lon, t.poi.lat]).addTo(this.#carte),
-        );
+        const marqueur = new Marker({ color: '#8A5AC2', scale: 0.72 })
+          .setLngLat([t.poi.lon, t.poi.lat]).addTo(this.#carte);
+        /* LE MARQUEUR AUSSI SE CLIQUE : c'est lui qu'on voit sur la carte —
+           le renvoyer vers la liste serait le chemin inverse du regard. */
+        const element = marqueur.getElement();
+        element.style.cursor = 'pointer';
+        element.setAttribute('role', 'button');
+        element.setAttribute('aria-label', `Détail de ${t.poi.titre}`);
+        element.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.#ficheLieu?.ouvrir(t.poi);
+        });
+        this.#marqueursMonuments.push(marqueur);
       }
     }
     corps.append(liste);

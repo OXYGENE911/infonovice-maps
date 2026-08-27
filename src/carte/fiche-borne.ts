@@ -92,8 +92,13 @@ export class FicheBorne extends HTMLElement {
      sans lui : le bouton « Itinéraire » ne paraît alors pas, plutôt que
      d'échouer au clic. */
   #itineraire: PorteItineraire | null = null;
+  /* L'AUTRE CARTOUCHE (fiche-lieu) : deux ouverts se recouvriraient — le
+     second geste range le premier, dans les deux sens (câblé par carte.ts). */
+  #homologue: { fermer(): void } | null = null;
 
   set itineraire(p: PorteItineraire) { this.#itineraire = p; }
+
+  set homologue(h: { fermer(): void }) { this.#homologue = h; }
   #annulation: AbortController | null = null;
   /** La cible affichée — sert à ignorer les réponses hors d'ordre. */
   #cible: CibleBorne | null = null;
@@ -155,6 +160,7 @@ export class FicheBorne extends HTMLElement {
     this.#cible = cible;
     // Voir `connectedCallback` : la colonne de gauche ne porte qu'une surface.
     refermerPanneaux(document);
+    this.#homologue?.fermer();
     this.hidden = false;
 
     const titre = this.querySelector('.fb-titre') as HTMLElement;
