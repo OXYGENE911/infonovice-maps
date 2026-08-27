@@ -617,7 +617,14 @@ etat-connexion { display: contents; }
    payer est un rail qui s'allonge ; le bénéfice est qu'aucun bouton ne
    devient inatteignable. Le panneau lui-même défile s'il est trop haut. */
 #carte .maplibregl-ctrl-top-left details > :not(summary) {
-  max-height: min(58vh, 460px); overflow-y: auto;
+  /* LA HAUTEUR SUIT L'ÉCRAN, elle n'est plus bridée à 460 pixels. Ce plafond
+     convenait à un volet de quelques lignes ; depuis que le planificateur
+     montre des PAGES (27/08/2026), il coupait son menu en deux et obligeait à
+     faire défiler pour atteindre « Feuille de route » — exactement le travers
+     qu'on venait de corriger. Le retrait laisse la place au pied de page et
+     aux commandes de vue. */
+  max-height: calc(100vh - var(--hauteur-entete, 45px) - 96px);
+  overflow-y: auto;
 }
 
 /* ═══ BAS-DROITE : LES RÉGLAGES D'AFFICHAGE ═══════════════════════════════ */
@@ -1334,3 +1341,218 @@ body.en-guidage #carte .maplibregl-ctrl-top-right summary:hover {
 }
 /* Le cartouche de détail d'une borne n'a rien à faire par-dessus le suivi. */
 body.en-guidage fiche-borne { display: none; }
+
+/* ==========================================================================
+   LES TITRES DE SECTION NE CHEVAUCHENT PLUS RIEN
+   --------------------------------------------------------------------------
+   « J'ai toujours les titres des fenêtres qui se chevauchent » (Armelin,
+   26/08/2026, capture à l'appui — « POINTS D'INTÉRÊT » posé à moitié hors de
+   son cadre, « FILTRER LES BORNES » coupé par la carte du dessus).
+
+   LA CAUSE EST DANS LE NAVIGATEUR, PAS DANS NOTRE MISE EN PAGE. Un `<legend>`
+   est rendu À CHEVAL SUR LA BORDURE de son `<fieldset>` : c'est son
+   comportement natif depuis toujours, et il remonte d'une demi-hauteur de
+   ligne AU-DESSUS du cadre. Tant que les cadres étaient plats et jointifs,
+   personne ne le voyait. Depuis que chaque section est une carte arrondie avec
+   son ombre, la légende sort de la carte et se pose sur celle du dessus.
+
+   LE REMÈDE : `float` remet la légende DANS le flux du fieldset, où elle se
+   comporte comme un titre ordinaire. C'est la technique éprouvée pour cela —
+   `display: block` seul ne suffit pas, le navigateur garde son placement
+   spécial. On garde le `<legend>` plutôt que de le remplacer par un `<p>` :
+   il porte le nom accessible du groupe, et un lecteur d'écran l'annonce en
+   entrant dedans.
+   ========================================================================== */
+#carte fieldset > legend,
+.reglages-corps fieldset > legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin: 0 0 2px;
+}
+/* SANS `clear`, le contenu qui suit se rangerait À CÔTÉ du titre flotté, et
+   la première case à cocher se retrouverait sur la même ligne que lui. */
+#carte fieldset > legend ~ *,
+.reglages-corps fieldset > legend ~ * {
+  clear: left;
+}
+
+/* ==========================================================================
+   VAGUE DU 27/08/2026 — raccourcis de trajet, action sur la borne
+   ========================================================================== */
+
+/* LES RACCOURCIS DE DÉPART ET D'ARRIVÉE. De petites pastilles sous le champ :
+   assez visibles pour qu'on les remarque, assez discrètes pour ne pas
+   concurrencer la saisie d'adresse, qui reste le cas général. */
+.iti-raccourcis {
+  display: flex; flex-wrap: wrap; gap: 5px; margin: -3px 0 2px;
+}
+.iti-raccourcis[hidden] { display: none; }
+.iti-raccourci {
+  padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  cursor: pointer; font: 600 11.5px var(--police); color: var(--texte-2);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.iti-raccourci:hover { border-color: var(--accent); color: var(--accent); }
+.iti-raccourci:disabled { opacity: .6; cursor: default; }
+.iti-raccourci:focus-visible { outline: none; box-shadow: var(--focus); }
+/* « Ma position » est le raccourci le plus employé : il se distingue. */
+.iti-raccourci-gps {
+  border-color: var(--accent); color: var(--accent); background: var(--fond);
+}
+
+/* L'ACTION SUR LA BORNE, en tête du cartouche : c'est ce qu'on vient y
+   chercher, pas une option à découvrir sous six rubriques. */
+.fb-actions { display: grid; }
+.fb-actions:empty { display: none; }
+.fb-aller {
+  padding: 9px 12px; border-radius: 10px;
+  border: 1px solid var(--accent); background: var(--accent);
+  cursor: pointer; font: 700 13px var(--police); color: var(--blanc);
+}
+.fb-aller:hover { background: var(--accent-vif); border-color: var(--accent-vif); }
+.fb-aller:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* La recherche de réseau dans le plan de recharge, même forme qu'ailleurs. */
+.recharge-reseau-recherche {
+  width: 100%; box-sizing: border-box; margin: 2px 0 4px;
+  padding: 5px 8px; border-radius: 8px; border: 1px solid var(--bord-2);
+  background: var(--fond); font: 400 12px var(--police); color: var(--texte-1);
+}
+.recharge-reseau-recherche:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* ==========================================================================
+   LE PLANIFICATEUR EN PAGES — refonte du 27/08/2026
+   --------------------------------------------------------------------------
+   Armelin, le 26/08/2026 : « quand on clique dans un menu, au lieu d'afficher
+   la fenêtre en gros plan pour configurer les filtres ou les options, le site
+   déroule seulement un formulaire en cascade et on doit scroller dans la
+   fenêtre pour naviguer dans les options ». Et plus loin : « au lieu d'ouvrir
+   une nouvelle page à chaque fois qui soit propre et sans nuisance graphique
+   avec un bouton retour ».
+
+   IL DÉCRIT UN DÉFAUT DE STRUCTURE, PAS DE DÉCORATION. Cinq volets dépliables
+   dans une colonne de trois cents pixels forment un couloir : une feuille de
+   route de quatre-vingts étapes repoussait la météo hors de l'écran, et
+   retrouver le résumé du trajet demandait de remonter à l'aveugle.
+
+   UNE PAGE À LA FOIS, UN TITRE, UNE FLÈCHE. C'est la mécanique des
+   applications de téléphone, et elle vaut ici pour la même raison : la colonne
+   est étroite, et l'on n'y tient qu'une chose.
+   ========================================================================== */
+
+/* LA COLONNE S'ÉLARGIT. Trois cent quarante pixels convenaient à un formulaire ;
+   une page qui se veut lisible en demande davantage — sans jamais manger la
+   carte, qui reste la moitié de l'information. */
+#carte .iti-corps {
+  min-width: 320px;
+  max-width: min(400px, calc(100vw - 40px));
+  padding: 0;
+  gap: 0;
+  display: block;
+}
+
+.vue-tete {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--bord);
+  background: var(--fond-doux);
+  border-radius: var(--rayon) var(--rayon) 0 0;
+  position: sticky; top: 0; z-index: 2;
+}
+.vue-titre {
+  margin: 0; flex: 1; min-width: 0;
+  font: 700 15px var(--police); color: var(--texte-1);
+  overflow-wrap: anywhere;
+}
+.vue-retour {
+  flex: 0 0 auto; width: 30px; height: 30px;
+  border: 1px solid var(--bord-2); border-radius: 9px;
+  background: var(--fond); cursor: pointer;
+  font: 400 16px var(--police); color: var(--texte-1); line-height: 1;
+}
+.vue-retour:hover { border-color: var(--accent); color: var(--accent); }
+.vue-retour:focus-visible { outline: none; box-shadow: var(--focus); }
+.vue-retour[hidden] { display: none; }
+
+.vue { padding: 14px; display: grid; gap: 12px; }
+.vue[hidden] { display: none; }
+.vue-note {
+  margin: 0; font: 400 11.5px var(--police); color: var(--texte-3);
+  line-height: 1.5;
+}
+
+/* LA DESTINATION EN PREMIER, ET EN GRAND. On sait où l'on veut aller ; c'est
+   le seul champ obligatoire, et la page entière tient autour de lui. */
+.iti-champ-principal {
+  display: grid; gap: 6px;
+  font: 600 12px var(--police); color: var(--texte-2);
+  text-transform: uppercase; letter-spacing: .04em;
+}
+
+/* LE MENU DES PAGES. De vraies lignes cliquables, hautes de quarante pixels :
+   on les vise sans réfléchir, au doigt comme à la souris. */
+.iti-menu { display: grid; gap: 2px; margin-top: 2px; }
+.iti-menu[hidden] { display: none; }
+.iti-vers {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 11px 12px; border-radius: 10px;
+  border: 1px solid transparent; background: var(--fond-doux);
+  cursor: pointer; text-align: left;
+  font: 600 12.5px var(--police); color: var(--texte-1);
+}
+.iti-vers:hover { border-color: var(--accent); color: var(--accent); }
+.iti-vers:focus-visible { outline: none; box-shadow: var(--focus); }
+.iti-vers span:last-child { color: var(--texte-3); font-size: 16px; }
+
+/* « Partager » se distingue : c'est une action, pas un détail du trajet. */
+.iti-vers-partage { background: var(--fond); border-color: var(--bord-2); }
+
+.iti-exports { display: flex; gap: 8px; }
+.iti-exports button {
+  flex: 1; padding: 9px 10px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  cursor: pointer; font: 600 12px var(--police); color: var(--texte-1);
+}
+.iti-exports button:hover { border-color: var(--accent); color: var(--accent); }
+.iti-exports button:focus-visible { outline: none; box-shadow: var(--focus); }
+
+.iti-lien {
+  width: 100%; padding: 11px 12px; border-radius: 10px;
+  border: 1px solid var(--accent); background: var(--accent);
+  cursor: pointer; font: 700 13px var(--police); color: var(--blanc);
+}
+.iti-lien:hover { background: var(--accent-vif); border-color: var(--accent-vif); }
+.iti-lien:focus-visible { outline: none; box-shadow: var(--focus); }
+
+.iti-effacer {
+  width: 100%; padding: 9px 12px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond);
+  cursor: pointer; font: 600 12px var(--police); color: var(--texte-2);
+}
+.iti-effacer:hover { border-color: #C0564A; color: #C0564A; }
+.iti-effacer:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* Les listes internes ne bornent plus leur hauteur : la page les porte, et
+   c'est elle qui défile. Deux niveaux de défilement au plus — la règle posée
+   le 26/08 après qu'une case à cocher soit devenue inatteignable. */
+.recharge-toutes-liste, .feuille-etapes, .trajet-liste, .recharge-liste {
+  max-height: none; overflow: visible;
+}
+
+/* LE VÉHICULE ET LES COUCHES SONT DES PAGES DU PLANIFICATEUR (27/08/2026).
+   Leurs composants gardent leur <details> interne — le réécrire pour rendre un
+   corps nu aurait touché deux fichiers de plusieurs centaines de lignes pour
+   un gain purement cosmétique. On masque donc leur en-tête et l'on force
+   l'ouverture : la page du planificateur porte déjà le titre et la flèche. */
+.vue-hote > * > details > summary { display: none; }
+.vue-hote > * > details > *:not(summary) {
+  margin-top: 0; box-shadow: none; border: none; padding: 0;
+  min-width: 0; max-width: none; max-height: none; overflow: visible;
+  background: none;
+}
+.vue-hote .poi-filtres {
+  border: 1px solid var(--bord); padding: 11px 13px; margin-top: 10px;
+}
+.vue-hote { padding: 14px; }

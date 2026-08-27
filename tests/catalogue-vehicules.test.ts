@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  CATALOGUE, libelleModele, modeleParCle, consommationDepuis,
-  autonomiesProposees, PART_AUTOROUTE,
+  CATALOGUE, libelleModele, libelleDansMarque, parMarque,
+  modeleParCle, consommationDepuis, autonomiesProposees, PART_AUTOROUTE,
 } from '../src/lib/catalogue-vehicules';
 import { PRISES } from '../src/lib/poi';
 
@@ -140,6 +140,87 @@ describe('autonomiesProposees', () => {
       const a = autonomiesProposees(m);
       expect(Number.isInteger(a.ville)).toBe(true);
       expect(Number.isInteger(a.autoroute)).toBe(true);
+    }
+  });
+});
+
+
+describe('le catalogue couvre ce qu’on croise sur les routes', () => {
+  /* Armelin, le 26/08/2026 : « augmente la liste des constructeurs automobiles
+     et augmente le nombre de voitures et regroupe-les par marques ». Il
+     nommait des absents qui ne sont pas des raretés — Fastned lui manquait
+     côté bornes, XPENG et Mercedes côté voitures. */
+  it('porte au moins cent modèles et trente marques', () => {
+    expect(CATALOGUE.length).toBeGreaterThanOrEqual(100);
+    expect(new Set(CATALOGUE.map((m) => m.marque)).size).toBeGreaterThanOrEqual(30);
+  });
+
+  it('contient les marques nommément demandées', () => {
+    const marques = new Set(CATALOGUE.map((m) => m.marque));
+    for (const attendue of ['XPENG', 'Mercedes-Benz', 'ZEEKR', 'VinFast',
+      'Volkswagen', 'Peugeot']) {
+      expect(marques.has(attendue), attendue).toBe(true);
+    }
+  });
+
+  it('contient les modèles nommément demandés', () => {
+    const cles = new Set(CATALOGUE.map((m) => m.cle));
+    for (const attendu of ['xpeng-g9-98', 'xpeng-g6-87', 'xpeng-p7-plus',
+      'zeekr-7x-100', 'zeekr-7gt', 'zeekr-x-66', 'zeekr-001-100', 'zeekr-9x',
+      'vinfast-vf8-plus', 'vinfast-vf6-eco', 'vinfast-vf6-plus',
+      'vw-idbuzz-79', 'vw-id4-77', 'vw-id5-77', 'vw-id7-77',
+      'peugeot-e3008-73', 'peugeot-e2008-54', 'peugeot-e5008-73']) {
+      expect(cles.has(attendu), attendu).toBe(true);
+    }
+  });
+
+  /* LA VF 8 PLUS PORTE LES CHIFFRES D'ARMELIN, pas les miens : 87,7 kWh et
+     457 km, qu'il a donnés lui-même. Une fiche constructeur approximative sur
+     LA voiture de l'usager principal serait le pire endroit où se tromper. */
+  it('la VF 8 Plus porte les valeurs données par son propriétaire', () => {
+    const vf8 = modeleParCle('vinfast-vf8-plus')!;
+    expect(vf8.capaciteKwh).toBe(87.7);
+    expect(vf8.wltpKm).toBe(457);
+  });
+});
+
+describe('parMarque', () => {
+  it('groupe les modèles sous leur marque, en ordre alphabétique', () => {
+    const groupes = parMarque();
+    const noms = groupes.map((g) => g.marque);
+    expect([...noms].sort((a, b) => a.localeCompare(b, 'fr'))).toEqual(noms);
+  });
+
+  it('n’égare aucun modèle en chemin', () => {
+    const total = parMarque().reduce((t, g) => t + g.modeles.length, 0);
+    expect(total).toBe(CATALOGUE.length);
+  });
+
+  it('ne crée pas deux groupes pour une même marque', () => {
+    const noms = parMarque().map((g) => g.marque);
+    expect(new Set(noms).size).toBe(noms.length);
+  });
+});
+
+describe('libelleDansMarque', () => {
+  /* DANS UN GROUPE DE MARQUE, la répéter serait du bruit : sous « Renault »,
+     on lit « Mégane E-Tech (EV60) », pas « Renault Mégane E-Tech (EV60) ». */
+  it('omet la marque, que le groupe porte déjà', () => {
+    const megane = modeleParCle('renault-megane-60')!;
+    expect(libelleDansMarque(megane)).toBe('Mégane E-Tech (EV60)');
+    expect(libelleModele(megane)).toBe('Renault Mégane E-Tech (EV60)');
+  });
+
+  it('reste lisible pour les modèles sans variante', () => {
+    expect(libelleDansMarque(modeleParCle('dacia-spring')!)).toBe('Spring');
+  });
+
+  /* ET DEUX MODÈLES D'UNE MÊME MARQUE NE SE CONFONDENT PAS : c'est le seul
+     texte qui les distingue dans la liste déroulante. */
+  it('distingue les modèles au sein de chaque marque', () => {
+    for (const g of parMarque()) {
+      const libelles = g.modeles.map(libelleDansMarque);
+      expect(new Set(libelles).size, g.marque).toBe(libelles.length);
     }
   });
 });

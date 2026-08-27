@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ouvrirVolet } from './volets';
 import { PNG_1PX, simulerTuiles, simulerCommunes } from './tuiles-simulees';
+import { allerA, retour } from './planificateur';
 
 test.beforeEach(async ({ page }) => {
   await simulerTuiles(page);
@@ -199,13 +200,13 @@ test('le profil altimétrique se charge À LA DEMANDE, et affiche les dénivelé
   await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
   // Tant que la section est repliée, AUCUN appel : les quotas sont un bien commun.
   expect(appelsAlti, 'l’altimétrie a été appelée sans demande').toBe(0);
-  await page.locator('.iti-alti summary').click();
+  await allerA(page, 'alti');
   await expect(page.locator('.alti-bilan')).toContainText('D+ 285 m', { timeout: 10_000 });
   await expect(page.locator('.alti-bilan')).toContainText('D− 152 m');
-  await expect(page.locator('.iti-alti svg')).toBeVisible();
+  await expect(page.locator('.iti-alti-corps svg')).toBeVisible();
   // Refermer puis rouvrir ne rappelle pas le service : le profil est acquis.
-  await page.locator('.iti-alti summary').click();
-  await page.locator('.iti-alti summary').click();
+  await retour(page);
+  await allerA(page, 'alti');
   await expect(page.locator('.alti-bilan')).toBeVisible();
   expect(appelsAlti, 'le service a été rappelé pour le même itinéraire').toBe(1);
 });
@@ -231,7 +232,7 @@ test('étapes intermédiaires et évitements PARLENT AU SERVICE, et se retirent'
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   await page.locator('.iti > summary').click();
-  const champs = page.locator('.iti-champs input[type="search"]');
+  const champs = page.locator('.vue-accueil input[type="search"]');
   await champs.nth(0).fill('paris');
   await page.getByRole('option', { name: 'Paris' }).first().click();
   await champs.nth(1).fill('lyon');
@@ -240,7 +241,11 @@ test('étapes intermédiaires et évitements PARLENT AU SERVICE, et se retirent'
   expect(urls[urls.length - 1]).not.toContain('constraints');
 
   // Éviter les autoroutes : le recalcul porte la contrainte, encodée.
+  /* LES ÉVITEMENTS SONT SUR LA PAGE « OPTIONS » depuis la refonte du
+     27/08 : l'accueil ne porte plus que les deux extrémités du trajet. */
+  await allerA(page, 'options');
   await page.getByRole('checkbox', { name: 'Autoroutes' }).check();
+  await retour(page);
   await expect.poll(() => urls.length).toBe(2);
   expect(decodeURIComponent(urls[1]!)).toContain('"value":"autoroute"');
 
@@ -309,13 +314,17 @@ test('réordonner les étapes, copier le lien, ouvrir la feuille : tout suit le 
   expect(urls.length, 'une ligne vide a déclenché un recalcul').toBe(2);
 
   // COPIER LE LIEN : il décrit le trajet CALCULÉ (ordre inversé, évitement).
-  await page.getByRole('button', { name: 'Copier le lien' }).click();
+  /* « COPIER LE LIEN », GPX ET KML SONT DERRIÈRE « PARTAGER » depuis le
+     27/08. Armelin : « les boutons GPX et KML nuisent à l'ergonomie en
+     affichant des boutons que peu de gens comprendront ». */
+  await allerA(page, 'partage');
+  await page.getByRole('button', { name: 'Copier le lien du trajet' }).click();
   const lien = await page.evaluate(() => navigator.clipboard.readText());
   expect(lien).toContain('4.83280,46.30690;5.04150,47.32200');
   expect(lien).toContain(';car;evite=autoroute');
 
   // LA FEUILLE DE ROUTE hérite étapes ET évitements du cliché.
-  await page.locator('.iti-feuille summary').click();
+  await allerA(page, 'feuille');
   await expect(page.locator('.feuille-etapes li')).toHaveCount(2, { timeout: 10_000 });
   const urlFeuille = urls.find((u) => u.includes('getSteps=true'));
   expect(urlFeuille).toContain('intermediates=4.8328,46.3069|5.0415,47.322');
@@ -355,7 +364,9 @@ test('un lien partagé porte étapes et évitements, et les rejoue', async ({ pa
   await expect(page.locator('.iti-resultat')).toContainText('539 km', { timeout: 10_000 });
   expect(urls[0]).toContain('intermediates=5.0415,47.322');
   expect(decodeURIComponent(urls[0]!)).toContain('"value":"autoroute"');
+  await allerA(page, 'options');
   await expect(page.getByRole('checkbox', { name: 'Autoroutes' })).toBeChecked();
+  await retour(page);
   await expect(page.locator('.etape-ligne input')).toHaveValue(/47,32200/);
   await expect(page.locator('.maplibregl-marker')).toHaveCount(3);
 });
@@ -383,7 +394,7 @@ test('la feuille de route parle français, et ne se charge qu’à la demande', 
   await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
   await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
   expect(appelsEtapes, 'les étapes ont été demandées sans ouverture').toBe(0);
-  await page.locator('.iti-feuille summary').click();
+  await allerA(page, 'feuille');
   const etapes = page.locator('.feuille-etapes li');
   await expect(etapes).toHaveCount(3, { timeout: 10_000 });
   await expect(etapes.nth(0)).toContainText('Départ — Rue de Rivoli');
@@ -393,8 +404,8 @@ test('la feuille de route parle français, et ne se charge qu’à la demande', 
   expect(appelsEtapes, 'le service doit être appelé une fois').toBe(1);
 
   // Refermer puis rouvrir ne rappelle pas le service : les étapes sont acquises.
-  await page.locator('.iti-feuille summary').click();
-  await page.locator('.iti-feuille summary').click();
+  await retour(page);
+  await allerA(page, 'feuille');
   await expect(etapes).toHaveCount(3);
   expect(appelsEtapes, 'le service a été rappelé pour le même itinéraire').toBe(1);
 
@@ -443,12 +454,12 @@ test('la feuille de route en panne parle français, et se réessaie', async ({ p
   });
   await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
   await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
-  await page.locator('.iti-feuille summary').click();
+  await allerA(page, 'feuille');
   await expect(page.locator('.iti-feuille-corps')).toContainText('momentanément indisponible', { timeout: 10_000 });
   // Le service revient : refermer puis rouvrir suffit — l'échec n'a rien verrouillé.
   enPanne = false;
-  await page.locator('.iti-feuille summary').click();
-  await page.locator('.iti-feuille summary').click();
+  await retour(page);
+  await allerA(page, 'feuille');
   await expect(page.locator('.feuille-etapes li')).toHaveCount(2, { timeout: 10_000 });
 });
 
@@ -1115,7 +1126,7 @@ test('MÉTÉO : prévision à l’HEURE D’ARRIVÉE, à la demande, écart de s
   // Rien tant que la section est fermée.
   expect(appelsMeteo, 'météo demandée sans ouvrir la section').toBe(0);
 
-  await page.locator('.iti-meteo summary').click();
+  await allerA(page, 'meteo');
   await expect(page.locator('.meteo-ligne')).toContainText('24 °C', { timeout: 15_000 });
   await expect(page.locator('.meteo-ligne')).toContainText('orage');
   await expect(page.locator('.meteo-ligne')).toContainText('1,8 mm de pluie');
@@ -1175,7 +1186,7 @@ test('MÉTÉO : une arrivée hors horizon ne se déguise PAS en prévision', asy
   });
   await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
   await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
-  await page.locator('.iti-meteo summary').click();
+  await allerA(page, 'meteo');
   await expect(page.locator('.iti-meteo-corps')).toContainText('trop lointaine', { timeout: 15_000 });
   await expect(page.locator('.meteo-ligne')).toHaveCount(0);
 });
@@ -1202,13 +1213,13 @@ test('MÉTÉO : le bulletin se REJOUE quand l’horloge a tourné', async ({ pag
   });
   await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
   await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
-  await page.locator('.iti-meteo summary').click();
+  await allerA(page, 'meteo');
   await expect(page.locator('.meteo-ligne')).toBeVisible({ timeout: 15_000 });
   expect(appels).toBe(1);
 
   // Refermer/rouvrir tout de suite : inutile de redemander.
-  await page.locator('.iti-meteo summary').click();
-  await page.locator('.iti-meteo summary').click();
+  await retour(page);
+  await allerA(page, 'meteo');
   await page.waitForTimeout(400);
   expect(appels, 'redemandé alors que rien n’a changé').toBe(1);
 
@@ -1216,9 +1227,9 @@ test('MÉTÉO : le bulletin se REJOUE quand l’horloge a tourné', async ({ pag
   // afficherait une arrivée déjà passée. L'horloge simulée de Playwright
   // avance le temps DU NAVIGATEUR, ce qu'une redéfinition de Date.now ne fait
   // pas (new Date() lit l'horloge système, pas Date.now).
-  await page.locator('.iti-meteo summary').click();
+  await allerA(page, 'meteo');
   await page.clock.fastForward('20:00');
-  await page.locator('.iti-meteo summary').click();
+  await allerA(page, 'meteo');
   await expect.poll(() => appels, { timeout: 15_000 }).toBe(2);
 });
 
@@ -1310,7 +1321,7 @@ test('SUR LE TRAJET : stations trouvées le long de l’itinéraire, appels PLAF
   // Tant que la section est fermée : AUCUN appel.
   expect(appels, 'appel parti sans ouvrir la section').toBe(0);
 
-  await page.locator('.iti-trajet summary').click();
+  await allerA(page, 'trajet');
   await expect(page.locator('.trajet-resume')).toContainText('1 station', { timeout: 15_000 });
   await expect(page.locator('.trajet-liste li')).toHaveCount(1);
   await expect(page.locator('.trajet-aller')).toHaveText('2 Route Nationale, Melun');
@@ -1406,8 +1417,9 @@ test('l’export GPX télécharge un fichier nommé, sans aucune requête', asyn
   }));
   await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
   await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
+  await allerA(page, 'partage');
   const telechargement = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'GPX' }).click();
+  await page.getByRole('button', { name: 'Fichier GPX' }).click();
   const fichier = await telechargement;
   expect(fichier.suggestedFilename()).toBe('itineraire-infonovice.gpx');
 });

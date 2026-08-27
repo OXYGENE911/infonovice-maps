@@ -2,6 +2,65 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.34.0] — 2026-08-27 — Un seul bouton, des pages, et 136 véhicules (PR #46)
+
+Sept retours du 26/08. La refonte de l'interface qu'Armelin décrivait est
+faite ; ce qui reste — choisir ses arrêts SUR LA CARTE — vient ensuite.
+
+### Le planificateur en pages
+
+« Au lieu d'ouvrir une nouvelle page à chaque fois qui soit propre et sans
+nuisance graphique avec un bouton retour. » Cinq volets dépliables dans une
+colonne de trois cents pixels formaient un couloir : une feuille de route de
+quatre-vingts étapes repoussait la météo hors de l'écran, et retrouver le
+résumé demandait de remonter à l'aveugle. **Une page à la fois, un titre, une
+flèche.**
+
+### Un seul bouton, plus trois
+
+« Un seul bouton est plus efficace à comprendre que trois boutons où il faudra
+se rappeler dans quel menu on peut trouver quelle option. » Le véhicule et les
+couches deviennent des **pages** du planificateur. Leur logique ne bouge pas :
+seule leur enveloppe disparaît.
+
+Deux menus, parce qu'il y a deux sortes de pages : celles qui ne dépendent pas
+d'un trajet — véhicule, couches, options — restent toujours accessibles ; les
+autres n'ont rien à montrer tant qu'aucun trajet n'existe.
+
+### « Partager » plutôt que GPX et KML
+
+GPX et KML sont des mots de métier ; partager est un geste. Les deux fichiers
+restent derrière, avec une phrase disant à quoi chacun sert.
+
+### La destination suffit
+
+« Une fois qu'on a mis le champ destination, ça calcule automatiquement par
+rapport à notre position actuelle. » C'est fait — **mais la position n'est
+jamais demandée d'office** : on se sert de ce qu'on a, parce que l'usager a
+pressé « Me localiser ». La contrainte 4 du projet ne se négocie pas pour un
+confort.
+
+### Le reste des retours
+
+- **Les titres qui se chevauchent** : une balise `legend` est rendue à cheval
+  sur la bordure de son `fieldset`. Invisible tant que les cadres étaient
+  plats ; depuis qu'ils sont arrondis, la légende sortait de sa carte.
+- **« Allego - Burger King Chelles Sud (1) »** : le même défaut que la carte
+  avait connu, dans l'autre panneau. J'avais corrigé le regroupement par
+  exploitant côté couches et oublié le planificateur.
+- **Aucun bouton pour aller vers une borne** : il fallait relever son adresse
+  et la retaper, pour un point qu'on désignait du doigt.
+- **« Carrefour » sans adresse** : le trajet partait des bonnes coordonnées,
+  mais rien ne permettait de le vérifier.
+- **Ni position, ni domicile, ni favoris en départ** : des raccourcis
+  paraissent sous chaque champ.
+- **Le rayon d'action sans position** : j'avais défendu l'inverse. Un rayon
+  centré ailleurs que sur la voiture ne répond pas à une autre question — il
+  répond à la même, faussement.
+- **136 modèles, 32 marques**, groupés sous leur marque.
+
+525 tests unitaires, 144 parcours E2E.
+
 ## [0.33.1] — 2026-08-26 — Une seule surface dans la colonne de gauche (PR #45)
 
 Ce que les mesures de texte ne voyaient pas. Le cartouche de détail et les

@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { ouvrirPlanificateur } from './planificateur';
 
 /* OUVRIR UN VOLET SANS SAVOIR OÙ IL VIT.
  *
@@ -32,6 +33,27 @@ export async function ouvrirVolet(page: Page, selecteur: string): Promise<void> 
   // déménagement, la question posée au DOM reste vraie.
   if (await page.locator(`.reglages-corps ${selecteur}`).count() > 0) {
     await ouvrirMenu(page);
+    await page.locator(`${selecteur} summary`).first().click();
+    return;
   }
+
+  /* OU EST-IL DEVENU UNE PAGE DU PLANIFICATEUR ? Depuis le 27/08/2026, le
+     véhicule et les couches n'ont plus de bouton propre : « un seul bouton est
+     plus efficace à comprendre que trois boutons où il faudra se rappeler dans
+     quel menu on peut trouver quelle option » (Armelin). On demande encore une
+     fois au DOM plutôt que d'inscrire ici une liste qui se périmerait. */
+  const hote = page.locator(`.vue-hote:has(${selecteur})`);
+  if (await hote.count() > 0) {
+    const vue = await hote.first().getAttribute('data-vue');
+    /* L'OUVERTURE ET LE RETOUR VIVENT DANS planificateur.ts : les ecrire une
+       seconde fois ici, c'etait les ecrire une seconde fois FAUX. La CI a
+       attrape la version d'ici, qui cliquait une fleche de retour invisible
+       quand le volet etait ferme. */
+    await ouvrirPlanificateur(page);
+    await page.locator(`.iti-vers[data-vers="${vue}"]`).click();
+    await expect(page.locator(`.vue[data-vue="${vue}"]`)).toBeVisible();
+    return;
+  }
+
   await page.locator(`${selecteur} summary`).first().click();
 }

@@ -28,7 +28,12 @@ test.beforeEach(async ({ page }) => {
 
    Le menu de droite garde ce qui répond vraiment à « que voir sur la carte » :
    le fond, le trafic, les transports — et « mes lieux ». */
-const RAIL = ['Itinéraire', 'Véhicule', 'Recharge et services'] as const;
+/* UN SEUL BOUTON, depuis le 27/08/2026. Armelin : « il y a trois boutons dans
+   la page d'accueil "Itinéraire", "Recharge et services" et "Véhicule", qui
+   pourraient tous être regroupés dans un unique bouton "Itinéraire" […] Un
+   seul bouton est plus efficace à comprendre que trois boutons où il faudra se
+   rappeler dans quel menu on peut trouver quelle option. » */
+const RAIL = ['Itinéraire'] as const;
 const RANGES_DANS_LE_MENU = ['.fonds', '.trafic', '.transports', '.favoris'] as const;
 
 const entree = (page: Page, nom: string): Locator =>
@@ -81,16 +86,18 @@ test('le menu range les couches, les lieux et l’affichage', async ({ page }) =
   }
 });
 
-test('la recharge est à GAUCHE, avec le trajet — jamais dans le menu', async ({ page }) => {
-  /* CE TEST EXISTE POUR EMPÊCHER UN RETOUR EN ARRIÈRE. Le va-et-vient entre
-     les deux côtés de l'écran était le reproche, et il se réinstallerait sans
-     bruit le jour où quelqu'un rangerait « les couches » ensemble par souci de
-     symétrie. La symétrie n'est pas le critère : l'intention l'est. */
+test('la recharge est une PAGE du trajet — jamais un bouton de plus', async ({ page }) => {
+  /* CE TEST EXISTE POUR EMPÊCHER UN RETOUR EN ARRIÈRE, deux fois. Le
+     va-et-vient entre les deux côtés de l'écran était le premier reproche ; la
+     multiplication des boutons à gauche fut le second. Ni l'un ni l'autre ne
+     doit se réinstaller par souci de symétrie — la symétrie n'est pas le
+     critère, l'intention l'est. */
   await ouvrirLaCarte(page);
-  await expect(page.locator('.maplibregl-ctrl-top-left .poi summary')).toBeVisible();
-  await ouvrirMenu(page);
   await expect(page.locator('.reglages-corps .poi'),
     'la recherche de bornes est retournée dans le menu de droite').toHaveCount(0);
+  await expect(page.locator('.vue-hote[data-vue="couches"] .poi'),
+    'la recherche de bornes n’est plus une page du planificateur').toHaveCount(1);
+  await expect(page.locator('.vue-hote[data-vue="vehicule"] .vehicule')).toHaveCount(1);
 });
 
 test('le haut-droit ne porte QUE le menu', async ({ page }) => {
@@ -153,9 +160,9 @@ test('un panneau ouvert ne recouvre aucune autre entrée du rail', async ({ page
 
 test('Échap referme le panneau ouvert', async ({ page }) => {
   await ouvrirLaCarte(page);
-  const ouvert = page.locator('.maplibregl-ctrl-top-left details[open]');
+  const ouvert = page.locator('.maplibregl-ctrl-top-left > div > * > details[open]');
 
-  await entree(page, 'Véhicule').click();
+  await entree(page, 'Itinéraire').click();
   await expect(ouvert).toHaveCount(1);
 
   await page.keyboard.press('Escape');
@@ -169,14 +176,26 @@ test('Échap referme aussi le menu des réglages', async ({ page }) => {
   await expect(page.locator('details.reglages[open]')).toHaveCount(0);
 });
 
-test('un clic sur la carte referme un volet du rail', async ({ page }) => {
+test('un clic sur la carte NE referme PAS le planificateur', async ({ page }) => {
+  /* CE PARCOURS A CHANGÉ DE SENS LE 27/08/2026, et le motif compte.
+     Le rail portait des volets TRANSITOIRES qu'un clic à côté refermait — le
+     bon comportement pour un formulaire qu'on remplit puis qu'on quitte.
+     Depuis que le planificateur ABRITE les couches de la carte et le profil du
+     véhicule, il est devenu une SURFACE DE TRAVAIL : on y coche « Bornes
+     électriques », on inspecte une borne, on en coche une autre. Le refermer à
+     chaque clic obligerait à le rouvrir entre chaque geste — c'est exactement
+     le défaut relevé le 26/08 sur ce même volet. */
   await ouvrirLaCarte(page);
 
-  await entree(page, 'Véhicule').click();
-  await expect(page.locator('.maplibregl-ctrl-top-left details[open]')).toHaveCount(1);
+  await entree(page, 'Itinéraire').click();
+  await expect(page.locator('.maplibregl-ctrl-top-left > div > * > details[open]')).toHaveCount(1);
   await page.mouse.click(640, 500);   // plein centre, loin des contrôles
-  await expect(page.locator('.maplibregl-ctrl-top-left details[open]'),
-    'cliquer à côté doit refermer un volet transitoire').toHaveCount(0);
+  await expect(page.locator('.maplibregl-ctrl-top-left > div > * > details[open]'),
+    'le planificateur s’est évanoui au premier clic sur la carte').toHaveCount(1);
+
+  // Il se ferme par Échap, ou par son propre bouton.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.maplibregl-ctrl-top-left > div > * > details[open]')).toHaveCount(0);
 });
 
 test('mais un clic sur la carte NE referme PAS le menu des réglages', async ({ page }) => {
@@ -192,22 +211,26 @@ test('mais un clic sur la carte NE referme PAS le menu des réglages', async ({ 
   await expect(page.locator('details.reglages[open]'),
     'le menu s’est évanoui au premier clic sur la carte').toHaveCount(1);
 
-  // Il se ferme par Échap, par son bouton, ou en ouvrant un volet du rail.
-  await entree(page, 'Véhicule').click();
+  // Il se ferme par Échap, par son bouton, ou en ouvrant le planificateur.
+  await entree(page, 'Itinéraire').click();
   await expect(page.locator('details.reglages[open]'),
-    'ouvrir un volet du rail devrait refermer le menu').toHaveCount(0);
+    'ouvrir le planificateur devrait refermer le menu').toHaveCount(0);
 });
 
-test('ouvrir un panneau du rail referme le précédent', async ({ page }) => {
+test('ouvrir le planificateur referme le menu des réglages, et l’inverse', async ({ page }) => {
+  /* IL N'Y A PLUS QU'UN VOLET DANS LE RAIL : l'exclusion se joue désormais
+     entre lui et le menu de droite. Deux surfaces de trois cents pixels
+     ouvertes ensemble ne laisseraient presque plus de carte. */
   await ouvrirLaCarte(page);
-  const ouvert = page.locator('.maplibregl-ctrl-top-left details[open]');
+  await entree(page, 'Itinéraire').click();
+  await expect(page.locator('.maplibregl-ctrl-top-left > div > * > details[open]')).toHaveCount(1);
+
+  await ouvrirMenu(page);
+  await expect(page.locator('.maplibregl-ctrl-top-left > div > * > details[open]'),
+    'deux surfaces ouvertes en même temps ne laissent plus de carte').toHaveCount(0);
 
   await entree(page, 'Itinéraire').click();
-  await expect(ouvert).toHaveCount(1);
-
-  await entree(page, 'Véhicule').click();
-  await expect(ouvert, 'deux panneaux ouverts en même temps encombrent l’écran').toHaveCount(1);
-  await expect(ouvert.locator('summary').first()).toHaveText(/Véhicule/);
+  await expect(page.locator('details.reglages[open]')).toHaveCount(0);
 });
 
 test('le pied de page ne recouvre rien', async ({ page }) => {
@@ -255,14 +278,14 @@ test('l’attribution de MapLibre n’est PAS traitée comme un de nos volets', 
 
   // 1. Ouvrir un volet ne doit pas refermer l'attribution.
   await attribution.evaluate((d: HTMLDetailsElement) => { d.open = true; });
-  await entree(page, 'Véhicule').click();
+  await entree(page, 'Itinéraire').click();
   await expect(attribution, 'ouvrir un volet a refermé l’attribution IGN')
     .toHaveAttribute('open', '');
 
   // 2. Ouvrir l'attribution ne doit pas refermer notre volet.
   await attribution.evaluate((d: HTMLDetailsElement) => { d.open = false; });
   await attribution.evaluate((d: HTMLDetailsElement) => { d.open = true; });
-  await expect(page.locator('.maplibregl-ctrl-top-left details[open]'),
+  await expect(page.locator('.maplibregl-ctrl-top-left > div > * > details[open]'),
     'l’attribution a refermé le volet — un lien partagé n’afficherait plus rien')
     .toHaveCount(1);
 });

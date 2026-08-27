@@ -19,7 +19,8 @@ import {
 } from '../lib/vehicule';
 import { collectionAnneaux } from '../lib/cercle';
 import {
-  CATALOGUE, libelleModele, modeleParCle, autonomiesProposees,
+  CATALOGUE, libelleModele, libelleDansMarque, parMarque,
+  modeleParCle, autonomiesProposees,
 } from '../lib/catalogue-vehicules';
 
 export const PREF_VEHICULE = 'vehicule';
@@ -72,9 +73,10 @@ export class PanneauVehicule extends HTMLElement {
     this.#carte = c;
     // setStyle détruit les sources : on repose, même contrat que les autres.
     c.on('style.load', () => { this.#poser(); });
-    /* On ne suit le déplacement de la carte QUE tant qu'aucune position GPS
-       n'est connue — sinon les anneaux s'ancrent sur le véhicule. */
-    c.on('moveend', () => { if (this.#actif && !this.#position) this.#poser(); });
+    /* PLUS AUCUN SUIVI DU DÉPLACEMENT DE CARTE : les anneaux n'entourent que
+       la position du véhicule, et faire glisser la carte ne la déplace pas.
+       Cet écouteur reposait les anneaux sur le centre de la vue tant que le
+       GPS était muet — c'est-à-dire tant qu'ils n'avaient aucun sens. */
   }
 
   connectedCallback(): void {
@@ -87,7 +89,7 @@ export class PanneauVehicule extends HTMLElement {
       </label>`;
 
     this.innerHTML = `
-      <details class="vehicule">
+      <details class="vehicule" open>
         <summary aria-label="Mon véhicule électrique">Véhicule</summary>
         <fieldset class="veh-corps">
           <legend>Mon véhicule électrique</legend>
@@ -100,14 +102,22 @@ export class PanneauVehicule extends HTMLElement {
           <label class="veh-ligne veh-ligne-catalogue">Modèle
             <span><select class="veh-catalogue" aria-label="Choisir un modèle de véhicule">
               <option value="">— saisie manuelle —</option>
-              ${CATALOGUE.map((m) => `
-                <option value="${m.cle}">${libelleModele(m)}</option>`).join('')}
+              <!-- GROUPÉ PAR MARQUE. Cent trente modèles à plat forment un
+                   mur ; sous leur marque, on descend à la sienne et l'on
+                   s'arrête. La balise optgroup fait cela nativement, sans
+                   la moindre ligne de script. -->
+              ${parMarque().map((g) => `
+                <optgroup label="${g.marque}">
+                  ${g.modeles.map((m) => `
+                    <option value="${m.cle}">${libelleDansMarque(m)}</option>`).join('')}
+                </optgroup>`).join('')}
             </select></span>
           </label>
-          <p class="veh-note veh-note-catalogue">Valeurs constructeur
-            indicatives, pré-remplies puis modifiables. L’autonomie proposée
-            découle du cycle WLTP, optimiste sur autoroute : remplacez-la par
-            vos propres relevés dès votre premier long trajet.</p>
+          <p class="veh-note veh-note-catalogue">${CATALOGUE.length} modèles,
+            valeurs constructeur indicatives, pré-remplies puis modifiables.
+            L’autonomie proposée découle du cycle WLTP, optimiste sur
+            autoroute : remplacez-la par vos propres relevés dès votre premier
+            long trajet.</p>
 
           <label class="veh-ligne">Nom
             <span><input type="text" class="veh-nom" placeholder="VinFast VF8"
@@ -302,42 +312,54 @@ export class PanneauVehicule extends HTMLElement {
     ancre.className = 'veh-bilan-ancre';
     ancre.textContent = this.#position
       ? 'Rayon mesuré depuis votre position.'
-      : 'Rayon mesuré depuis le centre de la carte — activez « Me localiser »'
-        + ' pour le rattacher à votre position.';
+      : 'Les anneaux attendent votre position : pressez « Me localiser ».'
+        + ' Un rayon d’action centré ailleurs que sur la voiture répondrait'
+        + ' faussement à la seule question qu’il pose.';
     boite.appendChild(ancre);
   }
 
   #poser(): void {
     const carte = this.#carte;
     if (!carte) return;
-    /* UNE DEMANDE ARRIVÉE TROP TÔT NE SE PERD PAS, ELLE ATTEND.
-       Ce garde-fou rendait `undefined` en silence quand le style n'était pas
-       prêt : décocher « Afficher mon rayon d'action » à cet instant ne faisait
-       RIEN, les anneaux restaient, et aucun message ne l'expliquait. Il ne
-       fallait qu'une machine chargée pour le déclencher — un parcours E2E ne
-       rougissait que dans la suite complète, jamais seul.
-       `style.load` ne suffit pas à rattraper : il ne se déclenche qu'au
-       CHANGEMENT de fond, pas quand un style déjà posé finit de se charger.
-       `idle` si. */
-    if (!carte.isStyleLoaded()) {
-      carte.once('idle', () => { this.#poser(); });
-      return;
-    }
-
-    const ancre = this.#position ?? {
-      lon: carte.getCenter().lng, lat: carte.getCenter().lat,
-    };
+    /* PAS DE POSITION, PAS D'ANNEAUX. Armelin, le 26/08/2026 : « quand on coche
+       la case sans avoir cliqué sur "me localiser", la carte affiche un cercle
+       en plein milieu de la carte car elle ne sait pas où on est. Ce qui n'est
+       pas logique. »
+       Il a raison, et j'avais défendu l'inverse : je pensais qu'un anneau
+       centré sur le regard, DÛMENT ANNONCÉ, valait mieux que rien. C'est faux.
+       Un rayon d'action répond à « jusqu'où puis-je aller » — une question qui
+       n'a de sens que depuis un endroit. Centré sur le regard, il ne répond
+       pas à une autre question : il répond à la même, faussement. La mention
+       sous les anneaux ne rattrapait pas ce qu'un cercle affirme d'un coup
+       d'œil. */
     const a = autonomies(this.#vehicule);
-    const donnees = this.#actif
-      ? collectionAnneaux(ancre.lon, ancre.lat, CONTEXTES.map((c) => ({
-        cle: c.cle, rayonKm: a[c.cle], couleur: c.couleur,
-      })))
+    const donnees = this.#actif && this.#position
+      ? collectionAnneaux(this.#position.lon, this.#position.lat,
+        CONTEXTES.map((c) => ({ cle: c.cle, rayonKm: a[c.cle], couleur: c.couleur })))
       : { type: 'FeatureCollection' as const, features: [] };
 
-    const source = carte.getSource(SOURCE) as GeoJSONSource | undefined;
-    if (source) { source.setData(donnees); return; }
-
-    carte.addSource(SOURCE, { type: 'geojson', data: donnees });
+    /* ON TENTE, ET L'ON NE DIFFÈRE QUE SUR L'ÉCHEC RÉEL.
+       Ce bloc a connu deux versions fautives, dans deux directions opposées :
+       d'abord un `return` muet quand le style n'était pas prêt — décocher les
+       anneaux ne faisait alors RIEN, sans un mot ; puis un renvoi à `idle`
+       conditionné à `isStyleLoaded()`, qui rend FAUX tant qu'une source charge
+       encore. Avec des tuiles simulées, il ne repasse jamais à vrai : les
+       anneaux attendaient un feu vert qui ne venait pas.
+       La bonne question n'est pas « le style est-il prêt ? » mais « MapLibre
+       a-t-il refusé ? ». On pose, et le refus — lui seul — programme une
+       nouvelle tentative. C'est déjà le contrat des couches de points
+       d'intérêt et du tracé d'itinéraire. */
+    try {
+      const source = carte.getSource(SOURCE) as GeoJSONSource | undefined;
+      if (source) { source.setData(donnees); return; }
+      carte.addSource(SOURCE, { type: 'geojson', data: donnees });
+    } catch (e) {
+      if (e instanceof Error && /style is not done loading/i.test(e.message)) {
+        carte.once('idle', () => { this.#poser(); });
+        return;
+      }
+      throw e;
+    }
     /* CONTOUR SEUL, PAS DE REMPLISSAGE. Trois disques empilés sur une carte la
        rendent illisible ; trois traits la laissent lisible. */
     carte.addLayer({

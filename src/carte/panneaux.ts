@@ -54,6 +54,13 @@ function estSurfaceDeTravail(details: HTMLDetailsElement): boolean {
      parcours l'ont vu du même coup.
      Le comportement ne doit pas dépendre du côté de l'écran où l'on range un
      panneau : il découle de son USAGE. On le déclare donc. */
+  /* LE PLANIFICATEUR EN FAIT PARTIE DEPUIS LE 27/08/2026, et cela découle
+     d'une décision d'ergonomie : il ABRITE désormais les couches de la carte
+     et le profil du véhicule. On y coche « Bornes électriques », on inspecte
+     une borne, on en coche une autre — exactement l'usage qui avait fait du
+     menu de droite une surface de travail. Le refermer à chaque clic sur la
+     carte obligerait à le rouvrir entre chaque geste. Il se ferme par son
+     bouton, par Échap, ou en ouvrant le menu de droite. */
   return details.classList.contains('reglages')
     || details.classList.contains(CLASSE_SURFACE);
 }
@@ -167,6 +174,17 @@ export function installerPanneaux(racine: Document | HTMLElement = document): ()
        MapLibre reste dehors, elle : elle vit dans de simples `<div>`, et
        c'est justement ce que `dansUnComposant` distingue. */
     if (element && dansUnComposant(element)) return;
+
+    /* NI SUR LES COMMANDES DE LA CARTE. Zoom, boussole et « Me localiser »
+       sont des BOUTONS de MapLibre, hors de nos composants : la règle les
+       comptait donc comme « un clic à côté » et refermait le volet ouvert.
+       C'était le plus absurde là où ça comptait le plus — le panneau du
+       véhicule écrit « pressez Me localiser » pour faire paraître les
+       anneaux, et le presser refermait ce panneau avant qu'ils paraissent.
+       L'ATTRIBUTION RESTE DEHORS, elle : son dépliant est un `<summary>` et
+       non un `<button>`, et l'ouvrir doit bien refermer les volets. */
+    if (element?.closest('.maplibregl-ctrl')?.querySelector('button')
+      && element.closest('button')) return;
     for (const details of panneauxPrincipauxOuverts(cible)) {
       if (!estSurfaceDeTravail(details)) details.open = false;
     }

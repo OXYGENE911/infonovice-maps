@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
+import { allerA, retour } from './planificateur';
+import { ouvrirVolet } from './volets';
 
 /* ARRÊTS DE RECHARGE — le calcul est pur et testé à sec (tests/arrets.test.ts) ;
    ces parcours vérifient le BRANCHEMENT : que le profil véhicule est bien lu,
@@ -11,7 +13,7 @@ const PARIS_LYON = '/#iti=2.35220,48.85660;4.83570,45.76400;car';
 /** Une ligne de l'INDEX NATIONAL, telle que l'export agrégé la rend. */
 interface LigneIndex {
   nom: string; lon: number; lat: number; p: number;
-  reseau?: string; pdc?: number; acces?: string;
+  reseau?: string; operateur?: string; pdc?: number; acces?: string;
 }
 
 /**
@@ -38,6 +40,9 @@ async function simulerIndexBornes(page: Page, bornes: LigneIndex[]): Promise<voi
           id_station_itinerance: `FR${b.nom.replace(/\W/g, '').slice(0, 8).toUpperCase()}`,
           nom_station: b.nom,
           nom_enseigne: b.reseau ?? 'Réseau d’essai',
+          /* L'OPÉRATEUR PORTE LE FILTRE : l'enseigne écrit souvent le nom du
+             site, et le regroupement s'y perdait. */
+          nom_operateur: b.operateur ?? b.reseau ?? 'Réseau d’essai',
           condition_acces: b.acces ?? 'Accès libre',
           prise_type_combo_ccs: '1',
           prise_type_chademo: '0',
@@ -90,7 +95,10 @@ test.beforeEach(async ({ page }) => {
  * Passer par le formulaire supprime la course à sa racine, et éprouve au
  * passage le chemin réel. */
 async function saisirVehicule(page: Page): Promise<void> {
-  await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Véhicule' }).click();
+  /* LE VÉHICULE EST UNE PAGE DU PLANIFICATEUR depuis le 27/08/2026 : « un seul
+     bouton est plus efficace à comprendre que trois boutons où il faudra se
+     rappeler dans quel menu on peut trouver quelle option » (Armelin). */
+  await ouvrirVolet(page, '.vehicule');
   await page.getByLabel('Batterie', { exact: true }).fill('87.7');
   await page.getByLabel('Santé (SOCE)').fill('94');
   await page.getByLabel('Charge (SOC)').fill('100');
@@ -98,11 +106,11 @@ async function saisirVehicule(page: Page): Promise<void> {
   await page.getByLabel('Sur autoroute').fill('280');
   // Le bilan confirme que le profil est pris en compte AVANT de continuer.
   await expect(page.locator('.veh-bilan-lignes')).toContainText('Sur autoroute');
-  /* ET ON ROUVRE LE PLANIFICATEUR. Ouvrir le volet « Véhicule » a refermé
-     celui de l'itinéraire — l'exclusion mutuelle du rail fonctionne comme
-     prévu, et la section des arrêts vit DEDANS. */
-  await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Itinéraire' }).click();
-  await expect(page.locator('.iti-recharge summary')).toBeVisible();
+  /* ET L'ON REVIENT AU TRAJET par la flèche, comme l'usager. Le véhicule est
+     une PAGE du planificateur : cliquer de nouveau son bouton de tête le
+     REFERMERAIT, puisqu'un <details> bascule. */
+  await retour(page);
+  await expect(page.locator('.iti-vers[data-vers="recharge"]')).toBeVisible();
 }
 
 async function ouvrirRecharge(page: Page, avecVehicule = true): Promise<void> {
@@ -115,7 +123,7 @@ async function ouvrirRecharge(page: Page, avecVehicule = true): Promise<void> {
      n'attend pas est une course qu'on parie. */
   await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
   if (avecVehicule) await saisirVehicule(page);
-  await page.locator('.iti-recharge summary').click();
+  await allerA(page, 'recharge');
 }
 
 test('sans véhicule renseigné, la section le DIT au lieu d’inventer', async ({ page }) => {
@@ -334,7 +342,7 @@ test('la durée dit si la charge est comprise — et le détail dit combien', as
     .toContainText('hors recharge');
 
   await saisirVehicule(page);
-  await page.locator('.iti-recharge summary').click();
+  await allerA(page, 'recharge');
   await expect(page.locator('.iti-recharge-corps')).toContainText('Aire de Beaune',
     { timeout: 15_000 });
 
@@ -437,4 +445,40 @@ test('toutes les bornes du trajet sont listées, retenues ou non', async ({ page
      (WCAG 1.4.1) : « retenue par le plan » est écrit. */
   await expect(corps.locator('.recharge-toutes-liste li.est-retenue'))
     .toContainText('retenue par le plan');
+});
+
+
+test('les réseaux du trajet se groupent par EXPLOITANT, pas par site', async ({ page }) => {
+  /* Armelin, le 26/08/2026, capture à l'appui : la liste des réseaux préférés
+     affichait « Allego - Burger King Chelles Sud (1) », « Allego - Burger King
+     Massy Opéra (1) », « Allego - Burger King Orléans Ingré (1) »… deux cent
+     quatorze entrées d'une station chacune sur un seul trajet.
+     La cause est celle que la carte avait déjà connue : certains producteurs
+     écrivent le NOM DU SITE dans l'enseigne. J'avais corrigé le panneau des
+     couches et oublié celui-ci — deux listes, un seul défaut. */
+  const allego: LigneIndex[] = [
+    /* LES TROIS SONT POSÉES SUR LE TRACÉ simulé Paris-Lyon : une borne à
+       quarante kilomètres du trajet en serait écartée par le rayon de
+       recherche, et le parcours mesurerait alors le vide. */
+    { nom: 'Chelles Sud', lon: 2.725, lat: 48.393, p: 150,
+      reseau: 'Allego - Burger King Chelles Sud', operateur: 'Allego' },
+    { nom: 'Massy Opéra', lon: 3.098, lat: 47.929, p: 150,
+      reseau: 'Allego - Burger King Massy Opéra', operateur: 'Allego' },
+    { nom: 'Orléans Ingré', lon: 3.470, lat: 47.464, p: 150,
+      reseau: 'Allego - Burger King Orléans Ingré', operateur: 'Allego' },
+    { ...BEAUNE, reseau: 'Ionity', operateur: 'IONITY GmbH' },
+  ];
+  await simulerIndexBornes(page, allego);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de', { timeout: 15_000 });
+
+  await corps.locator('.recharge-reseaux > summary').click();
+  const cases_ = corps.locator('.recharge-reseaux-corps input[type="checkbox"]');
+  /* DEUX EXPLOITANTS, pas quatre sites. Le compte suit : Allego vaut pour ses
+     trois stations d'un bloc. */
+  await expect(cases_).toHaveCount(2);
+  await expect(corps.locator('.recharge-reseaux-corps')).toContainText('Allego (3)');
+  await expect(corps.locator('.recharge-reseaux-corps'))
+    .not.toContainText('Burger King');
 });

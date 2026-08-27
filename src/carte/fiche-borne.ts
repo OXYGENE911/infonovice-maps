@@ -31,6 +31,7 @@ import {
   chargerCommodites, ErreurCommodites, TYPES_COMMODITE, type Commodite,
 } from '../lib/commodites';
 import { distanceM } from '../lib/le-long-du-trajet';
+import { adresseInverse } from '../lib/adresse';
 import { PRISES } from '../lib/poi';
 import { palierDe, PALIERS } from '../lib/puissance';
 import { refermerPanneaux } from './panneaux';
@@ -216,6 +217,7 @@ export class FicheBorne extends HTMLElement {
     corps.replaceChildren();
 
     corps.append(this.#bandeauAcces(d));
+    corps.append(this.#actions(d, cible));
     corps.append(this.#blocIdentite(d));
     if (d.groupes.length > 0) corps.append(this.#blocPoints(d));
     corps.append(this.#blocPratique(d));
@@ -243,6 +245,43 @@ export class FicheBorne extends HTMLElement {
        ou orange ne dit rien à qui ne distingue pas ces deux teintes (WCAG
        1.4.1, « utilisation de la couleur »). */
     return p;
+  }
+
+  /**
+   * Ce qu'on peut FAIRE de cette borne, tout en haut.
+   *
+   * Armelin, le 26/08/2026 : « quand je clique sur une borne de recharge, je
+   * n'ai pas la possibilité de cliquer sur un bouton pour démarrer un
+   * itinéraire vers cette dernière ». Le cartouche décrivait la station sans
+   * jamais permettre d'y aller — il fallait relever son adresse et la retaper
+   * dans le planificateur, pour un point qu'on désignait déjà du doigt.
+   *
+   * LE BOUTON EST EN TÊTE, sous l'accès : c'est l'action qu'on vient chercher,
+   * pas une option à découvrir en bas d'une liste de six rubriques.
+   */
+  #actions(d: DetailStation, cible: CibleBorne): HTMLElement {
+    const boite = document.createElement('div');
+    boite.className = 'fb-actions';
+    if (!this.#itineraire) return boite;
+
+    const aller = document.createElement('button');
+    aller.type = 'button';
+    aller.className = 'fb-aller';
+    aller.textContent = 'Itinéraire vers cette borne';
+    aller.addEventListener('click', () => {
+      /* LE LIBELLÉ PORTE L'ADRESSE quand on l'a. « SIGEIF » désigne des
+         centaines de bornes ; « SIGEIF — 17 rue Aristide Briand,
+         Chennevières-sur-Marne » en désigne une. Le trajet, lui, part des
+         COORDONNÉES et serait juste dans les deux cas — mais l'usager doit
+         pouvoir vérifier vers quoi il va. */
+      this.#itineraire?.allerVers(
+        { lon: cible.lon, lat: cible.lat },
+        d.adresse ? `${d.nom} — ${d.adresse}` : d.nom,
+      );
+      this.fermer();
+    });
+    boite.append(aller);
+    return boite;
   }
 
   #blocIdentite(d: DetailStation): HTMLElement {
@@ -458,9 +497,28 @@ export class FicheBorne extends HTMLElement {
         aller.textContent = 'Itinéraire';
         aller.setAttribute('aria-label', `Itinéraire vers ${libelle}`);
         aller.addEventListener('click', () => {
-          this.#itineraire?.allerVers({ lon: c.lon, lat: c.lat }, libelle);
-          // Le cartouche s'efface : on a obtenu ce qu'on venait y chercher.
-          this.fermer();
+          /* LE NOM SEUL NE SUFFIT PAS. Armelin, le 26/08/2026 : « le champ de
+             recherche affiche seulement le nom du commerce mais pas son
+             adresse […] il existe des milliers de Carrefour en France ». Le
+             trajet partait bel et bien des bonnes COORDONNÉES — mais rien ne
+             permettait de le vérifier, et « Carrefour » dans un champ
+             d'adresse se lit comme une saisie à moitié faite.
+             On demande donc l'adresse à la BAN, et son échec ne perd rien :
+             on retombe sur les coordonnées, qui désignent le lieu sans
+             ambiguïté même si elles se lisent moins bien. */
+          const secours = `${libelle} (${c.lat.toFixed(5)}, ${c.lon.toFixed(5)})`;
+          aller.disabled = true;
+          adresseInverse({ lon: c.lon, lat: c.lat }).then(
+            (a) => {
+              this.#itineraire?.allerVers({ lon: c.lon, lat: c.lat },
+                a ? `${libelle} — ${a.libelle}` : secours);
+              this.fermer();
+            },
+            () => {
+              this.#itineraire?.allerVers({ lon: c.lon, lat: c.lat }, secours);
+              this.fermer();
+            },
+          );
         });
         li.append(aller);
       }
