@@ -745,6 +745,86 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
   expect(appelsCarbu, 'appel parti sous le zoom minimal').toBe(appelsAvant);
 });
 
+test('PÉAGES : relevés à la demande, cabines FONDUES en gares, limites dites', async ({ page }) => {
+  /* Le verdict de l'étude du 27/08 : les péages se RELÈVENT (OSM), ils ne
+     s'évitent pas (le moteur public n'a pas de clause). Trois cabines d'une
+     même barrière et une gare isolée : l'usager franchit DEUX péages, pas
+     quatre. Et AUCUN appel tant qu'on ne demande rien — Overpass est un
+     commun bénévole. */
+  let appels = 0;
+  await page.route('**overpass.openstreetmap.fr**', (route) => {
+    appels += 1;
+    return route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      contentType: 'application/json',
+      /* LES CABINES SONT POSÉES SUR LE TRACÉ SIMULÉ (la droite Paris-Lyon) :
+         une cabine à six kilomètres de la ligne serait écartée par le filtre
+         exact — et le parcours mesurerait le filtre, pas la fonte en gares.
+         C'est arrivé à la première écriture de ce test. */
+      body: JSON.stringify({ elements: [
+        { type: 'node', id: 1, lat: 48.2381, lon: 2.8489,
+          tags: { barrier: 'toll_booth', name: 'Gare de Fleury' } },
+        { type: 'node', id: 2, lat: 48.2374, lon: 2.8495, tags: { barrier: 'toll_booth' } },
+        { type: 'node', id: 3, lat: 48.2388, lon: 2.8483, tags: { barrier: 'toll_booth' } },
+        { type: 'node', id: 4, lat: 47.30, lon: 3.60,
+          tags: { barrier: 'toll_booth', name: 'Gare de Beaune' } },
+      ] }),
+    });
+  });
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 390_000, duration: 13_000,
+    }),
+  }));
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  await allerA(page, 'options');
+  expect(appels, 'Overpass interrogé sans que personne ne le demande').toBe(0);
+
+  await page.getByRole('button', { name: 'Relever les péages du trajet' }).click();
+  const corps = page.locator('.iti-peages-corps');
+  await expect(corps).toContainText('2 gares de péage');
+  await expect(corps).toContainText('Gare de Fleury');
+  await expect(corps).toContainText('Gare de Beaune');
+  await expect(corps, 'le kilométrage situe chaque gare').toContainText(/km \d+/);
+  // Les limites en toutes lettres : la source, et ce qu'elle n'a pas.
+  await expect(corps).toContainText('OpenStreetMap');
+  await expect(corps).toContainText('tarif');
+  expect(appels, 'un clic, un appel').toBe(1);
+
+  /* ET LA PANNE PARLE FRANÇAIS : en surcharge, Overpass rend une page HTML —
+     la lire en JSON lèverait une exception illisible. Le bouton reste
+     réessayable : ce service tombe souvent. */
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    status: 200, contentType: 'text/html',
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    body: '<html><body>Dispatcher_Client::request_read_and_idx::timeout</body></html>',
+  }));
+  const bouton = page.getByRole('button', { name: 'Relever les péages du trajet' });
+  await bouton.click();
+  await expect(corps).toContainText('saturé');
+  await expect(bouton, 'un service qui tombe souvent doit rester réessayable').toBeEnabled();
+});
+
+test('PÉAGES : sans trajet le bouton répond, et la panne parle français', async ({ page }) => {
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    status: 200, contentType: 'text/html',
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    body: '<html><body>Dispatcher_Client::request_read_and_idx::timeout</body></html>',
+  }));
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await allerA(page, 'options');
+
+  // Sans trajet : une phrase, pas un silence.
+  const bouton = page.getByRole('button', { name: 'Relever les péages du trajet' });
+  await bouton.click();
+  await expect(page.locator('.iti-peages-corps')).toContainText('Calculez d’abord un itinéraire');
+});
+
 test('FAVORIS : un favori se renomme, et son adresse reste en sous-titre', async ({ page }) => {
   /* « Quand on met un lieu en favoris, c'est son adresse qui s'affiche. Ce
      serait bien de pouvoir leur donner un displayname plus facile à

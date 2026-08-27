@@ -37,6 +37,7 @@ import { PREF_VEHICULE } from './panneau-vehicule';
 import { ErreurPoi, type PoiCarburant, type PoiBorne } from '../lib/poi';
 import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import { palierDe } from '../lib/puissance';
+import { chargerPeages, ErreurPeages } from '../lib/peages';
 import { meteoA, phraseMeteo, symboleTemps, heureArrivee, formaterHeure, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
 import type { FicheBorne } from './fiche-borne';
 import type { BandeauGuidage } from './bandeau-guidage';
@@ -384,6 +385,16 @@ export class PanneauItineraire extends HTMLElement {
               ${(Object.keys(EVITEMENTS) as Eviter[]).map((v) => `
                 <label class="iti-evite"><input type="checkbox" value="${v}"><span>${EVITEMENTS[v]}</span></label>`).join('')}
             </fieldset>
+            <!-- LES PÉAGES SE RELÈVENT, ILS NE S'ÉVITENT PAS — le moteur
+                 public n'a pas de clause péage (mesuré PR #6), et l'étude du
+                 27/08 (docs/etudes-mandat-27-08.md §2) a tranché : nommer les
+                 gares du tracé, pour comparer soi-même avec la variante sans
+                 autoroute. À LA DEMANDE : Overpass est un commun bénévole. -->
+            <div class="iti-peages">
+              <button type="button" class="iti-peages-chercher">Relever les
+                péages du trajet</button>
+              <p class="iti-peages-corps" role="status"></p>
+            </div>
           </section>
 
           <!-- ======================= RECHARGE ======================= -->
@@ -558,6 +569,13 @@ export class PanneauItineraire extends HTMLElement {
       this.#allerA('accueil');
     });
 
+    /* LES PÉAGES DU TRAJET — un appel Overpass, au clic seulement. Le bouton
+       vit dans une page toujours accessible : sans trajet, il répond au lieu
+       de se taire. */
+    this.querySelector('.iti-peages-chercher')?.addEventListener('click', () => {
+      void this.#releverPeages();
+    });
+
     /* CHANGER LA MARGE REFAIT LE PLAN — mais seulement si la section est
        ouverte : un réglage invisible ne consomme rien. Le `#rechargePour` est
        remis à zéro, sans quoi le garde-fou anti-recalcul avalerait le
@@ -630,10 +648,14 @@ export class PanneauItineraire extends HTMLElement {
     this.#retirerBornesTrajet();
     this.#meteoPour = null; this.#meteoLe = null;
     for (const cls of
-      ['iti-alti', 'iti-feuille', 'iti-trajet', 'iti-meteo', 'iti-recharge'] as const) {
+      ['iti-alti', 'iti-feuille', 'iti-trajet', 'iti-meteo', 'iti-recharge',
+        'iti-peages'] as const) {
       const corps = this.querySelector(`.${cls}-corps`);
       if (corps) corps.textContent = '';
     }
+    // Le relevé des péages appartenait au trajet d'avant : le bouton revit.
+    const boutonPeages = this.querySelector<HTMLButtonElement>('.iti-peages-chercher');
+    if (boutonPeages) boutonPeages.disabled = false;
     this.#profilPour = null;
     this.#feuillePour = null;
     const menu = this.querySelector('.iti-menu:not(.iti-menu-toujours)') as HTMLElement | null;
@@ -995,6 +1017,49 @@ export class PanneauItineraire extends HTMLElement {
       this.#imposees.delete(cle);
     }
     this.#refairePlan();
+  }
+
+  /**
+   * Relève les gares de péage du tracé — un appel Overpass, au clic.
+   *
+   * LE RELEVÉ DIT SES LIMITES EN TOUTES LETTRES : la source est OSM (une gare
+   * absente de la carte n'est pas relevée), et le TARIF n'y figure pas — le
+   * promettre serait inventer.
+   */
+  async #releverPeages(): Promise<void> {
+    const bouton = this.querySelector<HTMLButtonElement>('.iti-peages-chercher');
+    const corps = this.querySelector<HTMLElement>('.iti-peages-corps');
+    if (!bouton || !corps) return;
+    const iti = this.#dernier;
+    if (!iti) {
+      corps.textContent =
+        'Calculez d’abord un itinéraire : les péages se relèvent sur son tracé.';
+      return;
+    }
+    bouton.disabled = true;
+    corps.textContent = 'Relevé des péages sur le tracé…';
+    try {
+      const gares = await chargerPeages(iti.geometrie);
+      if (this.#dernier !== iti) return; // le trajet a changé sous l'appel
+      bouton.disabled = false;
+      if (gares.length === 0) {
+        corps.textContent = 'Aucune gare de péage relevée sur ce tracé.'
+          + ' Source OpenStreetMap : une gare absente de la carte n’est pas relevée.';
+        return;
+      }
+      const liste = gares
+        .map((g) => `${g.nom ?? 'gare de péage'} (km ${Math.round(g.avancementM / 1000)})`)
+        .join(' · ');
+      corps.textContent =
+        `${gares.length} gare${gares.length > 1 ? 's' : ''} de péage sur ce tracé : `
+        + `${liste}. Source OpenStreetMap — le tarif n’y figure pas, et une gare`
+        + ' absente de la carte n’est pas relevée.';
+    } catch (e) {
+      // Overpass tombe souvent : le bouton reste réessayable.
+      bouton.disabled = false;
+      corps.textContent = e instanceof ErreurPeages
+        ? e.message : 'Les péages ne sont pas disponibles pour le moment.';
+    }
   }
 
   /* UNE PHRASE, PAS UNE LISTE : sur une aire, trois lignes de plus dans un
