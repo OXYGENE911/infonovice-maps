@@ -1348,15 +1348,16 @@ bandeau-guidage.bg-compact .bg-fleche svg { width: 30px; height: 30px; }
 }
 
 .bg-boutons { display: flex; gap: 8px; margin-top: 10px; }
-.bg-arreter, .bg-reduire {
+.bg-arreter, .bg-reduire, .bg-3d {
   padding: 8px 12px;
   border: 1px solid var(--bord-2); border-radius: 8px; background: var(--fond-doux);
   cursor: pointer; font: 600 13px var(--police); color: var(--texte-1);
 }
 .bg-arreter { flex: 1 1 auto; }
-.bg-reduire { flex: 0 0 auto; }
-.bg-arreter:hover, .bg-reduire:hover { border-color: var(--accent); color: var(--accent); }
-.bg-arreter:focus-visible, .bg-reduire:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-reduire, .bg-3d { flex: 0 0 auto; }
+.bg-arreter:hover, .bg-reduire:hover, .bg-3d:hover { border-color: var(--accent); color: var(--accent); }
+.bg-arreter:focus-visible, .bg-reduire:focus-visible,
+.bg-3d:focus-visible { outline: none; box-shadow: var(--focus); }
 
 /* LE BANDEAU RÉDUIT — « le cartouche en bas prend 1/3 de l'écran » (Armelin,
    27/08/2026). Réduit, il garde la manœuvre, le restant et les boutons :
@@ -1368,7 +1369,8 @@ bandeau-guidage.bg-compact .bg { padding: 8px 12px; }
 bandeau-guidage.bg-compact .bg-manoeuvre { padding-bottom: 4px; }
 bandeau-guidage.bg-compact .bg-boutons { margin-top: 6px; }
 bandeau-guidage.bg-compact .bg-arreter,
-bandeau-guidage.bg-compact .bg-reduire { padding: 5px 10px; font-size: 12px; }
+bandeau-guidage.bg-compact .bg-reduire,
+bandeau-guidage.bg-compact .bg-3d { padding: 5px 10px; font-size: 12px; }
 
 /* « RECENTRER » FLOTTE SUR LA CARTE, au-dessus du bandeau : il ne paraît que
    quand un geste a suspendu la caméra de suivi. */
