@@ -363,6 +363,20 @@ etapes-itineraire { display: grid; gap: 7px; }
   color: var(--texte-2); font: 600 13px var(--police); cursor: pointer;
 }
 .favori-retirer:focus-visible { outline: none; box-shadow: var(--focus); }
+/* Renommer un favori : même gabarit que le retrait, édition en place. */
+.favori-renommer {
+  width: 30px; height: 32px; border-radius: 8px; flex: none;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-2); font: 600 13px var(--police); cursor: pointer;
+}
+.favori-renommer:focus-visible { outline: none; box-shadow: var(--focus); }
+.favori-adresse { font-size: 11.5px; color: var(--texte-3); }
+.favori-nom-champ {
+  width: 100%; box-sizing: border-box; padding: 6px 8px;
+  border: 1px solid var(--accent); border-radius: 8px;
+  font: 400 13px var(--police); color: var(--texte-1); background: var(--fond);
+}
+.favori-nom-champ:focus-visible { outline: none; box-shadow: var(--focus); }
 .favoris-vide { margin: 0; font: 400 13px var(--police); color: var(--texte-2); }
 .favoris-promesse { margin: 0; font: 400 12.5px var(--police); color: var(--texte-2);
   border-top: 1px solid var(--bord); padding-top: 9px; }
@@ -758,6 +772,11 @@ etat-connexion { display: contents; }
   border: 1.5px solid #FFFFFF; box-shadow: 0 0 0 1px var(--bord);
 }
 .poi-legende-inconnue { background: #7A8794; font-size: 13px; letter-spacing: 0; }
+/* Les éclairs SVG de la légende et de la fiche — le même tracé que la carte.
+   Le viewBox 34×34 couvre toute la pastille : on le laisse déborder en
+   hauteur pour garder la taille d'éclair de la carte. */
+.poi-legende-pastille svg { width: 26px; height: 26px; display: block; }
+.fb-pastille svg { width: 22px; height: 22px; display: block; margin: 0 auto; }
 .poi-palier { margin: 3px 0 0; font: 600 12.5px var(--police); color: var(--texte-1); }
 .poi-prises { margin: 2px 0 0; font: 400 12px var(--police); color: var(--texte-3); }
 
@@ -968,8 +987,8 @@ fiche-borne[hidden] { display: none; }
 }
 
 /* LE BANDEAU D'ACCÈS. Sa couleur aide, mais c'est son TEXTE qui porte
-   l'information : « Accès réservé — vous ne pourrez pas y recharger
-   librement » se lit sans distinguer l'orange du vert (WCAG 1.4.1). */
+   l'information : « Accès réservé selon l'exploitant — badge, clientèle ou
+   résidents » se lit sans distinguer l'orange du vert (WCAG 1.4.1). */
 .fb-acces {
   margin: 0; padding: 9px 11px; border-radius: 10px;
   font: 600 12.5px var(--police); line-height: 1.4;
@@ -1150,6 +1169,12 @@ fiche-borne[hidden] { display: none; }
   margin: 4px 0 10px; padding-bottom: 10px;
   border-bottom: 1px solid var(--bord);
 }
+/* La fiche constructeur du modèle appliqué — vide tant que rien n'est choisi. */
+.veh-catalogue-detail {
+  margin: 4px 0 0; font: 600 12px var(--police); color: var(--texte-2);
+  line-height: 1.45;
+}
+.veh-catalogue-detail:empty { display: none; }
 
 /* ==========================================================================
    LE BANDEAU DE SUIVI (<bandeau-guidage>)

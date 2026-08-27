@@ -2,6 +2,49 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.36.0] — 2026-08-27 — Sept retours d'interface, et un « réservé » qui n'interdit rien (PR #50)
+
+La suite du mandat du 27/08 : les retours d'interface, chacun traité pour ce
+qu'il révélait.
+
+- **« Accès réservé » ne veut pas dire « interdit »** : « il y a des bornes où
+  je vais charger qui sont taguées accès réservé alors que ça fonctionne très
+  bien avec mon badge ». Le schéma IRVE ne connaît que deux états, et
+  « réservé » couvre autant la flotte fermée que la borne ouverte à quiconque
+  porte le badge de l'opérateur. Le bandeau nomme désormais la condition —
+  badge, clientèle ou résidents — et invite à vérifier, au lieu de condamner.
+  EN CHEMIN, une mesure : 240 lignes du fichier portent « Accès libre » dans
+  QUATRE encodages estropiés (« Accs libre », « Acc¸s libre »…) — producteurs
+  en Latin-1 ou Mac-Roman. La comparaison stricte les rendait « non
+  déclarés » ; le motif les rattrape, tests sur les chaînes réelles.
+- **L'encart d'installation ne se propose qu'au mobile** : sur ordinateur,
+  Chrome affiche déjà sa propre icône d'installation — le bouton la doublait.
+- **« Télécharger », pas « Charger »** : la liste déroulante de l'étendue du
+  réseau national se confondait avec le filtre de puissance. Elle décide de ce
+  qu'on TÉLÉCHARGE et garde hors ligne ; le filtre trie ce qui s'AFFICHE. Les
+  libellés le disent désormais.
+- **Les éclairs harmonisés** : la légende et la fiche affichaient l'émoji ⚡,
+  jaune ; la carte dessine des éclairs blancs. Le même tracé SVG partout.
+- **Les favoris se renomment** — « un displayname plus facile à visualiser » :
+  édition en place (✎, Entrée valide, Échap annule), et l'adresse d'origine
+  descend en SOUS-TITRE — « Maison de Mamie » n'aide que si l'on peut encore
+  situer où c'est. L'export/import la transporte.
+- **Le véhicule dit sa génération et son WLTP** : « un Xpeng G6 2024 n'a pas
+  les mêmes caractéristiques que les nouveaux G6 2026 » — exact : le restylé
+  passe à 80,8 kWh 5C sous 800 V, 451 kW en crête, 525 km WLTP (sources
+  automobile-propre et L'argus, dans le catalogue). Le champ « années » n'est
+  rempli QUE là où il est sourcé, la fiche constructeur s'affiche sous le
+  choix, et la borne de vraisemblance des tests (400 kW) est relevée à 500 —
+  la réalité l'avait dépassée.
+- **Le bouton « Transports en commun » reste, ET la question est consignée** :
+  Armelin n'en voit pas la plus-value visuelle. La couche montre bien les
+  véhicules (cercles aux couleurs des réseaux, zoom ≥ 10, trois réseaux
+  cochés au plus) — supprimer un travail mesuré de la PR #16 sur une
+  impression demande une contre-mesure : la décision lui revient, écrite dans
+  la ROADMAP.
+
+532 tests unitaires, 154 parcours E2E.
+
 ## [0.35.1] — 2026-08-27 — Le repère principal rendu aux lecteurs d'écran (PR #48)
 
 `role="application"` posé sur `<main>` écrasait le point de repère principal :

@@ -14,7 +14,7 @@ import type { Map as CarteMapLibre, GeoJSONSource, MapGeoJSONFeature } from 'map
 import { Popup } from 'maplibre-gl';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import { palierDe, libellePalier, PALIERS } from '../lib/puissance';
-import { poserIconesPuissance, nomIcone } from './icone-puissance';
+import { poserIconesPuissance, nomIcone, eclairsSVG } from './icone-puissance';
 import {
   chargerCarburants, chargerBornes, chargerParkings, vueAChange,
   PRISES, type ClePrise, type FiltresBornes,
@@ -235,23 +235,38 @@ export class PanneauPoi extends HTMLElement {
             groupés par EXPLOITANT — c’est lui qui porte une identité stable,
             là où l’enseigne écrit souvent le nom du site.</p>
 
-          <p class="poi-filtre-titre">Étendue du réseau national</p>
-          <label class="poi-filtre-ligne">Charger
+          <!-- « TÉLÉCHARGER ET GARDER HORS LIGNE », PAS « CHARGER ». Armelin,
+               le 27/08/2026 : « je ne comprends pas la liste déroulante
+               "charger" ni à quoi elle sert […] pourquoi un tel filtre quand
+               plus haut on a la puissance nominale ». Parce que ce n'en est
+               pas un : ce réglage décide de ce qu'on TÉLÉCHARGE une fois et
+               qu'on garde hors ligne — le filtre de puissance, lui, trie ce
+               qui s'AFFICHE. Deux verbes différents pour deux gestes
+               différents, et l'ancien libellé employait le même. -->
+          <p class="poi-filtre-titre">Réseau national gardé hors ligne</p>
+          <label class="poi-filtre-ligne">Télécharger
             <select class="poi-etendue" aria-label="Étendue du réseau national chargé">
               ${ETENDUES.map((e) => `
                 <option value="${e.cle}">${e.libelle}</option>`).join('')}
             </select>
           </label>
           <p class="poi-filtre-note poi-etendue-note"></p>
+          <p class="poi-filtre-note">Ce choix décide de ce qui est téléchargé
+            puis relu localement — pas de ce qui s’affiche : pour trier
+            l’affichage, la puissance minimale est plus haut.</p>
 
           <p class="poi-filtre-titre">Lecture de la carte</p>
+          <!-- LES ÉCLAIRS DE LA LÉGENDE SONT CEUX DE LA CARTE : même tracé,
+               même blanc (eclairsSVG). L'émoji ⚡ d'avant était rendu JAUNE
+               par la police, et la légende décrivait des pastilles qui
+               n'existaient nulle part (Armelin, 27/08/2026). -->
           <ul class="poi-legende">
             ${PALIERS.map((p) => `
               <li><span class="poi-legende-pastille" style="background:${p.couleur}"
-                aria-hidden="true">${'⚡'.repeat(p.palier)}</span>
+                aria-hidden="true">${eclairsSVG(p.palier)}</span>
                 ${p.libelle} — ${p.borne}</li>`).join('')}
             <li><span class="poi-legende-pastille poi-legende-inconnue"
-              aria-hidden="true">•</span> Puissance non déclarée</li>
+              aria-hidden="true">${eclairsSVG(0)}</span> Puissance non déclarée</li>
           </ul>
           <p class="poi-filtre-note">Sous le zoom 12, la carte montre le réseau
             national ci-dessus, groupé en amas : il est chargé une fois, puis

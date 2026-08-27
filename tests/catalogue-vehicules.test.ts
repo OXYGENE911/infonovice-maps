@@ -43,7 +43,11 @@ describe('la cohérence du catalogue', () => {
   it('les puissances de charge aussi', () => {
     for (const m of CATALOGUE) {
       expect(m.puissanceMaxKw, m.cle).toBeGreaterThanOrEqual(20);
-      expect(m.puissanceMaxKw, m.cle).toBeLessThanOrEqual(400);
+      /* 500 ET NON 400 : la borne de vraisemblance datait d'avant les
+         batteries 5C sous 800 V — le XPENG G6 restylé pointe réellement à
+         451 kW (sources en tête du catalogue, 27/08/2026). Une borne de
+         santé se relève quand la réalité la dépasse, elle ne censure pas. */
+      expect(m.puissanceMaxKw, m.cle).toBeLessThanOrEqual(500);
     }
   });
 

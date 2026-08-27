@@ -6,8 +6,8 @@
 // d'un libellé BAN (service externe) comme d'une saisie libre.
 import type { Map as CarteMapLibre } from 'maplibre-gl';
 import {
-  listerFavoris, retirerFavori, exporterDonnees, importerDonnees,
-  ErreurFavoris, ErreurStockage,
+  listerFavoris, retirerFavori, renommerFavori, exporterDonnees, importerDonnees,
+  ErreurFavoris, ErreurStockage, type Favori,
 } from '../lib/favoris';
 import { REPERES, lireRepere, effacerRepere, ecrireRepere } from '../lib/reperes';
 import { adresseInverse } from '../lib/adresse';
@@ -189,10 +189,26 @@ export class PanneauFavoris extends HTMLElement {
       aller.type = 'button';
       aller.className = 'favori-aller';
       aller.textContent = favori.nom;
+      /* L'ADRESSE D'ORIGINE EN SOUS-TITRE quand le favori a été renommé :
+         « Maison de Mamie » n'aide que si l'on peut encore situer où c'est.
+         Même dessin que les repères (fav-repere-lieu). */
+      if (favori.adresse && favori.adresse !== favori.nom) {
+        const lieu = document.createElement('span');
+        lieu.className = 'favori-adresse';
+        lieu.textContent = ` — ${favori.adresse}`;
+        aller.appendChild(lieu);
+      }
       aller.setAttribute('aria-label', `Aller à ${favori.nom}`);
       aller.addEventListener('click', () => {
         this.#carte?.flyTo({ center: [favori.lon, favori.lat], zoom: 16 });
       });
+      const renommer = document.createElement('button');
+      renommer.type = 'button';
+      renommer.className = 'favori-renommer';
+      renommer.textContent = '✎';
+      renommer.title = 'Renommer';
+      renommer.setAttribute('aria-label', `Renommer ${favori.nom}`);
+      renommer.addEventListener('click', () => { this.#editerNom(item, favori); });
       const retirer = document.createElement('button');
       retirer.type = 'button';
       retirer.className = 'favori-retirer';
@@ -213,9 +229,58 @@ export class PanneauFavoris extends HTMLElement {
             (suivant ?? this.querySelector<HTMLElement>('.favoris summary'))?.focus();
           });
       });
-      item.append(aller, retirer);
+      item.append(aller, renommer, retirer);
       liste.append(item);
     }
+  }
+
+  /**
+   * L'édition du nom, EN PLACE — la demande d'Armelin du 27/08/2026 : « leur
+   * donner un displayname plus facile à visualiser ».
+   *
+   * PAS DE window.prompt : il est bloqué dans certains contextes, il ne se
+   * style pas, et il sort l'usager de la page. Un champ remplace la ligne,
+   * Entrée valide, Échap rend la ligne telle quelle.
+   */
+  #editerNom(item: HTMLLIElement, favori: Favori): void {
+    const champ = document.createElement('input');
+    champ.type = 'text';
+    champ.className = 'favori-nom-champ';
+    champ.value = favori.nom;
+    champ.setAttribute('aria-label', `Nouveau nom pour ${favori.nom}`);
+    item.replaceChildren(champ);
+    champ.focus();
+    champ.select();
+
+    let clos = false;
+    const annuler = (): void => {
+      if (clos) return;
+      clos = true;
+      void this.rafraichir();
+    };
+    const valider = (): void => {
+      if (clos) return;
+      clos = true;
+      renommerFavori(favori.id, champ.value)
+        .then(() => this.rafraichir())
+        .then(() => {
+          (this.querySelector('.favoris-etat') as HTMLElement).textContent =
+            `Renommé en « ${champ.value.trim()} ».`;
+          this.querySelector<HTMLButtonElement>('.favori-renommer')?.focus();
+        })
+        .catch((e: unknown) => {
+          (this.querySelector('.favoris-etat') as HTMLElement).textContent =
+            e instanceof ErreurFavoris ? e.message : 'Renommage impossible.';
+          void this.rafraichir();
+        });
+    };
+    champ.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); valider(); }
+      if (e.key === 'Escape') { e.stopPropagation(); annuler(); }
+    });
+    /* LE BLUR VALIDE, IL N'ANNULE PAS : on a tapé un nom, cliquer ailleurs ne
+       doit pas le jeter — c'est la convention des éditions en place. */
+    champ.addEventListener('blur', valider);
   }
 }
 

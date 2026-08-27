@@ -54,12 +54,25 @@ export class EtatConnexion extends HTMLElement {
     afficher();
 
     const bouton = this.querySelector('.installer') as HTMLButtonElement;
+    /* LE BOUTON NE PARAÎT QUE SUR LES ÉCRANS QUI EN ONT L'USAGE. Armelin, le
+       27/08/2026 : « en mode desktop, le site propose l'encart pour installer
+       l'application alors que ça ne devrait le proposer qu'en version
+       mobile ». Sur ordinateur, Chrome affiche SA PROPRE icône d'installation
+       dans la barre d'adresse — notre bouton la doublait. Sur téléphone,
+       cette icône n'existe pas : le bouton y garde sa raison d'être. On
+       reconnaît « téléphone » à l'écran étroit OU au pointeur grossier, et le
+       verdict se rejoue si la fenêtre change de nature. */
+    const mobile = window.matchMedia('(max-width: 768px), (pointer: coarse)');
+    const majBouton = (): void => {
+      bouton.hidden = !(this.#installation && mobile.matches);
+    };
+    mobile.addEventListener('change', majBouton);
     window.addEventListener('beforeinstallprompt', (e) => {
       // Sans preventDefault, le navigateur pose sa propre invite quand il veut ;
       // on préfère un bouton discret, que l'usager actionne s'il le souhaite.
       e.preventDefault();
       this.#installation = e as EvenementInstallation;
-      bouton.hidden = false;
+      majBouton();
     });
     bouton.addEventListener('click', () => {
       const invite = this.#installation;
