@@ -24,6 +24,7 @@ import {
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
 import { limiteA, type LimiteTrajet } from '../lib/limites';
+import type { EvenementTrajet } from '../lib/trafic';
 import { flecheManoeuvre } from './icone-manoeuvre';
 import { refermerPanneaux } from './panneaux';
 
@@ -70,6 +71,14 @@ export class BandeauGuidage extends HTMLElement {
   #limites: readonly LimiteTrajet[] = [];
 
   set limites(l: readonly LimiteTrajet[]) { this.#limites = l; }
+
+  /* LES ÉVÉNEMENTS TRAFIC DU CORRIDOR (Bison Futé) — livrés après le
+     démarrage et rafraîchis par le planificateur. La barre de fluidité est
+     ÉCARTÉE avec la mesure (docs/navigation-mobile.md §Études) : le flux ne
+     porte que des événements ponctuels — on ANNONCE donc le prochain. */
+  #evenements: readonly EvenementTrajet[] = [];
+
+  set evenements(l: readonly EvenementTrajet[]) { this.#evenements = l; }
   #veille: number | null = null;
   #options: DemarrageGuidage | null = null;
   /** La caméra suit-elle la voiture ? Un geste de l'usager la suspend. */
@@ -130,6 +139,7 @@ export class BandeauGuidage extends HTMLElement {
           </div>
         </div>
         <p class="bg-restant" role="status"></p>
+        <p class="bg-trafic" role="status"></p>
         <p class="bg-arret"></p>
         <p class="bg-alerte" role="alert" hidden></p>
         <p class="bg-limite">Suivi d’itinéraire, pas navigation guidée :
@@ -401,6 +411,19 @@ export class BandeauGuidage extends HTMLElement {
       e.restantS > 0 ? formaterDuree(Math.round(e.restantS)) : null,
       arrivee ? `arrivée vers ${arrivee.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : null,
     ].filter(Boolean).join(' · ');
+
+    /* LE PROCHAIN ÉVÉNEMENT TRAFIC DEVANT SOI — « Travaux dans 12 km ».
+       Bison Futé ne connaît que des événements ponctuels : on annonce, on ne
+       colorie pas une fluidité qui n'existe pas dans la donnée. Au-delà de
+       50 km, silence : l'événement de l'arrivée ne concerne pas le volant. */
+    const trafic = this.querySelector('.bg-trafic') as HTMLElement;
+    const prochainEvt = e.horsRoute ? undefined
+      : this.#evenements.find((v) => v.avancementM > e.avancementM
+        && v.avancementM - e.avancementM < 50_000);
+    trafic.textContent = prochainEvt
+      ? `${prochainEvt.libelle} ${distanceEnMots(prochainEvt.avancementM - e.avancementM)}`
+        + ' (Bison Futé)'
+      : '';
 
     /* LE PROCHAIN ARRÊT DE RECHARGE — ce qui manque le plus en électrique, et
        qu'aucune application de navigation généraliste ne porte. */

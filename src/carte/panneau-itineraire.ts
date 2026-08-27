@@ -39,6 +39,7 @@ import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import { palierDe } from '../lib/puissance';
 import { chargerPeages, ErreurPeages } from '../lib/peages';
 import { chargerLimites } from '../lib/limites';
+import { chargerTrafic, evenementsDuTrajet } from '../lib/trafic';
 import {
   chargerMonuments, monumentsDuTrajet, ErreurMonuments, KM_PAR_MINUTE,
   type Monument,
@@ -1644,6 +1645,29 @@ export class PanneauItineraire extends HTMLElement {
         if (bandeau.actif && this.#dernier === iti) bandeau.limites = limites;
       })
       .catch(() => { /* bénin : voir ci-dessus */ });
+    /* LES ÉVÉNEMENTS TRAFIC DU CORRIDOR — livrés puis RAFRAÎCHIS toutes les
+       cinq minutes tant que le suivi tourne sur CE trajet : un accident
+       arrive pendant qu'on roule. La couche trafic de la carte (PR #14) fait
+       trois minutes ; cinq suffisent à une annonce. L'échec est bénin — la
+       ligne reste vide. */
+    const trace = iti.geometrie.coordinates as [number, number][];
+    const rafraichirTrafic = (): void => {
+      chargerTrafic()
+        .then((evenements) => {
+          if (bandeau.actif && this.#dernier === iti) {
+            bandeau.evenements = evenementsDuTrajet(evenements, trace);
+          }
+        })
+        .catch(() => { /* bénin : la ligne trafic reste vide */ });
+    };
+    rafraichirTrafic();
+    const minuteurTrafic = setInterval(() => {
+      if (!bandeau.actif || this.#dernier !== iti) {
+        clearInterval(minuteurTrafic);
+        return;
+      }
+      rafraichirTrafic();
+    }, 5 * 60_000);
   }
 
   /**

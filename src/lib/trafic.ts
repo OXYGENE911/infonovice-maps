@@ -12,6 +12,7 @@
 // Les coordonnées arrivent en Lambert-93 : la reprojection vit dans
 // lambert93.ts (sans dépendance).
 import { versWGS84, dansEmpriseFrance } from './lambert93';
+import { situerSurLeTrace } from './le-long-du-trajet';
 
 const HORODATE = 'https://www.bison-fute.gouv.fr/data/iteration/date.json';
 const BASE = 'https://www1.bison-fute.gouv.fr';
@@ -221,6 +222,40 @@ function horodatePlausible(ms: number): boolean {
 
 /** Les événements routiers de toute la France (~100 Ko). Deux requêtes :
     l'horodate courante, puis la couche elle-même. */
+/* ---- les événements du corridor, pour le suivi (candidate de l'étude du
+   27/08 : la barre de fluidité est ÉCARTÉE — Bison Futé ne publie que des
+   événements ponctuels, 6 bouchons nationaux mesurés à 20 h — mais ANNONCER
+   les événements du corridor est honnête et utile). ---- */
+
+export interface EvenementTrajet {
+  /** Position le long du trajet, en mètres. */
+  avancementM: number;
+  /** « Travaux », « Accident »… — déjà en français. */
+  libelle: string;
+  type: string;
+}
+
+/**
+ * Les événements EFFECTIFS à portée du tracé, triés par avancement — PURE.
+ *
+ * DEUX KILOMÈTRES DE RAYON : un événement Bison Futé est posé sur un axe, pas
+ * sur une voie — plus serré manquerait l'accident de l'autre chaussée, plus
+ * large annoncerait ceux de la nationale voisine. Les PRÉVISIONNELS sont tus :
+ * annoncer en roulant des travaux qui commenceront mardi serait du bruit.
+ */
+export function evenementsDuTrajet(
+  evenements: readonly EvenementRoute[], trace: [number, number][], rayonM = 2000,
+): EvenementTrajet[] {
+  const gardes: EvenementTrajet[] = [];
+  for (const e of evenements) {
+    if (e.etat === 'PREVISIONNEL') continue;
+    const { ecart, avancement } = situerSurLeTrace({ lon: e.lon, lat: e.lat }, trace);
+    if (ecart > rayonM) continue;
+    gardes.push({ avancementM: avancement, libelle: libelleType(e.type), type: e.type });
+  }
+  return gardes.sort((a, b) => a.avancementM - b.avancementM);
+}
+
 export async function chargerTrafic(signal?: AbortSignal): Promise<EvenementRoute[]> {
   const horodate = await appel(HORODATE, signal);
   const ms = Array.isArray(horodate) ? Number(horodate[0]) : Number(horodate);
