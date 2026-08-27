@@ -2,6 +2,26 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.41.1] — 2026-08-27 — Le cap et la vitesse GPS (PR #58)
+
+La deuxième PR du cadrage navigation mobile.
+
+- **La carte s'oriente au cap GPS** pendant le suivi — la direction du
+  déplacement en haut, comme toute navigation. JAMAIS sous 7 km/h : le cap
+  d'un véhicule immobile est du bruit qui ferait tournoyer la carte au feu
+  rouge — on garde l'orientation acquise. L'arrêt du suivi REND LE NORD.
+  Aucune permission nouvelle : le cap vient du fixe GPS, pas de
+  DeviceOrientation (qui attend son chantier, permission iOS oblige).
+- **La vitesse GPS dans un cercle** — cachée quand le récepteur ne la donne
+  pas (`speed` nul) : un chiffre figé serait un mensonge. Ce n'est PAS la
+  vitesse limite : l'ISA attend l'étude maxspeed OSM, et rien n'est promis
+  d'ici là.
+- Le parcours E2E instrumente la géolocalisation elle-même (Playwright ne
+  simule ni cap ni vitesse) et pousse des fixes complets : mouvement, arrêt
+  au feu, mesure absente, arrêt du suivi.
+
+551 tests unitaires, 164 parcours E2E (+1 sur cette branche).
+
 ## [0.40.0] — 2026-08-27 — Les lieux d'exception près du trajet (PR #56)
 
 La demande Nomadio du mandat : « afficher des lieux d'exception à proximité

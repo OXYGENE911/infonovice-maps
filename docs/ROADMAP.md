@@ -444,8 +444,14 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
         le suivi (Screen Wake Lock, repris au retour d'arrière-plan, rendu à
         l'arrêt, échec bénin). Et le bandeau SE RÉDUIT : manœuvre, restant
         et boutons — ce qu'on lit en roulant.
-      · [ ] PR « cap et vitesse GPS » ; [ ] PR « prochaine manœuvre en
-        grand » ; [ ] PR « vue 3D » si l'essai visuel du fond raster tient.
+      · [x] PR #58 — LE CAP ET LA VITESSE GPS : la carte s'oriente au cap
+        en mouvement (jamais sous 7 km/h — le cap d'un véhicule immobile est
+        du bruit qui ferait tournoyer la carte au feu rouge), l'arrêt du
+        suivi rend le nord ; la vitesse GPS s'affiche dans un cercle, cachée
+        quand le récepteur ne la donne pas. Aucune permission nouvelle : le
+        cap vient du fixe GPS, pas de DeviceOrientation.
+      · [ ] PR « prochaine manœuvre en grand » ; [ ] PR « vue 3D » si
+        l'essai visuel du fond raster tient.
 
 ## Itérations suivantes (backlog ouvert)
 - PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),

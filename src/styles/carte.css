@@ -1347,6 +1347,20 @@ bandeau-guidage.bg-compact .bg-reduire { padding: 5px 10px; font-size: 12px; }
 .bg-recentrer[hidden] { display: none; }
 .bg-recentrer:focus-visible { outline: none; box-shadow: var(--focus); }
 
+/* LA VITESSE GPS — un cercle à gauche, au-dessus du bandeau. Tabulaire :
+   « 87 » et « 117 » ne font pas sauter le cadre. */
+.bg-vitesse {
+  pointer-events: none; margin: 0;
+  position: absolute; left: 0; bottom: calc(100% + 10px);
+  width: 56px; height: 56px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: var(--fond); border: 2px solid var(--bord-2); box-shadow: var(--ombre-m);
+  font-variant-numeric: tabular-nums;
+}
+.bg-vitesse[hidden] { display: none; }
+.bg-vitesse-nombre { font: 700 19px var(--police); color: var(--texte-1); line-height: 1; }
+.bg-vitesse-unite { font: 600 9px var(--police); color: var(--texte-3); }
+
 /* LE BOUTON « DÉMARRER » PREND TOUTE LA LARGEUR de la barre d'actions : c'est
    le geste qu'on cherche après avoir calculé un trajet, pas un export GPX. */
 /* `.iti-actions .iti-demarrer` ET NON `.iti-demarrer` SEUL : la règle générique

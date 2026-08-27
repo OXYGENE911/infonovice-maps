@@ -64,6 +64,8 @@ export class BandeauGuidage extends HTMLElement {
      se REPREND au retour ; son échec est bénin (réglage d'économie d'énergie)
      et l'écran suit alors la règle du téléphone, comme avant. */
   #verrouEcran: VerrouEcran | null = null;
+  /** Vrai dès qu'un cap a tourné la carte : l'arrêt devra rendre le nord. */
+  #veilleAvaitTourne = false;
   #surVisibilite = (): void => { void this.#prendreVerrou(); };
 
   set carte(c: CarteMapLibre) {
@@ -118,7 +120,11 @@ export class BandeauGuidage extends HTMLElement {
       <!-- LE RECENTRAGE, HORS DU BANDEAU : il flotte sur la carte, là où le
            regard est quand on vient de la déplacer. Il ne paraît que quand la
            caméra est suspendue par un geste. -->
-      <button type="button" class="bg-recentrer" hidden>Recentrer</button>`;
+      <button type="button" class="bg-recentrer" hidden>Recentrer</button>
+      <!-- LA VITESSE GPS — un cercle discret à gauche. Cachée tant que le
+           récepteur ne la donne pas : un chiffre figé serait un mensonge. -->
+      <p class="bg-vitesse" hidden aria-label="Vitesse GPS">
+        <span class="bg-vitesse-nombre">0</span><span class="bg-vitesse-unite">km/h</span></p>`;
     this.querySelector('.bg-arreter')?.addEventListener('click', () => { this.arreter(); });
     this.querySelector('.bg-recentrer')?.addEventListener('click', () => { this.#recentrer(); });
     this.querySelector('.bg-reduire')?.addEventListener('click', () => {
@@ -156,7 +162,7 @@ export class BandeauGuidage extends HTMLElement {
     (this.querySelector('.bg-distance') as HTMLElement).textContent = '';
 
     this.#veille = navigator.geolocation.watchPosition(
-      (p) => { this.#majPosition(p.coords.longitude, p.coords.latitude); },
+      (p) => { this.#majPosition(p.coords); },
       (e) => {
         /* UN REFUS N'EST PAS UNE PANNE, et les deux se disent différemment :
            l'un se répare en changeant un réglage, l'autre en attendant. */
@@ -184,6 +190,13 @@ export class BandeauGuidage extends HTMLElement {
     this.hidden = true;
     clearTimeout(this.#reprise);
     (this.querySelector('.bg-recentrer') as HTMLElement | null)?.setAttribute('hidden', '');
+    (this.querySelector('.bg-vitesse') as HTMLElement | null)?.setAttribute('hidden', '');
+    /* LE NORD REVIENT EN HAUT : la carte orientée au cap n'a de sens qu'en
+       suivi — la laisser tournée après l'arrêt désoriente la consultation. */
+    if (this.#veilleAvaitTourne) {
+      this.#carte?.easeTo({ bearing: 0, duration: 500 });
+      this.#veilleAvaitTourne = false;
+    }
     document.removeEventListener('visibilitychange', this.#surVisibilite);
     /* LE VERROU D'ÉCRAN SE REND À L'ARRÊT : le garder viderait la batterie de
        celui qui est arrivé — le même devoir que le clearWatch ci-dessus. */
@@ -234,11 +247,31 @@ export class BandeauGuidage extends HTMLElement {
     p.hidden = message === '';
   }
 
-  #majPosition(lon: number, lat: number): void {
+  #majPosition(coords: {
+    longitude: number; latitude: number;
+    speed?: number | null; heading?: number | null;
+  }): void {
     const o = this.#options;
     if (!o) return;
+    const lon = coords.longitude;
+    const lat = coords.latitude;
     const e = etatGuidage(o, { lon, lat });
     this.#dernierePosition = [lon, lat];
+
+    /* LA VITESSE GPS, EN TOUTES LETTRES — « un petit cercle indiquant la
+       vitesse GPS en temps réel » (Armelin, 27/08/2026). `speed` vient en
+       m/s, et il est NULL quand le récepteur ne sait pas : la pastille
+       disparaît alors, plutôt que de figer un chiffre périmé. Ce n'est PAS
+       la vitesse limite (l'ISA) : elle attend l'étude maxspeed OSM. */
+    const vitesse = this.querySelector('.bg-vitesse') as HTMLElement;
+    if (typeof coords.speed === 'number' && Number.isFinite(coords.speed)
+      && coords.speed >= 0) {
+      (vitesse.querySelector('.bg-vitesse-nombre') as HTMLElement).textContent =
+        String(Math.round(coords.speed * 3.6));
+      vitesse.hidden = false;
+    } else {
+      vitesse.hidden = true;
+    }
 
     /* LA CARTE SUIT LA VOITURE — SAUF quand l'usager vient de la prendre :
        son geste suspend la caméra, le bouton « Recentrer » (ou vingt
@@ -246,9 +279,20 @@ export class BandeauGuidage extends HTMLElement {
        chaque fixe GPS — environ une fois par seconde — rendrait la carte
        illisible. */
     if (this.#camera) {
+      /* LE CAP GPS ORIENTE LA CARTE : la direction du déplacement en haut,
+         comme toute navigation. `heading` n'a de sens QU'EN MOUVEMENT — à
+         l'arrêt, c'est du bruit qui ferait tournoyer la carte au feu rouge :
+         en dessous de 2 m/s (7 km/h), on garde l'orientation acquise.
+         DeviceOrientation (la boussole à l'arrêt) attend son propre chantier :
+         elle exige une permission sur iOS, le cap GPS n'exige rien. */
+      const cap = typeof coords.heading === 'number' && Number.isFinite(coords.heading)
+        && typeof coords.speed === 'number' && (coords.speed ?? 0) > 2
+        ? coords.heading : null;
+      if (cap !== null) this.#veilleAvaitTourne = true;
       this.#carte?.easeTo({
         center: [lon, lat],
         zoom: Math.max(this.#carte.getZoom(), ZOOM_SUIVI),
+        ...(cap !== null ? { bearing: cap } : {}),
         duration: 800,
       });
     }
