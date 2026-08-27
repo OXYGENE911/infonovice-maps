@@ -550,8 +550,13 @@ test('TRANSPORTS : en paysage, tous les volets restent atteignables', async ({ p
     const dessus = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
     return { nom: el.textContent?.trim().slice(0, 12) ?? '', bas: r.bottom, ok: el.contains(dessus) };
   }).filter(Boolean));
-  // Deux volets de rail plus le menu : trois points d'entrée en paysage.
-  expect(captes.length, 'un point d’entrée a disparu').toBeGreaterThanOrEqual(3);
+  /* UN SEUL VOLET DE RAIL PLUS LE MENU, depuis le 27/08/2026 : le véhicule et
+     les couches sont devenus des PAGES du planificateur. « Un seul bouton est
+     plus efficace à comprendre que trois boutons où il faudra se rappeler dans
+     quel menu on peut trouver quelle option » (Armelin). L'exigence, elle, n'a
+     toujours pas bougé — rien ne doit sortir de l'écran ni intercepter le
+     doigt. */
+  expect(captes.length, 'un point d’entrée a disparu').toBeGreaterThanOrEqual(2);
   expect(captes.filter((c) => !c!.ok).map((c) => c!.nom),
     'un volet ne reçoit plus son propre clic').toEqual([]);
   expect(captes.filter((c) => c!.bas > 375).map((c) => c!.nom),

@@ -54,6 +54,13 @@ function estSurfaceDeTravail(details: HTMLDetailsElement): boolean {
      parcours l'ont vu du même coup.
      Le comportement ne doit pas dépendre du côté de l'écran où l'on range un
      panneau : il découle de son USAGE. On le déclare donc. */
+  /* LE PLANIFICATEUR EN FAIT PARTIE DEPUIS LE 27/08/2026, et cela découle
+     d'une décision d'ergonomie : il ABRITE désormais les couches de la carte
+     et le profil du véhicule. On y coche « Bornes électriques », on inspecte
+     une borne, on en coche une autre — exactement l'usage qui avait fait du
+     menu de droite une surface de travail. Le refermer à chaque clic sur la
+     carte obligerait à le rouvrir entre chaque geste. Il se ferme par son
+     bouton, par Échap, ou en ouvrant le menu de droite. */
   return details.classList.contains('reglages')
     || details.classList.contains(CLASSE_SURFACE);
 }

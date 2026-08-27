@@ -506,8 +506,9 @@ test('le cartouche et les volets ne se recouvrent JAMAIS : une surface a la fois
   await simulerPortail(page, FRANCE, DETAIL_TYPE);
   await ouvrirCartoucheBeaune(page);
 
-  // Ouvrir le cartouche a referme le volet des bornes.
-  await expect(page.locator('.poi'), 'le volet reste ouvert SOUS le cartouche')
+  /* Ouvrir le cartouche a referme le PLANIFICATEUR, qui abrite depuis le
+     27/08 la page des couches : c'est lui qui occupe la colonne. */
+  await expect(page.locator('.iti'), 'le volet reste ouvert SOUS le cartouche')
     .not.toHaveAttribute('open', '');
 
   // Et aucune boite ne croise l'autre — la preuve par les rectangles.
@@ -516,7 +517,7 @@ test('le cartouche et les volets ne se recouvrent JAMAIS : une surface a la fois
     if (!carte) return 'cartouche absent';
     const fautes: string[] = [];
     for (const v of document.querySelectorAll<HTMLElement>(
-      '#carte .maplibregl-ctrl-top-left details[open] > *:not(summary)',
+      '#carte .maplibregl-ctrl-top-left > div > * > details[open] > *:not(summary)',
     )) {
       const r = v.getBoundingClientRect();
       if (r.width === 0) continue;
@@ -530,8 +531,7 @@ test('le cartouche et les volets ne se recouvrent JAMAIS : une surface a la fois
   expect(croisement).toEqual([]);
 
   // Et dans l'autre sens : rouvrir un volet referme le cartouche.
-  await page.locator('.maplibregl-ctrl-top-left summary')
-    .filter({ hasText: 'Recharge et services' }).click();
+  await ouvrirVolet(page, '.poi');
   await expect(page.locator('fiche-borne'),
     "le cartouche survit par-dessus le volet qu’on vient d’ouvrir").toBeHidden();
 });

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
+import { ouvrirVolet } from './volets';
 
 /* PROFIL DU VÉHICULE ET RAYON D'ACTION — éprouvés avec un véhicule RÉEL, la
    VinFast VF8 d'Armelin et ses relevés du 25/08/2026. Une fiche constructeur
@@ -31,7 +32,10 @@ async function seLocaliser(page: Page): Promise<void> {
 async function ouvrirVehicule(page: Page): Promise<void> {
   await page.goto('/');
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
-  await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Véhicule' }).click();
+  /* LE VÉHICULE EST UNE PAGE DU PLANIFICATEUR depuis le 27/08/2026 : « un seul
+     bouton est plus efficace à comprendre que trois boutons où il faudra se
+     rappeler dans quel menu on peut trouver quelle option » (Armelin). */
+  await ouvrirVolet(page, '.vehicule');
 }
 
 async function saisirVF8(page: Page): Promise<void> {
@@ -174,7 +178,10 @@ test('le profil survit au rechargement — sans compte, sans serveur', async ({ 
 
   await page.reload();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
-  await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Véhicule' }).click();
+  /* LE VÉHICULE EST UNE PAGE DU PLANIFICATEUR depuis le 27/08/2026 : « un seul
+     bouton est plus efficace à comprendre que trois boutons où il faudra se
+     rappeler dans quel menu on peut trouver quelle option » (Armelin). */
+  await ouvrirVolet(page, '.vehicule');
   await expect(page.getByLabel('Batterie')).toHaveValue(VF8.batterie);
   await expect(page.locator('.veh-bilan-lignes')).toContainText('En ville : 400 km');
 });

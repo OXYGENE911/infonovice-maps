@@ -89,7 +89,7 @@ export class PanneauVehicule extends HTMLElement {
       </label>`;
 
     this.innerHTML = `
-      <details class="vehicule">
+      <details class="vehicule" open>
         <summary aria-label="Mon véhicule électrique">Véhicule</summary>
         <fieldset class="veh-corps">
           <legend>Mon véhicule électrique</legend>

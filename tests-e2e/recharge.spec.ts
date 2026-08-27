@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
+import { allerA, retour } from './planificateur';
+import { ouvrirVolet } from './volets';
 
 /* ARRÊTS DE RECHARGE — le calcul est pur et testé à sec (tests/arrets.test.ts) ;
    ces parcours vérifient le BRANCHEMENT : que le profil véhicule est bien lu,
@@ -93,7 +95,10 @@ test.beforeEach(async ({ page }) => {
  * Passer par le formulaire supprime la course à sa racine, et éprouve au
  * passage le chemin réel. */
 async function saisirVehicule(page: Page): Promise<void> {
-  await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Véhicule' }).click();
+  /* LE VÉHICULE EST UNE PAGE DU PLANIFICATEUR depuis le 27/08/2026 : « un seul
+     bouton est plus efficace à comprendre que trois boutons où il faudra se
+     rappeler dans quel menu on peut trouver quelle option » (Armelin). */
+  await ouvrirVolet(page, '.vehicule');
   await page.getByLabel('Batterie', { exact: true }).fill('87.7');
   await page.getByLabel('Santé (SOCE)').fill('94');
   await page.getByLabel('Charge (SOC)').fill('100');
@@ -101,11 +106,11 @@ async function saisirVehicule(page: Page): Promise<void> {
   await page.getByLabel('Sur autoroute').fill('280');
   // Le bilan confirme que le profil est pris en compte AVANT de continuer.
   await expect(page.locator('.veh-bilan-lignes')).toContainText('Sur autoroute');
-  /* ET ON ROUVRE LE PLANIFICATEUR. Ouvrir le volet « Véhicule » a refermé
-     celui de l'itinéraire — l'exclusion mutuelle du rail fonctionne comme
-     prévu, et la section des arrêts vit DEDANS. */
-  await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Itinéraire' }).click();
-  await expect(page.locator('.iti-recharge summary')).toBeVisible();
+  /* ET L'ON REVIENT AU TRAJET par la flèche, comme l'usager. Le véhicule est
+     une PAGE du planificateur : cliquer de nouveau son bouton de tête le
+     REFERMERAIT, puisqu'un <details> bascule. */
+  await retour(page);
+  await expect(page.locator('.iti-vers[data-vers="recharge"]')).toBeVisible();
 }
 
 async function ouvrirRecharge(page: Page, avecVehicule = true): Promise<void> {
@@ -118,7 +123,7 @@ async function ouvrirRecharge(page: Page, avecVehicule = true): Promise<void> {
      n'attend pas est une course qu'on parie. */
   await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
   if (avecVehicule) await saisirVehicule(page);
-  await page.locator('.iti-recharge summary').click();
+  await allerA(page, 'recharge');
 }
 
 test('sans véhicule renseigné, la section le DIT au lieu d’inventer', async ({ page }) => {
@@ -337,7 +342,7 @@ test('la durée dit si la charge est comprise — et le détail dit combien', as
     .toContainText('hors recharge');
 
   await saisirVehicule(page);
-  await page.locator('.iti-recharge summary').click();
+  await allerA(page, 'recharge');
   await expect(page.locator('.iti-recharge-corps')).toContainText('Aire de Beaune',
     { timeout: 15_000 });
 

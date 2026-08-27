@@ -20,7 +20,7 @@ async function ouvrirItineraire(page: Page): Promise<void> {
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
   await page.locator('.maplibregl-ctrl-top-left summary')
     .filter({ hasText: 'Itinéraire' }).click();
-  await expect(page.locator('.iti-champs')).toBeVisible();
+  await expect(page.locator('.vue-accueil')).toBeVisible();
 }
 
 test('« Ma position » pose le départ, adresse à l’appui', async ({ page, context }) => {

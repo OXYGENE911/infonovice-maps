@@ -157,7 +157,7 @@ export class PanneauPoi extends HTMLElement {
            on coche une couche, on inspecte un point, on en coche une autre. Un
            clic sur la carte ne le referme donc pas ; son propre résumé, la
            touche Échap ou l'ouverture d'un autre volet du rail, si. -->
-      <details class="poi surface-de-travail">
+      <details class="poi surface-de-travail" open>
         <!-- L'INTITULÉ DIT CE QU'ON Y CHERCHE. « Autour » était une position,
              pas une intention : on n'ouvre pas ce volet pour regarder autour,
              on l'ouvre pour trouver où recharger ou faire le plein. Et

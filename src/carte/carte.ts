@@ -97,7 +97,15 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   selecteur.surChangement = (o) => { carte.setStyle(styleCarte(o)); appliquerSombre(o); };
   menu.ajouter('Affichage', selecteur);
 
-  /* LES BORNES ET LES SERVICES PASSENT À GAUCHE, AVEC LE TRAJET.
+  /* LES BORNES ET LES SERVICES SONT UNE PAGE DU PLANIFICATEUR.
+     D'abord passés à gauche le 26/08 — « la recherche de point de charge
+     devrait être dans le menu de gauche » — ils y formaient un TROISIÈME
+     bouton. Armelin, le lendemain : « un seul bouton est plus efficace à
+     comprendre que trois boutons où il faudra se rappeler dans quel menu on
+     peut trouver quelle option ». Le rail ne porte donc plus qu'une entrée.
+
+     Ce qui suit reste vrai et explique pourquoi ils ne sont pas dans le menu
+     de droite :
      Armelin, le 25/08/2026 : « la recherche de point de charge devrait être
      dans le menu de gauche », et « jongler entre le menu de gauche et celui de
      droite nuit à l'ergonomie ». Il a raison, et la raison est plus profonde
@@ -112,10 +120,7 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      transports — et « mes lieux ». */
   const poi = new PanneauPoi();
   poi.carte = carte;
-  const portePoi = document.createElement('div');
-  portePoi.className = 'maplibregl-ctrl porte-poi';
-  portePoi.appendChild(poi);
-  carte.addControl({ onAdd: () => portePoi, onRemove: () => portePoi.remove() }, 'top-left');
+  panneau.loger('couches', poi);
 
   const trafic = new PanneauTrafic();
   trafic.carte = carte;
@@ -157,12 +162,7 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      navigateur, et aucun compte n'est demandé. */
   const vehicule = new PanneauVehicule();
   vehicule.carte = carte;
-  const porteVehicule = document.createElement('div');
-  porteVehicule.className = 'maplibregl-ctrl porte-vehicule';
-  porteVehicule.appendChild(vehicule);
-  carte.addControl(
-    { onAdd: () => porteVehicule, onRemove: () => porteVehicule.remove() }, 'top-left',
-  );
+  panneau.loger('vehicule', vehicule);
 
   /* LES LIEUX ENREGISTRÉS — favoris, domicile, travail, et l'export RGPD. */
   const favoris = new PanneauFavoris();
@@ -191,7 +191,12 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   geoloc.on('geolocate', (e: unknown) => {
     const p = (e as { coords?: { longitude?: number; latitude?: number } }).coords;
     if (typeof p?.longitude === 'number' && typeof p?.latitude === 'number') {
-      vehicule.position = { lon: p.longitude, lat: p.latitude };
+      const point = { lon: p.longitude, lat: p.latitude };
+      vehicule.position = point;
+      /* LE PLANIFICATEUR AUSSI. Une position deja connue lui sert de depart
+         par defaut : on dit ou l'on va, le reste se deduit. Rien n'est
+         demande au GPS pour cela — on se sert de ce qu'on a. */
+      panneau.position = point;
     }
   });
   carte.addControl(geoloc, 'bottom-right');

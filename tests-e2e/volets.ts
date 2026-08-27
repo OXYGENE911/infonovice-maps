@@ -32,6 +32,28 @@ export async function ouvrirVolet(page: Page, selecteur: string): Promise<void> 
   // déménagement, la question posée au DOM reste vraie.
   if (await page.locator(`.reglages-corps ${selecteur}`).count() > 0) {
     await ouvrirMenu(page);
+    await page.locator(`${selecteur} summary`).first().click();
+    return;
   }
+
+  /* OU EST-IL DEVENU UNE PAGE DU PLANIFICATEUR ? Depuis le 27/08/2026, le
+     véhicule et les couches n'ont plus de bouton propre : « un seul bouton est
+     plus efficace à comprendre que trois boutons où il faudra se rappeler dans
+     quel menu on peut trouver quelle option » (Armelin). On demande encore une
+     fois au DOM plutôt que d'inscrire ici une liste qui se périmerait. */
+  const hote = page.locator(`.vue-hote:has(${selecteur})`);
+  if (await hote.count() > 0) {
+    const vue = await hote.first().getAttribute('data-vue');
+    const tete = page.locator('.maplibregl-ctrl-top-left summary')
+      .filter({ hasText: 'Itinéraire' });
+    if (await page.locator('.iti[open]').count() === 0) await tete.click();
+    if (await page.locator('.vue-accueil:visible').count() === 0) {
+      await page.locator('.vue-retour').click();
+    }
+    await page.locator(`.iti-vers[data-vers="${vue}"]`).click();
+    await expect(page.locator(`.vue[data-vue="${vue}"]`)).toBeVisible();
+    return;
+  }
+
   await page.locator(`${selecteur} summary`).first().click();
 }
