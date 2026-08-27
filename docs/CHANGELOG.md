@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.41.3] — 2026-08-27 — La vue 3D du suivi (PR #60)
+
+La dernière PR du cadrage navigation mobile — ESSAYÉE avant d'être promise,
+comme le cadrage l'exigeait : capture du fond Plan IGN incliné à 60° sur
+Lyon au zoom du suivi. Verdict : le champ proche reste net, le lointain
+rapetisse — c'est la nature d'une perspective, et les étiquettes cuites dans
+le raster rapetissent avec elle (un fond vectoriel les garderait à taille
+d'écran ; la limite est connue et assumée).
+
+- La carte S'INCLINE À 55° quand le suivi démarre — la vue devant soi.
+- « Vue à plat » la refuse d'un bouton : certains lisent mieux à plat, et le
+  choix tient la session.
+- L'arrêt du suivi REDRESSE la carte, comme il rend le nord : l'inclinaison
+  n'a de sens qu'en suivi.
+- Une leçon d'animation, mesurée par le parcours E2E avant d'être comprise :
+  un easeTo interrompt le précédent et FIGE ce qu'il ne nomme pas — le
+  premier fixe GPS gelait l'inclinaison à 2°. Elle voyage désormais avec
+  chaque fixe.
+
+554 tests unitaires, 166 parcours E2E (+1).
+
 ## [0.41.2] — 2026-08-27 — La prochaine manœuvre en grand (PR #59)
 
 La troisième PR du cadrage navigation mobile : « indiquer les flèches de

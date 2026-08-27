@@ -216,6 +216,31 @@ test('le bandeau se RÉDUIT — et garde ce qu’on lit en roulant', async ({ pa
   await expect(bandeau.locator('.bg-limite')).toBeVisible();
 });
 
+test('la vue s’incline en suivi, se refuse d’un bouton, se redresse à l’arrêt', async ({ page }) => {
+  /* PR D du cadrage : la « vue 3D » — essayée sur capture AVANT d'être
+     promise (fond Plan IGN incliné : champ proche net, lointain qui
+     rapetisse, limite du raster assumée). L'inclinaison n'a de sens qu'en
+     suivi : elle arrive avec lui, se refuse d'un bouton, et repart avec lui. */
+  await ouvrirTrajet(page);
+  const inclinaison = (): Promise<number> => page.evaluate(() =>
+    Math.round((window as unknown as { __carte: { getPitch(): number } }).__carte.getPitch()));
+  expect(await inclinaison()).toBe(0);
+
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+  await expect.poll(inclinaison, { timeout: 10_000 }).toBe(55);
+
+  // Certains lisent mieux à plat : le bouton rend la carte, et se souvient.
+  await page.getByRole('button', { name: 'Passer la carte à plat' }).click();
+  await expect.poll(inclinaison, { timeout: 10_000 }).toBe(0);
+  await page.getByRole('button', { name: 'Incliner la carte' }).click();
+  await expect.poll(inclinaison, { timeout: 10_000 }).toBe(55);
+
+  // L'arrêt redresse : l'inclinaison n'a de sens qu'en suivi.
+  await page.getByRole('button', { name: 'Arrêter le suivi' }).click();
+  await expect.poll(inclinaison, { timeout: 10_000 }).toBe(0);
+});
+
 test('le cap GPS oriente la carte, la vitesse s’affiche — et tout se rend à l’arrêt', async ({ page }) => {
   /* PR B du cadrage navigation mobile : « afficher la boussole du téléphone
      pour savoir dans quel sens on se trouve » (le cap GPS, sans permission

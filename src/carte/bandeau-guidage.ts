@@ -41,6 +41,15 @@ export interface DemarrageGuidage extends OptionsGuidage {
 /** Le zoom du suivi : assez près pour lire la rue, assez loin pour anticiper. */
 const ZOOM_SUIVI = 15.5;
 
+/* L'INCLINAISON DU SUIVI — la « vue 3D » demandée le 27/08/2026, ESSAYÉE
+   AVANT D'ÊTRE PROMISE (le cadrage l'exigeait) : capture du fond Plan IGN
+   incliné à 60° sur Lyon au zoom 15,5 — le champ proche reste net, seul le
+   lointain rapetisse, ce qui est la nature d'une perspective. 55° garde un
+   peu plus de lisibilité au loin. Les étiquettes sont CUITES dans le raster :
+   elles rapetissent avec la distance, là où un fond vectoriel les garderait à
+   taille d'écran — la limite est connue et assumée. */
+const PITCH_SUIVI = 55;
+
 /* LA CAMÉRA REVIENT TOUTE SEULE APRÈS VINGT SECONDES sans nouveau geste.
    Armelin, le 27/08/2026 : « je ne peux plus dézoomer sur la carte car le
    zoom sur ma position se force automatiquement. Ce serait bien de pouvoir
@@ -67,6 +76,8 @@ export class BandeauGuidage extends HTMLElement {
   #verrouEcran: VerrouEcran | null = null;
   /** Vrai dès qu'un cap a tourné la carte : l'arrêt devra rendre le nord. */
   #veilleAvaitTourne = false;
+  /** La vue inclinée du suivi — un choix de l'usager, retenu pour la session. */
+  #en3D = true;
   #surVisibilite = (): void => { void this.#prendreVerrou(); };
 
   set carte(c: CarteMapLibre) {
@@ -121,6 +132,10 @@ export class BandeauGuidage extends HTMLElement {
                garde la manœuvre et le restant — ce qu'on lit en roulant. -->
           <button type="button" class="bg-reduire" aria-pressed="false"
             aria-label="Réduire le bandeau">Réduire</button>
+          <!-- LA VUE 3D SE REFUSE : certains lisent mieux à plat. Le choix
+               tient la session. -->
+          <button type="button" class="bg-3d" aria-pressed="true"
+            aria-label="Passer la carte à plat">Vue à plat</button>
           <button type="button" class="bg-arreter">Arrêter le suivi</button>
         </div>
       </div>
@@ -134,6 +149,15 @@ export class BandeauGuidage extends HTMLElement {
         <span class="bg-vitesse-nombre">0</span><span class="bg-vitesse-unite">km/h</span></p>`;
     this.querySelector('.bg-arreter')?.addEventListener('click', () => { this.arreter(); });
     this.querySelector('.bg-recentrer')?.addEventListener('click', () => { this.#recentrer(); });
+    this.querySelector('.bg-3d')?.addEventListener('click', () => {
+      this.#en3D = !this.#en3D;
+      const bouton = this.querySelector('.bg-3d') as HTMLButtonElement;
+      bouton.setAttribute('aria-pressed', String(this.#en3D));
+      bouton.textContent = this.#en3D ? 'Vue à plat' : 'Vue 3D';
+      bouton.setAttribute('aria-label',
+        this.#en3D ? 'Passer la carte à plat' : 'Incliner la carte');
+      this.#carte?.easeTo({ pitch: this.#en3D ? PITCH_SUIVI : 0, duration: 500 });
+    });
     this.querySelector('.bg-reduire')?.addEventListener('click', () => {
       const reduit = this.classList.toggle('bg-compact');
       const bouton = this.querySelector('.bg-reduire') as HTMLButtonElement;
@@ -179,8 +203,10 @@ export class BandeauGuidage extends HTMLElement {
       },
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 20_000 },
     );
-    // Le suivi qui démarre reprend la caméra — et garde l'écran allumé.
+    // Le suivi qui démarre reprend la caméra, incline la vue si l'usager la
+    // veut ainsi — et garde l'écran allumé.
     this.#camera = true;
+    if (this.#en3D) this.#carte?.easeTo({ pitch: PITCH_SUIVI, duration: 600 });
     this.#dernierePosition = null;
     (this.querySelector('.bg-recentrer') as HTMLElement).hidden = true;
     void this.#prendreVerrou();
@@ -200,8 +226,10 @@ export class BandeauGuidage extends HTMLElement {
     (this.querySelector('.bg-vitesse') as HTMLElement | null)?.setAttribute('hidden', '');
     /* LE NORD REVIENT EN HAUT : la carte orientée au cap n'a de sens qu'en
        suivi — la laisser tournée après l'arrêt désoriente la consultation. */
-    if (this.#veilleAvaitTourne) {
-      this.#carte?.easeTo({ bearing: 0, duration: 500 });
+    /* …ET LA CARTE SE REDRESSE : l'inclinaison n'a de sens qu'en suivi. */
+    const pitch = this.#carte?.getPitch() ?? 0;
+    if (this.#veilleAvaitTourne || pitch > 0) {
+      this.#carte?.easeTo({ bearing: 0, pitch: 0, duration: 500 });
       this.#veilleAvaitTourne = false;
     }
     document.removeEventListener('visibilitychange', this.#surVisibilite);
@@ -296,9 +324,14 @@ export class BandeauGuidage extends HTMLElement {
         && typeof coords.speed === 'number' && (coords.speed ?? 0) > 2
         ? coords.heading : null;
       if (cap !== null) this.#veilleAvaitTourne = true;
+      /* L'INCLINAISON VOYAGE AVEC CHAQUE FIXE : un easeTo interrompt le
+         précédent et FIGE ce qu'il ne nomme pas — le premier fixe arrivait
+         pendant l'animation d'inclinaison du démarrage et la gelait à 2°.
+         Mesuré par le parcours E2E avant d'être compris. */
       this.#carte?.easeTo({
         center: [lon, lat],
         zoom: Math.max(this.#carte.getZoom(), ZOOM_SUIVI),
+        pitch: this.#en3D ? PITCH_SUIVI : 0,
         ...(cap !== null ? { bearing: cap } : {}),
         duration: 800,
       });
