@@ -30,6 +30,7 @@ import { ajouterFavori } from '../lib/favoris';
 import { ecrireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { VisionneusePhoto } from './visionneuse-photo';
 import { FicheBorne } from './fiche-borne';
+import { FicheLieu } from './fiche-lieu';
 import { BandeauGuidage } from './bandeau-guidage';
 import { chercherPhotos, plusProche, ErreurPhotos } from '../lib/panoramax';
 import { adresseInverse } from '../lib/adresse';
@@ -151,6 +152,19 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   /* ET LE CARTOUCHE SAIT DEMANDER UN ITINÉRAIRE. Sans ce lien, la liste des
      commerces alentour se lisait sans qu'on puisse s'y rendre. */
   fiche.itineraire = panneau;
+
+  /* LE CARTOUCHE DES LIEUX D'EXCEPTION — le retour d'Armelin du 27/08 au
+     soir : « impossible de cliquer dessus pour avoir le détail à l'identique
+     d'une station de recharge ». Même règles que la fiche de borne, et les
+     deux se rangent l'un l'autre : un seul cartouche ouvert à la fois. */
+  const ficheLieu = new FicheLieu();
+  ficheLieu.carte = carte;
+  conteneur.appendChild(ficheLieu);
+  ficheLieu.itineraire = panneau;
+  ficheLieu.detourPar = (lieu) => { panneau.detourParLieu(lieu); };
+  ficheLieu.homologue = fiche;
+  fiche.homologue = ficheLieu;
+  panneau.ficheLieu = ficheLieu;
 
   /* LE BANDEAU DE SUIVI — un seul, posé au conteneur de la carte. Il occupe le
      bas de l'écran pendant le trajet : c'est la zone qu'on regarde le moins

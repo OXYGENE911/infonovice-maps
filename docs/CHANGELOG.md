@@ -2,6 +2,32 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.42.0] — 2026-08-27 — La fiche des lieux d'exception (PR #62)
+
+Le retour d'Armelin du soir même : « il est impossible de cliquer dessus pour
+avoir le détail à l'identique d'une station de recharge ». Le nom volait vers
+le lieu, et c'était tout — la liste savait où, jamais quoi.
+
+- **L'index s'enrichit, mesures à l'appui** : référence Mérimée (100 % des
+  classés), siècle de construction (85 %), adresse (27 %). 890 Ko → 1,50 Mo
+  brut, 0,42 Mo gzippés servis — toujours à la demande, jamais précaché.
+- **`<fiche-lieu>`** : le même cartouche que les bornes (mêmes classes, un
+  seul langage visuel) — statut « Monument historique classé », identité
+  (commune, adresse, siècles), et **la notice officielle Mérimée à un clic**
+  (pop.culture.gouv.fr — l'historique complet vit chez le ministère, pas dans
+  un index qu'il faudrait décupler). La référence est vérifiée par motif au
+  décodage : un index altéré ne fabrique pas d'URL vers n'importe quoi.
+- **Trois chemins vers la fiche** : le nom dans la liste, le MARQUEUR sur la
+  carte (cliquable, rôle et intitulé accessibles), et depuis la fiche —
+  « Itinéraire vers ce lieu », « Passer par là » (étape) et « Voir sur la
+  carte ». Les deux cartouches (borne, lieu) se rangent l'un l'autre : une
+  seule surface à la fois, la règle de la PR #45.
+- La fiche DIT ce qu'elle ignore : horaires et conditions de visite ne sont
+  pas au fichier — « renseignez-vous avant le détour ».
+
+556 tests unitaires (+2), 166 parcours E2E (le parcours des lieux s'étend à
+la fiche).
+
 ## [0.41.4] — 2026-08-27 — Les deux dernières études, verdicts mesurés (PR #61)
 
 Aucun code. Le cadrage navigation mobile est soldé jusque dans ses études
