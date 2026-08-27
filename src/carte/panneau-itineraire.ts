@@ -11,7 +11,7 @@ import { Marker } from 'maplibre-gl';
 import { RechercheAdresse } from './recherche';
 import { EtapesItineraire } from './etapes-itineraire';
 import { calculerItineraire, formaterDistance, formaterDuree, PROFILS, EVITEMENTS, ErreurItineraire, MAX_ETAPES, type Profil, type Itineraire, type Eviter } from '../lib/itineraire';
-import type { PointGeo } from '../lib/coordonnees';
+import { formaterCoordonnees, type PointGeo } from '../lib/coordonnees';
 import { lireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { listerFavoris } from '../lib/favoris';
 import { adresseInverse, type ResultatAdresse } from '../lib/adresse';
@@ -89,6 +89,10 @@ export class PanneauItineraire extends HTMLElement {
   #carte: CarteMapLibre | null = null;
   #depart: PointGeo | null = null;
   #arrivee: PointGeo | null = null;
+  /* LES LIBELLÉS DES DEUX POINTS, suivis pour l'INVERSION : échanger les
+     coordonnées sans échanger les textes mentirait dans les champs. */
+  #libelleDepart = '';
+  #libelleArrivee = '';
   #profil: Profil = 'car';
   #eviter = new Set<Eviter>();
   /** Jeton anti-réponses-hors-d'ordre de #calculer (voir le commentaire là-bas). */
@@ -326,6 +330,10 @@ export class PanneauItineraire extends HTMLElement {
             <div class="iti-raccourcis" data-pour="depart"
               role="group" aria-label="Choisir un départ enregistré"></div>
 
+            <!-- L'INVERSION — rentrer, c'est le même trajet à l'envers. -->
+            <button type="button" class="iti-inverser" hidden
+              aria-label="Inverser départ et destination">⇅ Inverser</button>
+
             <span class="iti-inter"></span>
 
             <label class="iti-champ-principal">Destination
@@ -376,7 +384,10 @@ export class PanneauItineraire extends HTMLElement {
                 <span>Partager ou exporter</span><span aria-hidden="true">›</span></button>
             </nav>
 
-            <button type="button" class="iti-effacer">Effacer le trajet</button>
+            <!-- « EFFACER » N'EXISTE QUE S'IL Y A QUELQUE CHOSE À EFFACER —
+                 le mandat UX du 28/08 : un bouton d'effacement devant des
+                 champs vides est une menace sans objet. -->
+            <button type="button" class="iti-effacer" hidden>Effacer le trajet</button>
           </section>
 
           <!-- ============= VÉHICULE ET COUCHES, EN PAGES ============= -->
@@ -544,7 +555,8 @@ export class PanneauItineraire extends HTMLElement {
     for (const role of ['depart', 'arrivee'] as const) {
       const champ = new RechercheAdresse();
       champ.surSelection = (r: ResultatAdresse) => {
-        if (role === 'depart') this.#depart = r; else this.#arrivee = r;
+        if (role === 'depart') { this.#depart = r; this.#libelleDepart = r.libelle; }
+        else { this.#arrivee = r; this.#libelleArrivee = r.libelle; }
             /* CHOISIR UNE DESTINATION SUFFIT quand on sait déjà où l'on est :
            « une fois qu'on a mis le champ destination, ça calcule
            automatiquement par rapport à notre position actuelle ». */
@@ -584,6 +596,7 @@ export class PanneauItineraire extends HTMLElement {
     void this.#majRaccourcis();
     this.#allerA('accueil');
     this.querySelector('.iti-effacer')?.addEventListener('click', () => this.#effacer());
+    this.querySelector('.iti-inverser')?.addEventListener('click', () => { this.#inverser(); });
     this.querySelector('.iti-gpx')?.addEventListener('click', () => {
       if (this.#dernier) telecharger(versGPX(this.#dernier, this.#nomTrajet()),
         'itineraire-infonovice.gpx', 'application/gpx+xml');
@@ -1679,11 +1692,47 @@ export class PanneauItineraire extends HTMLElement {
    * ouvrirait le volet, l'autre non ; l'un nommerait le lieu, l'autre pas.
    */
   #poser(role: 'depart' | 'arrivee', point: PointGeo, libelle: string): void {
-    if (role === 'depart') this.#depart = point; else this.#arrivee = point;
+    if (role === 'depart') { this.#depart = point; this.#libelleDepart = libelle; }
+    else { this.#arrivee = point; this.#libelleArrivee = libelle; }
     const champ = this.querySelector<RechercheAdresse>(
       `[data-role="${role}"] recherche-adresse`,
     );
     if (champ) champ.libelle = libelle;
+    void this.#calculer();
+  }
+
+  /**
+   * Montre ou range « Effacer » et « Inverser » selon qu'il y a matière.
+   *
+   * Le mandat UX du 28/08 : « le bouton d'effacement apparaît alors
+   * qu'aucun trajet n'existe » — vérifié, il était permanent. Il ne paraît
+   * plus que s'il y a un point, une étape ou un trajet à effacer ;
+   * l'inversion, dès qu'un point existe.
+   */
+  #majBoutons(): void {
+    const etapes = this.querySelector('etapes-itineraire') as EtapesItineraire | null;
+    const matiere = Boolean(this.#depart || this.#arrivee || this.#dernier
+      || (etapes && etapes.points.length > 0));
+    const effacer = this.querySelector<HTMLElement>('.iti-effacer');
+    if (effacer) effacer.hidden = !matiere;
+    const inverser = this.querySelector<HTMLElement>('.iti-inverser');
+    if (inverser) inverser.hidden = !(this.#depart || this.#arrivee);
+  }
+
+  /** Échange départ et destination — points, libellés, champs — et recalcule. */
+  #inverser(): void {
+    [this.#depart, this.#arrivee] = [this.#arrivee, this.#depart];
+    [this.#libelleDepart, this.#libelleArrivee] = [this.#libelleArrivee, this.#libelleDepart];
+    for (const role of ['depart', 'arrivee'] as const) {
+      const point = role === 'depart' ? this.#depart : this.#arrivee;
+      const libelle = role === 'depart' ? this.#libelleDepart : this.#libelleArrivee;
+      const champ = this.querySelector<RechercheAdresse>(
+        `[data-role="${role}"] recherche-adresse`,
+      );
+      /* UN POINT SANS LIBELLÉ (trajet rejoué d'un lien partagé) s'affiche en
+         coordonnées : un champ vide au-dessus d'un tracé réel mentirait. */
+      if (champ) champ.libelle = point ? (libelle || formaterCoordonnees(point)) : '';
+    }
     void this.#calculer();
   }
 
@@ -1692,14 +1741,17 @@ export class PanneauItineraire extends HTMLElement {
      s'ajoutent depuis la carte. Une liste figée au démarrage aurait ignoré
      tout ce que l'usager fait ensuite. */
   async #majRaccourcis(): Promise<void> {
+    /* SEULS LES REPÈRES RESTENT EN LIGNE — Domicile et Travail sont DEUX
+       boutons, les favoris étaient jusqu'à SIX sous CHAQUE champ : la
+       capture d'Armelin du 28/08 montre le mur qu'ils formaient. Ils passent
+       derrière un bouton « Favoris… » qui ouvre une boîte dédiée, avec
+       recherche — le mandat UX le demande en toutes lettres. */
     const entrees: { libelle: string; point: PointGeo; titre: string }[] = [];
     for (const { cle, libelle } of REPERES) {
       const r = await lireRepere(cle as CleRepere);
       if (r) entrees.push({ libelle, point: r, titre: r.libelle });
     }
-    for (const f of (await listerFavoris()).slice(0, 6)) {
-      entrees.push({ libelle: f.nom, point: f, titre: f.nom });
-    }
+    const nbFavoris = (await listerFavoris()).length;
 
     for (const boite of this.querySelectorAll<HTMLElement>('.iti-raccourcis')) {
       const role = boite.dataset['pour'] === 'arrivee' ? 'arrivee' : 'depart';
@@ -1732,8 +1784,97 @@ export class PanneauItineraire extends HTMLElement {
         });
         boite.append(b);
       }
+      if (nbFavoris > 0) {
+        const favoris = document.createElement('button');
+        favoris.type = 'button';
+        favoris.className = 'iti-raccourci iti-raccourci-favoris';
+        favoris.textContent = `Favoris… (${nbFavoris})`;
+        favoris.setAttribute('aria-label', role === 'depart'
+          ? 'Choisir un favori comme départ' : 'Choisir un favori comme arrivée');
+        favoris.addEventListener('click', () => { void this.#ouvrirChoixFavori(role); });
+        boite.append(favoris);
+      }
       boite.hidden = boite.childElementCount === 0;
     }
+  }
+
+  /**
+   * La boîte de choix d'un favori — un `<dialog>` NATIF : focus piégé,
+   * Échap géré, arrière-plan inerte, sans une ligne de plomberie modale.
+   *
+   * Reconstruite à chaque ouverture : les favoris bougent (ajout depuis la
+   * carte, renommage) et une boîte figée les ignorerait.
+   */
+  async #ouvrirChoixFavori(role: 'depart' | 'arrivee'): Promise<void> {
+    let boite = this.querySelector<HTMLDialogElement>('dialog.choix-favori');
+    if (!boite) {
+      boite = document.createElement('dialog');
+      boite.className = 'choix-favori';
+      boite.setAttribute('aria-label', 'Choisir un lieu enregistré');
+      this.append(boite);
+    }
+    const favoris = await listerFavoris();
+
+    boite.replaceChildren();
+    const titre = document.createElement('p');
+    titre.className = 'choix-favori-titre';
+    titre.textContent = role === 'depart' ? 'Partir de…' : 'Aller à…';
+
+    const fermer = document.createElement('button');
+    fermer.type = 'button';
+    fermer.className = 'choix-favori-fermer';
+    fermer.textContent = '✕';
+    fermer.setAttribute('aria-label', 'Fermer sans choisir');
+    fermer.addEventListener('click', () => { boite.close(); });
+
+    const recherche = document.createElement('input');
+    recherche.type = 'search';
+    recherche.className = 'choix-favori-recherche';
+    recherche.placeholder = 'Chercher un favori…';
+    recherche.setAttribute('aria-label', 'Chercher parmi les favoris');
+
+    const liste = document.createElement('ul');
+    liste.className = 'choix-favori-liste';
+    const rendre = (filtre: string): void => {
+      const f = filtre.trim().toLowerCase();
+      liste.replaceChildren();
+      for (const favori of favoris) {
+        if (f && !favori.nom.toLowerCase().includes(f)
+          && !(favori.adresse ?? '').toLowerCase().includes(f)) continue;
+        const item = document.createElement('li');
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'choix-favori-item';
+        const nom = document.createElement('span');
+        nom.className = 'choix-favori-nom';
+        nom.textContent = favori.nom;
+        b.append(nom);
+        if (favori.adresse && favori.adresse !== favori.nom) {
+          const ou = document.createElement('span');
+          ou.className = 'choix-favori-adresse';
+          ou.textContent = favori.adresse;
+          b.append(ou);
+        }
+        b.addEventListener('click', () => {
+          this.#poser(role, { lon: favori.lon, lat: favori.lat }, favori.nom);
+          boite.close();
+        });
+        item.append(b);
+        liste.append(item);
+      }
+      if (liste.childElementCount === 0) {
+        const vide = document.createElement('li');
+        vide.className = 'choix-favori-vide';
+        vide.textContent = 'Aucun favori ne porte ce nom.';
+        liste.append(vide);
+      }
+    };
+    recherche.addEventListener('input', () => { rendre(recherche.value); });
+    rendre('');
+
+    boite.append(fermer, titre, recherche, liste);
+    boite.showModal();
+    recherche.focus();
   }
 
   /**
@@ -2276,6 +2417,7 @@ export class PanneauItineraire extends HTMLElement {
   }
 
   async #calculer(): Promise<void> {
+    this.#majBoutons();
     if (!this.#carte || !this.#depart || !this.#arrivee) return;
     // JETON DE SÉQUENCE : cases à cocher et boutons ↑/↓ relancent des calculs
     // en rafale, et une reprise (500 ms + nouvel essai) peut faire aboutir la
@@ -2388,6 +2530,7 @@ export class PanneauItineraire extends HTMLElement {
   #effacer(): void {
     this.#sequence += 1; // tue toute réponse d'itinéraire encore en vol
     this.#dernier = null; this.#calculPour = null; this.#depart = null; this.#arrivee = null;
+    this.#libelleDepart = ''; this.#libelleArrivee = '';
     this.#marqueurs.forEach((m) => m.remove()); this.#marqueurs = [];
     this.#marqueursTrajet.forEach((m) => m.remove()); this.#marqueursTrajet = [];
     const carte = this.#carte;
@@ -2407,6 +2550,7 @@ export class PanneauItineraire extends HTMLElement {
     this.#eviter.clear();
     this.querySelectorAll('.iti-eviter input').forEach((c) => { (c as HTMLInputElement).checked = false; });
     this.querySelectorAll('input[type="search"]').forEach((c) => { (c as HTMLInputElement).value = ''; });
+    this.#majBoutons();
   }
 }
 
