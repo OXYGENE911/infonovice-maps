@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.43.1] — 2026-08-27 — Le prochain événement trafic, annoncé au volant (PR #64)
+
+La seconde candidate des études. La barre de fluidité en dégradé est ÉCARTÉE
+avec la mesure (Bison Futé ne publie que des événements ponctuels — six
+bouchons nationaux relevés à 20 h) ; ce qui est honnête et utile, c'est
+d'ANNONCER : « Travaux dans 12 km (Bison Futé) », dans le bandeau du suivi.
+
+- Les événements EFFECTIFS à moins de 2 km du tracé, projetés à leur
+  kilomètre — les PRÉVISIONNELS sont tus : les travaux de mardi ne
+  concernent pas le volant. Le prochain DEVANT soi s'annonce, jusqu'à 50 km ;
+  derrière soi ou hors route, silence.
+- Relevés au démarrage du suivi puis RAFRAÎCHIS toutes les cinq minutes tant
+  qu'il tourne — un accident arrive pendant qu'on roule. L'échec est bénin :
+  la ligne reste vide.
+- La fixture E2E pose ses événements en Lambert-93 (le point calculé par
+  inversion numérique de la reprojection du projet), et le beforeEach du
+  guidage BOUCHONNE Bison Futé comme Overpass : aucun parcours ne frappe les
+  services réels.
+
+568 tests unitaires (+2), 168 parcours E2E (+1).
+
 ## [0.43.0] — 2026-08-27 — La vitesse limite cartographiée (PR #63)
 
 La première des deux candidates issues des études : maxspeed OSM couvre 97 à

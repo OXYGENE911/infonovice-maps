@@ -486,7 +486,10 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
         publie des événements PONCTUELS (359 nationaux le 27/08 à 20 h,
         SIX bouchons dans toute la France), aucune fluidité de tronçon.
         L'honnête et utile : annoncer les événements du corridor dans le
-        suivi (« Travaux au km 78 »), candidate à une PR.
+        suivi → LIVRÉ, PR #64 : « Travaux dans 12 km (Bison Futé) » dans le
+        bandeau — effectifs seuls, 2 km du tracé, prochain devant soi
+        jusqu'à 50 km, rafraîchi toutes les cinq minutes tant que le suivi
+        tourne, silence derrière soi et hors route.
 
 ## Itérations suivantes (backlog ouvert)
 - PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),

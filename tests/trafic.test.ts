@@ -6,6 +6,7 @@ import { versWGS84, dansEmpriseFrance } from '../src/lib/lambert93';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import {
   dossierIteration, urlEvenements, versEvenements, versDetail, chargerTrafic,
+  evenementsDuTrajet,
   libelleType, couleurType, ErreurTrafic,
 } from '../src/lib/trafic';
 
@@ -258,5 +259,30 @@ describe('chargerTrafic — les gardes de la chaîne', () => {
     const e = await chargerTrafic();
     expect(e).toHaveLength(1);
     expect(String(f.mock.calls[1]?.[0])).toContain('data-20260822-010503');
+  });
+});
+
+/* LES ÉVÉNEMENTS DU CORRIDOR — la candidate de l'étude du 27/08 : la barre
+   de fluidité est écartée (données ponctuelles seulement), on ANNONCE. */
+describe('evenementsDuTrajet', () => {
+  const trace: [number, number][] =
+    Array.from({ length: 101 }, (_, i) => [3 + i * 0.01, 47] as [number, number]);
+  const evt = (lon: number, lat: number, type: string, etat = 'EFFECTIF') => ({
+    id: `${lon}`, lon, lat, type, etat, detail: null, cree: null,
+  });
+
+  test('retient les EFFECTIFS du corridor, triés par avancement', () => {
+    const l = evenementsDuTrajet([
+      evt(3.5, 47.01, 'ACCIDENT'),
+      evt(3.2, 47.005, 'TRAVAUX'),
+      evt(3.4, 47.5, 'COUPURE'),          // à ~40 km du tracé : dehors
+    ], trace);
+    expect(l.map((x) => x.libelle)).toEqual(['Travaux', 'Accident']);
+    expect(l[0]!.avancementM).toBeLessThan(l[1]!.avancementM);
+  });
+
+  test('les PRÉVISIONNELS sont tus — les travaux de mardi ne sont pas ceux du volant', () => {
+    const l = evenementsDuTrajet([evt(3.2, 47.005, 'TRAVAUX', 'PREVISIONNEL')], trace);
+    expect(l).toEqual([]);
   });
 });

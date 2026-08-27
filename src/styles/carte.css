@@ -1335,6 +1335,15 @@ bandeau-guidage.bg-compact .bg-fleche svg { width: 30px; height: 30px; }
   margin: 4px 0 0; font: 600 12.5px var(--police); color: var(--vert);
 }
 .bg-arret:empty { display: none; }
+/* Le prochain événement trafic — l'orange de l'alerte, pas le rouge du sang. */
+.bg-trafic {
+  margin: 4px 0 0; font: 600 12.5px var(--police); color: #B25B10;
+}
+.bg-trafic:empty { display: none; }
+bandeau-guidage.bg-compact .bg-trafic { display: none; }
+@media (prefers-color-scheme: dark) {
+  .bg-trafic { color: #F2A45C; }
+}
 
 .bg-alerte {
   margin: 8px 0 0; padding: 7px 9px; border-radius: 8px;

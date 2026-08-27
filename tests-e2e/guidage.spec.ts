@@ -62,6 +62,13 @@ test.beforeEach(async ({ page, context }) => {
     contentType: 'application/json',
     body: JSON.stringify({ elements: [] }),
   }));
+  /* MÊME RÈGLE POUR BISON FUTÉ : le suivi relève les événements du corridor
+     à son démarrage — sans bouchon, chaque parcours frapperait le service
+     réel. L'horodate absente suffit : l'appel échoue proprement, la ligne
+     trafic reste vide, et le test qui veut des événements pose sa route. */
+  await page.route('**/www.bison-fute.gouv.fr/**', (route) => route.fulfill({
+    contentType: 'application/json', body: '[]',
+  }));
 });
 
 async function ouvrirTrajet(page: Page): Promise<void> {
@@ -223,6 +230,68 @@ test('le bandeau se RÉDUIT — et garde ce qu’on lit en roulant', async ({ pa
 
   await page.getByRole('button', { name: 'Agrandir le bandeau' }).click();
   await expect(bandeau.locator('.bg-limite')).toBeVisible();
+});
+
+test('le prochain événement trafic du corridor s’ANNONCE — et se tait derrière soi', async ({ page }) => {
+  /* La seconde candidate de l'étude : la barre de fluidité est écartée
+     (Bison Futé ne publie que des événements ponctuels), on ANNONCE le
+     prochain devant soi. La fixture pose des TRAVAUX en Lambert-93 sur la
+     diagonale simulée, à ~20 % du trajet (point calculé par inversion
+     numérique de la reprojection du projet). */
+  await page.route('**/www.bison-fute.gouv.fr/data/iteration/date.json',
+    (route) => route.fulfill({ contentType: 'application/json', body: '[1787353503716]' }));
+  await page.route('**/www1.bison-fute.gouv.fr/data/**/evenementsOL6.json',
+    (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      type: 'FeatureCollection',
+      features: [
+        { geometry: { type: 'Point', coordinates: [688781.7, 6793094.7] },
+          properties: { type: 'TRAVAUX', etat_evenement: 'EFFECTIF', urlcpc: '' } },
+        // Un PRÉVISIONNEL au même endroit : il ne doit PAS s'annoncer.
+        { geometry: { type: 'Point', coordinates: [688781.7, 6793094.7] },
+          properties: { type: 'ACCIDENT', etat_evenement: 'PREVISIONNEL', urlcpc: '' } },
+      ],
+    }) }));
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null,
+        speed: null, heading: null, ...c } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+
+  /* À 10 % du trajet, les travaux de 20 % sont DEVANT : annonce, distance,
+     source. Le fixe est repoussé en boucle — les événements arrivent après
+     le démarrage. */
+  const trafic = page.locator('.bg-trafic');
+  await expect.poll(async () => {
+    await page.evaluate(() => {
+      (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+        longitude: 2.3522 + 2.4835 * 0.10, latitude: 48.8566 - 3.0926 * 0.10,
+      });
+    });
+    return trafic.textContent();
+  }, { timeout: 10_000 }).toContain('Travaux dans');
+  await expect(trafic).toContainText('Bison Futé');
+  await expect(trafic, 'le prévisionnel de mardi ne concerne pas le volant')
+    .not.toContainText('Accident');
+
+  // À 40 % du trajet, les travaux sont DERRIÈRE : la ligne se tait.
+  await page.evaluate(() => {
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+      longitude: 2.3522 + 2.4835 * 0.40, latitude: 48.8566 - 3.0926 * 0.40,
+    });
+  });
+  await expect(trafic).toBeEmpty({ timeout: 10_000 });
 });
 
 test('la limite CARTOGRAPHIÉE s’affiche sur son tronçon, et SE TAIT ailleurs', async ({ page }) => {
