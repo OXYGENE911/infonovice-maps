@@ -211,6 +211,72 @@ test('le bandeau se RÉDUIT — et garde ce qu’on lit en roulant', async ({ pa
   await expect(bandeau.locator('.bg-limite')).toBeVisible();
 });
 
+test('le cap GPS oriente la carte, la vitesse s’affiche — et tout se rend à l’arrêt', async ({ page }) => {
+  /* PR B du cadrage navigation mobile : « afficher la boussole du téléphone
+     pour savoir dans quel sens on se trouve » (le cap GPS, sans permission
+     nouvelle) et « un petit cercle indiquant la vitesse GPS en temps réel ».
+     Playwright ne sait pas simuler cap et vitesse : on instrumente la
+     géolocalisation elle-même et on POUSSE des fixes complets. */
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null, ...c } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+
+  /* EN MOUVEMENT (24,2 m/s ≈ 87 km/h, cap à l'est) : la carte s'oriente au
+     cap, la pastille affiche la vitesse. */
+  await page.evaluate(() => {
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+      longitude: 2.36, latitude: 48.85, speed: 24.2, heading: 90,
+    });
+  });
+  const vitesse = page.locator('.bg-vitesse');
+  await expect(vitesse).toBeVisible();
+  await expect(vitesse.locator('.bg-vitesse-nombre')).toHaveText('87');
+  await expect.poll(() => page.evaluate(() =>
+    Math.round((window as unknown as { __carte: { getBearing(): number } }).__carte.getBearing())),
+  { timeout: 10_000 }).toBe(90);
+
+  /* À L'ARRÊT AU FEU (vitesse 0, cap nul) : la pastille dit 0, la carte NE
+     TOURNOIE PAS — le cap d'un véhicule immobile est du bruit. */
+  await page.evaluate(() => {
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+      longitude: 2.36, latitude: 48.85, speed: 0, heading: 271,
+    });
+  });
+  await expect(vitesse.locator('.bg-vitesse-nombre')).toHaveText('0');
+  await page.waitForTimeout(1000);
+  expect(await page.evaluate(() =>
+    Math.round((window as unknown as { __carte: { getBearing(): number } }).__carte.getBearing())),
+  ).toBe(90);
+
+  /* SANS MESURE (speed null) : la pastille disparaît — un chiffre figé
+     serait un mensonge. */
+  await page.evaluate(() => {
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+      longitude: 2.36, latitude: 48.85, speed: null, heading: null,
+    });
+  });
+  await expect(vitesse).toBeHidden();
+
+  // L'ARRÊT REND LE NORD, et range la pastille.
+  await page.getByRole('button', { name: 'Arrêter le suivi' }).click();
+  await expect.poll(() => page.evaluate(() =>
+    Math.round((window as unknown as { __carte: { getBearing(): number } }).__carte.getBearing())),
+  { timeout: 10_000 }).toBe(0);
+});
+
 test('démarrer DÉGAGE la vue : volets refermés, recherche d’adresse effacée', async ({ page }) => {
   /* Armelin, le 26/08/2026 : « quand on est en mode navigation, il y a trop de
      cartouches affichés qui masquent la navigation, comme la recherche
