@@ -296,6 +296,30 @@ describe('filtrerStations', () => {
     expect(filtrerStations(jeu, { reseaux: ['B'] })).toHaveLength(2);
   });
 
+  /* LE NOM SE CHERCHE EN SOUS-CHAÎNE APLATIE — les graphies du fichier sont
+     inconstantes, mesuré sur IZIVIA FAST : « Mc Donald's - Bellac »,
+     « McDonald's -  Argentan » (double espace), et un espace SANS CHASSE en
+     fin de nom. Casse, accents et ponctuation ne comptent pas. */
+  it('cherche le nom en sous-chaîne, sourd à la casse et aux graphies', () => {
+    const mcdo = [
+      st({ nom: 'IZIVIA FAST - Mc Donald’s - Bellac' }),
+      st({ nom: 'IZIVIA FAST - McDonald’s -  Argentan' }),
+      st({ nom: 'Aire de Beaune' }),
+    ];
+    expect(filtrerStations(mcdo, { nom: 'mcdonald' })).toHaveLength(2);
+    expect(filtrerStations(mcdo, { nom: 'MC DONALD' })).toHaveLength(2);
+    expect(filtrerStations(mcdo, { nom: 'beaune' })).toHaveLength(1);
+    expect(filtrerStations(mcdo, { nom: 'burger' })).toHaveLength(0);
+    // Vide ou blanc : aucun filtre.
+    expect(filtrerStations(mcdo, { nom: '  ' })).toHaveLength(3);
+  });
+
+  it('les accents ne séparent pas ce que l’usager tape de ce qui est écrit', () => {
+    const jeu2 = [st({ nom: 'Béziers-Frigoulas' })];
+    expect(filtrerStations(jeu2, { nom: 'beziers' })).toHaveLength(1);
+    expect(filtrerStations(jeu2, { nom: 'Béziers' })).toHaveLength(1);
+  });
+
   /* LA COMPARAISON SE FAIT SUR LA CLÉ : cocher « LIDL » doit retenir aussi
      les stations écrites « Lidl France » — 434 d'entre elles, mesurées. */
   it('retient toutes les écritures d’un même réseau', () => {

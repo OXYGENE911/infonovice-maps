@@ -191,6 +191,32 @@ test('le filtre réseau est NATIONAL et survit au déplacement', async ({ page }
   await expect(page.locator('.poi-etat')).toContainText('2 stations dans la vue');
 });
 
+test('le nom de station filtre l’index LOCALEMENT, sourd aux graphies', async ({ page }) => {
+  /* Sous le zoom 12, l'index est complet en mémoire : la recherche par nom
+     s'y applique sans le moindre appel. « IZIVIA FAST - Mc Donald's » et
+     « McDonald's » sont les graphies RÉELLES du fichier, mesurées le
+     27/08/2026 — l'usager qui tape « mcdonald » doit trouver les deux. */
+  await simulerPortail(page, [
+    { nom: 'IZIVIA FAST - Mc Donald’s - Bellac', lon: 1.06, lat: 46.12, p: 150,
+      operateur: 'IZIVIA' },
+    { nom: 'IZIVIA FAST - McDonald’s - Argentan', lon: -0.02, lat: 48.74, p: 150,
+      operateur: 'IZIVIA' },
+    { nom: 'Ionity Beaune', lon: 4.84, lat: 47.02, p: 350, operateur: 'Ionity' },
+  ]);
+  await ouvrirBornes(page);
+  await expect(page.locator('.poi-etat')).toContainText('3 stations dans la vue',
+    { timeout: 20_000 });
+
+  await page.getByLabel('Nom de station contient').fill('mcdonald');
+  await expect(page.locator('.poi-etat')).toContainText('2 stations dans la vue',
+    { timeout: 10_000 });
+
+  // Effacer le champ rend tout — un filtre qui colle serait une panne muette.
+  await page.getByLabel('Nom de station contient').fill('');
+  await expect(page.locator('.poi-etat')).toContainText('3 stations dans la vue',
+    { timeout: 10_000 });
+});
+
 test('le cartouche dit l’ACCÈS RÉSERVÉ, le téléphone, et ce qu’il ignore', async ({ page }) => {
   /* Onze pour cent des stations françaises sont réservées à une flotte ou à
      des résidents. L'ancienne bulle les montrait comme les autres, et envoyait
