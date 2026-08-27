@@ -495,7 +495,7 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
 Cahier des charges complet transmis par Armelin après essai sur téléphone.
 Le triage (déjà livré / contredit par mesure / à faire / à décider) vit dans
 docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
-- [x] PR #65 — UX-1, le socle mobile : en-tête une rangée + place du Menu
+- [x] PR #69 — UX-1, le socle mobile : en-tête une rangée + place du Menu
       réservée, safe areas, jetons z-index, contrôles bas-droite espacés,
       contraste du contact Professionnels ; toucher fantôme cherché et NON
       reproduit (garde-fou posé).

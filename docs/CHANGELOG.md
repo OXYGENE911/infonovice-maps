@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [0.44.0] — 2026-08-28 — Le socle mobile du mandat UX (PR #65)
+## [0.44.0] — 2026-08-28 — Le socle mobile du mandat UX (PR #69)
 
 Armelin a testé sur téléphone et transmis un cahier des charges complet de
 refonte UX. Il est TRIÉ dans docs/mandat-ux-28-08.md — déjà livré / contredit
