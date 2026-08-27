@@ -927,6 +927,35 @@ etat-connexion { display: contents; }
 /* Dans la fiche, le picto s'aligne sur la ligne existante. */
 .fb-liste-commodites .com-picto svg { width: 15px; height: 15px; }
 
+/* COMPARER AVEC ET SANS AUTOROUTE — page Options : deux cartes, l'actuelle
+   marquée, la variante avec son bouton. */
+.iti-comparer { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--bord); }
+.iti-comparer-lancer {
+  padding: 7px 11px; border-radius: 8px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux); cursor: pointer;
+  font: 600 12.5px var(--police); color: var(--texte-1);
+}
+.iti-comparer-lancer:hover { border-color: var(--accent); color: var(--accent); }
+.iti-comparer-lancer:disabled { opacity: .55; cursor: default; }
+.iti-comparer-lancer:focus-visible { outline: none; box-shadow: var(--focus); }
+.iti-comparer-corps { display: grid; gap: 7px; margin-top: 8px;
+  font: 400 12px var(--police); color: var(--texte-2); }
+.comparer-variante {
+  display: grid; gap: 3px; justify-items: start;
+  padding: 8px 10px; border-radius: 10px; border: 1px solid var(--bord-2);
+}
+.comparer-actuelle { border-color: var(--accent); }
+.comparer-titre { margin: 0; font: 650 12.5px var(--police); color: var(--texte-1); }
+.comparer-chiffres { margin: 0; font-variant-numeric: tabular-nums; }
+.comparer-prendre {
+  padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--accent); background: transparent; cursor: pointer;
+  font: 600 11.5px var(--police); color: var(--accent);
+}
+.comparer-prendre:hover { background: var(--fond-doux); }
+.comparer-prendre:focus-visible { outline: none; box-shadow: var(--focus); }
+.comparer-note { margin: 0; font-size: 11px; color: var(--texte-3); line-height: 1.5; }
+
 /* LES PÉAGES DU TRAJET — page Options : un bouton discret, un relevé en
    toutes lettres. Même famille visuelle que les commodités. */
 .iti-peages { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--bord); }

@@ -745,6 +745,52 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
   expect(appelsCarbu, 'appel parti sous le zoom minimal').toBe(appelsAvant);
 });
 
+test('COMPARER : les deux variantes d’autoroute, chiffrées, et la variante se prend', async ({ page }) => {
+  /* Le verdict « alternatives » du 27/08 : pas de moteur, pas de faux A/B/C —
+     LA variante qui a un sens, l'autre choix d'autoroute, nommée par ce
+     qu'elle est. Le moteur simulé répond plus long et plus lent quand la
+     contrainte autoroute est dans l'URL. */
+  const urls: string[] = [];
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    const url = decodeURIComponent(route.request().url());
+    urls.push(url);
+    const sansAutoroute = url.includes('"value":"autoroute"');
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+        distance: sansAutoroute ? 455_000 : 390_000,
+        duration: sansAutoroute ? 19_000 : 13_000,
+      }),
+    });
+  });
+  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify({ total_count: 0, results: [] }),
+  }));
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  await allerA(page, 'options');
+
+  await page.getByRole('button', { name: 'Comparer avec et sans autoroute' }).click();
+  const corps = page.locator('.iti-comparer-corps');
+  // Les deux variantes, nommées et chiffrées — l'actuelle est marquée.
+  await expect(corps.locator('.comparer-actuelle')).toContainText('Par l’autoroute — le trajet actuel');
+  await expect(corps.locator('.comparer-actuelle')).toContainText('390 km');
+  const autre = corps.locator('.comparer-variante:not(.comparer-actuelle)');
+  await expect(autre).toContainText('Sans autoroute');
+  await expect(autre).toContainText('455 km');
+  // Sans véhicule renseigné, la note le dit au lieu d'inventer une recharge.
+  await expect(corps.locator('.comparer-note')).toContainText('Renseignez votre véhicule');
+
+  /* « PRENDRE CETTE VARIANTE » : la case bascule, le trajet recalcule. */
+  await autre.getByRole('button', { name: 'Prendre cette variante' }).click();
+  await expect(page.locator('.iti-resultat')).toContainText('455 km', { timeout: 10_000 });
+  await expect(page.locator('.iti-eviter input[value="autoroute"]')).toBeChecked();
+  // La dernière requête porte bien la contrainte.
+  expect(urls[urls.length - 1]).toContain('"value":"autoroute"');
+});
+
 test('LIEUX D’EXCEPTION : liste à la demande, détour réglable, étape ajoutée', async ({ page }) => {
   /* La demande Nomadio du 27/08 : des monuments à un détour maximal en
      minutes, qu'on peut AJOUTER à la planification. L'index est simulé pour
