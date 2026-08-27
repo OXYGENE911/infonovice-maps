@@ -334,6 +334,75 @@ celui qu'il concurrence.
       possibles (extrait au build, ou dérogation avec mention publique) ont été
       présentées et écartées. Mesure conservée dans docs/apis.md.
 
+## Le mandat du 27/08/2026 — session en autonomie, retours triés
+Armelin a mandaté une session « en autonomie, dans cet ordre » avec une
+vingtaine de retours (captures ABRP, Petal Maps et restautoroute à l'appui).
+Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
+
+- [x] PR #47 — LE PLAN SE RÈGLE, ET SE CHOISIT SUR LA CARTE :
+      · plafond de charge réglable (80/90/au besoin). L'ancien « plafond de
+        confort » à 80 % était MORT — sa clause d'échappement le neutralisait
+        toujours ; le réglage en fait un plafond dur, assumé jusqu'au refus
+        motivé qui NOMME le remède ;
+      · la réserve s'appelle désormais « Arriver aux bornes avec au moins » —
+        le réglage existait, sous un intitulé qui ne répondait pas à la
+        question ;
+      · MODE TRAJET : le plan affiché, les bornes nationales s'effacent — ne
+        restent que le corridor (cliquable) et les arrêts en pastilles
+        numérotées ; le volet des couches le DIT ; effacer le trajet rend la
+        carte. Frugalité : la couche masquée ne charge plus rien ;
+      · la fiche d'une borne sait « Ajouter au plan de recharge » et
+        « Retirer cet arrêt du plan » — sur le corridor seulement : hors
+        trajet, aucun bouton qui mènerait à un plan impossible.
+- [ ] Itinéraires alternatifs A/B/C (comme ABRP) — À ÉTUDIER D'ABORD : le
+      service public IGN n'expose PAS d'alternatives (getcapabilities du
+      21/08, PR #6). Pistes honnêtes : variantes par évitements, ou point de
+      passage décalé. Ne rien promettre avant la mesure.
+- [ ] Accessibilité `role="application"` (déjà au chapitre « Limites
+      connues ») — sa propre PR.
+- [ ] Ménage Dependabot : ESLint 10.9, Vite 8.2.2 (mineures) ; TypeScript
+      5.9 → 7.0 est un chantier à part.
+- [ ] PETITES CORRECTIONS D'INTERFACE, une PR groupée :
+      · l'encart « installer l'application » paraît aussi sur grand écran —
+        vérifier l'intention et le comportement attendu ;
+      · le libellé « Charger » de l'étendue du réseau national se confond
+        avec le filtre de puissance — renommer pour dire ce qu'il fait
+        (ce qu'on TÉLÉCHARGE, pas ce qu'on AFFICHE) ;
+      · éclairs JAUNES (émoji ⚡) dans la légende et la fiche, BLANCS
+        (dessinés) sur la carte — harmoniser en dessinant partout ;
+      · favoris : un nom d'affichage modifiable, l'adresse en dessous ;
+      · véhicule : afficher l'année du modèle et l'autonomie WLTP
+        constructeur — un Xpeng G6 2024 n'est pas un G6 2026 ;
+      · bouton « Transports en commun » : Armelin n'en voit pas la
+        plus-value visuelle — vérifier le rendu réel avant de trancher
+        (supprimer un travail mesuré de la PR #16 demande une mesure) ;
+      · « Accès réservé » affiché sur des bornes où le badge d'Armelin
+        fonctionne — comprendre ce que `condition_acces` veut VRAIMENT dire
+        (réservé ≠ abonnement) et reformuler.
+- [ ] ÉTUDES À MESURER AVANT DE PROMETTRE, chacune datée dans docs/ :
+      · API maps.infonovice.fr pour les autres produits (FOOD COMMUNITY,
+        SPORTS, FAMILY…) — publique, à clé, ou bornée aux sous-domaines
+        infonovice.fr ; rappel : pas de backend en phase 1, la voie naturelle
+        est la bibliothèque /src/lib/ ou l'URL de partage ;
+      · péages OSM (barrier=toll_booth) pour avertir ou éviter — le moteur
+        public ignore les péages, mais un POST-TRAITEMENT local peut compter
+        et signaler ceux du tracé ;
+      · restauration sur le trajet, présentation dédiée (restautoroute.fr) ;
+      · monuments à proximité du parcours (Nomadio, base Mérimée/POP — sans
+        clé ?) avec détour maximal en minutes ;
+      · badges de recharge dans le profil → filtrer par compatibilité
+        e-MSP : vérifier si UNE source publique le donne (probablement non —
+        l'écrire alors avec la mesure) ;
+      · IZIVIA FAST sur McDonald's : distinguer les stations en restaurant —
+        l'implantation/l'adresse du fichier IRVE le disent-elles ?
+- [ ] NAVIGATION MOBILE (suivi d'itinéraire) — un chantier à cadrer entier :
+      boussole, vue 3D (pitch), flèches aux intersections, cartouche réduit,
+      dézoom libre + bouton « recentrer », barre de trafic verticale colorée
+      avec curseur d'avancement et arrêts, vitesse limite (ISA) et vitesse
+      GPS. Grosse surface : à découper après cadrage, en gardant la ligne
+      « le suivi refuse de s'appeler navigation » tant que les limites web
+      (arrière-plan iOS) tiennent.
+
 ## Itérations suivantes (backlog ouvert)
 - PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),
   zones de danger…

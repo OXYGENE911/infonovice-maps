@@ -97,6 +97,33 @@ export class PanneauPoi extends HTMLElement {
 
   set fiche(f: FicheBorne) { this.#fiche = f; }
 
+  /* LE MODE TRAJET DU PLANIFICATEUR EFFACE LES BORNES NATIONALES : quand un
+     plan de recharge est à l'écran, seules comptent les bornes du corridor —
+     « cela permettra d'assainir visuellement la carte » (Armelin, 27/08/2026).
+     Le drapeau fait DEUX choses : il cache les couches posées, et il coupe les
+     chargements de la couche bornes — afficher pour rien serait du gâchis,
+     interroger pour rien en serait un plus grave. */
+  #bornesMasquees = false;
+
+  masquerBornesNationales(masquees: boolean): void {
+    if (this.#bornesMasquees === masquees) return;
+    this.#bornesMasquees = masquees;
+    this.#appliquerMasquage();
+    this.#etat();
+    // Au retour, la couche se remet au niveau de la vue courante.
+    if (!masquees && this.#actives.has('bornes')) void this.#charger('bornes', true);
+  }
+
+  /** Applique la visibilité du moment aux couches de bornes posées. */
+  #appliquerMasquage(): void {
+    const carte = this.#carte;
+    if (!carte) return;
+    const visibilite = this.#bornesMasquees ? 'none' : 'visible';
+    for (const id of ['poi-bornes', 'poi-bornes-amas', 'poi-bornes-amas-nombre']) {
+      if (carte.getLayer(id)) carte.setLayoutProperty(id, 'visibility', visibilite);
+    }
+  }
+
   /* Posé UNE fois à l'assemblage, pour la vie de l'application : le panneau
      n'est jamais détruit, on ne s'encombre pas d'un désabonnement (décision
      tracée — revue du 22/08). */
@@ -576,6 +603,9 @@ export class PanneauPoi extends HTMLElement {
   async #charger(couche: Couche, force = false): Promise<void> {
     const carte = this.#carte;
     if (!carte || !this.#actives.has(couche)) return;
+    /* MASQUÉES PAR LE MODE TRAJET : ni affichage, ni CHARGEMENT. Interroger le
+       portail pour des punaises invisibles gaspillerait un quota public. */
+    if (couche === 'bornes' && this.#bornesMasquees) return;
 
     /* LES BORNES ONT LEUR PROPRE ROUTE SOUS LE SEUIL : l'index national.
        Les deux autres couches n'ont pas d'index et s'arrêtent là — mieux vaut
@@ -694,11 +724,18 @@ export class PanneauPoi extends HTMLElement {
     if (message) { p.textContent = message; return; }
     const fr = (n: number): string => n.toLocaleString('fr-FR');
     const bouts: string[] = [];
+    /* PENDANT LE MODE TRAJET, LE DIRE : une couche cochée mais invisible sans
+       explication se lit comme une panne. */
+    if (this.#bornesMasquees && this.#actives.has('bornes')) {
+      bouts.push('Bornes : la carte ne montre que celles du trajet planifié'
+        + ' — effacez ou recalculez le trajet pour revoir le réseau entier');
+    }
     /* SOUS LE SEUIL, DIRE CE QU'ON MONTRE — et ce qu'on ne montre pas. Une
        carte qui affiche les stations rapides sans annoncer son seuil laisse
        croire qu'il n'existe rien d'autre. */
     const sousLeSeuil = (this.#carte?.getZoom() ?? ZOOM_MIN) < ZOOM_MIN;
-    if (sousLeSeuil && this.#actives.has('bornes') && !this.#erreurs.bornes) {
+    if (!this.#bornesMasquees
+      && sousLeSeuil && this.#actives.has('bornes') && !this.#erreurs.bornes) {
       const n = this.#montres.bornes;
       const quoi = etendue(this.#etendue);
       const domaine = quoi.seuilKw > 0
@@ -708,7 +745,8 @@ export class PanneauPoi extends HTMLElement {
         : `${fr(n)} station${n > 1 ? 's' : ''} dans la vue (${domaine})`);
     }
     for (const couche of this.#actives) {
-      // Déjà dit ci-dessus, dans les termes de l'index.
+      // Déjà dit ci-dessus — par le mode trajet, ou dans les termes de l'index.
+      if (couche === 'bornes' && this.#bornesMasquees) continue;
       if (couche === 'bornes' && sousLeSeuil && !this.#erreurs.bornes) continue;
       if (couche !== 'bornes' && sousLeSeuil) {
         bouts.push(`${COUCHES[couche]} : zoomez pour les afficher`);
@@ -734,6 +772,9 @@ export class PanneauPoi extends HTMLElement {
       this.#poserSource('poi-parkings', this.#parkings);
       this.#poserSource('poi-carburants', this.#carburants);
       this.#poserSource('poi-bornes', this.#bornes);
+      // Un changement de style vient de reposer les couches : le masquage du
+      // mode trajet, lui, n'a pas changé — on le réapplique.
+      this.#appliquerMasquage();
     } catch (e) {
       // Style en cours de chargement : style.load (branché dans `set carte`)
       // reposera tout — même contrat que le tracé d'itinéraire.

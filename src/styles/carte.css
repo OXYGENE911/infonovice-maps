@@ -1414,6 +1414,17 @@ body.en-guidage fiche-borne { display: none; }
 .fb-aller:hover { background: var(--accent-vif); border-color: var(--accent-vif); }
 .fb-aller:focus-visible { outline: none; box-shadow: var(--focus); }
 
+/* AJOUTER OU RETIRER DU PLAN DE RECHARGE — la seconde action du cartouche,
+   moins pressante que l'itinéraire : bordure pleine, fond discret. */
+.fb-actions { gap: 6px; }
+.fb-plan {
+  padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--accent); background: transparent;
+  cursor: pointer; font: 600 13px var(--police); color: var(--accent);
+}
+.fb-plan:hover { background: var(--fond-doux); }
+.fb-plan:focus-visible { outline: none; box-shadow: var(--focus); }
+
 /* La recherche de réseau dans le plan de recharge, même forme qu'ailleurs. */
 .recharge-reseau-recherche {
   width: 100%; box-sizing: border-box; margin: 2px 0 4px;

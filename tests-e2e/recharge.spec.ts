@@ -30,14 +30,18 @@ interface LigneIndex {
  * enregistrements. Les confondre rendrait un tableau là où le cartouche attend
  * un objet, et le détail paraîtrait introuvable sans qu'on sache pourquoi.
  */
+/** L'identifiant d'itinérance que l'index simulé fabrique pour une borne. */
+const idSimule = (b: LigneIndex): string =>
+  `FR${b.nom.replace(/\W/g, '').slice(0, 8).toUpperCase()}`;
+
 async function simulerIndexBornes(page: Page, bornes: LigneIndex[]): Promise<void> {
   await page.route('**/public.opendatasoft.com/**', (route) => {
-    const url = route.request().url();
+    const url = decodeURIComponent(route.request().url());
     if (url.includes('/exports/json')) {
       return route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify(bornes.map((b) => ({
-          id_station_itinerance: `FR${b.nom.replace(/\W/g, '').slice(0, 8).toUpperCase()}`,
+          id_station_itinerance: idSimule(b),
           nom_station: b.nom,
           nom_enseigne: b.reseau ?? 'Réseau d’essai',
           /* L'OPÉRATEUR PORTE LE FILTRE : l'enseigne écrit souvent le nom du
@@ -52,6 +56,32 @@ async function simulerIndexBornes(page: Page, bornes: LigneIndex[]): Promise<voi
           lon: b.lon,
           lat: b.lat,
         }))),
+      });
+    }
+    /* LE DÉTAIL D'UNE STATION (cartouche) : la même borne, dans la forme des
+       enregistrements. Sans cette route, ouvrir une fiche depuis le plan
+       répondait « n'est plus dans le fichier national » — et les parcours du
+       27/08 (ajouter/retirer un arrêt depuis la fiche) mesuraient un bouton
+       qui ne peut pas paraître. */
+    if (url.includes('/records')) {
+      const id = /id_station_itinerance = "([^"]+)"/.exec(url)?.[1];
+      const b = bornes.find((x) => idSimule(x) === id)
+        ?? bornes.find((x) => url.includes(`nom_station = "${x.nom}"`));
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(b ? { total_count: 1, results: [{
+          nom_station: b.nom,
+          adresse_station: 'Route d’essai, 21200 Beaune',
+          nom_enseigne: b.reseau ?? 'Réseau d’essai',
+          nom_operateur: b.operateur ?? b.reseau ?? 'Réseau d’essai',
+          condition_acces: b.acces ?? 'Accès libre',
+          puissance_nominale: b.p,
+          nbre_pdc: b.pdc ?? 4,
+          id_station_itinerance: idSimule(b),
+          id_pdc_itinerance: `${idSimule(b)}P1`,
+          prise_type_combo_ccs: '1',
+          date_maj: '2026-08-01',
+        }] } : { total_count: 0, results: [] }),
       });
     }
     return route.fulfill({
@@ -481,4 +511,174 @@ test('les réseaux du trajet se groupent par EXPLOITANT, pas par site', async ({
   await expect(corps.locator('.recharge-reseaux-corps')).toContainText('Allego (3)');
   await expect(corps.locator('.recharge-reseaux-corps'))
     .not.toContainText('Burger King');
+});
+
+/* LE PLAN SE RÈGLE, ET SE CHOISIT SUR LA CARTE — les retours d'Armelin du
+   27/08/2026 : plafond de charge, carte assainie pendant le plan, et la fiche
+   d'une borne qui sait l'ajouter ou la retirer. */
+
+test('le plafond de charge tronque les départs, quitte à AJOUTER un arrêt', async ({ page }) => {
+  await simulerIndexBornes(page, TROIS);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de', { timeout: 15_000 });
+
+  /* Une cible d'arrivée haute force une grosse charge : « au besoin », un seul
+     arrêt rempli à ~100 % suffit. */
+  await page.getByLabel('Charge voulue à l’arrivée').selectOption('30');
+  await expect(corps.locator('.recharge-liste li')).toHaveCount(1);
+  await expect(corps.locator('.recharge-liste')).toContainText(/départ (9\d|100) %/);
+
+  /* Plafonné à 80 : la même charge ne passe plus en un arrêt. Le plan doit en
+     prendre deux — et AUCUN départ ne dépasse le plafond. */
+  await page.getByLabel('Plafond de charge aux bornes').selectOption('80');
+  await expect(corps.locator('.recharge-liste li')).toHaveCount(2);
+  const texte = await corps.locator('.recharge-liste').innerText();
+  for (const [, depart] of texte.matchAll(/départ (\d+) %/g)) {
+    expect(Number(depart), 'un départ dépasse le plafond choisi').toBeLessThanOrEqual(80);
+  }
+});
+
+test('un plafond intenable produit un refus qui NOMME le remède', async ({ page }) => {
+  // Une seule borne à mi-parcours : à 80 % de départ, la fin du trajet avec
+  // une cible à 30 % ne passe pas, et rien d'autre n'existe plus loin.
+  await simulerIndexBornes(page, [BEAUNE]);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
+
+  await page.getByLabel('Charge voulue à l’arrivée').selectOption('30');
+  await page.getByLabel('Plafond de charge aux bornes').selectOption('80');
+  await expect(corps).toContainText('plafond de charge');
+});
+
+test('le plan affiché, la carte ne montre plus que les bornes du trajet', async ({ page }) => {
+  await simulerIndexBornes(page, TROIS);
+  await page.goto(PARIS_LYON);
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+
+  /* LA COUCHE NATIONALE D'ABORD : on l'active pour la voir disparaître —
+     sans elle, le parcours mesurerait un masquage sans témoin. */
+  await allerA(page, 'couches');
+  await page.getByRole('checkbox', { name: 'Bornes électriques' }).check();
+  await expect.poll(() => page.evaluate(() =>
+    Boolean((window as unknown as { __carte: { getLayer(id: string): unknown } })
+      .__carte.getLayer('poi-bornes'))), { timeout: 10_000 }).toBe(true);
+  await retour(page);
+
+  await saisirVehicule(page);
+  await allerA(page, 'recharge');
+  await expect(page.locator('.iti-recharge-corps')).toContainText('Aire de',
+    { timeout: 15_000 });
+
+  /* LES BORNES NATIONALES S'EFFACENT… */
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __carte: { getLayoutProperty(c: string, p: string): unknown } })
+      .__carte.getLayoutProperty('poi-bornes', 'visibility'))).toBe('none');
+  /* …ET LE VOLET DES COUCHES LE DIT, plutôt que de paraître en panne. */
+  await expect(page.locator('.poi-etat')).toContainText('trajet planifié');
+
+  /* LES COUCHES DU TRAJET EXISTENT : pastilles d'arrêt et corridor. */
+  const couches = await page.evaluate(() => {
+    const c = (window as unknown as { __carte: { getLayer(id: string): unknown } }).__carte;
+    return {
+      arrets: Boolean(c.getLayer('iti-arrets-pastille')),
+      corridor: Boolean(c.getLayer('iti-corridor')),
+    };
+  });
+  expect(couches.arrets, 'la couche des arrêts du plan manque').toBe(true);
+  expect(couches.corridor, 'la couche du corridor manque').toBe(true);
+
+  /* EFFACER LE TRAJET REND LA CARTE : couches du trajet retirées, bornes
+     nationales de retour. */
+  await retour(page);
+  await page.locator('.iti-effacer').click();
+  await expect.poll(() => page.evaluate(() => {
+    const c = (window as unknown as {
+      __carte: { getLayer(id: string): unknown; getLayoutProperty(x: string, p: string): unknown };
+    }).__carte;
+    return {
+      arrets: Boolean(c.getLayer('iti-arrets-pastille')),
+      visibilite: c.getLayoutProperty('poi-bornes', 'visibility'),
+    };
+  })).toEqual({ arrets: false, visibilite: 'visible' });
+});
+
+test('une pastille d’arrêt SUR LA CARTE se clique, et sa fiche retire l’arrêt', async ({ page }) => {
+  await simulerIndexBornes(page, TROIS);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
+
+  /* LE CLIC TOMBE SUR LA PASTILLE : on projette la position de la borne dans
+     l'écran plutôt que de deviner des pixels. */
+  await page.waitForTimeout(900); // fitBounds en cours : on laisse la carte se poser
+  const point = await page.evaluate(() => {
+    const c = (window as unknown as {
+      __carte: { project(l: [number, number]): { x: number; y: number } };
+    }).__carte;
+    return c.project([3.6, 47.3]);
+  });
+  const canevas = await page.locator('#carte canvas.maplibregl-canvas').boundingBox();
+  await page.mouse.click(canevas!.x + point.x, canevas!.y + point.y);
+
+  /* LA FICHE S'OUVRE, et propose de retirer l'arrêt : cette borne est retenue
+     par le plan. */
+  const fiche = page.locator('fiche-borne');
+  await expect(fiche).toBeVisible();
+  await expect(fiche.locator('.fb-titre')).toContainText('Aire de Beaune');
+  const retirer = fiche.getByRole('button', { name: 'Retirer cet arrêt du plan de recharge' });
+  await expect(retirer).toBeVisible();
+  await retirer.click();
+
+  /* L'ARRÊT SORT DU PLAN — la liste ne le porte plus, le plan reste vivant. */
+  await expect(corps.locator('.recharge-liste')).not.toContainText('Aire de Beaune');
+  await expect(corps.locator('.recharge-liste')).toContainText('km');
+});
+
+test('la fiche d’une borne NON retenue propose de l’ajouter au plan', async ({ page }) => {
+  await simulerIndexBornes(page, TROIS);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de', { timeout: 15_000 });
+  // La borne lente des deux tiers n'est pas retenue d'office.
+  await expect(corps.locator('.recharge-liste')).not.toContainText('Aire des Deux Tiers');
+
+  // On ouvre sa fiche depuis la liste complète du trajet.
+  await corps.locator('.recharge-toutes > summary').click();
+  await page.getByRole('button', { name: 'Détail de Aire des Deux Tiers' }).click();
+
+  const fiche = page.locator('fiche-borne');
+  await expect(fiche).toBeVisible();
+  const ajouter = fiche.getByRole('button', { name: 'Ajouter au plan de recharge' });
+  await expect(ajouter).toBeVisible();
+  await ajouter.click();
+
+  await expect(corps.locator('.recharge-liste')).toContainText('Aire des Deux Tiers');
+});
+
+test('hors trajet, la fiche ne promet RIEN au plan', async ({ page }) => {
+  /* Une borne loin de la route : sa fiche ne doit proposer ni ajout ni
+     retrait — un bouton qui mènerait à un plan qu'elle ne peut pas servir. */
+  await simulerIndexBornes(page, [BEAUNE,
+    { nom: 'Hors route', lon: -1.5, lat: 43.5, p: 150 }]);
+  await ouvrirRecharge(page);
+  await expect(page.locator('.iti-recharge-corps')).toContainText('Aire de Beaune',
+    { timeout: 15_000 });
+
+  /* On ouvre la fiche de la borne lointaine comme le ferait un clic sur la
+     couche nationale : elle n'est pas sur le corridor. */
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement & {
+      ouvrir(c: { id: string | null; lon: number; lat: number; nom: string }): void;
+    }>('fiche-borne')!.ouvrir({
+      id: 'FRHORSROUT', lon: -1.5, lat: 43.5, nom: 'Hors route',
+    });
+  });
+  const fiche = page.locator('fiche-borne');
+  await expect(fiche).toBeVisible();
+  await expect(fiche.getByRole('button', { name: 'Itinéraire vers cette borne' }))
+    .toBeVisible();
+  await expect(fiche.locator('.fb-plan')).toHaveCount(0);
 });

@@ -50,6 +50,14 @@ export interface OptionsPlan {
   socArrivee: number;
   /** Marge que l'on refuse d'entamer, en %. On arrive à une borne AVEC. */
   reserve: number;
+  /* LE PLAFOND DE CHARGE — la demande d'Armelin du 27/08/2026 : « spécifier à
+     combien de pourcentage de recharge maximale on souhaite partir de la
+     borne. Par exemple, filtré à 80 % maximum. » Au-dessus de 80 %, la charge
+     ralentit fortement ; certains préfèrent DEUX arrêts courts à un long.
+     ABSENT OU À 100, ON CHARGE CE QU'IL FAUT — le comportement historique.
+     C'est un plafond DUR : le respecter peut ajouter des arrêts, et peut
+     rendre un trajet infaisable — auquel cas le refus le dit, avec le remède. */
+  plafondCharge?: number | undefined;
   /* CE QUE L'USAGER IMPOSE AU PLANIFICATEUR — sa demande du 25/08/2026 :
      « avec des + et des - pour choisir moi-même les arrêts ». Deux listes de
      clés (voir `cleBorne`) : celles où l'on VEUT s'arrêter, et celles dont on
@@ -66,7 +74,7 @@ export interface OptionsPlan {
  * ne peut pas servir : « Lidl » désigne des centaines de stations, et imposer
  * l'une les imposerait toutes.
  */
-export function cleBorne(b: BorneCandidate): string {
+export function cleBorne(b: Pick<BorneCandidate, 'id' | 'lon' | 'lat'>): string {
   return b.id ?? `${b.lon.toFixed(5)},${b.lat.toFixed(5)}`;
 }
 
@@ -91,12 +99,16 @@ export interface PlanRecharge {
 }
 
 /* AU-DELÀ DE 80 %, LA CHARGE RALENTIT FORTEMENT : le véhicule bride pour
-   protéger la batterie. Un planificateur qui remplit à 100 % à chaque arrêt
-   fait perdre plus de temps qu'il n'en gagne. On plafonne donc, sauf si le
-   dernier tronçon l'exige — mieux vaut vingt minutes de plus qu'un trajet
-   déclaré impossible. */
-const PLAFOND_CONFORT = 80;
-const PLAFOND_DUR = 100;
+   protéger la batterie. Ce seuil-là est PHYSIQUE — il gouverne la courbe de
+   durée ci-dessous et ne se règle pas. Le plafond que l'usager choisit
+   (`plafondCharge`) est une autre chose : jusqu'où il ACCEPTE de remplir.
+
+   L'ANCIEN « PLAFOND DE CONFORT » À 80 % ÉTAIT MORT, et la mesure le montre :
+   le plan chargeait toujours exactement ce qu'il faut (socVoulu), et sa clause
+   d'échappement relevait la borne à 100 dès que le besoin dépassait 80. Aucune
+   valeur ne se trouvait donc jamais tronquée. Le réglage d'Armelin lui donne
+   un sens réel : un plafond DUR, assumé jusqu'au refus motivé. */
+const SEUIL_RALENTI = 80;
 
 /** Rendement de la charge : une part de l'énergie part en chaleur. */
 const RENDEMENT = 0.9;
@@ -123,8 +135,8 @@ export function dureeChargeMin(
   if (!(puissance > 0) || !(energieKwh > 0)) return 0;
 
   // Part de la charge effectuée au-dessus de 80 %, où le débit s'effondre.
-  const hautDe = Math.max(socDe, PLAFOND_CONFORT);
-  const hautA = Math.max(socA, PLAFOND_CONFORT);
+  const hautDe = Math.max(socDe, SEUIL_RALENTI);
+  const hautA = Math.max(socA, SEUIL_RALENTI);
   const partHaute = socA > socDe ? (hautA - hautDe) / (socA - socDe) : 0;
   const ralentissement = 1 + partHaute * 1.5;
 
@@ -199,6 +211,10 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
 
   const reserve = borner(o.reserve, 0, 50);
   const cible = borner(o.socArrivee, 0, 100);
+  /* LE PLANCHER DU PLAFOND EST 50 : en dessous, presque aucun tronçon
+     d'autoroute ne tiendrait entre deux charges, et le refus deviendrait la
+     réponse normale — un réglage qui casse tout n'est pas un réglage. */
+  const plafond = borner(o.plafondCharge ?? 100, 50, 100);
   let soc = borner(o.socDepart, 0, 100);
   let positionM = 0;
   const arrets: Arret[] = [];
@@ -218,8 +234,13 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
        remplir de nouveau. */
     const prochaineImposee = etapesImposees.find((b) => b.avancementM > positionM);
 
-    // Assez pour finir en gardant la cible, et plus rien d'imposé devant ?
-    if (socFin >= cible && !prochaineImposee) {
+    /* Assez pour finir en gardant la cible, et plus rien d'imposé devant ?
+       L'EPSILON N'EST PAS UN DÉTAIL : chaque charge vise EXACTEMENT la cible,
+       et l'arithmétique flottante rend alors un socFin à 9,999 999 999 9 pour
+       une cible de 10. Sans tolérance, le plan réclamait un arrêt de plus pour
+       un manque d'un billionième de pour cent — vu quand le plafond de charge
+       a multiplié les arrêts calculés « au plus juste ». */
+    if (socFin >= cible - 1e-9 && !prochaineImposee) {
       const duree = arrets.reduce((t, a) => t + a.dureeMin, 0);
       return { faisable: true, arrets, socArrivee: socFin, dureeRechargeMin: duree };
     }
@@ -258,9 +279,13 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
           + ' Retirez cet arrêt, ou ajoutez-en un avant lui.',
         );
       }
+      /* SI LE PLAFOND EST EN CAUSE, LE DIRE : un refus qui tait le réglage qui
+         l'a produit enferme l'usager. On ne l'écrit que lorsqu'un plafond
+         plein aurait pu changer la donne — c'est-à-dire dès qu'il est bridé. */
       return echec(
         `Aucune borne utilisable avant ${km} km, où la réserve serait entamée.`
-        + ' Élargissez les filtres, ou partez avec plus de charge.',
+        + ' Élargissez les filtres, ou partez avec plus de charge.'
+        + (plafond < 100 ? ' Vous pouvez aussi relever le plafond de charge.' : ''),
       );
     }
 
@@ -269,9 +294,10 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
     positionM = choisie.avancementM;
 
     /* COMBIEN CHARGER ? Juste ce qu'il faut pour finir avec la cible — pas le
-       plein. Si le plafond de confort n'y suffit pas, on monte jusqu'au
-       plafond dur : mieux vaut vingt minutes de plus qu'un trajet déclaré
-       impossible. */
+       plein — et JAMAIS au-delà du plafond choisi. Si le plafond ne suffit
+       pas pour rallier la destination d'une traite, le tour suivant cherchera
+       une borne plus loin ; et s'il n'y en a pas, le refus nommera le
+       plafond. */
     const suivanteImposee = etapesImposees.find((b) => b.avancementM > positionM);
     /* ON VISE LE PROCHAIN POINT DE PASSAGE OBLIGÉ, PAS SYSTÉMATIQUEMENT LA
        DESTINATION : jusqu'à un arrêt imposé, il suffit d'y arriver avec la
@@ -280,10 +306,13 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
     const socALArrivee = suivanteImposee ? reserve : cible;
     const besoinKwh = energiePour(restantApresM, v) + v.capaciteKwh * (socALArrivee / 100);
     const socVoulu = (besoinKwh / v.capaciteKwh) * 100;
+    /* ARRIVER AU-DESSUS DU PLAFOND N'EST PAS UNE FAUTE — on ne vidange pas une
+       batterie. Le haut de la fourchette est donc le plafond, OU le SOC
+       d'arrivée s'il le dépasse déjà. */
     const socRepart = borner(
       Math.max(socVoulu, socALaBorne),
       socALaBorne,
-      socVoulu > PLAFOND_CONFORT ? PLAFOND_DUR : PLAFOND_CONFORT,
+      Math.max(plafond, socALaBorne),
     );
 
     const energieKwh = v.capaciteKwh * ((socRepart - socALaBorne) / 100);
