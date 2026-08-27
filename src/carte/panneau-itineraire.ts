@@ -396,6 +396,16 @@ export class PanneauItineraire extends HTMLElement {
               ${(Object.keys(EVITEMENTS) as Eviter[]).map((v) => `
                 <label class="iti-evite"><input type="checkbox" value="${v}"><span>${EVITEMENTS[v]}</span></label>`).join('')}
             </fieldset>
+            <!-- COMPARER AVEC ET SANS AUTOROUTE — le verdict de l'étude
+                 « alternatives » du 27/08 : pas de moteur, pas de vrais
+                 itinéraires A/B/C ; mais DEUX variantes honnêtes, nommées par
+                 ce qu'elles sont, avec le plan de recharge de chacune. Un
+                 appel au moteur par comparaison, à la demande. -->
+            <div class="iti-comparer">
+              <button type="button" class="iti-comparer-lancer">Comparer avec
+                et sans autoroute</button>
+              <div class="iti-comparer-corps" role="status"></div>
+            </div>
             <!-- LES PÉAGES SE RELÈVENT, ILS NE S'ÉVITENT PAS — le moteur
                  public n'a pas de clause péage (mesuré PR #6), et l'étude du
                  27/08 (docs/etudes-mandat-27-08.md §2) a tranché : nommer les
@@ -604,6 +614,9 @@ export class PanneauItineraire extends HTMLElement {
     this.querySelector('.iti-peages-chercher')?.addEventListener('click', () => {
       void this.#releverPeages();
     });
+    this.querySelector('.iti-comparer-lancer')?.addEventListener('click', () => {
+      void this.#comparerAutoroute();
+    });
 
     /* CHANGER LA MARGE REFAIT LE PLAN — mais seulement si la section est
        ouverte : un réglage invisible ne consomme rien. Le `#rechargePour` est
@@ -687,13 +700,16 @@ export class PanneauItineraire extends HTMLElement {
     this.#meteoPour = null; this.#meteoLe = null;
     for (const cls of
       ['iti-alti', 'iti-feuille', 'iti-trajet', 'iti-meteo', 'iti-recharge',
-        'iti-peages', 'iti-monuments'] as const) {
+        'iti-peages', 'iti-monuments', 'iti-comparer'] as const) {
       const corps = this.querySelector(`.${cls}-corps`);
       if (corps) corps.textContent = '';
     }
-    // Le relevé des péages appartenait au trajet d'avant : le bouton revit.
-    const boutonPeages = this.querySelector<HTMLButtonElement>('.iti-peages-chercher');
-    if (boutonPeages) boutonPeages.disabled = false;
+    // Le relevé des péages et la comparaison appartenaient au trajet
+    // d'avant : leurs boutons revivent.
+    for (const cls of ['.iti-peages-chercher', '.iti-comparer-lancer']) {
+      const bouton = this.querySelector<HTMLButtonElement>(cls);
+      if (bouton) bouton.disabled = false;
+    }
     this.#profilPour = null;
     this.#feuillePour = null;
     const menu = this.querySelector('.iti-menu:not(.iti-menu-toujours)') as HTMLElement | null;
@@ -787,12 +803,16 @@ export class PanneauItineraire extends HTMLElement {
      bornes le long du tracé, et il est plafonné à six tronçons depuis la
      PR #11. Le profil du véhicule vient d'IndexedDB : il n'a jamais quitté le
      navigateur et ne le quitte pas ici non plus. */
-  async #planifierRecharge(): Promise<void> {
-    const corps = this.querySelector('.iti-recharge-corps') as HTMLElement;
-    const iti = this.#dernier;
-    if (this.#vue !== 'recharge' || !iti || this.#rechargePour === iti) return;
-    this.#rechargePour = iti;
-
+  /**
+   * Le profil véhicule tel qu'IndexedDB le connaît, prêt pour le
+   * planificateur — `null` quand il manque l'essentiel. Partagé entre le
+   * plan de recharge et la comparaison de variantes : deux lecteurs, une
+   * seule interprétation des champs.
+   */
+  async #lireVehicule(): Promise<{
+    vehicule: { capaciteKwh: number; consommationKwh100: number; puissanceMaxKw: number };
+    socDepart: number;
+  } | null> {
     const memo = await lirePreference<unknown>(PREF_VEHICULE);
     const m = (memo ?? {}) as Record<string, unknown>;
     const brut = (m['vehicule'] ?? {}) as Record<string, unknown>;
@@ -800,8 +820,26 @@ export class PanneauItineraire extends HTMLElement {
       (typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x : 0);
     const capacite = nombre(brut['capaciteNominale']) * (nombre(brut['soce']) || 100) / 100;
     const conso = ((brut['consommations'] ?? {}) as Record<string, unknown>)['autoroute'];
+    if (!(capacite > 0) || !(nombre(conso) > 0)) return null;
+    return {
+      vehicule: {
+        capaciteKwh: capacite,
+        consommationKwh100: nombre(conso),
+        // 150 kW par défaut : une valeur courante, et l'interface le dit.
+        puissanceMaxKw: nombre(brut['puissanceMaxKw']) || 150,
+      },
+      socDepart: nombre(brut['soc']) || 100,
+    };
+  }
 
-    if (!(capacite > 0) || !(nombre(conso) > 0)) {
+  async #planifierRecharge(): Promise<void> {
+    const corps = this.querySelector('.iti-recharge-corps') as HTMLElement;
+    const iti = this.#dernier;
+    if (this.#vue !== 'recharge' || !iti || this.#rechargePour === iti) return;
+    this.#rechargePour = iti;
+
+    const profil = await this.#lireVehicule();
+    if (!profil) {
       corps.textContent = 'Renseignez d’abord votre véhicule (panneau « Véhicule ») :'
         + ' batterie, santé et autonomie constatée.';
       this.#rechargePour = null;   // réessayable une fois le profil rempli
@@ -814,13 +852,8 @@ export class PanneauItineraire extends HTMLElement {
     const annulation = new AbortController();
     this.#annulationRecharge = annulation;
 
-    this.#vehiculeCourant = {
-      capaciteKwh: capacite,
-      consommationKwh100: nombre(conso),
-      // 150 kW par défaut : une valeur courante, et l'interface le dit.
-      puissanceMaxKw: nombre(brut['puissanceMaxKw']) || 150,
-    };
-    this.#socDepart = nombre(brut['soc']) || 100;
+    this.#vehiculeCourant = profil.vehicule;
+    this.#socDepart = profil.socDepart;
 
     try {
       /* LES BORNES DU TRAJET VIENNENT DE L'INDEX NATIONAL, PLUS DU PORTAIL.
@@ -1098,6 +1131,160 @@ export class PanneauItineraire extends HTMLElement {
       corps.textContent = e instanceof ErreurPeages
         ? e.message : 'Les péages ne sont pas disponibles pour le moment.';
     }
+  }
+
+  /**
+   * Compare le trajet courant avec sa variante avec/sans autoroute.
+   *
+   * PAS DES « ITINÉRAIRES A/B/C » : le moteur public ne rend pas
+   * d'alternatives (mesuré PR #6), et une variante par étape décalée serait
+   * un artifice. On calcule LA variante qui a un sens — l'autre choix
+   * d'autoroute — et l'on montre pour chacune la route ET la recharge :
+   * c'est le total qui décide, une portion gratuite d'autoroute peut battre
+   * la nationale une fois la charge comptée.
+   *
+   * LES PLANS DE RECHARGE SONT CALCULÉS À NEUF, SANS LES CONSIGNES : les
+   * arrêts imposés du trajet courant peuvent être hors de la variante — les
+   * appliquer condamnerait la comparaison d'avance, et c'est écrit sous le
+   * résultat.
+   */
+  async #comparerAutoroute(): Promise<void> {
+    const bouton = this.querySelector<HTMLButtonElement>('.iti-comparer-lancer');
+    const corps = this.querySelector<HTMLElement>('.iti-comparer-corps');
+    if (!bouton || !corps) return;
+    const cliche = this.#calculPour;
+    const courant = this.#dernier;
+    if (!cliche || !courant) {
+      corps.textContent =
+        'Calculez d’abord un itinéraire : la comparaison porte sur son tracé.';
+      return;
+    }
+    bouton.disabled = true;
+    corps.textContent = 'Calcul de la variante…';
+
+    const evitaitAutoroute = cliche.eviter.includes('autoroute');
+    const eviterVariante = evitaitAutoroute
+      ? cliche.eviter.filter((v) => v !== 'autoroute')
+      : [...cliche.eviter, 'autoroute' as Eviter];
+    try {
+      const variante = await calculerItineraire(
+        cliche.depart, cliche.arrivee, cliche.profil,
+        { etapes: cliche.etapes, eviter: eviterVariante },
+      );
+      if (this.#dernier !== courant) return; // le trajet a changé sous l'appel
+
+      /* LA RECHARGE ENTRE DANS LA COMPARAISON quand un véhicule est
+         renseigné : l'index est en cache, le calcul est local. */
+      const profil = await this.#lireVehicule();
+      let stations: StationRapide[] | null = null;
+      if (profil) {
+        try {
+          stations = (await indexNational()).stations;
+        } catch { stations = null; /* la route se compare quand même */ }
+      }
+      const planPour = (iti: Itineraire): PlanRecharge | null => {
+        if (!profil || !stations) return null;
+        return planifierArrets({
+          vehicule: profil.vehicule,
+          distanceM: iti.distance,
+          bornes: stationsDuTrajet(
+            stations, iti.geometrie.coordinates as [number, number][], 10_000,
+          ).map((t) => ({
+            nom: t.poi.nom, lon: t.poi.lon, lat: t.poi.lat, reseau: t.poi.reseau,
+            id: t.poi.id, avancementM: t.avancement, ecartM: t.ecart,
+            puissanceKw: t.poi.puissance,
+          })),
+          socDepart: profil.socDepart,
+          socArrivee: this.#valeurReglage('.recharge-cible', 10),
+          reserve: this.#valeurReglage('.recharge-reserve', 10),
+          plafondCharge: this.#valeurReglage('.recharge-plafond', 100),
+        });
+      };
+      this.#afficherComparaison(
+        { iti: courant, plan: planPour(courant), sansAutoroute: evitaitAutoroute, actuel: true },
+        { iti: variante, plan: planPour(variante), sansAutoroute: !evitaitAutoroute, actuel: false },
+        Boolean(profil),
+      );
+      bouton.disabled = false;
+    } catch (e) {
+      bouton.disabled = false;
+      corps.textContent = e instanceof ErreurItineraire
+        ? e.message : 'La variante n’a pas pu être calculée pour le moment.';
+    }
+  }
+
+  #afficherComparaison(
+    ...variantes: [
+      { iti: Itineraire; plan: PlanRecharge | null; sansAutoroute: boolean; actuel: boolean },
+      { iti: Itineraire; plan: PlanRecharge | null; sansAutoroute: boolean; actuel: boolean },
+      boolean,
+    ]
+  ): void {
+    const [a, b, avecVehicule] = variantes;
+    const corps = this.querySelector<HTMLElement>('.iti-comparer-corps');
+    if (!corps) return;
+    corps.replaceChildren();
+
+    for (const v of [a, b]) {
+      const bloc = document.createElement('div');
+      bloc.className = `comparer-variante${v.actuel ? ' comparer-actuelle' : ''}`;
+
+      const titre = document.createElement('p');
+      titre.className = 'comparer-titre';
+      titre.textContent = (v.sansAutoroute ? 'Sans autoroute' : 'Par l’autoroute')
+        + (v.actuel ? ' — le trajet actuel' : '');
+
+      const chiffres = document.createElement('p');
+      chiffres.className = 'comparer-chiffres';
+      const bouts = [`${formaterDistance(v.iti.distance)}`,
+        `${formaterDuree(v.iti.duree)} de route`];
+      if (v.plan) {
+        if (!v.plan.faisable) {
+          bouts.push('recharge : trajet non faisable avec ce véhicule');
+        } else if (v.plan.arrets.length === 0) {
+          bouts.push('aucun arrêt de recharge');
+        } else {
+          const charge = Math.round(v.plan.dureeRechargeMin);
+          bouts.push(`${v.plan.arrets.length} arrêt${v.plan.arrets.length > 1 ? 's' : ''}`
+            + `, ${charge} min de charge`);
+          bouts.push(`total ${formaterDuree(v.iti.duree + charge * 60)}`);
+        }
+      }
+      chiffres.textContent = bouts.join(' · ');
+      bloc.append(titre, chiffres);
+
+      if (!v.actuel) {
+        const prendre = document.createElement('button');
+        prendre.type = 'button';
+        prendre.className = 'comparer-prendre';
+        prendre.textContent = 'Prendre cette variante';
+        prendre.addEventListener('click', () => {
+          /* LA VARIANTE DEVIENT LE TRAJET : la case « autoroutes » bascule —
+             état interne ET case cochée, les deux — et le calcul repart. Le
+             résultat de la comparaison sera balayé par la remise à zéro des
+             sections : c'est juste, il décrivait l'ancien couple. */
+          const case_ = this.querySelector<HTMLInputElement>(
+            '.iti-eviter input[value="autoroute"]');
+          if (v.sansAutoroute) this.#eviter.add('autoroute');
+          else this.#eviter.delete('autoroute');
+          if (case_) case_.checked = v.sansAutoroute;
+          void this.#calculer();
+        });
+        bloc.append(prendre);
+      }
+      corps.append(bloc);
+    }
+
+    const note = document.createElement('p');
+    note.className = 'comparer-note';
+    note.textContent = (avecVehicule
+      ? 'Plans de recharge calculés à neuf, sans vos arrêts imposés ni vos'
+        + ' réseaux préférés — les consignes du trajet actuel ne valent pas'
+        + ' pour l’autre tracé. '
+      : 'Renseignez votre véhicule pour comparer aussi la recharge. ')
+      + 'Les péages ne sont pas comptés : le tarif n’est dans aucune source'
+      + ' publique.';
+    corps.append(note);
   }
 
   /* ---- les lieux d'exception près du trajet ---- */
