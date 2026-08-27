@@ -15,7 +15,7 @@ import { expect, type Page } from '@playwright/test';
 
 /** Les pages atteignables depuis le menu du planificateur. */
 export type PageTrajet = 'recharge' | 'feuille' | 'trajet' | 'meteo' | 'alti'
-  | 'options' | 'partage' | 'vehicule' | 'couches';
+  | 'monuments' | 'options' | 'partage' | 'vehicule' | 'couches';
 
 /**
  * Ouvre le planificateur et ramène sa page d'accueil.
