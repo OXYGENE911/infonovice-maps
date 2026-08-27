@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { ouvrirPlanificateur } from './planificateur';
 
 /* OUVRIR UN VOLET SANS SAVOIR OÙ IL VIT.
  *
@@ -44,12 +45,11 @@ export async function ouvrirVolet(page: Page, selecteur: string): Promise<void> 
   const hote = page.locator(`.vue-hote:has(${selecteur})`);
   if (await hote.count() > 0) {
     const vue = await hote.first().getAttribute('data-vue');
-    const tete = page.locator('.maplibregl-ctrl-top-left summary')
-      .filter({ hasText: 'Itinéraire' });
-    if (await page.locator('.iti[open]').count() === 0) await tete.click();
-    if (await page.locator('.vue-accueil:visible').count() === 0) {
-      await page.locator('.vue-retour').click();
-    }
+    /* L'OUVERTURE ET LE RETOUR VIVENT DANS planificateur.ts : les ecrire une
+       seconde fois ici, c'etait les ecrire une seconde fois FAUX. La CI a
+       attrape la version d'ici, qui cliquait une fleche de retour invisible
+       quand le volet etait ferme. */
+    await ouvrirPlanificateur(page);
     await page.locator(`.iti-vers[data-vers="${vue}"]`).click();
     await expect(page.locator(`.vue[data-vue="${vue}"]`)).toBeVisible();
     return;
