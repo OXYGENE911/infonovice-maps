@@ -121,6 +121,9 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   const poi = new PanneauPoi();
   poi.carte = carte;
   panneau.loger('couches', poi);
+  /* LE MODE TRAJET DU PLANIFICATEUR SAIT EFFACER LES BORNES NATIONALES : quand
+     un plan de recharge est à l'écran, seules restent les bornes du corridor. */
+  panneau.couchesBornes = poi;
 
   const trafic = new PanneauTrafic();
   trafic.carte = carte;

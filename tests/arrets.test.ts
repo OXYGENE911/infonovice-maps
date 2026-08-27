@@ -291,3 +291,65 @@ describe('cleBorne', () => {
     expect(a).not.toBe(b);
   });
 });
+
+/* LE PLAFOND DE CHARGE — la demande d'Armelin du 27/08/2026 : « spécifier à
+   combien de pourcentage de recharge maximale on souhaite partir de la borne.
+   Par exemple, filtré à 80 % maximum. » C'est un plafond DUR : il peut ajouter
+   des arrêts, et il peut rendre un trajet infaisable — auquel cas le refus
+   nomme le réglage plutôt que de laisser chercher. */
+describe('le plafond de charge de l’usager', () => {
+  test('sans plafond, rien ne change : on charge ce qu’il faut', () => {
+    /* Le même trajet que « il MONTE au-delà quand le dernier tronçon
+       l'exige » : l'absence de plafond doit reproduire le comportement
+       historique à l'identique. */
+    const r = plan({ distanceM: 500_000, bornes: [borne(250, 150)] });
+    expect(r.faisable).toBe(true);
+    expect(r.arrets[0]!.socDepart).toBeGreaterThan(80);
+  });
+
+  test('un plafond à 80 tronque la charge… et le plan ajoute un arrêt', () => {
+    /* 500 km, borne à 250 : sans plafond, un seul arrêt chargé à ~99 %. Avec
+       un plafond à 80, la borne de 250 ne suffit plus (80 % font 224 km, il
+       en reste 250 plus la cible) : le plan doit prendre AUSSI la borne
+       suivante au lieu de mentir sur le premier départ. */
+    const bornes = [borne(250, 150), borne(400, 150)];
+    const sans = plan({ distanceM: 500_000, bornes });
+    expect(sans.arrets).toHaveLength(1);
+
+    const avec = plan({ distanceM: 500_000, bornes, plafondCharge: 80 });
+    expect(avec.faisable).toBe(true);
+    for (const a of avec.arrets) {
+      expect(a.socDepart, 'aucun départ ne dépasse le plafond').toBeLessThanOrEqual(80);
+    }
+    expect(avec.arrets.length).toBeGreaterThan(sans.arrets.length);
+  });
+
+  test('arriver AU-DESSUS du plafond n’oblige pas à vidanger', () => {
+    /* Un arrêt imposé tôt : on y arrive à ~89 %. Le plafond à 80 ne doit pas
+       faire « repartir » plus bas qu'on est arrivé. */
+    const halte = borne(30, 150, 'La halte');
+    const r = plan({
+      distanceM: 200_000, bornes: [halte],
+      imposees: [cleBorne(halte)], plafondCharge: 80,
+    });
+    expect(r.faisable).toBe(true);
+    expect(r.arrets[0]!.socDepart).toBeCloseTo(r.arrets[0]!.socArrivee, 5);
+  });
+
+  test('quand le plafond rend le trajet infaisable, le refus le NOMME', () => {
+    /* Une seule borne à 250 km d'un trajet de 500 : à 80 % de départ, les
+       250 km restants (89 % de batterie) ne passent pas, et aucune autre
+       borne n'existe. Le refus doit désigner le remède. */
+    const r = plan({ distanceM: 500_000, bornes: [borne(250, 150)], plafondCharge: 80 });
+    expect(r.faisable).toBe(false);
+    expect(r.motif).toContain('plafond de charge');
+  });
+
+  test('un plafond absurde est ramené dans la fourchette raisonnable', () => {
+    // 5 % de plafond interdirait tout tronçon : borné à 50, le plan vit.
+    const bornes = [borne(100, 150), borne(200, 150), borne(300, 150), borne(400, 150)];
+    const r = plan({ distanceM: 450_000, bornes, plafondCharge: 5 });
+    expect(r.faisable).toBe(true);
+    for (const a of r.arrets) expect(a.socDepart).toBeLessThanOrEqual(50);
+  });
+});

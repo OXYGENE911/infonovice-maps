@@ -31,6 +31,7 @@ import {
   chargerCommodites, ErreurCommodites, TYPES_COMMODITE, type Commodite,
 } from '../lib/commodites';
 import { distanceM } from '../lib/le-long-du-trajet';
+import { cleBorne } from '../lib/arrets';
 import { adresseInverse } from '../lib/adresse';
 import { PRISES } from '../lib/poi';
 import { palierDe, PALIERS } from '../lib/puissance';
@@ -74,6 +75,13 @@ export function anciennete(iso: string | null, maintenant = new Date()): string 
 /** Ce que le cartouche sait demander au planificateur. */
 export interface PorteItineraire {
   allerVers(point: { lon: number; lat: number }, libelle: string): void;
+  /* LE PLAN DE RECHARGE SE COMMANDE AUSSI D'ICI — Armelin, le 27/08/2026 :
+     « sélectionner une borne proposée sur le trajet pour en voir son détail et
+     décider de la retirer », « sélectionner une borne non proposée […] et
+     proposer de l'ajouter à l'itinéraire ». Optionnelles : le cartouche reste
+     utilisable avec un planificateur qui ne sait pas encore répondre. */
+  etatDansLePlan?(cle: string): 'retenu' | 'candidat' | null;
+  basculerArret?(cle: string, action: 'imposer' | 'ecarter'): void;
 }
 
 export class FicheBorne extends HTMLElement {
@@ -281,6 +289,29 @@ export class FicheBorne extends HTMLElement {
       this.fermer();
     });
     boite.append(aller);
+
+    /* LE PLAN DE RECHARGE, quand il est à l'écran et que cette borne est sur
+       le trajet. LA CLÉ est celle du planificateur (cleBorne) : identifiant
+       d'itinérance d'abord, position sinon — le nom seul désignerait des
+       centaines de stations. Aucun bouton hors trajet : proposer d'ajouter au
+       plan une borne à 300 km de la route serait une promesse creuse. */
+    const cle = cleBorne(cible);
+    const etat = this.#itineraire.etatDansLePlan?.(cle) ?? null;
+    if (etat && this.#itineraire.basculerArret) {
+      const bascule = document.createElement('button');
+      bascule.type = 'button';
+      bascule.className = 'fb-plan';
+      bascule.textContent = etat === 'retenu'
+        ? 'Retirer cet arrêt du plan de recharge'
+        : 'Ajouter au plan de recharge';
+      bascule.addEventListener('click', () => {
+        this.#itineraire?.basculerArret?.(cle, etat === 'retenu' ? 'ecarter' : 'imposer');
+        /* LE CARTOUCHE SE FERME : le plan vient de changer sous les yeux de
+           l'usager — pastilles et liste — et c'est LUI qu'on regarde alors. */
+        this.fermer();
+      });
+      boite.append(bascule);
+    }
     return boite;
   }
 
