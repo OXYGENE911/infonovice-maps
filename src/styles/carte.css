@@ -99,10 +99,14 @@ body { font-family: var(--police); background: var(--fond); }
 @media (max-width: 640px) {
   .entete {
     top: calc(var(--sur-encoche) + 6px); left: 6px;
-    /* LA PLACE DU MENU EST RÉSERVÉE : à pleine largeur, l'en-tête passait
-       SUR le bouton Menu — « enu » à l'écran, vu sur capture. Le bouton
-       Menu doit toujours rester visible : c'est un critère du mandat. */
-    max-width: calc(100vw - 96px);
+    /* LA PLACE DU MENU EST RÉSERVÉE PAR `right`, PAS PAR max-width : en
+       shrink-to-fit, le champ de recherche prend sa largeur NATURELLE, qui
+       dépend des polices — 215 px sous celles de la CI Linux, sous le
+       plafond, et l'en-tête recouvrait le Menu (« enu » à l'écran, vu sur
+       capture ; revu en CI le 28/08). Ancré des deux côtés, son bord droit
+       ne dépend plus d'aucune métrique de police. 130 px : le bouton Menu
+       mesuré à ~111 px sous les polices CI, plus une marge. */
+    right: 130px; max-width: none;
     padding: 6px 10px; gap: 8px;
     flex-wrap: nowrap; align-items: center;
   }
