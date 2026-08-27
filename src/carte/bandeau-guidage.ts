@@ -23,6 +23,7 @@ import {
   etatGuidage, distanceEnMots, heureArriveeEstimee, type OptionsGuidage,
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
+import { flecheManoeuvre } from './icone-manoeuvre';
 import { refermerPanneaux } from './panneaux';
 
 /** Un arrêt de recharge à annoncer pendant le trajet. */
@@ -100,8 +101,14 @@ export class BandeauGuidage extends HTMLElement {
     this.innerHTML = `
       <div class="bg">
         <div class="bg-manoeuvre">
-          <p class="bg-instruction"></p>
-          <p class="bg-distance"></p>
+          <!-- LA FLÈCHE ANTICIPE LA PHRASE : « indiquer les flèches de
+               direction à chaque intersection ou sortie » (27/08/2026). La
+               phrase reste la vérité ; la flèche se lit depuis un support. -->
+          <span class="bg-fleche" aria-hidden="true"></span>
+          <div class="bg-manoeuvre-texte">
+            <p class="bg-instruction"></p>
+            <p class="bg-distance"></p>
+          </div>
         </div>
         <p class="bg-restant" role="status"></p>
         <p class="bg-arret"></p>
@@ -299,6 +306,16 @@ export class BandeauGuidage extends HTMLElement {
 
     const instruction = this.querySelector('.bg-instruction') as HTMLElement;
     const distance = this.querySelector('.bg-distance') as HTMLElement;
+
+    /* LA FLÈCHE SUIT L'ÉTAPE — et disparaît hors route ou sans feuille :
+       une flèche qui pointe au hasard est pire qu'aucune. */
+    const fleche = this.querySelector('.bg-fleche') as HTMLElement;
+    if (!e.horsRoute && e.etape) {
+      fleche.innerHTML = flecheManoeuvre(e.etape.manoeuvre);
+      fleche.hidden = false;
+    } else {
+      fleche.hidden = true;
+    }
 
     if (e.horsRoute) {
       /* ON LE DIT, ON NE DEVINE PAS. Continuer d'annoncer une manœuvre pour

@@ -2,7 +2,7 @@
 // testées à sec sur des fixtures AU FORMAT RÉEL du service (vérifié par
 // appels réels le 21/08/2026, docs/apis.md).
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { traduireInstruction, libelleVoie, versEtapes, etapesItineraire, ErreurFeuille } from '../src/lib/feuille-de-route';
+import { traduireInstruction, libelleVoie, versEtapes, etapesItineraire, manoeuvreDe, ErreurFeuille } from '../src/lib/feuille-de-route';
 
 describe('traduireInstruction', () => {
   test('couvre les manœuvres courantes en français', () => {
@@ -84,7 +84,7 @@ describe('versEtapes', () => {
       etape('arrive', 'straight', '', 0),
     ] }] });
     expect(e).toHaveLength(3);
-    expect(e[0]).toEqual({ texte: 'Départ', voie: 'Rue de Rivoli', distance: 98.2 });
+    expect(e[0]).toEqual({ texte: 'Départ', voie: 'Rue de Rivoli', distance: 98.2, manoeuvre: 'straight' });
     expect(e[1]!.voie).toBe('A6');
     expect(e[2]!.texte).toBe('Vous êtes arrivé');
   });
@@ -104,8 +104,8 @@ describe('versEtapes', () => {
       { instruction: { type: 'arrive' } },
     ] }] });
     expect(e).toHaveLength(2);
-    expect(e[0]).toEqual({ texte: 'Départ', voie: 'Pont de Sevres', distance: 0 });
-    expect(e[1]).toEqual({ texte: 'Vous êtes arrivé', voie: '', distance: 0 });
+    expect(e[0]).toEqual({ texte: 'Départ', voie: 'Pont de Sevres', distance: 0, manoeuvre: 'straight' });
+    expect(e[1]).toEqual({ texte: 'Vous êtes arrivé', voie: '', distance: 0, manoeuvre: 'arrivee' });
   });
 });
 
@@ -160,5 +160,26 @@ describe('etapesItineraire (fetch simulé)', () => {
     vi.stubGlobal('fetch', f);
     await expect(etapesItineraire(A, B, 'car')).rejects.toThrow('étapes exploitables');
     expect(f).toHaveBeenCalledTimes(1);
+  });
+});
+
+/* LA MANŒUVRE À DESSINER — la flèche du suivi (PR C du cadrage navigation
+   mobile). La phrase reste la vérité ; ceci ne décide que du dessin. */
+describe('manoeuvreDe', () => {
+  test('les huit directions passent telles quelles', () => {
+    expect(manoeuvreDe({ type: 'turn', modifier: 'right' })).toBe('right');
+    expect(manoeuvreDe({ type: 'turn', modifier: 'sharp left' })).toBe('sharp left');
+    expect(manoeuvreDe({ type: 'turn', modifier: 'uturn' })).toBe('uturn');
+  });
+
+  test('rond-point et arrivée ont leur propre glyphe, quel que soit le modifier', () => {
+    expect(manoeuvreDe({ type: 'roundabout', modifier: 'right' })).toBe('rond-point');
+    expect(manoeuvreDe({ type: 'rotary' })).toBe('rond-point');
+    expect(manoeuvreDe({ type: 'arrive' })).toBe('arrivee');
+  });
+
+  test('un code inconnu retombe sur tout droit — jamais une flèche au hasard', () => {
+    expect(manoeuvreDe({ type: 'continue', modifier: 'sideways' })).toBe('straight');
+    expect(manoeuvreDe({})).toBe('straight');
   });
 });

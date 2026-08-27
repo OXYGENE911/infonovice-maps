@@ -455,8 +455,13 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
         suivi rend le nord ; la vitesse GPS s'affiche dans un cercle, cachée
         quand le récepteur ne la donne pas. Aucune permission nouvelle : le
         cap vient du fixe GPS, pas de DeviceOrientation.
-      · [ ] PR « prochaine manœuvre en grand » ; [ ] PR « vue 3D » si
-        l'essai visuel du fond raster tient.
+      · [x] PR #59 — LA PROCHAINE MANŒUVRE EN GRAND : la manœuvre OSRM
+        voyage désormais avec chaque étape (`manoeuvreDe`, normalisée) et le
+        bandeau la DESSINE — une seule flèche, huit rotations, glyphes
+        propres pour le rond-point et l'arrivée, rien de committé. Au
+        départ, tout droit : le modifier du moteur dit le côté
+        d'engagement, pas un ordre. La flèche disparaît hors route.
+      · [ ] PR « vue 3D » si l'essai visuel du fond raster tient.
 
 ## Itérations suivantes (backlog ouvert)
 - PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),

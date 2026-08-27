@@ -1305,9 +1305,16 @@ bandeau-guidage[hidden] { display: none; }
 }
 
 .bg-manoeuvre {
-  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 10px;
   padding-bottom: 8px; border-bottom: 1px solid var(--bord);
 }
+/* LA FLÈCHE DE MANŒUVRE — en grand, à la taille qu'on lit depuis un support. */
+.bg-fleche { flex: 0 0 auto; display: flex; color: var(--accent); }
+.bg-fleche svg { width: 40px; height: 40px; display: block; }
+.bg-fleche[hidden] { display: none; }
+.bg-manoeuvre-texte { flex: 1 1 auto; display: flex; align-items: baseline;
+  gap: 10px; flex-wrap: wrap; }
+bandeau-guidage.bg-compact .bg-fleche svg { width: 30px; height: 30px; }
 .bg-instruction {
   margin: 0; flex: 1 1 60%;
   font: 700 17px var(--police); color: var(--texte-1); line-height: 1.25;
