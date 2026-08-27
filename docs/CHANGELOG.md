@@ -2,6 +2,18 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.36.1] — 2026-08-27 — Les six études du mandat, verdicts datés (PR #51)
+
+Aucun code : deux documents qui décident. docs/etudes-mandat-27-08.md rend
+ses verdicts — API produits (bibliothèque partagée maintenant, proxy jamais,
+API HTTP avec le backend premium seulement), péages (nommer oui, éviter non),
+restauration (chantier de présentation), monuments (Mérimée sans clé, trois
+mesures avant la PR), badges e-MSP (écarté : aucune source publique),
+alternatives (« comparer avec/sans autoroute » plutôt qu'un faux A/B/C).
+docs/navigation-mobile.md cadre le suivi téléphone en quatre PR et deux
+études, wake lock en tête — sans renier « le suivi refuse de s'appeler
+navigation ».
+
 ## [0.36.0] — 2026-08-27 — Sept retours d'interface, et un « réservé » qui n'interdit rien (PR #50)
 
 La suite du mandat du 27/08 : les retours d'interface, chacun traité pour ce
