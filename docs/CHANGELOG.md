@@ -2,6 +2,31 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.40.0] — 2026-08-27 — Les lieux d'exception près du trajet (PR #56)
+
+La demande Nomadio du mandat : « afficher des lieux d'exception à proximité
+de son parcours [avec] le détour maximal acceptable en termes de minutes »,
+et pouvoir « les ajouter à la planification ». DATAtourisme étant écarté
+(clé), la voie souveraine est la base MÉRIMÉE du ministère de la Culture.
+
+- **Les trois mesures d'abord** (46 760 notices du fichier du jour) : 95 %
+  de coordonnées exploitables ; 14 990 monuments CLASSÉS contre 31 321
+  inscrits seuls — la coupe éditoriale retient les classés, un inscrit est
+  souvent une façade privée ; l'index réduit tient en 890 Ko.
+- **L'index est ENGENDRÉ et versionné** (scripts/generer-monuments.mjs) : le
+  CSV source pèse 100 Mo et ne touche jamais le navigateur ; la CI ne dépend
+  pas du seau du ministère ; le fichier servi n'entre ni dans le budget
+  bundle ni dans le précache. Un parcours E2E charge l'index RÉEL du dépôt :
+  s'il ne trouvait rien entre Paris et Lyon, c'est l'index qui serait cassé.
+- **La page « Lieux d'exception »** du planificateur : détour maximal 5/10/
+  20 min, calcul LOCAL sur le tracé (même mécanique que les bornes), trente
+  lieux au plus — les plus proches du tracé — remis dans l'ordre du chemin,
+  marqueurs sur la carte, et « Passer par là » qui fait du monument une
+  ÉTAPE du trajet et recalcule. L'approximation est écrite : le détour est
+  estimé à vol d'oiseau, la route réelle peut faire plus.
+
+551 tests unitaires (+5), 163 parcours E2E (+2).
+
 ## [0.39.1] — 2026-08-27 — Les commodités en puces à pictogrammes (PR #55)
 
 « Restautoroute affiche des informations claires avec de beaux logos toutes

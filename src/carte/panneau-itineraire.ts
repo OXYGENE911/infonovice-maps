@@ -10,7 +10,7 @@ import type { Map as CarteMapLibre, GeoJSONSource } from 'maplibre-gl';
 import { Marker } from 'maplibre-gl';
 import { RechercheAdresse } from './recherche';
 import { EtapesItineraire } from './etapes-itineraire';
-import { calculerItineraire, formaterDistance, formaterDuree, PROFILS, EVITEMENTS, ErreurItineraire, type Profil, type Itineraire, type Eviter } from '../lib/itineraire';
+import { calculerItineraire, formaterDistance, formaterDuree, PROFILS, EVITEMENTS, ErreurItineraire, MAX_ETAPES, type Profil, type Itineraire, type Eviter } from '../lib/itineraire';
 import type { PointGeo } from '../lib/coordonnees';
 import { lireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { listerFavoris } from '../lib/favoris';
@@ -38,6 +38,10 @@ import { ErreurPoi, type PoiCarburant, type PoiBorne } from '../lib/poi';
 import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import { palierDe } from '../lib/puissance';
 import { chargerPeages, ErreurPeages } from '../lib/peages';
+import {
+  chargerMonuments, monumentsDuTrajet, ErreurMonuments, KM_PAR_MINUTE,
+  type Monument,
+} from '../lib/monuments';
 import { svgCommodite } from './icone-commodite';
 import { meteoA, phraseMeteo, symboleTemps, heureArrivee, formaterHeure, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
 import type { FicheBorne } from './fiche-borne';
@@ -71,6 +75,7 @@ const VUES = {
   trajet: 'Sur le trajet',
   meteo: 'Météo à l’arrivée',
   alti: 'Profil altimétrique',
+  monuments: 'Lieux d’exception',
   partage: 'Partager ou exporter',
 } as const;
 
@@ -105,6 +110,9 @@ export class PanneauItineraire extends HTMLElement {
       un bulletin d'arrivée périme avec l'horloge, pas avec l'itinéraire. */
   #meteoPour: Itineraire | null = null;
   #meteoLe: Date | null = null;
+  /** Itinéraire dont les lieux d'exception sont calculés (ou en cours). */
+  #monumentsPour: Itineraire | null = null;
+  #marqueursMonuments: Marker[] = [];
   #annulationTrajet: AbortController | null = null;
   #marqueursTrajet: Marker[] = [];
   #marqueurs: Marker[] = [];
@@ -355,6 +363,8 @@ export class PanneauItineraire extends HTMLElement {
                 <span>Météo à l’arrivée</span><span aria-hidden="true">›</span></button>
               <button type="button" class="iti-vers" data-vers="alti">
                 <span>Profil altimétrique</span><span aria-hidden="true">›</span></button>
+              <button type="button" class="iti-vers" data-vers="monuments">
+                <span>Lieux d’exception</span><span aria-hidden="true">›</span></button>
               <button type="button" class="iti-vers iti-vers-partage" data-vers="partage">
                 <span>Partager ou exporter</span><span aria-hidden="true">›</span></button>
             </nav>
@@ -473,6 +483,24 @@ export class PanneauItineraire extends HTMLElement {
           <!-- ======================= ALTIMÉTRIE ======================= -->
           <section class="vue" data-vue="alti" hidden>
             <div class="iti-alti-corps" role="status"></div>
+          </section>
+
+          <!-- ================== LIEUX D'EXCEPTION ================== -->
+          <!-- Les monuments CLASSÉS de la base Mérimée à un détour
+               raisonnable du tracé — la demande Nomadio du 27/08/2026 :
+               « le détour maximal acceptable en termes de minutes ». -->
+          <section class="vue" data-vue="monuments" hidden>
+            <div class="iti-monuments-reglages">
+              <label>À moins de
+                <select class="monuments-detour" aria-label="Détour maximal en minutes">
+                  <option value="5">5 min</option>
+                  <option value="10" selected>10 min</option>
+                  <option value="20">20 min</option>
+                </select>
+                de détour environ
+              </label>
+            </div>
+            <div class="iti-monuments-corps" role="status"></div>
           </section>
 
           <!-- ======================= PARTAGE ======================= -->
@@ -602,6 +630,12 @@ export class PanneauItineraire extends HTMLElement {
         void this.#chercherSurLeTrajet();
       });
     }
+    /* Changer le détour maximal rejoue le calcul des lieux — LOCAL : l'index
+       est déjà en mémoire, aucune relecture réseau. */
+    this.querySelector('.monuments-detour')?.addEventListener('change', () => {
+      this.#monumentsPour = null;
+      void this.#chargerLieux();
+    });
 
     /* UN LIEN PARTAGÉ S'OUVRE TOUT SEUL : le fragment porte l'itinéraire, on
        le rejoue à l'arrivée. Défensif — un fragment forgé rend null et la
@@ -643,6 +677,9 @@ export class PanneauItineraire extends HTMLElement {
     this.#annulationTrajet?.abort();
     this.#rechargePour = null;
     this.#annulationRecharge?.abort();
+    this.#monumentsPour = null;
+    this.#marqueursMonuments.forEach((m) => m.remove());
+    this.#marqueursMonuments = [];
     /* LE MODE TRAJET S'ÉTEINT AVEC SON TRAJET : les bornes du corridor
        appartiennent à l'itinéraire qui les a produites, et la couche
        nationale reprend sa place. */
@@ -650,7 +687,7 @@ export class PanneauItineraire extends HTMLElement {
     this.#meteoPour = null; this.#meteoLe = null;
     for (const cls of
       ['iti-alti', 'iti-feuille', 'iti-trajet', 'iti-meteo', 'iti-recharge',
-        'iti-peages'] as const) {
+        'iti-peages', 'iti-monuments'] as const) {
       const corps = this.querySelector(`.${cls}-corps`);
       if (corps) corps.textContent = '';
     }
@@ -1063,6 +1100,122 @@ export class PanneauItineraire extends HTMLElement {
     }
   }
 
+  /* ---- les lieux d'exception près du trajet ---- */
+
+  /**
+   * Charge l'index des monuments classés (une fois par session) et calcule
+   * localement ceux à portée de détour du tracé.
+   */
+  async #chargerLieux(): Promise<void> {
+    const corps = this.querySelector('.iti-monuments-corps') as HTMLElement;
+    const iti = this.#dernier;
+    if (this.#vue !== 'monuments' || !iti || this.#monumentsPour === iti) return;
+    this.#monumentsPour = iti;
+    corps.textContent = 'Lecture du répertoire des monuments classés (890 Ko,'
+      + ' une fois par visite)…';
+    try {
+      const monuments = await chargerMonuments();
+      if (this.#dernier !== iti || this.#vue !== 'monuments') return;
+      const detourMin = this.#valeurReglage('.monuments-detour', 10);
+      const trouves = monumentsDuTrajet(
+        monuments, iti.geometrie.coordinates as [number, number][], detourMin,
+      );
+      this.#afficherLieux(trouves, detourMin);
+    } catch (e) {
+      if (this.#dernier !== iti) return;
+      this.#monumentsPour = null; // réessayable
+      corps.textContent = e instanceof ErreurMonuments
+        ? e.message : 'Les lieux d’exception ne sont pas disponibles pour le moment.';
+    }
+  }
+
+  #afficherLieux(trouves: SurLeTrajet<Monument>[], detourMin: number): void {
+    const corps = this.querySelector('.iti-monuments-corps') as HTMLElement;
+    corps.replaceChildren();
+    this.#marqueursMonuments.forEach((m) => m.remove());
+    this.#marqueursMonuments = [];
+
+    if (trouves.length === 0) {
+      corps.textContent = `Aucun monument classé à moins de ${detourMin} min`
+        + ' environ de ce trajet. Élargissez le détour, ou profitez de la route.';
+      return;
+    }
+
+    const resume = document.createElement('p');
+    resume.className = 'monuments-resume';
+    resume.textContent = `${trouves.length} monument${trouves.length > 1 ? 's' : ''}`
+      + ` classé${trouves.length > 1 ? 's' : ''} à moins de ${detourMin} min environ`;
+    corps.append(resume);
+
+    const liste = document.createElement('ol');
+    liste.className = 'monuments-liste';
+    /* TRENTE AU PLUS : un trajet qui longe la Loire en croise des centaines,
+       et la liste redeviendrait un mur. Les plus PROCHES DU TRACÉ d'abord —
+       c'est le détour qui décide — puis remis dans l'ordre du chemin. */
+    const montres = [...trouves].sort((a, b) => a.ecart - b.ecart).slice(0, 30)
+      .sort((a, b) => a.avancement - b.avancement);
+    for (const t of montres) {
+      const item = document.createElement('li');
+
+      const voir = document.createElement('button');
+      voir.type = 'button';
+      voir.className = 'monuments-voir';
+      voir.textContent = t.poi.titre;
+      voir.setAttribute('aria-label', `Voir ${t.poi.titre} sur la carte`);
+      voir.addEventListener('click', () => {
+        this.#carte?.flyTo({ center: [t.poi.lon, t.poi.lat], zoom: 15 });
+      });
+
+      const detail = document.createElement('span');
+      detail.className = 'monuments-detail';
+      const minutes = Math.max(1, Math.round(t.ecart / 1000 / KM_PAR_MINUTE));
+      detail.textContent = [
+        t.poi.commune || null,
+        `km ${Math.round(t.avancement / 1000)}`,
+        `≈ ${minutes} min de détour`,
+      ].filter(Boolean).join(' · ');
+
+      /* « LES AJOUTER À LA PLANIFICATION » — la moitié opérante de la
+         demande : le monument devient une ÉTAPE du trajet, et le moteur
+         recalcule par là. */
+      const detour = document.createElement('button');
+      detour.type = 'button';
+      detour.className = 'monuments-detour-par';
+      detour.textContent = 'Passer par là';
+      detour.setAttribute('aria-label', `Faire un détour par ${t.poi.titre}`);
+      detour.addEventListener('click', () => {
+        const etapes = this.querySelector('etapes-itineraire') as EtapesItineraire;
+        if (etapes.points.length >= MAX_ETAPES) {
+          detail.textContent = `Le trajet porte déjà ${MAX_ETAPES} étapes —`
+            + ' retirez-en une pour ajouter ce détour.';
+          return;
+        }
+        etapes.points = [...etapes.points, { lon: t.poi.lon, lat: t.poi.lat }];
+        void this.#calculer();
+        this.#allerA('accueil');
+      });
+
+      item.append(voir, detail, detour);
+      liste.append(item);
+
+      if (this.#carte) {
+        this.#marqueursMonuments.push(
+          new Marker({ color: '#8A5AC2', scale: 0.72 })
+            .setLngLat([t.poi.lon, t.poi.lat]).addTo(this.#carte),
+        );
+      }
+    }
+    corps.append(liste);
+
+    const note = document.createElement('p');
+    note.className = 'monuments-note';
+    note.textContent = (trouves.length > montres.length
+      ? `Les ${montres.length} plus proches du tracé sont listés, sur ${trouves.length}. ` : '')
+      + 'Monuments historiques CLASSÉS, base Mérimée (ministère de la Culture).'
+      + ' Le détour est estimé à vol d’oiseau — la route réelle peut faire plus.';
+    corps.append(note);
+  }
+
   /* DES PUCES À PICTOGRAMMES, PLUS UNE PHRASE. La phrase était le bon choix
      dans un accordéon dense ; Armelin, le 27/08/2026, montrant
      restautoroute.fr : « affiche des informations claires avec de beaux
@@ -1199,6 +1352,7 @@ export class PanneauItineraire extends HTMLElement {
     if (vue === 'trajet') void this.#chercherSurLeTrajet();
     if (vue === 'meteo') void this.#chargerMeteo();
     if (vue === 'alti') void this.#chargerProfil();
+    if (vue === 'monuments') void this.#chargerLieux();
   }
 
 

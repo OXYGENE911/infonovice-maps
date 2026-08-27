@@ -407,10 +407,15 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
         toutes lettres, distance qui décide, douze puces au plus et le reste
         compté. Dans le plan de recharge ET la fiche de borne. Rendu vérifié
         par capture avant livraison.
-      · Monuments (base Mérimée, ministère de la Culture, sans clé —
-        accessible, vérifié le 27/08) : prometteur ; TROIS mesures avant la
-        PR (couverture des coordonnées, poids d'un index, classés vs
-        inscrits).
+      · Monuments (base Mérimée) : LES TROIS MESURES FAITES le 27/08 sur le
+        fichier du jour (46 760 notices) — 95 % de coordonnées ; index
+        classés 890 Ko brut ; 14 990 classés vs 31 321 inscrits seuls (la
+        coupe éditoriale : les classés). → LIVRÉ, PR #56 : page « Lieux
+        d'exception » du planificateur — détour maximal 5/10/20 min, index
+        ENGENDRÉ et versionné (scripts/generer-monuments.mjs, le CSV de
+        100 Mo ne touche jamais le navigateur), calcul local sur le tracé,
+        « Passer par là » ajoute le monument en ÉTAPE et recalcule.
+        L'approximation à vol d'oiseau est écrite sous la liste.
       · Badges e-MSP : ÉCARTÉ avec le motif — aucune source publique ne dit
         quels badges une station accepte ; les réseaux préférés sont
         l'approximation honnête. À réévaluer si l'open data d'itinérance

@@ -745,6 +745,82 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
   expect(appelsCarbu, 'appel parti sous le zoom minimal').toBe(appelsAvant);
 });
 
+test('LIEUX D’EXCEPTION : liste à la demande, détour réglable, étape ajoutée', async ({ page }) => {
+  /* La demande Nomadio du 27/08 : des monuments à un détour maximal en
+     minutes, qu'on peut AJOUTER à la planification. L'index est simulé pour
+     contrôler les distances : un château à ~200 m du tracé, une abbaye à
+     20 km — le réglage du détour tranche entre les deux. */
+  await page.route('**/donnees/monuments.json', (route) => route.fulfill({
+    contentType: 'application/json',
+    /* LES DISTANCES SONT PERPENDICULAIRES À LA DIAGONALE, pas verticales : la
+       première abbaye posée « à 20 km au nord » n'était qu'à 4 km du tracé,
+       et le test mesurait l'inverse de ce qu'il croyait. Château à ~200 m,
+       abbaye à ~17 km — le réglage 10/20 minutes tranche entre les deux. */
+    body: JSON.stringify([
+      [3.6, 47.301, 'Château de la Colline', 'Beaune'],
+      [3.5, 47.75, 'Abbaye lointaine', 'Ailleurs'],
+    ]),
+  }));
+  const urls: string[] = [];
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    urls.push(decodeURIComponent(route.request().url()));
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+        distance: 390_000, duration: 13_000,
+      }),
+    });
+  });
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  await allerA(page, 'monuments');
+
+  const corps = page.locator('.iti-monuments-corps');
+  // À 10 minutes (défaut), le château répond, l'abbaye à 20 km se tait.
+  await expect(corps).toContainText('Château de la Colline', { timeout: 15_000 });
+  await expect(corps).not.toContainText('Abbaye lointaine');
+  await expect(corps).toContainText(/≈ \d+ min de détour/);
+  // La source et l'approximation, en toutes lettres.
+  await expect(corps).toContainText('Mérimée');
+  await expect(corps).toContainText('vol d’oiseau');
+
+  // Élargir à 20 minutes fait entrer l'abbaye — calcul LOCAL, index déjà lu.
+  await page.getByLabel('Détour maximal en minutes').selectOption('20');
+  await expect(corps).toContainText('Abbaye lointaine');
+
+  /* « PASSER PAR LÀ » : le monument devient une ÉTAPE, le moteur recalcule
+     par lui — la requête suivante porte des intermediates. */
+  const avant = urls.length;
+  await page.getByRole('button', { name: 'Faire un détour par Château de la Colline' }).click();
+  await expect.poll(() => urls.length, { timeout: 10_000 }).toBeGreaterThan(avant);
+  const derniere = urls[urls.length - 1]!;
+  expect(derniere, 'l’étape du détour n’est pas partie au moteur')
+    .toContain('intermediates=3.6');
+});
+
+test('LIEUX D’EXCEPTION : l’index RÉEL engendré se charge et répond', async ({ page }) => {
+  /* Sans simulation : le fichier public/donnees/monuments.json versionné au
+     dépôt (14 350 monuments classés) est servi par le site lui-même. Un
+     Paris-Lyon traverse la Bourgogne : s'il ne trouvait RIEN à 20 minutes,
+     c'est l'index qui serait cassé — pas la France qui manquerait de
+     châteaux. */
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 390_000, duration: 13_000,
+    }),
+  }));
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  await allerA(page, 'monuments');
+  await expect(page.locator('.monuments-resume'), 'l’index réel ne rend rien : cassé ?')
+    .toContainText(/\d+ monuments? classés?/, { timeout: 20_000 });
+});
+
 test('PÉAGES : relevés à la demande, cabines FONDUES en gares, limites dites', async ({ page }) => {
   /* Le verdict de l'étude du 27/08 : les péages se RELÈVENT (OSM), ils ne
      s'évitent pas (le moteur public n'a pas de clause). Trois cabines d'une

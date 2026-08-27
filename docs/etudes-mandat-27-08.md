@@ -124,6 +124,18 @@ moyenne — même mécanique que « le long du trajet » (PR #11).
 Trois mesures à faire AVANT la PR ; si la couverture des coordonnées est
 mauvaise, l'écrire et s'arrêter là.**
 
+MESURES FAITES le 27/08/2026 au soir, sur le fichier du jour (46 760
+notices, séparateur `|`, champs cités multilignes) :
+1. coordonnées WGS84 exploitables : **95 %** (44 484) ;
+2. index réduit [lon, lat, titre, commune] : 3,37 Mo brut / 0,93 Mo gzip
+   toutes protections ; **890 Ko brut pour les seuls classés** ;
+3. « classé MH » au moins partiellement : **14 990** ; « inscrit » seul :
+   **31 321**. La coupe éditoriale retient les classés — un inscrit est
+   souvent une façade privée sans rien à visiter.
+LIVRÉ en PR #56 (page « Lieux d'exception », index engendré par
+scripts/generer-monuments.mjs et versionné — la CI ne dépend pas du seau
+OVH du ministère, et le CSV de 100 Mo ne touche jamais le navigateur).
+
 ## 5. Badges de recharge dans le profil
 
 La demande : renseigner ses badges (Chargemap, Izivia, Electra…) pour ne
