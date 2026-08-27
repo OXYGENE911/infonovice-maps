@@ -8,7 +8,7 @@ body { font-family: var(--police); background: var(--fond); }
 
 /* Lien d'évitement : premier élément focusable, visible seulement au clavier. */
 .evitement {
-  position: fixed; top: -48px; left: 12px; z-index: 30;
+  position: fixed; top: -48px; left: 12px; z-index: var(--z-bandeaux);
   padding: 10px 16px; border-radius: 10px;
   background: var(--fond-profond); color: #fff; font-size: 14px;
   transition: top .15s;
@@ -21,7 +21,8 @@ body { font-family: var(--police); background: var(--fond); }
    apparaît EN LIGNE, sur tout Chromium — poussait le champ de recherche
    88 px hors du viewport, sans aucun moyen de défiler jusqu'à lui. */
 .entete {
-  position: fixed; top: 12px; left: 12px; z-index: 20;
+  position: fixed; top: calc(var(--sur-encoche) + 12px); left: 12px;
+  z-index: var(--z-entete);
   display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
   max-width: calc(100vw - 24px);
   padding: 9px 16px;
@@ -44,7 +45,7 @@ body { font-family: var(--police); background: var(--fond); }
 }
 .recherche input:focus-visible { outline: none; box-shadow: var(--focus); }
 .recherche ul {
-  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 25;
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: var(--z-suggestions);
   margin: 0; padding: 6px; list-style: none;
   background: var(--fond); border: 1px solid var(--bord);
   border-radius: var(--rayon); box-shadow: var(--ombre-m);
@@ -62,7 +63,7 @@ body { font-family: var(--police); background: var(--fond); }
 }
 .recherche .contexte { font-size: 11.5px; color: var(--texte-3); white-space: nowrap; }
 .recherche-erreur {
-  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 25;
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: var(--z-suggestions);
   padding: 10px 12px; border-radius: 10px;
   background: #7A2E2E; color: #fff; font: 400 13px var(--police);
 }
@@ -90,8 +91,45 @@ body { font-family: var(--police); background: var(--fond); }
 .pa-copier-mots:focus-visible { outline: none; box-shadow: var(--focus); }
 @media (max-width: 560px) { .entete-note { display: none; } }
 
+/* L'EN-TÊTE MOBILE SE FAIT PETIT — le premier reproche des captures du
+   28/08 : « le bandeau supérieur est trop haut », il mangeait deux rangées
+   (marque puis grand champ) sur un tiers de l'écran. Sur téléphone : UNE
+   rangée — la marque en petit, le champ qui prend le reste — et des marges
+   serrées. La carte est le produit ; l'en-tête est un outil. */
+@media (max-width: 640px) {
+  .entete {
+    top: calc(var(--sur-encoche) + 6px); left: 6px;
+    /* LA PLACE DU MENU EST RÉSERVÉE : à pleine largeur, l'en-tête passait
+       SUR le bouton Menu — « enu » à l'écran, vu sur capture. Le bouton
+       Menu doit toujours rester visible : c'est un critère du mandat. */
+    max-width: calc(100vw - 96px);
+    padding: 6px 10px; gap: 8px;
+    flex-wrap: nowrap; align-items: center;
+  }
+  .entete-marque { font-size: 13px; white-space: nowrap; }
+  .entete recherche-adresse { min-width: 0; }
+  .recherche input { min-width: 0; padding: 7px 10px; font-size: 13.5px; }
+  /* Le rail « Itinéraire » se cale sous l'en-tête réduit : la variable
+     --hauteur-entete est MESURÉE par main.ts, rien à recalibrer ici. */
+}
+/* SOUS 400 px, LA MARQUE S'EFFACE : le nom vit dans l'onglet et l'icône
+   PWA — à l'écran, chaque pixel revient au champ de recherche. */
+@media (max-width: 400px) {
+  .entete-marque { display: none; }
+}
+
+/* LES CONTRÔLES DU COIN BAS-DROIT NE SE CHEVAUCHENT PLUS. La capture du
+   28/08 montre le bouton « Me localiser » posé SUR le zoom : chaque groupe
+   reprend sa marge, et le coin entier remonte au-dessus de la barre de
+   geste du téléphone. */
+#carte .maplibregl-ctrl-bottom-right { padding-bottom: var(--sur-barre-basse); }
+#carte .maplibregl-ctrl-bottom-left { padding-bottom: var(--sur-barre-basse); }
+#carte .maplibregl-ctrl-bottom-right .maplibregl-ctrl {
+  margin: 0 10px 10px 0; float: right; clear: both;
+}
+
 .sans-js {
-  position: fixed; inset: auto 12px 12px 12px; z-index: 30;
+  position: fixed; inset: auto 12px calc(var(--sur-barre-basse) + 12px) 12px; z-index: var(--z-bandeaux);
   padding: 14px 16px; border-radius: var(--rayon);
   background: var(--fond-profond); color: #F0F2F5; font-size: 14px;
 }
@@ -400,7 +438,7 @@ etapes-itineraire { display: grid; gap: 7px; }
    les clics destinés au panneau déroulé — attrapé trois fois par Playwright
    (fonds sous POI, radios sous Favoris) avant ce correctif GÉNÉRAL. */
 .maplibregl-ctrl-top-left .maplibregl-ctrl { position: relative; }
-.maplibregl-ctrl-top-left .maplibregl-ctrl:has(details[open]) { z-index: 10; }
+.maplibregl-ctrl-top-left .maplibregl-ctrl:has(details[open]) { z-index: var(--z-volet-ouvert); }
 
 /* --- Sur le trajet (PR #11) --- */
 .iti-trajet summary {
@@ -469,7 +507,7 @@ etapes-itineraire { display: grid; gap: 7px; }
 .pa-photo-etat { margin: 5px 0 0; font: 500 12px var(--police); color: var(--texte-2); }
 .pa-photo-etat:empty { display: none; }
 .photo-voile {
-  position: fixed; inset: 0; z-index: 1000;
+  position: fixed; inset: 0; z-index: var(--z-modale);
   place-items: center; padding: 24px;
   background: rgba(8, 14, 24, .82);
 }
@@ -1049,7 +1087,7 @@ etat-connexion { display: contents; }
    visuel pour les cartouches de détail. */
 fiche-borne,
 fiche-lieu {
-  position: absolute; z-index: 5;
+  position: absolute; z-index: var(--z-cartouche);
   left: 12px; bottom: calc(var(--attribution-sommet, 26px) + 12px);
   width: min(360px, calc(100vw - 24px));
   /* La hauteur cède devant la carte : mieux vaut un cartouche qui défile
@@ -1292,7 +1330,7 @@ fiche-borne[hidden], fiche-lieu[hidden] { display: none; }
       de l'information ; un bandeau plein écran l'effacerait.
    ========================================================================== */
 bandeau-guidage {
-  position: absolute; z-index: 6;
+  position: absolute; z-index: calc(var(--z-cartouche) + 1);
   left: 12px; right: 12px;
   bottom: calc(var(--attribution-sommet, 26px) + 12px);
   display: block; pointer-events: none;

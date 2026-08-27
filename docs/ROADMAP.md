@@ -491,6 +491,20 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
         jusqu'à 50 km, rafraîchi toutes les cinq minutes tant que le suivi
         tourne, silence derrière soi et hors route.
 
+## Le mandat UX du 28/08/2026 — triage dans docs/mandat-ux-28-08.md
+Cahier des charges complet transmis par Armelin après essai sur téléphone.
+Le triage (déjà livré / contredit par mesure / à faire / à décider) vit dans
+docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
+- [x] PR #65 — UX-1, le socle mobile : en-tête une rangée + place du Menu
+      réservée, safe areas, jetons z-index, contrôles bas-droite espacés,
+      contraste du contact Professionnels ; toucher fantôme cherché et NON
+      reproduit (garde-fou posé).
+- [ ] UX-2 état « destination sélectionnée » · [ ] UX-3 planification
+      allégée · [ ] UX-4 « Pourquoi ce plan ? » · [ ] EV-1 réglages élargis
+      · [ ] NAV-1 orientation trois états · [ ] POI-1 catégories Overpass.
+- DÉCISIONS D'ARMELIN : bottom sheets généralisées ; profils de pauses ;
+  copilote / routines / arrivée réelle (§4 du triage).
+
 ## Itérations suivantes (backlog ouvert)
 - PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),
   zones de danger…
