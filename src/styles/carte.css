@@ -1354,12 +1354,17 @@ bandeau-guidage.bg-compact .bg-reduire { padding: 5px 10px; font-size: 12px; }
 
 /* LA RECHERCHE D'UN RÉSEAU dans le filtre : un champ, pas une liste de cent
    quarante entrées. */
-.poi-reseau-recherche {
+.poi-reseau-recherche,
+.poi-nom-station {
   width: 100%; box-sizing: border-box; margin: 2px 0 4px;
   padding: 6px 9px; border-radius: 8px; border: 1px solid var(--bord-2);
   background: var(--fond); font: 400 12px var(--police); color: var(--texte-1);
 }
-.poi-reseau-recherche:focus-visible { outline: none; box-shadow: var(--focus); }
+.poi-reseau-recherche:focus-visible,
+.poi-nom-station:focus-visible { outline: none; box-shadow: var(--focus); }
+/* Le champ vit DANS sa ligne de filtre : l'étiquette au-dessus, le champ
+   pleine largeur en dessous. */
+.poi-filtre-ligne:has(.poi-nom-station) { display: block; }
 .poi-etendue-note { line-height: 1.5; }
 
 /* ==========================================================================

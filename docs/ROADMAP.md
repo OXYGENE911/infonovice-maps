@@ -410,7 +410,11 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
       · Alternatives A/B/C : pas de moteur, pas de vraies alternatives ; une
         PR « Comparer avec/sans autoroute » (2 appels, plans de recharge
         rejoués localement sur chaque tracé) est honnête et utile.
-- [ ] IZIVIA FAST sur McDonald's — MESURÉ le 27/08, le fichier le permet :
+- [x] PR #52 — « Nom de station contient… » : le filtre est livré, envoyé au
+      service (`suggest()`) au-delà du zoom 12, appliqué à l'index aplati
+      (casse, accents, ponctuation sourds) en deçà, débounce 400 ms, persisté
+      avec les autres filtres. Taper « mcdonald » répond au cas IZIVIA.
+      L'origine, MESURÉE le 27/08, le fichier le permet :
       les stations en restaurant portent « Mc Donald's »/« McDonald's » dans
       `nom_station` (2 484 lignes IZIVIA FAST, ~36 McDo ; graphies
       inconstantes). La réponse générique est un FILTRE « nom de station

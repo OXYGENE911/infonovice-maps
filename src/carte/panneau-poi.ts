@@ -215,6 +215,18 @@ export class PanneauPoi extends HTMLElement {
               <option value="300">300 kW et plus</option>
             </select>
           </label>
+          <!-- LE NOM DE STATION CONTIENT… — « IZIVIA FAST a fait un
+               partenariat avec McDonald pour mettre des bornes dans leur
+               McDo. Ce serait bien de distinguer ces deux types de
+               stations » (Armelin, 27/08/2026). Mesuré : les stations en
+               restaurant portent le nom dans nom_station, en graphies
+               inconstantes — d'où une recherche par sous-chaîne, envoyée AU
+               SERVICE au-delà du zoom 12 et appliquée à l'index en deçà. -->
+          <label class="poi-filtre-ligne">Nom de station contient
+            <input type="search" class="poi-nom-station"
+              placeholder="McDonald, Aire de Beaune…"
+              aria-label="Nom de station contient">
+          </label>
           <p class="poi-filtre-titre">Connecteurs acceptés</p>
           ${PRISES.map((p) => `
             <label><input type="checkbox" class="poi-prise" value="${p.cle}"> ${p.libelle}</label>`).join('')}
@@ -291,6 +303,18 @@ export class PanneauPoi extends HTMLElement {
       this.#filtres = { ...this.#filtres, puissanceMin: Number.isFinite(v) && v > 0 ? v : undefined };
       surFiltre();
     });
+    /* LE NOM SE TAPE, DONC IL SE DÉBOUNCE — 400 ms, comme l'autocomplétion :
+       chaque frappe au-delà du zoom 12 partirait sinon en requête au portail,
+       et les quotas publics sont un bien commun. */
+    let minuteurNom: ReturnType<typeof setTimeout> | undefined;
+    this.querySelector<HTMLInputElement>('.poi-nom-station')?.addEventListener('input', (e) => {
+      const brut = (e.target as HTMLInputElement).value.trim();
+      clearTimeout(minuteurNom);
+      minuteurNom = setTimeout(() => {
+        this.#filtres = { ...this.#filtres, nom: brut === '' ? undefined : brut };
+        surFiltre();
+      }, 400);
+    });
     /* LA RECHERCHE NE TOUCHE NI AUX FILTRES NI À LA CARTE : elle ne fait que
        réduire ce que la liste montre. Un réseau DÉJÀ COCHÉ reste affiché même
        s'il ne correspond pas à la recherche — sinon un filtre actif
@@ -363,13 +387,18 @@ export class PanneauPoi extends HTMLElement {
       const prises = prisesLues.filter(
         (v): v is ClePrise => typeof v === 'string' && PRISES.some((p) => p.cle === v));
       const reseauxLus = Array.isArray(m['reseaux']) ? m['reseaux'] : [];
+      const nomLu = typeof m['nom'] === 'string' && m['nom'].trim() !== ''
+        ? m['nom'].trim() : undefined;
       this.#filtres = {
         puissanceMin: Number.isFinite(puissance) && puissance > 0 ? puissance : undefined,
         prises,
         reseaux: reseauxLus.filter((v): v is string => typeof v === 'string' && v.trim() !== ''),
+        nom: nomLu,
       };
       const select = this.querySelector<HTMLSelectElement>('.poi-puissance');
       if (select) select.value = String(this.#filtres.puissanceMin ?? 0);
+      const champNom = this.querySelector<HTMLInputElement>('.poi-nom-station');
+      if (champNom && nomLu) champNom.value = nomLu;
       for (const cle of prises) {
         const c = this.querySelector<HTMLInputElement>(`.poi-prise[value="${cle}"]`);
         if (c) c.checked = true;

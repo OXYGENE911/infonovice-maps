@@ -25,8 +25,29 @@ automatiquement ».
   réduit, il garde la manœuvre, le restant et les boutons ; la note de limite,
   lue au démarrage, se range.
 
-532 tests unitaires, 157 parcours E2E (+3 : caméra suspendue et rendue,
+536 tests unitaires, 160 parcours E2E (+3 : caméra suspendue et rendue,
 verrou compté demandé/rendu, bandeau mesuré plus petit).
+
+## [0.37.0] — 2026-08-27 — « Nom de station contient… » (PR #52)
+
+Le filtre né du cas IZIVIA/McDonald's : « IZIVIA FAST a fait un partenariat
+avec McDonald […] ce serait bien de distinguer ces deux types de stations. »
+Mesuré d'abord : les stations en restaurant portent bien le nom dans
+`nom_station` (~36 lignes sur les 2 484 d'IZIVIA FAST), en graphies
+inconstantes — « Mc Donald's », « McDonald's », doubles espaces, espace sans
+chasse en fin de nom. D'où un filtre GÉNÉRIQUE par sous-chaîne, et non un cas
+spécial McDo :
+- au-delà du zoom 12, il part AU SERVICE en `suggest()` — le plein-texte du
+  portail, vérifié par appel réel (36 lignes pour « Donald », zéro pour un
+  `like` : le portail compare des mots entiers) ; un tri local d'un ensemble
+  plafonné à 100 mentirait ;
+- en deçà, il s'applique à l'index national en mémoire, APLATI : casse,
+  accents et ponctuation ne comptent pas — « mcdonald » trouve les deux
+  graphies, « beziers » trouve « Béziers-Frigoulas » ;
+- débounce de 400 ms (chaque frappe partirait sinon au portail), persisté
+  avec les autres filtres, restauré au chargement.
+
+536 tests unitaires (+4 sur les chaînes réelles du fichier), 156 parcours E2E.
 
 ## [0.36.1] — 2026-08-27 — Les six études du mandat, verdicts datés (PR #51)
 

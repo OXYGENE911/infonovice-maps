@@ -430,6 +430,7 @@ export function filtrerStations(
      doit retenir aussi les stations écrites « Lidl France ». Voir `cleReseau`
      et la mesure qui l'a motivée. */
   const reseaux = new Set((filtres.reseaux ?? []).map(cleReseau));
+  const nom = normaliserNom(filtres.nom ?? '');
   return stations.filter((s) => {
     if (puissanceMin > 0 && s.puissance < puissanceMin) return false;
     // OU entre les prises : un véhicule accepte l'une OU l'autre.
@@ -439,8 +440,28 @@ export function filtrerStations(
       const brut = s.operateur ?? s.reseau;
       if (!brut || !reseaux.has(cleReseau(brut))) return false;
     }
+    if (nom !== '' && !normaliserNom(s.nom).includes(nom)) return false;
     return true;
   });
+}
+
+/**
+ * Le nom d'une station, aplati pour la recherche par sous-chaîne.
+ *
+ * LES GRAPHIES DU FICHIER SONT INCONSTANTES, mesuré le 27/08/2026 sur les
+ * stations IZIVIA FAST en restaurant : « Mc Donald's - Bellac »,
+ * « McDonald's -  Argentan », et même « Barbezieux-Saint-Hilaire​ » avec
+ * un ESPACE SANS CHASSE en fin de nom. On abaisse la casse, on retire les
+ * accents et TOUT ce qui n'est pas lettre ou chiffre : « mcdonald » trouve
+ * les deux graphies, « st médard » trouve « Saint-Médard » non, mais
+ * « medard » oui — l'usager tape un morceau, pas une clé exacte.
+ */
+export function normaliserNom(brut: string): string {
+  return brut
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 }
 
 /**
