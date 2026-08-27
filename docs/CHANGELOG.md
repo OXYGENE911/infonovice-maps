@@ -2,6 +2,26 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.41.2] — 2026-08-27 — La prochaine manœuvre en grand (PR #59)
+
+La troisième PR du cadrage navigation mobile : « indiquer les flèches de
+direction à chaque intersection ou sortie ».
+
+- La manœuvre OSRM VOYAGE désormais avec chaque étape (`manoeuvreDe`,
+  normalisée : huit directions, rond-point, arrivée) — elle mourait jusqu'ici
+  dans la traduction en français.
+- Le bandeau la DESSINE en grand : UNE flèche, huit rotations — c'est ce qui
+  les rend cohérentes entre elles — et des glyphes propres pour le rond-point
+  et l'arrivée. Rien de committé, tout se relit (le précédent des éclairs).
+- AU DÉPART, TOUT DROIT : le `modifier` du moteur y dit le côté d'engagement,
+  pas un ordre — une flèche « à gauche » sous le mot « Départ » se lirait
+  comme un ordre. Vu sur les fixtures mêmes du projet.
+- La flèche DISPARAÎT hors route ou sans feuille : une flèche qui pointe au
+  hasard est pire qu'aucune.
+
+554 tests unitaires (+3), 165 parcours E2E (assertion ajoutée au parcours du
+suivi).
+
 ## [0.41.1] — 2026-08-27 — Le cap et la vitesse GPS (PR #58)
 
 La deuxième PR du cadrage navigation mobile.

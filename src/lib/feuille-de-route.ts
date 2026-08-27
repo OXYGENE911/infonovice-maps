@@ -13,6 +13,13 @@ const DELAI_MS = 8000;
 
 export class ErreurFeuille extends Error {}
 
+/* LA MANŒUVRE NORMALISÉE — pour la DESSINER, pas seulement la dire. Le suivi
+   affiche une flèche par manœuvre (PR C du cadrage navigation mobile) : la
+   phrase reste la vérité, la flèche l'anticipe d'un coup d'œil. */
+export type Manoeuvre = 'uturn' | 'sharp right' | 'right' | 'slight right'
+  | 'straight' | 'slight left' | 'left' | 'sharp left'
+  | 'rond-point' | 'arrivee';
+
 export interface EtapeRoute {
   /** L'instruction en français : « Tournez à droite ». */
   texte: string;
@@ -20,6 +27,22 @@ export interface EtapeRoute {
   voie: string;
   /** Longueur de l'étape en mètres. */
   distance: number;
+  /** La manœuvre à dessiner. `straight` quand le code ne dit rien de mieux. */
+  manoeuvre: Manoeuvre;
+}
+
+/** `type` + `modifier` OSRM → la manœuvre à dessiner — PURE. */
+export function manoeuvreDe(i: { type?: string; modifier?: string }): Manoeuvre {
+  if (i.type === 'arrive') return 'arrivee';
+  if (i.type === 'roundabout' || i.type === 'rotary') return 'rond-point';
+  /* AU DÉPART, LE MODIFIER DIT DE QUEL CÔTÉ ON S'ENGAGE — pas une manœuvre à
+     venir. Une flèche « à gauche » sous le mot « Départ » se lirait comme un
+     ordre : on dessine tout droit. Vu sur les fixtures mêmes de ce fichier. */
+  if (i.type === 'depart') return 'straight';
+  const m = i.modifier ?? '';
+  const connues: Manoeuvre[] = ['uturn', 'sharp right', 'right', 'slight right',
+    'straight', 'slight left', 'left', 'sharp left'];
+  return (connues as string[]).includes(m) ? m as Manoeuvre : 'straight';
 }
 
 /* ---- traduction des codes OSRM, décidée une fois ---- */
@@ -128,6 +151,7 @@ export function versEtapes(brut: unknown): EtapeRoute[] {
       texte: traduireInstruction(e.instruction ?? {}),
       voie,
       distance: Number.isFinite(e.distance) ? (e.distance as number) : 0,
+      manoeuvre: manoeuvreDe(e.instruction ?? {}),
     });
   }
   if (etapes.length < 2) {

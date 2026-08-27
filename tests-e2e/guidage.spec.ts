@@ -86,6 +86,11 @@ test('le bouton « Démarrer » lance le suivi, instructions comprises', async (
   await expect(bandeau.locator('.bg-instruction')).toContainText('A6', { timeout: 15_000 });
   await expect(bandeau.locator('.bg-restant')).toContainText('restants');
   await expect(bandeau.locator('.bg-restant')).toContainText('arrivée vers');
+  /* ET LA FLÈCHE DE MANŒUVRE, DESSINÉE — « indiquer les flèches de direction
+     à chaque intersection » (27/08/2026). Au départ : tout droit, jamais le
+     côté d'engagement du moteur. */
+  await expect(bandeau.locator('.bg-fleche svg'),
+    'la manœuvre doit se dessiner, pas seulement se dire').toHaveCount(1);
 });
 
 test('le bandeau DIT qu’il n’est pas une navigation guidée', async ({ page }) => {
