@@ -420,9 +420,14 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
         quels badges une station accepte ; les réseaux préférés sont
         l'approximation honnête. À réévaluer si l'open data d'itinérance
         paraît.
-      · Alternatives A/B/C : pas de moteur, pas de vraies alternatives ; une
-        PR « Comparer avec/sans autoroute » (2 appels, plans de recharge
-        rejoués localement sur chaque tracé) est honnête et utile.
+      · Alternatives A/B/C : pas de moteur, pas de vraies alternatives →
+        LIVRÉ, PR #57 : « Comparer avec et sans autoroute » dans la page
+        Options — un appel au moteur pour la variante, les plans de recharge
+        des DEUX tracés calculés localement (à neuf, sans les consignes du
+        trajet courant — c'est écrit sous le résultat), le TOTAL
+        route + charge affiché, et « Prendre cette variante » qui bascule
+        l'évitement et recalcule. Les variantes sont nommées par ce qu'elles
+        sont, jamais « itinéraire B ».
 - [x] PR #52 — « Nom de station contient… » : le filtre est livré, envoyé au
       service (`suggest()`) au-delà du zoom 12, appliqué à l'index aplati
       (casse, accents, ponctuation sourds) en deçà, débounce 400 ms, persisté

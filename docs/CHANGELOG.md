@@ -2,6 +2,31 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.41.0] — 2026-08-27 — Comparer avec et sans autoroute (PR #57)
+
+Le verdict « alternatives » de l'étude appliqué : le moteur public ne rend
+pas d'itinéraires A/B/C (mesuré PR #6), et une variante par étape décalée
+serait un artifice. On calcule LA variante qui a un sens — l'autre choix
+d'autoroute — et on la nomme par ce qu'elle est.
+
+- Page Options, à la demande : UN appel au moteur pour la variante ; les
+  plans de recharge des deux tracés se calculent LOCALEMENT quand un véhicule
+  est renseigné (l'index est en cache) — car c'est le TOTAL route + charge
+  qui décide : une portion gratuite d'autoroute peut battre la nationale une
+  fois la charge comptée.
+- Les plans comparés sont calculés À NEUF, sans les arrêts imposés ni les
+  réseaux préférés du trajet courant — des consignes posées sur un tracé ne
+  valent pas pour l'autre, et c'est écrit sous le résultat. Les péages ne
+  sont pas comptés : le tarif n'est dans aucune source publique — écrit
+  aussi.
+- « Prendre cette variante » bascule l'évitement (état ET case cochée) et
+  recalcule — la variante devient le trajet.
+- En chemin, la lecture du profil véhicule est EXTRAITE (#lireVehicule) :
+  le plan de recharge et la comparaison lisaient IndexedDB chacun à sa
+  façon — deux lecteurs, une seule interprétation désormais.
+
+551 tests unitaires, 164 parcours E2E (+1).
+
 ## [0.40.0] — 2026-08-27 — Les lieux d'exception près du trajet (PR #56)
 
 La demande Nomadio du mandat : « afficher des lieux d'exception à proximité
