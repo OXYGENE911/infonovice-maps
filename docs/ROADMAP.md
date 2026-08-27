@@ -416,6 +416,11 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
         100 Mo ne touche jamais le navigateur), calcul local sur le tracé,
         « Passer par là » ajoute le monument en ÉTAPE et recalcule.
         L'approximation à vol d'oiseau est écrite sous la liste.
+        COMPLÉTÉ LE SOIR MÊME (PR #62, retour d'Armelin : « impossible de
+        cliquer dessus pour avoir le détail ») : la fiche du lieu — même
+        cartouche que les bornes — depuis la liste ET le marqueur, avec la
+        notice Mérimée officielle à un clic ; index enrichi (référence
+        100 %, siècle 85 %, adresse 27 % — 0,42 Mo gzippés).
       · Badges e-MSP : ÉCARTÉ avec le motif — aucune source publique ne dit
         quels badges une station accepte ; les réseaux préférés sont
         l'approximation honnête. À réévaluer si l'open data d'itinérance

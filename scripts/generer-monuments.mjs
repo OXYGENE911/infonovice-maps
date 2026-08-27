@@ -81,8 +81,18 @@ const iTypo = colonne('Typologie_de_la_protection');
 const iTitre = colonne('Titre_editorial_de_la_notice');
 const iDenom = colonne('Denomination_de_l_edifice');
 const iCommune = colonne('Commune_forme_editoriale');
+/* LA FICHE D'UN LIEU (retour d'Armelin du 27/08 au soir : « impossible de
+   cliquer dessus pour avoir le détail à l'identique d'une station ») demande
+   trois champs de plus, MESURÉS avant d'être embarqués : la référence
+   Mérimée (100 % des classés — elle ouvre la notice officielle POP), le
+   siècle de construction (85 %), l'adresse (27 % — affichée quand elle est
+   là). L'index passe de 890 Ko à 1,50 Mo brut — 0,42 Mo gzippés servis. */
+const iRef = colonne('Reference');
+const iSiecle = colonne('Format_abrege_du_siecle_de_construction');
+const iAdresse = colonne('Adresse_forme_editoriale');
 for (const [nom, i] of [['coordonnées', iCoord], ['typologie', iTypo],
-  ['titre', iTitre], ['commune', iCommune]]) {
+  ['titre', iTitre], ['commune', iCommune], ['référence', iRef],
+  ['siècle', iSiecle], ['adresse', iAdresse]]) {
   if (i < 0) throw new Error(`Colonne ${nom} introuvable — le format a changé.`);
 }
 
@@ -106,7 +116,10 @@ for (const l of iterateur) {
   const commune = (l[iCommune] ?? '').trim().slice(0, 40);
   // Un tableau de tuples, pas d'objets : les clés répétées 15 000 fois
   // pèseraient le tiers du fichier.
-  monuments.push([Number(lon.toFixed(5)), Number(lat.toFixed(5)), titre, commune]);
+  monuments.push([Number(lon.toFixed(5)), Number(lat.toFixed(5)), titre, commune,
+    (l[iRef] ?? '').trim().slice(0, 12),
+    (l[iSiecle] ?? '').trim().slice(0, 40),
+    (l[iAdresse] ?? '').trim().slice(0, 60)]);
 }
 
 monuments.sort((a, b) => a[0] - b[0]);

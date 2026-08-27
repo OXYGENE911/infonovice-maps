@@ -803,8 +803,9 @@ test('LIEUX D’EXCEPTION : liste à la demande, détour réglable, étape ajout
        et le test mesurait l'inverse de ce qu'il croyait. Château à ~200 m,
        abbaye à ~17 km — le réglage 10/20 minutes tranche entre les deux. */
     body: JSON.stringify([
-      [3.6, 47.301, 'Château de la Colline', 'Beaune'],
-      [3.5, 47.75, 'Abbaye lointaine', 'Ailleurs'],
+      [3.6, 47.301, 'Château de la Colline', 'Beaune', 'PA00078023',
+        '12e s.;16e s.', '2 rue du Donjon'],
+      [3.5, 47.75, 'Abbaye lointaine', 'Ailleurs', 'PA00078099', '', ''],
     ]),
   }));
   const urls: string[] = [];
@@ -836,14 +837,37 @@ test('LIEUX D’EXCEPTION : liste à la demande, détour réglable, étape ajout
   await page.getByLabel('Détour maximal en minutes').selectOption('20');
   await expect(corps).toContainText('Abbaye lointaine');
 
-  /* « PASSER PAR LÀ » : le monument devient une ÉTAPE, le moteur recalcule
-     par lui — la requête suivante porte des intermediates. */
+  /* LE NOM OUVRE LA FICHE — le retour du 27/08 au soir : « impossible de
+     cliquer dessus pour avoir le détail à l'identique d'une station ». Elle
+     dit le statut, l'identité, et OUVRE LA NOTICE OFFICIELLE. */
+  /* DEUX CHEMINS VERS LA FICHE — le nom dans la liste ET le marqueur sur la
+     carte portent le même intitulé accessible : on clique celui de la liste
+     (le marqueur, lui, se prouve par son rôle même dans cette résolution). */
+  await page.locator('.monuments-voir', { hasText: 'Château de la Colline' }).click();
+  const ficheLieu = page.locator('fiche-lieu');
+  await expect(ficheLieu).toBeVisible();
+  await expect(ficheLieu.locator('.fb-titre')).toHaveText('Château de la Colline');
+  await expect(ficheLieu).toContainText('Monument historique classé');
+  await expect(ficheLieu).toContainText('Beaune');
+  await expect(ficheLieu).toContainText('2 rue du Donjon');
+  // « 12e s.;16e s. » se lit « 12e s., 16e s. » — le point-virgule est technique.
+  await expect(ficheLieu).toContainText('12e s., 16e s.');
+  const notice = ficheLieu.locator('a.fb-notice');
+  await expect(notice).toContainText('PA00078023');
+  await expect(notice).toHaveAttribute('href',
+    'https://www.pop.culture.gouv.fr/notice/merimee/PA00078023');
+  await expect(ficheLieu, 'horaires de visite non déclarés : la fiche le dit')
+    .toContainText('renseignez-vous');
+
+  /* « PASSER PAR LÀ » DEPUIS LA FICHE : le monument devient une ÉTAPE, le
+     moteur recalcule par lui — la requête suivante porte des intermediates. */
   const avant = urls.length;
-  await page.getByRole('button', { name: 'Faire un détour par Château de la Colline' }).click();
+  await ficheLieu.getByRole('button', { name: 'Passer par là (étape du trajet)' }).click();
   await expect.poll(() => urls.length, { timeout: 10_000 }).toBeGreaterThan(avant);
   const derniere = urls[urls.length - 1]!;
   expect(derniere, 'l’étape du détour n’est pas partie au moteur')
     .toContain('intermediates=3.6');
+  await expect(ficheLieu, 'la fiche se range : le trajet vient de changer').toBeHidden();
 });
 
 test('LIEUX D’EXCEPTION : l’index RÉEL engendré se charge et répond', async ({ page }) => {

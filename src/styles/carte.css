@@ -1045,7 +1045,10 @@ etat-connexion { display: contents; }
       téléphone, elle occupe le bas de l'écran et laisse la carte visible —
       choisir une borne suppose de voir où elle est.
    ========================================================================== */
-fiche-borne {
+/* fiche-lieu partage TOUT le dessin de fiche-borne : un seul langage
+   visuel pour les cartouches de détail. */
+fiche-borne,
+fiche-lieu {
   position: absolute; z-index: 5;
   left: 12px; bottom: calc(var(--attribution-sommet, 26px) + 12px);
   width: min(360px, calc(100vw - 24px));
@@ -1054,7 +1057,7 @@ fiche-borne {
   max-height: min(70vh, 620px);
   display: block;
 }
-fiche-borne[hidden] { display: none; }
+fiche-borne[hidden], fiche-lieu[hidden] { display: none; }
 
 .fb {
   display: flex; flex-direction: column; max-height: inherit;
@@ -1175,7 +1178,7 @@ fiche-borne[hidden] { display: none; }
 /* Sur téléphone, le cartouche devient un bandeau bas : il laisse voir la
    carte au-dessus, ce qu'une carte flottante centrée ne ferait pas. */
 @media (max-width: 640px) {
-  fiche-borne {
+  fiche-borne, fiche-lieu {
     left: 8px; right: 8px; width: auto;
     bottom: calc(var(--attribution-sommet, 26px) + 8px);
     max-height: 62vh;
@@ -1535,7 +1538,7 @@ body.en-guidage #carte .maplibregl-ctrl-top-right summary:hover {
   opacity: 1;
 }
 /* Le cartouche de détail d'une borne n'a rien à faire par-dessus le suivi. */
-body.en-guidage fiche-borne { display: none; }
+body.en-guidage fiche-borne, body.en-guidage fiche-lieu { display: none; }
 
 /* ==========================================================================
    LES TITRES DE SECTION NE CHEVAUCHENT PLUS RIEN
@@ -1618,6 +1621,8 @@ body.en-guidage fiche-borne { display: none; }
   cursor: pointer; font: 600 13px var(--police); color: var(--accent);
 }
 .fb-plan:hover { background: var(--fond-doux); }
+.fb-notice { color: var(--accent); text-decoration: underline; }
+.fb-notice:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
 .fb-plan:focus-visible { outline: none; box-shadow: var(--focus); }
 
 /* La recherche de réseau dans le plan de recharge, même forme qu'ailleurs. */
