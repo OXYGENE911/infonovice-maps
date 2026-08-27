@@ -11,6 +11,58 @@ du 26/08). Le rôle vit désormais sur un conteneur interne — qui EMPORTE l'id
 n'ont bougé, et `#carte` reste le nœud que MapLibre reçoit. Un parcours E2E
 verrouille la structure : `<main>` sans rôle, l'application DANS le repère.
 
+## [0.35.0] — 2026-08-27 — Le plan se règle, et se choisit sur la carte (PR #47)
+
+Session mandatée « en autonomie » par Armelin, avec une vingtaine de retours
+triés dans la ROADMAP. Cette PR livre le premier d'entre eux — le cœur du
+planificateur EV.
+
+### Le plafond de charge, et un plafond qui était mort
+
+« Spécifier à combien de pourcentage de recharge maximale on souhaite partir
+de la borne. Par exemple, filtré à 80 % maximum. » En l'implémentant, la
+relecture a montré que le « plafond de confort » à 80 % du modèle ne tronquait
+JAMAIS rien : sa clause d'échappement relevait la limite à 100 dès que le
+besoin dépassait 80, et en dessous on chargeait le besoin exact. Du code qui
+avait l'air d'une prudence, et qui n'en était pas une. Le nouveau réglage
+(« Repartir des bornes au plus à » — 80/90/au besoin) est un plafond DUR : il
+peut ajouter des arrêts, et quand il rend le trajet infaisable, le refus le
+NOMME — « Vous pouvez aussi relever le plafond de charge. »
+
+Au passage, un epsilon dans la comparaison d'arrivée : chaque charge vise
+EXACTEMENT la cible, et l'arithmétique flottante rendait un 9,999 999 99 « en
+dessous » d'une cible de 10 — un arrêt de plus réclamé pour un billionième.
+
+### « Arriver aux bornes avec au moins »
+
+Le réglage demandé (« choisir à combien de pourcentage de batterie il souhaite
+arriver sur une borne ») EXISTAIT — c'est la réserve — sous l'intitulé « Ne
+jamais descendre sous », qui ne répondait pas à la question posée. Renommé, et
+enrichi d'un cran à 30 %.
+
+### Le mode trajet : la carte s'assainit
+
+Le plan affiché, « toutes les autres bornes de France disparaissent de la
+carte ». Les bornes nationales s'effacent — et leur couche CESSE DE CHARGER,
+pas seulement d'afficher : des punaises invisibles qui interrogent un portail
+public seraient un gâchis silencieux. Restent le corridor du trajet (icônes de
+puissance, cliquables, filtrées par les réseaux préférés — les bornes écartées
+au « − » restent visibles : on revient sur un refus, pas sur une borne
+invisible) et les arrêts du plan en pastilles numérotées — le « 2 » de la
+carte est le « 2. » de la liste. Le volet des couches DIT ce qui se passe.
+Effacer ou recalculer le trajet rend la carte.
+
+### La fiche d'une borne commande le plan
+
+« Sélectionner une borne proposée pour en voir son détail et décider de la
+retirer » ; « sélectionner une borne non proposée et proposer de l'ajouter ».
+Le cartouche de détail porte désormais « Retirer cet arrêt du plan de
+recharge » ou « Ajouter au plan de recharge » — sur les bornes du corridor
+seulement : hors trajet, aucun bouton qui mènerait à un plan impossible.
+
+530 tests unitaires, 149 parcours E2E.
+>>>>>>> main
+
 ## [0.34.0] — 2026-08-27 — Un seul bouton, des pages, et 136 véhicules (PR #46)
 
 Sept retours du 26/08. La refonte de l'interface qu'Armelin décrivait est

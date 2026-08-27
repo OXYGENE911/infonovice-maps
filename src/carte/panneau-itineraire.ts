@@ -35,11 +35,28 @@ import { chargerCommodites, TYPES_COMMODITE, ErreurCommodites } from '../lib/com
 import { lirePreference } from '../lib/stockage';
 import { PREF_VEHICULE } from './panneau-vehicule';
 import { ErreurPoi, type PoiCarburant, type PoiBorne } from '../lib/poi';
+import { poserIconesPuissance, nomIcone } from './icone-puissance';
+import { palierDe } from '../lib/puissance';
 import { meteoA, phraseMeteo, symboleTemps, heureArrivee, formaterHeure, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
 import type { FicheBorne } from './fiche-borne';
 import type { BandeauGuidage } from './bandeau-guidage';
 
 const SOURCE = 'itineraire';
+/* LES BORNES DU MODE TRAJET — deux sources : le corridor (toutes les bornes à
+   portée du tracé, cliquables) et les arrêts du plan (pastilles numérotées).
+   Elles remplacent l'affichage national pendant qu'un plan est à l'écran :
+   « que toutes les autres bornes de France disparaissent de la carte afin de
+   n'afficher que les bornes suggérées, ainsi que toutes les autres bornes
+   présentes sur le trajet » (Armelin, 27/08/2026). */
+const SOURCE_CORRIDOR = 'iti-bornes-trajet';
+const SOURCE_ARRETS = 'iti-arrets';
+/** La couleur des arrêts retenus — celle des bornes, mais pleine et cerclée. */
+const COULEUR_ARRET = '#1E9E5A';
+
+/** Ce que le planificateur sait demander à la couche des bornes nationales. */
+export interface PorteCouchesBornes {
+  masquerBornesNationales(masquees: boolean): void;
+}
 
 /** Les pages du planificateur, et leur titre. */
 const VUES = {
@@ -88,11 +105,12 @@ export class PanneauItineraire extends HTMLElement {
   #meteoLe: Date | null = null;
   #annulationTrajet: AbortController | null = null;
   #marqueursTrajet: Marker[] = [];
-  /* LES ARRÊTS ONT LEURS PROPRES MARQUEURS. Les mêler à ceux de « sur le
-     trajet » ferait disparaître un plan de recharge dès qu'on cherche une
-     station-service — deux fonctions distinctes, deux collections. */
-  #marqueursArrets: Marker[] = [];
   #marqueurs: Marker[] = [];
+  /* LA COUCHE DES BORNES NATIONALES, pour l'effacer pendant qu'un plan est à
+     l'écran. Posée par carte.ts ; le panneau reste utilisable sans elle. */
+  #couchesBornes: PorteCouchesBornes | null = null;
+  /** Vrai quand les couches du mode trajet sont posées sur la carte. */
+  #modeTrajetPose = false;
   /* LE CARTOUCHE DE DÉTAIL, partagé avec le panneau des couches (voir
      carte.ts) : un seul pour l'application, jamais deux ouverts. */
   #fiche: FicheBorne | null = null;
@@ -217,10 +235,41 @@ export class PanneauItineraire extends HTMLElement {
     this.querySelector(`.vue[data-vue="${vue}"]`)?.appendChild(element);
   }
 
+  set couchesBornes(p: PorteCouchesBornes) { this.#couchesBornes = p; }
+
   set carte(c: CarteMapLibre) {
     this.#carte = c;
     // Repose le tracé après chaque changement de style (fond).
-    c.on('style.load', () => { if (this.#dernier) this.#tracer(this.#dernier); });
+    c.on('style.load', () => {
+      if (this.#dernier) this.#tracer(this.#dernier);
+      // Les bornes du mode trajet aussi : setStyle détruit leurs sources.
+      this.#modeTrajetPose = false;
+      if (this.#bornesTrajet.length > 0) this.#poserBornesTrajet();
+    });
+    /* LES BORNES DU TRAJET SE CLIQUENT, arrêts du plan comme candidates :
+       « sélectionner une borne pour en voir son détail et décider de la
+       retirer », « sélectionner une borne non proposée et proposer de
+       l'ajouter » (Armelin, 27/08). Les gestionnaires par couche de MapLibre
+       s'enregistrent sans que la couche existe encore : ils ne s'activent
+       qu'à sa pose. */
+    for (const couche of ['iti-arrets-pastille', 'iti-corridor']) {
+      c.on('click', couche, (e) => {
+        const natif = e.originalEvent as Event & { __clicPris?: boolean };
+        if (natif.__clicPris) return;
+        natif.__clicPris = true;
+        const f = e.features?.[0];
+        if (!f || f.geometry.type !== 'Point') return;
+        const p = f.properties ?? {};
+        const [lon, lat] = f.geometry.coordinates as [number, number];
+        this.#fiche?.ouvrir({
+          id: typeof p['id'] === 'string' && p['id'] ? p['id'] : null,
+          lon: lon!, lat: lat!,
+          nom: typeof p['nom'] === 'string' && p['nom'] ? p['nom'] : 'Station de recharge',
+        });
+      });
+      c.on('mouseenter', couche, () => { c.getCanvas().style.cursor = 'pointer'; });
+      c.on('mouseleave', couche, () => { c.getCanvas().style.cursor = ''; });
+    }
   }
 
   connectedCallback(): void {
@@ -349,12 +398,29 @@ export class PanneauItineraire extends HTMLElement {
                   <option value="30">30 %</option>
                 </select>
               </label>
-              <label>Ne jamais descendre sous
+              <!-- « ARRIVER AUX BORNES AVEC AU MOINS » : c'est la même réserve
+                   qu'avant, mais nommée par ce qu'elle décide. Armelin, le
+                   27/08 : « choisir à combien de pourcentage de batterie il
+                   souhaite arriver sur une borne de recharge ». Le réglage
+                   existait — sous un intitulé qui ne répondait pas à la
+                   question posée. -->
+              <label>Arriver aux bornes avec au moins
                 <select class="recharge-reserve" aria-label="Réserve minimale en route">
                   <option value="5">5 %</option>
                   <option value="10" selected>10 %</option>
                   <option value="15">15 %</option>
                   <option value="20">20 %</option>
+                  <option value="30">30 %</option>
+                </select>
+              </label>
+              <!-- LE PLAFOND DE CHARGE — « filtré à 80 % maximum » (Armelin,
+                   27/08). « Au besoin » est le défaut : on charge ce qu'il
+                   faut, comme avant ce réglage. -->
+              <label>Repartir des bornes au plus à
+                <select class="recharge-plafond" aria-label="Plafond de charge aux bornes">
+                  <option value="80">80 %</option>
+                  <option value="90">90 %</option>
+                  <option value="100" selected>au besoin</option>
                 </select>
               </label>
             </div>
@@ -497,7 +563,7 @@ export class PanneauItineraire extends HTMLElement {
        remis à zéro, sans quoi le garde-fou anti-recalcul avalerait le
        changement, exactement comme le seuil de vue l'avait fait pour les
        filtres de bornes. */
-    for (const cls of ['.recharge-cible', '.recharge-reserve']) {
+    for (const cls of ['.recharge-cible', '.recharge-reserve', '.recharge-plafond']) {
       this.querySelector(cls)?.addEventListener('change', () => {
         /* LE PLAN SE REJOUE, IL NE SE RECHERCHE PAS. Les bornes du trajet sont
            déjà en mémoire : remettre `#rechargePour` à zéro relancerait tout
@@ -558,6 +624,10 @@ export class PanneauItineraire extends HTMLElement {
     this.#annulationTrajet?.abort();
     this.#rechargePour = null;
     this.#annulationRecharge?.abort();
+    /* LE MODE TRAJET S'ÉTEINT AVEC SON TRAJET : les bornes du corridor
+       appartiennent à l'itinéraire qui les a produites, et la couche
+       nationale reprend sa place. */
+    this.#retirerBornesTrajet();
     this.#meteoPour = null; this.#meteoLe = null;
     for (const cls of
       ['iti-alti', 'iti-feuille', 'iti-trajet', 'iti-meteo', 'iti-recharge'] as const) {
@@ -766,9 +836,165 @@ export class PanneauItineraire extends HTMLElement {
       socDepart: this.#socDepart,
       socArrivee: this.#valeurReglage('.recharge-cible', 10),
       reserve: this.#valeurReglage('.recharge-reserve', 10),
+      plafondCharge: this.#valeurReglage('.recharge-plafond', 100),
       imposees: [...this.#imposees],
       ecartees: [...this.#ecartees],
     }));
+  }
+
+  /* ---- le mode trajet sur la carte ---- */
+
+  /**
+   * La clé d'une borne du corridor — la même que celle du planificateur.
+   */
+  #cleDe(t: SurLeTrajet<StationRapide>): string {
+    return cleBorne({ id: t.poi.id, lon: t.poi.lon, lat: t.poi.lat });
+  }
+
+  /**
+   * Pose (ou met à jour) les deux couches du mode trajet, et efface les
+   * bornes nationales.
+   *
+   * LE CORRIDOR N'EST PAS FILTRÉ PAR LES RÉSEAUX PRÉFÉRÉS À L'AFFICHAGE… si :
+   * il l'est, parce que c'est la demande exacte — « n'afficher que les bornes
+   * du réseau de son choix sur le trajet. Cela permettra d'assainir encore
+   * plus la carte. » Les bornes écartées au « − » restent visibles : on peut
+   * revenir sur un refus, pas sur une borne invisible.
+   */
+  #poserBornesTrajet(): void {
+    const carte = this.#carte;
+    if (!carte) return;
+    if (this.#bornesTrajet.length === 0) { this.#retirerBornesTrajet(); return; }
+
+    /* LES ARRÊTS DU PLAN, avec leur rang — la pastille « 2 » sur la carte est
+       la même que le « 2. » de la liste. */
+    const arrets = this.#planCourant?.faisable ? this.#planCourant.arrets : [];
+    const rangs = new Map(arrets.map((a, i) => [cleBorne(a.borne), i + 1]));
+
+    const candidates = this.#candidates();
+    const montrees = new Set(candidates.map((c) => cleBorne(c)));
+
+    const corridor: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: this.#bornesTrajet
+        .filter((t) => {
+          const cle = this.#cleDe(t);
+          // Ni les arrêts (l'autre couche les porte), ni ce que le filtre de
+          // réseau vient d'écarter — sauf les refus au « − », qu'on garde.
+          return !rangs.has(cle) && (montrees.has(cle) || this.#ecartees.has(cle));
+        })
+        .map((t) => ({
+          type: 'Feature',
+          properties: {
+            id: t.poi.id, nom: t.poi.nom,
+            icone: nomIcone(palierDe(t.poi.puissance)),
+          },
+          geometry: { type: 'Point', coordinates: [t.poi.lon, t.poi.lat] },
+        })),
+    };
+    const pastilles: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: arrets.map((a, i) => ({
+        type: 'Feature',
+        properties: { id: a.borne.id ?? null, nom: a.borne.nom, rang: String(i + 1) },
+        geometry: { type: 'Point', coordinates: [a.borne.lon, a.borne.lat] },
+      })),
+    };
+
+    try {
+      const srcCorridor = carte.getSource(SOURCE_CORRIDOR) as GeoJSONSource | undefined;
+      const srcArrets = carte.getSource(SOURCE_ARRETS) as GeoJSONSource | undefined;
+      if (srcCorridor && srcArrets) {
+        srcCorridor.setData(corridor);
+        srcArrets.setData(pastilles);
+      } else {
+        poserIconesPuissance(carte);
+        carte.addSource(SOURCE_CORRIDOR, { type: 'geojson', data: corridor });
+        carte.addSource(SOURCE_ARRETS, { type: 'geojson', data: pastilles });
+        /* Le corridor sous les arrêts : une candidate collée à un arrêt ne
+           doit pas voler son clic à la pastille numérotée. */
+        carte.addLayer({
+          id: 'iti-corridor', type: 'symbol', source: SOURCE_CORRIDOR,
+          layout: {
+            'icon-image': ['get', 'icone'],
+            'icon-size': 0.55,
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+          },
+        });
+        carte.addLayer({
+          id: 'iti-arrets-pastille', type: 'circle', source: SOURCE_ARRETS,
+          paint: {
+            'circle-radius': 15,
+            'circle-color': COULEUR_ARRET,
+            'circle-stroke-width': 3,
+            'circle-stroke-color': '#FFFFFF',
+          },
+        });
+        carte.addLayer({
+          id: 'iti-arrets-rang', type: 'symbol', source: SOURCE_ARRETS,
+          layout: {
+            'text-field': ['get', 'rang'],
+            'text-size': 15,
+            'text-allow-overlap': true,
+            'text-ignore-placement': true,
+          },
+          paint: { 'text-color': '#FFFFFF' },
+        });
+      }
+    } catch (e) {
+      // Style en chargement : style.load (branché dans `set carte`) reposera.
+      if (e instanceof Error && /style is not done loading/i.test(e.message)) return;
+      throw e;
+    }
+    this.#modeTrajetPose = true;
+    this.#couchesBornes?.masquerBornesNationales(true);
+  }
+
+  /** Retire les couches du mode trajet et rend la carte aux bornes nationales. */
+  #retirerBornesTrajet(): void {
+    const carte = this.#carte;
+    if (this.#modeTrajetPose && carte) {
+      for (const id of ['iti-arrets-rang', 'iti-arrets-pastille', 'iti-corridor']) {
+        if (carte.getLayer(id)) carte.removeLayer(id);
+      }
+      for (const id of [SOURCE_ARRETS, SOURCE_CORRIDOR]) {
+        if (carte.getSource(id)) carte.removeSource(id);
+      }
+    }
+    this.#modeTrajetPose = false;
+    this.#couchesBornes?.masquerBornesNationales(false);
+  }
+
+  /* ---- ce que la fiche d'une borne sait demander au plan ---- */
+
+  /**
+   * L'état d'une borne vis-à-vis du plan courant.
+   *
+   * `retenu` : elle est un arrêt du plan (choisi ou imposé). `candidat` : elle
+   * est sur le corridor du trajet, le plan pourrait la prendre. `null` : aucun
+   * plan à l'écran, ou borne hors du corridor — la fiche ne propose alors
+   * rien, plutôt qu'un bouton qui échouerait.
+   */
+  etatDansLePlan(cle: string): 'retenu' | 'candidat' | null {
+    if (this.#bornesTrajet.length === 0) return null;
+    const arrets = this.#planCourant?.faisable ? this.#planCourant.arrets : [];
+    if (arrets.some((a) => cleBorne(a.borne) === cle) || this.#imposees.has(cle)) {
+      return 'retenu';
+    }
+    return this.#bornesTrajet.some((t) => this.#cleDe(t) === cle) ? 'candidat' : null;
+  }
+
+  /** Impose ou écarte une borne du plan, et le refait — tout est local. */
+  basculerArret(cle: string, action: 'imposer' | 'ecarter'): void {
+    if (action === 'imposer') {
+      this.#imposees.add(cle);
+      this.#ecartees.delete(cle);
+    } else {
+      this.#ecartees.add(cle);
+      this.#imposees.delete(cle);
+    }
+    this.#refairePlan();
   }
 
   /* UNE PHRASE, PAS UNE LISTE : sur une aire, trois lignes de plus dans un
@@ -1052,8 +1278,10 @@ export class PanneauItineraire extends HTMLElement {
     // Le résumé du haut apprend le temps de charge : voir `#majResume`.
     this.#planCourant = plan;
     this.#majResume();
-    this.#marqueursArrets.forEach((m) => m.remove());
-    this.#marqueursArrets = [];
+    /* LA CARTE PASSE EN MODE TRAJET : les bornes nationales s'effacent, seules
+       restent celles du corridor et les arrêts du plan. Même sur un REFUS —
+       c'est précisément là qu'on cherche des yeux une borne de repli. */
+    this.#poserBornesTrajet();
 
     if (!plan.faisable) {
       /* ON DIT NON, TÔT, AVEC LE MOTIF. Un plan bancal qui laisse découvrir le
@@ -1168,14 +1396,8 @@ export class PanneauItineraire extends HTMLElement {
         });
         item.append(aller, reseau, detail, retirer, voir, sortie);
         liste.append(item);
-
-        // Et le marqueur, dans le vert des bornes, avec son rang.
-        if (this.#carte) {
-          this.#marqueursArrets.push(
-            new Marker({ color: '#1E9E5A', scale: 0.8 })
-              .setLngLat([a.borne.lon, a.borne.lat]).addTo(this.#carte),
-          );
-        }
+        /* Le marqueur de l'arrêt vit désormais dans la couche `iti-arrets`
+           (voir #poserBornesTrajet) : pastille numérotée, cliquable. */
       }
       corps.append(liste);
     }
@@ -1303,10 +1525,7 @@ export class PanneauItineraire extends HTMLElement {
     const liste = document.createElement('ol');
     liste.className = 'recharge-toutes-liste';
     for (const t of this.#bornesTrajet) {
-      const cle = cleBorne({
-        nom: t.poi.nom, lon: t.poi.lon, lat: t.poi.lat, id: t.poi.id,
-        avancementM: t.avancement, ecartM: t.ecart, puissanceKw: t.poi.puissance,
-      });
+      const cle = this.#cleDe(t);
       const item = document.createElement('li');
       const impose = this.#imposees.has(cle);
       const ecarte = this.#ecartees.has(cle);
@@ -1657,7 +1876,6 @@ export class PanneauItineraire extends HTMLElement {
     this.#dernier = null; this.#calculPour = null; this.#depart = null; this.#arrivee = null;
     this.#marqueurs.forEach((m) => m.remove()); this.#marqueurs = [];
     this.#marqueursTrajet.forEach((m) => m.remove()); this.#marqueursTrajet = [];
-    this.#marqueursArrets.forEach((m) => m.remove()); this.#marqueursArrets = [];
     const carte = this.#carte;
     if (carte?.getSource(SOURCE)) {
       carte.removeLayer('itineraire-trait'); carte.removeLayer('itineraire-bord');
