@@ -210,6 +210,20 @@ describe('les filtres de bornes voyagent dans l’URL', () => {
     expect(u).toContain('OR');
   });
 
+  test('le nom de station part en suggest(), pas en égalité', () => {
+    /* Vérifié par appel réel le 27/08/2026 : `suggest(nom_station,"Donald")`
+       rend 36 lignes, `like "Donald"` aucune — le portail compare des mots
+       entiers. Et le guillemet reste neutralisé contre l'injection. */
+    const u = decodeURIComponent(urlBornes(B, { nom: 'Mc Donald' }));
+    expect(u).toContain('suggest(nom_station,"Mc Donald")');
+    const injecte = decodeURIComponent(urlBornes(B, { nom: 'a"b' }));
+    expect(injecte).not.toContain('"a"b"');
+  });
+
+  test('un nom vide ou blanc n’émet AUCUNE clause', () => {
+    expect(decodeURIComponent(urlBornes(B, { nom: '   ' }))).not.toContain('suggest');
+  });
+
   test('les réseaux se filtrent sur l’OPÉRATEUR, échappés contre l’injection', () => {
     const u = decodeURIComponent(urlBornes(B, { reseaux: ['Ionity', 'e"born'] }));
     expect(u).toContain('nom_operateur = "Ionity"');

@@ -73,6 +73,13 @@ export interface FiltresBornes {
   prises?: ClePrise[] | undefined;
   /** Enseignes retenues (« Ionity »…). Vide = toutes. */
   reseaux?: string[] | undefined;
+  /* LE NOM DE STATION CONTIENT… — la demande d'Armelin du 27/08/2026 :
+     distinguer les IZIVIA FAST « sur des McDonald's » de celles de la rue.
+     Mesuré ce jour-là : les stations en restaurant portent bien
+     « Mc Donald's »/« McDonald's » dans `nom_station` (~36 lignes sur les
+     2 484 d'IZIVIA FAST), avec des graphies inconstantes — d'où une recherche
+     par SOUS-CHAÎNE, jamais une égalité. */
+  nom?: string | undefined;
 }
 
 export interface Charge<T> { elements: T[]; total: number; }
@@ -126,6 +133,15 @@ export function urlBornes(b: Bbox, filtres: FiltresBornes = {}): string {
        La liste du panneau groupe donc par opérateur, et cette clause doit
        interroger le MÊME champ : les deux se répondent, ou le filtre ment. */
     clauses.push(`(${reseaux.map((r) => `nom_operateur = ${citer(r)}`).join(' OR ')})`);
+  }
+  /* `suggest()` EST LA RECHERCHE PLEIN-TEXTE DU PORTAIL — vérifiée par appel
+     réel le 27/08/2026 : `suggest(nom_station,"Donald")` rend 36 lignes là où
+     `like "Donald"` n'en rend aucune (le portail compare des mots entiers).
+     Le filtre part AU SERVICE, comme les autres : le plafond de 100
+     enregistrements rendrait mensonger un tri local. */
+  const nom = (filtres.nom ?? '').trim();
+  if (nom !== '') {
+    clauses.push(`suggest(nom_station,${citer(nom)})`);
   }
 
   return 'https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/'

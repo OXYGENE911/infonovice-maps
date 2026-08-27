@@ -90,6 +90,20 @@ test('les connecteurs partent en OU — un véhicule accepte l’un OU l’autre
     && u.includes('OR')), { message: 'les connecteurs ne sont pas partis en OU' }).toBe(true);
 });
 
+test('le nom de station tapé PART DANS LA REQUÊTE, en suggest()', async ({ page }) => {
+  /* « Distinguer les IZIVIA FAST sur des McDonald's de celles de la rue »
+     (Armelin, 27/08/2026). Au-delà du zoom 12, le portail plafonne à 100
+     enregistrements : un tri local mentirait, le filtre part donc au
+     service — suggest() est sa recherche plein-texte, vérifiée par appel
+     réel (36 lignes pour « Donald », zéro pour un like). */
+  const vues = await espionnerIrve(page);
+  await ouvrirBornes(page);
+
+  await page.getByLabel('Nom de station contient').fill('Mc Donald');
+  await expect.poll(() => vues.some((u) => u.includes('suggest(nom_station,"Mc Donald")')),
+    { message: 'le nom n’est pas parti au service' }).toBe(true);
+});
+
 test('sans filtre, aucune clause parasite ne part', async ({ page }) => {
   const vues = await espionnerIrve(page);
   await ouvrirBornes(page);
