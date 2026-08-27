@@ -369,23 +369,22 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
       compatibilité annoncé pour ≥ 7.1 — issue typescript-eslint #10940).
       La chaîne de lint est une porte de CI : à reprendre quand
       typescript-eslint suivra.
-- [ ] PETITES CORRECTIONS D'INTERFACE, une PR groupée :
-      · l'encart « installer l'application » paraît aussi sur grand écran —
-        vérifier l'intention et le comportement attendu ;
-      · le libellé « Charger » de l'étendue du réseau national se confond
-        avec le filtre de puissance — renommer pour dire ce qu'il fait
-        (ce qu'on TÉLÉCHARGE, pas ce qu'on AFFICHE) ;
-      · éclairs JAUNES (émoji ⚡) dans la légende et la fiche, BLANCS
-        (dessinés) sur la carte — harmoniser en dessinant partout ;
-      · favoris : un nom d'affichage modifiable, l'adresse en dessous ;
-      · véhicule : afficher l'année du modèle et l'autonomie WLTP
-        constructeur — un Xpeng G6 2024 n'est pas un G6 2026 ;
-      · bouton « Transports en commun » : Armelin n'en voit pas la
-        plus-value visuelle — vérifier le rendu réel avant de trancher
-        (supprimer un travail mesuré de la PR #16 demande une mesure) ;
-      · « Accès réservé » affiché sur des bornes où le badge d'Armelin
-        fonctionne — comprendre ce que `condition_acces` veut VRAIMENT dire
-        (réservé ≠ abonnement) et reformuler.
+- [x] PR #50 — PETITES CORRECTIONS D'INTERFACE, groupées. Tout est au
+      CHANGELOG 0.36.0 ; ce qui mérite la roadmap :
+      · « Accès réservé » reformulé (badge/clientèle/résidents, « vérifiez
+        avant le détour ») + 240 lignes aux encodages estropiés rattrapées ;
+      · installation PWA bornée au mobile ; « Télécharger » remplace
+        « Charger » ; éclairs SVG partout ; favoris renommables avec
+        l'adresse en sous-titre ; générations et WLTP au catalogue (XPENG G6
+        restylé ajouté, 451 kW sourcés).
+      · BOUTON « TRANSPORTS EN COMMUN » : GARDÉ, DÉCISION À ARMELIN. La
+        couche montre réellement les véhicules (cercles aux couleurs des
+        réseaux, zoom ≥ 10, jusqu'à trois réseaux cochés) — l'impression
+        « aucune différence visuelle » vient probablement d'un essai sans
+        réseau coché ou sous le zoom 10. Les positions ne nourrissent AUCUN
+        algorithme : supprimer le bouton, ce serait supprimer la
+        fonctionnalité entière de la PR #16. Si Armelin le confirme après un
+        essai zoomé avec un réseau coché, on retirera le tout proprement.
 - [ ] ÉTUDES À MESURER AVANT DE PROMETTRE, chacune datée dans docs/ :
       · API maps.infonovice.fr pour les autres produits (FOOD COMMUNITY,
         SPORTS, FAMILY…) — publique, à clé, ou bornée aux sous-domaines
@@ -400,8 +399,13 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
       · badges de recharge dans le profil → filtrer par compatibilité
         e-MSP : vérifier si UNE source publique le donne (probablement non —
         l'écrire alors avec la mesure) ;
-      · IZIVIA FAST sur McDonald's : distinguer les stations en restaurant —
-        l'implantation/l'adresse du fichier IRVE le disent-elles ?
+      · IZIVIA FAST sur McDonald's : MESURÉ le 27/08 — le fichier le permet.
+        Les stations en restaurant portent « Mc Donald's »/« McDonald's »
+        dans `nom_station` (2 484 lignes IZIVIA FAST, dont ~36 McDo ;
+        graphies inconstantes, espaces et caractères invisibles compris).
+        La réponse générique est un FILTRE « nom de station contient… » :
+        local sur l'index national, `suggest()` au portail par emprise
+        (opérateur vérifié). Sa propre PR.
 - [ ] NAVIGATION MOBILE (suivi d'itinéraire) — un chantier à cadrer entier :
       boussole, vue 3D (pitch), flèches aux intersections, cartouche réduit,
       dézoom libre + bouton « recentrer », barre de trafic verticale colorée

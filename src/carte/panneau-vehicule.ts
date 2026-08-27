@@ -113,6 +113,11 @@ export class PanneauVehicule extends HTMLElement {
                 </optgroup>`).join('')}
             </select></span>
           </label>
+          <!-- LA FICHE CONSTRUCTEUR DU MODÈLE CHOISI, en toutes lettres :
+               « ce serait bien d'afficher la valeur WLTP du constructeur et
+               l'année du véhicule » (Armelin, 27/08/2026). Vide tant qu'aucun
+               modèle n'est appliqué. -->
+          <p class="veh-catalogue-detail" role="status"></p>
           <p class="veh-note veh-note-catalogue">${CATALOGUE.length} modèles,
             valeurs constructeur indicatives, pré-remplies puis modifiables.
             L’autonomie proposée découle du cycle WLTP, optimiste sur
@@ -182,6 +187,18 @@ export class PanneauVehicule extends HTMLElement {
         puissanceMaxKw: modele.puissanceMaxKw,
       };
       this.#essais = { ...km };
+      /* LA FICHE CONSTRUCTEUR S'AFFICHE SOUS LE CHOIX : années de la
+         génération quand on les connaît, autonomie WLTP nommée pour ce
+         qu'elle est. Le catalogue les portait sans jamais les montrer. */
+      const detail = this.querySelector<HTMLElement>('.veh-catalogue-detail');
+      if (detail) {
+        detail.textContent = [
+          modele.annees ? `Génération ${modele.annees}` : null,
+          `${modele.capaciteKwh} kWh utiles`,
+          `${modele.puissanceMaxKw} kW en pointe`,
+          `${modele.wltpKm} km WLTP constructeur (optimiste, surtout sur autoroute)`,
+        ].filter(Boolean).join(' · ');
+      }
       this.#refletChamps();
       this.#recalculer();
     });

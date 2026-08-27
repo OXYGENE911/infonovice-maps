@@ -234,7 +234,11 @@ test('le cartouche dit l’ACCÈS RÉSERVÉ, le téléphone, et ce qu’il ignor
   await expect(fiche).toBeVisible({ timeout: 10_000 });
   await expect(fiche.locator('.fb-acces'), 'l’accès réservé doit se lire SANS la couleur')
     .toContainText('Accès réservé');
-  await expect(fiche).toContainText('vous ne pourrez pas y recharger librement');
+  /* « RÉSERVÉ » N'EST PAS « INTERDIT » : le badge d'un opérateur suffit
+     souvent (retour d'Armelin du 27/08). Le bandeau nomme la condition ET
+     invite à vérifier — il ne condamne plus la borne. */
+  await expect(fiche).toContainText('badge, clientèle ou résidents');
+  await expect(fiche).toContainText('vérifiez avant le détour');
   // Le numéro de l'exploitant : on le cherche quand la borne refuse de démarrer.
   await expect(fiche.locator('.fb-tel')).toHaveText('+33 4 91 00 00 00');
   await expect(fiche.locator('.fb-tel')).toHaveAttribute('href', 'tel:+33491000000');

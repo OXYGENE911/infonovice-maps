@@ -47,6 +47,13 @@ export interface ModeleVehicule {
   wltpKm: number;
   /** Standard de charge rapide de ce modèle. */
   prise: ClePrise;
+  /* LES ANNÉES DE LA GÉNÉRATION, quand plusieurs se croisent sous le même
+     nom. Armelin, le 27/08/2026 : « un Xpeng G6 2024 n'a pas les mêmes
+     caractéristiques que les nouveaux Xpeng G6 2026 » — et c'est vrai :
+     batterie, pointe de charge et autonomie changent sans que le nom bouge.
+     Le champ n'est REMPLI QUE LÀ OÙ IL EST SOURCÉ : une année devinée serait
+     pire qu'une absence. */
+  annees?: string;
 }
 
 /* La liste couvre les modèles les plus répandus sur les routes françaises,
@@ -251,8 +258,13 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
   { cle: 'volvo-ex90', marque: 'Volvo', modele: 'EX90', capaciteKwh: 107, puissanceMaxKw: 250, wltpKm: 614, prise: 'combo_ccs' },
 
   // — XPENG —
-  { cle: 'xpeng-g6-66', marque: 'XPENG', modele: 'G6', variante: 'Standard Range', capaciteKwh: 66, puissanceMaxKw: 215, wltpKm: 435, prise: 'combo_ccs' },
-  { cle: 'xpeng-g6-87', marque: 'XPENG', modele: 'G6', variante: 'Long Range', capaciteKwh: 87.5, puissanceMaxKw: 280, wltpKm: 570, prise: 'combo_ccs' },
+  /* DEUX GÉNÉRATIONS DE G6 SE CROISENT SUR LES ROUTES, et leurs chiffres
+     n'ont rien à voir : le restylage 2025 passe à une batterie LFP 5C de
+     80,8 kWh sous 800 V, 451 kW en crête (10-80 % en 12 minutes), 525 km
+     WLTP. Sources : fiches automobile-propre.com et largus.fr, 27/08/2026. */
+  { cle: 'xpeng-g6-66', marque: 'XPENG', modele: 'G6', variante: 'Standard Range', annees: '2024-2025', capaciteKwh: 66, puissanceMaxKw: 215, wltpKm: 435, prise: 'combo_ccs' },
+  { cle: 'xpeng-g6-87', marque: 'XPENG', modele: 'G6', variante: 'Long Range', annees: '2024-2025', capaciteKwh: 87.5, puissanceMaxKw: 280, wltpKm: 570, prise: 'combo_ccs' },
+  { cle: 'xpeng-g6-81-2025', marque: 'XPENG', modele: 'G6', variante: 'Long Range restylé', annees: 'depuis 2025', capaciteKwh: 80.8, puissanceMaxKw: 451, wltpKm: 525, prise: 'combo_ccs' },
   { cle: 'xpeng-g9-78', marque: 'XPENG', modele: 'G9', variante: 'Standard Range', capaciteKwh: 78.2, puissanceMaxKw: 300, wltpKm: 460, prise: 'combo_ccs' },
   { cle: 'xpeng-g9-98', marque: 'XPENG', modele: 'G9', variante: 'Long Range', capaciteKwh: 98, puissanceMaxKw: 300, wltpKm: 570, prise: 'combo_ccs' },
   { cle: 'xpeng-p7-plus', marque: 'XPENG', modele: 'P7+', variante: 'Long Range', capaciteKwh: 76.3, puissanceMaxKw: 230, wltpKm: 550, prise: 'combo_ccs' },
@@ -287,14 +299,18 @@ export function parMarque(): { marque: string; modeles: ModeleVehicule[] }[] {
 }
 
 /** Le libellé affiché DANS un groupe de marque : la marque y est déjà dite. */
+/** Ce qui distingue le modèle dans sa marque : variante, et années quand
+    plusieurs générations se croisent — « G6 (Long Range, 2024-2025) ». */
 export function libelleDansMarque(m: ModeleVehicule): string {
-  return m.variante ? `${m.modele} (${m.variante})` : m.modele;
+  const precisions = [m.variante, m.annees].filter(Boolean).join(', ');
+  return precisions ? `${m.modele} (${precisions})` : m.modele;
 }
 
 /** Le libellé affiché dans la liste : « Renault Mégane E-Tech (EV60) ». */
 export function libelleModele(m: ModeleVehicule): string {
   const base = `${m.marque} ${m.modele}`;
-  return m.variante ? `${base} (${m.variante})` : base;
+  const precisions = [m.variante, m.annees].filter(Boolean).join(', ');
+  return precisions ? `${base} (${precisions})` : base;
 }
 
 /** Recherche par clé. `null` — et non un modèle par défaut — quand rien ne

@@ -84,6 +84,38 @@ function dessiner(nombreEclairs: number, couleur: string): ImageData | null {
 }
 
 /**
+ * Les mêmes éclairs, en SVG pour le DOM — légende et fiche de borne.
+ *
+ * LA CARTE DESSINE DES ÉCLAIRS BLANCS ; la légende et la fiche affichaient
+ * l'émoji ⚡, rendu JAUNE par la police système. Armelin, le 27/08/2026 :
+ * « il faudrait harmoniser ». Le tracé est LE MÊME polygone que le canevas
+ * ci-dessus : une seule silhouette, deux supports. Markup engendré par le
+ * code à partir de constantes — aucune donnée externe n'y entre.
+ */
+export function eclairsSVG(nombre: number): string {
+  const centre = TAILLE / 2;
+  const formes: string[] = [];
+  if (nombre > 0) {
+    const hauteur = 15;
+    const largeur = nombre === 1 ? 11 : nombre === 2 ? 8 : 6.5;
+    const espace = 1;
+    const total = nombre * largeur + (nombre - 1) * espace;
+    let x = centre - total / 2;
+    for (let i = 0; i < nombre; i += 1) {
+      const points = ECLAIR.map(([ex, ey]) =>
+        `${(x + ex * largeur).toFixed(2)},${(centre - hauteur / 2 + ey * hauteur).toFixed(2)}`).join(' ');
+      formes.push(`<polygon points="${points}" fill="#FFFFFF"/>`);
+      x += largeur + espace;
+    }
+  } else {
+    // Puissance inconnue : le même point creux que la carte.
+    formes.push(`<circle cx="${centre}" cy="${centre}" r="4" fill="#FFFFFF"/>`);
+  }
+  return `<svg viewBox="0 0 ${TAILLE} ${TAILLE}" aria-hidden="true" focusable="false">`
+    + `${formes.join('')}</svg>`;
+}
+
+/**
  * Enregistre les quatre pastilles auprès de la carte. Idempotent : `setStyle`
  * détruit les images comme il détruit les sources, et cette fonction est
  * rappelée à chaque `style.load`.

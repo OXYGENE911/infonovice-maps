@@ -745,6 +745,90 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
   expect(appelsCarbu, 'appel parti sous le zoom minimal').toBe(appelsAvant);
 });
 
+test('FAVORIS : un favori se renomme, et son adresse reste en sous-titre', async ({ page }) => {
+  /* « Quand on met un lieu en favoris, c'est son adresse qui s'affiche. Ce
+     serait bien de pouvoir leur donner un displayname plus facile à
+     visualiser » (Armelin, 27/08/2026). Le renommage se fait EN PLACE —
+     champ, Entrée — et l'adresse d'origine ne se perd pas : elle descend en
+     sous-titre, parce que « Maison de Mamie » n'aide que si l'on peut encore
+     situer où c'est. */
+  await page.route('**/api-adresse.data.gouv.fr/reverse/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ features: [{
+      geometry: { coordinates: [2.330992, 48.868831] },
+      properties: { label: '8 Rue de la Paix 75002 Paris', type: 'housenumber', postcode: '75002', city: 'Paris' },
+    }] }),
+  }));
+  await page.goto('/');
+  const canevas = page.locator('#carte canvas.maplibregl-canvas');
+  await canevas.waitFor({ timeout: 15_000 });
+  const cadre = await canevas.boundingBox();
+  await page.mouse.move(cadre!.x + 640, cadre!.y + 360);
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+  await expect(page.locator('.pa-libelle')).toContainText('8 Rue de la Paix', { timeout: 10_000 });
+  await page.getByRole('button', { name: 'Ajouter aux favoris' }).click();
+  await expect(page.getByRole('button', { name: /Ajouté aux favoris/ })).toBeVisible();
+
+  await ouvrirVolet(page, '.favoris');
+  await page.getByRole('button', { name: 'Renommer 8 Rue de la Paix 75002 Paris' }).click();
+  const champ = page.locator('.favori-nom-champ');
+  await expect(champ).toBeVisible();
+  await champ.fill('Bureau de Paris');
+  await champ.press('Enter');
+
+  const favori = page.locator('.favori-aller');
+  await expect(favori).toContainText('Bureau de Paris');
+  await expect(favori.locator('.favori-adresse'),
+    'l’adresse d’origine doit rester lisible').toContainText('8 Rue de la Paix');
+  await expect(page.locator('.favoris-etat')).toContainText('Renommé');
+
+  // Le nouveau nom SURVIT au rechargement — c'est un renommage, pas un décor.
+  await page.reload();
+  await canevas.waitFor({ timeout: 15_000 });
+  await ouvrirVolet(page, '.favoris');
+  await expect(page.locator('.favori-aller')).toContainText('Bureau de Paris');
+
+  // Échap, lui, annule : on rouvre l'édition et on la referme sans dégât.
+  await page.getByRole('button', { name: 'Renommer Bureau de Paris' }).click();
+  await page.locator('.favori-nom-champ').press('Escape');
+  await expect(page.locator('.favori-aller')).toContainText('Bureau de Paris');
+});
+
+test('l’encart d’installation ne se propose qu’aux écrans mobiles', async ({ page }) => {
+  /* « En mode desktop, le site propose l'encart pour installer l'application
+     alors que ça ne devrait le proposer qu'en version mobile » (Armelin,
+     27/08/2026). Sur ordinateur, Chrome a déjà SA PROPRE icône d'installation
+     dans la barre d'adresse — le bouton la doublait. On simule l'événement
+     d'installation du navigateur et on mesure le bouton aux deux tailles. */
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('beforeinstallprompt', { cancelable: true }));
+  });
+  await expect(page.locator('.installer'),
+    'sur grand écran, le navigateur propose déjà l’installation').toBeHidden();
+
+  // La même fenêtre, réduite à un écran de téléphone : le bouton paraît.
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(page.locator('.installer')).toBeVisible();
+});
+
+test('la légende des bornes dessine les MÊMES éclairs que la carte', async ({ page }) => {
+  /* L'émoji ⚡ sortait JAUNE de la police là où la carte dessine des éclairs
+     BLANCS (Armelin, 27/08/2026). La légende embarque désormais le même tracé
+     SVG que les pastilles de la carte. */
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await ouvrirVolet(page, '.poi');
+  await page.getByRole('checkbox', { name: 'Bornes électriques' }).check();
+  // Six éclairs dans les trois pastilles de palier (1 + 2 + 3).
+  await expect(page.locator('.poi-legende-pastille svg polygon')).toHaveCount(6);
+  const texte = await page.locator('.poi-legende').innerText();
+  expect(texte, 'l’émoji jaune ne doit plus paraître').not.toContain('⚡');
+});
+
 test('FAVORIS : appui long → ajout, persistance, export JSON, retrait, import', async ({ page }) => {
   await page.route('**/api-adresse.data.gouv.fr/reverse/**', (route) => route.fulfill({
     contentType: 'application/json',

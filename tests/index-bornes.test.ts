@@ -56,6 +56,23 @@ describe('acces', () => {
     expect(acces('acces reserve')).toBe(false);
   });
 
+  /* MESURÉ LE 27/08/2026 SUR LE PORTAIL : 240 lignes portent « Accès libre »
+     dans quatre encodages estropiés — des producteurs qui téléversent en
+     Latin-1 ou Mac-Roman. La comparaison stricte les rendait « non
+     déclarés » ; le motif accepte l'accent massacré, un à deux octets. */
+  it('rattrape les encodages cassés relevés dans le fichier réel', () => {
+    expect(acces('Accs libre')).toBe(true);
+    expect(acces('Acc¸s libre')).toBe(true);
+    expect(acces('AccĂ¨s libre')).toBe(true);
+    expect(acces('Accčs libre')).toBe(true);
+    expect(acces('Accès réservé')).toBe(false);
+  });
+
+  it('mais ne prend pas n’importe quel mot commençant par « acc »', () => {
+    expect(acces('Accueil libre-service')).toBeNull();
+    expect(acces('Accès sur rendez-vous')).toBeNull();
+  });
+
   /* ON NE DEVINE PAS UN DROIT D'ACCÈS. Une valeur inattendue rend `null`, et
      l'interface dira « non déclaré » plutôt que d'inventer un « ouvert ». */
   it('rend null sur tout le reste, sans replier sur « ouvert »', () => {

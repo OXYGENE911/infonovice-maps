@@ -177,14 +177,20 @@ const nombreOuNull = (v: unknown): number | null => {
 
 /* « Accès libre » / « Accès réservé », couverture 100 % (mesuré). ONZE POUR
    CENT DES STATIONS SONT RÉSERVÉES : flotte d'entreprise, copropriété,
-   personnel. Les afficher comme les autres envoie l'usager vers une borne où
-   il ne pourra pas brancher — un défaut silencieux que l'ancienne popup
-   partageait. Tout ce qui n'est ni l'un ni l'autre rend `null` : on ne devine
-   pas un droit d'accès. */
+   personnel — mais aussi, souvent, un simple badge d'opérateur : le champ dit
+   « une condition existe », pas « entrée interdite ». Tout ce qui n'est ni
+   l'un ni l'autre rend `null` : on ne devine pas un droit d'accès.
+
+   LES ENCODAGES CASSÉS DU FICHIER SONT RATTRAPÉS. Mesuré le 27/08/2026 sur
+   le portail : 240 lignes portent « Accès libre » dans QUATRE encodages
+   estropiés (« Accs libre », « Acc¸s libre », « AccĂ¨s libre »,
+   « Accčs libre ») — des producteurs qui téléversent en Latin-1 ou Mac-Roman.
+   La comparaison stricte les rendait « non déclarés » ; le motif ci-dessous
+   accepte un à deux octets quelconques là où l'accent a été massacré. */
 export function acces(v: unknown): boolean | null {
   const t = texteOuNull(v)?.toLowerCase() ?? '';
-  if (t.startsWith('accès libre') || t.startsWith('acces libre')) return true;
-  if (t.startsWith('accès réservé') || t.startsWith('acces reserve')) return false;
+  if (/^acc.{0,2}s\s+libre/.test(t)) return true;
+  if (/^acc.{0,2}s\s+r.{0,2}serv.{0,2}/.test(t)) return false;
   return null;
 }
 

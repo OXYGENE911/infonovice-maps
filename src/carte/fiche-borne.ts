@@ -35,6 +35,7 @@ import { cleBorne } from '../lib/arrets';
 import { adresseInverse } from '../lib/adresse';
 import { PRISES } from '../lib/poi';
 import { palierDe, PALIERS } from '../lib/puissance';
+import { eclairsSVG } from './icone-puissance';
 import { refermerPanneaux } from './panneaux';
 
 /** Ce qu'il faut pour aller chercher une station : peu de choses. */
@@ -244,7 +245,15 @@ export class FicheBorne extends HTMLElement {
       p.textContent = 'Ouvert à tous';
     } else if (d.ouvert === false) {
       p.className = 'fb-acces fb-acces-reserve';
-      p.textContent = 'Accès réservé — vous ne pourrez pas y recharger librement';
+      /* « RÉSERVÉ » NE VEUT PAS DIRE « INTERDIT ». Armelin, le 27/08/2026 :
+         « il y a des bornes où je vais charger qui sont taguées accès réservé
+         alors que ça fonctionne très bien avec mon badge ». Le schéma IRVE ne
+         connaît que deux états, et « Accès réservé » couvre aussi bien la
+         flotte d'entreprise fermée que la borne ouverte à quiconque porte le
+         badge de l'opérateur. L'ancien texte — « vous ne pourrez pas y
+         recharger librement » — transformait une condition en interdiction. */
+      p.textContent = 'Accès réservé selon l’exploitant — badge, clientèle ou'
+        + ' résidents. Votre badge peut y donner droit : vérifiez avant le détour.';
     } else {
       p.className = 'fb-acces fb-acces-inconnu';
       p.textContent = 'Conditions d’accès non déclarées par l’exploitant';
@@ -356,7 +365,11 @@ export class FicheBorne extends HTMLElement {
       const pastille = document.createElement('span');
       pastille.className = 'fb-pastille';
       pastille.setAttribute('aria-hidden', 'true');
-      pastille.textContent = palier ? '⚡'.repeat(palier) : '•';
+      /* LES MÊMES ÉCLAIRS QUE LA CARTE — blancs, dessinés (eclairsSVG), là où
+         l'émoji ⚡ sortait JAUNE de la police système. Markup engendré par le
+         code à partir de constantes : la règle textContent vise les données
+         externes, il n'y en a aucune ici. */
+      pastille.innerHTML = eclairsSVG(palier ?? 0);
       if (couleur) pastille.style.background = couleur;
 
       const titre = document.createElement('span');

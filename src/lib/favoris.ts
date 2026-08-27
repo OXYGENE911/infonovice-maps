@@ -18,6 +18,9 @@ export class ErreurStockage extends Error {}
 export interface Favori extends PointGeo {
   id: string;
   nom: string;
+  /** L'adresse d'origine, gardée en sous-titre quand l'usager renomme :
+      « Maison de Mamie » n'aide que si l'on peut encore vérifier où c'est. */
+  adresse?: string;
   /** Date d'ajout, ISO 8601. */
   cree: string;
 }
@@ -44,6 +47,28 @@ export async function ajouterFavori(nom: string, point: PointGeo): Promise<Favor
 
 export async function retirerFavori(id: string): Promise<void> {
   await supprimerDans(MAGASIN_FAVORIS, id);
+}
+
+/**
+ * Renomme un favori — la demande d'Armelin du 27/08/2026 : « quand on met un
+ * lieu en favoris, c'est son adresse qui s'affiche. Ce serait bien de pouvoir
+ * leur donner un displayname plus facile à visualiser. »
+ *
+ * L'ADRESSE D'ORIGINE NE SE PERD PAS : au premier renommage, l'ancien nom —
+ * qui est l'adresse BAN de l'ajout — descend en sous-titre. « Maison de
+ * Mamie » sans adresse redeviendrait un point qu'il faut ouvrir pour situer.
+ */
+export async function renommerFavori(id: string, nom: string): Promise<Favori> {
+  const propre = nom.trim();
+  if (!propre) throw new ErreurFavoris('Un favori doit garder un nom.');
+  const favori = (await listerFavoris()).find((f) => f.id === id);
+  if (!favori) throw new ErreurFavoris('Ce favori n’existe plus.');
+  const adresse = favori.adresse ?? (favori.nom === propre ? undefined : favori.nom);
+  const nouveau: Favori = {
+    ...favori, nom: propre, ...(adresse !== undefined ? { adresse } : {}),
+  };
+  await ecrireDans(MAGASIN_FAVORIS, id, nouveau);
+  return nouveau;
 }
 
 /* ---- export / import ---- */
@@ -85,6 +110,9 @@ export function validerSauvegarde(brut: unknown): { preferences: Record<string, 
       || Math.abs(c.lon) > 180 || Math.abs(c.lat) > 90) continue;
     favoris.push({
       id: c.id, nom: c.nom, lon: c.lon, lat: c.lat,
+      // L'adresse d'origine (renommage) voyage avec l'export : la perdre à
+      // l'import ferait d'une restauration une dégradation.
+      ...(typeof c.adresse === 'string' && c.adresse ? { adresse: c.adresse } : {}),
       cree: typeof c.cree === 'string' ? c.cree : new Date(0).toISOString(),
     });
   }

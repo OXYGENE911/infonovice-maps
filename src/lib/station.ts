@@ -241,11 +241,12 @@ export function versDetail(brut: unknown): DetailStation | null {
   };
 }
 
-/** Même règle que l'index : on ne devine pas un droit d'accès. */
+/** Même règle que l'index, encodages estropiés compris (voir `acces`
+    dans lib/index-bornes.ts) : on ne devine pas un droit d'accès. */
 function accesOuvert(v: unknown): boolean | null {
   const t = texteOuNull(v)?.toLowerCase() ?? '';
-  if (t.startsWith('accès libre') || t.startsWith('acces libre')) return true;
-  if (t.startsWith('accès réservé') || t.startsWith('acces reserve')) return false;
+  if (/^acc.{0,2}s\s+libre/.test(t)) return true;
+  if (/^acc.{0,2}s\s+r.{0,2}serv.{0,2}/.test(t)) return false;
   return null;
 }
 
