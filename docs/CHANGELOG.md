@@ -61,7 +61,6 @@ recharge » ou « Ajouter au plan de recharge » — sur les bornes du corridor
 seulement : hors trajet, aucun bouton qui mènerait à un plan impossible.
 
 530 tests unitaires, 149 parcours E2E.
->>>>>>> main
 
 ## [0.34.0] — 2026-08-27 — Un seul bouton, des pages, et 136 véhicules (PR #46)
 
