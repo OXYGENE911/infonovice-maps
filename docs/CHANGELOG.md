@@ -25,7 +25,7 @@ automatiquement ».
   réduit, il garde la manœuvre, le restant et les boutons ; la note de limite,
   lue au démarrage, se range.
 
-536 tests unitaires, 160 parcours E2E (+3 : caméra suspendue et rendue,
+536 tests unitaires, 159 parcours E2E (+3 : caméra suspendue et rendue,
 verrou compté demandé/rendu, bandeau mesuré plus petit).
 
 ## [0.37.0] — 2026-08-27 — « Nom de station contient… » (PR #52)
