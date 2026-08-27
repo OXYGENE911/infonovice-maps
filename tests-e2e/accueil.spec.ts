@@ -21,6 +21,31 @@ test('la carte s’amorce : canevas présent, contrôles en français', async ({
   await expect(page.locator('.maplibregl-ctrl-attrib')).toContainText('IGN');
 });
 
+test('le repère principal et l’application sont DEUX nœuds distincts', async ({ page }) => {
+  /* `role="application"` posé sur <main> ÉCRASAIT le point de repère
+     principal : un lecteur d'écran ne trouvait plus « le contenu principal »
+     (audit Lighthouse du 26/08/2026, corrigé le 27/08). Le rôle vit désormais
+     sur un conteneur interne — qui emporte l'id `#carte`, car c'est lui que
+     MapLibre reçoit et que trente parcours désignent. */
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  const structure = await page.evaluate(() => {
+    const principal = document.querySelector('main');
+    const application = document.getElementById('carte');
+    return {
+      principalSansRole: Boolean(principal) && !principal!.hasAttribute('role'),
+      applicationDansPrincipal: Boolean(application?.closest('main'))
+        && application?.getAttribute('role') === 'application',
+      etiquette: application?.getAttribute('aria-label') ?? '',
+    };
+  });
+  expect(structure.principalSansRole,
+    'le rôle application ne doit plus écraser <main>').toBe(true);
+  expect(structure.applicationDansPrincipal,
+    'la carte doit rester une application, DANS le repère principal').toBe(true);
+  expect(structure.etiquette).toContain('Carte de France');
+});
+
 test('SOUVERAINETÉ : seules les origines déclarées sont contactées', async ({ page }) => {
   // La contrainte n° 3 du projet, mesurée au navigateur. La liste blanche
   // s'élargit par PR, jamais par accident : data.geopf.fr est arrivée avec

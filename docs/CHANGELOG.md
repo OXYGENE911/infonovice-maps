@@ -2,6 +2,15 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.35.1] — 2026-08-27 — Le repère principal rendu aux lecteurs d'écran (PR #48)
+
+`role="application"` posé sur `<main>` écrasait le point de repère principal :
+un lecteur d'écran ne trouvait plus « le contenu principal » (audit Lighthouse
+du 26/08). Le rôle vit désormais sur un conteneur interne — qui EMPORTE l'id
+`#carte` : ni la feuille de style ni les trente parcours E2E qui le désignent
+n'ont bougé, et `#carte` reste le nœud que MapLibre reçoit. Un parcours E2E
+verrouille la structure : `<main>` sans rôle, l'application DANS le repère.
+
 ## [0.34.0] — 2026-08-27 — Un seul bouton, des pages, et 136 véhicules (PR #46)
 
 Sept retours du 26/08. La refonte de l'interface qu'Armelin décrivait est
