@@ -40,12 +40,52 @@ export interface DemarrageGuidage extends OptionsGuidage {
 /** Le zoom du suivi : assez près pour lire la rue, assez loin pour anticiper. */
 const ZOOM_SUIVI = 15.5;
 
+/* LA CAMÉRA REVIENT TOUTE SEULE APRÈS VINGT SECONDES sans nouveau geste.
+   Armelin, le 27/08/2026 : « je ne peux plus dézoomer sur la carte car le
+   zoom sur ma position se force automatiquement. Ce serait bien de pouvoir
+   dézoomer et d'avoir ensuite un bouton qui s'affiche permettant de recentrer
+   automatiquement ou d'attendre quelques minutes avant de recentrer. » */
+const REPRISE_CAMERA_MS = 20_000;
+
+/** Le verrou d'écran, tel que le navigateur le rend. */
+interface VerrouEcran { release(): Promise<void> }
+
 export class BandeauGuidage extends HTMLElement {
   #carte: CarteMapLibre | null = null;
   #veille: number | null = null;
   #options: DemarrageGuidage | null = null;
+  /** La caméra suit-elle la voiture ? Un geste de l'usager la suspend. */
+  #camera = true;
+  #reprise: ReturnType<typeof setTimeout> | undefined;
+  #dernierePosition: [number, number] | null = null;
+  /* L'ÉCRAN RESTE ALLUMÉ PENDANT LE SUIVI (Screen Wake Lock) : un téléphone
+     qui se verrouille au premier feu rouge n'est pas un suivi. Le verrou
+     TOMBE quand l'onglet passe en arrière-plan — le navigateur l'impose — et
+     se REPREND au retour ; son échec est bénin (réglage d'économie d'énergie)
+     et l'écran suit alors la règle du téléphone, comme avant. */
+  #verrouEcran: VerrouEcran | null = null;
+  #surVisibilite = (): void => { void this.#prendreVerrou(); };
 
-  set carte(c: CarteMapLibre) { this.#carte = c; }
+  set carte(c: CarteMapLibre) {
+    this.#carte = c;
+    /* UN GESTE DE L'USAGER SUSPEND LA CAMÉRA — pas un mouvement du code. Les
+       événements MapLibre issus d'un vrai geste portent `originalEvent` ;
+       nos propres `easeTo` n'en portent pas : c'est LE discriminant. */
+    for (const geste of ['movestart', 'zoomstart', 'rotatestart', 'pitchstart'] as const) {
+      c.on(geste, (e) => {
+        const gesteUsager = (e as { originalEvent?: Event }).originalEvent;
+        if (this.actif && gesteUsager) this.#suspendreCamera();
+      });
+    }
+    /* `dragstart` ET `wheel` EN PLUS : ils ne naissent QUE d'un geste — et la
+       molette, elle, peut être avalée par un `easeTo` en cours (l'animation
+       du suivi tourne huit dixièmes de seconde sur dix) : son `zoomstart`
+       n'est alors pas rejoué avec l'originalEvent. L'événement `wheel` du
+       niveau du dessous, lui, arrive toujours. */
+    for (const geste of ['dragstart', 'wheel'] as const) {
+      c.on(geste, () => { if (this.actif) this.#suspendreCamera(); });
+    }
+  }
 
   /** `true` tant que le suivi tourne — l'appelant s'en sert pour son bouton. */
   get actif(): boolean { return this.#veille !== null; }
@@ -66,9 +106,28 @@ export class BandeauGuidage extends HTMLElement {
         <p class="bg-alerte" role="alert" hidden></p>
         <p class="bg-limite">Suivi d’itinéraire, pas navigation guidée :
           aucune voix, et aucun recalcul si vous quittez la route.</p>
-        <button type="button" class="bg-arreter">Arrêter le suivi</button>
-      </div>`;
+        <div class="bg-boutons">
+          <!-- LE BANDEAU SE RÉDUIT : « réduire la taille du cartouche en bas
+               qui prend 1/3 de l'écran » (Armelin, 27/08/2026). Réduit, il
+               garde la manœuvre et le restant — ce qu'on lit en roulant. -->
+          <button type="button" class="bg-reduire" aria-pressed="false"
+            aria-label="Réduire le bandeau">Réduire</button>
+          <button type="button" class="bg-arreter">Arrêter le suivi</button>
+        </div>
+      </div>
+      <!-- LE RECENTRAGE, HORS DU BANDEAU : il flotte sur la carte, là où le
+           regard est quand on vient de la déplacer. Il ne paraît que quand la
+           caméra est suspendue par un geste. -->
+      <button type="button" class="bg-recentrer" hidden>Recentrer</button>`;
     this.querySelector('.bg-arreter')?.addEventListener('click', () => { this.arreter(); });
+    this.querySelector('.bg-recentrer')?.addEventListener('click', () => { this.#recentrer(); });
+    this.querySelector('.bg-reduire')?.addEventListener('click', () => {
+      const reduit = this.classList.toggle('bg-compact');
+      const bouton = this.querySelector('.bg-reduire') as HTMLButtonElement;
+      bouton.setAttribute('aria-pressed', String(reduit));
+      bouton.textContent = reduit ? 'Agrandir' : 'Réduire';
+      bouton.setAttribute('aria-label', reduit ? 'Agrandir le bandeau' : 'Réduire le bandeau');
+    });
   }
 
   /**
@@ -107,6 +166,12 @@ export class BandeauGuidage extends HTMLElement {
       },
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 20_000 },
     );
+    // Le suivi qui démarre reprend la caméra — et garde l'écran allumé.
+    this.#camera = true;
+    this.#dernierePosition = null;
+    (this.querySelector('.bg-recentrer') as HTMLElement).hidden = true;
+    void this.#prendreVerrou();
+    document.addEventListener('visibilitychange', this.#surVisibilite);
     return true;
   }
 
@@ -117,8 +182,50 @@ export class BandeauGuidage extends HTMLElement {
     }
     this.#options = null;
     this.hidden = true;
+    clearTimeout(this.#reprise);
+    (this.querySelector('.bg-recentrer') as HTMLElement | null)?.setAttribute('hidden', '');
+    document.removeEventListener('visibilitychange', this.#surVisibilite);
+    /* LE VERROU D'ÉCRAN SE REND À L'ARRÊT : le garder viderait la batterie de
+       celui qui est arrivé — le même devoir que le clearWatch ci-dessus. */
+    void this.#verrouEcran?.release().catch(() => { /* déjà tombé : rien à faire */ });
+    this.#verrouEcran = null;
     document.body.classList.remove('en-guidage');
     this.dispatchEvent(new CustomEvent('guidage-arrete', { bubbles: true }));
+  }
+
+  /* ---- la caméra appartient à l'usager ---- */
+
+  #suspendreCamera(): void {
+    this.#camera = false;
+    (this.querySelector('.bg-recentrer') as HTMLElement).hidden = false;
+    /* CHAQUE GESTE REPOUSSE LA REPRISE : tant qu'on explore la carte, elle
+       reste à nous ; vingt secondes d'immobilité, et le suivi la reprend. */
+    clearTimeout(this.#reprise);
+    this.#reprise = setTimeout(() => { this.#recentrer(); }, REPRISE_CAMERA_MS);
+  }
+
+  #recentrer(): void {
+    clearTimeout(this.#reprise);
+    this.#camera = true;
+    (this.querySelector('.bg-recentrer') as HTMLElement).hidden = true;
+    const p = this.#dernierePosition;
+    if (p && this.#carte) {
+      this.#carte.easeTo({ center: p, zoom: Math.max(this.#carte.getZoom(), ZOOM_SUIVI), duration: 600 });
+    }
+  }
+
+  async #prendreVerrou(): Promise<void> {
+    if (!this.actif || document.visibilityState !== 'visible') return;
+    const n = navigator as Navigator & {
+      wakeLock?: { request(type: 'screen'): Promise<VerrouEcran> };
+    };
+    if (!n.wakeLock) return;
+    try {
+      this.#verrouEcran = await n.wakeLock.request('screen');
+    } catch {
+      /* Refusé (économie d'énergie, batterie faible) : bénin — l'écran suit
+         alors le réglage du téléphone, exactement comme avant ce verrou. */
+    }
   }
 
   #alerte(message: string): void {
@@ -131,14 +238,20 @@ export class BandeauGuidage extends HTMLElement {
     const o = this.#options;
     if (!o) return;
     const e = etatGuidage(o, { lon, lat });
+    this.#dernierePosition = [lon, lat];
 
-    /* LA CARTE SUIT LA VOITURE. `easeTo` et non `jumpTo` : un saut à chaque
-       fixe GPS — environ une fois par seconde — rendrait la carte illisible. */
-    this.#carte?.easeTo({
-      center: [lon, lat],
-      zoom: Math.max(this.#carte.getZoom(), ZOOM_SUIVI),
-      duration: 800,
-    });
+    /* LA CARTE SUIT LA VOITURE — SAUF quand l'usager vient de la prendre :
+       son geste suspend la caméra, le bouton « Recentrer » (ou vingt
+       secondes d'immobilité) la rend. `easeTo` et non `jumpTo` : un saut à
+       chaque fixe GPS — environ une fois par seconde — rendrait la carte
+       illisible. */
+    if (this.#camera) {
+      this.#carte?.easeTo({
+        center: [lon, lat],
+        zoom: Math.max(this.#carte.getZoom(), ZOOM_SUIVI),
+        duration: 800,
+      });
+    }
 
     const instruction = this.querySelector('.bg-instruction') as HTMLElement;
     const distance = this.querySelector('.bg-distance') as HTMLElement;

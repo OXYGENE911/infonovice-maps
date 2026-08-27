@@ -2,6 +2,32 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.38.0] — 2026-08-27 — La caméra rendue à l'usager (PR #53)
+
+La première des quatre PR du cadrage navigation mobile
+(docs/navigation-mobile.md), née du retour le plus concret d'Armelin : « je ne
+peux plus dézoomer sur la carte car le zoom sur ma position se force
+automatiquement ».
+
+- **Un geste suspend la caméra de suivi** — glisser, molette, rotation. Le
+  discriminant est l'`originalEvent` de MapLibre : nos propres `easeTo` n'en
+  portent pas. La molette a demandé son propre écouteur : pendant l'animation
+  du suivi (800 ms sur 1 000), son `zoomstart` est avalé.
+- **« Recentrer » flotte sur la carte** quand la caméra est suspendue ; vingt
+  secondes d'immobilité la rendent aussi — chaque nouveau geste repousse le
+  compteur.
+- **L'écran reste allumé pendant le suivi** (Screen Wake Lock) : un téléphone
+  qui se verrouille au premier feu rouge n'est pas un suivi. Le verrou est
+  repris au retour d'arrière-plan, RENDU à l'arrêt — le même devoir que le
+  `clearWatch` — et son échec est bénin (l'écran suit le réglage du
+  téléphone, comme avant).
+- **Le bandeau se réduit** — « le cartouche en bas prend 1/3 de l'écran » :
+  réduit, il garde la manœuvre, le restant et les boutons ; la note de limite,
+  lue au démarrage, se range.
+
+536 tests unitaires, 159 parcours E2E (+3 : caméra suspendue et rendue,
+verrou compté demandé/rendu, bandeau mesuré plus petit).
+
 ## [0.37.0] — 2026-08-27 — « Nom de station contient… » (PR #52)
 
 Le filtre né du cas IZIVIA/McDonald's : « IZIVIA FAST a fait un partenariat
