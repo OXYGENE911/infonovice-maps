@@ -1241,13 +1241,41 @@ bandeau-guidage[hidden] { display: none; }
   line-height: 1.4;
 }
 
-.bg-arreter {
-  margin-top: 10px; width: 100%; padding: 8px 12px;
+.bg-boutons { display: flex; gap: 8px; margin-top: 10px; }
+.bg-arreter, .bg-reduire {
+  padding: 8px 12px;
   border: 1px solid var(--bord-2); border-radius: 8px; background: var(--fond-doux);
   cursor: pointer; font: 600 13px var(--police); color: var(--texte-1);
 }
-.bg-arreter:hover { border-color: var(--accent); color: var(--accent); }
-.bg-arreter:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-arreter { flex: 1 1 auto; }
+.bg-reduire { flex: 0 0 auto; }
+.bg-arreter:hover, .bg-reduire:hover { border-color: var(--accent); color: var(--accent); }
+.bg-arreter:focus-visible, .bg-reduire:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* LE BANDEAU RÉDUIT — « le cartouche en bas prend 1/3 de l'écran » (Armelin,
+   27/08/2026). Réduit, il garde la manœuvre, le restant et les boutons :
+   ce qu'on lit en roulant. La note de limite a été lue au démarrage ; le
+   prochain arrêt revit en agrandissant. */
+bandeau-guidage.bg-compact .bg-limite,
+bandeau-guidage.bg-compact .bg-arret { display: none; }
+bandeau-guidage.bg-compact .bg { padding: 8px 12px; }
+bandeau-guidage.bg-compact .bg-manoeuvre { padding-bottom: 4px; }
+bandeau-guidage.bg-compact .bg-boutons { margin-top: 6px; }
+bandeau-guidage.bg-compact .bg-arreter,
+bandeau-guidage.bg-compact .bg-reduire { padding: 5px 10px; font-size: 12px; }
+
+/* « RECENTRER » FLOTTE SUR LA CARTE, au-dessus du bandeau : il ne paraît que
+   quand un geste a suspendu la caméra de suivi. */
+.bg-recentrer {
+  pointer-events: auto;
+  position: absolute; right: 0; bottom: calc(100% + 10px);
+  padding: 9px 14px; border-radius: 999px;
+  border: 1px solid var(--accent); background: var(--accent);
+  cursor: pointer; font: 700 13px var(--police); color: var(--blanc);
+  box-shadow: var(--ombre-m);
+}
+.bg-recentrer[hidden] { display: none; }
+.bg-recentrer:focus-visible { outline: none; box-shadow: var(--focus); }
 
 /* LE BOUTON « DÉMARRER » PREND TOUTE LA LARGEUR de la barre d'actions : c'est
    le geste qu'on cherche après avoir calculé un trajet, pas un export GPX. */

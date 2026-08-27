@@ -416,13 +416,19 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
       inconstantes). La réponse générique est un FILTRE « nom de station
       contient… » : local sur l'index national, `suggest()` au portail par
       emprise. Sa propre PR.
-- [ ] NAVIGATION MOBILE — CADRÉ le 27/08/2026 dans docs/navigation-mobile.md :
-      quatre PR découpées (caméra rendue à l'usager + wake lock ; cap et
-      vitesse GPS ; prochaine manœuvre en grand ; vue 3D si l'essai visuel
-      tient) et deux études préalables (couverture maxspeed OSM pour l'ISA ;
-      maquette de la barre de trafic sur les données Bison Futé réelles).
-      La ligne ne bouge pas : le suivi refuse de s'appeler navigation tant
-      que l'arrière-plan mobile n'existe pas (app native, phase 2).
+- [~] NAVIGATION MOBILE — CADRÉ le 27/08/2026 dans docs/navigation-mobile.md :
+      quatre PR découpées et deux études préalables (couverture maxspeed OSM
+      pour l'ISA ; maquette de la barre de trafic sur les données Bison Futé
+      réelles). La ligne ne bouge pas : le suivi refuse de s'appeler
+      navigation tant que l'arrière-plan mobile n'existe pas (phase 2).
+      · [x] PR #53 — LA CAMÉRA RENDUE À L'USAGER : un geste (glisser,
+        molette, rotation) suspend le suivi de caméra ; « Recentrer » — ou
+        vingt secondes d'immobilité — le rend. L'ÉCRAN RESTE ALLUMÉ pendant
+        le suivi (Screen Wake Lock, repris au retour d'arrière-plan, rendu à
+        l'arrêt, échec bénin). Et le bandeau SE RÉDUIT : manœuvre, restant
+        et boutons — ce qu'on lit en roulant.
+      · [ ] PR « cap et vitesse GPS » ; [ ] PR « prochaine manœuvre en
+        grand » ; [ ] PR « vue 3D » si l'essai visuel du fond raster tient.
 
 ## Itérations suivantes (backlog ouvert)
 - PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),

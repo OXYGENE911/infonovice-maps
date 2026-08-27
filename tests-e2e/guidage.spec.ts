@@ -113,6 +113,99 @@ test('quitter la route se DIT, l’instruction ne continue pas comme si de rien'
   await expect(bandeau.locator('.bg-alerte')).toContainText('Recalculez');
 });
 
+test('un geste sur la carte SUSPEND la caméra, « Recentrer » la rend', async ({ page, context }) => {
+  /* « Quand la navigation est démarrée, je ne peux plus dézoomer sur la carte
+     car le zoom sur ma position se force automatiquement » (Armelin,
+     27/08/2026). Le geste de l'usager suspend le suivi de caméra ; le bouton
+     — ou vingt secondes d'immobilité — le rend. */
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  const bandeau = page.locator('bandeau-guidage');
+  await expect(bandeau).toBeVisible({ timeout: 15_000 });
+
+  // La caméra suit d'abord la voiture : le centre rejoint la position.
+  await expect.poll(() => page.evaluate(() => {
+    const c = (window as unknown as { __carte: { getCenter(): { lng: number } } }).__carte;
+    return Math.abs(c.getCenter().lng - 2.3522) < 0.01;
+  }), { timeout: 10_000 }).toBe(true);
+
+  /* LE GESTE : une molette sur la carte. Il porte un originalEvent — c'est ce
+     qui le distingue de nos propres easeTo. */
+  const cadre = await page.locator('#carte canvas.maplibregl-canvas').boundingBox();
+  await page.mouse.move(cadre!.x + cadre!.width / 2, cadre!.y + 200);
+  await page.mouse.wheel(0, 600);
+  const recentrer = page.getByRole('button', { name: 'Recentrer' });
+  await expect(recentrer).toBeVisible();
+
+  /* LA POSITION AVANCE, LA CARTE NE BOUGE PLUS : c'est toute la demande. */
+  await context.setGeolocation({ longitude: 2.8, latitude: 48.3 });
+  await page.waitForTimeout(1500);
+  const centreSuspendu = await page.evaluate(() =>
+    (window as unknown as { __carte: { getCenter(): { lng: number } } }).__carte.getCenter().lng);
+  expect(Math.abs(centreSuspendu - 2.8), 'la caméra a repris la main malgré le geste')
+    .toBeGreaterThan(0.05);
+
+  // « Recentrer » rend la caméra au suivi, et se range.
+  await recentrer.click();
+  await expect.poll(() => page.evaluate(() => {
+    const c = (window as unknown as { __carte: { getCenter(): { lng: number } } }).__carte;
+    return Math.abs(c.getCenter().lng - 2.8) < 0.01;
+  }), { timeout: 10_000 }).toBe(true);
+  await expect(recentrer).toBeHidden();
+});
+
+test('l’écran reste allumé pendant le suivi, et le verrou se REND à l’arrêt', async ({ page }) => {
+  /* Screen Wake Lock : un téléphone qui se verrouille au premier feu rouge
+     n'est pas un suivi — et un verrou gardé après l'arrêt viderait la
+     batterie de celui qui est arrivé. On instrumente l'API du navigateur et
+     l'on compte. */
+  await page.addInitScript(() => {
+    const compte = { demandes: 0, rendus: 0 };
+    (window as unknown as { __verrous: typeof compte }).__verrous = compte;
+    Object.defineProperty(navigator, 'wakeLock', {
+      value: {
+        request: () => {
+          compte.demandes += 1;
+          return Promise.resolve({ release: () => { compte.rendus += 1; return Promise.resolve(); } });
+        },
+      },
+    });
+  });
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __verrous: { demandes: number } }).__verrous.demandes))
+    .toBeGreaterThanOrEqual(1);
+
+  await page.getByRole('button', { name: 'Arrêter le suivi' }).click();
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __verrous: { rendus: number } }).__verrous.rendus),
+  { message: 'le verrou n’a pas été rendu à l’arrêt' }).toBeGreaterThanOrEqual(1);
+});
+
+test('le bandeau se RÉDUIT — et garde ce qu’on lit en roulant', async ({ page }) => {
+  /* « Réduire la taille du cartouche en bas qui prend 1/3 de l'écran »
+     (Armelin, 27/08/2026). Réduit : la manœuvre et le restant restent, la
+     note de limite — lue au démarrage — se range. */
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  const bandeau = page.locator('bandeau-guidage');
+  await expect(bandeau.locator('.bg-limite')).toBeVisible({ timeout: 15_000 });
+
+  const avant = (await bandeau.locator('.bg').boundingBox())!.height;
+  await page.getByRole('button', { name: 'Réduire le bandeau' }).click();
+  await expect(bandeau.locator('.bg-limite')).toBeHidden();
+  await expect(bandeau.locator('.bg-instruction')).toBeVisible();
+  await expect(bandeau.locator('.bg-restant')).toBeVisible();
+  const apres = (await bandeau.locator('.bg').boundingBox())!.height;
+  expect(apres, 'réduit, le bandeau doit être plus petit').toBeLessThan(avant);
+
+  await page.getByRole('button', { name: 'Agrandir le bandeau' }).click();
+  await expect(bandeau.locator('.bg-limite')).toBeVisible();
+});
+
 test('démarrer DÉGAGE la vue : volets refermés, recherche d’adresse effacée', async ({ page }) => {
   /* Armelin, le 26/08/2026 : « quand on est en mode navigation, il y a trop de
      cartouches affichés qui masquent la navigation, comme la recherche
