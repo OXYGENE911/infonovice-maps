@@ -395,7 +395,11 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
         sous-module, copie).
       · Péages : l'évitement reste impossible (moteur IGN), mais NOMMER les
         gares de péage du tracé (barrier=toll_booth, mécanique Overpass des
-        commodités) est faisable → candidate à une PR.
+        commodités) est faisable → LIVRÉ, PR #54 : « Relever les péages du
+        trajet » dans la page Options — à la demande, cabines FONDUES en
+        gares (OSM cartographie chaque voie), kilométrage, limites dites
+        (source OSM, pas de tarif). Filtre exact local sur le vrai tracé,
+        polyligne décimée et plafonnée dans la requête.
       · Restauration façon restautoroute : les données sont déjà là
         (commodités PR #29), c'est un chantier de PRÉSENTATION → maquette
         d'abord, pictogrammes dessinés, jamais de logos de marques.

@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.39.0] — 2026-08-27 — Les péages du trajet, nommés (PR #54)
+
+Le verdict de l'étude du 27/08 appliqué : les péages ne s'évitent pas (le
+moteur public n'a pas de clause — mesuré PR #6), ils se RELÈVENT. Un bouton
+dans la page Options : « Relever les péages du trajet » — un appel Overpass
+au clic, jamais au fil de la carte.
+
+- **Une gare n'est pas un nœud** : OSM cartographie souvent CHAQUE CABINE
+  d'une barrière (une par voie). Les cabines à moins de 500 m d'avancement
+  fondent en une gare, qui porte le premier nom déclaré du groupe — « 2 gares »
+  là où le fichier dit quatorze nœuds.
+- **La requête décrit le tracé par une polyligne décimée** (un point par
+  kilomètre, plafonnée à 400 points) ; le rayon de 400 m absorbe l'écart des
+  cordes dans les courbes, et le filtre EXACT se refait localement sur le
+  vrai tracé — la première écriture du parcours E2E a d'ailleurs posé une
+  cabine à 6 km de la ligne, et le filtre l'a écartée comme il devait.
+- **Les limites en toutes lettres** : source OpenStreetMap (une gare absente
+  de la carte n'est pas relevée), et le TARIF n'y figure pas — le promettre
+  serait inventer.
+
+546 tests unitaires (+10), 161 parcours E2E (+2).
+
 ## [0.38.0] — 2026-08-27 — La caméra rendue à l'usager (PR #53)
 
 La première des quatre PR du cadrage navigation mobile

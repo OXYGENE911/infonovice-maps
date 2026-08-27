@@ -175,14 +175,19 @@ test('l’écran reste allumé pendant le suivi, et le verrou se REND à l’arr
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
 
+  /* DIX SECONDES ET NON CINQ : en local, plusieurs workers Playwright se
+     partagent la machine et affament les timers (le phénomène documenté dans
+     playwright.config.ts) — mesuré : 1 échec sur 4 en répétition parallèle,
+     0 sur 6 à un seul worker. La CI, elle, tourne à un worker. */
   await expect.poll(() => page.evaluate(() =>
-    (window as unknown as { __verrous: { demandes: number } }).__verrous.demandes))
-    .toBeGreaterThanOrEqual(1);
+    (window as unknown as { __verrous: { demandes: number } }).__verrous.demandes),
+  { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 
   await page.getByRole('button', { name: 'Arrêter le suivi' }).click();
   await expect.poll(() => page.evaluate(() =>
     (window as unknown as { __verrous: { rendus: number } }).__verrous.rendus),
-  { message: 'le verrou n’a pas été rendu à l’arrêt' }).toBeGreaterThanOrEqual(1);
+  { message: 'le verrou n’a pas été rendu à l’arrêt', timeout: 10_000 })
+    .toBeGreaterThanOrEqual(1);
 });
 
 test('le bandeau se RÉDUIT — et garde ce qu’on lit en roulant', async ({ page }) => {
