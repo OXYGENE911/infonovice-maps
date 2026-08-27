@@ -23,6 +23,7 @@ import {
   etatGuidage, distanceEnMots, heureArriveeEstimee, type OptionsGuidage,
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
+import { limiteA, type LimiteTrajet } from '../lib/limites';
 import { flecheManoeuvre } from './icone-manoeuvre';
 import { refermerPanneaux } from './panneaux';
 
@@ -62,6 +63,13 @@ interface VerrouEcran { release(): Promise<void> }
 
 export class BandeauGuidage extends HTMLElement {
   #carte: CarteMapLibre | null = null;
+  /* LES LIMITES CARTOGRAPHIÉES du tracé (lib/limites.ts) — livrées APRÈS le
+     démarrage : Overpass peut mettre vingt secondes, et « Démarrer » ne doit
+     pas les attendre. Tant qu'elles ne sont pas là (ou pas du tout), le
+     panneau de limite n'apparaît simplement pas. */
+  #limites: readonly LimiteTrajet[] = [];
+
+  set limites(l: readonly LimiteTrajet[]) { this.#limites = l; }
   #veille: number | null = null;
   #options: DemarrageGuidage | null = null;
   /** La caméra suit-elle la voiture ? Un geste de l'usager la suspend. */
@@ -146,7 +154,15 @@ export class BandeauGuidage extends HTMLElement {
       <!-- LA VITESSE GPS — un cercle discret à gauche. Cachée tant que le
            récepteur ne la donne pas : un chiffre figé serait un mensonge. -->
       <p class="bg-vitesse" hidden aria-label="Vitesse GPS">
-        <span class="bg-vitesse-nombre">0</span><span class="bg-vitesse-unite">km/h</span></p>`;
+        <span class="bg-vitesse-nombre">0</span><span class="bg-vitesse-unite">km/h</span></p>
+      <!-- LA LIMITE CARTOGRAPHIÉE — un disque cerclé de rouge, au-dessus de
+           la vitesse. CARTOGRAPHIÉE, pas mesurée : OpenStreetMap ignore les
+           travaux et les limites variables — le title le dit, et le panneau
+           SE TAIT quand la carte ne sait pas. -->
+      <p class="bg-limite-vitesse" hidden role="status"
+        title="Vitesse limite cartographiée (OpenStreetMap) — travaux et limites variables non connus"
+        aria-label="Vitesse limite cartographiée">
+        <span class="bg-limite-nombre">50</span></p>`;
     this.querySelector('.bg-arreter')?.addEventListener('click', () => { this.arreter(); });
     this.querySelector('.bg-recentrer')?.addEventListener('click', () => { this.#recentrer(); });
     this.querySelector('.bg-3d')?.addEventListener('click', () => {
@@ -224,6 +240,7 @@ export class BandeauGuidage extends HTMLElement {
     clearTimeout(this.#reprise);
     (this.querySelector('.bg-recentrer') as HTMLElement | null)?.setAttribute('hidden', '');
     (this.querySelector('.bg-vitesse') as HTMLElement | null)?.setAttribute('hidden', '');
+    (this.querySelector('.bg-limite-vitesse') as HTMLElement | null)?.setAttribute('hidden', '');
     /* LE NORD REVIENT EN HAUT : la carte orientée au cap n'a de sens qu'en
        suivi — la laisser tournée après l'arrêt désoriente la consultation. */
     /* …ET LA CARTE SE REDRESSE : l'inclinaison n'a de sens qu'en suivi. */
@@ -306,6 +323,18 @@ export class BandeauGuidage extends HTMLElement {
       vitesse.hidden = false;
     } else {
       vitesse.hidden = true;
+    }
+
+    /* LA LIMITE CARTOGRAPHIÉE DU KILOMÈTRE COURANT — lecture locale, le
+       relevé a été fait une fois au démarrage. Hors tronçon connu ou hors
+       route : le panneau disparaît, il ne mentira pas. */
+    const panneauLimite = this.querySelector('.bg-limite-vitesse') as HTMLElement;
+    const kmh = e.horsRoute ? null : limiteA(this.#limites, e.avancementM);
+    if (kmh !== null) {
+      (panneauLimite.querySelector('.bg-limite-nombre') as HTMLElement).textContent = String(kmh);
+      panneauLimite.hidden = false;
+    } else {
+      panneauLimite.hidden = true;
     }
 
     /* LA CARTE SUIT LA VOITURE — SAUF quand l'usager vient de la prendre :

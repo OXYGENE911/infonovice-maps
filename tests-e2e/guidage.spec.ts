@@ -53,6 +53,15 @@ test.beforeEach(async ({ page, context }) => {
   // La géolocalisation est un GESTE : on l'autorise, on ne la déclenche pas.
   await context.grantPermissions(['geolocation']);
   await context.setGeolocation({ longitude: 2.3522, latitude: 48.8566 });
+  /* LE RELEVÉ DES LIMITES part au démarrage du suivi : sans ce bouchon, les
+     parcours frapperaient le VRAI Overpass — un commun bénévole — à chaque
+     exécution. Les tests qui mesurent ce relevé posent leur propre route
+     AVANT celle-ci, et Playwright donne priorité à la dernière posée. */
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json',
+    body: JSON.stringify({ elements: [] }),
+  }));
 });
 
 async function ouvrirTrajet(page: Page): Promise<void> {
@@ -214,6 +223,74 @@ test('le bandeau se RÉDUIT — et garde ce qu’on lit en roulant', async ({ pa
 
   await page.getByRole('button', { name: 'Agrandir le bandeau' }).click();
   await expect(bandeau.locator('.bg-limite')).toBeVisible();
+});
+
+test('la limite CARTOGRAPHIÉE s’affiche sur son tronçon, et SE TAIT ailleurs', async ({ page }) => {
+  /* La candidate issue de l'étude maxspeed (97-100 % de couverture mesurée).
+     Overpass est simulé : une route à 110 le long du premier tiers du tracé.
+     Le panneau paraît sur le tronçon, disparaît au-delà — jamais la limite
+     d'il y a trois kilomètres. Et UN SEUL appel, au démarrage. */
+  let appels = 0;
+  await page.route('**overpass.openstreetmap.fr**', (route) => {
+    appels += 1;
+    return route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      contentType: 'application/json',
+      body: JSON.stringify({ elements: [{
+        type: 'way', id: 1, tags: { highway: 'trunk', maxspeed: '110' },
+        /* Huit nœuds posés SUR la diagonale Paris-Lyon simulée, du départ au
+           premier tiers (~130 km). */
+        geometry: Array.from({ length: 8 }, (_, i) => ({
+          lat: 48.8566 - (i * 3.0926 * 0.33) / 7,
+          lon: 2.3522 + (i * 2.4835 * 0.33) / 7,
+        })),
+      }] }),
+    });
+  });
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null,
+        speed: null, heading: null, ...c } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await ouvrirTrajet(page);
+  expect(appels, 'Overpass interrogé avant tout suivi').toBe(0);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+
+  /* Sur le tronçon (à ~15 % du trajet) : le panneau dit 110. LE FIXE EST
+     REPOUSSÉ EN BOUCLE : les limites arrivent APRÈS le démarrage (Overpass ne
+     bloque pas le bouton), et le panneau ne se rafraîchit qu'au fixe suivant
+     — un fixe unique pouvait précéder la livraison. */
+  const panneau = page.locator('.bg-limite-vitesse');
+  await expect.poll(async () => {
+    await page.evaluate(() => {
+      (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+        longitude: 2.3522 + 2.4835 * 0.15, latitude: 48.8566 - 3.0926 * 0.15,
+      });
+    });
+    return panneau.isVisible();
+  }, { timeout: 10_000 }).toBe(true);
+  await expect(panneau.locator('.bg-limite-nombre')).toHaveText('110');
+  await expect(panneau, 'le panneau doit dire sa nature cartographiée')
+    .toHaveAttribute('title', /cartographiée/);
+
+  // Aux deux tiers du trajet : plus aucun tronçon connu — le panneau SE TAIT.
+  await page.evaluate(() => {
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+      longitude: 2.3522 + 2.4835 * 0.66, latitude: 48.8566 - 3.0926 * 0.66,
+    });
+  });
+  await expect(panneau).toBeHidden({ timeout: 10_000 });
+  expect(appels, 'un suivi, un appel — le GPS bat chaque seconde').toBe(1);
 });
 
 test('la vue s’incline en suivi, se refuse d’un bouton, se redresse à l’arrêt', async ({ page }) => {

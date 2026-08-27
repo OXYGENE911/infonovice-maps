@@ -471,10 +471,12 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
         chaque fixe GPS.
       LE CADRAGE NAVIGATION MOBILE EST SOLDÉ (PR #53, #58, #59, #60), ET
       SES DEUX ÉTUDES AUSSI (PR #61, mesures dans docs/navigation-mobile.md) :
-      · maxspeed OSM : 97-100 % de couverture sur trois types d'axes — la
-        vitesse limite CARTOGRAPHIÉE est faisable (un appel Overpass par
-        trajet, lecture locale en suivi), candidate à une PR ; jamais
-        appelée « ISA ».
+      · maxspeed OSM : 97-100 % de couverture sur trois types d'axes →
+        LIVRÉ, PR #63 : le disque cerclé de rouge du suivi — un appel
+        Overpass par trajet (POST, polyligne serrée), lecture locale par
+        INTERVALLES de tronçon, routes croisées écartées par leur empreinte,
+        silence hors tronçon connu. Le démarrage du suivi n'attend pas
+        Overpass. Jamais appelée « ISA ».
       · barre de trafic en dégradé : ÉCARTÉE avec la mesure — Bison Futé
         publie des événements PONCTUELS (359 nationaux le 27/08 à 20 h,
         SIX bouchons dans toute la France), aucune fluidité de tronçon.
