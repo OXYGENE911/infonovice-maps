@@ -18,7 +18,6 @@ du 26/08). Le rôle vit désormais sur un conteneur interne — qui EMPORTE l'id
 `#carte` : ni la feuille de style ni les trente parcours E2E qui le désignent
 n'ont bougé, et `#carte` reste le nœud que MapLibre reçoit. Un parcours E2E
 verrouille la structure : `<main>` sans rôle, l'application DANS le repère.
->>>>>>> origin/main
 
 ## [0.35.0] — 2026-08-27 — Le plan se règle, et se choisit sur la carte (PR #47)
 
