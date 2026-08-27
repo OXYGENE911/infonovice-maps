@@ -903,6 +903,30 @@ etat-connexion { display: contents; }
   font: 500 11.5px var(--police); color: var(--texte-2);
 }
 
+/* LES COMMODITÉS EN PUCES À PICTOGRAMMES — la présentation « claire et
+   stylisée » du 27/08. Le picto porte le TYPE (dessiné, jamais un logo de
+   marque), le nom en toutes lettres, la distance qui décide. Chaque type a
+   sa couleur de picto, le texte reste au contraste du thème. */
+.com-puces { display: flex; flex-wrap: wrap; gap: 5px; align-items: center;
+  font: 400 11.5px var(--police); color: var(--texte-2); }
+.com-puce {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px 3px 6px; border-radius: 999px;
+  border: 1px solid var(--bord-2); background: var(--fond);
+}
+.com-picto { display: inline-flex; }
+.com-picto svg { width: 14px; height: 14px; display: block; }
+.com-carburant .com-picto, .com-picto.com-carburant { color: var(--ambre-fonce); }
+.com-restauration .com-picto, .com-picto.com-restauration { color: var(--vert); }
+.com-cafe .com-picto, .com-picto.com-cafe { color: var(--accent); }
+.com-wc .com-picto, .com-picto.com-wc { color: var(--texte-3); }
+.com-nom { font: 600 11.5px var(--police); color: var(--texte-1); }
+.com-distance { font: 400 11px var(--police); color: var(--texte-3);
+  font-variant-numeric: tabular-nums; }
+.com-note { flex-basis: 100%; margin-top: 2px; font-size: 11px; color: var(--texte-3); }
+/* Dans la fiche, le picto s'aligne sur la ligne existante. */
+.fb-liste-commodites .com-picto svg { width: 15px; height: 15px; }
+
 /* LES PÉAGES DU TRAJET — page Options : un bouton discret, un relevé en
    toutes lettres. Même famille visuelle que les commodités. */
 .iti-peages { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--bord); }

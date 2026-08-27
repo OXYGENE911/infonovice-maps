@@ -27,6 +27,25 @@ et pouvoir « les ajouter à la planification ». DATAtourisme étant écarté
 
 551 tests unitaires (+5), 163 parcours E2E (+2).
 
+## [0.39.1] — 2026-08-27 — Les commodités en puces à pictogrammes (PR #55)
+
+« Restautoroute affiche des informations claires avec de beaux logos toutes
+les commodités […] alors que maps.infonovice.fr affiche uniquement une
+liste » (Armelin, 27/08). Le chantier était de PRÉSENTATION — les données
+sont celles de la PR #29, aucun appel de plus.
+
+- Les commodités d'un arrêt s'affichent en PUCES : pictogramme du type
+  DESSINÉ PAR LE CODE (pompe, couverts, tasse, WC — jamais un logo
+  d'enseigne, marques déposées ; le nom s'écrit en toutes lettres à côté),
+  et la distance qui décide — « 60 m » vaut le détour à pied, « 800 m » non.
+- Douze puces au plus, le reste COMPTÉ : une grande aire porte trente
+  commodités, et trente puces referaient le mur qu'on voulait abattre.
+- Le même picto rejoint la liste de la fiche de borne — une seule famille
+  visuelle, vérifiée par capture avant livraison.
+- La phrase d'avant (« UNE PHRASE, PAS UNE LISTE ») était le bon choix dans
+  un accordéon dense ; le planificateur en pages a la place, et la demande
+  du 27/08 est explicite. La décision précédente est remplacée, pas oubliée.
+
 ## [0.39.0] — 2026-08-27 — Les péages du trajet, nommés (PR #54)
 
 Le verdict de l'étude du 27/08 appliqué : les péages ne s'évitent pas (le

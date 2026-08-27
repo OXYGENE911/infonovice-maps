@@ -275,9 +275,16 @@ test('les commodités sont À LA DEMANDE, et un seul arrêt à la fois', async (
 
   await page.getByRole('button', { name: 'Voir les commodités à Aire de Beaune' }).click();
   const sortie = page.locator('.recharge-commodites-corps');
-  await expect(sortie).toContainText('Station-service (TotalEnergies)');
+  /* DES PUCES À PICTOGRAMMES depuis le 27/08 (« de beaux logos toutes les
+     commodités » — restautoroute.fr en exemple) : le nom en toutes lettres,
+     le type en picto dessiné, la distance qui décide. */
+  await expect(sortie).toContainText('TotalEnergies');
   await expect(sortie).toContainText('Toilettes');
   await expect(sortie).toContainText('L’Arche');
+  await expect(sortie.locator('.com-puce')).toHaveCount(3);
+  await expect(sortie.locator('.com-puce svg'), 'chaque puce porte son picto dessiné')
+    .toHaveCount(3);
+  await expect(sortie.locator('.com-distance').first()).toContainText(/\d+ m/);
   // L'attribution OSM est une obligation de la licence ODbL, pas un ornement.
   await expect(sortie).toContainText('OpenStreetMap');
   expect(appels, 'un arrêt demandé, un appel').toBe(1);

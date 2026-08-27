@@ -20,7 +20,7 @@ import { versFragment, depuisFragment } from '../lib/partage-url';
 import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 import {
-  chercherLeLongDuTrajet, stationsDuTrajet,
+  chercherLeLongDuTrajet, stationsDuTrajet, distanceM,
   type Categorie, type SurLeTrajet,
 } from '../lib/le-long-du-trajet';
 import {
@@ -42,6 +42,7 @@ import {
   chargerMonuments, monumentsDuTrajet, ErreurMonuments, KM_PAR_MINUTE,
   type Monument,
 } from '../lib/monuments';
+import { svgCommodite } from './icone-commodite';
 import { meteoA, phraseMeteo, symboleTemps, heureArrivee, formaterHeure, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
 import type { FicheBorne } from './fiche-borne';
 import type { BandeauGuidage } from './bandeau-guidage';
@@ -1215,23 +1216,62 @@ export class PanneauItineraire extends HTMLElement {
     corps.append(note);
   }
 
-  /* UNE PHRASE, PAS UNE LISTE : sur une aire, trois lignes de plus dans un
-     volet déjà dense n'aident personne. On groupe par type et on nomme les
-     enseignes connues — un quart des commodités n'en portent aucune, et pour
-     celles-là le TYPE est déjà l'information utile. */
-  #phraseCommodites(trouvees: import('../lib/commodites').Commodite[]): string {
+  /* DES PUCES À PICTOGRAMMES, PLUS UNE PHRASE. La phrase était le bon choix
+     dans un accordéon dense ; Armelin, le 27/08/2026, montrant
+     restautoroute.fr : « affiche des informations claires avec de beaux
+     logos toutes les commodités », là où nous rendions « uniquement une
+     liste ». Chaque puce porte le TYPE en picto dessiné (jamais un logo de
+     marque — déposé), le NOM en toutes lettres, et la DISTANCE : « 60 m »
+     décide d'y aller à pied pendant la charge, « 800 m » non. */
+  #pucesCommodites(
+    trouvees: import('../lib/commodites').Commodite[],
+    autour: { lon: number; lat: number },
+  ): HTMLElement {
+    const boite = document.createElement('div');
+    boite.className = 'com-puces';
     if (trouvees.length === 0) {
-      return 'Rien de cartographié autour de cet arrêt — ce qui ne veut pas'
-        + ' dire qu’il n’y a rien.';
+      boite.textContent = 'Rien de cartographié autour de cet arrêt — ce qui'
+        + ' ne veut pas dire qu’il n’y a rien.';
+      return boite;
     }
-    const bouts: string[] = [];
-    for (const { cle, libelle } of TYPES_COMMODITE) {
-      const duType = trouvees.filter((c) => c.type === cle);
-      if (duType.length === 0) continue;
-      const noms = [...new Set(duType.map((c) => c.nom).filter((n): n is string => !!n))];
-      bouts.push(noms.length > 0 ? `${libelle} (${noms.join(', ')})` : libelle);
+    const avecDistance = trouvees
+      .map((c) => ({ c, m: Math.round(distanceM([autour.lon, autour.lat], [c.lon, c.lat])) }))
+      .sort((a, b) => a.m - b.m);
+
+    /* DOUZE PUCES AU PLUS, ET LE RESTE COMPTÉ : une grande aire porte trente
+       commodités, et trente puces redeviennent le mur qu'on voulait éviter. */
+    const montrees = avecDistance.slice(0, 12);
+    for (const { c, m } of montrees) {
+      const libelleType = TYPES_COMMODITE.find((t) => t.cle === c.type)?.libelle ?? c.type;
+      const puce = document.createElement('span');
+      puce.className = `com-puce com-${c.type}`;
+      puce.title = `${libelleType}${c.nom ? ` — ${c.nom}` : ''} · ${m} m`;
+
+      const picto = document.createElement('span');
+      picto.className = 'com-picto';
+      picto.setAttribute('aria-hidden', 'true');
+      // Markup engendré depuis des constantes : aucune donnée externe n'y entre.
+      picto.innerHTML = svgCommodite(c.type);
+
+      const nom = document.createElement('span');
+      nom.className = 'com-nom';
+      // Un quart des commodités n'ont aucune identité : le type est le nom.
+      nom.textContent = c.nom ?? libelleType;
+
+      const dist = document.createElement('span');
+      dist.className = 'com-distance';
+      dist.textContent = `${m} m`;
+
+      puce.append(picto, nom, dist);
+      boite.append(puce);
     }
-    return `${bouts.join(' · ')}. Source OpenStreetMap.`;
+    const note = document.createElement('span');
+    note.className = 'com-note';
+    note.textContent = (montrees.length < avecDistance.length
+      ? `${avecDistance.length - montrees.length} de plus à proximité. ` : '')
+      + 'Source OpenStreetMap.';
+    boite.append(note);
+    return boite;
   }
 
   /**
@@ -1590,7 +1630,11 @@ export class PanneauItineraire extends HTMLElement {
           voir.disabled = true;
           sortie.textContent = 'Recherche des commodités…';
           chargerCommodites(a.borne.lon, a.borne.lat).then(
-            (trouvees) => { sortie.textContent = this.#phraseCommodites(trouvees); },
+            (trouvees) => {
+              sortie.replaceChildren(
+                this.#pucesCommodites(trouvees, { lon: a.borne.lon, lat: a.borne.lat }),
+              );
+            },
             (e: unknown) => {
               voir.disabled = false;   // réessayable : Overpass tombe souvent
               sortie.textContent = e instanceof ErreurCommodites

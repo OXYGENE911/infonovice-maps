@@ -401,8 +401,12 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
         (source OSM, pas de tarif). Filtre exact local sur le vrai tracé,
         polyligne décimée et plafonnée dans la requête.
       · Restauration façon restautoroute : les données sont déjà là
-        (commodités PR #29), c'est un chantier de PRÉSENTATION → maquette
-        d'abord, pictogrammes dessinés, jamais de logos de marques.
+        (commodités PR #29), c'était un chantier de PRÉSENTATION → LIVRÉ,
+        PR #55 : les commodités s'affichent en PUCES à pictogrammes dessinés
+        (pompe, couverts, tasse, WC — jamais un logo de marque), nom en
+        toutes lettres, distance qui décide, douze puces au plus et le reste
+        compté. Dans le plan de recharge ET la fiche de borne. Rendu vérifié
+        par capture avant livraison.
       · Monuments (base Mérimée) : LES TROIS MESURES FAITES le 27/08 sur le
         fichier du jour (46 760 notices) — 95 % de coordonnées ; index
         classés 890 Ko brut ; 14 990 classés vs 31 321 inscrits seuls (la

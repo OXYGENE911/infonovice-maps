@@ -36,6 +36,7 @@ import { adresseInverse } from '../lib/adresse';
 import { PRISES } from '../lib/poi';
 import { palierDe, PALIERS } from '../lib/puissance';
 import { eclairsSVG } from './icone-puissance';
+import { svgCommodite } from './icone-commodite';
 import { refermerPanneaux } from './panneaux';
 
 /** Ce qu'il faut pour aller chercher une station : peu de choses. */
@@ -508,6 +509,14 @@ export class FicheBorne extends HTMLElement {
       // Un quart des commodités ne portent aucune identité : le type suffit.
       const libelle = c.nom ?? libelleType;
 
+      /* LE PICTO DESSINÉ AVANT LE MOT — la présentation « claire et
+         stylisée » demandée le 27/08 (restautoroute.fr en exemple). Jamais un
+         logo d'enseigne : le picto porte le TYPE, le nom s'écrit à côté. */
+      const picto = document.createElement('span');
+      picto.className = `com-picto com-${c.type}`;
+      picto.setAttribute('aria-hidden', 'true');
+      picto.innerHTML = svgCommodite(c.type);
+
       const type = document.createElement('span');
       type.className = 'fb-commodite-type';
       type.textContent = libelleType;
@@ -529,7 +538,7 @@ export class FicheBorne extends HTMLElement {
       dist.className = 'fb-commodite-distance';
       dist.textContent = `${m} m`;
 
-      li.append(type, nom, dist);
+      li.append(picto, type, nom, dist);
 
       /* ET UN ITINÉRAIRE VERS LUI. C'est l'autre moitié de la demande : on
          regarde un restaurant à 62 m et l'on veut y aller, pas recopier son
