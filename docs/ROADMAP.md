@@ -362,8 +362,13 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
       passage décalé. Ne rien promettre avant la mesure.
 - [ ] Accessibilité `role="application"` (déjà au chapitre « Limites
       connues ») — sa propre PR.
-- [ ] Ménage Dependabot : ESLint 10.9, Vite 8.2.2 (mineures) ; TypeScript
-      5.9 → 7.0 est un chantier à part.
+- [x] Ménage Dependabot (PR #49) : ESLint 10.9, Vite 8.2.2 (mineures).
+      TypeScript 7.0.2 ESSAYÉ ET ÉCARTÉ avec la preuve, le 27/08 : `tsc`
+      lui-même passe sans une erreur, mais typescript-eslint REFUSE de
+      démarrer (« typescript-eslint does not support TS 7.0 », suivi de
+      compatibilité annoncé pour ≥ 7.1 — issue typescript-eslint #10940).
+      La chaîne de lint est une porte de CI : à reprendre quand
+      typescript-eslint suivra.
 - [x] PR #50 — PETITES CORRECTIONS D'INTERFACE, groupées. Tout est au
       CHANGELOG 0.36.0 ; ce qui mérite la roadmap :
       · « Accès réservé » reformulé (badge/clientèle/résidents, « vérifiez

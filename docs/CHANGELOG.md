@@ -45,6 +45,14 @@ qu'il révélait.
 
 532 tests unitaires, 154 parcours E2E.
 
+## [0.35.2] — 2026-08-27 — Ménage des dépendances (PR #49)
+
+ESLint 10.9.0 et Vite 8.2.2 (mineures Dependabot), vérifiées par toute la
+chaîne. TypeScript 7.0.2 essayé et ÉCARTÉ avec la preuve : `tsc` passe sans
+une erreur, mais typescript-eslint refuse de démarrer (« does not support
+TS 7.0 », support annoncé pour ≥ 7.1). La chaîne de lint est une porte de
+CI ; à reprendre quand elle suivra.
+
 ## [0.35.1] — 2026-08-27 — Le repère principal rendu aux lecteurs d'écran (PR #48)
 
 `role="application"` posé sur `<main>` écrasait le point de repère principal :
