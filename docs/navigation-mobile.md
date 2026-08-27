@@ -65,8 +65,42 @@ Elle est gratuite, locale, et son échec est bénin. À prendre en premier.
 - PR B « Le cap et la vitesse » : carte orientée cap GPS + vitesse GPS (3, 6).
 - PR C « La prochaine manœuvre en grand » : flèche + distance (5).
 - PR D « Vue 3D » : pitch en suivi, SI l'essai visuel du fond raster tient (4).
-- ÉTUDE « maxspeed OSM » avant toute promesse ISA (7).
-- ÉTUDE-MAQUETTE « barre de trafic » sur les données Bison Futé réelles (8).
+- ÉTUDE « maxspeed OSM » avant toute promesse ISA (7) — FAITE, voir §Études.
+- ÉTUDE-MAQUETTE « barre de trafic » sur les données Bison Futé réelles (8)
+  — FAITE, voir §Études : le dégradé de fluidité est ÉCARTÉ avec la mesure.
+
+## Études — mesures du 27/08/2026 au soir
+
+### maxspeed OSM (pour la vitesse limite « ISA »)
+
+Couverture de `maxspeed` mesurée par Overpass sur trois types d'axes :
+- A6 autour de Beaune (motorway) : 112 tronçons sur 114 — **98 %** ;
+- N79/RCEA vers Mâcon (trunk) : 142 sur 142 — **100 %** ;
+- départementales autour d'Avallon (secondary) : 198 sur 204 — **97 %**.
+
+VERDICT : la couverture PORTE la fonctionnalité. La voie d'implémentation
+frugale : UN appel Overpass par trajet (le mécanisme des péages — polyligne
+décimée), les limites projetées en intervalles d'avancement, puis le suivi
+lit LOCALEMENT la limite du kilomètre courant. À afficher pour ce qu'elle
+est : une limite CARTOGRAPHIÉE (travaux et limites variables invisibles),
+jamais « ISA » — ce sigle désigne un dispositif réglementaire embarqué.
+Candidate à une PR.
+
+### La barre de trafic verticale (dégradé vert/orange/rouge)
+
+Le flux Bison Futé réel, relevé le 27/08/2026 à 20 h 05 : **359 événements
+nationaux, tous PONCTUELS** (geometry Point, jamais de tronçon), répartis en
+155 travaux, 92 obstacles, 42 restrictions, 23 coupures, 17 accidents…
+et **6 bouchons sur toute la France**.
+
+VERDICT : le DÉGRADÉ DE FLUIDITÉ EST ÉCARTÉ, avec cette mesure. Bison Futé
+publie des ÉVÉNEMENTS, pas des vitesses de tronçon : une barre
+verte/orange/rouge serait verte presque partout presque toujours, et sa
+promesse implicite — une fluidité MESURÉE — n'existe pas dans la donnée.
+Ce qui reste honnête et utile : annoncer les ÉVÉNEMENTS du corridor dans le
+SUIVI, projetés à leur kilomètre (« Travaux au km 78 ») — la mécanique des
+péages, appliquée au flux trafic déjà consommé par la PR #14. Candidate à
+une PR, plus utile qu'une réglette décorative.
 
 Rien de tout cela ne demande un compte, un serveur, ni une donnée qui sorte
 du navigateur : la position reste locale, comme la page « Vie privée »
