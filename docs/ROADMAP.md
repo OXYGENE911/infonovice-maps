@@ -193,17 +193,19 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       Repli soigné : sans WebGL, ou si la texture est refusée, l'image à plat
       reste affichée. Et la navigation se fait aussi AUX FLÈCHES.
 
-- [ ] `<main id="carte" role="application">` — relevé le 26/08/2026 par
+- [x] RÉSOLU le 27/08/2026 (PR #48) — `<main id="carte" role="application">`
+      — relevé le 26/08/2026 par
       l'audit « arbre d'accessibilité » de Lighthouse. `role="application"`
       est le bon choix pour une carte : il demande au lecteur d'écran de
       laisser passer les touches, sans quoi les flèches déplaceraient le
       curseur de lecture au lieu de la carte. Mais posé sur `<main>`, il
       ÉCRASE le point de repère principal de la page : un lecteur d'écran ne
       trouve plus « le contenu principal ».
-      LE REMÈDE EST CONNU — garder `<main>` comme repère et poser
-      `role="application"` sur un conteneur interne — mais il déplace le
-      nœud que MapLibre reçoit et que trente parcours E2E désignent par
-      `#carte`. À faire dans sa propre PR, pas en fin de nuit.
+      LE REMÈDE APPLIQUÉ : `<main>` reste le repère, le rôle vit sur un
+      conteneur interne — qui EMPORTE l'id `#carte`. Ni la feuille de style ni
+      les trente parcours E2E n'ont eu à bouger : ils désignent `#carte`, et
+      `#carte` est toujours le nœud que MapLibre reçoit. Un parcours E2E
+      verrouille la structure.
       Sans conséquence sur la note : les trois axes exigés par le projet
       restent à 100 (l'audit appartient à la catégorie « navigation
       agentique », hors périmètre).

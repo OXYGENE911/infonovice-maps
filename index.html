@@ -73,8 +73,19 @@
     <span class="entete-marque">Infonovice <strong>Maps</strong></span>
     <span class="entete-note">Cartographie souveraine — IGN&nbsp;· BAN&nbsp;· zéro tracking</span>
   </header>
-  <main id="carte" role="application" aria-label="Carte de France interactive.
-    Utilisez les boutons Zoomer, Dézoomer et Me localiser en haut à droite."></main>
+  <!-- LE REPÈRE PRINCIPAL ET L'APPLICATION SONT DEUX NŒUDS, et il le faut.
+       `role="application"` est le bon choix pour une carte : il demande au
+       lecteur d'écran de laisser passer les touches, sans quoi les flèches
+       déplaceraient le curseur de lecture au lieu de la carte. Mais posé sur
+       <main>, il ÉCRASAIT le point de repère principal de la page — relevé par
+       l'audit « arbre d'accessibilité » de Lighthouse le 26/08/2026. Le rôle
+       descend donc sur un conteneur interne, qui EMPORTE l'id : les trente
+       parcours E2E et la feuille de style désignent `#carte`, et `#carte`
+       reste le nœud que MapLibre reçoit. -->
+  <main>
+    <div id="carte" role="application" aria-label="Carte de France interactive.
+      Utilisez les boutons Zoomer, Dézoomer et Me localiser en haut à droite."></div>
+  </main>
   <nav class="pied-carte" aria-label="Informations sur le service">
     <a href="/a-propos.html">À propos</a>
     <a href="/offre-flottes.html">Professionnels</a>

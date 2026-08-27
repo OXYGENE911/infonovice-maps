@@ -33,17 +33,24 @@ export async function ouvrirPlanificateur(page: Page): Promise<void> {
       .filter({ hasText: 'Itinéraire' }).click();
     await expect(page.locator('.iti[open]')).toHaveCount(1);
   }
-  /* ON ATTEND QUE LE VOLET SOIT RENDU avant de juger quoi que ce soit. Sans
-     cette attente, la lecture de visibilite ci-dessous etait un instantane
-     pris trop tot : l'accueil paraissait cache alors qu'il allait paraitre,
-     et l'on cliquait une fleche de retour qui, elle, etait bel et bien
-     cachee — trente secondes d'attente pour rien. */
-  await expect(page.locator('.vue-tete')).toBeVisible();
-  if (await page.locator('.vue-accueil').isVisible()) return;
+  /* LA DÉCISION SE REJOUE, ELLE NE SE PREND PAS SUR UN INSTANTANÉ. L'attribut
+     `open` du volet est posé de façon SYNCHRONE au clic, mais l'événement
+     `toggle` — celui qui ramène le volet à sa page d'accueil — est dispatché
+     de façon ASYNCHRONE. Un instantané pris entre les deux voyait l'accueil
+     caché, partait cliquer la flèche de retour… que le retour à l'accueil
+     venait de cacher : trente secondes d'attente pour une flèche qui ne
+     reviendrait pas. La version précédente attendait `.vue-tete` avant de
+     juger — un rendez-vous qui ne fermait pas la fenêtre, mesuré : 1 échec
+     sur 4 en répétition, 3 sur 4 dès qu'un changement anodin décalait le
+     rendu. La boucle ci-dessous REJOUE la décision entière jusqu'à ce
+     qu'elle aboutisse : voir l'accueil, ou cliquer une flèche encore là. */
+  const accueil = page.locator('.vue-accueil');
   const fleche = page.locator('.vue-retour');
-  await expect(fleche).toBeVisible();
-  await fleche.click();
-  await expect(page.locator('.vue-accueil')).toBeVisible();
+  await expect(async () => {
+    if (await accueil.isVisible()) return;
+    await fleche.click({ timeout: 1_500 });
+    await expect(accueil).toBeVisible({ timeout: 1_500 });
+  }).toPass({ timeout: 15_000 });
 }
 
 /**

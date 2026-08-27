@@ -10,6 +10,16 @@ une erreur, mais typescript-eslint refuse de démarrer (« does not support
 TS 7.0 », support annoncé pour ≥ 7.1). La chaîne de lint est une porte de
 CI ; à reprendre quand elle suivra.
 
+## [0.35.1] — 2026-08-27 — Le repère principal rendu aux lecteurs d'écran (PR #48)
+
+`role="application"` posé sur `<main>` écrasait le point de repère principal :
+un lecteur d'écran ne trouvait plus « le contenu principal » (audit Lighthouse
+du 26/08). Le rôle vit désormais sur un conteneur interne — qui EMPORTE l'id
+`#carte` : ni la feuille de style ni les trente parcours E2E qui le désignent
+n'ont bougé, et `#carte` reste le nœud que MapLibre reçoit. Un parcours E2E
+verrouille la structure : `<main>` sans rôle, l'application DANS le repère.
+>>>>>>> origin/main
+
 ## [0.35.0] — 2026-08-27 — Le plan se règle, et se choisit sur la carte (PR #47)
 
 Session mandatée « en autonomie » par Armelin, avec une vingtaine de retours
