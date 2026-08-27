@@ -1402,6 +1402,21 @@ bandeau-guidage.bg-compact .bg-3d { padding: 5px 10px; font-size: 12px; }
 .bg-vitesse-nombre { font: 700 19px var(--police); color: var(--texte-1); line-height: 1; }
 .bg-vitesse-unite { font: 600 9px var(--police); color: var(--texte-3); }
 
+/* LA LIMITE CARTOGRAPHIÉE — le dessin générique d'un panneau de limitation :
+   disque blanc cerclé de rouge, chiffre noir. Fond et chiffre restent FIXES
+   (pas de thème sombre) : un panneau routier ne change pas de couleurs la
+   nuit, et son code visuel est précisément ce qui le rend lisible. */
+.bg-limite-vitesse {
+  pointer-events: none; margin: 0;
+  position: absolute; left: 0; bottom: calc(100% + 76px);
+  width: 56px; height: 56px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: #FFFFFF; border: 7px solid #C4001E; box-shadow: var(--ombre-m);
+  font-variant-numeric: tabular-nums;
+}
+.bg-limite-vitesse[hidden] { display: none; }
+.bg-limite-nombre { font: 700 20px var(--police); color: #111111; line-height: 1; }
+
 /* LE BOUTON « DÉMARRER » PREND TOUTE LA LARGEUR de la barre d'actions : c'est
    le geste qu'on cherche après avoir calculé un trajet, pas un export GPX. */
 /* `.iti-actions .iti-demarrer` ET NON `.iti-demarrer` SEUL : la règle générique

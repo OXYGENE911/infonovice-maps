@@ -38,6 +38,7 @@ import { ErreurPoi, type PoiCarburant, type PoiBorne } from '../lib/poi';
 import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import { palierDe } from '../lib/puissance';
 import { chargerPeages, ErreurPeages } from '../lib/peages';
+import { chargerLimites } from '../lib/limites';
 import {
   chargerMonuments, monumentsDuTrajet, ErreurMonuments, KM_PAR_MINUTE,
   type Monument,
@@ -1633,6 +1634,16 @@ export class PanneauItineraire extends HTMLElement {
         : [],
     });
     this.#majBoutonDemarrer();
+    /* LES LIMITES CARTOGRAPHIÉES ARRIVENT APRÈS : « Démarrer » ne doit pas
+       attendre les vingt secondes qu'Overpass peut prendre. Un appel, dont
+       l'échec est bénin — le panneau de limite n'apparaît pas, et le suivi
+       vaut mieux sans lui que pas de suivi. Livrées SEULEMENT si le suivi
+       tourne encore sur CE trajet. */
+    chargerLimites(iti.geometrie)
+      .then((limites) => {
+        if (bandeau.actif && this.#dernier === iti) bandeau.limites = limites;
+      })
+      .catch(() => { /* bénin : voir ci-dessus */ });
   }
 
   /**

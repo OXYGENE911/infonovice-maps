@@ -2,6 +2,31 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.43.0] — 2026-08-27 — La vitesse limite cartographiée (PR #63)
+
+La première des deux candidates issues des études : maxspeed OSM couvre 97 à
+100 % des axes mesurés — la donnée porte la fonctionnalité.
+
+- **Un disque cerclé de rouge** à gauche du bandeau de suivi, au-dessus de la
+  vitesse GPS. CARTOGRAPHIÉE, pas mesurée : travaux et limites variables lui
+  échappent — le panneau le dit (title), et jamais « ISA », qui désigne un
+  dispositif réglementaire embarqué. Ses couleurs ignorent le thème sombre :
+  un panneau routier ne change pas de couleurs la nuit.
+- **UN appel Overpass par trajet**, au démarrage du suivi, EN POST (polyligne
+  serrée : 300 m de pas, rayon 25 m) ; la lecture est ensuite LOCALE à chaque
+  fixe. Et le démarrage N'ATTEND PAS Overpass : les limites arrivent quand
+  elles arrivent — mesuré d'abord en bloquant, douze parcours rouges, corrigé.
+- **Des intervalles, pas des points** : la première écriture échantillonnait
+  les nœuds OSM — un test l'a prise en défaut sur une ligne droite où les
+  nœuds s'espacent d'un kilomètre. La route est continue entre ses nœuds.
+- **Les routes qui croisent sont écartées par leur empreinte** (deux nœuds
+  proches ET cent mètres d'étalement) : le pont à 30 n'affiche pas sa limite
+  sur l'autoroute qu'il enjambe. Et l'on SE TAIT hors tronçon connu, hors
+  route, et sur les valeurs illisibles — aucun panneau est mieux qu'un
+  panneau faux.
+
+566 tests unitaires (+10), 167 parcours E2E (+1).
+
 ## [0.42.0] — 2026-08-27 — La fiche des lieux d'exception (PR #62)
 
 Le retour d'Armelin du soir même : « il est impossible de cliquer dessus pour
