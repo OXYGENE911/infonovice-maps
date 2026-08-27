@@ -2,6 +2,14 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.35.2] — 2026-08-27 — Ménage des dépendances (PR #49)
+
+ESLint 10.9.0 et Vite 8.2.2 (mineures Dependabot), vérifiées par toute la
+chaîne. TypeScript 7.0.2 essayé et ÉCARTÉ avec la preuve : `tsc` passe sans
+une erreur, mais typescript-eslint refuse de démarrer (« does not support
+TS 7.0 », support annoncé pour ≥ 7.1). La chaîne de lint est une porte de
+CI ; à reprendre quand elle suivra.
+
 ## [0.35.0] — 2026-08-27 — Le plan se règle, et se choisit sur la carte (PR #47)
 
 Session mandatée « en autonomie » par Armelin, avec une vingtaine de retours
