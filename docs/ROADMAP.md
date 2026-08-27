@@ -385,34 +385,44 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
         algorithme : supprimer le bouton, ce serait supprimer la
         fonctionnalité entière de la PR #16. Si Armelin le confirme après un
         essai zoomé avec un réseau coché, on retirera le tout proprement.
-- [ ] ÉTUDES À MESURER AVANT DE PROMETTRE, chacune datée dans docs/ :
-      · API maps.infonovice.fr pour les autres produits (FOOD COMMUNITY,
-        SPORTS, FAMILY…) — publique, à clé, ou bornée aux sous-domaines
-        infonovice.fr ; rappel : pas de backend en phase 1, la voie naturelle
-        est la bibliothèque /src/lib/ ou l'URL de partage ;
-      · péages OSM (barrier=toll_booth) pour avertir ou éviter — le moteur
-        public ignore les péages, mais un POST-TRAITEMENT local peut compter
-        et signaler ceux du tracé ;
-      · restauration sur le trajet, présentation dédiée (restautoroute.fr) ;
-      · monuments à proximité du parcours (Nomadio, base Mérimée/POP — sans
-        clé ?) avec détour maximal en minutes ;
-      · badges de recharge dans le profil → filtrer par compatibilité
-        e-MSP : vérifier si UNE source publique le donne (probablement non —
-        l'écrire alors avec la mesure) ;
-      · IZIVIA FAST sur McDonald's : MESURÉ le 27/08 — le fichier le permet.
-        Les stations en restaurant portent « Mc Donald's »/« McDonald's »
-        dans `nom_station` (2 484 lignes IZIVIA FAST, dont ~36 McDo ;
-        graphies inconstantes, espaces et caractères invisibles compris).
-        La réponse générique est un FILTRE « nom de station contient… » :
-        local sur l'index national, `suggest()` au portail par emprise
-        (opérateur vérifié). Sa propre PR.
-- [ ] NAVIGATION MOBILE (suivi d'itinéraire) — un chantier à cadrer entier :
-      boussole, vue 3D (pitch), flèches aux intersections, cartouche réduit,
-      dézoom libre + bouton « recentrer », barre de trafic verticale colorée
-      avec curseur d'avancement et arrêts, vitesse limite (ISA) et vitesse
-      GPS. Grosse surface : à découper après cadrage, en gardant la ligne
-      « le suivi refuse de s'appeler navigation » tant que les limites web
-      (arrière-plan iOS) tiennent.
+- [x] LES SIX ÉTUDES SONT FAITES, verdicts datés dans
+      docs/etudes-mandat-27-08.md (27/08/2026). En une ligne chacune :
+      · API pour les autres produits : le site n'a AUCUNE donnée en propre à
+        servir — une API serait un proxy payant vers des services publics
+        gratuits. Voie retenue : la bibliothèque /src/lib partagée + liens
+        profonds, MAINTENANT ; API HTTP seulement avec le backend premium.
+        DÉCISION D'ARMELIN ATTENDUE sur le mode de partage (paquet npm,
+        sous-module, copie).
+      · Péages : l'évitement reste impossible (moteur IGN), mais NOMMER les
+        gares de péage du tracé (barrier=toll_booth, mécanique Overpass des
+        commodités) est faisable → candidate à une PR.
+      · Restauration façon restautoroute : les données sont déjà là
+        (commodités PR #29), c'est un chantier de PRÉSENTATION → maquette
+        d'abord, pictogrammes dessinés, jamais de logos de marques.
+      · Monuments (base Mérimée, ministère de la Culture, sans clé —
+        accessible, vérifié le 27/08) : prometteur ; TROIS mesures avant la
+        PR (couverture des coordonnées, poids d'un index, classés vs
+        inscrits).
+      · Badges e-MSP : ÉCARTÉ avec le motif — aucune source publique ne dit
+        quels badges une station accepte ; les réseaux préférés sont
+        l'approximation honnête. À réévaluer si l'open data d'itinérance
+        paraît.
+      · Alternatives A/B/C : pas de moteur, pas de vraies alternatives ; une
+        PR « Comparer avec/sans autoroute » (2 appels, plans de recharge
+        rejoués localement sur chaque tracé) est honnête et utile.
+- [ ] IZIVIA FAST sur McDonald's — MESURÉ le 27/08, le fichier le permet :
+      les stations en restaurant portent « Mc Donald's »/« McDonald's » dans
+      `nom_station` (2 484 lignes IZIVIA FAST, ~36 McDo ; graphies
+      inconstantes). La réponse générique est un FILTRE « nom de station
+      contient… » : local sur l'index national, `suggest()` au portail par
+      emprise. Sa propre PR.
+- [ ] NAVIGATION MOBILE — CADRÉ le 27/08/2026 dans docs/navigation-mobile.md :
+      quatre PR découpées (caméra rendue à l'usager + wake lock ; cap et
+      vitesse GPS ; prochaine manœuvre en grand ; vue 3D si l'essai visuel
+      tient) et deux études préalables (couverture maxspeed OSM pour l'ISA ;
+      maquette de la barre de trafic sur les données Bison Futé réelles).
+      La ligne ne bouge pas : le suivi refuse de s'appeler navigation tant
+      que l'arrière-plan mobile n'existe pas (app native, phase 2).
 
 ## Itérations suivantes (backlog ouvert)
 - PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),
