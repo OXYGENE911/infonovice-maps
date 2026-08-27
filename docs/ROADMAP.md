@@ -461,7 +461,25 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
         propres pour le rond-point et l'arrivée, rien de committé. Au
         départ, tout droit : le modifier du moteur dit le côté
         d'engagement, pas un ordre. La flèche disparaît hors route.
-      · [ ] PR « vue 3D » si l'essai visuel du fond raster tient.
+      · [x] PR #60 — LA VUE 3D, essayée AVANT d'être promise : capture du
+        fond Plan IGN incliné à 60° sur Lyon (zoom du suivi) — champ proche
+        net, lointain qui rapetisse (les étiquettes sont cuites dans le
+        raster : limite connue et assumée). Livrée à 55° : la carte
+        s'incline avec le suivi, « Vue à plat » la refuse (le choix tient
+        la session), l'arrêt la redresse. Et une leçon d'animation : un
+        easeTo FIGE ce qu'il ne nomme pas — l'inclinaison voyage avec
+        chaque fixe GPS.
+      LE CADRAGE NAVIGATION MOBILE EST SOLDÉ (PR #53, #58, #59, #60), ET
+      SES DEUX ÉTUDES AUSSI (PR #61, mesures dans docs/navigation-mobile.md) :
+      · maxspeed OSM : 97-100 % de couverture sur trois types d'axes — la
+        vitesse limite CARTOGRAPHIÉE est faisable (un appel Overpass par
+        trajet, lecture locale en suivi), candidate à une PR ; jamais
+        appelée « ISA ».
+      · barre de trafic en dégradé : ÉCARTÉE avec la mesure — Bison Futé
+        publie des événements PONCTUELS (359 nationaux le 27/08 à 20 h,
+        SIX bouchons dans toute la France), aucune fluidité de tronçon.
+        L'honnête et utile : annoncer les événements du corridor dans le
+        suivi (« Travaux au km 78 »), candidate à une PR.
 
 ## Itérations suivantes (backlog ouvert)
 - PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),

@@ -2,6 +2,22 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.41.4] — 2026-08-27 — Les deux dernières études, verdicts mesurés (PR #61)
+
+Aucun code. Le cadrage navigation mobile est soldé jusque dans ses études
+(docs/navigation-mobile.md, §Études) :
+- **maxspeed OSM** : 97-100 % de couverture mesurée sur trois types d'axes
+  (A6, RCEA, départementales) — la vitesse limite CARTOGRAPHIÉE est faisable,
+  un appel Overpass par trajet, lecture locale en suivi. Jamais « ISA » : ce
+  sigle désigne un dispositif réglementaire embarqué.
+- **La barre de trafic en dégradé est ÉCARTÉE, avec la mesure** : le flux
+  Bison Futé du 27/08 à 20 h 05 porte 359 événements nationaux, tous
+  PONCTUELS, dont SIX bouchons pour toute la France — aucune fluidité de
+  tronçon n'existe dans la donnée, et une barre verte partout presque
+  toujours mentirait par sa promesse implicite. L'honnête et utile — annoncer
+  les événements du corridor dans le suivi (« Travaux au km 78 ») — est
+  consigné comme candidate.
+
 ## [0.41.3] — 2026-08-27 — La vue 3D du suivi (PR #60)
 
 La dernière PR du cadrage navigation mobile — ESSAYÉE avant d'être promise,
