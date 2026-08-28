@@ -518,6 +518,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       la vue, à la demande » (un clic = un appel Overpass, jamais au
       déplacement, refus motivé sous le zoom 12, plafond annoncé).
       LE DÉCOUPAGE INITIAL DU MANDAT EST SOLDÉ (UX-1 à POI-1, PR #69-#75).
+- [x] PR #76 — la frise verticale du trajet en suivi (candidate « après
+      NAV-1 » du triage) : arrêts en pastilles numérotées, événements Bison
+      Futé en losanges à leur kilomètre, curseur-voiture — des événements
+      ponctuels, jamais une fluidité que la donnée ne contient pas.
 - DÉCISIONS D'ARMELIN : bottom sheets généralisées ; profils de pauses ;
   copilote / routines / arrivée réelle (§4 du triage).
 

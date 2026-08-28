@@ -2,6 +2,24 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.51.0] — 2026-08-28 — La frise du trajet en suivi (PR #76)
+
+La candidate « après NAV-1 » du triage du 28/08 : la « barre verticale » du
+mandat, rendue avec ce que la donnée PERMET.
+
+- **Une frise verticale sur le bord gauche en suivi** — départ en bas,
+  arrivée en haut : pastilles vertes numérotées des arrêts de recharge (les
+  mêmes numéros que la carte et la liste), losanges ambre des événements
+  Bison Futé posés à leur kilomètre, curseur-voiture qui avance à chaque
+  fixe. Reconstruite au fixe : quelques dizaines de spans par seconde ne
+  coûtent rien, et la frise reste juste sans invalidation à gérer.
+- **Jamais un dégradé de fluidité** : Bison Futé publie des événements
+  ponctuels (mesure du 27/08), la frise montre des événements ponctuels.
+- Décorative au sens strict (aria-hidden) : tout ce qu'elle montre est déjà
+  DIT en texte dans le bandeau — prochain arrêt, prochain événement.
+
+585 tests unitaires, 186 parcours E2E (+1).
+
 ## [0.50.0] — 2026-08-28 — La recherche par catégories (PR #75)
 
 Septième et dernière PR du découpage initial du mandat UX du 28/08 (POI-1).
