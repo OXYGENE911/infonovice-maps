@@ -1402,16 +1402,20 @@ bandeau-guidage.bg-compact .bg-trafic { display: none; }
 }
 
 .bg-boutons { display: flex; gap: 8px; margin-top: 10px; }
-.bg-arreter, .bg-reduire, .bg-3d {
+.bg-arreter, .bg-reduire, .bg-3d, .bg-orientation {
   padding: 8px 12px;
   border: 1px solid var(--bord-2); border-radius: 8px; background: var(--fond-doux);
   cursor: pointer; font: 600 13px var(--police); color: var(--texte-1);
 }
 .bg-arreter { flex: 1 1 auto; }
-.bg-reduire, .bg-3d { flex: 0 0 auto; }
-.bg-arreter:hover, .bg-reduire:hover, .bg-3d:hover { border-color: var(--accent); color: var(--accent); }
-.bg-arreter:focus-visible, .bg-reduire:focus-visible,
-.bg-3d:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-reduire, .bg-3d, .bg-orientation { flex: 0 0 auto; }
+.bg-arreter:hover, .bg-reduire:hover, .bg-3d:hover,
+.bg-orientation:hover { border-color: var(--accent); color: var(--accent); }
+.bg-arreter:focus-visible, .bg-reduire:focus-visible, .bg-3d:focus-visible,
+.bg-orientation:focus-visible { outline: none; box-shadow: var(--focus); }
+/* Quatre boutons sur un petit écran : la rangée s'enroule plutôt que de
+   pousser « Arrêter » hors du bandeau. */
+.bg-boutons { flex-wrap: wrap; }
 
 /* LE BANDEAU RÉDUIT — « le cartouche en bas prend 1/3 de l'écran » (Armelin,
    27/08/2026). Réduit, il garde la manœuvre, le restant et les boutons :

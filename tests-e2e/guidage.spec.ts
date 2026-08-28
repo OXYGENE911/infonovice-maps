@@ -453,6 +453,105 @@ test('le cap GPS oriente la carte, la vitesse s’affiche — et tout se rend à
   { timeout: 10_000 }).toBe(0);
 });
 
+test('l’orientation à TROIS ÉTATS — cap, nord, vue libre — et le cap se LISSE', async ({ page }) => {
+  /* Mandat UX du 28/08 (NAV-1). Cap en haut est le défaut ; « Nord en haut »
+     redresse et TIENT le nord sous les fixes ; « Vue libre » suit la voiture
+     sans toucher à la rotation. Et le cap ne saute pas d'un fixe à l'autre :
+     il se lisse — 35 % de l'écart par mesure, arc le plus court. */
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null, ...c } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+  const cap = (n: number) => page.evaluate((h) => {
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+      longitude: 2.36, latitude: 48.85, speed: 24.2, heading: h,
+    });
+  }, n);
+  const bearing = () => page.evaluate(() =>
+    Math.round((window as unknown as { __carte: { getBearing(): number } }).__carte.getBearing()));
+
+  // CAP (défaut) : le premier cap est pris ENTIER — la carte ne part pas de travers.
+  const bouton = page.getByRole('button', { name: 'Changer l’orientation de la carte' });
+  await expect(bouton).toHaveText('Cap en haut');
+  await cap(90);
+  await expect.poll(bearing, { timeout: 10_000 }).toBe(90);
+  /* LE LISSAGE : le fixe suivant à 100° ne tourne que de 35 % de l'écart —
+     94° (arrondi), pas 100. Un récepteur qui tremble ne secoue plus la carte. */
+  await cap(100);
+  await expect.poll(bearing, { timeout: 10_000 }).toBe(94);
+
+  // NORD : redressée AU CLIC, et le nord TIENT sous les fixes suivants.
+  await bouton.click();
+  await expect(bouton).toHaveText('Nord en haut');
+  await expect.poll(bearing, { timeout: 10_000 }).toBe(0);
+  await cap(120);
+  await page.waitForTimeout(1000);
+  expect(await bearing()).toBe(0);
+
+  // LIBRE : la carte suit la voiture sans toucher à la rotation posée.
+  await bouton.click();
+  await expect(bouton).toHaveText('Vue libre');
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { setBearing(b: number): void } }).__carte.setBearing(45);
+  });
+  await cap(200);
+  await page.waitForTimeout(1000);
+  expect(await bearing(), 'la vue libre a été tournée par un fixe').toBe(45);
+
+  // Et le cycle revient au cap.
+  await bouton.click();
+  await expect(bouton).toHaveText('Cap en haut');
+});
+
+test('à l’ARRÊT, la boussole oriente la carte — ouverte par le geste, jamais d’office', async ({ page }) => {
+  /* Mandat UX du 28/08 (NAV-1) : DeviceOrientation APRÈS geste et permission.
+     Le geste est ici « Démarrer le suivi » (mode cap par défaut) ; sur iOS,
+     requestPermission s'y ajoute — Chromium ne l'a pas, on s'abonne direct.
+     Le cap GPS n'existe qu'en mouvement : à l'arrêt, c'est la boussole qui
+     sait où le téléphone regarde. */
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null, ...c } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+
+  /* Une mesure boussole ABSOLUE (alpha 270 → cap 90), puis un fixe À L'ARRÊT :
+     le cap GPS est muet, la boussole prend le relais. */
+  await page.evaluate(() => {
+    window.dispatchEvent(new DeviceOrientationEvent('deviceorientationabsolute',
+      { alpha: 270, absolute: true }));
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+      longitude: 2.36, latitude: 48.85, speed: 0, heading: null,
+    });
+  });
+  await expect.poll(() => page.evaluate(() =>
+    Math.round((window as unknown as { __carte: { getBearing(): number } }).__carte.getBearing())),
+  { timeout: 10_000 }).toBe(90);
+});
+
 test('démarrer DÉGAGE la vue : volets refermés, recherche d’adresse effacée', async ({ page }) => {
   /* Armelin, le 26/08/2026 : « quand on est en mode navigation, il y a trop de
      cartouches affichés qui masquent la navigation, comme la recherche

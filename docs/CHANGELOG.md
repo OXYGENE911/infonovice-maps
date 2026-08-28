@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.49.0] — 2026-08-28 — L'orientation à trois états (PR #74)
+
+Sixième PR du mandat UX du 28/08 (NAV-1).
+
+- **Un bouton d'orientation dans le bandeau de suivi**, à trois états qui se
+  cyclent : **Cap en haut** (défaut — la route devant soi), **Nord en haut**
+  (redressée au clic, le nord TENU sous les fixes), **Vue libre** (la carte
+  suit la voiture sans toucher à la rotation posée au doigt — easeTo fige ce
+  qu'il ne nomme pas, et c'est ici une vertu). Le choix tient la session.
+- **Le cap se LISSE** (src/lib/orientation.ts, pur et testé à sec) : 35 % de
+  l'écart par mesure, arc le plus court — 350° vers 10° fait +20°, jamais un
+  tour complet ; les écarts sous 3° sont du tremblement, ignorés. Le premier
+  cap est pris entier : la carte ne part pas de travers.
+- **À l'arrêt, la boussole prend le relais** — DeviceOrientation ouvert
+  APRÈS un geste (« Démarrer », ou le passage en mode cap), permission iOS
+  demandée à ce moment-là, jamais d'office. Seuls les alphas ABSOLUS sont
+  convertis (360 − alpha) : un alpha relatif pointerait sur la position
+  d'ouverture de la page. Refusée : le cap GPS seul, comme avant.
+
+579 tests unitaires (+11), 182 parcours E2E (+2).
+
 ## [0.48.0] — 2026-08-28 — Réglages élargis, durée sur les pastilles (PR #73)
 
 Cinquième PR du mandat UX du 28/08 (EV-1).

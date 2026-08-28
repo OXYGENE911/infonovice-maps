@@ -20,6 +20,9 @@
  */
 import type { Map as CarteMapLibre } from 'maplibre-gl';
 import {
+  lisserCap, capDeBoussole, modeSuivant, libelleMode, type ModeOrientation,
+} from '../lib/orientation';
+import {
   etatGuidage, distanceEnMots, heureArriveeEstimee, type OptionsGuidage,
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
@@ -93,6 +96,20 @@ export class BandeauGuidage extends HTMLElement {
   #verrouEcran: VerrouEcran | null = null;
   /** Vrai dès qu'un cap a tourné la carte : l'arrêt devra rendre le nord. */
   #veilleAvaitTourne = false;
+
+  /* L'ORIENTATION À TROIS ÉTATS (mandat UX 28/08, NAV-1) : cap en haut
+     (défaut), nord en haut, ou vue libre — la carte suit la voiture sans lui
+     tourner autour. Le choix tient la session, comme la 3D. */
+  #modeOrientation: ModeOrientation = 'cap';
+
+  /** Le cap affiché, LISSÉ : les à-coups du récepteur ne secouent pas la carte. */
+  #capLisse: number | null = null;
+
+  /** Le dernier cap boussole reçu — la source de l'arrêt, quand elle existe. */
+  #capBoussole: number | null = null;
+
+  /** L'abonnement DeviceOrientation. Nul tant que le geste ne l'a pas ouvert. */
+  #boussole: AbortController | null = null;
   /** La vue inclinée du suivi — un choix de l'usager, retenu pour la session. */
   #en3D = true;
   #surVisibilite = (): void => { void this.#prendreVerrou(); };
@@ -154,6 +171,10 @@ export class BandeauGuidage extends HTMLElement {
                tient la session. -->
           <button type="button" class="bg-3d" aria-pressed="true"
             aria-label="Passer la carte à plat">Vue à plat</button>
+          <!-- L'ORIENTATION À TROIS ÉTATS (NAV-1) : le bouton DIT l'état
+               courant et le clic passe au suivant — cap, nord, libre. -->
+          <button type="button" class="bg-orientation"
+            aria-label="Changer l’orientation de la carte">Cap en haut</button>
           <button type="button" class="bg-arreter">Arrêter le suivi</button>
         </div>
       </div>
@@ -184,6 +205,23 @@ export class BandeauGuidage extends HTMLElement {
         this.#en3D ? 'Passer la carte à plat' : 'Incliner la carte');
       this.#carte?.easeTo({ pitch: this.#en3D ? PITCH_SUIVI : 0, duration: 500 });
     });
+    this.querySelector('.bg-orientation')?.addEventListener('click', () => {
+      this.#modeOrientation = modeSuivant(this.#modeOrientation);
+      const bouton = this.querySelector('.bg-orientation') as HTMLButtonElement;
+      bouton.textContent = libelleMode(this.#modeOrientation);
+      /* LA BOUSSOLE NE S'OUVRE QUE SUR CE GESTE — et seulement en mode cap :
+         iOS exige un geste ET une permission pour DeviceOrientation, et
+         l'écouter sans besoin gaspillerait des réveils capteur. */
+      if (this.#modeOrientation === 'cap') void this.#ouvrirBoussole();
+      else this.#fermerBoussole();
+      /* L'état choisi s'applique SANS attendre le prochain fixe : passer au
+         nord doit redresser la carte au clic, pas au prochain mouvement. */
+      if (this.#modeOrientation === 'nord') {
+        this.#carte?.easeTo({ bearing: 0, duration: 500 });
+      } else if (this.#modeOrientation === 'cap' && this.#capLisse !== null) {
+        this.#carte?.easeTo({ bearing: this.#capLisse, duration: 500 });
+      }
+    });
     this.querySelector('.bg-reduire')?.addEventListener('click', () => {
       const reduit = this.classList.toggle('bg-compact');
       const bouton = this.querySelector('.bg-reduire') as HTMLButtonElement;
@@ -194,11 +232,55 @@ export class BandeauGuidage extends HTMLElement {
   }
 
   /**
+   * Ouvre l'écoute de la boussole — APRÈS un geste, jamais d'office.
+   *
+   * iOS exige `DeviceOrientationEvent.requestPermission()` dans un geste ;
+   * ailleurs, on s'abonne directement. `deviceorientationabsolute` d'abord
+   * (Android le réserve aux mesures absolues), `deviceorientation` en repli —
+   * `capDeBoussole` refuse de toute façon les alphas relatifs.
+   */
+  async #ouvrirBoussole(): Promise<void> {
+    if (this.#boussole || !('DeviceOrientationEvent' in window)) return;
+    const Evt = DeviceOrientationEvent as unknown as {
+      requestPermission?: () => Promise<string>;
+    };
+    if (typeof Evt.requestPermission === 'function') {
+      const reponse = await Evt.requestPermission().catch(() => 'denied');
+      // Refusée : la carte s'oriente au cap GPS seul, comme avant — pas d'alerte,
+      // rien n'est cassé, une source manque.
+      if (reponse !== 'granted') return;
+    }
+    this.#boussole = new AbortController();
+    const relever = (e: DeviceOrientationEvent): void => {
+      const cap = capDeBoussole(e as unknown as {
+        webkitCompassHeading?: number | undefined;
+        alpha: number | null;
+        absolute?: boolean | undefined;
+      });
+      if (cap !== null) this.#capBoussole = cap;
+    };
+    window.addEventListener('deviceorientationabsolute', relever as EventListener,
+      { signal: this.#boussole.signal });
+    window.addEventListener('deviceorientation', relever as EventListener,
+      { signal: this.#boussole.signal });
+  }
+
+  #fermerBoussole(): void {
+    this.#boussole?.abort();
+    this.#boussole = null;
+    this.#capBoussole = null;
+  }
+
+  /**
    * Démarre le suivi. Rend `false` si la géolocalisation est indisponible —
    * l'appelant peut alors le dire à sa façon.
    */
   demarrer(o: DemarrageGuidage): boolean {
     this.arreter();
+    /* Le cap lissé repart de zéro : celui du trajet précédent orienterait le
+       premier fixe du nouveau. Le MODE, lui, tient la session — comme la 3D. */
+    this.#capLisse = null;
+    if (this.#modeOrientation === 'cap') void this.#ouvrirBoussole();
     if (!('geolocation' in navigator)) {
       this.#alerte('Ce navigateur ne sait pas donner votre position.');
       this.hidden = false;
@@ -241,6 +323,7 @@ export class BandeauGuidage extends HTMLElement {
   }
 
   arreter(): void {
+    this.#fermerBoussole();
     if (this.#veille !== null) {
       navigator.geolocation.clearWatch(this.#veille);
       this.#veille = null;
@@ -359,9 +442,15 @@ export class BandeauGuidage extends HTMLElement {
          en dessous de 2 m/s (7 km/h), on garde l'orientation acquise.
          DeviceOrientation (la boussole à l'arrêt) attend son propre chantier :
          elle exige une permission sur iOS, le cap GPS n'exige rien. */
-      const cap = typeof coords.heading === 'number' && Number.isFinite(coords.heading)
+      const capGps = typeof coords.heading === 'number' && Number.isFinite(coords.heading)
         && typeof coords.speed === 'number' && (coords.speed ?? 0) > 2
         ? coords.heading : null;
+      /* À L'ARRÊT, LA BOUSSOLE PREND LE RELAIS — si le geste l'a ouverte
+         (NAV-1). En mouvement, le cap GPS garde la main : il mesure la
+         route, la boussole mesure le téléphone. */
+      const brut = capGps ?? (this.#modeOrientation === 'cap' ? this.#capBoussole : null);
+      if (brut !== null) this.#capLisse = lisserCap(this.#capLisse, brut);
+      const cap = this.#modeOrientation === 'cap' ? this.#capLisse : null;
       if (cap !== null) this.#veilleAvaitTourne = true;
       /* L'INCLINAISON VOYAGE AVEC CHAQUE FIXE : un easeTo interrompt le
          précédent et FIGE ce qu'il ne nomme pas — le premier fixe arrivait
@@ -371,7 +460,11 @@ export class BandeauGuidage extends HTMLElement {
         center: [lon, lat],
         zoom: Math.max(this.#carte.getZoom(), ZOOM_SUIVI),
         pitch: this.#en3D ? PITCH_SUIVI : 0,
-        ...(cap !== null ? { bearing: cap } : {}),
+        /* Nord : cap zéro tenu. Cap : le cap lissé. Libre : on ne nomme PAS
+           bearing — easeTo fige ce qu'il ne nomme pas, et c'est ici une
+           vertu : la rotation posée du doigt reste. */
+        ...(this.#modeOrientation === 'nord' ? { bearing: 0 }
+          : cap !== null ? { bearing: cap } : {}),
         duration: 800,
       });
     }
