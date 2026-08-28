@@ -212,7 +212,7 @@ body { font-family: var(--police); background: var(--fond); }
 .iti-champs > label { display: grid; gap: 5px;
   font: 700 11px var(--police); color: var(--texte-3);
   text-transform: uppercase; letter-spacing: .07em; }
-.iti-profils { display: flex; gap: 8px; }
+.iti-profils, .iti-optimisations { display: flex; gap: 8px; }
 .iti-profil { flex: 1; }
 .iti-profil input { position: absolute; opacity: 0; width: 0; height: 0; }
 .iti-profil span {

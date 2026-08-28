@@ -522,6 +522,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       NAV-1 » du triage) : arrêts en pastilles numérotées, événements Bison
       Futé en losanges à leur kilomètre, curseur-voiture — des événements
       ponctuels, jamais une fluidité que la donnée ne contient pas.
+- [x] PR #77 — « Le plus rapide / Le plus court » : les profils de trajet
+      cadrés par la mesure (le moteur ne connaît que fastest/shortest) ;
+      le réglage voyage dans le lien partagé (;opt=shortest).
+      TOUTES LES CANDIDATES DU TRIAGE DU 28/08 SONT SOLDÉES — ne restent
+      que les décisions d'Armelin (§4 du triage).
 - DÉCISIONS D'ARMELIN : bottom sheets généralisées ; profils de pauses ;
   copilote / routines / arrivée réelle (§4 du triage).
 

@@ -94,10 +94,13 @@ s'écraser.
   donnée n'en contient pas). Les PÉAGES n'y sont PAS : leur relevé est un
   geste à la demande (PR #54, frugalité Overpass) — les y poser d'office
   déclencherait l'appel à chaque suivi. À réévaluer si Armelin le demande.
-- **Profils de trajet** (Rapide/Économe/Sans péage…) : à cadrer — beaucoup
-  d'étiquettes du cahier des charges n'ont pas de levier réel côté moteur
-  (seuls autoroutes/tunnels/ponts existent). N'exposer QUE des profils qui
-  changent vraiment quelque chose.
+- **Profils de trajet — CADRÉS ET LIVRÉS (PR #77, 0.52.0)** : la mesure
+  (getcapabilities du 28/08) ne laisse que DEUX optimisations, fastest et
+  shortest → « Le plus rapide / Le plus court » sur la page Options, réglage
+  porté par le lien partagé (;opt=shortest). « Économe » (pas de modèle de
+  consommation côté moteur) et « Sans péage » (pas de contrainte de péage)
+  sont ÉCARTÉS avec la mesure ; les évitements autoroutes/tunnels/ponts
+  couvraient déjà le reste du levier réel.
 
 ## 4. Demande une décision d'Armelin
 
