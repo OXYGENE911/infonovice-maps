@@ -76,6 +76,18 @@ export interface OptionsPlan {
      d'avant — à plat, à 20 °C, sans bridage. */
   conditions?: ConditionsTrajet | undefined;
   profilConditions?: ProfilConditions | undefined;
+  /* LES PAUSES HUMAINES (décision d'Armelin du 28/08). Chacune optionnelle,
+     absente = le plan d'avant. */
+  /** Chaque arrêt dure AU MOINS ce temps — et la pause PAIE la charge :
+      on remplit ce que le temps permet, plafond respecté. */
+  pauseMinimaleMin?: number | undefined;
+  /** Distance maximale entre deux arrêts, en mètres — « une pause toutes
+      les deux heures » convertie par l'appelant à la vitesse du trajet. */
+  intervalleMaxM?: number | undefined;
+  /** Par clé de borne : la distance (m) du plus proche agrément du profil
+      choisi (aire de jeux, espace vert, restauration) — un BONUS au choix,
+      jamais un filtre. */
+  agrements?: ReadonlyMap<string, number> | undefined;
 }
 
 /**
@@ -91,6 +103,8 @@ export function cleBorne(b: Pick<BorneCandidate, 'id' | 'lon' | 'lat'>): string 
 
 export interface Arret {
   borne: BorneCandidate;
+  /** Distance du plus proche agrément du profil de pause, si trouvé. */
+  agrementM?: number;
   /** SOC en arrivant à la borne, en %. */
   socArrivee: number;
   /** SOC en repartant, en %. */
@@ -181,9 +195,16 @@ const energiePour = (metres: number, v: Vehicule): number =>
  * donc chaque candidate sur l'avancement qu'elle offre ET sur ce qu'elle
  * coûtera en minutes.
  */
+/* LE BONUS D'AGRÉMENT VAUT VINGT : le score se compte en kilomètres
+   d'avance utiles, et vingt points font préférer une borne à aire de jeux à
+   une borne nue jusqu'à vingt kilomètres plus loin — assez pour compter,
+   jamais assez pour tordre un plan. */
+const BONUS_AGREMENT = 20;
+
 function choisir(
   candidates: BorneCandidate[], departM: number, v: Vehicule,
   plafondKw: number | null = null,
+  agrements: ReadonlyMap<string, number> | undefined = undefined,
 ): BorneCandidate | null {
   let meilleure: BorneCandidate | null = null;
   let meilleurScore = -Infinity;
@@ -199,7 +220,8 @@ function choisir(
     const minutesEtalon = (40 / (puissance * RENDEMENT)) * 60;
     // Le détour se paie deux fois : aller ET retour.
     const detourKm = (c.ecartM * 2) / 1000;
-    const score = gainKm - detourKm - minutesEtalon;
+    const bonus = agrements?.has(cleBorne(c)) ? BONUS_AGREMENT : 0;
+    const score = gainKm - detourKm - minutesEtalon + bonus;
     if (score > meilleurScore) { meilleurScore = score; meilleure = c; }
   }
   return meilleure;
@@ -259,6 +281,9 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
     plafondThermiqueKw: plafondThermique,
   };
 
+  const pauseMin = o.pauseMinimaleMin && o.pauseMinimaleMin > 0 ? o.pauseMinimaleMin : 0;
+  const intervalleMax = o.intervalleMaxM && o.intervalleMaxM > 0 ? o.intervalleMaxM : null;
+
   const reserve = borner(o.reserve, 0, 50);
   const cible = borner(o.socArrivee, 0, 100);
   /* LE PLANCHER DU PLAFOND EST 50 : en dessous, presque aucun tronçon
@@ -290,7 +315,11 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
        une cible de 10. Sans tolérance, le plan réclamait un arrêt de plus pour
        un manque d'un billionième de pour cent — vu quand le plafond de charge
        a multiplié les arrêts calculés « au plus juste ». */
-    if (socFin >= cible - 1e-9 && !prochaineImposee) {
+    /* L'INTERVALLE DE PAUSE BORNE AUSSI LA DERNIÈRE JAMBE : une batterie qui
+       tiendrait 350 km d'une traite ne dispense pas de la pause des deux
+       heures — c'est tout son sens. */
+    if (socFin >= cible - 1e-9 && !prochaineImposee
+      && (intervalleMax === null || restantM <= intervalleMax)) {
       const duree = arrets.reduce((t, a) => t + a.dureeMin, 0);
       return {
         faisable: true, arrets, socArrivee: socFin, dureeRechargeMin: duree,
@@ -301,8 +330,10 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
     /* IL FAUT S'ARRÊTER. Portée utile : ce qu'on peut faire SANS entamer la
        réserve — arriver à une borne à 2 % n'est pas un plan, c'est un pari. */
     const energieUtile = va.capaciteKwh * ((soc - reserve) / 100);
-    const porteeM = energieUtile > 0
+    const porteeBatterieM = energieUtile > 0
       ? (energieUtile / (va.consommationKwh100 / 100)) * 1000 : 0;
+    const porteeM = intervalleMax === null
+      ? porteeBatterieM : Math.min(porteeBatterieM, intervalleMax);
 
     /* UN ARRÊT IMPOSÉ À PORTÉE EST PRIS, SANS DISCUSSION. C'est le sens même
        du « + » : l'usager sait des choses que le modèle ignore — un repas, un
@@ -319,7 +350,7 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
       const aPortee = bornes.filter(
         (b) => b.avancementM > positionM && b.avancementM <= positionM + porteeM,
       );
-      choisie = choisir(aPortee, positionM, va, plafondThermique);
+      choisie = choisir(aPortee, positionM, va, plafondThermique, o.agrements);
     }
 
     if (!choisie) {
@@ -335,6 +366,14 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
       /* SI LE PLAFOND EST EN CAUSE, LE DIRE : un refus qui tait le réglage qui
          l'a produit enferme l'usager. On ne l'écrit que lorsqu'un plafond
          plein aurait pu changer la donne — c'est-à-dire dès qu'il est bridé. */
+      /* SI C'EST LA PAUSE QUI BORNE — pas la batterie —, le refus doit la
+         nommer : « partez avec plus de charge » n'y changerait rien. */
+      if (intervalleMax !== null && intervalleMax < porteeBatterieM) {
+        return echec(
+          `Aucune borne avant ${km} km, la limite de votre réglage de pause.`
+          + ' Espacez les pauses, ou retirez ce réglage.',
+        );
+      }
       return echec(
         `Aucune borne utilisable avant ${km} km, où la réserve serait entamée.`
         + ' Élargissez les filtres, ou partez avec plus de charge.'
@@ -376,22 +415,52 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
        refuser un trajet parfaitement faisable au motif qu'il comporte une
        pause. L'arrêt est alors inscrit à zéro kilowattheure et zéro minute —
        ce qu'il est. */
-    if (energieKwh <= 0 && choisie !== prochaineImposee) {
+    /* …ET L'ARRÊT DE PAUSE NON PLUS : quand l'intervalle des pauses a forcé
+       l'arrêt, une batterie encore pleine est NORMALE — on s'arrête pour les
+       humains, pas pour les électrons. Le garde-fou ne vise que le modèle
+       qui piétinerait sans consigne. */
+    if (energieKwh <= 0 && choisie !== prochaineImposee && intervalleMax === null) {
       return echec(
         `Le trajet n’avance plus à ${Math.round(positionM / 1000)} km :`
         + ' la borne retenue n’apporte pas d’autonomie utile.',
       );
     }
 
+    /* LA PAUSE MINIMALE PAIE LA CHARGE. Si la charge nécessaire tient en
+       moins que la pause demandée, on ne reste pas branché à ne rien faire :
+       on remplit ce que le temps permet — plafond respecté — et la marge
+       gagnée peut épargner l'arrêt suivant. La courbe de durée n'est pas
+       linéaire au-dessus de 80 % : on cherche le SOC atteignable par
+       dichotomie plutôt que d'inverser la formule à la main. */
+    let socFinal = socRepart;
+    let duree = dureeChargeMin(energieKwh, choisie.puissanceKw, va, socALaBorne, socRepart,
+      plafondThermique);
+    if (pauseMin > 0 && duree < pauseMin) {
+      const socMax = Math.max(plafond, socALaBorne);
+      let bas = socFinal; let haut = socMax;
+      for (let i = 0; i < 24; i += 1) {
+        const milieu = (bas + haut) / 2;
+        const d = dureeChargeMin(
+          va.capaciteKwh * ((milieu - socALaBorne) / 100),
+          choisie.puissanceKw, va, socALaBorne, milieu, plafondThermique,
+        );
+        if (d <= pauseMin) bas = milieu; else haut = milieu;
+      }
+      socFinal = bas;
+      duree = pauseMin;
+    }
+    const energieFinale = va.capaciteKwh * ((socFinal - socALaBorne) / 100);
+
+    const agrementM = o.agrements?.get(cleBorne(choisie));
     arrets.push({
       borne: choisie,
+      ...(agrementM !== undefined ? { agrementM } : {}),
       socArrivee: socALaBorne,
-      socDepart: socRepart,
-      energieKwh: Math.max(energieKwh, 0),
-      dureeMin: dureeChargeMin(energieKwh, choisie.puissanceKw, va, socALaBorne, socRepart,
-        plafondThermique),
+      socDepart: socFinal,
+      energieKwh: Math.max(energieFinale, 0),
+      dureeMin: duree,
     });
-    soc = socRepart;
+    soc = socFinal;
   }
 
   return echec(

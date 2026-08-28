@@ -2,6 +2,33 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.56.0] — 2026-08-28 — Les profils de pauses humaines (PR #81)
+
+La deuxième décision tranchée du §4 du triage. Un trajet électrique
+s'arrête de toute façon : autant que l'arrêt serve AUSSI les humains à
+bord. Trois réglages sur la page « Arrêts de recharge » :
+
+- **« Chaque arrêt dure au moins » (20/30/45 min)** — et LA PAUSE PAIE LA
+  CHARGE : si le besoin tient en moins, on remplit ce que le temps permet
+  (plafond respecté, dichotomie sur la courbe non linéaire au-dessus de
+  80 %) — on repart plus chargé, jamais du temps perdu.
+- **« Une pause au moins toutes les » (2 h / 3 h de route)** — l'intervalle
+  se convertit en mètres à la vitesse de CE trajet et force l'arrêt même
+  quand la batterie tiendrait ; quand c'est LUI qui borne, le refus le
+  nomme (« la limite de votre réglage de pause »), pas la réserve.
+- **« Autour des arrêts, privilégier » : Famille (aire de jeux) / Animal
+  (espace vert) / Repas (restauration)** — chaque profil HONORÉ PAR UNE
+  MESURE (corridor Paris-Lyon, 28/08 : ≥ 293 aires de jeux, ≥ 220 espaces
+  verts, ≥ 1 400 restaurants à 600 m du tracé). Une PRÉFÉRENCE, jamais un
+  filtre : bonus de vingt points au choix de borne, et l'arrêt DIT sa
+  trouvaille (« aire de jeux à 151 m »).
+- **La forme de la requête est une mesure aussi** : la recherche corridor
+  SATURAIT Overpass (timeouts relevés) ; une UNION de disques de 500 m
+  autour des seules bornes candidates répond en ~7 s — UN appel par
+  (trajet, profil), jamais au réglage, échec bénin et dit.
+
+630 tests unitaires (+10), 199 parcours E2E (+1).
+
 ## [0.55.0] — 2026-08-28 — Le plan de recharge sent la météo, le relief et la vitesse (PR #80)
 
 La demande d'Armelin du 28/08 : l'algorithme d'autonomie doit prendre en

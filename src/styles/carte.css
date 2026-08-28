@@ -2109,3 +2109,9 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
   border: 1px solid var(--bord-2); background: var(--fond-doux); color: var(--texte-2);
 }
 .recevoir-actions button:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* --- Les pauses humaines (PR pauses, 28/08) --- */
+.recharge-pause-etat {
+  margin: 2px 0 0; font: 400 12px/1.5 var(--police); color: var(--texte-2);
+}
+.recharge-pause-etat:empty { display: none; }
