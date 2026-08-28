@@ -93,19 +93,27 @@ body.page {
    texte moins lisible est un survol raté. Mesures :
    clair   #2272C4 + blanc  = 4,98:1   survol #185FA5 + blanc  = 6,52:1
    sombre  #378ADD + #0E1014 = 5,26:1  survol #B5D4F4 + #0E1014 = 12,3:1 */
-.page-action {
+/* LE SÉLECTEUR EST `a.page-action`, ET IL LE FAUT. Armelin, le 28/08/2026 :
+   « le texte Écrire à contact@infonovice.fr est peu ou pas visible ». La
+   cause : `.page-corps a` (spécificité 0-1-1) écrasait la couleur de
+   `.page-action` (0-1-0) — le lien s'affichait en BLEU ACCENT sur le fond
+   bleu du bouton. Le même piège que `.iti-actions .iti-demarrer` avait déjà
+   documenté : une classe simple perd contre « classe + élément », quel que
+   soit l'ordre de la feuille. `:visited` est couvert aussi : un lien visité
+   qui vire au violet sombre redeviendrait illisible. */
+a.page-action, a.page-action:visited {
   display: inline-block; min-height: 44px; padding: 12px 20px;
   border-radius: 8px; background: var(--bleu-500); color: var(--blanc);
   font-weight: 600; text-decoration: none;
   transition: background 200ms ease;
 }
-.page-action:hover, .page-action:focus-visible { background: var(--bleu-600); }
+a.page-action:hover, a.page-action:focus-visible { background: var(--bleu-600); color: var(--blanc); }
 /* L'ANNEAU de focus doit se voir sur le fond COLORÉ du lien, pas sur celui de
    la page : d'où le décalage, et une couleur qui tranche dans les deux modes. */
 .page-action:focus-visible { outline: 3px solid var(--texte-1); outline-offset: 3px; }
 
 @media (prefers-color-scheme: dark) {
-  .page-action { background: var(--bleu-400); color: #0E1014; }
-  .page-action:hover, .page-action:focus-visible { background: var(--bleu-100); }
+  a.page-action, a.page-action:visited { background: var(--bleu-400); color: #0E1014; }
+  a.page-action:hover, a.page-action:focus-visible { background: var(--bleu-100); color: #0E1014; }
 }
 @media (prefers-reduced-motion: reduce) { .page-action { transition: none; } }

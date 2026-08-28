@@ -31,6 +31,23 @@
 
   /* Système, pas Google Fonts : contrainte de souveraineté n° 3. */
   --police: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+
+  /* LES COUCHES, NOMMÉES ET ORDONNÉES EN UN SEUL ENDROIT. Les z-index
+     numériques éparpillés dans carte.css s'arbitraient de mémoire — le
+     mandat UX du 28/08 les jette dans des jetons : qui recouvre qui se lit
+     ici, et nulle part ailleurs. */
+  --z-cartouche: 5;      /* fiches borne/lieu, bandeau de suivi : sur la carte */
+  --z-volet-ouvert: 10;  /* un volet du rail déplié passe devant ses voisins */
+  --z-entete: 20;        /* l'en-tête flottant */
+  --z-suggestions: 25;   /* la liste d'adresses, au-dessus de TOUT l'ordinaire */
+  --z-bandeaux: 30;      /* hors-ligne, évitement, sans-js */
+  --z-modale: 1000;      /* visionneuse photo : rien au-dessus */
+
+  /* LES MARGES DE SÉCURITÉ DES TÉLÉPHONES (encoche, barre de geste) :
+     zéro partout ailleurs — env() rend 0 quand le navigateur ne les
+     connaît pas. */
+  --sur-encoche: env(safe-area-inset-top, 0px);
+  --sur-barre-basse: env(safe-area-inset-bottom, 0px);
 }
 
 @media (prefers-color-scheme: dark) {
