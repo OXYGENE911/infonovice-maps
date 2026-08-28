@@ -509,8 +509,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #72 — UX-4, « Pourquoi ce plan ? » : un volet sous le plan de
       recharge — consignes reprises, chaque arrêt motivé par le critère réel
       du calcul, puissance retenue nommée, aveu du modèle en clôture.
-- [ ] EV-1 réglages élargis · [ ] NAV-1 orientation trois états ·
-      [ ] POI-1 catégories Overpass.
+- [x] PR #73 — EV-1, réglages élargis : plafond 50-90, détour lieux 30 min,
+      durée de charge écrite sous les pastilles du plan sur la carte.
+- [ ] NAV-1 orientation trois états · [ ] POI-1 catégories Overpass.
 - DÉCISIONS D'ARMELIN : bottom sheets généralisées ; profils de pauses ;
   copilote / routines / arrivée réelle (§4 du triage).
 

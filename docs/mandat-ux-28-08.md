@@ -76,9 +76,9 @@ s'écraser.
   consignes (réserve, plafond, cible), choix de l'usager (réseaux, imposées,
   écartées), critère réel par arrêt (compromis distance gagnée / puissance /
   détour), puissance retenue, aveu du modèle. Jamais d'invention.
-- **PR EV-1** : réglages élargis (plafond 50-90, détour lieux 30 min) ;
-  statut visuel des arrêts (suggéré/imposé/écarté déjà distingués — les
-  MONTRER sur les marqueurs : durée de charge sur la pastille).
+- **PR EV-1 — LIVRÉE (PR #73, 0.48.0)** : plafond 50-90 (le modèle bornait
+  déjà à [50, 100]) ; détour lieux 30 min ; durée de charge sous chaque
+  pastille du plan (« sans recharge » pour un arrêt imposé sans besoin).
 - **PR NAV-1** : mode d'orientation à trois états (nord / cap / libre) +
   lissage ; DeviceOrientation APRÈS geste et permission (iOS).
 - **PR POI-1** : recherche par catégories (Overpass, à la demande, dans la

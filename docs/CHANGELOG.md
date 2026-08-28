@@ -2,6 +2,23 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.48.0] — 2026-08-28 — Réglages élargis, durée sur les pastilles (PR #73)
+
+Cinquième PR du mandat UX du 28/08 (EV-1).
+
+- **Le plafond de charge descend à 50 %** (50/60/70 rejoignent 80/90/« au
+  besoin ») : sous 80 %, la charge reste dans la zone rapide de la courbe —
+  certains préfèrent trois arrêts éclair à un plein. Le modèle borne déjà à
+  [50, 100] ; un plafond intenable reste refusé avec son remède, et les
+  commandes restent pour revenir en arrière.
+- **Le détour des lieux d'exception monte à 30 min** — Nomadio va jusque-là.
+- **La durée de charge s'écrit SOUS chaque pastille** du plan sur la carte
+  (« 18 min », halo blanc ; « sans recharge » pour un arrêt imposé sans
+  besoin) : le « 2 » dit l'ordre, pas le prix — 18 et 45 minutes ne se
+  valent pas quand on choisit lequel sauter. Rendu vérifié par capture.
+
+568 tests unitaires, 180 parcours E2E (+2, un étendu).
+
 ## [0.47.0] — 2026-08-28 — « Pourquoi ce plan ? » (PR #72)
 
 Quatrième PR du mandat UX du 28/08 (UX-4). Un plan de recharge qui ne

@@ -836,6 +836,10 @@ test('LIEUX D’EXCEPTION : liste à la demande, détour réglable, étape ajout
   // Élargir à 20 minutes fait entrer l'abbaye — calcul LOCAL, index déjà lu.
   await page.getByLabel('Détour maximal en minutes').selectOption('20');
   await expect(corps).toContainText('Abbaye lointaine');
+  // Et 30 minutes existe depuis le mandat UX du 28/08 (EV-1) — Nomadio va
+  // jusque-là. selectOption ÉCHOUERAIT si l'option manquait.
+  await page.getByLabel('Détour maximal en minutes').selectOption('30');
+  await expect(corps).toContainText('Abbaye lointaine');
 
   /* LE NOM OUVRE LA FICHE — le retour du 27/08 au soir : « impossible de
      cliquer dessus pour avoir le détail à l'identique d'une station ». Elle
