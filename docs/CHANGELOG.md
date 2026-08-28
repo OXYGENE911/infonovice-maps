@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.45.0] — 2026-08-28 — La planification allégée (PR #70)
+
+Deuxième PR du mandat UX du 28/08 (UX-3). La capture d'Armelin montrait le
+volet Itinéraire : jusqu'à SIX favoris répétés sous CHAQUE champ, et un
+« Effacer le trajet » offert alors qu'aucun trajet n'existe.
+
+- **Les favoris quittent les champs** : un bouton « Favoris… (n) » par champ
+  ouvre un `<dialog>` NATIF — focus piégé, Échap, arrière-plan inerte sans
+  une ligne de plomberie — avec recherche qui filtre sur le nom et
+  l'adresse. Reconstruit à chaque ouverture : les favoris bougent. Seuls
+  « Ma position », Domicile et Travail restent en ligne.
+- **« Effacer le trajet » ne paraît que s'il y a matière** — un point, une
+  étape ou un trajet ; il se range de lui-même une fois le volet vierge.
+- **« ⇅ Inverser »** échange départ et destination — points, libellés,
+  champs — et recalcule dans l'autre sens. Le test lit les COORDONNÉES de la
+  requête au moteur : un échange d'étiquettes seules recalculerait le même
+  trajet sous d'autres noms. Un point sans libellé (trajet rejoué d'un lien
+  partagé) s'affiche en coordonnées plutôt qu'en champ vide.
+
+568 tests unitaires, 174 parcours E2E (+3, un adapté au nouveau parcours).
+
 ## [0.44.0] — 2026-08-28 — Le socle mobile du mandat UX (PR #69)
 
 Armelin a testé sur téléphone et transmis un cahier des charges complet de
