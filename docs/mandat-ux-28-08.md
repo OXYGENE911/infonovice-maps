@@ -61,10 +61,11 @@ s'écraser.
   contrôles bas-droite qui se chevauchaient (capture).
 - **PR UX-2** : état « destination sélectionnée » — fiche compacte avec
   4 actions (Y aller / Planifier / Favori / Options) au clic d'une adresse.
-- **PR UX-3** : planification allégée — bouton « Effacer » seulement si un
-  trajet existe ; favoris derrière un bouton (fenêtre dédiée avec
-  recherche), plus en liste permanente sous les champs ; inversion
-  départ/destination.
+- **PR UX-3 — LIVRÉE (PR #70, 0.45.0)** : planification allégée — bouton
+  « Effacer » seulement si un trajet existe ; favoris derrière un bouton
+  « Favoris… (n) » ouvrant un <dialog> natif avec recherche, plus en liste
+  permanente sous les champs ; « ⇅ Inverser » qui échange points, libellés
+  et champs puis recalcule.
 - **PR UX-4** : « Pourquoi ce plan ? » — expliquer les choix du
   planificateur EV avec ce qu'on SAIT (connecteur, marge, plafond) ; jamais
   d'invention.

@@ -111,6 +111,15 @@ test('un favori se propose aussi, sans qu’on retape son nom', async ({ page })
   await page.locator('.iti > summary').click();
   await page.locator('.iti > summary').click();
 
-  await page.getByRole('button', { name: 'Aller à Chez ma sœur' }).click();
+  /* DEPUIS LE MANDAT UX DU 28/08, les favoris ne s'étalent plus sous chaque
+     champ — la capture d'Armelin montrait le mur qu'ils formaient. Un bouton
+     « Favoris… » ouvre une boîte dédiée ; deux gestes au lieu d'un, mais un
+     volet qui respire. */
+  await page.locator('[data-pour="arrivee"]')
+    .getByRole('button', { name: 'Choisir un favori comme arrivée' }).click();
+  await page.locator('dialog.choix-favori')
+    .getByRole('button', { name: /Chez ma sœur/ }).click();
   await expect(page.locator('[data-role="arrivee"] input')).toHaveValue('Chez ma sœur');
+  // La boîte s'est refermée d'elle-même : le choix est fait, elle n'a plus rien à dire.
+  await expect(page.locator('dialog.choix-favori')).not.toBeVisible();
 });

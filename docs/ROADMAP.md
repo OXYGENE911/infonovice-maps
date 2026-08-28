@@ -499,9 +499,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       réservée, safe areas, jetons z-index, contrôles bas-droite espacés,
       contraste du contact Professionnels ; toucher fantôme cherché et NON
       reproduit (garde-fou posé).
-- [ ] UX-2 état « destination sélectionnée » · [ ] UX-3 planification
-      allégée · [ ] UX-4 « Pourquoi ce plan ? » · [ ] EV-1 réglages élargis
-      · [ ] NAV-1 orientation trois états · [ ] POI-1 catégories Overpass.
+- [x] PR #70 — UX-3, la planification allégée : favoris derrière un bouton
+      « Favoris… (n) » ouvrant un <dialog> natif avec recherche (plus de
+      liste sous chaque champ) ; « Effacer le trajet » seulement s'il y a
+      matière ; « ⇅ Inverser » qui échange et recalcule.
+- [ ] UX-2 état « destination sélectionnée » · [ ] UX-4 « Pourquoi ce
+      plan ? » · [ ] EV-1 réglages élargis · [ ] NAV-1 orientation trois
+      états · [ ] POI-1 catégories Overpass.
 - DÉCISIONS D'ARMELIN : bottom sheets généralisées ; profils de pauses ;
   copilote / routines / arrivée réelle (§4 du triage).
 

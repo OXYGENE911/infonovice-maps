@@ -1818,3 +1818,61 @@ body.en-guidage fiche-borne, body.en-guidage fiche-lieu { display: none; }
   border: 1px solid var(--bord); padding: 11px 13px; margin-top: 10px;
 }
 .vue-hote { padding: 14px; }
+
+/* --- Planification allégée (PR UX-3) --- */
+/* L'inversion, entre les deux champs puisqu'elle les échange. Pas de
+   `display` posé : l'attribut `hidden` doit suffire à la ranger. */
+.iti-inverser {
+  justify-self: start; margin: -2px 0;
+  padding: 4px 12px; border-radius: 999px;
+  border: 1px solid var(--bord-2); background: var(--fond);
+  cursor: pointer; font: 600 11.5px var(--police); color: var(--texte-2);
+}
+.iti-inverser:hover { border-color: var(--accent); color: var(--accent); }
+.iti-inverser:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* La boîte de choix d'un favori. Un vrai <dialog> MODAL : il vit dans le
+   top layer du navigateur, AU-DESSUS de tout z-index — aucun jeton d'ordre
+   à poser, c'est son contrat. */
+dialog.choix-favori {
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(70vh, 520px);
+  padding: 14px; border: 1px solid var(--bord-2); border-radius: var(--rayon);
+  background: var(--fond); color: var(--texte-1); box-shadow: var(--ombre-m);
+  display: none; flex-direction: column; gap: 10px;
+}
+dialog.choix-favori[open] { display: flex; }
+dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
+.choix-favori-titre { margin: 0; font: 700 15px var(--police); }
+.choix-favori-fermer {
+  position: absolute; top: 8px; right: 8px;
+  width: 32px; height: 32px; border-radius: 8px;
+  border: none; background: none; cursor: pointer;
+  font: 600 14px var(--police); color: var(--texte-2);
+}
+.choix-favori-fermer:hover { background: var(--fond-doux); color: var(--texte-1); }
+.choix-favori-fermer:focus-visible { outline: none; box-shadow: var(--focus); }
+.choix-favori-recherche {
+  width: 100%; box-sizing: border-box; padding: 9px 12px;
+  border: 1px solid var(--bord-2); border-radius: 9px;
+  background: var(--fond-doux); color: var(--texte-1);
+  font: 400 14px var(--police);
+}
+.choix-favori-recherche:focus-visible { outline: none; box-shadow: var(--focus); }
+.choix-favori-liste {
+  list-style: none; margin: 0; padding: 0;
+  overflow-y: auto; display: grid; gap: 4px;
+}
+.choix-favori-item {
+  width: 100%; text-align: left; padding: 9px 12px;
+  border: 1px solid transparent; border-radius: 9px;
+  background: none; cursor: pointer; display: grid; gap: 1px;
+}
+.choix-favori-item:hover { background: var(--fond-doux); border-color: var(--bord-2); }
+.choix-favori-item:focus-visible { outline: none; box-shadow: var(--focus); }
+.choix-favori-nom { font: 600 13.5px var(--police); color: var(--texte-1); }
+.choix-favori-adresse {
+  font: 400 12px var(--police); color: var(--texte-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.choix-favori-vide { padding: 8px 4px; font: 400 13px var(--police); color: var(--texte-3); }
