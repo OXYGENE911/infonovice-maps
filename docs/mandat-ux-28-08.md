@@ -79,8 +79,11 @@ s'écraser.
 - **PR EV-1 — LIVRÉE (PR #73, 0.48.0)** : plafond 50-90 (le modèle bornait
   déjà à [50, 100]) ; détour lieux 30 min ; durée de charge sous chaque
   pastille du plan (« sans recharge » pour un arrêt imposé sans besoin).
-- **PR NAV-1** : mode d'orientation à trois états (nord / cap / libre) +
-  lissage ; DeviceOrientation APRÈS geste et permission (iOS).
+- **PR NAV-1 — LIVRÉE (PR #74, 0.49.0)** : orientation à trois états au
+  bandeau (cap / nord / libre, le choix tient la session) ; cap lissé sur
+  l'arc court (35 % par mesure, < 3° ignoré) ; boussole à l'arrêt via
+  DeviceOrientation, ouverte APRÈS geste, permission iOS demandée alors,
+  alphas relatifs refusés.
 - **PR POI-1** : recherche par catégories (Overpass, à la demande, dans la
   vue) — pharmacies, parkings, restaurants… frugalité stricte.
 - **Timeline verticale d'ÉVÉNEMENTS en suivi** (pas de fluidité) : position,
