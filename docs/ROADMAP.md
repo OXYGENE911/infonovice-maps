@@ -514,7 +514,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #74 — NAV-1, l'orientation à trois états : cap / nord / libre au
       bandeau, cap lissé (arc court, tremblement ignoré), boussole à l'arrêt
       ouverte après geste et permission.
-- [ ] POI-1 catégories Overpass.
+- [x] PR #75 — POI-1, la recherche par catégories : cinq catégories « dans
+      la vue, à la demande » (un clic = un appel Overpass, jamais au
+      déplacement, refus motivé sous le zoom 12, plafond annoncé).
+      LE DÉCOUPAGE INITIAL DU MANDAT EST SOLDÉ (UX-1 à POI-1, PR #69-#75).
 - DÉCISIONS D'ARMELIN : bottom sheets généralisées ; profils de pauses ;
   copilote / routines / arrivée réelle (§4 du triage).
 
