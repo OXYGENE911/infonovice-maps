@@ -90,6 +90,14 @@ describe('urlItineraire', () => {
     expect(u.split('constraints=')).toHaveLength(2);
   });
 
+  it('l’optimisation : fastest d’office, shortest sur demande — les DEUX seules du moteur', () => {
+    // getcapabilities du 28/08 : optimization ∈ {fastest, shortest}, rien
+    // d'autre — « économe » ou « sans péage » n'ont pas de levier à porter.
+    expect(urlItineraire(A, B, 'car')).toContain('optimization=fastest');
+    expect(urlItineraire(A, B, 'car', { optimisation: 'shortest' }))
+      .toContain('optimization=shortest');
+  });
+
   it('la forme feuille de route ajoute getSteps et waysAttributes', () => {
     const u = urlItineraire(A, B, 'pedestrian', {}, true);
     expect(u).toContain('profile=pedestrian');

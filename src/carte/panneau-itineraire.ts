@@ -10,7 +10,7 @@ import type { Map as CarteMapLibre, GeoJSONSource } from 'maplibre-gl';
 import { Marker } from 'maplibre-gl';
 import { RechercheAdresse } from './recherche';
 import { EtapesItineraire } from './etapes-itineraire';
-import { calculerItineraire, formaterDistance, formaterDuree, PROFILS, EVITEMENTS, ErreurItineraire, MAX_ETAPES, type Profil, type Itineraire, type Eviter } from '../lib/itineraire';
+import { calculerItineraire, formaterDistance, formaterDuree, PROFILS, EVITEMENTS, OPTIMISATIONS, ErreurItineraire, MAX_ETAPES, type Profil, type Itineraire, type Eviter, type Optimisation } from '../lib/itineraire';
 import { formaterCoordonnees, type PointGeo } from '../lib/coordonnees';
 import { lireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { listerFavoris } from '../lib/favoris';
@@ -95,6 +95,11 @@ export class PanneauItineraire extends HTMLElement {
   #libelleArrivee = '';
   #profil: Profil = 'car';
   #eviter = new Set<Eviter>();
+
+  /* L'OPTIMISATION — le cadrage des « profils de trajet » (mandat 28/08) :
+     le moteur ne connaît que fastest et shortest (getcapabilities du 28/08),
+     on n'expose que cela. Les évitements couvrent déjà le reste du levier. */
+  #optimisation: Optimisation = 'fastest';
   /** Jeton anti-réponses-hors-d'ordre de #calculer (voir le commentaire là-bas). */
   #sequence = 0;
   #dernier: Itineraire | null = null;
@@ -103,7 +108,7 @@ export class PanneauItineraire extends HTMLElement {
       lien partagé et marqueurs se lisent ICI, jamais dans l'état vivant. */
   #calculPour: {
     depart: PointGeo; arrivee: PointGeo; profil: Profil;
-    etapes: PointGeo[]; eviter: Eviter[];
+    etapes: PointGeo[]; eviter: Eviter[]; optimisation: Optimisation;
   } | null = null;
   /** Itinéraire dont le profil altimétrique est chargé (ou en cours). */
   #profilPour: Itineraire | null = null;
@@ -409,6 +414,15 @@ export class PanneauItineraire extends HTMLElement {
                 <label class="iti-profil"><input type="radio" name="profil" value="${p}"
                   ${p === this.#profil ? 'checked' : ''}><span>${PROFILS[p]}</span></label>`).join('')}
             </div>
+            <!-- L'OPTIMISATION : les deux seules que le moteur CONNAÎT.
+                 « Économe » et « Sans péage » sont écartés avec la mesure
+                 (aucun modèle de consommation, aucune contrainte de péage
+                 côté service — consigné au triage du 28/08). -->
+            <div class="iti-optimisations" role="radiogroup" aria-label="Optimiser le trajet">
+              ${(Object.keys(OPTIMISATIONS) as Optimisation[]).map((o) => `
+                <label class="iti-profil"><input type="radio" name="optimisation" value="${o}"
+                  ${o === this.#optimisation ? 'checked' : ''}><span>${OPTIMISATIONS[o]}</span></label>`).join('')}
+            </div>
             <fieldset class="iti-eviter">
               <legend>Éviter</legend>
               ${(Object.keys(EVITEMENTS) as Eviter[]).map((v) => `
@@ -576,6 +590,12 @@ export class PanneauItineraire extends HTMLElement {
     const etapes = new EtapesItineraire();
     etapes.addEventListener('etapes-changees', () => { void this.#calculer(); });
     this.querySelector('.iti-inter')?.appendChild(etapes);
+    this.querySelectorAll('.iti-optimisations input').forEach((c) => {
+      c.addEventListener('change', () => {
+        this.#optimisation = (c as HTMLInputElement).value as Optimisation;
+        void this.#calculer();
+      });
+    });
     this.querySelectorAll('.iti-eviter input').forEach((c) => {
       c.addEventListener('change', () => {
         const case_ = c as HTMLInputElement;
@@ -694,6 +714,10 @@ export class PanneauItineraire extends HTMLElement {
       }
       const radio = this.querySelector(`input[name="profil"][value="${partage.profil}"]`);
       if (radio) (radio as HTMLInputElement).checked = true;
+      this.#optimisation = partage.optimisation;
+      const opt = this.querySelector(
+        `input[name="optimisation"][value="${partage.optimisation}"]`);
+      if (opt) (opt as HTMLInputElement).checked = true;
       this.querySelector('details')?.setAttribute('open', '');
       // La carte n'est branchée qu'après la construction : on attend le tour
       // de boucle où `carte` est posée.
@@ -1220,7 +1244,7 @@ export class PanneauItineraire extends HTMLElement {
     try {
       const variante = await calculerItineraire(
         cliche.depart, cliche.arrivee, cliche.profil,
-        { etapes: cliche.etapes, eviter: eviterVariante },
+        { etapes: cliche.etapes, eviter: eviterVariante, optimisation: cliche.optimisation },
       );
       if (this.#dernier !== courant) return; // le trajet a changé sous l'appel
 
@@ -2455,7 +2479,7 @@ export class PanneauItineraire extends HTMLElement {
     corps.textContent = 'Préparation de la feuille de route…';
     try {
       const etapes = await etapesItineraire(cliche.depart, cliche.arrivee, cliche.profil,
-        { etapes: cliche.etapes, eviter: cliche.eviter });
+        { etapes: cliche.etapes, eviter: cliche.eviter, optimisation: cliche.optimisation });
       if (this.#dernier !== iti) return;
       corps.textContent = '';
       // Titre et résumé FIGÉS avec les étapes : l'impression décrira ce
@@ -2572,10 +2596,12 @@ export class PanneauItineraire extends HTMLElement {
       const depart = this.#depart; const arrivee = this.#arrivee; const profil = this.#profil;
       const inter = (this.querySelector('etapes-itineraire') as EtapesItineraire).points;
       const eviter = [...this.#eviter];
-      const iti = await calculerItineraire(depart, arrivee, profil, { etapes: inter, eviter });
+      const optimisation = this.#optimisation;
+      const iti = await calculerItineraire(depart, arrivee, profil,
+        { etapes: inter, eviter, optimisation });
       if (jeton !== this.#sequence) return;
       this.#dernier = iti;
-      this.#calculPour = { depart, arrivee, profil, etapes: inter, eviter };
+      this.#calculPour = { depart, arrivee, profil, etapes: inter, eviter, optimisation };
       // Le résumé AVANT la pose : distance et durée ne dépendent pas de la
       // carte, et la pose peut légitimement attendre (style en cours de
       // chargement) — l'utilisateur ne doit pas payer cette attente.
@@ -2686,6 +2712,12 @@ export class PanneauItineraire extends HTMLElement {
     this.#reinitialiserSections(true);
     (this.querySelector('etapes-itineraire') as EtapesItineraire).points = [];
     this.#eviter.clear();
+    this.querySelectorAll('.iti-optimisations input').forEach((c) => {
+      c.addEventListener('change', () => {
+        this.#optimisation = (c as HTMLInputElement).value as Optimisation;
+        void this.#calculer();
+      });
+    });
     this.querySelectorAll('.iti-eviter input').forEach((c) => { (c as HTMLInputElement).checked = false; });
     this.querySelectorAll('input[type="search"]').forEach((c) => { (c as HTMLInputElement).value = ''; });
     this.#majBoutons();

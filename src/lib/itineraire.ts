@@ -21,6 +21,16 @@ export const EVITEMENTS: Record<Eviter, string> = {
   autoroute: 'Autoroutes', tunnel: 'Tunnels', pont: 'Ponts',
 };
 
+/* LE CADRAGE DES « PROFILS DE TRAJET » du mandat du 28/08, tranché par la
+   mesure (getcapabilities du 28/08) : le moteur ne connaît que DEUX
+   optimisations — fastest et shortest. « Économe » n'a pas de modèle de
+   consommation côté service, « Sans péage » pas de contrainte de péage :
+   les exposer serait des étiquettes vides. On expose ce qui EST. */
+export type Optimisation = 'fastest' | 'shortest';
+export const OPTIMISATIONS: Record<Optimisation, string> = {
+  fastest: 'Le plus rapide', shortest: 'Le plus court',
+};
+
 /* Au-delà, l'URL s'allonge et le trajet devient illisible : six étapes
    suffisent à une tournée. La borne vit ICI (le domaine) : l'interface ET le
    lien de partage la respectent — sinon un lien à dix étapes rejouerait en
@@ -31,6 +41,8 @@ export interface OptionsItineraire {
   /** Étapes intermédiaires, dans l'ordre du trajet. */
   etapes?: PointGeo[];
   eviter?: Eviter[];
+  /** Absente : fastest — le comportement de toujours. */
+  optimisation?: Optimisation;
 }
 
 /** L'URL du service — PURE, partagée avec la feuille de route, testée à sec.
@@ -40,7 +52,8 @@ export function urlItineraire(
   depart: PointGeo, arrivee: PointGeo, profil: Profil,
   options: OptionsItineraire = {}, etapesDetaillees = false,
 ): string {
-  let url = `${SERVICE}?resource=bdtopo-osrm&profile=${profil}&optimization=fastest`
+  let url = `${SERVICE}?resource=bdtopo-osrm&profile=${profil}`
+    + `&optimization=${options.optimisation ?? 'fastest'}`
     + `&start=${depart.lon},${depart.lat}&end=${arrivee.lon},${arrivee.lat}`
     + '&geometryFormat=geojson&distanceUnit=meter&timeUnit=second';
   if (options.etapes?.length) {

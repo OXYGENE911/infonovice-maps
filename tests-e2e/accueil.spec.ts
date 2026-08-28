@@ -289,6 +289,73 @@ test('étapes intermédiaires et évitements PARLENT AU SERVICE, et se retirent'
   expect(urls[3]).not.toContain('intermediates');
 });
 
+test('« Le plus court » PARLE AU SERVICE, voyage dans le lien, et revient', async ({ page, context }) => {
+  /* Le cadrage des « profils de trajet » du mandat du 28/08 : le moteur ne
+     connaît que fastest et shortest (getcapabilities du 28/08) — on expose
+     ces deux-là, rien d'inventé. Ce parcours mesure les trois contrats :
+     le paramètre part au service, le lien partagé le porte, et le lien
+     rejoué recoche le réglage. */
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.route('**/api-adresse.data.gouv.fr/search/**', (route) => {
+    const q = new URL(route.request().url()).searchParams.get('q') ?? '';
+    const [libelle, lon, lat] = q.includes('lyon')
+      ? ['Lyon', 4.8357, 45.7640] : ['Paris', 2.3522, 48.8566];
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ features: [{
+      geometry: { coordinates: [lon, lat] },
+      properties: { label: libelle, type: 'municipality', postcode: '', city: libelle },
+    }] }) });
+  });
+  const urls: string[] = [];
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    urls.push(route.request().url());
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 465_000, duration: 15_480,
+    }) });
+  });
+  await page.goto('/');
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
+  await page.locator('.iti > summary').click();
+  const champs = page.locator('.vue-accueil input[type="search"]');
+  await champs.nth(0).fill('paris');
+  await page.getByRole('option', { name: 'Paris' }).first().click();
+  await champs.nth(1).fill('lyon');
+  await page.getByRole('option', { name: 'Lyon' }).first().click();
+  await expect(page.locator('.iti-resultat')).toContainText('465 km', { timeout: 10_000 });
+  // Le défaut est celui de toujours : fastest.
+  expect(urls[urls.length - 1]).toContain('optimization=fastest');
+
+  await allerA(page, 'options');
+  /* Le CLIC VA AU TEXTE : l'input est masqué (opacity 0), c'est son <span>
+     stylé en pilule qui se présente — comme pour l'usager. */
+  await page.locator('.iti-optimisations span', { hasText: 'Le plus court' }).click();
+  await expect.poll(() => urls.length).toBe(2);
+  expect(urls[1]).toContain('optimization=shortest');
+
+  // Le lien partagé porte le réglage — un trajet « le plus court » rejoué
+  // en « rapide » serait un autre trajet sous le même lien.
+  await allerA(page, 'partage');
+  await page.getByRole('button', { name: 'Copier le lien du trajet' }).click();
+  const lien = await page.evaluate(() => navigator.clipboard.readText());
+  expect(lien).toContain(';opt=shortest');
+
+  // Et le lien rejoué RECOCHE le réglage, requête à l'appui.
+  const rejoue: string[] = [];
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    rejoue.push(route.request().url());
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 465_000, duration: 15_480,
+    }) });
+  });
+  await page.goto(lien.replace(/^.*#/, '/#'));
+  await page.reload();
+  await expect(page.locator('.iti-resultat')).toContainText('465 km', { timeout: 15_000 });
+  expect(rejoue[rejoue.length - 1]).toContain('optimization=shortest');
+  await allerA(page, 'options');
+  await expect(page.getByRole('radio', { name: 'Le plus court' })).toBeChecked();
+});
+
 test('réordonner les étapes, copier le lien, ouvrir la feuille : tout suit le CLICHÉ', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.route('**/api-adresse.data.gouv.fr/search/**', (route) => {

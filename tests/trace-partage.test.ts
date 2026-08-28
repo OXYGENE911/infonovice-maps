@@ -67,6 +67,21 @@ describe('partage par URL', () => {
     const relu = depuisFragment('#iti=2.35220,48.85660;4.83570,45.76400;car');
     expect(relu?.etapes).toEqual([]);
     expect(relu?.eviter).toEqual([]);
+    // Et l'optimisation vaut le défaut de toujours : un vieux lien rejoue
+    // EXACTEMENT le trajet qu'il promettait.
+    expect(relu?.optimisation).toBe('fastest');
+  });
+
+  it('le plus court voyage dans le lien — et fastest reste ABSENT du fragment', () => {
+    const frag = versFragment({ ...P, optimisation: 'shortest' });
+    expect(frag).toContain(';opt=shortest');
+    expect(depuisFragment(frag)?.optimisation).toBe('shortest');
+    // fastest est le défaut : l'écrire allongerait tous les liens pour rien.
+    expect(versFragment({ ...P, optimisation: 'fastest' })).not.toContain('opt=');
+    // Une optimisation inconnue invalide TOUT le fragment, comme un évitement.
+    expect(depuisFragment('#iti=2,48;5,45;car;opt=econome')).toBeNull();
+    // `fastest` écrit à la main est toléré : c'est le défaut, il ne ment pas.
+    expect(depuisFragment('#iti=2,48;5,45;car;opt=fastest')?.optimisation).toBe('fastest');
   });
 
   it('un évitement inconnu ou une étape hors du globe invalident TOUT le fragment', () => {

@@ -2,6 +2,26 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.52.0] — 2026-08-28 — « Le plus rapide / Le plus court » (PR #77)
+
+Le dernier candidat du triage du 28/08 — les « profils de trajet » — CADRÉ
+PAR LA MESURE (getcapabilities du 28/08) : le moteur public IGN ne connaît
+que DEUX optimisations, fastest et shortest. « Économe » n'a pas de modèle
+de consommation côté service, « Sans péage » pas de contrainte de péage —
+les exposer serait des étiquettes vides. On expose ce qui EST.
+
+- **« Le plus rapide / Le plus court »** en pilules sur la page Options,
+  sous Voiture / À pied ; le recalcul part au changement. Les évitements
+  (autoroutes, tunnels, ponts) couvraient déjà le reste du levier réel.
+- **Le réglage voyage dans le lien partagé** (`;opt=shortest`) : un trajet
+  « le plus court » rejoué en « rapide » serait un autre trajet sous le même
+  lien. `fastest` reste absent du fragment — les liens déjà partagés restent
+  identiques à eux-mêmes, et rejouent en `fastest` comme toujours.
+- La feuille de route et « Comparer avec et sans autoroute » lisent le
+  CLICHÉ, optimisation comprise : ils décrivent le trajet tracé.
+
+587 tests unitaires (+2), 187 parcours E2E (+1).
+
 ## [0.51.0] — 2026-08-28 — La frise du trajet en suivi (PR #76)
 
 La candidate « après NAV-1 » du triage du 28/08 : la « barre verticale » du
