@@ -235,6 +235,48 @@ test('« Pourquoi ce plan ? » explique avec ce qu’on SAIT — consignes, crit
     .toContainText('ne jamais charger au-delà de 80 %');
 });
 
+test('le plafond descend à 50 % — et un plafond intenable le DIT, réversible', async ({ page }) => {
+  /* Mandat UX du 28/08 (EV-1) : plafond élargi 50-90. Sous 80 %, la charge
+     reste dans la zone rapide — certains préfèrent trois arrêts éclair à un
+     plein. Sur CE trajet (390 km, une seule borne à 197 km), 50 % ne couvre
+     pas la seconde jambe : le refus doit le dire AVEC le remède, et relever
+     le plafond doit rendre le plan — les commandes restent. */
+  await simulerIndexBornes(page, [BEAUNE]);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
+
+  await page.getByLabel('Plafond de charge aux bornes').selectOption('50');
+  await expect(corps).toContainText('relever le plafond');
+  await page.getByLabel('Plafond de charge aux bornes').selectOption('80');
+  await expect(corps).toContainText('Aire de Beaune');
+});
+
+test('la durée de charge est SUR la pastille de la carte, pas seulement en liste', async ({ page }) => {
+  /* Mandat UX du 28/08 (EV-1) : « 2 » dit l'ordre, pas le prix — 18 min et
+     45 min ne se valent pas quand on choisit lequel sauter. On lit la DONNÉE
+     de la couche plutôt que ses pixels : le rendu du texte dépend des
+     glyphes, la donnée non. */
+  await simulerIndexBornes(page, [BEAUNE]);
+  await ouvrirRecharge(page);
+  await expect(page.locator('.iti-recharge-corps'))
+    .toContainText('Aire de Beaune', { timeout: 15_000 });
+
+  await expect.poll(() => page.evaluate(() => {
+    const carte = (window as unknown as {
+      __carte: {
+        getLayer(id: string): unknown;
+        getSource(id: string): { serialize(): { data: GeoJSON.FeatureCollection } } | undefined;
+      };
+    }).__carte;
+    const source = carte.getSource('iti-arrets');
+    const durees = source ? source.serialize().data.features
+      .map((f) => (f.properties as { duree?: string }).duree) : [];
+    return Boolean(carte.getLayer('iti-arrets-duree'))
+      && durees.length === 1 && /^\d+ min$/.test(durees[0] ?? '');
+  }), { timeout: 10_000 }).toBe(true);
+});
+
 test('AUCUN appel tant que la section est repliée — les quotas sont un bien commun', async ({ page }) => {
   let appels = 0;
   await page.route('**/public.opendatasoft.com/**', (route) => {

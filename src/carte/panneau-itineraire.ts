@@ -467,7 +467,14 @@ export class PanneauItineraire extends HTMLElement {
                    27/08). « Au besoin » est le défaut : on charge ce qu'il
                    faut, comme avant ce réglage. -->
               <label>Repartir des bornes au plus à
+                <!-- ÉLARGI 50-90 (mandat UX 28/08, EV-1) : sous 80 %, la
+                     charge reste dans la zone rapide de la courbe — certains
+                     préfèrent TROIS arrêts éclair à un plein. Un plafond
+                     intenable reste refusé avec son remède. -->
                 <select class="recharge-plafond" aria-label="Plafond de charge aux bornes">
+                  <option value="50">50 %</option>
+                  <option value="60">60 %</option>
+                  <option value="70">70 %</option>
                   <option value="80">80 %</option>
                   <option value="90">90 %</option>
                   <option value="100" selected>au besoin</option>
@@ -524,6 +531,7 @@ export class PanneauItineraire extends HTMLElement {
                   <option value="5">5 min</option>
                   <option value="10" selected>10 min</option>
                   <option value="20">20 min</option>
+                  <option value="30">30 min</option>
                 </select>
                 de détour environ
               </label>
@@ -1009,7 +1017,13 @@ export class PanneauItineraire extends HTMLElement {
       type: 'FeatureCollection',
       features: arrets.map((a, i) => ({
         type: 'Feature',
-        properties: { id: a.borne.id ?? null, nom: a.borne.nom, rang: String(i + 1) },
+        properties: {
+          id: a.borne.id ?? null, nom: a.borne.nom, rang: String(i + 1),
+          /* LA DURÉE SOUS LA PASTILLE (mandat UX 28/08, EV-1) : « 2 » dit
+             l'ordre, pas le prix — 18 min et 45 min ne se valent pas quand
+             on choisit lequel sauter. Un arrêt imposé sans recharge le dit. */
+          duree: a.dureeMin > 0 ? `${Math.round(a.dureeMin)} min` : 'sans recharge',
+        },
         geometry: { type: 'Point', coordinates: [a.borne.lon, a.borne.lat] },
       })),
     };
@@ -1054,6 +1068,23 @@ export class PanneauItineraire extends HTMLElement {
           },
           paint: { 'text-color': '#FFFFFF' },
         });
+        /* La durée sous la pastille, halo blanc : lisible sur tout fond,
+           comme les toponymes du Plan IGN. */
+        carte.addLayer({
+          id: 'iti-arrets-duree', type: 'symbol', source: SOURCE_ARRETS,
+          layout: {
+            'text-field': ['get', 'duree'],
+            'text-size': 11.5,
+            'text-offset': [0, 2.1],
+            'text-allow-overlap': true,
+            'text-ignore-placement': true,
+          },
+          paint: {
+            'text-color': '#0C447C',
+            'text-halo-color': '#FFFFFF',
+            'text-halo-width': 1.6,
+          },
+        });
       }
     } catch (e) {
       // Style en chargement : style.load (branché dans `set carte`) reposera.
@@ -1068,7 +1099,7 @@ export class PanneauItineraire extends HTMLElement {
   #retirerBornesTrajet(): void {
     const carte = this.#carte;
     if (this.#modeTrajetPose && carte) {
-      for (const id of ['iti-arrets-rang', 'iti-arrets-pastille', 'iti-corridor']) {
+      for (const id of ['iti-arrets-duree', 'iti-arrets-rang', 'iti-arrets-pastille', 'iti-corridor']) {
         if (carte.getLayer(id)) carte.removeLayer(id);
       }
       for (const id of [SOURCE_ARRETS, SOURCE_CORRIDOR]) {
