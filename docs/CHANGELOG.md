@@ -2,6 +2,25 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.46.0] — 2026-08-28 — La fiche de destination (PR #71)
+
+Troisième PR du mandat UX du 28/08 (UX-2, état « destination sélectionnée »).
+Choisir une adresse dans la recherche posait un marqueur MUET : pour en faire
+quelque chose, il fallait retrouver le lieu dans le planificateur ou par
+appui long.
+
+- **Une fiche compacte s'ouvre sur le lieu choisi** — nom BAN, contexte, et
+  les quatre gestes qu'on vient faire : **Y aller** (le volet s'ouvre, la
+  destination porte son nom, le départ se déduit de la position connue ou se
+  demande en toutes lettres — mécanique `allerVers` existante), **Ajouter
+  aux favoris** (le nom est déjà tranché : aucune attente, contrairement à
+  l'appui long qui résout d'abord l'adresse), **Photos de rue** (Panoramax,
+  sur demande seulement) et **Copier les coordonnées**.
+- Rien de nouveau ne part sur le réseau : les quatre gestes réutilisent des
+  mécaniques déjà mesurées (PR #10, #46).
+
+568 tests unitaires, 177 parcours E2E (+3).
+
 ## [0.45.0] — 2026-08-28 — La planification allégée (PR #70)
 
 Deuxième PR du mandat UX du 28/08 (UX-3). La capture d'Armelin montrait le

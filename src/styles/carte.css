@@ -1876,3 +1876,22 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .choix-favori-vide { padding: 8px 4px; font: 400 13px var(--police); color: var(--texte-3); }
+
+/* --- La fiche de destination (PR UX-2) --- */
+/* Les boutons héritent des styles .pa-* de l'appui long ; ici seulement ce
+   que la fiche a en propre : le contexte sous le nom, les actions en grille
+   — « Y aller » en premier et en accent, c'est le geste qu'on vient faire. */
+.fd-contexte { margin: -4px 0 0; font-size: 12px; color: var(--texte-3); }
+.fd-contexte:empty { display: none; }
+.fd-actions { display: grid; gap: 6px; }
+.fd-actions button {
+  width: 100%; padding: 7px 12px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-1); font: 600 12.5px var(--police); cursor: pointer;
+  text-align: left;
+}
+.fd-actions button:focus-visible { outline: none; box-shadow: var(--focus); }
+.fd-actions .fd-aller {
+  border-color: var(--accent); background: var(--accent); color: var(--blanc);
+}
+.fd-actions .fd-aller:hover { background: var(--accent-vif); border-color: var(--accent-vif); }
