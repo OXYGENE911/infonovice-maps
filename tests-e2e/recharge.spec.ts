@@ -460,6 +460,61 @@ test('les PAUSES HUMAINES : la pause paie la charge, le profil famille trouve so
   expect(appelsOverpass, 'un réglage a rappelé Overpass').toBe(1);
 });
 
+test('le COPILOTE connaît le plan : l’arrêt, ses SOC prévus, ses commodités à la demande', async ({ page, context }) => {
+  /* Le panneau du passager pendant un suivi AVEC plan de recharge : la carte
+     d'arrêt porte le nom, la distance restante et les SOC prévus — déjà en
+     mémoire — et les commodités ne partent que sur le bouton. */
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ longitude: 2.3522, latitude: 48.8566 });
+  let appelsOverpass = 0;
+  await page.route('**overpass.openstreetmap.fr**', (route) => {
+    appelsOverpass += 1;
+    const corps = route.request().postData() ?? '';
+    // Le démarrage relève les LIMITES (way/maxspeed) : rien à rendre ici.
+    if (corps.includes('maxspeed')) {
+      return route.fulfill({
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        contentType: 'application/json', body: JSON.stringify({ elements: [] }),
+      });
+    }
+    // Les COMMODITÉS de l'arrêt : un restaurant nommé, des WC.
+    return route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      contentType: 'application/json',
+      body: JSON.stringify({ elements: [
+        { lat: 47.3, lon: 3.601, tags: { amenity: 'restaurant', brand: 'Aire Gourmande' } },
+        { lat: 47.3, lon: 3.5995, tags: { amenity: 'toilets' } },
+      ] }),
+    });
+  });
+  await page.route('**/www.bison-fute.gouv.fr/**', (route) => route.fulfill({
+    contentType: 'application/json', body: '[]',
+  }));
+  await simulerIndexBornes(page, [BEAUNE]);
+  await ouvrirRecharge(page);
+  await expect(page.locator('.iti-recharge-corps'))
+    .toContainText('Aire de Beaune', { timeout: 15_000 });
+
+  await retour(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+  const overpassApresDemarrage = appelsOverpass;
+
+  await page.getByRole('button', { name: 'Ouvrir le panneau du copilote' }).click();
+  const copilote = page.locator('.bg-copilote');
+  await expect(copilote).toContainText('Recharges à venir', { timeout: 15_000 });
+  await expect(copilote).toContainText('Aire de Beaune');
+  await expect(copilote).toContainText(/dans .+ km/);
+  await expect(copilote).toContainText(/arrivée \d+ % → départ \d+ %/);
+  // Ouvrir le panneau n'a RIEN appelé de plus : tout était en mémoire.
+  expect(appelsOverpass).toBe(overpassApresDemarrage);
+
+  await copilote.getByRole('button', { name: 'Commodités sur place' }).click();
+  await expect(copilote).toContainText('Restauration (Aire Gourmande)');
+  await expect(copilote).toContainText('Toilettes');
+  expect(appelsOverpass).toBe(overpassApresDemarrage + 1);
+});
+
 test('AUCUN appel tant que la section est repliée — les quotas sont un bien commun', async ({ page }) => {
   let appels = 0;
   await page.route('**/public.opendatasoft.com/**', (route) => {

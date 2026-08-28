@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #82 — le mode copilote (DÉCISION d'Armelin du 28/08) : un panneau
+      pour le passager pendant le suivi — recharges à venir avec SOC prévus
+      et commodités à la demande, tous les événements devant soi, arrivée et
+      météo sur demande. Tout local sauf les boutons ; le partage de position
+      entre appareils est ÉCARTÉ d'office (zéro serveur).
 - [x] PR #81 — les profils de pauses humaines (DÉCISION d'Armelin du
       28/08) : pause minimale qui PAIE la charge, intervalle 2 h/3 h qui
       force l'arrêt (refus nommé quand c'est lui qui borne), profils

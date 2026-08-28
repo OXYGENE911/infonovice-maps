@@ -1900,6 +1900,10 @@ export class PanneauItineraire extends HTMLElement {
           reseau: a.borne.reseau ?? null,
           avancementM: a.borne.avancementM,
           dureeMin: a.dureeMin,
+          lon: a.borne.lon,
+          lat: a.borne.lat,
+          socArrivee: a.socArrivee,
+          socDepart: a.socDepart,
         }))
         : [],
     });
