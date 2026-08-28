@@ -2,6 +2,38 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.44.0] — 2026-08-28 — Le socle mobile du mandat UX (PR #69)
+
+Armelin a testé sur téléphone et transmis un cahier des charges complet de
+refonte UX. Il est TRIÉ dans docs/mandat-ux-28-08.md — déjà livré / contredit
+par une mesure / à faire / à décider — et cette PR livre son socle :
+
+- **L'en-tête mobile tient sur UNE rangée** (la capture montrait deux rangées
+  sur un tiers d'écran) : marque en petit — effacée sous 400 px, elle vit
+  dans l'onglet et l'icône —, champ qui prend le reste, et LA PLACE DU MENU
+  RÉSERVÉE : à pleine largeur, l'en-tête coupait le bouton (« enu » à
+  l'écran, mesuré puis verrouillé par un test de rectangles).
+- **Safe areas** : l'en-tête sous l'encoche, les contrôles et bandeaux bas
+  au-dessus de la barre de geste (env(safe-area-inset-*), jetons
+  --sur-encoche / --sur-barre-basse).
+- **Les contrôles bas-droite ne se chevauchent plus** (« Me localiser » posé
+  SUR le zoom — capture) : marges explicites par groupe.
+- **Les z-index deviennent des JETONS nommés** dans tokens.css : qui
+  recouvre qui se lit en un seul endroit.
+- **Le bouton contact des Professionnels se lit enfin** : `.page-corps a`
+  (0-1-1) écrasait la couleur de `.page-action` (0-1-0) — bleu accent sur
+  fond bleu. Le sélecteur devient `a.page-action`, `:visited` couvert, et le
+  test lit la couleur CALCULÉE.
+- **Le « toucher fantôme » des suggestions : cherché et NON REPRODUIT.** Le
+  preventDefault() du pointerdown supprime déjà les événements souris de
+  compatibilité (spec Pointer Events). Un correctif a été écrit, SABOTÉ pour
+  vérification — le parcours passait dans les deux cas : il n'a pas été
+  gardé. Le parcours de recouvrement reste en garde-fou.
+
+568 tests unitaires, 171 parcours E2E (+3 : Menu entier à 320 px sans
+défilement horizontal, garde-fou du toucher fantôme, contraste calculé du
+bouton contact).
+
 ## [0.43.1] — 2026-08-27 — Le prochain événement trafic, annoncé au volant (PR #64)
 
 La seconde candidate des études. La barre de fluidité en dégradé est ÉCARTÉE

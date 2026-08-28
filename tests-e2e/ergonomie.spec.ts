@@ -289,3 +289,93 @@ test('l’attribution de MapLibre n’est PAS traitée comme un de nos volets', 
     'l’attribution a refermé le volet — un lien partagé n’afficherait plus rien')
     .toHaveCount(1);
 });
+
+/* LE SOCLE MOBILE DU MANDAT UX DU 28/08 — les captures d'Armelin en tests :
+   l'en-tête mangeait un tiers de l'écran, le bouton Menu était coupé, les
+   contrôles bas-droite se chevauchaient. Ici, tout se mesure en rectangles. */
+
+test('à 320 px, le Menu est ENTIER, l’en-tête est bas, rien ne déborde', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  // Le bouton Menu, VISIBLE ET ENTIER — « enu » à l'écran a existé.
+  const menu = page.locator('summary[aria-label="Menu : réglages, couches et lieux"]');
+  await expect(menu).toBeVisible();
+  const boiteMenu = (await menu.boundingBox())!;
+  expect(boiteMenu.x + boiteMenu.width, 'le Menu dépasse à droite').toBeLessThanOrEqual(320);
+  const entete = (await page.locator('.entete').boundingBox())!;
+  expect(entete.x + entete.width, 'l’en-tête recouvre le Menu')
+    .toBeLessThanOrEqual(boiteMenu.x + 1);
+
+  // L'en-tête tient sur UNE rangée : moins de soixante pixels de haut.
+  expect(entete.height, 'l’en-tête reprend deux rangées').toBeLessThan(60);
+
+  // Aucun défilement horizontal : la page EST la carte.
+  const debord = await page.evaluate(() =>
+    document.documentElement.scrollWidth - window.innerWidth);
+  expect(debord, 'la page déborde horizontalement').toBeLessThanOrEqual(0);
+});
+
+test('choisir une suggestion ne DÉCLENCHE PAS le bouton posé derrière', async ({ page }) => {
+  /* LE TOUCHER FANTÔME, CHERCHÉ ET NON REPRODUIT. Le mandat du 28/08
+     signale que « les suggestions et les éléments situés derrière peuvent
+     recevoir le même toucher ». Vérifié : le preventDefault() du
+     pointerdown de la sélection SUPPRIME déjà les événements souris de
+     compatibilité (spec Pointer Events), click compris — un correctif
+     supplémentaire a été écrit, SABOTÉ pour vérification, et le parcours
+     passait dans les deux cas : il n'a donc pas été gardé. Ce parcours
+     reste en GARDE-FOU : si la sélection changeait un jour de mécanisme,
+     le fantôme réapparaîtrait ici. */
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.route('**/api-adresse.data.gouv.fr/search/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ features: [
+      { geometry: { coordinates: [4.8357, 45.764] },
+        properties: { label: '36 Rue Sadi Carnot 69100 Lyon', type: 'housenumber',
+          context: '69, Rhône', score: 0.9 } },
+    ] }),
+  }));
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  await page.locator('.entete .recherche input').fill('36 rue sadi carnot');
+  const option = page.locator('.entete .recherche [role="option"]').first();
+  await expect(option).toBeVisible();
+
+  /* LA SUGGESTION RECOUVRE LE BOUTON « Itinéraire » — c'est la condition du
+     fantôme, on la VÉRIFIE avant de cliquer : un test qui tape à côté ne
+     prouverait rien. */
+  const boiteOption = (await option.boundingBox())!;
+  const iti = page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Itinéraire' });
+  const boiteIti = (await iti.boundingBox())!;
+  const recouvre = boiteOption.y < boiteIti.y + boiteIti.height
+    && boiteOption.y + boiteOption.height > boiteIti.y;
+  expect(recouvre, 'la suggestion ne recouvre pas le bouton : le test ne prouve rien').toBe(true);
+
+  // Un VRAI toucher : down puis up, au centre de la suggestion.
+  await page.mouse.click(boiteOption.x + boiteOption.width / 2,
+    boiteOption.y + Math.min(boiteOption.height / 2, boiteIti.y + 5 - boiteOption.y));
+  // La sélection a eu lieu…
+  await expect(page.locator('.entete .recherche input')).toHaveValue(/Sadi Carnot/);
+  // …et le planificateur, derrière, N'A PAS reçu le clic.
+  await page.waitForTimeout(400);
+  await expect(page.locator('.iti[open]'), 'le clic fantôme a ouvert le planificateur')
+    .toHaveCount(0);
+});
+
+test('le bouton de contact des Professionnels se LIT — blanc sur bleu', async ({ page }) => {
+  /* Armelin, le 28/08 : « le texte est peu ou pas visible ». La cause :
+     `.page-corps a` écrasait la couleur de `.page-action` — bleu accent sur
+     fond bleu. Le test lit la couleur CALCULÉE, celle que l'œil reçoit. */
+  await page.goto('/offre-flottes.html');
+  const lien = page.locator('a.page-action');
+  await expect(lien).toBeVisible();
+  const styles = await lien.evaluate((e) => {
+    const s = getComputedStyle(e);
+    return { couleur: s.color, fond: s.backgroundColor };
+  });
+  expect(styles.couleur, 'le texte doit trancher sur le fond bleu')
+    .toBe('rgb(255, 255, 255)');
+  expect(styles.fond).not.toBe(styles.couleur);
+});
