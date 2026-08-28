@@ -2,6 +2,40 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.55.0] — 2026-08-28 — Le plan de recharge sent la météo, le relief et la vitesse (PR #80)
+
+La demande d'Armelin du 28/08 : l'algorithme d'autonomie doit prendre en
+compte le véhicule, le SOCE, la température aux deux bouts, le dénivelé, la
+vitesse du parcours — et le bridage BMS par batterie trop froide ou trop
+chaude (« sur mon VF8 : 60 kW à chaud, 30 kW sous 0 °C »).
+
+- **Un module pur, testé à sec** (src/lib/conditions.ts) : vitesse moyenne
+  du parcours (la durée du moteur IGN PORTE déjà les limites tronçon par
+  tronçon — traînée en v², bornée), température à la CONVENTION DES ANNEAUX
+  d'autonomie (+1,2 %/°C sous 20, +0,5 % au-dessus — deux modèles diraient
+  deux autonomies), dénivelé en KILOWATTHEURES (m·g·h, traction 85 %,
+  récupération 60 % — un col ne coûte pas un pourcentage), et bridage
+  thermique : sous 0 °C ou dès 35 °C d'air, la charge plafonne aux valeurs
+  DÉCLARÉES du véhicule — le choix de borne aussi (une 350 kW bridée à 60
+  ne vaut plus mieux qu'une 60).
+- **Les relevés, UNE fois par itinéraire** : Open-Meteo aux deux bouts
+  (départ maintenant, arrivée à l'heure estimée — la dérogation du 22/08
+  couvre cet usage), altimétrie IGN pour D+/D−, vitesse sans aucun appel.
+  Chaque source peut échouer SEULE ; cocher une case ne rappelle rien.
+- **Le profil véhicule s'étend** (facultatif) : masse, charge max sous
+  0 °C, charge max en canicule. Le catalogue porte les bridages du VF 8 —
+  la SOURCE est le relevé d'Armelin sur son véhicule, seuls des relevés y
+  entrent. Le SOCE comptait déjà (capacité réelle).
+- **Tout est DIT, provenance comprise** : « Pourquoi ce plan ? » énonce les
+  degrés, les facteurs, les kWh du relief, le bridage — et la limite de la
+  méthode : la température de l'AIR, pas celle de la batterie. Deux
+  mensonges d'affichage débusqués par le parcours hiver : la ligne d'arrêt
+  disait « à 150 kW retenus » sous un plan bridé à 30, et l'aveu final
+  prétendait calculer « à plat » — les deux suivent désormais le calcul.
+- Sans conditions relevées, RIEN ne change : le contrat est un test.
+
+620 tests unitaires (+22), 198 parcours E2E (+2).
+
 ## [0.54.0] — 2026-08-28 — Le partage de favoris (PR #79)
 
 La seconde demande d'Armelin du 28/08 : « exporter les favoris si on change

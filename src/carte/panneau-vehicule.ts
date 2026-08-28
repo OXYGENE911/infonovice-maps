@@ -133,6 +133,21 @@ export class PanneauVehicule extends HTMLElement {
           ${champ('soc', 'Charge (SOC)', '%')}
           ${champ('puissanceMaxKw', 'Charge max', 'kW')}
 
+          <!-- LES CONDITIONS (28/08) : ce que le véhicule sait de lui-même
+               face au froid, au chaud et au relief. TOUT est optionnel —
+               vide, le plan reste celui d'avant. Les bridages sont des
+               RELEVÉS du propriétaire (le BMS ne les publie pas) : le VF 8
+               d'Armelin plafonne à 30 kW sous 0 °C et 60 kW par batterie
+               très chaude. -->
+          <p class="veh-titre">Par grand froid, canicule ou montagne (facultatif)</p>
+          ${champ('masseKg', 'Masse', 'kg', '10')}
+          ${champ('puissanceFroidKw', 'Charge max sous 0 °C', 'kW')}
+          ${champ('puissanceChaudKw', 'Charge max en canicule', 'kW')}
+          <p class="veh-note">Vos relevés à la borne, pas la fiche
+            constructeur. Le planificateur ne connaît que la température de
+            l’air : par gel ou canicule, il applique ces plafonds en
+            estimation prudente. Masse vide : 2 000 kg.</p>
+
           <p class="veh-titre">Autonomie constatée à pleine charge</p>
           ${CONTEXTES.map((c) => champ(`essai-${c.cle}`, c.libelle, 'km')).join('')}
           <p class="veh-note">Vos relevés, pas la fiche du constructeur : c’est
@@ -160,7 +175,8 @@ export class PanneauVehicule extends HTMLElement {
         if (cle.startsWith('essai-')) {
           this.#essais[cle.slice(6) as CleContexte] = nombre;
         } else if (cle === 'capaciteNominale' || cle === 'soce' || cle === 'soc'
-          || cle === 'puissanceMaxKw') {
+          || cle === 'puissanceMaxKw' || cle === 'masseKg'
+          || cle === 'puissanceFroidKw' || cle === 'puissanceChaudKw') {
           this.#vehicule[cle] = nombre;
         }
         this.#recalculer();
@@ -185,6 +201,11 @@ export class PanneauVehicule extends HTMLElement {
            à un modèle qui n'a rien à voir. L'usager corrige ensuite. */
         soce: 100,
         puissanceMaxKw: modele.puissanceMaxKw,
+        /* Les bridages SUIVENT le modèle — y compris vers zéro (« non
+           déclaré ») : garder ceux du véhicule précédent appliquerait le BMS
+           d'une autre voiture. */
+        puissanceFroidKw: modele.puissanceFroidKw ?? 0,
+        puissanceChaudKw: modele.puissanceChaudKw ?? 0,
       };
       this.#essais = { ...km };
       /* LA FICHE CONSTRUCTEUR S'AFFICHE SOUS LE CHOIX : années de la
@@ -200,6 +221,14 @@ export class PanneauVehicule extends HTMLElement {
         ].filter(Boolean).join(' · ');
       }
       this.#refletChamps();
+      /* LES BRIDAGES NE SURVIVENT PAS AU CHANGEMENT DE MODÈLE, même à
+         l'écran : la règle « on n'écrase pas avec un zéro » protège le SOC
+         du jour — pas le BMS d'une autre voiture. Un 30 kW affiché qui ne
+         s'applique plus serait un mensonge. */
+      for (const cle of ['puissanceFroidKw', 'puissanceChaudKw'] as const) {
+        const c = this.querySelector<HTMLInputElement>(`.veh-champ[data-cle="${cle}"]`);
+        if (c && !(this.#vehicule[cle] && this.#vehicule[cle]! > 0)) c.value = '';
+      }
       this.#recalculer();
     });
 
@@ -233,7 +262,8 @@ export class PanneauVehicule extends HTMLElement {
       const cle = c.dataset['cle'] ?? '';
       const valeur = cle.startsWith('essai-')
         ? this.#essais[cle.slice(6) as CleContexte]
-        : this.#vehicule[cle as 'capaciteNominale' | 'soce' | 'soc' | 'puissanceMaxKw'];
+        : this.#vehicule[cle as 'capaciteNominale' | 'soce' | 'soc' | 'puissanceMaxKw'
+          | 'masseKg' | 'puissanceFroidKw' | 'puissanceChaudKw'] ?? 0;
       /* ON N'ÉCRASE PAS UN CHAMP AVEC UN ZÉRO : le catalogue ne connaît pas
          l'état de charge du jour, et l'effacer à chaque changement de modèle
          obligerait à le ressaisir sans raison. */

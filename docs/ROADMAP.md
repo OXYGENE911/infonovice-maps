@@ -534,6 +534,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #80 — le plan de recharge sent les conditions (demande d'Armelin du
+      28/08) : température aux deux bouts (Open-Meteo), dénivelé (altimétrie
+      IGN, en kWh), vitesse du parcours (durée du moteur), bridage BMS
+      froid/canicule déclaré par véhicule (VF 8 : relevés d'Armelin au
+      catalogue). Relevés une fois par itinéraire ; sans relevés, rien ne
+      change ; tout est dit dans « Pourquoi ce plan ? », limite air/batterie
+      comprise.
 - DÉCISIONS D'ARMELIN : bottom sheets généralisées ; profils de pauses ;
   copilote / routines / arrivée réelle (§4 du triage).
 
