@@ -226,7 +226,11 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   carte.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
 
   /* LA RECHERCHE vit dans l'en-tête (elle EST la fonction principale d'une
-     carte) ; la sélection pose un marqueur et y vole. */
+     carte) ; la sélection pose un marqueur, y vole, et OUVRE LA FICHE de la
+     destination — mandat UX du 28/08 (PR UX-2) : un marqueur muet obligeait à
+     retrouver le lieu dans le planificateur ou par appui long pour en faire
+     quelque chose. Quatre gestes, tous DÉJÀ mesurés ailleurs dans
+     l'application : y aller, garder, regarder, dicter. */
   const recherche = new RechercheAdresse();
   document.querySelector('.entete')?.appendChild(recherche);
   let marqueur: Marker | null = null;
@@ -234,7 +238,83 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     marqueur?.remove();
     marqueur = new Marker({ color: '#2272C4' }).setLngLat([r.lon, r.lat]).addTo(carte);
     carte.flyTo({ center: [r.lon, r.lat], zoom: r.type === 'municipality' ? 13 : 17 });
+    montrerDestination(r);
   };
+
+  /** La fiche compacte d'une adresse choisie dans la recherche. */
+  function montrerDestination(r: { libelle: string; contexte: string; lon: number; lat: number }): void {
+    const point = { lon: r.lon, lat: r.lat };
+    const coords = formaterCoordonnees(point);
+    /* closeOnClick: false — même leçon que l'appui long (PR #10) : un
+       événement de la même gestuelle refermait la popup dans la foulée. */
+    const popup = new Popup({ closeButton: true, closeOnClick: false, maxWidth: '320px' })
+      .setLngLat([r.lon, r.lat])
+      .setHTML('<div class="popup-adresse fiche-destination">'
+        + '<p class="pa-libelle"></p><p class="fd-contexte"></p>'
+        + '<div class="fd-actions">'
+        + '<button type="button" class="fd-aller">Y aller</button>'
+        + '<button type="button" class="pa-favori">Ajouter aux favoris</button>'
+        + '<button type="button" class="pa-photo">Photos de rue</button>'
+        + '<button type="button" class="pa-copier">Copier les coordonnées</button>'
+        + '</div><p class="pa-photo-etat" role="status"></p></div>')
+      .addTo(carte);
+    const bloc = popup.getElement();
+    // textContent, jamais innerHTML : le libellé vient d'un service externe.
+    (bloc.querySelector('.pa-libelle') as HTMLElement).textContent = r.libelle;
+    (bloc.querySelector('.fd-contexte') as HTMLElement).textContent = r.contexte;
+
+    /* « Y ALLER » : le point d'entrée unique des autres composants — le volet
+       s'ouvre, la destination porte son NOM, le départ se déduit de la
+       position connue ou se demande en toutes lettres. La fiche se referme :
+       elle a rempli son office. */
+    bloc.querySelector('.fd-aller')?.addEventListener('click', () => {
+      panneau.allerVers(point, r.libelle);
+      popup.remove();
+    });
+
+    /* LE NOM DU FAVORI EST DÉJÀ TRANCHÉ — c'est le libellé BAN qu'on vient de
+       choisir : aucune attente, aucun bouton désactivé, contrairement à
+       l'appui long qui doit d'abord résoudre l'adresse. */
+    const favori = bloc.querySelector('.pa-favori') as HTMLButtonElement;
+    favori.addEventListener('click', () => {
+      favori.disabled = true;
+      ajouterFavori(r.libelle, point).then(
+        () => { favori.textContent = 'Ajouté aux favoris ✓'; void favoris.rafraichir(); },
+        () => { favori.textContent = 'Ajout impossible (stockage local indisponible)'; },
+      );
+    });
+
+    bloc.querySelector('.pa-copier')?.addEventListener('click', () => {
+      void navigator.clipboard.writeText(coords);
+      (bloc.querySelector('.pa-copier') as HTMLElement).textContent = 'Copié !';
+    });
+
+    // Les photos ne partent QUE sur demande : un commun associatif se ménage.
+    const boutonPhoto = bloc.querySelector('.pa-photo') as HTMLButtonElement;
+    const etatPhoto = bloc.querySelector('.pa-photo-etat') as HTMLElement;
+    boutonPhoto.addEventListener('click', () => {
+      boutonPhoto.disabled = true;
+      etatPhoto.textContent = 'Recherche d’une photo…';
+      chercherPhotos(point.lon, point.lat).then(
+        (photos) => {
+          const photo = plusProche(photos, point.lon, point.lat);
+          if (!photo) {
+            etatPhoto.textContent = 'Aucune photo de rue à cet endroit.';
+            boutonPhoto.disabled = false;
+            return;
+          }
+          etatPhoto.textContent = '';
+          boutonPhoto.disabled = false;
+          visionneuse.ouvrir(photo);
+        },
+        (e: unknown) => {
+          etatPhoto.textContent = e instanceof ErreurPhotos
+            ? e.message : 'Photos de rue indisponibles pour le moment.';
+          boutonPhoto.disabled = false;
+        },
+      );
+    });
+  }
 
   /* L'APPUI LONG (500 ms, souris comme doigt) répond « où suis-je ? » :
      adresse inverse BAN + coordonnées au format maison, avec un bouton

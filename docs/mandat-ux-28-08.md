@@ -59,8 +59,13 @@ s'écraser.
   gardé ; un parcours de recouvrement reste en garde-fou. À réévaluer si
   Armelin le reproduit sur appareil avec les étapes exactes + espacement des
   contrôles bas-droite qui se chevauchaient (capture).
-- **PR UX-2** : état « destination sélectionnée » — fiche compacte avec
-  4 actions (Y aller / Planifier / Favori / Options) au clic d'une adresse.
+- **PR UX-2 — LIVRÉE (PR #71, 0.46.0)** : état « destination
+  sélectionnée » — fiche compacte au choix d'une adresse. Les 4 actions
+  demandées (Y aller / Planifier / Favori / Options) sont rendues avec ce
+  qui est MESURÉ : « Y aller » et « Planifier » sont le même geste ici
+  (allerVers ouvre le volet, nomme la destination, déduit ou demande le
+  départ) ; « Options » devient les deux gestes qui existent — Photos de
+  rue et Copier les coordonnées.
 - **PR UX-3 — LIVRÉE (PR #70, 0.45.0)** : planification allégée — bouton
   « Effacer » seulement si un trajet existe ; favoris derrière un bouton
   « Favoris… (n) » ouvrant un <dialog> natif avec recherche, plus en liste
