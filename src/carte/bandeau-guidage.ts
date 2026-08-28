@@ -110,6 +110,7 @@ export class BandeauGuidage extends HTMLElement {
 
   /** L'abonnement DeviceOrientation. Nul tant que le geste ne l'a pas ouvert. */
   #boussole: AbortController | null = null;
+
   /** La vue inclinée du suivi — un choix de l'usager, retenu pour la session. */
   #en3D = true;
   #surVisibilite = (): void => { void this.#prendreVerrou(); };
@@ -193,7 +194,14 @@ export class BandeauGuidage extends HTMLElement {
       <p class="bg-limite-vitesse" hidden role="status"
         title="Vitesse limite cartographiée (OpenStreetMap) — travaux et limites variables non connus"
         aria-label="Vitesse limite cartographiée">
-        <span class="bg-limite-nombre">50</span></p>`;
+        <span class="bg-limite-nombre">50</span></p>
+      <!-- LA FRISE DU TRAJET — la « barre verticale » du mandat du 28/08,
+           rendue avec ce que la donnée PERMET : des ÉVÉNEMENTS ponctuels
+           (arrêts de recharge, Bison Futé), jamais une fluidité en dégradé
+           que Bison Futé ne publie pas. Décorative au sens strict : tout ce
+           qu'elle montre est déjà DIT en texte dans le bandeau (prochain
+           arrêt, prochain événement) — d'où aria-hidden. -->
+      <div class="bg-frise" aria-hidden="true" hidden></div>`;
     this.querySelector('.bg-arreter')?.addEventListener('click', () => { this.arreter(); });
     this.querySelector('.bg-recentrer')?.addEventListener('click', () => { this.#recentrer(); });
     this.querySelector('.bg-3d')?.addEventListener('click', () => {
@@ -287,6 +295,8 @@ export class BandeauGuidage extends HTMLElement {
       return false;
     }
     this.#options = o;
+    const frise = this.querySelector<HTMLElement>('.bg-frise');
+    if (frise) { frise.hidden = true; frise.replaceChildren(); }
     this.hidden = false;
     this.#alerte('');
     /* ON DÉGAGE LA VUE. Volets refermés, et une classe sur le document qui
@@ -527,6 +537,53 @@ export class BandeauGuidage extends HTMLElement {
         + ` ${distanceEnMots(prochain.avancementM - e.avancementM)}`
         + `${prochain.dureeMin > 0 ? ` · ${Math.round(prochain.dureeMin)} min sur place` : ''}`
       : '';
+
+    this.#majFrise(e.avancementM, e.restantM);
+  }
+
+  /**
+   * La frise verticale du trajet : départ en bas, arrivée en haut, et entre
+   * les deux ce que le trajet RÉSERVE — les arrêts de recharge en pastilles
+   * numérotées (les mêmes numéros que la carte et la liste), les événements
+   * Bison Futé en losanges. Le curseur est la voiture.
+   *
+   * RECONSTRUITE À CHAQUE FIXE, et c'est un choix : quelques dizaines de
+   * spans une fois par seconde ne coûtent rien, et la frise reste juste sans
+   * invalidation à gérer — les événements se rafraîchissent toutes les cinq
+   * minutes pendant le suivi.
+   */
+  #majFrise(avancementM: number, restantM: number): void {
+    const frise = this.querySelector<HTMLElement>('.bg-frise');
+    if (!frise) return;
+    const total = avancementM + restantM;
+    if (!(total > 0)) { frise.hidden = true; return; }
+    frise.hidden = false;
+
+    const pct = (m: number): string =>
+      `${Math.min(Math.max((m / total) * 100, 0), 100).toFixed(2)}%`;
+
+    frise.replaceChildren();
+    const piste = document.createElement('span');
+    piste.className = 'bg-frise-piste';
+    frise.append(piste);
+
+    for (const [i, a] of (this.#options?.arrets ?? []).entries()) {
+      const point = document.createElement('span');
+      point.className = 'bg-frise-arret';
+      point.style.bottom = pct(a.avancementM);
+      point.textContent = String(i + 1);
+      frise.append(point);
+    }
+    for (const evt of this.#evenements) {
+      const point = document.createElement('span');
+      point.className = 'bg-frise-evt';
+      point.style.bottom = pct(evt.avancementM);
+      frise.append(point);
+    }
+    const curseur = document.createElement('span');
+    curseur.className = 'bg-frise-curseur';
+    curseur.style.bottom = pct(avancementM);
+    frise.append(curseur);
   }
 }
 

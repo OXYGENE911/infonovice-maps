@@ -89,8 +89,11 @@ s'écraser.
   déjà une couche) « dans la vue, à la demande » : un clic = un appel, rien
   au déplacement, refus motivé sous le zoom 12, plafond de 100 annoncé.
   LE DÉCOUPAGE INITIAL EST SOLDÉ : UX-1 à POI-1 livrées (PR #69 à #75).
-- **Timeline verticale d'ÉVÉNEMENTS en suivi** (pas de fluidité) : position,
-  arrêts, péages, événements Bison Futé — candidate après NAV-1.
+- **Timeline verticale d'ÉVÉNEMENTS en suivi — LIVRÉE (PR #76, 0.51.0)** :
+  position, arrêts de recharge, événements Bison Futé (pas de fluidité — la
+  donnée n'en contient pas). Les PÉAGES n'y sont PAS : leur relevé est un
+  geste à la demande (PR #54, frugalité Overpass) — les y poser d'office
+  déclencherait l'appel à chaque suivi. À réévaluer si Armelin le demande.
 - **Profils de trajet** (Rapide/Économe/Sans péage…) : à cadrer — beaucoup
   d'étiquettes du cahier des charges n'ont pas de levier réel côté moteur
   (seuls autoroutes/tunnels/ponts existent). N'exposer QUE des profils qui
