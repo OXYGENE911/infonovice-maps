@@ -506,8 +506,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #71 — UX-2, la fiche de destination : choisir une adresse ouvre
       une fiche compacte (Y aller / Ajouter aux favoris / Photos de rue /
       Copier les coordonnées) — plus de marqueur muet.
-- [ ] UX-4 « Pourquoi ce plan ? » · [ ] EV-1 réglages élargis · [ ] NAV-1
-      orientation trois états · [ ] POI-1 catégories Overpass.
+- [x] PR #72 — UX-4, « Pourquoi ce plan ? » : un volet sous le plan de
+      recharge — consignes reprises, chaque arrêt motivé par le critère réel
+      du calcul, puissance retenue nommée, aveu du modèle en clôture.
+- [ ] EV-1 réglages élargis · [ ] NAV-1 orientation trois états ·
+      [ ] POI-1 catégories Overpass.
 - DÉCISIONS D'ARMELIN : bottom sheets généralisées ; profils de pauses ;
   copilote / routines / arrivée réelle (§4 du triage).
 

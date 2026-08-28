@@ -1923,6 +1923,113 @@ export class PanneauItineraire extends HTMLElement {
     return Number.isFinite(v) && v >= 0 ? v : repli;
   }
 
+  /**
+   * « Pourquoi ce plan ? » — mandat UX du 28/08 (PR UX-4).
+   *
+   * ON N'EXPLIQUE QU'AVEC CE QU'ON SAIT : les consignes de l'usager
+   * (réserve, plafond, cible, réseaux cochés, arrêts imposés ou écartés),
+   * la puissance RETENUE à chaque borne — le minimum entre elle et le
+   * véhicule —, l'écart au tracé. Et l'aveu du modèle, en toutes lettres :
+   * ni relief, ni vent, ni trafic, ni courbe de charge réelle. Jamais
+   * d'invention — pas de « plus fiable », pas de « meilleur choix » sans le
+   * critère qui l'a décidé.
+   */
+  #pourquoiCePlan(plan: PlanRecharge): HTMLElement {
+    const v = this.#vehiculeCourant;
+    const volet = document.createElement('details');
+    volet.className = 'recharge-pourquoi';
+    const titre = document.createElement('summary');
+    titre.textContent = 'Pourquoi ce plan ?';
+    volet.append(titre);
+
+    const consignes = document.createElement('p');
+    consignes.className = 'pourquoi-consignes';
+    const cible = this.#valeurReglage('.recharge-cible', 10);
+    const reserve = this.#valeurReglage('.recharge-reserve', 10);
+    const plafond = this.#valeurReglage('.recharge-plafond', 100);
+    const morceaux = [
+      `partir à ${Math.round(this.#socDepart)} %`,
+      `arriver à chaque borne avec au moins ${reserve} % (votre réserve)`,
+      ...(plafond < 100 ? [`ne jamais charger au-delà de ${plafond} % (votre plafond)`] : []),
+      `viser ${cible} % à destination`,
+    ];
+    consignes.textContent = `Vos consignes : ${morceaux.join(' ; ')}.`;
+    volet.append(consignes);
+
+    /* CE QUE L'USAGER A DÉJÀ DÉCIDÉ compte dans l'explication : un plan
+       taillé par des réseaux cochés ou des refus au « − » n'est pas un choix
+       du planificateur, et le dire évite de le lui attribuer. */
+    const contraintes: string[] = [];
+    if (this.#reseauxPreferes.size > 0) {
+      contraintes.push(`seuls vos réseaux cochés sont considérés (${
+        [...this.#reseauxPreferes].sort((a, b) => a.localeCompare(b, 'fr')).join(', ')})`);
+    }
+    if (this.#imposees.size > 0) {
+      contraintes.push(`${this.#imposees.size} arrêt${this.#imposees.size > 1 ? 's' : ''} imposé${this.#imposees.size > 1 ? 's' : ''} par vous`);
+    }
+    if (this.#ecartees.size > 0) {
+      contraintes.push(`${this.#ecartees.size} borne${this.#ecartees.size > 1 ? 's' : ''} écartée${this.#ecartees.size > 1 ? 's' : ''} au « − »`);
+    }
+    if (contraintes.length > 0) {
+      const p = document.createElement('p');
+      p.className = 'pourquoi-contraintes';
+      p.textContent = `Vos choix : ${contraintes.join(' ; ')}.`;
+      volet.append(p);
+    }
+
+    if (plan.arrets.length === 0) {
+      const aucun = document.createElement('p');
+      aucun.className = 'pourquoi-arret';
+      aucun.textContent = 'Aucun arrêt : la batterie couvre la distance'
+        + ' sans entamer votre réserve.';
+      volet.append(aucun);
+    } else {
+      const liste = document.createElement('ul');
+      liste.className = 'pourquoi-liste';
+      for (const [i, a] of plan.arrets.entries()) {
+        const item = document.createElement('li');
+        const imposee = this.#imposees.has(cleBorne(a.borne));
+        const retenue = v ? Math.min(a.borne.puissanceKw ?? 0, v.puissanceMaxKw) : null;
+        const bouts = [
+          imposee
+            ? 'imposé par vous'
+            /* LE CRITÈRE DU CHOIX, tel que le planificateur le calcule
+               vraiment (lib/arrets.ts) : l'avancement gagné, moins le détour,
+               moins le temps que coûterait la charge — pas un superlatif. */
+            : 'retenu sur le compromis distance gagnée / puissance / détour',
+          `vous y arrivez à ${Math.round(a.socArrivee)} %`,
+          a.dureeMin > 0
+            ? `charge jusqu'à ${Math.round(a.socDepart)} %`
+              + (plafond < 100 && Math.round(a.socDepart) >= plafond ? ' (votre plafond)' : '')
+            : 'sans recharge',
+          ...(a.dureeMin > 0 && retenue && v
+            ? [`${Math.round(a.dureeMin)} min à ${retenue} kW retenus`
+              + (a.borne.puissanceKw && a.borne.puissanceKw > v.puissanceMaxKw
+                ? ` (la borne offre ${a.borne.puissanceKw}, le véhicule accepte ${v.puissanceMaxKw})`
+                : '')]
+            : []),
+          ...(a.borne.ecartM >= 100
+            ? [`détour de ${a.borne.ecartM >= 1000
+              ? `${(a.borne.ecartM / 1000).toFixed(1)} km` : `${Math.round(a.borne.ecartM)} m`}`]
+            : ['au bord du tracé']),
+        ];
+        item.textContent = `${i + 1}. ${a.borne.nom} — ${bouts.join(' · ')}.`;
+        liste.append(item);
+      }
+      volet.append(liste);
+    }
+
+    /* L'AVEU DU MODÈLE clôt l'explication — la règle du projet : ne jamais
+       faire dire au calcul ce qu'il ne sait pas. */
+    const limites = document.createElement('p');
+    limites.className = 'pourquoi-limites';
+    limites.textContent = 'Ce modèle calcule à plat et à consommation'
+      + ' constante : ni relief, ni vent, ni trafic, ni courbe de charge'
+      + ' réelle du véhicule.';
+    volet.append(limites);
+    return volet;
+  }
+
   #afficherRecharge(plan: PlanRecharge): void {
     const corps = this.querySelector('.iti-recharge-corps') as HTMLElement;
     corps.replaceChildren();
@@ -1960,7 +2067,7 @@ export class PanneauItineraire extends HTMLElement {
       : `${plan.arrets.length} arrêt${plan.arrets.length > 1 ? 's' : ''}`
         + ` · ${Math.round(plan.dureeRechargeMin)} min de charge`
         + ` · arrivée à ${Math.round(plan.socArrivee)} %`;
-    corps.append(resume);
+    corps.append(resume, this.#pourquoiCePlan(plan));
 
     if (plan.arrets.length > 0) {
       const liste = document.createElement('ol');

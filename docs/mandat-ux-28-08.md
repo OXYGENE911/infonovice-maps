@@ -71,9 +71,11 @@ s'écraser.
   « Favoris… (n) » ouvrant un <dialog> natif avec recherche, plus en liste
   permanente sous les champs ; « ⇅ Inverser » qui échange points, libellés
   et champs puis recalcule.
-- **PR UX-4** : « Pourquoi ce plan ? » — expliquer les choix du
-  planificateur EV avec ce qu'on SAIT (connecteur, marge, plafond) ; jamais
-  d'invention.
+- **PR UX-4 — LIVRÉE (PR #72, 0.47.0)** : « Pourquoi ce plan ? » — volet
+  sous le plan de recharge, qui n'explique qu'avec ce que le calcul sait :
+  consignes (réserve, plafond, cible), choix de l'usager (réseaux, imposées,
+  écartées), critère réel par arrêt (compromis distance gagnée / puissance /
+  détour), puissance retenue, aveu du modèle. Jamais d'invention.
 - **PR EV-1** : réglages élargis (plafond 50-90, détour lieux 30 min) ;
   statut visuel des arrêts (suggéré/imposé/écarté déjà distingués — les
   MONTRER sur les marqueurs : durée de charge sur la pastille).
