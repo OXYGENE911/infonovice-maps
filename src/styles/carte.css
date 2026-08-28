@@ -1920,3 +1920,44 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
    `.recharge-pourquoi p` (0-1-1) ci-dessus battrait une classe simple
    (0-1-0) — la leçon `.iti-demarrer`, déjà payée. */
 .recharge-pourquoi .pourquoi-limites { font-style: italic; color: var(--texte-3); }
+
+/* --- La frise du trajet (candidate du triage 28/08, après NAV-1) --- */
+/* Sur le bord GAUCHE de l'écran, au-dessus du bandeau : la droite porte déjà
+   zoom, boussole et géolocalisation. Départ en bas, arrivée en haut — le
+   sens de la route quand la carte est au cap. */
+.bg-frise {
+  position: absolute; left: 10px; bottom: calc(100% + 76px);
+  width: 14px; height: min(34vh, 300px);
+  pointer-events: none;
+}
+.bg-frise[hidden] { display: none; }
+.bg-frise-piste {
+  position: absolute; left: 50%; top: 0; bottom: 0;
+  width: 4px; transform: translateX(-50%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fond) 70%, transparent);
+  border: 1px solid var(--bord-2);
+}
+/* Les arrêts de recharge : les MÊMES pastilles vertes numérotées que la
+   carte et la liste — un seul vocabulaire. */
+.bg-frise-arret {
+  position: absolute; left: 50%; transform: translate(-50%, 50%);
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #2E7D32; border: 2px solid var(--blanc);
+  color: var(--blanc); font: 700 9px/12px var(--police); text-align: center;
+  box-shadow: var(--ombre-s);
+}
+/* Les événements Bison Futé : des losanges ambre — ponctuels, comme la
+   donnée. Jamais un dégradé de fluidité qu'elle ne contient pas. */
+.bg-frise-evt {
+  position: absolute; left: 50%; transform: translate(-50%, 50%) rotate(45deg);
+  width: 9px; height: 9px; border-radius: 2px;
+  background: var(--ambre-fonce); border: 1.5px solid var(--blanc);
+}
+/* La voiture : le point accent, par-dessus tout le reste. */
+.bg-frise-curseur {
+  position: absolute; left: 50%; transform: translate(-50%, 50%);
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--accent-vif); border: 2px solid var(--blanc);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-vif) 35%, transparent);
+}

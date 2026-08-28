@@ -294,6 +294,74 @@ test('le prochain événement trafic du corridor s’ANNONCE — et se tait derr
   await expect(trafic).toBeEmpty({ timeout: 10_000 });
 });
 
+test('la FRISE du trajet : événements posés à leur kilomètre, curseur qui avance', async ({ page }) => {
+  /* La « barre verticale » du mandat du 28/08, rendue avec ce que la donnée
+     permet : des ÉVÉNEMENTS ponctuels, jamais une fluidité en dégradé que
+     Bison Futé ne publie pas. Les TRAVAUX de la fixture sont à ~20 % du
+     trajet : le losange doit être posé LÀ, et le curseur doit suivre la
+     voiture. (Les pastilles d'arrêts empruntent la même boucle et la même
+     échelle que les losanges ; monter ici un plan EV complet dupliquerait
+     toute la fixture de recharge.spec.ts pour la même ligne de code.) */
+  await page.route('**/www.bison-fute.gouv.fr/data/iteration/date.json',
+    (route) => route.fulfill({ contentType: 'application/json', body: '[1787353503716]' }));
+  await page.route('**/www1.bison-fute.gouv.fr/data/**/evenementsOL6.json',
+    (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      type: 'FeatureCollection',
+      features: [
+        { geometry: { type: 'Point', coordinates: [688781.7, 6793094.7] },
+          properties: { type: 'TRAVAUX', etat_evenement: 'EFFECTIF', urlcpc: '' } },
+      ],
+    }) }));
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null,
+        speed: null, heading: null, ...c } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+
+  const frise = page.locator('.bg-frise');
+  const hauteurDe = async (sel: string): Promise<number> =>
+    Number.parseFloat(await page.locator(sel).evaluate(
+      (el) => (el as HTMLElement).style.bottom));
+
+  /* AU DÉPART : la frise paraît au premier fixe, le curseur est en bas, et
+     le losange des travaux est posé à SON kilomètre — autour de 20 %.
+     L'événement arrive de façon asynchrone après le démarrage : on REJOUE
+     un fixe jusqu'à ce qu'il soit sur la frise (même mécanique que la ligne
+     de texte du bandeau). */
+  await expect.poll(async () => {
+    await page.evaluate(() => {
+      (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+        longitude: 2.3522, latitude: 48.8566 });
+    });
+    return page.locator('.bg-frise-evt').count();
+  }, { timeout: 15_000 }).toBe(1);
+  await expect(frise).toBeVisible();
+  expect(await hauteurDe('.bg-frise-curseur')).toBeLessThan(3);
+  const evt = await hauteurDe('.bg-frise-evt');
+  expect(evt, 'les travaux ne sont pas à leur kilomètre').toBeGreaterThan(12);
+  expect(evt).toBeLessThan(30);
+
+  // À MI-ROUTE : le curseur a avancé — il est la voiture, pas une décoration.
+  await page.evaluate(() => {
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+      longitude: 3.5939, latitude: 47.31 });
+  });
+  await expect.poll(() => hauteurDe('.bg-frise-curseur'), { timeout: 10_000 })
+    .toBeGreaterThan(40);
+});
+
 test('la limite CARTOGRAPHIÉE s’affiche sur son tronçon, et SE TAIT ailleurs', async ({ page }) => {
   /* La candidate issue de l'étude maxspeed (97-100 % de couverture mesurée).
      Overpass est simulé : une route à 110 le long du premier tiers du tracé.
