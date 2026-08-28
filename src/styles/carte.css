@@ -1839,6 +1839,7 @@ body.en-guidage fiche-borne, body.en-guidage fiche-lieu { display: none; }
    top layer du navigateur, AU-DESSUS de tout z-index — aucun jeton d'ordre
    à poser, c'est son contrat. */
 dialog.choix-favori {
+  margin: auto;  /* le reset `* { margin: 0 }` écrase le centrage natif */
   width: min(420px, calc(100vw - 32px));
   max-height: min(70vh, 520px);
   padding: 14px; border: 1px solid var(--bord-2); border-radius: var(--rayon);
@@ -2065,3 +2066,45 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
   /* Le menu n'a plus besoin de son coussin haut : la poignée le remplace. */
   details.reglages[open] .reglages-corps { padding-top: 0; }
 }
+
+/* --- Le partage de favoris (demande d'Armelin du 28/08) --- */
+.favoris-partage-note {
+  margin: 6px 0 0; font: 400 11.5px/1.5 var(--police); color: var(--texte-3);
+}
+/* La boîte de réception : un <dialog> natif, comme le choix de favori du
+   planificateur — focus piégé, Échap, arrière-plan inerte. */
+dialog.recevoir-favoris {
+  /* `margin: auto` REDIT ce que le navigateur donnait : le reset `* {
+     margin: 0 }` (ligne 3) écrase le centrage natif des dialogues modaux —
+     la boîte collait en haut de l'écran, vu sur capture. */
+  margin: auto;
+  width: min(400px, calc(100vw - 32px)); max-height: min(70vh, 480px);
+  padding: 16px; border: 1px solid var(--bord-2); border-radius: var(--rayon);
+  background: var(--fond); color: var(--texte-1); box-shadow: var(--ombre-m);
+  display: none; flex-direction: column; gap: 10px;
+}
+dialog.recevoir-favoris[open] { display: flex; }
+dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
+.recevoir-titre { margin: 0; font: 700 15px var(--police); }
+.recevoir-liste {
+  list-style: none; margin: 0; padding: 0; overflow-y: auto;
+  display: grid; gap: 4px;
+}
+.recevoir-liste li {
+  padding: 7px 11px; border: 1px solid var(--bord); border-radius: 9px;
+  background: var(--fond-doux); font: 500 13px var(--police);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.recevoir-actions { display: flex; gap: 8px; }
+.recevoir-actions button {
+  padding: 9px 14px; border-radius: 9px; cursor: pointer;
+  font: 600 13px var(--police);
+}
+.recevoir-ajouter {
+  flex: 1; border: 1px solid var(--accent); background: var(--accent); color: var(--blanc);
+}
+.recevoir-ajouter:hover { background: var(--accent-vif); border-color: var(--accent-vif); }
+.recevoir-ignorer {
+  border: 1px solid var(--bord-2); background: var(--fond-doux); color: var(--texte-2);
+}
+.recevoir-actions button:focus-visible { outline: none; box-shadow: var(--focus); }

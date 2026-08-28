@@ -530,6 +530,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       « commence par les bottom sheets ») : planificateur et menu ancrés en
       bas sur téléphone, poignée, paliers mi/plein/fermer, rien ne change
       sur grand écran. BS-2 (fiches borne/lieu) si l'essai convainc.
+- [x] PR #79 — le partage de favoris par lien (demande d'Armelin du 28/08) :
+      #favs= de la main à la main, réception confirmée, repères exclus,
+      doublons écartés par la position ; l'export JSON reste l'outil du
+      déménagement complet.
 - DÉCISIONS D'ARMELIN : bottom sheets généralisées ; profils de pauses ;
   copilote / routines / arrivée réelle (§4 du triage).
 

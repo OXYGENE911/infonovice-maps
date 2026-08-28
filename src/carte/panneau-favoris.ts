@@ -6,13 +6,17 @@
 // d'un libellé BAN (service externe) comme d'une saisie libre.
 import type { Map as CarteMapLibre } from 'maplibre-gl';
 import {
-  listerFavoris, retirerFavori, renommerFavori, exporterDonnees, importerDonnees,
+  listerFavoris, retirerFavori, renommerFavori, exporterDonnees, importerDonnees, ajouterFavori,
   ErreurFavoris, ErreurStockage, type Favori,
 } from '../lib/favoris';
 import { REPERES, lireRepere, effacerRepere, ecrireRepere } from '../lib/reperes';
 import { adresseInverse } from '../lib/adresse';
 import { formaterCoordonnees } from '../lib/coordonnees';
 import { telecharger } from '../lib/trace';
+import {
+  versFragmentFavoris, depuisFragmentFavoris, sansDejaConnus,
+  ErreurPartageFavoris, type LieuPartage,
+} from '../lib/partage-favoris';
 
 export class PanneauFavoris extends HTMLElement {
   #carte: CarteMapLibre | null = null;
@@ -40,8 +44,20 @@ export class PanneauFavoris extends HTMLElement {
           <div class="favoris-actions">
             <button type="button" class="favoris-exporter">Exporter mes données</button>
             <button type="button" class="favoris-importer">Importer</button>
+            <button type="button" class="favoris-partager">Partager mes favoris</button>
             <input type="file" accept="application/json,.json" hidden>
           </div>
+          <!-- DEUX GESTES, DEUX OUTILS — la demande d'Armelin du 28/08 :
+               « exporter les favoris si on change de téléphone… et même un
+               partage ». Le LIEN transporte les favoris seuls, de la main à
+               la main ; l'EXPORT transporte tout (favoris et préférences)
+               dans un fichier. Les repères — domicile, travail — ne voyagent
+               JAMAIS par lien : partager « chez moi » d'un geste distrait
+               doit être impossible, pas improbable. -->
+          <p class="favoris-partage-note">Le lien transporte vos favoris vers
+            un autre téléphone, un autre ordinateur, ou quelqu’un d’autre —
+            jamais vos repères (domicile, travail). Il ne passe par aucun
+            serveur.</p>
           <p class="favoris-etat" role="status"></p>
         </div>
       </details>`;
@@ -76,7 +92,108 @@ export class PanneauFavoris extends HTMLElement {
           void this.rafraichir();
         });
     });
+    this.querySelector('.favoris-partager')?.addEventListener('click', () => {
+      void this.#partager();
+    });
+
     void this.rafraichir();
+    this.#recevoirDuLien();
+  }
+
+  /**
+   * Fabrique le lien de partage et le met en route : la feuille de partage
+   * du téléphone quand elle existe (navigator.share), le presse-papiers
+   * sinon. Le refus d'un lot trop grand NOMME son remède : l'export.
+   */
+  async #partager(): Promise<void> {
+    const etat = this.querySelector('.favoris-etat') as HTMLElement;
+    try {
+      const fragment = versFragmentFavoris(await listerFavoris());
+      const lien = location.origin + location.pathname + fragment;
+      /* navigator.share N'EST PAS UN DÉTOUR : sur téléphone — le cas même de
+         la demande —, c'est la feuille de partage du système, vers l'autre
+         appareil ou l'autre personne. Son refus (geste annulé) est bénin. */
+      if (navigator.share) {
+        await navigator.share({ title: 'Mes favoris Infonovice Maps', url: lien })
+          .catch(() => { /* partage annulé : pas une erreur */ });
+        etat.textContent = '';
+        return;
+      }
+      await navigator.clipboard.writeText(lien);
+      etat.textContent = 'Lien copié ! Ouvrez-le sur l’autre appareil pour y retrouver vos favoris.';
+    } catch (e) {
+      etat.textContent = e instanceof ErreurPartageFavoris
+        ? e.message : 'Le partage est indisponible pour le moment.';
+    }
+  }
+
+  /**
+   * Un lien de favoris reçu s'ouvre sur une boîte de CONFIRMATION — jamais
+   * une écriture silencieuse : c'est le stockage de l'usager, un lien forgé
+   * ou cliqué par erreur ne doit rien pouvoir y déposer sans son accord.
+   */
+  #recevoirDuLien(): void {
+    const lieux = depuisFragmentFavoris(location.hash);
+    if (!lieux) return;
+    /* LE FRAGMENT S'EFFACE TOUT DE SUITE : un rechargement ne doit pas
+       reposer la même question, et le lien ne doit pas rester dans la barre
+       comme s'il décrivait cette session. */
+    history.replaceState(null, '', location.pathname + location.search);
+
+    const boite = document.createElement('dialog');
+    boite.className = 'recevoir-favoris';
+    boite.setAttribute('aria-label', 'Favoris partagés avec vous');
+    const titre = document.createElement('p');
+    titre.className = 'recevoir-titre';
+    titre.textContent = lieux.length === 1
+      ? 'Un lieu a été partagé avec vous'
+      : `${lieux.length} lieux ont été partagés avec vous`;
+    const liste = document.createElement('ul');
+    liste.className = 'recevoir-liste';
+    for (const l of lieux) {
+      const item = document.createElement('li');
+      // textContent : le nom vient d'un lien, jamais interprété en HTML.
+      item.textContent = l.nom;
+      liste.append(item);
+    }
+    const actions = document.createElement('div');
+    actions.className = 'recevoir-actions';
+    const ajouter = document.createElement('button');
+    ajouter.type = 'button';
+    ajouter.className = 'recevoir-ajouter';
+    ajouter.textContent = 'Ajouter à mes favoris';
+    const ignorer = document.createElement('button');
+    ignorer.type = 'button';
+    ignorer.className = 'recevoir-ignorer';
+    ignorer.textContent = 'Ignorer';
+    actions.append(ajouter, ignorer);
+    boite.append(titre, liste, actions);
+    document.body.append(boite);
+
+    ignorer.addEventListener('click', () => { boite.close(); boite.remove(); });
+    ajouter.addEventListener('click', () => {
+      void (async (): Promise<void> => {
+        ajouter.disabled = true;
+        /* LES DOUBLONS S'ÉCARTENT PAR LA POSITION, pas par le nom : le même
+           endroit renommé reste le même endroit. */
+        const nouveaux: LieuPartage[] = sansDejaConnus(lieux, await listerFavoris());
+        for (const l of nouveaux) {
+          await ajouterFavori(l.nom, { lon: l.lon, lat: l.lat });
+        }
+        boite.close(); boite.remove();
+        const etat = this.querySelector('.favoris-etat') as HTMLElement;
+        etat.textContent = nouveaux.length === 0
+          ? 'Rien à ajouter : ces lieux sont déjà dans vos favoris.'
+          : `${nouveaux.length} favori${nouveaux.length > 1 ? 's' : ''} ajouté${nouveaux.length > 1 ? 's' : ''}`
+            + (lieux.length > nouveaux.length ? ' (le reste y était déjà)' : '') + '.';
+        await this.rafraichir();
+      })().catch(() => {
+        ajouter.disabled = false;
+        (this.querySelector('.favoris-etat') as HTMLElement).textContent =
+          'Ajout impossible (stockage local indisponible).';
+      });
+    });
+    boite.showModal();
   }
 
   /** Relit et raffiche la liste — appelée aussi par l'assemblage quand un

@@ -2,6 +2,32 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.54.0] — 2026-08-28 — Le partage de favoris (PR #79)
+
+La seconde demande d'Armelin du 28/08 : « exporter les favoris si on change
+de téléphone ou d'ordinateur. Et même un partage. » L'export/import JSON
+existait (PR #10) — le neuf, c'est le LIEN.
+
+- **« Partager mes favoris »** dans le volet Favoris : un lien qui porte les
+  favoris seuls (fragment `#favs=`, jamais envoyé à un serveur — de la main
+  à la main, comme le partage de trajet). Sur téléphone, la feuille de
+  partage du système (navigator.share) ; sinon le lien se copie. 100 lieux
+  au plus — au-delà, le refus nomme le remède : l'export.
+- **Les repères — domicile, travail — ne voyagent JAMAIS par lien** :
+  partager « chez moi » d'un geste distrait doit être impossible, pas
+  improbable. Le fichier d'export reste l'outil du déménagement complet ;
+  la note du volet distingue les deux gestes.
+- **La réception DEMANDE avant d'écrire** : boîte de confirmation (dialog
+  natif) listant les lieux, « Ajouter » / « Ignorer » ; un lien forgé rend
+  null (jamais un lot partiel), les doublons s'écartent par la POSITION à
+  cinq décimales — renommé, un lieu reste le même endroit. Le fragment
+  s'efface aussitôt : recharger ne repose pas la question.
+- Et un défaut débusqué au passage : le reset `* { margin: 0 }` écrasait le
+  centrage natif des dialogues modaux — les deux boîtes (choix de favori,
+  réception) collaient en haut. `margin: auto` redonné, vu sur capture.
+
+598 tests unitaires (+7), 196 parcours E2E (+5).
+
 ## [0.53.0] — 2026-08-28 — Les feuilles basses (PR #78)
 
 Armelin a tranché la première décision du triage : « commence par les bottom
