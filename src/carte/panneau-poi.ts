@@ -26,6 +26,10 @@ import {
   type StationRapide, type ReseauNational, type CleEtendue,
 } from '../lib/index-bornes';
 import type { FicheBorne } from './fiche-borne';
+import {
+  CATEGORIES, chercherCategorie, ErreurCategories,
+  type Categorie, type LieuCategorie,
+} from '../lib/categories';
 
 export const PREF_POI = 'poi';
 /** Les filtres de bornes vivent à part : ils survivent au décochage de la couche. */
@@ -77,6 +81,16 @@ export class PanneauPoi extends HTMLElement {
   #totaux: Partial<Record<Couche, number>> = {};
   #minuteur: ReturnType<typeof setTimeout> | undefined;
   #popup: Popup | null = null;
+
+  /* LA RECHERCHE PAR CATÉGORIES (mandat UX 28/08, POI-1) — à la demande,
+     dans la vue, UNE catégorie à la fois. Rien ne se recharge au
+     déplacement : la frugalité est le contrat. */
+  #categorieActive: Categorie | null = null;
+
+  #annulationCategorie: AbortController | null = null;
+
+  /** Les lieux posés, gardés pour reposer la couche après un setStyle. */
+  #lieuxPoses: LieuCategorie[] = [];
   #popupDe: Couche | null = null;
   /** L'index national, une fois chargé. Vide tant qu'il ne l'est pas. */
   #index: StationRapide[] = [];
@@ -202,6 +216,22 @@ export class PanneauPoi extends HTMLElement {
             <label><input type="checkbox" value="${c}"> ${COUCHES[c]}</label>`).join('')}
         </fieldset>
 
+        <!-- LA RECHERCHE PAR CATÉGORIES — « dans la vue, à la demande »
+             (mandat UX 28/08, POI-1). PAS une couche : une couche suit la
+             carte et rappelle le service à chaque glissement ; ici UN clic
+             fait UN appel, et la liste ne bouge plus — Overpass est un
+             commun bénévole. -->
+        <fieldset class="poi-categories">
+          <legend>Dans la vue, à la demande</legend>
+          <div class="poi-categories-boutons" role="group"
+            aria-label="Chercher une catégorie de lieux dans la vue">
+            ${CATEGORIES.map((c) => `
+              <button type="button" class="poi-categorie" data-cle="${c.cle}"
+                aria-pressed="false">${c.libelle}</button>`).join('')}
+          </div>
+          <p class="poi-categorie-etat" role="status"></p>
+        </fieldset>
+
         <!-- LES FILTRES DE BORNES NE PARAISSENT QUE COUCHE ACTIVE. Montrer des
              réglages qui ne s'appliquent à rien encombre sans informer. -->
         <fieldset class="poi-filtres" hidden>
@@ -289,6 +319,12 @@ export class PanneauPoi extends HTMLElement {
         </fieldset>
         <p class="poi-etat" role="status"></p>
       </details>`;
+    for (const bouton of this.querySelectorAll<HTMLButtonElement>('.poi-categorie')) {
+      bouton.addEventListener('click', () => {
+        const categorie = CATEGORIES.find((c) => c.cle === bouton.dataset['cle']);
+        if (categorie) void this.#surCategorie(categorie);
+      });
+    }
     /* LES FILTRES REPARTENT AU SERVICE, ils ne trient pas l'existant. Le
        portail plafonne à 100 enregistrements : filtrer ce qui est déjà chargé
        montrerait trois bornes CCS là où la zone en compte cinquante. */
@@ -816,6 +852,11 @@ export class PanneauPoi extends HTMLElement {
       this.#poserSource('poi-parkings', this.#parkings);
       this.#poserSource('poi-carburants', this.#carburants);
       this.#poserSource('poi-bornes', this.#bornes);
+      // Les lieux d'une catégorie cherchée survivent aussi au changement de
+      // fond — même contrat que le tracé d'itinéraire.
+      if (this.#categorieActive && this.#lieuxPoses.length > 0) {
+        this.#poserLieux(this.#lieuxPoses);
+      }
       // Un changement de style vient de reposer les couches : le masquage du
       // mode trajet, lui, n'a pas changé — on le réapplique.
       this.#appliquerMasquage();
@@ -911,6 +952,123 @@ export class PanneauPoi extends HTMLElement {
   }
 
   /* ---- popups, en textContent : les libellés viennent de l'extérieur ---- */
+
+  /**
+   * Un clic sur une catégorie : cherche, ou efface si elle était active.
+   *
+   * SOUS LE ZOOM 12, ON REFUSE ET ON DIT POURQUOI : l'emprise couvrirait des
+   * départements entiers, et le plafond de résultats rendrait cent lieux au
+   * hasard — un affichage qui ment. Même seuil que les autres couches.
+   */
+  async #surCategorie(categorie: Categorie): Promise<void> {
+    const etat = this.querySelector('.poi-categorie-etat') as HTMLElement;
+    if (this.#categorieActive?.cle === categorie.cle) {
+      this.#effacerCategorie();
+      etat.textContent = '';
+      return;
+    }
+    const carte = this.#carte;
+    if (!carte) return;
+    if (carte.getZoom() < ZOOM_MIN) {
+      etat.textContent = 'Rapprochez-vous (zoom 12 au moins) : chercher sur une'
+        + ' emprise trop large rendrait cent lieux au hasard.';
+      return;
+    }
+
+    this.#effacerCategorie();
+    this.#categorieActive = categorie;
+    this.#majBoutonsCategories();
+    this.#annulationCategorie = new AbortController();
+    etat.textContent = `Recherche des ${categorie.libelle.toLowerCase()}…`;
+    const limites = carte.getBounds();
+    try {
+      const lieux = await chercherCategorie(categorie, {
+        ouest: limites.getWest(), sud: limites.getSouth(),
+        est: limites.getEast(), nord: limites.getNorth(),
+      }, this.#annulationCategorie.signal);
+      if (this.#categorieActive?.cle !== categorie.cle) return;
+      this.#lieuxPoses = lieux;
+      this.#poserLieux(lieux);
+      /* LE COMPTE, ET LE CONTRAT : la liste ne suit pas la carte. Le dire
+         évite qu'un déplacement fasse croire à des pharmacies disparues. */
+      etat.textContent = lieux.length === 0
+        ? `Aucun lieu « ${categorie.libelle} » dans cette vue (source OpenStreetMap).`
+        : `${lieux.length} dans la vue`
+          + (lieux.length >= 100 ? ' (les 100 premiers)' : '')
+          + ' — la liste ne suit pas la carte : recliquez après un déplacement.';
+    } catch (e) {
+      if (this.#categorieActive?.cle !== categorie.cle) return;
+      this.#effacerCategorie();
+      etat.textContent = e instanceof ErreurCategories
+        ? e.message : 'La recherche de lieux est indisponible pour le moment.';
+    }
+  }
+
+  #majBoutonsCategories(): void {
+    for (const b of this.querySelectorAll<HTMLButtonElement>('.poi-categorie')) {
+      b.setAttribute('aria-pressed',
+        String(b.dataset['cle'] === this.#categorieActive?.cle));
+    }
+  }
+
+  #poserLieux(lieux: LieuCategorie[]): void {
+    const carte = this.#carte;
+    if (!carte) return;
+    const donnees: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: lieux.map((l) => ({
+        type: 'Feature',
+        properties: { nom: l.nom },
+        geometry: { type: 'Point', coordinates: [l.lon, l.lat] },
+      })),
+    };
+    const source = carte.getSource('poi-categorie') as GeoJSONSource | undefined;
+    if (source) { source.setData(donnees); return; }
+    carte.addSource('poi-categorie', { type: 'geojson', data: donnees });
+    carte.addLayer({
+      id: 'poi-categorie-points', type: 'circle', source: 'poi-categorie',
+      paint: {
+        'circle-radius': 7,
+        'circle-color': '#7C3AED',
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#FFFFFF',
+      },
+    });
+    carte.on('click', 'poi-categorie-points', (e) => {
+      const natif = e.originalEvent as Event & { __clicPris?: boolean };
+      if (natif.__clicPris) return;
+      natif.__clicPris = true;
+      const f = (e.features ?? [])[0];
+      if (!f) return;
+      const bloc = document.createElement('div');
+      bloc.className = 'popup-adresse';
+      const titre = document.createElement('p');
+      titre.className = 'pa-libelle';
+      // textContent : le nom vient d'OpenStreetMap, jamais interprété en HTML.
+      const nom = (f.properties as { nom?: string | null })?.nom;
+      titre.textContent = nom ?? this.#categorieActive?.libelle.replace(/s$/, '') ?? 'Lieu';
+      const source_ = document.createElement('p');
+      source_.className = 'pa-coords';
+      source_.textContent = 'Source OpenStreetMap';
+      bloc.append(titre, source_);
+      this.#popup?.remove();
+      this.#popup = new Popup({ closeButton: true, maxWidth: '260px' })
+        .setLngLat(e.lngLat).setDOMContent(bloc).addTo(carte);
+    });
+    carte.on('mouseenter', 'poi-categorie-points', () => { carte.getCanvas().style.cursor = 'pointer'; });
+    carte.on('mouseleave', 'poi-categorie-points', () => { carte.getCanvas().style.cursor = ''; });
+  }
+
+  #effacerCategorie(): void {
+    this.#annulationCategorie?.abort();
+    this.#annulationCategorie = null;
+    this.#categorieActive = null;
+    this.#lieuxPoses = [];
+    this.#majBoutonsCategories();
+    const carte = this.#carte;
+    if (carte?.getLayer('poi-categorie-points')) carte.removeLayer('poi-categorie-points');
+    if (carte?.getSource('poi-categorie')) carte.removeSource('poi-categorie');
+  }
 
   #monterPopup(couche: Couche, lngLat: { lng: number; lat: number }, contenu: HTMLElement): void {
     this.#popup?.remove();

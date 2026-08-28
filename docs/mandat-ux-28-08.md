@@ -84,8 +84,11 @@ s'écraser.
   l'arc court (35 % par mesure, < 3° ignoré) ; boussole à l'arrêt via
   DeviceOrientation, ouverte APRÈS geste, permission iOS demandée alors,
   alphas relatifs refusés.
-- **PR POI-1** : recherche par catégories (Overpass, à la demande, dans la
-  vue) — pharmacies, parkings, restaurants… frugalité stricte.
+- **PR POI-1 — LIVRÉE (PR #75, 0.50.0)** : cinq catégories (Pharmacies,
+  Restaurants, Boulangeries, Supermarchés, Toilettes — les parkings sont
+  déjà une couche) « dans la vue, à la demande » : un clic = un appel, rien
+  au déplacement, refus motivé sous le zoom 12, plafond de 100 annoncé.
+  LE DÉCOUPAGE INITIAL EST SOLDÉ : UX-1 à POI-1 livrées (PR #69 à #75).
 - **Timeline verticale d'ÉVÉNEMENTS en suivi** (pas de fluidité) : position,
   arrêts, péages, événements Bison Futé — candidate après NAV-1.
 - **Profils de trajet** (Rapide/Économe/Sans péage…) : à cadrer — beaucoup

@@ -2,6 +2,29 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.50.0] — 2026-08-28 — La recherche par catégories (PR #75)
+
+Septième et dernière PR du découpage initial du mandat UX du 28/08 (POI-1).
+
+- **Cinq catégories « dans la vue, à la demande »** — Pharmacies,
+  Restaurants, Boulangeries, Supermarchés, Toilettes — dans la page
+  « Recharge et services ». PAS une couche : une couche suit la carte et
+  rappelle le service à chaque glissement ; ici UN clic fait UN appel
+  Overpass (le miroir français, comme les commodités), et la liste ne bouge
+  plus — le contrat est écrit sous les boutons. Recliquer efface.
+- **Frugalité stricte, mesurée par les parcours** : aucun appel sous le
+  zoom 12 (refus motivé — cent lieux au hasard sur la France seraient un
+  mensonge), aucun appel au déplacement, plafond de 100 résultats annoncé
+  quand il tronque. Overpass saturé : message français, état réarmé.
+- Les lieux en cercles violets, nom OpenStreetMap au clic (textContent,
+  règle du projet), survivants d'un changement de fond.
+- Et une leçon payée une DEUXIÈME fois (après `.iti-demarrer`) : la feuille
+  MapLibre pose un fond de survol sur `.maplibregl-ctrl button:hover`
+  (0-3-1) — le bouton actif survolé devenait blanc sur gris 5 %. Mesuré à
+  la couleur calculée, corrigé à 0-4-0.
+
+585 tests unitaires (+6), 185 parcours E2E (+3).
+
 ## [0.49.0] — 2026-08-28 — L'orientation à trois états (PR #74)
 
 Sixième PR du mandat UX du 28/08 (NAV-1).
