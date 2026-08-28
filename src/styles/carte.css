@@ -1920,3 +1920,35 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
    `.recharge-pourquoi p` (0-1-1) ci-dessus battrait une classe simple
    (0-1-0) — la leçon `.iti-demarrer`, déjà payée. */
 .recharge-pourquoi .pourquoi-limites { font-style: italic; color: var(--texte-3); }
+
+/* --- La recherche par catégories (PR POI-1) --- */
+/* Logé dans la page « couches » du planificateur, le fieldset perd sa carte
+   bordée : sans marge propre, sa légende collait à la case « Parkings ». */
+.vue .poi-categories { margin-top: 12px; }
+.poi-categories-boutons { display: flex; flex-wrap: wrap; gap: 5px; }
+.poi-categorie {
+  padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  cursor: pointer; font: 600 11.5px var(--police); color: var(--texte-2);
+}
+.poi-categorie:hover { border-color: var(--accent); color: var(--accent); }
+.poi-categorie:focus-visible { outline: none; box-shadow: var(--focus); }
+/* L'état actif se voit SANS la couleur seule : fond ET texte changent.
+   `.poi-categories .poi-categorie[…]` ET NON la classe seule : le volet vit
+   dans un contrôle MapLibre, dont la feuille pose un fond de survol sur
+   `.maplibregl-ctrl button:not(:disabled):hover` (0-2-1) — plus fort qu'un
+   0-2-0, et le bouton actif SURVOLÉ redevenait gris pâle sous texte blanc :
+   illisible. Mesuré à la couleur calculée, comme le contact Professionnels.
+   C'est la leçon `.iti-demarrer` (plus haut), payée une deuxième fois. */
+.poi-categories .poi-categorie[aria-pressed="true"] {
+  border-color: var(--accent); background: var(--accent); color: var(--blanc);
+}
+/* …ET SOUS LE CURSEUR : après le clic, la souris est ENCORE sur le bouton —
+   c'est l'instant où l'usager le regarde. La règle de survol de MapLibre
+   (`.maplibregl-ctrl button:not(:disabled):hover`, 0-3-1) battait le 0-3-0
+   ci-dessus : blanc sur gris 5 %, mesuré à la couleur calculée. 0-4-0 gagne. */
+.poi-categories .poi-categorie[aria-pressed="true"]:hover {
+  background: var(--accent-vif); border-color: var(--accent-vif); color: var(--blanc);
+}
+.poi-categorie-etat { margin: 6px 0 0; font: 400 12px/1.5 var(--police); color: var(--texte-2); }
+.poi-categorie-etat:empty { display: none; }
