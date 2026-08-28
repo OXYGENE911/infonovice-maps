@@ -17,6 +17,7 @@ import { listerFavoris } from '../lib/favoris';
 import { adresseInverse, type ResultatAdresse } from '../lib/adresse';
 import { versGPX, versKML, telecharger } from '../lib/trace';
 import { versFragment, depuisFragment } from '../lib/partage-url';
+import { installerFeuilleBasse } from './feuille-basse';
 import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 import {
@@ -624,6 +625,13 @@ export class PanneauItineraire extends HTMLElement {
     void this.#majRaccourcis();
     this.#allerA('accueil');
     this.querySelector('.iti-effacer')?.addEventListener('click', () => this.#effacer());
+
+    /* SUR TÉLÉPHONE, LE VOLET EST UNE FEUILLE BASSE (décision d'Armelin du
+       28/08) : la carte respire au-dessus, la poignée règle la hauteur. */
+    installerFeuilleBasse(
+      this.querySelector('details.iti') as HTMLDetailsElement,
+      this.querySelector('.iti-corps') as HTMLElement,
+    );
     this.querySelector('.iti-inverser')?.addEventListener('click', () => { this.#inverser(); });
     this.querySelector('.iti-gpx')?.addEventListener('click', () => {
       if (this.#dernier) telecharger(versGPX(this.#dernier, this.#nomTrajet()),

@@ -12,6 +12,8 @@
  * déménage, on ne réécrit pas.
  */
 
+import { installerFeuilleBasse } from './feuille-basse';
+
 export class MenuReglages extends HTMLElement {
   /* LE SQUELETTE SE CONSTRUIT À LA DEMANDE, PAS SEULEMENT À L'ATTACHE.
      `connectedCallback` ne s'exécute qu'une fois l'élément dans le DOM ; or le
@@ -36,6 +38,12 @@ export class MenuReglages extends HTMLElement {
         </summary>
         <div class="reglages-corps"></div>
       </details>`;
+    /* SUR TÉLÉPHONE, LE MENU AUSSI EST UNE FEUILLE BASSE — même mécanique
+       que le planificateur, mêmes gestes (décision d'Armelin du 28/08). */
+    installerFeuilleBasse(
+      this.querySelector('details.reglages') as HTMLDetailsElement,
+      this.querySelector('.reglages-corps') as HTMLElement,
+    );
   }
 
   connectedCallback(): void { this.#construire(); }

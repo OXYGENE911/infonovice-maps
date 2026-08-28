@@ -104,8 +104,11 @@ s'écraser.
 
 ## 4. Demande une décision d'Armelin
 
-- Bottom sheets généralisées vs panneaux actuels : refonte lourde de
-  l'ergonomie mobile — valider la direction avant d'y engager des semaines ;
+- Bottom sheets généralisées : TRANCHÉ PAR ARMELIN le 28/08 (« commence par
+  les bottom sheets ») → BS-1 LIVRÉE (PR #78, 0.53.0) : planificateur et
+  menu en feuilles basses sur téléphone (une mécanique commune,
+  src/carte/feuille-basse.ts). BS-2 — fiches de borne et de lieu, déjà
+  ancrées en bas — après retour d'essai ;
 - profils de pauses « humaines » (famille, bébé, animal…) : le cadrage
   est séduisant mais chaque profil doit être honoré par des DONNÉES
   (Overpass les porte en partie) — valider le périmètre ;

@@ -2,6 +2,31 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.53.0] — 2026-08-28 — Les feuilles basses (PR #78)
+
+Armelin a tranché la première décision du triage : « commence par les bottom
+sheets ». Sur téléphone, le planificateur et le menu deviennent des FEUILLES
+ancrées en bas — la carte respire au-dessus, le pouce atteint tout. Sur
+grand écran, RIEN ne change.
+
+- **Une mécanique, plusieurs volets** (src/carte/feuille-basse.ts) : poignée
+  (aria-hidden — un confort du doigt, le clavier passe par le bouton comme
+  avant), mi-hauteur par défaut, plein écran au tirer (88 % : l'en-tête et
+  un liseré de carte restent TOUJOURS visibles), fermeture au geste franc
+  vers le bas. Le palier d'arrivée est une fonction PURE testée à sec : un
+  flick décide seul (± 0,5 px/ms, vitesse lue sur le DERNIER segment du
+  geste), un lâcher lent va au palier le plus proche.
+- **Trois pièges d'empilement mesurés puis réglés** : la feuille MapLibre
+  pose `transform: translate(0)` sur chaque contrôle (le fixed s'ancrait
+  DANS la pastille) ; les conteneurs MapLibre sont des contextes (les
+  contrôles bas-droite passaient par-dessus — le conteneur PORTEUR monte) ;
+  `#carte` en position fixed est un contexte à lui seul (le pied de page,
+  peint après, restait dessus — il s'efface sous une feuille ouverte).
+- Les fiches de borne et de lieu — déjà ancrées en bas — suivront si
+  l'essai convainc (BS-2).
+
+591 tests unitaires (+4), 191 parcours E2E (+4).
+
 ## [0.52.0] — 2026-08-28 — « Le plus rapide / Le plus court » (PR #77)
 
 Le dernier candidat du triage du 28/08 — les « profils de trajet » — CADRÉ

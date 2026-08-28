@@ -1993,3 +1993,75 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
   background: var(--accent-vif); border: 2px solid var(--blanc);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-vif) 35%, transparent);
 }
+
+/* --- Les feuilles basses (BS-1 — décision d'Armelin du 28/08) --- */
+/* Sur téléphone, planificateur et menu deviennent des feuilles ancrées en
+   bas : la carte respire au-dessus, le pouce atteint tout, la poignée règle
+   la hauteur (mi-hauteur par défaut, plein écran, ou fermer d'un geste —
+   src/carte/feuille-basse.ts). Sur grand écran, RIEN ne change : la poignée
+   n'existe pas et les volets restent latéraux. */
+.feuille-poignee { display: none; }
+
+@media (max-width: 640px) {
+  /* LA FEUILLE MAPLIBRE POSE `transform: translate(0)` SUR CHAQUE CONTRÔLE —
+     et un transform fait de l'ancêtre le containing block de tout descendant
+     `fixed` : la feuille se retrouvait ANCRÉE DANS LA PASTILLE (rect mesuré :
+     89 px de large, y négatif). On le neutralise sur NOS deux portes, ici
+     seulement : sur grand écran, les volets n'ont pas de fixed à ancrer. */
+  .maplibregl-ctrl.porte-iti, .maplibregl-ctrl.porte-menu { transform: none; }
+
+  /* LES CONTENEURS MAPLIBRE (z-index 2) SONT DES CONTEXTES D'EMPILEMENT : le
+     z-index de la feuille reste enfermé dans le sien, et les contrôles
+     bas-droite — conteneur frère, peint après — passaient PAR-DESSUS. On
+     monte le conteneur PORTEUR quand sa feuille est ouverte : c'est lui qui
+     porte le rang, pas la feuille. */
+  #carte .maplibregl-ctrl-top-left:has(details.iti[open]),
+  #carte .maplibregl-ctrl-top-right:has(details.reglages[open]) {
+    z-index: var(--z-volet-ouvert);
+  }
+
+  /* LE PIED DE PAGE S'EFFACE SOUS UNE FEUILLE OUVERTE. Il vit dans <body>,
+     peint APRÈS `#carte` — qui, en `position: fixed`, est un contexte
+     d'empilement à lui seul : aucun z-index intérieur ne peut passer
+     au-dessus du pied. Plutôt que de hisser toute la carte au-dessus de
+     l'en-tête, le pied se tait : sous une feuille, il serait illisible — il
+     revient à la fermeture. */
+  body:has(details.iti[open]) .pied-carte,
+  body:has(details.reglages[open]) .pied-carte { visibility: hidden; }
+
+  #carte .iti[open] .iti-corps,
+  details.reglages[open] .reglages-corps {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+    z-index: var(--z-volet-ouvert);
+    margin: 0; width: auto; min-width: 0; max-width: none;
+    height: var(--feuille-hauteur, 50vh);
+    height: var(--feuille-hauteur, 50dvh);
+    /* L'en-tête et un liseré de carte restent TOUJOURS visibles : une
+       feuille qui mange tout l'écran n'est plus une feuille. */
+    max-height: calc(100dvh - var(--hauteur-entete, 45px) - 18px);
+    border: 1px solid var(--bord); border-bottom: none;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -10px 34px rgba(10, 30, 60, .2);
+    overflow-y: auto; overscroll-behavior: contain;
+    padding-bottom: max(14px, var(--sur-barre-basse));
+    transition: height 200ms ease;
+  }
+  /* Sous le doigt, la transition se coupe : une feuille qui rattrape le
+     geste avec 200 ms de retard paraît molle. */
+  #carte .iti[open] .iti-corps.feuille-glisse,
+  details.reglages[open] .reglages-corps.feuille-glisse { transition: none; }
+
+  .feuille-poignee {
+    display: block; position: sticky; top: 0; z-index: 3;
+    padding: 9px 0 7px; background: var(--fond);
+    touch-action: none; cursor: grab;
+  }
+  .feuille-poignee span {
+    display: block; width: 44px; height: 5px; margin: 0 auto;
+    border-radius: 999px; background: var(--bord-2);
+  }
+  /* La tête de page du planificateur colle SOUS la poignée, pas dessus. */
+  #carte .iti-corps .vue-tete { top: 21px; }
+  /* Le menu n'a plus besoin de son coussin haut : la poignée le remplace. */
+  details.reglages[open] .reglages-corps { padding-top: 0; }
+}
