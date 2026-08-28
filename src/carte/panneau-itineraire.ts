@@ -19,6 +19,7 @@ import { versGPX, versKML, telecharger } from '../lib/trace';
 import { versFragment, depuisFragment } from '../lib/partage-url';
 import { installerFeuilleBasse } from './feuille-basse';
 import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
+import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 import {
@@ -176,6 +177,14 @@ export class PanneauItineraire extends HTMLElement {
 
   /** Masse et bridages thermiques du véhicule courant. */
   #profilConditions: ProfilConditions = {};
+
+  /* LES AGRÉMENTS DU PROFIL DE PAUSE — relevés UNE fois par (trajet, profil),
+     rejoués localement ensuite. */
+  #agrements: Map<string, number> | null = null;
+
+  #agrementsPour: { iti: Itineraire; profil: string } | null = null;
+
+  #annulationAgrements: AbortController | null = null;
   #socDepart = 100;
 
   set fiche(f: FicheBorne) { this.#fiche = f; }
@@ -507,6 +516,34 @@ export class PanneauItineraire extends HTMLElement {
                   <option value="100" selected>au besoin</option>
                 </select>
               </label>
+              <!-- LES PAUSES HUMAINES (décision d'Armelin du 28/08). Un
+                   trajet électrique s'arrête de toute façon : autant que
+                   l'arrêt serve AUSSI les humains à bord. La pause PAIE la
+                   charge ; le profil est une PRÉFÉRENCE honorée par les
+                   données OSM (mesure du 28/08), jamais un filtre. -->
+              <label>Chaque arrêt dure au moins
+                <select class="recharge-pause-min" aria-label="Durée minimale de chaque arrêt">
+                  <option value="0" selected>le temps de charge</option>
+                  <option value="20">20 min</option>
+                  <option value="30">30 min</option>
+                  <option value="45">45 min</option>
+                </select>
+              </label>
+              <label>Une pause au moins toutes les
+                <select class="recharge-pause-intervalle" aria-label="Temps de route maximal entre deux pauses">
+                  <option value="0" selected>— au besoin</option>
+                  <option value="120">2 h de route</option>
+                  <option value="180">3 h de route</option>
+                </select>
+              </label>
+              <label>Autour des arrêts, privilégier
+                <select class="recharge-pause-profil" aria-label="Profil de pause">
+                  <option value="" selected>rien de particulier</option>
+                  ${PROFILS_PAUSE.map((pr) => `
+                    <option value="${pr.cle}">${pr.libelle}</option>`).join('')}
+                </select>
+              </label>
+              <p class="recharge-pause-etat" role="status"></p>
             </div>
             <div class="iti-recharge-corps" role="status"></div>
           </section>
@@ -691,7 +728,13 @@ export class PanneauItineraire extends HTMLElement {
        remis à zéro, sans quoi le garde-fou anti-recalcul avalerait le
        changement, exactement comme le seuil de vue l'avait fait pour les
        filtres de bornes. */
-    for (const cls of ['.recharge-cible', '.recharge-reserve', '.recharge-plafond']) {
+    /* LE PROFIL DE PAUSE RELÈVE LES ENVIRONS — un appel, puis le rejouage
+       local, comme les conditions. Son échec est BÉNIN et DIT. */
+    this.querySelector('.recharge-pause-profil')?.addEventListener('change', () => {
+      void this.#appliquerProfilPause();
+    });
+    for (const cls of ['.recharge-cible', '.recharge-reserve', '.recharge-plafond',
+      '.recharge-pause-min', '.recharge-pause-intervalle']) {
       this.querySelector(cls)?.addEventListener('change', () => {
         /* LE PLAN SE REJOUE, IL NE SE RECHERCHE PAS. Les bornes du trajet sont
            déjà en mémoire : remettre `#rechargePour` à zéro relancerait tout
@@ -1045,6 +1088,60 @@ export class PanneauItineraire extends HTMLElement {
   }
 
   /**
+   * Applique le profil de pause choisi : relève les environs des bornes du
+   * trajet — UNE fois par (trajet, profil) — puis rejoue le plan.
+   *
+   * L'échec du relevé est BÉNIN : le plan sort sans bonus, et l'état le dit
+   * en une ligne plutôt que d'inventer des environs.
+   */
+  async #appliquerProfilPause(): Promise<void> {
+    const etat = this.querySelector<HTMLElement>('.recharge-pause-etat');
+    const cle = this.querySelector<HTMLSelectElement>('.recharge-pause-profil')?.value ?? '';
+    const iti = this.#dernier;
+    this.#annulationAgrements?.abort();
+    if (etat) etat.textContent = '';
+    if (!cle || !iti) {
+      this.#agrements = null;
+      this.#agrementsPour = null;
+      this.#refairePlan();
+      return;
+    }
+    if (this.#agrementsPour && this.#agrementsPour.iti === iti
+      && this.#agrementsPour.profil === cle) {
+      this.#refairePlan();
+      return;
+    }
+    const profil = PROFILS_PAUSE.find((x) => x.cle === cle);
+    if (!profil) return;
+    const annulation = new AbortController();
+    this.#annulationAgrements = annulation;
+    if (etat) etat.textContent = 'Relevé des environs des bornes (OpenStreetMap)…';
+    try {
+      const agrements = await chercherAgrements(
+        profil, this.#candidates(), annulation.signal,
+      );
+      if (annulation.signal.aborted || this.#dernier !== iti) return;
+      this.#agrements = agrements;
+      this.#agrementsPour = { iti, profil: cle };
+      if (etat) {
+        etat.textContent = agrements.size === 0
+          ? `Aucune ${profil.agrement} à ${'500'} m d'une borne de ce trajet — le plan reste inchangé.`
+          : `${agrements.size} borne${agrements.size > 1 ? 's' : ''} du trajet avec ${profil.agrement} à moins de 500 m.`;
+      }
+      this.#refairePlan();
+    } catch (e) {
+      if (annulation.signal.aborted) return;
+      this.#agrements = null;
+      this.#agrementsPour = null;
+      if (etat) {
+        etat.textContent = (e instanceof ErreurPauses ? e.message
+          : 'Le relevé des environs est indisponible.') + ' Le plan sort sans ce critère.';
+      }
+      this.#refairePlan();
+    }
+  }
+
+  /**
    * Rejoue le plan sur les bornes déjà trouvées — SANS RIEN RECHARGER.
    *
    * C'est ce qui rend les « + » et les « − » instantanés : cocher un arrêt ne
@@ -1067,6 +1164,16 @@ export class PanneauItineraire extends HTMLElement {
       ecartees: [...this.#ecartees],
       conditions: this.#conditionsPour === iti ? this.#conditions ?? {} : {},
       profilConditions: this.#profilConditions,
+      pauseMinimaleMin: this.#valeurReglage('.recharge-pause-min', 0),
+      /* « Toutes les 2 h » se convertit en MÈTRES à la vitesse de CE trajet :
+         le planificateur ne pense qu'en distance, et c'est la durée du moteur
+         qui sait ce que deux heures y valent. */
+      intervalleMaxM: (() => {
+        const minutes = this.#valeurReglage('.recharge-pause-intervalle', 0);
+        if (!(minutes > 0) || !(iti.duree > 0)) return undefined;
+        return (minutes / 60) * ((iti.distance / iti.duree) * 3.6) * 1000;
+      })(),
+      agrements: this.#agrementsPour?.iti === iti ? this.#agrements ?? undefined : undefined,
     }));
   }
 
@@ -2161,6 +2268,22 @@ export class PanneauItineraire extends HTMLElement {
     if (this.#ecartees.size > 0) {
       contraintes.push(`${this.#ecartees.size} borne${this.#ecartees.size > 1 ? 's' : ''} écartée${this.#ecartees.size > 1 ? 's' : ''} au « − »`);
     }
+    const pauseMin = this.#valeurReglage('.recharge-pause-min', 0);
+    if (pauseMin > 0) {
+      contraintes.push(`chaque arrêt dure au moins ${pauseMin} min — la pause`
+        + ' PAIE la charge : on repart plus chargé, jamais au-delà du plafond');
+    }
+    const intervalleMin = this.#valeurReglage('.recharge-pause-intervalle', 0);
+    if (intervalleMin > 0) {
+      contraintes.push(`une pause au moins toutes les ${intervalleMin / 60} h de route`);
+    }
+    const profilPauseChoisi = PROFILS_PAUSE.find((x) =>
+      x.cle === (this.querySelector<HTMLSelectElement>('.recharge-pause-profil')?.value ?? ''));
+    if (profilPauseChoisi) {
+      contraintes.push(`privilégier les bornes avec ${profilPauseChoisi.agrement}`
+        + ' à moins de 500 m (environs OpenStreetMap — une préférence,'
+        + ' jamais un filtre)');
+    }
     if (contraintes.length > 0) {
       const p = document.createElement('p');
       p.className = 'pourquoi-contraintes';
@@ -2277,6 +2400,8 @@ export class PanneauItineraire extends HTMLElement {
     corps.append(resume, this.#pourquoiCePlan(plan));
 
     if (plan.arrets.length > 0) {
+      const profilPause = PROFILS_PAUSE.find((x) =>
+        x.cle === (this.querySelector<HTMLSelectElement>('.recharge-pause-profil')?.value ?? ''));
       const liste = document.createElement('ol');
       liste.className = 'recharge-liste';
       for (const a of plan.arrets) {
@@ -2320,7 +2445,11 @@ export class PanneauItineraire extends HTMLElement {
           + (a.dureeMin > 0
             ? ` · ${Math.round(a.dureeMin)} min de charge`
             : ' · arrêt imposé, sans recharge')
-          + (a.borne.puissanceKw ? ` · ${a.borne.puissanceKw} kW` : '');
+          + (a.borne.puissanceKw ? ` · ${a.borne.puissanceKw} kW` : '')
+          /* LA TROUVAILLE DU PROFIL, SUR L'ARRÊT MÊME : « aire de jeux à
+             250 m » se lit là où l'on décide de s'arrêter. */
+          + (profilPause && a.agrementM !== undefined
+            ? ` · ${profilPause.agrement} à ${a.agrementM} m` : '');
         /* LES COMMODITÉS SONT À LA DEMANDE, un arrêt à la fois. Overpass est
            un service bénévole : on ne l'interroge pas pour les quatre arrêts
            d'un coup au cas où l'usager regarderait. */
@@ -2776,6 +2905,11 @@ export class PanneauItineraire extends HTMLElement {
       this.#imposees.clear();
       this.#ecartees.clear();
       this.#reseauxPreferes.clear();
+      /* Les environs relevés décrivaient les bornes de L'ANCIEN trajet. */
+      this.#agrements = null;
+      this.#agrementsPour = null;
+      const etatPause = this.querySelector<HTMLElement>('.recharge-pause-etat');
+      if (etatPause) etatPause.textContent = '';
       this.#rechercheReseau = '';
       this.#voletsOuverts = { reseaux: false, toutes: false };
       this.#majResume();

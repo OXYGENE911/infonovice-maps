@@ -300,11 +300,17 @@ test('TRANSPORTS : le compte distingue la vue du réseau entier', async ({ page 
 test('TRANSPORTS : une horloge en avance ne fait pas disparaître le réseau', async ({ page }) => {
   /* Relevé le 22/08 : l'en-tête d'Atoumod avançait de 63 s, celui du SETRAM
      de 85 s. Avec une tolérance d'une minute, le volet annonçait « Aucun
-     véhicule en circulation — Divia » alors que les bus roulaient. */
+     véhicule en circulation — Divia » alors que les bus roulaient.
+     LA POSITION AVANCE DE 120 s : au-delà des 60 s de l'ancienne tolérance
+     — le correctif reste prouvé — mais à 60 s sous AVANCE_MAX_S (180 s).
+     À 180 s pile (rougi une fois en CI, run 33163037522), la marge était
+     NULLE : l'app fige son « maintenant » AVANT l'appel, la fixture date la
+     sienne au fulfill, et le premier franchissement de seconde entre les
+     deux faisait basculer la position en « datée du futur ». */
   await page.route('**/proxy.transport.data.gouv.fr/resource/**', (route) => route.fulfill({
     contentType: 'application/x-protobuf',
     body: fluxSimule(
-      [{ id: 'v1', lon: 5.0415, lat: 47.3220, ligne: 'T1', nom: 'Gare', ageS: -90 }],
+      [{ id: 'v1', lon: 5.0415, lat: 47.3220, ligne: 'T1', nom: 'Gare', ageS: -30 }],
       Math.floor(Date.now() / 1000) + 90,
     ),
   }));

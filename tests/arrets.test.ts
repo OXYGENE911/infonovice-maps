@@ -442,3 +442,72 @@ describe('les conditions changent le plan — et leur absence ne change RIEN', (
     expect(chaud.arrets[0]?.borne.nom).toBe('Soixante');
   });
 });
+
+/* LES PAUSES HUMAINES (décision d'Armelin du 28/08) : la pause paie la
+   charge, l'intervalle force l'arrêt, l'agrément penche le choix. */
+describe('les pauses humaines', () => {
+  test('la PAUSE PAIE LA CHARGE : trente minutes remplissent plus que le strict besoin', () => {
+    /* 300 km, borne à 250 : la dernière jambe est courte, le besoin se
+       charge en quelques minutes — la pause de 30 remplit le reste. */
+    const sans = plan({ distanceM: 300_000, bornes: [borne(250, 150)] });
+    const avec = plan({ distanceM: 300_000, bornes: [borne(250, 150)], pauseMinimaleMin: 30 });
+    expect(sans.arrets[0]!.dureeMin).toBeLessThan(30);
+    expect(avec.faisable).toBe(true);
+    expect(avec.arrets[0]?.dureeMin).toBe(30);
+    // Le temps imposé n'est pas du temps perdu : on repart PLUS chargé.
+    expect(avec.arrets[0]?.socDepart).toBeGreaterThan(sans.arrets[0]!.socDepart);
+    // Et jamais au-dessus du plafond choisi.
+    const plafonne = plan({
+      distanceM: 300_000, bornes: [borne(250, 150)],
+      pauseMinimaleMin: 45, plafondCharge: 80,
+    });
+    expect(plafonne.arrets[0]?.socDepart).toBeLessThanOrEqual(80 + 1e-6);
+  });
+
+  test('une charge déjà plus longue que la pause ne change RIEN', () => {
+    // À 50 kW, l'arrêt dépasse largement 20 min : la pause est absorbée.
+    const sans = plan({ distanceM: 500_000, bornes: [borne(250, 50)] });
+    const avec = plan({ distanceM: 500_000, bornes: [borne(250, 50)], pauseMinimaleMin: 20 });
+    expect(avec.arrets[0]?.dureeMin).toBeCloseTo(sans.arrets[0]!.dureeMin, 5);
+  });
+
+  test('l’INTERVALLE force l’arrêt même quand la batterie tiendrait', () => {
+    // 200 km d'une traite : la VF8 le fait — pas le réglage « pause tous
+    // les 120 km » (deux heures de nationale).
+    const sans = plan({ distanceM: 200_000, bornes: [borne(110, 150)] });
+    const avec = plan({
+      distanceM: 200_000, bornes: [borne(110, 150)], intervalleMaxM: 120_000,
+    });
+    expect(sans.arrets).toHaveLength(0);
+    expect(avec.faisable).toBe(true);
+    expect(avec.arrets).toHaveLength(1);
+  });
+
+  test('quand c’est la PAUSE qui borne, le refus la NOMME — pas la batterie', () => {
+    const r = plan({ distanceM: 300_000, bornes: [borne(200, 150)], intervalleMaxM: 120_000 });
+    expect(r.faisable).toBe(false);
+    expect(r.motif).toContain('réglage de pause');
+    expect(r.motif).not.toContain('réserve serait entamée');
+  });
+
+  test('l’AGRÉMENT penche le choix — vingt kilomètres d’avance, pas davantage', () => {
+    const bornes = [
+      borne(240, 150, 'Nue'),
+      borne(228, 150, 'Avec aire de jeux'),
+      borne(200, 150, 'Trop en arrière, même avec jeux'),
+    ];
+    const agrements = new Map([
+      [cleBorne(bornes[1]!), 250],
+      [cleBorne(bornes[2]!), 100],
+    ]);
+    const sans = plan({ distanceM: 480_000, bornes });
+    const avec = plan({ distanceM: 480_000, bornes, agrements });
+    expect(sans.arrets[0]?.borne.nom).toBe('Nue');
+    // 12 km de recul contre un bonus de 20 : l'aire de jeux gagne…
+    expect(avec.arrets[0]?.borne.nom).toBe('Avec aire de jeux');
+    // …et l'arrêt PORTE sa trouvaille, pour l'affichage.
+    expect(avec.arrets[0]?.agrementM).toBe(250);
+    // 40 km de recul : le bonus ne suffit plus — préférence, jamais dogme.
+    expect(avec.arrets[0]?.borne.nom).not.toBe('Trop en arrière, même avec jeux');
+  });
+});

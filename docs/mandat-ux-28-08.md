@@ -109,9 +109,15 @@ s'écraser.
   menu en feuilles basses sur téléphone (une mécanique commune,
   src/carte/feuille-basse.ts). BS-2 — fiches de borne et de lieu, déjà
   ancrées en bas — après retour d'essai ;
-- profils de pauses « humaines » (famille, bébé, animal…) : le cadrage
-  est séduisant mais chaque profil doit être honoré par des DONNÉES
-  (Overpass les porte en partie) — valider le périmètre ;
+- profils de pauses « humaines » : TRANCHÉ PAR ARMELIN le 28/08 →
+  LIVRÉ (PR #81, 0.56.0), périmètre cadré par la mesure : famille (aires de
+  jeux, ≥ 293 sur le corridor d'essai), animal (espaces verts, ≥ 220),
+  repas (restauration, ≥ 1 400) — en PRÉFÉRENCE au choix de borne, jamais
+  en filtre. « Bébé » n'a PAS de clé OSM fiable (baby_hatch est un autre
+  objet ; changing_table est un attribut rarement renseigné) — écarté avec
+  la mesure, la pause minimale et l'aire de jeux couvrent l'essentiel du
+  besoin. S'y ajoutent la pause minimale qui paie la charge et
+  l'intervalle 2 h/3 h de route ;
 - mode copilote, routines locales, mode « arrivée réelle » : à cadrer
   individuellement, chacun est un chantier.
 

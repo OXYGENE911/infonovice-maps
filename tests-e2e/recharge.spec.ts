@@ -407,6 +407,59 @@ test('les conditions se relèvent UNE fois par trajet — cocher une case ne rap
     .toContainText('130 km/h de moyenne');
 });
 
+test('les PAUSES HUMAINES : la pause paie la charge, le profil famille trouve son aire de jeux', async ({ page }) => {
+  /* Décision d'Armelin du 28/08. Trois contrats mesurés ici : la pause
+     minimale allonge l'arrêt ET remplit plus (jamais du temps perdu) ; le
+     profil famille relève les environs UNE fois (union de disques Overpass,
+     jamais le corridor qui sature) et l'arrêt DIT sa trouvaille ; un réglage
+     ne rappelle rien. */
+  let appelsOverpass = 0;
+  await page.route('**overpass.openstreetmap.fr**', (route) => {
+    appelsOverpass += 1;
+    // Une aire de jeux à ~150 m à l'est de l'Aire de Beaune.
+    return route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      contentType: 'application/json',
+      body: JSON.stringify({ elements: [{ lat: 47.3, lon: 3.602 }] }),
+    });
+  });
+  await simulerIndexBornes(page, [BEAUNE]);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
+  // Le premier .recharge-detail est celui du PLAN ; le second vit dans la
+  // liste « toutes les bornes ».
+  const detailArret = corps.locator('.recharge-liste .recharge-detail').first();
+  const sansPause = await detailArret.innerText();
+
+  /* LA PAUSE PAIE LA CHARGE : l'arrêt passe à 30 min, et l'on repart PLUS
+     chargé qu'avant — le départ affiché monte. */
+  await page.getByLabel('Durée minimale de chaque arrêt').selectOption('30');
+  await expect(detailArret).toContainText('30 min de charge');
+  const avecPause = await detailArret.innerText();
+  const depart = (t: string): number => Number(/départ (\d+) %/.exec(t)?.[1] ?? 0);
+  expect(depart(avecPause), 'la pause n’a pas rempli la batterie')
+    .toBeGreaterThan(depart(sansPause));
+
+  // LE PROFIL FAMILLE : un relevé, une trouvaille, et l'arrêt la dit.
+  expect(appelsOverpass).toBe(0);
+  await page.getByLabel('Profil de pause').selectOption('famille');
+  await expect(page.locator('.recharge-pause-etat'))
+    .toContainText('1 borne du trajet avec aire de jeux');
+  await expect(detailArret).toContainText(/aire de jeux à \d+ m/);
+  expect(appelsOverpass).toBe(1);
+
+  // Et le Pourquoi consigne le réglage, préférence — jamais filtre.
+  await corps.locator('.recharge-pourquoi summary').click();
+  await expect(corps.locator('.recharge-pourquoi'))
+    .toContainText('une préférence, jamais un filtre');
+
+  // FRUGALITÉ : un autre réglage rejoue le plan SANS rappeler Overpass.
+  await page.getByLabel('Plafond de charge aux bornes').selectOption('80');
+  await expect(corps).toContainText('Aire de Beaune');
+  expect(appelsOverpass, 'un réglage a rappelé Overpass').toBe(1);
+});
+
 test('AUCUN appel tant que la section est repliée — les quotas sont un bien commun', async ({ page }) => {
   let appels = 0;
   await page.route('**/public.opendatasoft.com/**', (route) => {

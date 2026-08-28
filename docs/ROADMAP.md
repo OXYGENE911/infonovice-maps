@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #81 — les profils de pauses humaines (DÉCISION d'Armelin du
+      28/08) : pause minimale qui PAIE la charge, intervalle 2 h/3 h qui
+      force l'arrêt (refus nommé quand c'est lui qui borne), profils
+      famille/animal/repas honorés par la mesure OSM (union de disques —
+      le corridor saturait Overpass) en préférence, jamais en filtre.
 - [x] PR #80 — le plan de recharge sent les conditions (demande d'Armelin du
       28/08) : température aux deux bouts (Open-Meteo), dénivelé (altimétrie
       IGN, en kWh), vitesse du parcours (durée du moteur), bridage BMS
