@@ -202,7 +202,7 @@ test('choisir un modèle remplit le formulaire, et le bilan suit', async ({ page
     .selectOption({ label: 'VF 8 (Eco)' });
 
   await expect(page.getByLabel('Batterie', { exact: true })).toHaveValue('82.4');
-  await expect(page.getByLabel('Charge max')).toHaveValue('150');
+  await expect(page.getByLabel('Charge max', { exact: true })).toHaveValue('150');
   await expect(page.getByLabel('Nom du véhicule')).toHaveValue('VinFast VF 8 (Eco)');
   /* GROUPÉ PAR MARQUE : dans la liste, on lit « VF 8 (Eco) » sous « VinFast »,
      et non « VinFast VF 8 (Eco) » — répéter la marque sous elle-même serait du

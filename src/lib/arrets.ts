@@ -15,6 +15,11 @@
  * l'aveu qu'aucune borne n'est à portée au kilomètre 250.
  */
 
+import {
+  consommationAjustee, plafondThermiqueKw, facteurVitesse, facteurTemperature,
+  energieDeniveleKwh, type ConditionsTrajet, type ProfilConditions,
+} from './conditions';
+
 export interface BorneCandidate {
   nom: string;
   lon: number;
@@ -65,6 +70,12 @@ export interface OptionsPlan {
      planificateur qu'on subit. */
   imposees?: readonly string[] | undefined;
   ecartees?: readonly string[] | undefined;
+  /* LES CONDITIONS DU TRAJET (28/08) : température aux deux bouts, dénivelé,
+     vitesse moyenne du parcours — et ce que le véhicule sait de son propre
+     bridage thermique. TOUT est optionnel : absent, le modèle reste celui
+     d'avant — à plat, à 20 °C, sans bridage. */
+  conditions?: ConditionsTrajet | undefined;
+  profilConditions?: ProfilConditions | undefined;
 }
 
 /**
@@ -96,6 +107,15 @@ export interface PlanRecharge {
   dureeRechargeMin: number;
   /** Pourquoi le plan échoue — jamais vide quand `faisable` est faux. */
   motif?: string;
+  /** Ce que les conditions ont RÉELLEMENT changé — « Pourquoi ce plan ? »
+      l'énonce, jamais un chiffre sorti de nulle part. */
+  conditionsAppliquees?: {
+    consommationKwh100: number;
+    facteurVitesse: number;
+    facteurTemperature: number;
+    deniveleKwh: number;
+    plafondThermiqueKw: number | null;
+  };
 }
 
 /* AU-DELÀ DE 80 %, LA CHARGE RALENTIT FORTEMENT : le véhicule bride pour
@@ -129,9 +149,15 @@ const borner = (v: number, min: number, max: number): number =>
  */
 export function dureeChargeMin(
   energieKwh: number, puissanceBorneKw: number | null, v: Vehicule,
-  socDe: number, socA: number,
+  socDe: number, socA: number, plafondThermiqueKw2: number | null = null,
 ): number {
-  const puissance = Math.min(puissanceBorneKw ?? 0, v.puissanceMaxKw);
+  /* LE BMS A LE DERNIER MOT : batterie trop froide ou trop chaude, la
+     puissance réelle tombe sous ce que la borne ET le véhicule promettent
+     (relevé d'Armelin sur son VF8, 28/08). */
+  const puissance = Math.min(
+    puissanceBorneKw ?? 0, v.puissanceMaxKw,
+    plafondThermiqueKw2 ?? Infinity,
+  );
   if (!(puissance > 0) || !(energieKwh > 0)) return 0;
 
   // Part de la charge effectuée au-dessus de 80 %, où le débit s'effondre.
@@ -157,13 +183,16 @@ const energiePour = (metres: number, v: Vehicule): number =>
  */
 function choisir(
   candidates: BorneCandidate[], departM: number, v: Vehicule,
+  plafondKw: number | null = null,
 ): BorneCandidate | null {
   let meilleure: BorneCandidate | null = null;
   let meilleurScore = -Infinity;
 
   for (const c of candidates) {
     const gainKm = (c.avancementM - departM) / 1000;
-    const puissance = Math.min(c.puissanceKw ?? 0, v.puissanceMaxKw);
+    /* Bridée par le BMS, une borne de 350 kW ne vaut pas mieux qu'une de
+       60 : le score doit compter la puissance qu'on AURA, pas la promesse. */
+    const puissance = Math.min(c.puissanceKw ?? 0, v.puissanceMaxKw, plafondKw ?? Infinity);
     if (puissance <= 0) continue;
     // Minutes qu'il faudrait pour récupérer 40 kWh sur cette borne : un étalon
     // commun, qui rend les puissances comparables entre elles.
@@ -209,6 +238,27 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
     return echec('Trajet illisible.');
   }
 
+  /* LE VÉHICULE AJUSTÉ AUX CONDITIONS : la consommation de référence prend
+     la vitesse du parcours (multiplicatif), la température (multiplicatif)
+     et le dénivelé (des kilowattheures, pas un pourcentage). Absentes, les
+     conditions laissent tout intact — c'est le contrat de lib/conditions. */
+  const conditions = o.conditions ?? {};
+  const profilCond = o.profilConditions ?? {};
+  const consoAjustee = consommationAjustee(
+    v.consommationKwh100, o.distanceM, conditions, profilCond,
+  );
+  const plafondThermique = plafondThermiqueKw(
+    conditions.tempDepartC, conditions.tempArriveeC, profilCond,
+  );
+  const va: Vehicule = { ...v, consommationKwh100: consoAjustee };
+  const appliquees = {
+    consommationKwh100: consoAjustee,
+    facteurVitesse: facteurVitesse(conditions.vitesseMoyenneKmh),
+    facteurTemperature: facteurTemperature(conditions.tempDepartC, conditions.tempArriveeC),
+    deniveleKwh: energieDeniveleKwh(conditions.monteeM, conditions.descenteM, profilCond.masseKg),
+    plafondThermiqueKw: plafondThermique,
+  };
+
   const reserve = borner(o.reserve, 0, 50);
   const cible = borner(o.socArrivee, 0, 100);
   /* LE PLANCHER DU PLAFOND EST 50 : en dessous, presque aucun tronçon
@@ -220,7 +270,7 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
   const arrets: Arret[] = [];
 
   const socApres = (metres: number, socAvant: number): number =>
-    socAvant - (energiePour(metres, v) / v.capaciteKwh) * 100;
+    socAvant - (energiePour(metres, va) / va.capaciteKwh) * 100;
 
   for (let tour = 0; tour <= MAX_ARRETS; tour += 1) {
     const restantM = o.distanceM - positionM;
@@ -242,14 +292,17 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
        a multiplié les arrêts calculés « au plus juste ». */
     if (socFin >= cible - 1e-9 && !prochaineImposee) {
       const duree = arrets.reduce((t, a) => t + a.dureeMin, 0);
-      return { faisable: true, arrets, socArrivee: socFin, dureeRechargeMin: duree };
+      return {
+        faisable: true, arrets, socArrivee: socFin, dureeRechargeMin: duree,
+        conditionsAppliquees: appliquees,
+      };
     }
 
     /* IL FAUT S'ARRÊTER. Portée utile : ce qu'on peut faire SANS entamer la
        réserve — arriver à une borne à 2 % n'est pas un plan, c'est un pari. */
-    const energieUtile = v.capaciteKwh * ((soc - reserve) / 100);
+    const energieUtile = va.capaciteKwh * ((soc - reserve) / 100);
     const porteeM = energieUtile > 0
-      ? (energieUtile / (v.consommationKwh100 / 100)) * 1000 : 0;
+      ? (energieUtile / (va.consommationKwh100 / 100)) * 1000 : 0;
 
     /* UN ARRÊT IMPOSÉ À PORTÉE EST PRIS, SANS DISCUSSION. C'est le sens même
        du « + » : l'usager sait des choses que le modèle ignore — un repas, un
@@ -266,7 +319,7 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
       const aPortee = bornes.filter(
         (b) => b.avancementM > positionM && b.avancementM <= positionM + porteeM,
       );
-      choisie = choisir(aPortee, positionM, v);
+      choisie = choisir(aPortee, positionM, va, plafondThermique);
     }
 
     if (!choisie) {
@@ -304,8 +357,8 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
        réserve ; jusqu'à la destination, il faut y arriver avec la cible. */
     const restantApresM = (suivanteImposee?.avancementM ?? o.distanceM) - positionM;
     const socALArrivee = suivanteImposee ? reserve : cible;
-    const besoinKwh = energiePour(restantApresM, v) + v.capaciteKwh * (socALArrivee / 100);
-    const socVoulu = (besoinKwh / v.capaciteKwh) * 100;
+    const besoinKwh = energiePour(restantApresM, va) + va.capaciteKwh * (socALArrivee / 100);
+    const socVoulu = (besoinKwh / va.capaciteKwh) * 100;
     /* ARRIVER AU-DESSUS DU PLAFOND N'EST PAS UNE FAUTE — on ne vidange pas une
        batterie. Le haut de la fourchette est donc le plafond, OU le SOC
        d'arrivée s'il le dépasse déjà. */
@@ -315,7 +368,7 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
       Math.max(plafond, socALaBorne),
     );
 
-    const energieKwh = v.capaciteKwh * ((socRepart - socALaBorne) / 100);
+    const energieKwh = va.capaciteKwh * ((socRepart - socALaBorne) / 100);
     /* UN ARRÊT IMPOSÉ PEUT NE RIEN CHARGER, ET C'EST LÉGITIME : on s'y arrête
        pour déjeuner, pour retrouver quelqu'un, ou parce qu'on en a envie. Le
        garde-fou ci-dessous vise le cas où le MODÈLE choisit une borne inutile
@@ -335,7 +388,8 @@ export function planifierArrets(o: OptionsPlan): PlanRecharge {
       socArrivee: socALaBorne,
       socDepart: socRepart,
       energieKwh: Math.max(energieKwh, 0),
-      dureeMin: dureeChargeMin(energieKwh, choisie.puissanceKw, v, socALaBorne, socRepart),
+      dureeMin: dureeChargeMin(energieKwh, choisie.puissanceKw, va, socALaBorne, socRepart,
+        plafondThermique),
     });
     soc = socRepart;
   }

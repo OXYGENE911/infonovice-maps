@@ -42,6 +42,14 @@ export interface Vehicule {
      150. Sans ce chiffre, un planificateur promet des temps de charge qu'aucun
      véhicule ne tient. */
   puissanceMaxKw: number;
+  /* CE QUE LE VÉHICULE SAIT DE SES CONDITIONS (28/08) — tout optionnel, zéro
+     vaut « non déclaré » : le plan reste alors celui d'avant. */
+  /** Masse en ordre de marche, kg — pour l'énergie du dénivelé. */
+  masseKg?: number;
+  /** Bridage BMS de la charge DC quand l'air est sous 0 °C, en kW. */
+  puissanceFroidKw?: number;
+  /** Bridage BMS de la charge DC en canicule (air ≥ 35 °C), en kW. */
+  puissanceChaudKw?: number;
 }
 
 /** Ramène une valeur dans [0, max] — les saisies humaines sont une frontière système. */

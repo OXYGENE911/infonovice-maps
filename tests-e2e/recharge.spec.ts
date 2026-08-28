@@ -107,8 +107,43 @@ test.beforeEach(async ({ page }) => {
     contentType: 'application/json',
     body: JSON.stringify({
       geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
-      distance: 390_000, duration: 13_000,
+      /* 390 km en 10 800 s = 130 km/h PILE : le facteur vitesse du modèle des
+         conditions vaut 1, et les plans de tous ces parcours restent ceux
+         d'avant les conditions (28/08). */
+      distance: 390_000, duration: 10_800,
     }),
+  }));
+  /* LES CONDITIONS SE BOUCHONNENT EN NEUTRE — 20 °C, terrain plat : les
+     facteurs valent 1 et les plans attendus ne bougent pas. Sans ces routes,
+     chaque parcours frapperait le VRAI Open-Meteo et la VRAIE altimétrie
+     (la leçon Overpass/Bison Futé, encore). Les tests qui veulent du froid
+     ou du relief posent leur propre route PAR-DESSUS. */
+  await page.route('**/api.open-meteo.com/**', (route) => {
+    const base = new Date();
+    const heure = (h: number): string => {
+      const d = new Date(base.getTime() + h * 3600 * 1000);
+      const p = (n: number): string => String(n).padStart(2, '0');
+      return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:00`;
+    };
+    const heures = [-1, 0, 1, 2, 3, 4, 5];
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      utc_offset_seconds: 0,
+      hourly: {
+        time: heures.map(heure),
+        temperature_2m: heures.map(() => 20),
+        precipitation: heures.map(() => 0),
+        weather_code: heures.map(() => 0),
+        wind_speed_10m: heures.map(() => 5),
+      },
+    }) });
+  });
+  await page.route('**/data.geopf.fr/altimetrie/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ elevations: [
+      { lon: 2.3522, lat: 48.8566, z: 100, acc: 'Average value' },
+      { lon: 3.6, lat: 47.3, z: 100, acc: 'Average value' },
+      { lon: 4.8357, lat: 45.764, z: 100, acc: 'Average value' },
+    ] }),
   }));
 });
 
@@ -132,7 +167,7 @@ async function saisirVehicule(page: Page): Promise<void> {
   await page.getByLabel('Batterie', { exact: true }).fill('87.7');
   await page.getByLabel('Santé (SOCE)').fill('94');
   await page.getByLabel('Charge (SOC)').fill('100');
-  await page.getByLabel('Charge max').fill('150');
+  await page.getByLabel('Charge max', { exact: true }).fill('150');
   await page.getByLabel('Sur autoroute').fill('280');
   // Le bilan confirme que le profil est pris en compte AVANT de continuer.
   await expect(page.locator('.veh-bilan-lignes')).toContainText('Sur autoroute');
@@ -198,8 +233,11 @@ test('la réserve du modèle est écrite sous le plan, jamais sous-entendue', as
   const corps = page.locator('.iti-recharge-corps');
   await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
   /* CE QUE LE MODÈLE NE SAIT PAS DOIT ÊTRE ÉCRIT SOUS LE PLAN. Un plan qui
-     tait ses hypothèses se fait prendre pour une prévision. */
-  await expect(corps).toContainText('ni le relief, ni le vent');
+     tait ses hypothèses se fait prendre pour une prévision. Depuis le
+     28/08, les conditions neutres du beforeEach sont RELEVÉES : la note dit
+     ce qui est compté ET ce qui reste inconnu. */
+  await expect(corps).toContainText('relief et vitesse du parcours sont comptés');
+  await expect(corps).toContainText('restent inconnus le vent, la pluie');
   await expect(corps, 'le seuil de l’index doit être annoncé').toContainText('50 kW et plus');
 });
 
@@ -222,8 +260,11 @@ test('« Pourquoi ce plan ? » explique avec ce qu’on SAIT — consignes, crit
   await expect(volet).toContainText('compromis distance gagnée / puissance / détour');
   // La puissance retenue est NOMMÉE : min(borne, véhicule) = 150 kW ici.
   await expect(volet).toContainText('150 kW retenus');
-  // Et l'aveu du modèle clôt l'explication.
-  await expect(volet).toContainText('ni relief, ni vent, ni trafic');
+  /* Et l'aveu du modèle clôt l'explication — sa forme d'APRÈS le 28/08 :
+     les conditions neutres du beforeEach sont RELEVÉES (20 °C), le volet ne
+     prétend donc plus calculer « à plat », il dit ce qui reste inconnu. */
+  await expect(volet).toContainText('le vent, la pluie, le trafic');
+  await expect(volet).toContainText('pas de la batterie');
 
   /* LE PLAFOND N'EST DIT QUE S'IL EXISTE : à « au besoin » (100), pas une
      ligne — puis choisi à 80 %, la consigne apparaît. */
@@ -275,6 +316,95 @@ test('la durée de charge est SUR la pastille de la carte, pas seulement en list
     return Boolean(carte.getLayer('iti-arrets-duree'))
       && durees.length === 1 && /^\d+ min$/.test(durees[0] ?? '');
   }), { timeout: 10_000 }).toBe(true);
+});
+
+test('l’HIVER entre dans le plan : bridage du VF8 appliqué, et DIT avec sa provenance', async ({ page }) => {
+  /* La demande d'Armelin du 28/08 : température, relief, vitesse et bridage
+     BMS dans le calcul. Scénario gel (−2 °C aux deux bouts) sur SON VF8 —
+     « sous 0 °C je ne dépasse pas 30 kW ». Le volet « Pourquoi ce plan ? »
+     doit dire le degré, le facteur, le bridage ET la limite de la méthode
+     (la température d'AIR, pas celle de la batterie). */
+  await page.route('**/api.open-meteo.com/**', (route) => {
+    const base = new Date();
+    const heure = (h: number): string => {
+      const d = new Date(base.getTime() + h * 3600 * 1000);
+      const p = (n: number): string => String(n).padStart(2, '0');
+      return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:00`;
+    };
+    const heures = [-1, 0, 1, 2, 3, 4, 5];
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      utc_offset_seconds: 0,
+      hourly: {
+        time: heures.map(heure),
+        temperature_2m: heures.map(() => -2),
+        precipitation: heures.map(() => 0),
+        weather_code: heures.map(() => 71),
+        wind_speed_10m: heures.map(() => 10),
+      },
+    }) });
+  });
+  await simulerIndexBornes(page, [BEAUNE]);
+  await page.goto(PARIS_LYON);
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  await saisirVehicule(page);
+  // Le bridage à froid du VF8, saisi comme le ferait son propriétaire —
+  // saisirVehicule vient de refermer la page, on y retourne.
+  await allerA(page, 'vehicule');
+  await page.getByLabel('Charge max sous 0 °C').fill('30');
+  await retour(page);
+  await allerA(page, 'recharge');
+
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
+  await corps.locator('.recharge-pourquoi summary').click();
+  const volet = corps.locator('.recharge-pourquoi');
+  await expect(volet).toContainText('-2 °C au départ');
+  // La durée de l'arrêt et sa puissance disent la MÊME histoire : bridé, on
+  // n'écrit pas « à 150 kW retenus » sur la ligne qui explique 3 h de charge.
+  await expect(volet).toContainText('à 30 kW retenus');
+  // Et l'aveu final ne prétend plus calculer « à plat » : le relief est compté.
+  await expect(volet).not.toContainText('calcule à plat');
+  await expect(volet).toContainText('charge bridée à 30 kW');
+  // La limite de la méthode est ÉCRITE : l'air, pas la batterie.
+  await expect(volet).toContainText('AIR');
+  await expect(volet).toContainText('kWh/100 km retenus');
+  // Et les limites du parcours sont comptées par la vitesse moyenne du moteur.
+  await expect(volet).toContainText('130 km/h de moyenne');
+});
+
+test('les conditions se relèvent UNE fois par trajet — cocher une case ne rappelle RIEN', async ({ page }) => {
+  /* La frugalité du plan : Open-Meteo et l'altimétrie sont interrogés au
+     premier calcul, puis chaque « + », « − » ou réglage REJOUE le plan sur
+     les relevés en mémoire. */
+  let appelsMeteo = 0;
+  let appelsAlti = 0;
+  await page.route('**/api.open-meteo.com/**', (route) => {
+    appelsMeteo += 1;
+    return route.fulfill({ status: 404, body: '' });
+  });
+  await page.route('**/data.geopf.fr/altimetrie/**', (route) => {
+    appelsAlti += 1;
+    return route.fulfill({ status: 404, body: '' });
+  });
+  await simulerIndexBornes(page, [BEAUNE]);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
+  const meteoApres = appelsMeteo;
+  const altiApres = appelsAlti;
+  expect(meteoApres, 'départ et arrivée : deux relevés au plus').toBeLessThanOrEqual(2);
+
+  await page.getByLabel('Plafond de charge aux bornes').selectOption('80');
+  await expect(corps).toContainText('Aire de Beaune');
+  expect(appelsMeteo, 'un réglage a rappelé la météo').toBe(meteoApres);
+  expect(appelsAlti, 'un réglage a rappelé l’altimétrie').toBe(altiApres);
+
+  /* ET LEUR ÉCHEC (404 ici) N'A RIEN BLOQUÉ : le plan est sorti quand même,
+     et le volet DIT qu'il roule à 20 °C, à plat. */
+  await corps.locator('.recharge-pourquoi summary').click();
+  await expect(corps.locator('.recharge-pourquoi'))
+    .toContainText('130 km/h de moyenne');
 });
 
 test('AUCUN appel tant que la section est repliée — les quotas sont un bien commun', async ({ page }) => {

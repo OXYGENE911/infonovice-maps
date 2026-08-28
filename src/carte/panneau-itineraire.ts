@@ -18,6 +18,7 @@ import { adresseInverse, type ResultatAdresse } from '../lib/adresse';
 import { versGPX, versKML, telecharger } from '../lib/trace';
 import { versFragment, depuisFragment } from '../lib/partage-url';
 import { installerFeuilleBasse } from './feuille-basse';
+import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
 import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 import {
@@ -164,6 +165,17 @@ export class PanneauItineraire extends HTMLElement {
   #voletsOuverts: { reseaux: boolean; toutes: boolean } = { reseaux: false, toutes: false };
   /** Le profil véhicule du dernier plan, pour rejouer sans relire IndexedDB. */
   #vehiculeCourant: { capaciteKwh: number; consommationKwh100: number; puissanceMaxKw: number } | null = null;
+
+  /* LES CONDITIONS DU TRAJET (28/08) — température aux deux bouts, dénivelé,
+     vitesse moyenne. Relevées UNE fois par itinéraire quand la page recharge
+     s'ouvre, puis relues localement à chaque rejouage de plan : cocher une
+     case ne rappelle ni Open-Meteo ni l'altimétrie. */
+  #conditions: ConditionsTrajet | null = null;
+
+  #conditionsPour: Itineraire | null = null;
+
+  /** Masse et bridages thermiques du véhicule courant. */
+  #profilConditions: ProfilConditions = {};
   #socDepart = 100;
 
   set fiche(f: FicheBorne) { this.#fiche = f; }
@@ -872,6 +884,7 @@ export class PanneauItineraire extends HTMLElement {
   async #lireVehicule(): Promise<{
     vehicule: { capaciteKwh: number; consommationKwh100: number; puissanceMaxKw: number };
     socDepart: number;
+    profilConditions: ProfilConditions;
   } | null> {
     const memo = await lirePreference<unknown>(PREF_VEHICULE);
     const m = (memo ?? {}) as Record<string, unknown>;
@@ -881,6 +894,11 @@ export class PanneauItineraire extends HTMLElement {
     const capacite = nombre(brut['capaciteNominale']) * (nombre(brut['soce']) || 100) / 100;
     const conso = ((brut['consommations'] ?? {}) as Record<string, unknown>)['autoroute'];
     if (!(capacite > 0) || !(nombre(conso) > 0)) return null;
+    /* Zéro vaut « non déclaré » : le champ correspondant reste absent, et le
+       modèle des conditions n'applique alors RIEN — le contrat de
+       lib/conditions. */
+    const optionnel = (x: unknown): number | undefined =>
+      (nombre(x) > 0 ? nombre(x) : undefined);
     return {
       vehicule: {
         capaciteKwh: capacite,
@@ -889,6 +907,11 @@ export class PanneauItineraire extends HTMLElement {
         puissanceMaxKw: nombre(brut['puissanceMaxKw']) || 150,
       },
       socDepart: nombre(brut['soc']) || 100,
+      profilConditions: {
+        masseKg: optionnel(brut['masseKg']),
+        puissanceFroidKw: optionnel(brut['puissanceFroidKw']),
+        puissanceChaudKw: optionnel(brut['puissanceChaudKw']),
+      },
     };
   }
 
@@ -914,6 +937,7 @@ export class PanneauItineraire extends HTMLElement {
 
     this.#vehiculeCourant = profil.vehicule;
     this.#socDepart = profil.socDepart;
+    this.#profilConditions = profil.profilConditions;
 
     try {
       /* LES BORNES DU TRAJET VIENNENT DE L'INDEX NATIONAL, PLUS DU PORTAIL.
@@ -930,7 +954,13 @@ export class PanneauItineraire extends HTMLElement {
          ne rapporte. Le paramètre s'appelle `rayonM` — passer « 10 » cherchait
          dans un rayon de dix MÈTRES et ne rendait jamais rien, sans la moindre
          erreur. Le parcours E2E l'a vu ; un test à sec ne l'aurait pas vu. */
-      const { stations } = await indexNational(annulation.signal);
+      /* LES CONDITIONS SE RELÈVENT EN MÊME TEMPS QUE L'INDEX — et chacune
+         peut échouer SEULE : une météo en panne ne prive pas le plan du
+         relief, et rien ne bloque jamais le calcul. */
+      const [{ stations }] = await Promise.all([
+        indexNational(annulation.signal),
+        this.#chargerConditions(iti, annulation.signal),
+      ]);
       if (this.#dernier !== iti || annulation.signal.aborted) return;
       this.#bornesTrajet = stationsDuTrajet(
         stations, iti.geometrie.coordinates as [number, number][], 10_000,
@@ -972,6 +1002,49 @@ export class PanneauItineraire extends HTMLElement {
   }
 
   /**
+   * Relève les conditions du trajet — UNE fois par itinéraire.
+   *
+   * Trois sources, chacune facultative et attrapée SEULE : Open-Meteo aux
+   * deux bouts (départ maintenant, arrivée à l'heure estimée — la dérogation
+   * météo du 22/08 couvre cet usage), l'altimétrie IGN pour le dénivelé
+   * (le même service que le profil de la page « alti »), et la vitesse
+   * moyenne qui ne coûte RIEN : distance/durée du moteur — c'est le graphe
+   * routier qui a déjà compté les limites tronçon par tronçon.
+   */
+  async #chargerConditions(iti: Itineraire, signal: AbortSignal): Promise<void> {
+    if (this.#conditionsPour === iti && this.#conditions) return;
+    const conditions: ConditionsTrajet = {
+      vitesseMoyenneKmh: iti.duree > 0 ? (iti.distance / iti.duree) * 3.6 : undefined,
+    };
+    const maintenant = new Date();
+    const arriveeEstimee = new Date(maintenant.getTime() + iti.duree * 1000);
+    const sommets = iti.geometrie.coordinates;
+    const [pDep, pArr] = [sommets[0], sommets[sommets.length - 1]];
+    await Promise.all([
+      pDep
+        ? meteoA(pDep[0]!, pDep[1]!, maintenant, signal)
+          .then((m) => { conditions.tempDepartC = m.temperature; })
+          .catch(() => { /* le plan vivra à 20 °C, et le dira */ })
+        : Promise.resolve(),
+      pArr
+        ? meteoA(pArr[0]!, pArr[1]!, arriveeEstimee, signal)
+          .then((m) => { conditions.tempArriveeC = m.temperature; })
+          .catch(() => { /* idem */ })
+        : Promise.resolve(),
+      profilItineraire(iti.geometrie)
+        .then((points) => {
+          const d = denivele(points);
+          conditions.monteeM = d.montee;
+          conditions.descenteM = d.descente;
+        })
+        .catch(() => { /* le plan vivra à plat, et le dira */ }),
+    ]);
+    if (signal.aborted) return;
+    this.#conditions = conditions;
+    this.#conditionsPour = iti;
+  }
+
+  /**
    * Rejoue le plan sur les bornes déjà trouvées — SANS RIEN RECHARGER.
    *
    * C'est ce qui rend les « + » et les « − » instantanés : cocher un arrêt ne
@@ -992,6 +1065,8 @@ export class PanneauItineraire extends HTMLElement {
       plafondCharge: this.#valeurReglage('.recharge-plafond', 100),
       imposees: [...this.#imposees],
       ecartees: [...this.#ecartees],
+      conditions: this.#conditionsPour === iti ? this.#conditions ?? {} : {},
+      profilConditions: this.#profilConditions,
     }));
   }
 
@@ -1281,6 +1356,17 @@ export class PanneauItineraire extends HTMLElement {
           socArrivee: this.#valeurReglage('.recharge-cible', 10),
           reserve: this.#valeurReglage('.recharge-reserve', 10),
           plafondCharge: this.#valeurReglage('.recharge-plafond', 100),
+          /* LA VARIANTE SE COMPARE SOUS LES MÊMES CONDITIONS — températures
+             comprises, et SA vitesse à elle : c'est souvent tout l'écart
+             entre « avec » et « sans autoroute ». Le dénivelé, relevé sur
+             l'AUTRE tracé, ne se transpose pas : il est omis ici plutôt que
+             menti. */
+          conditions: {
+            tempDepartC: this.#conditions?.tempDepartC,
+            tempArriveeC: this.#conditions?.tempArriveeC,
+            vitesseMoyenneKmh: iti.duree > 0 ? (iti.distance / iti.duree) * 3.6 : undefined,
+          },
+          profilConditions: profil.profilConditions,
         });
       };
       this.#afficherComparaison(
@@ -2019,6 +2105,48 @@ export class PanneauItineraire extends HTMLElement {
     consignes.textContent = `Vos consignes : ${morceaux.join(' ; ')}.`;
     volet.append(consignes);
 
+    /* LES CONDITIONS APPLIQUÉES (28/08) — chiffres du CALCUL, jamais
+       redérivés ici : le plan les rend avec lui. Et quand rien n'a été
+       relevé, on le dit : un plan « à 20 °C, à plat » qui se tairait
+       passerait pour une prévision. */
+    const cond = plan.conditionsAppliquees;
+    if (cond && v) {
+      const releve = this.#conditions ?? {};
+      const p = document.createElement('p');
+      p.className = 'pourquoi-conditions';
+      const bouts: string[] = [];
+      if (typeof releve.tempDepartC === 'number' || typeof releve.tempArriveeC === 'number') {
+        const t = (x: number | undefined): string =>
+          (typeof x === 'number' ? `${Math.round(x)} °C` : '?');
+        bouts.push(`${t(releve.tempDepartC)} au départ, ${t(releve.tempArriveeC)} à l'arrivée`
+          + (cond.facteurTemperature !== 1
+            ? ` (consommation ×${cond.facteurTemperature.toFixed(2)})` : ''));
+      }
+      if (typeof releve.vitesseMoyenneKmh === 'number') {
+        bouts.push(`${Math.round(releve.vitesseMoyenneKmh)} km/h de moyenne — les limites`
+          + ` du parcours, comptées par le moteur (×${cond.facteurVitesse.toFixed(2)})`);
+      }
+      if (typeof releve.monteeM === 'number') {
+        bouts.push(`D+ ${Math.round(releve.monteeM)} m / D− ${Math.round(releve.descenteM ?? 0)} m`
+          + ` (${cond.deniveleKwh >= 0 ? '+' : '−'}${Math.abs(cond.deniveleKwh).toFixed(1)} kWh)`);
+      }
+      if (cond.plafondThermiqueKw !== null) {
+        bouts.push(`charge bridée à ${cond.plafondThermiqueKw} kW — le bridage`
+          + ' déclaré de votre véhicule, appliqué sur la température de'
+          + ' l’AIR : la batterie n’est pas mesurable d’ici, l’estimation'
+          + ' est prudente');
+      }
+      if (bouts.length === 0) {
+        p.textContent = 'Conditions non relevées (météo et relief'
+          + ' indisponibles) : plan à 20 °C, à plat.';
+      } else {
+        p.textContent = `Conditions du jour : ${bouts.join(' ; ')} — soit`
+          + ` ${cond.consommationKwh100.toFixed(1)} kWh/100 km retenus`
+          + ` (référence ${v.consommationKwh100.toFixed(1)}).`;
+      }
+      volet.append(p);
+    }
+
     /* CE QUE L'USAGER A DÉJÀ DÉCIDÉ compte dans l'explication : un plan
        taillé par des réseaux cochés ou des refus au « − » n'est pas un choix
        du planificateur, et le dire évite de le lui attribuer. */
@@ -2052,7 +2180,13 @@ export class PanneauItineraire extends HTMLElement {
       for (const [i, a] of plan.arrets.entries()) {
         const item = document.createElement('li');
         const imposee = this.#imposees.has(cleBorne(a.borne));
-        const retenue = v ? Math.min(a.borne.puissanceKw ?? 0, v.puissanceMaxKw) : null;
+        /* La puissance RETENUE compte AUSSI le bridage thermique : écrire
+           « 150 kW » quand le BMS a plafonné à 30 mentirait sur la ligne
+           même qui explique la durée. */
+        const brideKw = plan.conditionsAppliquees?.plafondThermiqueKw ?? null;
+        const retenue = v
+          ? Math.min(a.borne.puissanceKw ?? 0, v.puissanceMaxKw, brideKw ?? Infinity)
+          : null;
         const bouts = [
           imposee
             ? 'imposé par vous'
@@ -2086,9 +2220,19 @@ export class PanneauItineraire extends HTMLElement {
        faire dire au calcul ce qu'il ne sait pas. */
     const limites = document.createElement('p');
     limites.className = 'pourquoi-limites';
-    limites.textContent = 'Ce modèle calcule à plat et à consommation'
-      + ' constante : ni relief, ni vent, ni trafic, ni courbe de charge'
-      + ' réelle du véhicule.';
+    /* L'AVEU SUIT LE CALCUL : depuis le 28/08, relief, température et
+       vitesse du parcours peuvent être comptés — dire encore « à plat »
+       serait faux dans un sens comme dans l'autre. */
+    const conditionsComptees = Boolean(plan.conditionsAppliquees)
+      && ((this.#conditions?.monteeM !== undefined)
+        || (this.#conditions?.tempDepartC !== undefined));
+    limites.textContent = conditionsComptees
+      ? 'Restent inconnus de ce modèle : le vent, la pluie, le trafic, le'
+        + ' style de conduite et la courbe de charge réelle du véhicule — et'
+        + ' la température retenue est celle de l’air, pas de la batterie.'
+      : 'Ce modèle calcule à plat et à consommation'
+        + ' constante : ni relief, ni vent, ni trafic, ni courbe de charge'
+        + ' réelle du véhicule.';
     volet.append(limites);
     return volet;
   }
@@ -2234,9 +2378,19 @@ export class PanneauItineraire extends HTMLElement {
 
     const reserve = document.createElement('p');
     reserve.className = 'recharge-reserve';
-    reserve.textContent = 'Estimation à plat, à consommation constante :'
-      + ' ni le relief, ni le vent, ni le trafic, ni la vraie courbe de charge'
-      + ' de votre véhicule ne sont pris en compte.'
+    /* LA NOTE SUIT LE CALCUL (28/08) : quand météo et relief sont relevés,
+       « à plat, à consommation constante » serait un mensonge — et quand ils
+       ne le sont pas, l'ancien aveu reste le bon. */
+    const releves = this.#conditionsPour === this.#dernier
+      && (this.#conditions?.tempDepartC !== undefined
+        || this.#conditions?.monteeM !== undefined);
+    reserve.textContent = (releves
+      ? 'Température, relief et vitesse du parcours sont comptés (détail dans'
+        + ' « Pourquoi ce plan ? ») ; restent inconnus le vent, la pluie, le'
+        + ' trafic et la vraie courbe de charge de votre véhicule.'
+      : 'Estimation à plat, à consommation constante :'
+        + ' ni le relief, ni le vent, ni le trafic, ni la vraie courbe de charge'
+        + ' de votre véhicule ne sont pris en compte.')
       + ` Bornes de ${SEUIL_RAPIDE} kW et plus, depuis le fichier national IRVE.`;
     corps.append(reserve);
   }

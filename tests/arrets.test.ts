@@ -353,3 +353,92 @@ describe('le plafond de charge de l’usager', () => {
     for (const a of r.arrets) expect(a.socDepart).toBeLessThanOrEqual(50);
   });
 });
+
+/* LES CONDITIONS DU TRAJET (28/08) — l'hiver, la canicule, le col et la
+   vitesse entrent dans le plan. Le VF8 d'Armelin sert encore de cas d'école :
+   « 60 kW à chaud, 30 kW sous 0 °C » (relevé du 28/08). */
+describe('les conditions changent le plan — et leur absence ne change RIEN', () => {
+  const VF8_THERMIQUE = { puissanceFroidKw: 30, puissanceChaudKw: 60, masseKg: 2500 };
+
+  test('sans conditions : exactement le plan d’avant (régression impossible)', () => {
+    const avant = plan({ distanceM: 500_000, bornes: [borne(250, 150)] });
+    const avec = plan({ distanceM: 500_000, bornes: [borne(250, 150)], conditions: {}, profilConditions: {} });
+    expect(avec).toEqual({ ...avant, conditionsAppliquees: avec.conditionsAppliquees });
+    expect(avec.conditionsAppliquees?.consommationKwh100).toBeCloseTo(29.4, 5);
+    expect(avec.conditionsAppliquees?.plafondThermiqueKw).toBeNull();
+  });
+
+  test('sous 0 °C, la charge est bridée à 30 kW : les MÊMES bornes, bien plus long', () => {
+    /* Les bornes à 180 et 330 km restent à portée d'hiver (202 km à 90 %) :
+       on compare le TEMPS, pas la faisabilité. */
+    const bornes = [borne(180, 150), borne(330, 150)];
+    const doux = plan({ distanceM: 450_000, bornes });
+    const gel = plan({
+      distanceM: 450_000, bornes,
+      conditions: { tempDepartC: -2, tempArriveeC: 1 },
+      profilConditions: VF8_THERMIQUE,
+    });
+    expect(doux.faisable).toBe(true);
+    expect(gel.faisable).toBe(true);
+    // Bride 150 → 30 kW ET surconsommation de 25 % : plus d'énergie, moins vite.
+    expect(gel.dureeRechargeMin).toBeGreaterThan(doux.dureeRechargeMin * 4);
+    expect(gel.conditionsAppliquees?.plafondThermiqueKw).toBe(30);
+    // Convention des anneaux : +1,2 %/°C sous 20 — à −2 °C, ×1,264.
+    expect(gel.conditionsAppliquees?.facteurTemperature).toBeCloseTo(1.264, 5);
+  });
+
+  test('l’hiver RACCOURCIT la portée : un trajet qui passait demande un arrêt', () => {
+    // 250 km : passe à 20 °C (portée 280 km)… mais pas à −5 °C (portée ÷ 1,25).
+    const doux = plan({ distanceM: 250_000, bornes: [borne(120, 150)] });
+    const gel = plan({
+      distanceM: 250_000, bornes: [borne(120, 150)],
+      conditions: { tempDepartC: -5 },
+    });
+    expect(doux.arrets).toHaveLength(0);
+    expect(gel.faisable).toBe(true);
+    expect(gel.arrets, 'l’hiver aurait dû imposer un arrêt').toHaveLength(1);
+  });
+
+  test('le col compte en kilowattheures : D+ sans retour fait chuter le SOC d’arrivée', () => {
+    const plat = plan({ distanceM: 200_000, bornes: [] });
+    const col = plan({
+      distanceM: 200_000, bornes: [],
+      conditions: { monteeM: 1500, descenteM: 200 },
+      profilConditions: { masseKg: 2500 },
+    });
+    // ≈ 12,7 kWh de plus sur 82,44 : environ 14 points de SOC.
+    expect(plat.socArrivee - col.socArrivee).toBeGreaterThan(12);
+    expect(plat.socArrivee - col.socArrivee).toBeLessThan(17);
+  });
+
+  test('une moyenne de nationale ALLONGE la portée — la vitesse du moteur IGN parle', () => {
+    // 350 km d'une traite : impossible à 130 de moyenne, possible à 85.
+    const autoroute = plan({ distanceM: 350_000, bornes: [] });
+    const nationale = plan({
+      distanceM: 350_000, bornes: [],
+      conditions: { vitesseMoyenneKmh: 85 },
+    });
+    expect(autoroute.faisable).toBe(false);
+    expect(nationale.faisable).toBe(true);
+  });
+
+  test('en canicule, une borne 350 kW ne vaut plus mieux qu’une 60 : le choix suit le BMS', () => {
+    /* Deux bornes côte à côte : la 350 kW un peu plus loin gagnerait par
+       temps doux ; bridée à 60, son avantage disparaît et la plus proche
+       (moins de détour) l'emporte. */
+    /* À 210 km : encore à portée d'été (la canicule coûte AUSSI +12 % de
+       consommation — 225 km de portée, pas 252). */
+    const bornes = [
+      { ...borne(210, 60, 'Soixante'), ecartM: 100 },
+      { ...borne(208, 350, 'Ultra'), ecartM: 2000 },
+    ];
+    const doux = plan({ distanceM: 430_000, bornes });
+    const chaud = plan({
+      distanceM: 430_000, bornes,
+      conditions: { tempDepartC: 37 },
+      profilConditions: { puissanceChaudKw: 60 },
+    });
+    expect(doux.arrets[0]?.borne.nom).toBe('Ultra');
+    expect(chaud.arrets[0]?.borne.nom).toBe('Soixante');
+  });
+});

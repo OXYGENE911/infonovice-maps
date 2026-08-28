@@ -1912,6 +1912,7 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
 .recharge-pourquoi summary:focus-visible { outline: none; box-shadow: var(--focus); }
 .recharge-pourquoi[open] summary { color: var(--texte-1); }
 .recharge-pourquoi p { margin: 6px 0 0; font: 400 12.5px/1.5 var(--police); color: var(--texte-2); }
+.pourquoi-conditions { color: var(--texte-2); }
 .pourquoi-liste {
   margin: 6px 0 0; padding: 0; list-style: none;
   display: grid; gap: 5px;

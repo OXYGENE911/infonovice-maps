@@ -43,6 +43,11 @@ export interface ModeleVehicule {
   capaciteKwh: number;
   /** Pointe de charge en courant continu, en kW. */
   puissanceMaxKw: number;
+  /** Bridage BMS de la charge sous 0 °C d'air, en kW — quand un RELEVÉ le
+      documente ; jamais deviné. */
+  puissanceFroidKw?: number;
+  /** Bridage BMS de la charge par batterie très chaude (canicule), en kW. */
+  puissanceChaudKw?: number;
   /** Autonomie WLTP en km. Optimiste : voir l'en-tête. */
   wltpKm: number;
   /** Standard de charge rapide de ce modèle. */
@@ -236,8 +241,11 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
   { cle: 'vinfast-vf6-eco', marque: 'VinFast', modele: 'VF 6', variante: 'Eco', capaciteKwh: 59.6, puissanceMaxKw: 60, wltpKm: 399, prise: 'combo_ccs' },
   { cle: 'vinfast-vf6-plus', marque: 'VinFast', modele: 'VF 6', variante: 'Plus', capaciteKwh: 59.6, puissanceMaxKw: 60, wltpKm: 381, prise: 'combo_ccs' },
   { cle: 'vinfast-vf7-eco', marque: 'VinFast', modele: 'VF 7', variante: 'Eco', capaciteKwh: 70.8, puissanceMaxKw: 100, wltpKm: 450, prise: 'combo_ccs' },
-  { cle: 'vinfast-vf8', marque: 'VinFast', modele: 'VF 8', variante: 'Eco', capaciteKwh: 82.4, puissanceMaxKw: 150, wltpKm: 447, prise: 'combo_ccs' },
-  { cle: 'vinfast-vf8-plus', marque: 'VinFast', modele: 'VF 8', variante: 'Plus', capaciteKwh: 87.7, puissanceMaxKw: 150, wltpKm: 457, prise: 'combo_ccs' },
+  /* BRIDAGES THERMIQUES DU VF 8 : relevés d'Armelin sur SON véhicule
+     (28/08/2026) — « 60 kW à 43 °C de batterie, 30 kW à 45 °C ; sous 0 °C
+     je ne dépasse pas 30 kW ». Seuls des RELEVÉS entrent ici. */
+  { cle: 'vinfast-vf8', marque: 'VinFast', modele: 'VF 8', variante: 'Eco', capaciteKwh: 82.4, puissanceMaxKw: 150, wltpKm: 447, prise: 'combo_ccs', puissanceFroidKw: 30, puissanceChaudKw: 60 },
+  { cle: 'vinfast-vf8-plus', marque: 'VinFast', modele: 'VF 8', variante: 'Plus', capaciteKwh: 87.7, puissanceMaxKw: 150, wltpKm: 457, prise: 'combo_ccs', puissanceFroidKw: 30, puissanceChaudKw: 60 },
   { cle: 'vinfast-vf9', marque: 'VinFast', modele: 'VF 9', variante: 'Eco', capaciteKwh: 123, puissanceMaxKw: 150, wltpKm: 594, prise: 'combo_ccs' },
 
   // — Volkswagen —
