@@ -118,8 +118,13 @@ s'écraser.
   la mesure, la pause minimale et l'aire de jeux couvrent l'essentiel du
   besoin. S'y ajoutent la pause minimale qui paie la charge et
   l'intervalle 2 h/3 h de route ;
-- mode copilote, routines locales, mode « arrivée réelle » : à cadrer
-  individuellement, chacun est un chantier.
+- mode copilote : TRANCHÉ PAR ARMELIN le 28/08 → LIVRÉ (PR #82, 0.57.0),
+  cadré sans serveur : un panneau pour le PASSAGER sur l'appareil du suivi
+  (recharges à venir + commodités à la demande, événements devant soi,
+  arrivée + météo sur demande). Le partage de position entre deux appareils
+  exigerait un serveur — écarté d'office, consigné ;
+- routines locales, mode « arrivée réelle » : à cadrer individuellement,
+  chacun est un chantier.
 
 Chaque PR de cette série reprend la discipline habituelle : mesures avant
 promesses, tests avec chaque livraison, CI verte avant fusion, consignation

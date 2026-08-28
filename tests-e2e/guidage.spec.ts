@@ -620,6 +620,91 @@ test('à l’ARRÊT, la boussole oriente la carte — ouverte par le geste, jama
   { timeout: 10_000 }).toBe(90);
 });
 
+test('le COPILOTE : les événements de la route listés, la météo sur DEMANDE seulement', async ({ page }) => {
+  /* Décision d'Armelin du 28/08 — le mode copilote : un panneau pour le
+     PASSAGER pendant le suivi. Trois contrats : tout ce qui s'affiche est
+     déjà en mémoire (les événements listés avec leur distance), rien ne part
+     sur le réseau sans un BOUTON (la météo se demande), et la réponse
+     obtenue SURVIT aux fixes suivants. */
+  await page.route('**/www.bison-fute.gouv.fr/data/iteration/date.json',
+    (route) => route.fulfill({ contentType: 'application/json', body: '[1787353503716]' }));
+  await page.route('**/www1.bison-fute.gouv.fr/data/**/evenementsOL6.json',
+    (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      type: 'FeatureCollection',
+      features: [{ geometry: { type: 'Point', coordinates: [688781.7, 6793094.7] },
+        properties: { type: 'TRAVAUX', etat_evenement: 'EFFECTIF', urlcpc: '' } }],
+    }) }));
+  let appelsMeteo = 0;
+  await page.route('**/api.open-meteo.com/**', (route) => {
+    appelsMeteo += 1;
+    const base = new Date();
+    const heure = (h: number): string => {
+      const d = new Date(base.getTime() + h * 3600 * 1000);
+      const p = (n: number): string => String(n).padStart(2, '0');
+      return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:00`;
+    };
+    const heures = [-1, 0, 1, 2, 3, 4, 5];
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      utc_offset_seconds: 0,
+      hourly: {
+        time: heures.map(heure),
+        temperature_2m: heures.map(() => 21),
+        precipitation: heures.map(() => 0),
+        weather_code: heures.map(() => 0),
+        wind_speed_10m: heures.map(() => 5),
+      },
+    }) });
+  });
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null,
+        speed: null, heading: null, ...c } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+
+  // L'événement arrive de façon asynchrone : on rejoue un fixe jusqu'à lui.
+  await page.getByRole('button', { name: 'Ouvrir le panneau du copilote' }).click();
+  const copilote = page.locator('.bg-copilote');
+  await expect(copilote).toBeVisible();
+  await expect(copilote).toContainText('Pour le passager');
+  await expect.poll(async () => {
+    await page.evaluate(() => {
+      (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+        longitude: 2.3522, latitude: 48.8566 });
+    });
+    return copilote.locator('.bg-copilote-evenements li').count();
+  }, { timeout: 15_000 }).toBe(1);
+  await expect(copilote).toContainText(/Travaux — dans .+ km/);
+  await expect(copilote).toContainText('restants');
+
+  // La météo ne part QUE sur demande — et la réponse SURVIT au fixe suivant.
+  expect(appelsMeteo).toBe(0);
+  await copilote.getByRole('button', { name: 'Météo à l’arrivée' }).click();
+  await expect(copilote).toContainText('(Open-Meteo)');
+  expect(appelsMeteo).toBe(1);
+  await page.evaluate(() => {
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+      longitude: 2.36, latitude: 48.85 });
+  });
+  await expect(copilote).toContainText('(Open-Meteo)');
+  expect(appelsMeteo, 'un fixe a relancé la météo').toBe(1);
+
+  // La croix referme, le bouton dit son état.
+  await copilote.getByRole('button', { name: 'Fermer le panneau du copilote' }).click();
+  await expect(copilote).toBeHidden();
+});
+
 test('démarrer DÉGAGE la vue : volets refermés, recherche d’adresse effacée', async ({ page }) => {
   /* Armelin, le 26/08/2026 : « quand on est en mode navigation, il y a trop de
      cartouches affichés qui masquent la navigation, comme la recherche

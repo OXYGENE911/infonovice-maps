@@ -26,6 +26,8 @@ import {
   etatGuidage, distanceEnMots, heureArriveeEstimee, type OptionsGuidage,
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
+import { chargerCommodites, ErreurCommodites, TYPES_COMMODITE, type Commodite } from '../lib/commodites';
+import { meteoA, phraseMeteo, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
 import { limiteA, type LimiteTrajet } from '../lib/limites';
 import type { EvenementTrajet } from '../lib/trafic';
 import { flecheManoeuvre } from './icone-manoeuvre';
@@ -37,6 +39,12 @@ export interface ArretAAnnoncer {
   reseau: string | null;
   avancementM: number;
   dureeMin: number;
+  /* POUR LE COPILOTE (28/08) : la position ouvre les commodités à la
+     demande, les SOC prévus disent dans quel état on arrive et repart. */
+  lon: number;
+  lat: number;
+  socArrivee: number;
+  socDepart: number;
 }
 
 export interface DemarrageGuidage extends OptionsGuidage {
@@ -111,6 +119,15 @@ export class BandeauGuidage extends HTMLElement {
   /** L'abonnement DeviceOrientation. Nul tant que le geste ne l'a pas ouvert. */
   #boussole: AbortController | null = null;
 
+  /* LE MODE COPILOTE (décision d'Armelin du 28/08) : un panneau pour le
+     PASSAGER pendant le suivi — recharges à venir, événements de la route,
+     arrivée. Le conducteur garde le bandeau épuré ; le copilote a les mains
+     libres. Reconstruit à chaque fixe tant qu'il est ouvert. */
+  #copiloteOuvert = false;
+
+  /** Le dernier état du guidage — le copilote se rafraîchit dessus. */
+  #etat: { avancementM: number; restantM: number; restantS: number } | null = null;
+
   /** La vue inclinée du suivi — un choix de l'usager, retenu pour la session. */
   #en3D = true;
   #surVisibilite = (): void => { void this.#prendreVerrou(); };
@@ -176,6 +193,8 @@ export class BandeauGuidage extends HTMLElement {
                courant et le clic passe au suivant — cap, nord, libre. -->
           <button type="button" class="bg-orientation"
             aria-label="Changer l’orientation de la carte">Cap en haut</button>
+          <button type="button" class="bg-copilote-bouton" aria-pressed="false"
+            aria-label="Ouvrir le panneau du copilote">Copilote</button>
           <button type="button" class="bg-arreter">Arrêter le suivi</button>
         </div>
       </div>
@@ -195,6 +214,19 @@ export class BandeauGuidage extends HTMLElement {
         title="Vitesse limite cartographiée (OpenStreetMap) — travaux et limites variables non connus"
         aria-label="Vitesse limite cartographiée">
         <span class="bg-limite-nombre">50</span></p>
+      <!-- LE PANNEAU DU COPILOTE — au-dessus du bandeau, pour le PASSAGER :
+           consulter et préparer pendant que le conducteur conduit. Rien n'y
+           part tout seul sur le réseau : commodités et météo sont des
+           boutons. -->
+      <section class="bg-copilote" role="region" aria-label="Panneau du copilote" hidden>
+        <div class="bg-copilote-tete">
+          <p class="bg-copilote-titre">Copilote</p>
+          <button type="button" class="bg-copilote-fermer" aria-label="Fermer le panneau du copilote">✕</button>
+        </div>
+        <p class="bg-copilote-note">Pour le passager — le conducteur garde les
+          yeux sur la route.</p>
+        <div class="bg-copilote-corps"></div>
+      </section>
       <!-- LA FRISE DU TRAJET — la « barre verticale » du mandat du 28/08,
            rendue avec ce que la donnée PERMET : des ÉVÉNEMENTS ponctuels
            (arrêts de recharge, Bison Futé), jamais une fluidité en dégradé
@@ -229,6 +261,20 @@ export class BandeauGuidage extends HTMLElement {
       } else if (this.#modeOrientation === 'cap' && this.#capLisse !== null) {
         this.#carte?.easeTo({ bearing: this.#capLisse, duration: 500 });
       }
+    });
+    this.querySelector('.bg-copilote-bouton')?.addEventListener('click', () => {
+      this.#copiloteOuvert = !this.#copiloteOuvert;
+      const panneau = this.querySelector<HTMLElement>('.bg-copilote');
+      if (panneau) panneau.hidden = !this.#copiloteOuvert;
+      this.querySelector('.bg-copilote-bouton')
+        ?.setAttribute('aria-pressed', String(this.#copiloteOuvert));
+      if (this.#copiloteOuvert) this.#majCopilote();
+    });
+    this.querySelector('.bg-copilote-fermer')?.addEventListener('click', () => {
+      this.#copiloteOuvert = false;
+      const panneau = this.querySelector<HTMLElement>('.bg-copilote');
+      if (panneau) panneau.hidden = true;
+      this.querySelector('.bg-copilote-bouton')?.setAttribute('aria-pressed', 'false');
     });
     this.querySelector('.bg-reduire')?.addEventListener('click', () => {
       const reduit = this.classList.toggle('bg-compact');
@@ -297,6 +343,13 @@ export class BandeauGuidage extends HTMLElement {
     this.#options = o;
     const frise = this.querySelector<HTMLElement>('.bg-frise');
     if (frise) { frise.hidden = true; frise.replaceChildren(); }
+    /* Le copilote du trajet précédent ne décrit plus rien : fermé, vidé. */
+    this.#copiloteOuvert = false;
+    this.#etat = null;
+    const copilote = this.querySelector<HTMLElement>('.bg-copilote');
+    if (copilote) copilote.hidden = true;
+    this.querySelector<HTMLElement>('.bg-copilote-corps')?.replaceChildren();
+    this.querySelector('.bg-copilote-bouton')?.setAttribute('aria-pressed', 'false');
     this.hidden = false;
     this.#alerte('');
     /* ON DÉGAGE LA VUE. Volets refermés, et une classe sur le document qui
@@ -539,6 +592,167 @@ export class BandeauGuidage extends HTMLElement {
       : '';
 
     this.#majFrise(e.avancementM, e.restantM);
+    this.#etat = { avancementM: e.avancementM, restantM: e.restantM, restantS: e.restantS };
+    if (this.#copiloteOuvert) this.#majCopilote();
+  }
+
+  /**
+   * Reconstruit le panneau du copilote sur le dernier fixe.
+   *
+   * TOUT EST LOCAL : les arrêts et événements sont déjà en mémoire, la
+   * distance se soustrait. Les seuls appels réseau — commodités d'un arrêt,
+   * météo à l'arrivée — sont des BOUTONS, et leurs réponses SURVIVENT à la
+   * reconstruction : elles se raccrochent par clé, sans quoi le fixe suivant
+   * effacerait ce qu'on vient de demander.
+   */
+  #majCopilote(): void {
+    const corps = this.querySelector<HTMLElement>('.bg-copilote-corps');
+    const o = this.#options;
+    const e = this.#etat;
+    if (!corps || !o || !e) return;
+
+    /* LES RÉPONSES DÉJÀ OBTENUES (commodités par arrêt, météo) se relèvent
+       AVANT le replaceChildren, et se reposent après. */
+    const memoire = new Map<string, HTMLElement>();
+    for (const el of corps.querySelectorAll<HTMLElement>('[data-memoire]')) {
+      memoire.set(el.dataset['memoire']!, el);
+    }
+    corps.replaceChildren();
+
+    const section = (titre: string): void => {
+      const t = document.createElement('p');
+      t.className = 'bg-copilote-section';
+      t.textContent = titre;
+      corps.append(t);
+    };
+
+    // — Les recharges à venir —
+    const restants = o.arrets.filter((a) => a.avancementM > e.avancementM);
+    if (restants.length > 0) {
+      section('Recharges à venir');
+      for (const a of restants) {
+        const carte = document.createElement('div');
+        carte.className = 'bg-copilote-arret';
+        const nom = document.createElement('p');
+        nom.className = 'bg-copilote-arret-nom';
+        nom.textContent = a.nom + (a.reseau ? ` (${a.reseau})` : '');
+        const detail = document.createElement('p');
+        detail.className = 'bg-copilote-arret-detail';
+        detail.textContent = `dans ${formaterDistance(a.avancementM - e.avancementM)}`
+          + ` · prévu : arrivée ${Math.round(a.socArrivee)} % → départ ${Math.round(a.socDepart)} %`
+          + (a.dureeMin > 0 ? ` · ${Math.round(a.dureeMin)} min` : ' · sans recharge');
+        carte.append(nom, detail);
+
+        const cle = `commodites-${a.lon.toFixed(5)},${a.lat.toFixed(5)}`;
+        const deja = memoire.get(cle);
+        if (deja) {
+          carte.append(deja);
+        } else {
+          const voir = document.createElement('button');
+          voir.type = 'button';
+          voir.className = 'bg-copilote-commodites';
+          voir.textContent = 'Commodités sur place';
+          voir.addEventListener('click', () => {
+            voir.disabled = true;
+            voir.textContent = 'Recherche…';
+            chargerCommodites(a.lon, a.lat).then(
+              (trouvees) => {
+                const sortie = document.createElement('p');
+                sortie.className = 'bg-copilote-sortie';
+                sortie.dataset['memoire'] = cle;
+                sortie.textContent = trouvees.length === 0
+                  ? 'Rien de recensé à moins de 400 m.'
+                  : this.#phraseCommodites(trouvees);
+                voir.replaceWith(sortie);
+              },
+              (err: unknown) => {
+                voir.disabled = false;
+                voir.textContent = err instanceof ErreurCommodites
+                  ? err.message : 'Commodités indisponibles — réessayer';
+              },
+            );
+          });
+          carte.append(voir);
+        }
+        corps.append(carte);
+      }
+    }
+
+    // — Les événements de la route, TOUS ceux qui restent devant —
+    const evenements = this.#evenements.filter((v) => v.avancementM > e.avancementM);
+    if (evenements.length > 0) {
+      section('Sur la route (Bison Futé)');
+      const liste = document.createElement('ul');
+      liste.className = 'bg-copilote-evenements';
+      for (const v of evenements) {
+        const item = document.createElement('li');
+        item.textContent = `${v.libelle} — dans ${formaterDistance(v.avancementM - e.avancementM)}`;
+        liste.append(item);
+      }
+      corps.append(liste);
+    }
+
+    // — L'arrivée —
+    section('À l’arrivée');
+    const arrivee = document.createElement('p');
+    arrivee.className = 'bg-copilote-arrivee';
+    const heure = heureArriveeEstimee(e.restantS, new Date());
+    arrivee.textContent = `${formaterDistance(e.restantM)} restants`
+      + (e.restantS > 0 ? ` · ${formaterDuree(Math.round(e.restantS))}` : '')
+      + (heure ? ` · vers ${heure.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : '');
+    corps.append(arrivee);
+
+    const cleMeteo = 'meteo-arrivee';
+    const dejaMeteo = memoire.get(cleMeteo);
+    if (dejaMeteo) {
+      corps.append(dejaMeteo);
+    } else {
+      const meteo = document.createElement('button');
+      meteo.type = 'button';
+      meteo.className = 'bg-copilote-meteo';
+      meteo.textContent = 'Météo à l’arrivée';
+      meteo.addEventListener('click', () => {
+        const destination = o.trace[o.trace.length - 1];
+        if (!destination) return;
+        meteo.disabled = true;
+        meteo.textContent = 'Prévision…';
+        const vise = new Date(Date.now() + (this.#etat?.restantS ?? 0) * 1000);
+        meteoA(destination[0], destination[1], vise).then(
+          (m) => {
+            const sortie = document.createElement('p');
+            sortie.className = 'bg-copilote-sortie';
+            sortie.dataset['memoire'] = cleMeteo;
+            /* AU-DELÀ DE L'HORIZON DE PRÉVISION, ON LE DIT — la même règle
+               que la page météo (revue du 22/08). */
+            sortie.textContent = m.ecartMinutes > ECART_MAX_MINUTES
+              ? 'La prévision ne couvre pas encore l’heure d’arrivée.'
+              : `${phraseMeteo(m)} (Open-Meteo)`;
+            meteo.replaceWith(sortie);
+          },
+          (err: unknown) => {
+            meteo.disabled = false;
+            meteo.textContent = err instanceof ErreurMeteo
+              ? err.message : 'Météo indisponible — réessayer';
+          },
+        );
+      });
+      corps.append(meteo);
+    }
+  }
+
+  /** « restauration (McDonald’s), WC, café » — du texte, pas des icônes :
+      le copilote lit, il ne décode pas. */
+  #phraseCommodites(trouvees: readonly Commodite[]): string {
+    const parType = new Map<string, string[]>();
+    for (const c of trouvees) {
+      const libelle = TYPES_COMMODITE.find((t) => t.cle === c.type)?.libelle ?? c.type;
+      const noms = parType.get(libelle) ?? [];
+      if (c.nom && !noms.includes(c.nom) && noms.length < 3) noms.push(c.nom);
+      parType.set(libelle, noms);
+    }
+    return [...parType.entries()]
+      .map(([libelle, noms]) => (noms.length > 0 ? `${libelle} (${noms.join(', ')})` : libelle))
+      .join(' · ');
   }
 
   /**

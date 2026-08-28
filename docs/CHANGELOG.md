@@ -2,6 +2,34 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.57.0] — 2026-08-28 — Le mode copilote (PR #82)
+
+La troisième décision tranchée du §4 du triage. Sans serveur, pas de second
+appareil : le cadrage honnête est UN PANNEAU POUR LE PASSAGER sur l'appareil
+du suivi — consulter et préparer pendant que le conducteur conduit.
+
+- **Un bouton « Copilote » au bandeau** ouvre un panneau au-dessus de lui,
+  borné à la moitié de l'écran — la route reste la moitié de l'information.
+  Il dit d'emblée pour qui il est : « Pour le passager — le conducteur garde
+  les yeux sur la route. »
+- **Recharges à venir** : chaque arrêt restant du plan — nom, réseau,
+  distance restante vivante, SOC prévus (arrivée → départ), durée — et ses
+  **commodités sur place à la DEMANDE** (un bouton, un appel, la réponse
+  survit aux fixes suivants : elle se raccroche par clé à la
+  reconstruction).
+- **Sur la route** : TOUS les événements Bison Futé encore devant, avec
+  leur distance — le bandeau n'annonce que le prochain, le copilote lit la
+  suite.
+- **À l'arrivée** : restant, durée, heure estimée — et la **météo à
+  l'arrivée sur demande** (Open-Meteo à l'heure d'arrivée ; au-delà de
+  l'horizon de prévision, on le dit — la règle de la page météo).
+- Tout le reste est LOCAL : ouvrir le panneau n'appelle rien (mesuré par un
+  parcours), et il se reconstruit à chaque fixe tant qu'il est ouvert.
+- Les arrêts annoncés au bandeau portent désormais position et SOC prévus —
+  c'est ce qui rend le panneau possible sans un appel de plus.
+
+630 tests unitaires, 201 parcours E2E (+2).
+
 ## [0.56.0] — 2026-08-28 — Les profils de pauses humaines (PR #81)
 
 La deuxième décision tranchée du §4 du triage. Un trajet électrique

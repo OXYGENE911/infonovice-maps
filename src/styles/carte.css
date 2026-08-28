@@ -1402,17 +1402,22 @@ bandeau-guidage.bg-compact .bg-trafic { display: none; }
 }
 
 .bg-boutons { display: flex; gap: 8px; margin-top: 10px; }
-.bg-arreter, .bg-reduire, .bg-3d, .bg-orientation {
+.bg-arreter, .bg-reduire, .bg-3d, .bg-orientation, .bg-copilote-bouton {
   padding: 8px 12px;
   border: 1px solid var(--bord-2); border-radius: 8px; background: var(--fond-doux);
   cursor: pointer; font: 600 13px var(--police); color: var(--texte-1);
 }
 .bg-arreter { flex: 1 1 auto; }
-.bg-reduire, .bg-3d, .bg-orientation { flex: 0 0 auto; }
-.bg-arreter:hover, .bg-reduire:hover, .bg-3d:hover,
-.bg-orientation:hover { border-color: var(--accent); color: var(--accent); }
+.bg-reduire, .bg-3d, .bg-orientation, .bg-copilote-bouton { flex: 0 0 auto; }
+.bg-arreter:hover, .bg-reduire:hover, .bg-3d:hover, .bg-orientation:hover,
+.bg-copilote-bouton:hover { border-color: var(--accent); color: var(--accent); }
 .bg-arreter:focus-visible, .bg-reduire:focus-visible, .bg-3d:focus-visible,
-.bg-orientation:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-orientation:focus-visible,
+.bg-copilote-bouton:focus-visible { outline: none; box-shadow: var(--focus); }
+/* Le bouton du copilote DIT son état : ouvert, il est plein. */
+.bg-copilote-bouton[aria-pressed="true"] {
+  background: var(--accent); border-color: var(--accent); color: var(--blanc);
+}
 /* Quatre boutons sur un petit écran : la rangée s'enroule plutôt que de
    pousser « Arrêter » hors du bandeau. */
 .bg-boutons { flex-wrap: wrap; }
@@ -2115,3 +2120,49 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
   margin: 2px 0 0; font: 400 12px/1.5 var(--police); color: var(--texte-2);
 }
 .recharge-pause-etat:empty { display: none; }
+
+/* --- Le panneau du copilote (décision d'Armelin du 28/08) --- */
+/* AU-DESSUS du bandeau, borné en hauteur : la carte et la route restent la
+   moitié de l'écran — c'est un panneau de passager, pas une page. */
+.bg-copilote {
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 8px);
+  /* DEVANT la frise : elle vient après dans le DOM et se peignait PAR-DESSUS
+     le panneau (pastilles vues sur capture) — et tout ce qu'elle montre est
+     redit ici, en toutes lettres. */
+  z-index: 2;
+  pointer-events: auto;
+  max-height: min(48vh, 420px); overflow-y: auto; overscroll-behavior: contain;
+  padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
+  background: var(--fond); box-shadow: var(--ombre-m);
+}
+.bg-copilote[hidden] { display: none; }
+.bg-copilote-tete { display: flex; align-items: center; justify-content: space-between; }
+.bg-copilote-titre { margin: 0; font: 700 14px var(--police); color: var(--texte-1); }
+.bg-copilote-fermer {
+  width: 30px; height: 30px; border-radius: 8px; border: none;
+  background: none; cursor: pointer; font: 600 13px var(--police); color: var(--texte-2);
+}
+.bg-copilote-fermer:hover { background: var(--fond-doux); color: var(--texte-1); }
+.bg-copilote-fermer:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-copilote-note { margin: 2px 0 8px; font: 400 11.5px/1.5 var(--police); color: var(--texte-3); }
+.bg-copilote-section {
+  margin: 10px 0 4px; font: 700 11px var(--police); color: var(--texte-3);
+  text-transform: uppercase; letter-spacing: .07em;
+}
+.bg-copilote-arret {
+  padding: 8px 10px; margin: 4px 0; border: 1px solid var(--bord);
+  border-radius: 10px; background: var(--fond-doux);
+}
+.bg-copilote-arret-nom { margin: 0; font: 650 13px var(--police); color: var(--texte-1); }
+.bg-copilote-arret-detail { margin: 2px 0 0; font: 400 12.5px/1.5 var(--police); color: var(--texte-2); }
+.bg-copilote-commodites, .bg-copilote-meteo {
+  margin-top: 6px; padding: 6px 11px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond);
+  cursor: pointer; font: 600 12px var(--police); color: var(--texte-2);
+}
+.bg-copilote-commodites:hover, .bg-copilote-meteo:hover { border-color: var(--accent); color: var(--accent); }
+.bg-copilote-commodites:focus-visible,
+.bg-copilote-meteo:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-copilote-sortie { margin: 6px 0 0; font: 400 12.5px/1.5 var(--police); color: var(--texte-2); }
+.bg-copilote-evenements { margin: 0; padding-left: 18px; font: 400 12.5px/1.6 var(--police); color: var(--texte-2); }
+.bg-copilote-arrivee { margin: 0; font: 500 13px var(--police); color: var(--texte-1); }
