@@ -203,6 +203,38 @@ test('la réserve du modèle est écrite sous le plan, jamais sous-entendue', as
   await expect(corps, 'le seuil de l’index doit être annoncé').toContainText('50 kW et plus');
 });
 
+test('« Pourquoi ce plan ? » explique avec ce qu’on SAIT — consignes, critère, aveu', async ({ page }) => {
+  /* Mandat UX du 28/08 (PR UX-4). L'explication n'a droit qu'aux données du
+     calcul : les consignes de l'usager, le critère réel du choix de borne
+     (lib/arrets.ts), la puissance RETENUE, l'écart au tracé — et l'aveu du
+     modèle. Jamais « plus fiable » ni « meilleur choix » sans critère. */
+  await simulerIndexBornes(page, [BEAUNE]);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
+
+  const volet = corps.locator('.recharge-pourquoi');
+  await volet.locator('summary').click();
+  // Les consignes de l'usager, reprises en toutes lettres.
+  await expect(volet).toContainText('Vos consignes');
+  await expect(volet).toContainText('votre réserve');
+  // Le critère du choix — celui que le planificateur calcule VRAIMENT.
+  await expect(volet).toContainText('compromis distance gagnée / puissance / détour');
+  // La puissance retenue est NOMMÉE : min(borne, véhicule) = 150 kW ici.
+  await expect(volet).toContainText('150 kW retenus');
+  // Et l'aveu du modèle clôt l'explication.
+  await expect(volet).toContainText('ni relief, ni vent, ni trafic');
+
+  /* LE PLAFOND N'EST DIT QUE S'IL EXISTE : à « au besoin » (100), pas une
+     ligne — puis choisi à 80 %, la consigne apparaît. */
+  await expect(volet).not.toContainText('au-delà de');
+  await page.getByLabel('Plafond de charge aux bornes').selectOption('80');
+  await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
+  await corps.locator('.recharge-pourquoi summary').click();
+  await expect(corps.locator('.recharge-pourquoi'))
+    .toContainText('ne jamais charger au-delà de 80 %');
+});
+
 test('AUCUN appel tant que la section est repliée — les quotas sont un bien commun', async ({ page }) => {
   let appels = 0;
   await page.route('**/public.opendatasoft.com/**', (route) => {

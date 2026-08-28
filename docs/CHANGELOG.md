@@ -2,6 +2,25 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.47.0] — 2026-08-28 — « Pourquoi ce plan ? » (PR #72)
+
+Quatrième PR du mandat UX du 28/08 (UX-4). Un plan de recharge qui ne
+s'explique pas se subit ; celui qui invente des raisons — « plus fiable »,
+« meilleur choix » — ment. Le volet n'explique qu'avec ce que le calcul SAIT.
+
+- **Un volet discret sous le résumé du plan** : les consignes de l'usager
+  reprises en toutes lettres (SOC de départ, réserve, plafond — seulement
+  s'il existe —, cible d'arrivée) ; ses choix quand il y en a (réseaux
+  cochés, arrêts imposés, bornes écartées au « − ») ;
+- **chaque arrêt motivé** avec le critère que le planificateur calcule
+  vraiment (compromis distance gagnée / puissance / détour — lib/arrets.ts),
+  le SOC d'arrivée, la charge et son plafond, la puissance RETENUE (minimum
+  borne/véhicule, l'écart nommé quand la borne offre plus), le détour ;
+- **l'aveu du modèle en clôture** : à plat, à consommation constante — ni
+  relief, ni vent, ni trafic, ni courbe de charge réelle.
+
+568 tests unitaires, 178 parcours E2E (+1).
+
 ## [0.46.0] — 2026-08-28 — La fiche de destination (PR #71)
 
 Troisième PR du mandat UX du 28/08 (UX-2, état « destination sélectionnée »).
