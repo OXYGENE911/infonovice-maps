@@ -525,8 +525,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #77 — « Le plus rapide / Le plus court » : les profils de trajet
       cadrés par la mesure (le moteur ne connaît que fastest/shortest) ;
       le réglage voyage dans le lien partagé (;opt=shortest).
-      TOUTES LES CANDIDATES DU TRIAGE DU 28/08 SONT SOLDÉES — ne restent
-      que les décisions d'Armelin (§4 du triage).
+      TOUTES LES CANDIDATES DU TRIAGE DU 28/08 SONT SOLDÉES.
+- [x] PR #78 — BS-1, les feuilles basses (DÉCISION D'ARMELIN du 28/08 :
+      « commence par les bottom sheets ») : planificateur et menu ancrés en
+      bas sur téléphone, poignée, paliers mi/plein/fermer, rien ne change
+      sur grand écran. BS-2 (fiches borne/lieu) si l'essai convainc.
 - DÉCISIONS D'ARMELIN : bottom sheets généralisées ; profils de pauses ;
   copilote / routines / arrivée réelle (§4 du triage).
 
