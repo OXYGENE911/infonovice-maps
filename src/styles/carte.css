@@ -2087,3 +2087,30 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
 /* --- Le repère saisi PAR ADRESSE (retour d'Armelin du 29/08) --- */
 .fav-repere-saisie { margin: 4px 0 8px; }
 .fav-repere-saisie .recherche input { width: 100%; box-sizing: border-box; }
+
+/* --- Les routines locales (décision d'Armelin du 29/08) --- */
+.iti-routines { display: flex; flex-wrap: wrap; gap: 6px; }
+.iti-routine {
+  padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--accent); background: var(--bleu-50);
+  cursor: pointer; font: 650 12.5px var(--police); color: var(--bleu-700);
+}
+.iti-routine:hover { background: var(--accent); color: var(--blanc); }
+.iti-routine:focus-visible { outline: none; box-shadow: var(--focus); }
+@media (prefers-color-scheme: dark) {
+  .iti-routine { background: #14263A; color: var(--bleu-100); }
+}
+/* `[hidden]` doit GAGNER sur le display:flex — le piège .iti-raccourcis,
+   encore : l'attribut était posé et l'élément s'affichait quand même. */
+.favoris-habitudes[hidden] { display: none; }
+.favoris-habitudes {
+  display: flex; align-items: center; gap: 8px; margin: 8px 0 0;
+  font: 400 11.5px/1.5 var(--police); color: var(--texte-3);
+}
+.favoris-habitudes-oubli {
+  padding: 4px 9px; border-radius: 8px; border: 1px solid var(--bord);
+  background: var(--fond); cursor: pointer; font: 500 11.5px var(--police);
+  color: var(--texte-2); flex: 0 0 auto;
+}
+.favoris-habitudes-oubli:hover { border-color: #C0564A; color: #C0564A; }
+.favoris-habitudes-oubli:focus-visible { outline: none; box-shadow: var(--focus); }

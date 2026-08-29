@@ -534,6 +534,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #88 — les routines locales (DÉCISION d'Armelin du 29/08) : repères
+      au bon moment + habitudes apprises localement (3 trajets = 1 routine),
+      visibles et effaçables d'un bouton — jamais hors de l'appareil.
 - [x] PR #87 — le recalcul automatique hors-route (demande du 29/08) : le
       bandeau constate l'écart qui dure, le planificateur refait depuis la
       position, le suivi repart tout seul — étapes passées abandonnées.
