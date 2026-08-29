@@ -13,6 +13,7 @@
 import type { Map as CarteMapLibre, GeoJSONSource, MapGeoJSONFeature } from 'maplibre-gl';
 import { Popup } from 'maplibre-gl';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
+import { pictoMenu } from './icone-menu';
 import {
   chargerTrafic, chargerDetail, libelleType, couleurType, ErreurTrafic,
   type EvenementRoute,
@@ -67,7 +68,7 @@ export class PanneauTrafic extends HTMLElement {
     if (this.firstElementChild) return;
     this.innerHTML = `
       <details class="trafic">
-        <summary aria-label="Afficher l’info trafic">Trafic</summary>
+        <summary aria-label="Afficher l’info trafic">${pictoMenu('trafic')}Trafic</summary>
         <fieldset>
           <legend>Info trafic</legend>
           <label><input type="checkbox" class="trafic-case">

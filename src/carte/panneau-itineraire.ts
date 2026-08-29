@@ -18,6 +18,7 @@ import { adresseInverse, type ResultatAdresse } from '../lib/adresse';
 import { versGPX, versKML, telecharger } from '../lib/trace';
 import { versFragment, depuisFragment } from '../lib/partage-url';
 import { installerFeuilleBasse } from './feuille-basse';
+import { pictoMenu } from './icone-menu';
 import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
 import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
@@ -341,7 +342,7 @@ export class PanneauItineraire extends HTMLElement {
   connectedCallback(): void {
     this.innerHTML = `
       <details class="iti surface-de-travail">
-        <summary aria-label="Ouvrir le planificateur d’itinéraire">Itinéraire</summary>
+        <summary aria-label="Ouvrir le planificateur d’itinéraire">${pictoMenu('itineraire')}Itinéraire</summary>
         <div class="iti-corps">
 
           <!-- LA TÊTE DE NAVIGATION. Une seule page à l'écran, un titre qui
@@ -419,11 +420,11 @@ export class PanneauItineraire extends HTMLElement {
                  vides. -->
             <nav class="iti-menu iti-menu-toujours" aria-label="Réglages">
               <button type="button" class="iti-vers" data-vers="vehicule">
-                <span>Mon véhicule</span><span aria-hidden="true">›</span></button>
+                ${pictoMenu('vehicule')}<span>Mon véhicule</span><span aria-hidden="true">›</span></button>
               <button type="button" class="iti-vers" data-vers="couches">
-                <span>Recharge et services</span><span aria-hidden="true">›</span></button>
+                ${pictoMenu('couches')}<span>Recharge et services</span><span aria-hidden="true">›</span></button>
               <button type="button" class="iti-vers" data-vers="options">
-                <span>Options du trajet</span><span aria-hidden="true">›</span></button>
+                ${pictoMenu('options')}<span>Options du trajet</span><span aria-hidden="true">›</span></button>
             </nav>
 
             <!-- LE MENU S'EST ALLÉGÉ LE 29/08, sur les retours d'Armelin :
@@ -434,13 +435,13 @@ export class PanneauItineraire extends HTMLElement {
                  tout en bas d'un menu à rallonge, « on peut vite l'oublier ». -->
             <nav class="iti-menu" aria-label="Détails du trajet" hidden>
               <button type="button" class="iti-vers" data-vers="recharge">
-                <span>Arrêts de recharge</span><span aria-hidden="true">›</span></button>
+                ${pictoMenu('recharge')}<span>Arrêts de recharge</span><span aria-hidden="true">›</span></button>
               <button type="button" class="iti-vers" data-vers="monuments">
-                <span>Lieux d’exception</span><span aria-hidden="true">›</span></button>
+                ${pictoMenu('monuments')}<span>Lieux d’exception</span><span aria-hidden="true">›</span></button>
               <button type="button" class="iti-vers" data-vers="feuille">
-                <span>Feuille de route</span><span aria-hidden="true">›</span></button>
+                ${pictoMenu('feuille')}<span>Feuille de route</span><span aria-hidden="true">›</span></button>
               <button type="button" class="iti-vers iti-vers-partage" data-vers="partage">
-                <span>Partager ou exporter</span><span aria-hidden="true">›</span></button>
+                ${pictoMenu('partage')}<span>Partager ou exporter</span><span aria-hidden="true">›</span></button>
             </nav>
 
             <!-- « EFFACER » N'EXISTE QUE S'IL Y A QUELQUE CHOSE À EFFACER —
