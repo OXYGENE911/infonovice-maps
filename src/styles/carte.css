@@ -744,9 +744,10 @@ etat-connexion { display: contents; }
   font: 500 13px var(--police); color: var(--texte-1);
 }
 .fav-repere-aller:disabled { opacity: .5; cursor: default; }
-.fav-repere-aller:focus-visible, .fav-repere-oubli:focus-visible {
+.fav-repere-aller:focus-visible, .fav-repere-adresse:focus-visible,
+.fav-repere-oubli:focus-visible {
   outline: none; box-shadow: var(--focus); }
-.fav-repere-oubli {
+.fav-repere-adresse, .fav-repere-oubli {
   padding: 5px 9px; border-radius: 8px; border: 1px solid var(--bord);
   background: var(--fond); cursor: pointer; font: 500 12px var(--police);
   color: var(--texte-2);
@@ -2073,3 +2074,7 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
 .bg-copilote-sortie { margin: 6px 0 0; font: 400 12.5px/1.5 var(--police); color: var(--texte-2); }
 .bg-copilote-evenements { margin: 0; padding-left: 18px; font: 400 12.5px/1.6 var(--police); color: var(--texte-2); }
 .bg-copilote-arrivee { margin: 0; font: 500 13px var(--police); color: var(--texte-1); }
+
+/* --- Le repère saisi PAR ADRESSE (retour d'Armelin du 29/08) --- */
+.fav-repere-saisie { margin: 4px 0 8px; }
+.fav-repere-saisie .recherche input { width: 100%; box-sizing: border-box; }
