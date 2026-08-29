@@ -649,5 +649,29 @@ Sources : [ABRP — Live data via Enode](https://abrp.featurebase.app/help/artic
 
 ---
 
+## Photos des lieux d'exception — pistes mesurées (29/08/2026)
+
+La question d'Armelin du 29/08 : afficher une ou plusieurs photos d'un
+monument dans la liste des Lieux d'exception — « comment les récupérer
+automatiquement et sur quelle base de données se positionner ? ». Trois
+pistes sondées par appels réels, sur un échantillon de 24 monuments
+CLASSÉS tirés de l'index à pas régulier (métropole) :
+
+| Piste | Couverture mesurée | Verdict |
+|---|---|---|
+| **Wikimedia Commons via Wikidata** (P380 réf. Mérimée → P18 image) | **23/24 (96 %)** | vraies photos cadrées du monument (héritage « Wiki Loves Monuments ») ; sans clé, CORS `origin=*`, licences libres AVEC attribution obligatoire. MAIS fondation américaine : **dérogation souveraineté**, même chemin qu'Open-Meteo — décision d'Armelin + mention publique |
+| **Panoramax** (`api.panoramax.xyz`, déjà approuvée) | 18/24 (75 %) à ≤ 150 m | photos DE RUE, pas cadrées sur le monument ; souverain, zéro décision à prendre — conviendrait à un bouton « Voir la rue », pas à illustrer une notice |
+| **POP / base Mémoire** (ministère de la Culture) | — | `api.pop.culture.gouv.fr` : 404 sur les motifs documentés, AUCUN en-tête CORS ; et les photos Mémoire sont © Médiathèque du patrimoine — droits NON libres, inutilisables même si l'API répondait |
+
+La requête Wikidata coûterait UN appel SPARQL par page de résultats (les
+références en lot), puis les vignettes viennent de `upload.wikimedia.org`
+(`Special:FilePath/<nom>?width=320`) — deux origines à déclarer en CSP
+(connect-src + img-src), attribution (auteur, licence) affichée sous
+chaque image via `extmetadata`. Frugalité : photos chargées à l'OUVERTURE
+de la notice seulement, jamais en lot.
+
+RIEN N'EST LIVRÉ : la voie à 96 % demande la dérogation. C'est une
+DÉCISION d'Armelin, pas un choix technique.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.
