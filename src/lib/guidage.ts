@@ -22,7 +22,33 @@ import type { EtapeRoute } from './feuille-de-route';
 import { situerSurLeTrace } from './le-long-du-trajet';
 
 /** Au-delà de cet écart au tracé, on ne prétend plus suivre l'itinéraire. */
-export const ECART_HORS_ROUTE_M = 150;
+/* CENT-CINQUANTE MÈTRES ÉTAIENT TROP INDULGENTS. Armelin, le 29/08, capture
+   à l'appui : « quand on se trompe de destination, le recalcul automatique
+   intervient trop tardivement — j'ai pu faire le tour d'un rond-point et
+   m'écarter du trajet sans que le recalcul intervienne ». À 150 m, on a le
+   temps de prendre une rue entière avant que l'application s'en aperçoive.
+   QUATRE-VINGTS EST LE PLANCHER RAISONNABLE, et il se justifie : un
+   récepteur de téléphone donne 5 à 15 m en ville dégagée, 30 à 50 dans une
+   rue encaissée ; deux rues parallèles sont rarement à moins de 40 m. En
+   dessous, on annoncerait « vous avez quitté l'itinéraire » à des gens qui
+   roulent droit. */
+export const ECART_HORS_ROUTE_M = 80;
+
+/**
+ * Part-on à CONTRESENS ? — PURE.
+ *
+ * L'ÉCART AU TRACÉ NE VOIT PAS TOUT : après un tour de rond-point, on
+ * repart sur la même route, à deux mètres du tracé — parfaitement « sur
+ * l'itinéraire », et dans le mauvais sens. Ce que l'on constate alors,
+ * c'est que l'avancement RECULE. Cent cinquante mètres de recul ne sont
+ * pas du bruit de récepteur (il se compte en dizaines de mètres) : c'est
+ * un demi-tour.
+ */
+export function partiAContresens(
+  avancementM: number, maxAtteintM: number, margeM = 150,
+): boolean {
+  return maxAtteintM - avancementM > margeM;
+}
 
 export interface Position { lon: number; lat: number }
 
@@ -37,11 +63,25 @@ export interface EtatGuidage {
   restantM: number;
   /** Durée restante estimée, en secondes. */
   restantS: number;
-  /** L'instruction en cours, `null` si la feuille de route manque. */
+  /** L'étape en cours — la ROUTE SUR LAQUELLE ON ROULE, pas ce qui vient. */
   etape: EtapeRoute | null;
-  /** Mètres jusqu'à la fin de l'étape courante — donc jusqu'à la manœuvre. */
+  /**
+   * LA MANŒUVRE À ANNONCER, et c'est elle qu'il faut afficher.
+   *
+   * LE DÉFAUT QU'ELLE CORRIGE (Armelin, 29/08, captures à l'appui : « le GPS
+   * confond sa gauche et sa droite pendant la navigation »). Le service rend
+   * l'instruction du DÉBUT de chaque étape et la longueur qui SUIT —
+   * vérifié sur une réponse réelle : `depart` puis 30 m, `turn sharp left`
+   * puis 46 m, `turn right` puis 205 m… Tant qu'on roule dans l'étape i, la
+   * manœuvre déjà faite est celle de l'étape i ; celle qui ARRIVE est celle
+   * de l'étape i+1. Le bandeau affichait la première avec la distance de la
+   * seconde : « tournez à droite dans 200 m » quand la route tournait à
+   * gauche — une manœuvre de retard, systématiquement.
+   */
+  manoeuvre: EtapeRoute | null;
+  /** Mètres jusqu'à cette manœuvre — la fin de l'étape courante. */
   jusquALaManoeuvreM: number;
-  /** L'instruction d'après, pour anticiper. `null` à la dernière. */
+  /** L'instruction d'après CELLE-CI, pour préparer l'enchaînement. */
   suivante: EtapeRoute | null;
 }
 
@@ -101,7 +141,11 @@ export function etatGuidage(o: OptionsGuidage, p: Position): EtatGuidage {
 
   const situe = etapeAlAvancement(o.etapes, avancement);
   const etape = situe ? o.etapes[situe.index] ?? null : null;
-  const suivante = situe ? o.etapes[situe.index + 1] ?? null : null;
+  /* CE QUI ARRIVE, c'est l'instruction de l'étape SUIVANTE. À la dernière,
+     il n'y a plus rien après : l'étape courante — « Vous êtes arrivé » —
+     est alors la bonne réponse. */
+  const manoeuvre = situe ? o.etapes[situe.index + 1] ?? etape : null;
+  const suivante = situe ? o.etapes[situe.index + 2] ?? null : null;
 
   return {
     avancementM: avancement,
@@ -110,6 +154,7 @@ export function etatGuidage(o: OptionsGuidage, p: Position): EtatGuidage {
     restantM,
     restantS: duree * part,
     etape,
+    manoeuvre,
     jusquALaManoeuvreM: situe ? Math.max(0, situe.finM - avancement) : 0,
     suivante,
   };

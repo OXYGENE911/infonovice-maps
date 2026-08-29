@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   etapeAlAvancement, etatGuidage, distanceEnMots, heureArriveeEstimee,
-  ECART_HORS_ROUTE_M, type OptionsGuidage,
+  ECART_HORS_ROUTE_M, partiAContresens, type OptionsGuidage,
 } from '../src/lib/guidage';
 import type { EtapeRoute } from '../src/lib/feuille-de-route';
 
@@ -97,13 +97,18 @@ describe('etatGuidage', () => {
     expect(e.horsRoute).toBe(false);
   });
 
-  it('donne la manœuvre en cours, la distance qui l’en sépare, et la suivante', () => {
+  it('donne l’étape en cours, la manœuvre annoncée, et la distance qui l’en sépare', () => {
+    /* `suivante` a changé de sens avec le correctif du 29/08 : c'est
+       désormais la manœuvre d'APRÈS celle qu'on annonce, pour préparer un
+       enchaînement. Avec deux étapes, il n'y a donc rien après. */
     const e = etatGuidage(
       options([etape('Partez', 55_000), etape('Tournez à gauche', 56_000)]),
       { lon: 2.0, lat: 48.4 },
     );
     expect(e.etape?.texte).toBe('Partez');
-    expect(e.suivante?.texte).toBe('Tournez à gauche');
+    expect(e.manoeuvre?.texte, 'c’est la PROCHAINE manœuvre qu’on annonce')
+      .toBe('Tournez à gauche');
+    expect(e.suivante).toBeNull();
     expect(e.jusquALaManoeuvreM).toBeGreaterThan(0);
   });
 
@@ -173,5 +178,99 @@ describe('heureArriveeEstimee', () => {
   it('rend null sur une durée absurde plutôt qu’une date de fantaisie', () => {
     expect(heureArriveeEstimee(Number.NaN, t)).toBeNull();
     expect(heureArriveeEstimee(-1, t)).toBeNull();
+  });
+});
+
+/* LA MANŒUVRE ANNONCÉE — le défaut le plus grave trouvé jusqu'ici, relevé
+ * par Armelin au volant le 29/08, captures à l'appui : « le GPS confond sa
+ * gauche et sa droite pendant la navigation ». Il ne les confondait pas :
+ * il avait UNE MANŒUVRE DE RETARD. Le service rend l'instruction du DÉBUT
+ * de chaque étape et la longueur qui SUIT (vérifié sur réponse réelle :
+ * `depart` puis 30 m, `turn sharp left` puis 46 m, `turn right` puis
+ * 205 m…). Afficher l'étape COURANTE, c'était nommer ce qu'on venait de
+ * faire — avec la distance de ce qui arrivait.
+ */
+describe('etatGuidage — la manœuvre annoncée', () => {
+  const etapes = [
+    { texte: 'Départ', voie: 'Rue du Départ', distance: 1000 },
+    { texte: 'Tournez à droite', voie: 'D606', distance: 500 },
+    { texte: 'Tournez à gauche', voie: 'Avenue des Tilleuls', distance: 300 },
+    { texte: 'Vous êtes arrivé', voie: '', distance: 0 },
+  ];
+  // 111 km par degré : l'avancement en mètres se pose en latitude.
+  const aM = (m: number): { lon: number; lat: number } =>
+    ({ lon: 2.0, lat: 48.0 + m / 111_000 });
+
+  it('annonce CE QUI ARRIVE, jamais ce qu’on vient de faire', () => {
+    const e = etatGuidage(options(etapes), aM(300));
+    expect(e.etape?.texte, 'l’étape courante reste celle où l’on roule').toBe('Départ');
+    expect(e.manoeuvre?.texte, 'la manœuvre annoncée doit être la PROCHAINE')
+      .toBe('Tournez à droite');
+    // …et la distance est bien celle qui mène à CETTE manœuvre.
+    expect(e.jusquALaManoeuvreM).toBeGreaterThan(698);
+    expect(e.jusquALaManoeuvreM).toBeLessThan(702);
+  });
+
+  it('la voie annoncée est celle où l’on VA, pas celle qu’on quitte', () => {
+    const e = etatGuidage(options(etapes), aM(300));
+    expect(e.etape?.voie).toBe('Rue du Départ');
+    expect(e.manoeuvre?.voie).toBe('D606');
+  });
+
+  it('avance d’une manœuvre à l’autre au fil du trajet', () => {
+    expect(etatGuidage(options(etapes), aM(1200)).manoeuvre?.texte).toBe('Tournez à gauche');
+    expect(etatGuidage(options(etapes), aM(1600)).manoeuvre?.texte).toBe('Vous êtes arrivé');
+  });
+
+  it('à la DERNIÈRE étape, il n’y a plus rien après : on garde l’arrivée', () => {
+    const e = etatGuidage(options(etapes), aM(99_999));
+    expect(e.manoeuvre?.texte).toBe('Vous êtes arrivé');
+    expect(e.suivante).toBeNull();
+  });
+
+  it('« suivante » sert l’enchaînement : la manœuvre d’APRÈS celle annoncée', () => {
+    const e = etatGuidage(options(etapes), aM(300));
+    expect(e.suivante?.texte).toBe('Tournez à gauche');
+  });
+
+  it('sans feuille de route, aucune manœuvre n’est inventée', () => {
+    const e = etatGuidage(options([]), aM(300));
+    expect(e.manoeuvre).toBeNull();
+    expect(e.etape).toBeNull();
+  });
+});
+
+/* LE RECALCUL QUI ARRIVE TROP TARD — Armelin, le 29/08, capture à l'appui :
+ * « j'ai pu faire le tour d'un rond-point et m'écarter du trajet sans que le
+ * recalcul intervienne ». Deux causes, deux remèdes : un seuil d'écart trop
+ * indulgent (150 m), et l'aveuglement au demi-tour — on repart en arrière SUR
+ * le tracé, l'écart ne voit rien. */
+describe('partiAContresens', () => {
+  it('constate le recul franc : c’est un demi-tour, pas du bruit', () => {
+    expect(partiAContresens(1_000, 1_400)).toBe(true);
+  });
+
+  it('reste muet sous la marge — un récepteur tremble de dizaines de mètres', () => {
+    expect(partiAContresens(1_390, 1_400)).toBe(false);
+    expect(partiAContresens(1_300, 1_400)).toBe(false);
+    // Pile à la marge : on ne déclenche pas — l'inégalité est stricte.
+    expect(partiAContresens(1_250, 1_400)).toBe(false);
+  });
+
+  it('ne dit jamais contresens quand on AVANCE', () => {
+    expect(partiAContresens(1_500, 1_400)).toBe(false);
+    expect(partiAContresens(0, 0)).toBe(false);
+  });
+});
+
+describe('ECART_HORS_ROUTE_M', () => {
+  it('est descendu à 80 m — 150 laissait prendre une rue entière', () => {
+    expect(ECART_HORS_ROUTE_M).toBe(80);
+  });
+
+  it('reste au-dessus du tremblement d’un récepteur en rue encaissée', () => {
+    /* 30 à 50 m en ville dense : en dessous, on annoncerait « vous avez
+       quitté l'itinéraire » à des gens qui roulent droit. */
+    expect(ECART_HORS_ROUTE_M).toBeGreaterThan(50);
   });
 });

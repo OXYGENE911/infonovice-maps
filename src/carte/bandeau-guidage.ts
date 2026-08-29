@@ -26,6 +26,7 @@ import {
 } from '../lib/orientation';
 import {
   etatGuidage, distanceEnMots, heureArriveeEstimee, type OptionsGuidage,
+  partiAContresens,
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
 import { chargerCommodites, ErreurCommodites, TYPES_COMMODITE, type Commodite } from '../lib/commodites';
@@ -149,6 +150,8 @@ export class BandeauGuidage extends HTMLElement {
      mitraille pendant qu'on cherche une sortie serait pire que l'ancien
      message. */
   #horsRouteDepuis: number | null = null;
+  /** Le plus loin qu'on soit allé sur le tracé — voir `partiAContresens`. */
+  #avancementMax = 0;
 
   /* −Infinity, PAS zéro : performance.now() démarre à zéro AVEC la page, et
      un garde « > 30 s depuis le dernier » initialisé à zéro interdisait tout
@@ -419,6 +422,7 @@ export class BandeauGuidage extends HTMLElement {
     this.#etat = null;
     this.#horsRouteDepuis = null;
     this.#dernierRecalculMs = Number.NEGATIVE_INFINITY;
+    this.#avancementMax = 0;
     const copilote = this.querySelector<HTMLElement>('.bg-copilote');
     if (copilote) copilote.hidden = true;
     this.querySelector<HTMLElement>('.bg-copilote-corps')?.replaceChildren();
@@ -633,8 +637,8 @@ export class BandeauGuidage extends HTMLElement {
     /* LA FLÈCHE SUIT L'ÉTAPE — et disparaît hors route ou sans feuille :
        une flèche qui pointe au hasard est pire qu'aucune. */
     const fleche = this.querySelector('.bg-fleche') as HTMLElement;
-    if (!e.horsRoute && e.etape) {
-      fleche.innerHTML = flecheManoeuvre(e.etape.manoeuvre);
+    if (!e.horsRoute && e.manoeuvre) {
+      fleche.innerHTML = flecheManoeuvre(e.manoeuvre.manoeuvre);
       fleche.hidden = false;
     } else {
       fleche.hidden = true;
@@ -645,11 +649,16 @@ export class BandeauGuidage extends HTMLElement {
        ou trajet terminé — il s'efface au lieu de flotter à vide. */
     const cartouche = this.querySelector('.bg-cartouche') as HTMLElement;
     const ecusson = this.querySelector('.bg-ecusson') as HTMLElement;
+    /* DEUX VOIES, ET ELLES NE SONT PAS LA MÊME : le cartouche annonce celle
+       où l'on VA (la voie de la manœuvre à venir), la barre du bas nomme
+       celle où l'on EST. Les confondre, c'est afficher le nom de la rue
+       qu'on quitte au-dessus de la flèche qui en sort. */
     const voieCourante = e.horsRoute ? '' : (e.etape?.voie ?? '');
-    const classe = classeRoute(voieCourante);
-    cartouche.hidden = !e.etape && !e.horsRoute;
+    const voieVisee = e.horsRoute ? '' : (e.manoeuvre?.voie ?? voieCourante);
+    const classe = classeRoute(voieVisee);
+    cartouche.hidden = !e.manoeuvre && !e.horsRoute;
     cartouche.dataset['classe'] = classe;
-    const numero = numeroRoute(voieCourante);
+    const numero = numeroRoute(voieVisee);
     ecusson.textContent = numero;
     ecusson.hidden = numero === '';
     /* L'écusson est un signe : il se DIT en toutes lettres à qui écoute la
@@ -667,26 +676,53 @@ export class BandeauGuidage extends HTMLElement {
       instruction.textContent = 'Vous avez quitté l’itinéraire.';
       distance.textContent = `À ${formaterDistance(e.ecartM)} du trajet`;
       this.#alerte('Nouvel itinéraire depuis votre position dans un instant…');
+      /* PLUS VITE QU'AVANT (29/08) : quatre secondes de constat au lieu de
+         huit, et quinze secondes entre deux recalculs au lieu de trente.
+         Le premier chiffre décidait du temps perdu à rouler sur une route
+         qu'on ne suit plus ; le second n'a jamais servi qu'à ne pas
+         marteler le service, et quinze secondes y suffisent. */
       const maintenant = performance.now();
-      if (e.ecartM > 50) {
-        if (this.#horsRouteDepuis === null) this.#horsRouteDepuis = maintenant;
-        else if (maintenant - this.#horsRouteDepuis > 8_000
-          && maintenant - this.#dernierRecalculMs > 30_000) {
-          this.#dernierRecalculMs = maintenant;
-          document.dispatchEvent(new CustomEvent('recalcul-hors-route', {
-            detail: { lon, lat },
-          }));
-        }
+      if (this.#horsRouteDepuis === null) this.#horsRouteDepuis = maintenant;
+      else if (maintenant - this.#horsRouteDepuis > 4_000
+        && maintenant - this.#dernierRecalculMs > 15_000) {
+        this.#dernierRecalculMs = maintenant;
+        this.#avancementMax = 0;
+        document.dispatchEvent(new CustomEvent('recalcul-hors-route', {
+          detail: { lon, lat },
+        }));
       }
     } else {
       this.#horsRouteDepuis = null;
+      /* SUR LE TRACÉ, MAIS DANS QUEL SENS ? Un tour de rond-point ramène à
+         deux mètres du tracé, en marche arrière : l'écart ne voit rien,
+         l'avancement, lui, recule. On le constate, et on refait le trajet
+         depuis ici — c'est le cas qu'Armelin a filmé le 29/08. */
+      if (partiAContresens(e.avancementM, this.#avancementMax)) {
+        const maintenant = performance.now();
+        if (maintenant - this.#dernierRecalculMs > 15_000) {
+          this.#dernierRecalculMs = maintenant;
+          this.#avancementMax = e.avancementM;
+          this.#alerte('Vous repartez en arrière — nouvel itinéraire depuis votre position…');
+          document.dispatchEvent(new CustomEvent('recalcul-hors-route', {
+            detail: { lon, lat },
+          }));
+          return;
+        }
+      }
+      this.#avancementMax = Math.max(this.#avancementMax, e.avancementM);
       this.#alerte('');
       /* LA VOIE NE SE REDIT PLUS ICI : elle porte l'écusson du cartouche et
          le bas du bandeau. « Tournez à droite — D606 » sur trois lignes
          dans un cartouche large de deux cent quatre-vingts pixels était la
          même information écrite trois fois. */
-      instruction.textContent = e.etape ? e.etape.texte : 'Suivez l’itinéraire';
-      distance.textContent = e.etape ? distanceEnMots(e.jusquALaManoeuvreM) : '';
+      /* ON ANNONCE CE QUI ARRIVE, PAS CE QU'ON VIENT DE FAIRE. Voir
+         `manoeuvre` dans lib/guidage : le service donne l'instruction du
+         DÉBUT d'étape et la longueur qui suit — afficher l'étape courante
+         revenait à nommer la manœuvre déjà exécutée, avec la distance de
+         la prochaine. « Le GPS confond sa gauche et sa droite » (Armelin,
+         29/08) : il ne les confondait pas, il avait un tour de retard. */
+      instruction.textContent = e.manoeuvre ? e.manoeuvre.texte : 'Suivez l’itinéraire';
+      distance.textContent = e.manoeuvre ? distanceEnMots(e.jusquALaManoeuvreM) : '';
     }
 
     /* L'ARRIVÉE RÉELLE (décision d'Armelin du 29/08) : l'heure affichée
