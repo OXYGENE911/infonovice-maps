@@ -219,20 +219,34 @@ body { font-family: var(--police); background: var(--fond); }
   font: 700 11px var(--police); color: var(--texte-3);
   text-transform: uppercase; letter-spacing: .07em; }
 .iti-profils, .iti-optimisations { display: flex; gap: 8px; }
-.iti-profil { flex: 1; }
+/* PIC-2 (29/08) — LES OPTIONS PORTENT LEURS PICTOS. La bascule s'écrit
+   désormais en frère GÉNÉRAL (`~ span`) et non plus adjacent (`+ span`) :
+   le picto s'est glissé entre la case et le libellé, et `+` ne franchit
+   pas un frère. Le voisin direct aurait silencieusement cessé de peindre
+   l'état coché — un réglage qui ne se voit plus n'est plus un réglage. */
+.iti-profil { flex: 1; position: relative; }
 .iti-profil input { position: absolute; opacity: 0; width: 0; height: 0; }
 .iti-profil span {
   display: block; text-align: center; padding: 8px 0; border-radius: 10px;
   border: 1px solid var(--bord-2); font: 600 13px var(--police);
   color: var(--texte-2); cursor: pointer;
 }
-.iti-profil input:checked + span {
+/* Le picto se pose DANS le cadre du libellé, à sa gauche : il l'annonce,
+   il ne le remplace pas (variante A, choisie le 29/08). */
+.iti-profil { display: flex; align-items: center; }
+.iti-profil .picto-menu {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  width: 17px; height: 17px; color: var(--texte-3); pointer-events: none;
+}
+.iti-profil span { flex: 1; padding-left: 30px; }
+.iti-profil input:checked ~ span {
   background: var(--bleu-50); border-color: var(--accent); color: var(--accent);
 }
+.iti-profil input:checked ~ .picto-menu { color: var(--accent); }
 @media (prefers-color-scheme: dark) {
-  .iti-profil input:checked + span { background: #14263A; }
+  .iti-profil input:checked ~ span { background: #14263A; }
 }
-.iti-profil input:focus-visible + span { box-shadow: var(--focus); }
+.iti-profil input:focus-visible ~ span { box-shadow: var(--focus); }
 .iti-resultat { font: 650 15px var(--police); color: var(--texte-1); }
 .iti-erreur { font: 400 13px var(--police); color: #C0392B; }
 .iti-actions { display: flex; gap: 7px; flex-wrap: wrap; }
@@ -309,6 +323,10 @@ etapes-itineraire { display: grid; gap: 7px; }
 .iti-eviter legend { font: 600 12px var(--police); color: var(--texte-2); padding: 0 4px; }
 .iti-evite { display: inline-flex; gap: 5px; align-items: center;
   font: 400 13px var(--police); color: var(--texte-1); cursor: pointer; }
+/* Coché, l'évitement passe à l'accent : le picto le dit avec le mot. */
+.iti-evite .picto-menu { width: 17px; height: 17px; color: var(--texte-3); }
+.iti-evite input:checked ~ .picto-menu { color: var(--accent); }
+.iti-evite:has(input:checked) { color: var(--accent); font-weight: 600; }
 .iti-evite input:focus-visible { outline: none; box-shadow: var(--focus); }
 
 /* --- Points d'intérêt (PR #9) — même livrée que le sélecteur de fonds --- */

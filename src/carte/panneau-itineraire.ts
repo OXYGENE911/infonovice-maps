@@ -467,7 +467,8 @@ export class PanneauItineraire extends HTMLElement {
             <div class="iti-profils" role="radiogroup" aria-label="Mode de déplacement">
               ${(Object.keys(PROFILS) as Profil[]).map((p) => `
                 <label class="iti-profil"><input type="radio" name="profil" value="${p}"
-                  ${p === this.#profil ? 'checked' : ''}><span>${PROFILS[p]}</span></label>`).join('')}
+                  ${p === this.#profil ? 'checked' : ''}
+                  >${pictoMenu(p === 'car' ? 'vehicule' : 'pieton')}<span>${PROFILS[p]}</span></label>`).join('')}
             </div>
             <!-- L'OPTIMISATION : les deux seules que le moteur CONNAÎT.
                  « Économe » et « Sans péage » sont écartés avec la mesure
@@ -476,12 +477,14 @@ export class PanneauItineraire extends HTMLElement {
             <div class="iti-optimisations" role="radiogroup" aria-label="Optimiser le trajet">
               ${(Object.keys(OPTIMISATIONS) as Optimisation[]).map((o) => `
                 <label class="iti-profil"><input type="radio" name="optimisation" value="${o}"
-                  ${o === this.#optimisation ? 'checked' : ''}><span>${OPTIMISATIONS[o]}</span></label>`).join('')}
+                  ${o === this.#optimisation ? 'checked' : ''}
+                  >${pictoMenu(o === 'fastest' ? 'rapide' : 'court')}<span>${OPTIMISATIONS[o]}</span></label>`).join('')}
             </div>
             <fieldset class="iti-eviter">
               <legend>Éviter</legend>
               ${(Object.keys(EVITEMENTS) as Eviter[]).map((v) => `
-                <label class="iti-evite"><input type="checkbox" value="${v}"><span>${EVITEMENTS[v]}</span></label>`).join('')}
+                <label class="iti-evite"><input type="checkbox" value="${v}"
+                  >${pictoMenu(v)}<span>${EVITEMENTS[v]}</span></label>`).join('')}
             </fieldset>
             <!-- COMPARER AVEC ET SANS AUTOROUTE — le verdict de l'étude
                  « alternatives » du 27/08 : pas de moteur, pas de vrais
