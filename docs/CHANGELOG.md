@@ -26,7 +26,7 @@ plusieurs photos ? » — puis, l'étude rendue : « OK pour Wikimedia ».
   part est la référence du ministère — jamais la position, jamais
   l'identité. Sans photo, la fiche reste une fiche : aucun message.
 
-627 tests unitaires (+13), 194 parcours E2E (+1).
+634 tests unitaires (+13), 194 parcours E2E (+1).
 ## [0.72.0] — 2026-08-29 — GUID-2 : l'instruction devient une fenêtre, la barre du bas se vide (PR #98)
 
 Quatre retours d'Armelin du 29/08 sur le mode navigation, tous tenus :
