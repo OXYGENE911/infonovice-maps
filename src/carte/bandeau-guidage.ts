@@ -28,6 +28,7 @@ import {
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
 import { chargerCommodites, ErreurCommodites, TYPES_COMMODITE, type Commodite } from '../lib/commodites';
 import { meteoA, phraseMeteo, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
+import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
 import { limiteA, type LimiteTrajet } from '../lib/limites';
 import type { EvenementTrajet } from '../lib/trafic';
 import { flecheManoeuvre } from './icone-manoeuvre';
@@ -690,6 +691,52 @@ export class BandeauGuidage extends HTMLElement {
         liste.append(item);
       }
       corps.append(liste);
+    }
+
+    /* — Le relief, SUR DEMANDE — l'ancienne page « Profil altimétrique »
+       vit ici depuis le 29/08 (retour d'Armelin : le menu du planificateur
+       s'allège, le copilote consulte). Un appel, la réponse survit. */
+    section('Le relief du trajet');
+    const cleAlti = 'profil-altimetrique';
+    const dejaAlti = memoire.get(cleAlti);
+    if (dejaAlti) {
+      corps.append(dejaAlti);
+    } else {
+      const alti = document.createElement('button');
+      alti.type = 'button';
+      alti.className = 'bg-copilote-alti';
+      alti.textContent = 'Voir le profil altimétrique';
+      alti.addEventListener('click', () => {
+        alti.disabled = true;
+        alti.textContent = 'Calcul du profil…';
+        profilItineraire({ type: 'LineString', coordinates: o.trace }).then(
+          (points) => {
+            const t = versTraceSVG(points, 280, 64);
+            const d = denivele(points);
+            const sortie = document.createElement('div');
+            sortie.className = 'bg-copilote-sortie';
+            sortie.dataset['memoire'] = cleAlti;
+            // Uniquement des nombres formatés par nos soins : ce innerHTML ne
+            // porte aucune donnée externe (la règle textContent vaut pour les
+            // libellés).
+            sortie.innerHTML = `
+              <svg viewBox="0 0 280 64" preserveAspectRatio="none" role="img"
+                aria-label="Profil altimétrique, de ${Math.round(t.zMin)} à ${Math.round(t.zMax)} mètres d’altitude">
+                <polygon class="alti-aire" points="${t.aire}"></polygon>
+                <polyline class="alti-ligne" points="${t.ligne}"></polyline>
+              </svg>
+              <p class="alti-bilan">D+ ${Math.round(d.montee)} m · D− ${Math.round(d.descente)} m ·
+                de ${Math.round(t.zMin)} à ${Math.round(t.zMax)} m</p>`;
+            alti.replaceWith(sortie);
+          },
+          (err: unknown) => {
+            alti.disabled = false;
+            alti.textContent = err instanceof ErreurAltimetrie
+              ? err.message : 'Profil indisponible — réessayer';
+          },
+        );
+      });
+      corps.append(alti);
     }
 
     // — L'arrivée —

@@ -634,6 +634,15 @@ test('le COPILOTE : les événements de la route listés, la météo sur DEMANDE
       features: [{ geometry: { type: 'Point', coordinates: [688781.7, 6793094.7] },
         properties: { type: 'TRAVAUX', etat_evenement: 'EFFECTIF', urlcpc: '' } }],
     }) }));
+  let appelsAlti = 0;
+  await page.route('**/data.geopf.fr/altimetrie/**', (route) => {
+    appelsAlti += 1;
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ elevations: [
+      { lon: 2.3522, lat: 48.8566, z: 35, acc: 'Average value' },
+      { lon: 3.5, lat: 47.3, z: 320, acc: 'Average value' },
+      { lon: 4.8357, lat: 45.764, z: 168, acc: 'Average value' },
+    ] }) });
+  });
   let appelsMeteo = 0;
   await page.route('**/api.open-meteo.com/**', (route) => {
     appelsMeteo += 1;
@@ -699,6 +708,15 @@ test('le COPILOTE : les événements de la route listés, la météo sur DEMANDE
   });
   await expect(copilote).toContainText('(Open-Meteo)');
   expect(appelsMeteo, 'un fixe a relancé la météo').toBe(1);
+
+  /* LE RELIEF AUSSI VIT ICI depuis le 29/08 (l'ancienne page « Profil
+     altimétrique » du planificateur) : un bouton, un appel, le dessin et
+     les dénivelés — et la réponse survit comme les autres. */
+  expect(appelsAlti).toBe(0);
+  await copilote.getByRole('button', { name: 'Voir le profil altimétrique' }).click();
+  await expect(copilote).toContainText('D+ 285 m');
+  await expect(copilote.locator('svg')).toBeVisible();
+  expect(appelsAlti).toBe(1);
 
   // La croix referme, le bouton dit son état.
   await copilote.getByRole('button', { name: 'Fermer le panneau du copilote' }).click();

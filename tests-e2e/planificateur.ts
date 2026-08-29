@@ -14,7 +14,10 @@ import { expect, type Page } from '@playwright/test';
  */
 
 /** Les pages atteignables depuis le menu du planificateur. */
-export type PageTrajet = 'recharge' | 'feuille' | 'trajet' | 'meteo' | 'alti'
+/* « trajet », « meteo » et « alti » ONT EXISTÉ et sont retirées du menu le
+   29/08 (retours d'Armelin) : la carte montre déjà les bornes, la météo et
+   le relief vivent dans le copilote. */
+export type PageTrajet = 'recharge' | 'feuille'
   | 'monuments' | 'options' | 'partage' | 'vehicule' | 'couches';
 
 /**
