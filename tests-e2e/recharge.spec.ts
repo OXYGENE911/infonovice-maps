@@ -1094,3 +1094,36 @@ test('hors trajet, la fiche ne promet RIEN au plan', async ({ page }) => {
     .toBeVisible();
   await expect(fiche.locator('.fb-plan')).toHaveCount(0);
 });
+
+test('MÉMOIRE : les réglages d’arrêt survivent au rechargement', async ({ page }) => {
+  /* Armelin, le 30/08 : « dans la section arrêt de recharge, les paramètres
+     de préférence pour arriver ou partir d'une borne ne sont pas mémorisés,
+     ce qui m'oblige à devoir le reconfigurer à chaque fois ». Ces réglages
+     décrivent une MANIÈRE DE ROULER, pas un trajet : ils lui survivent. */
+  await ouvrirRecharge(page, false);
+  await page.locator('.recharge-cible').selectOption('20');
+  await page.locator('.recharge-reserve').selectOption('20');
+  /* L'ÉCRITURE EST ASYNCHRONE : recharger tout de suite couperait la
+     seconde. On attend qu'elle SOIT en base — le même rendez-vous que
+     l'apprentissage des routines, et pour la même raison. */
+  await expect.poll(() => page.evaluate(async () => {
+    const d = indexedDB.open('infonovice-maps', 2);
+    const db = await new Promise<IDBDatabase>((ok) => { d.onsuccess = () => ok(d.result); });
+    return new Promise<string>((ok) => {
+      const tr = db.transaction('preferences', 'readonly');
+      const r = tr.objectStore('preferences').get('reglages-recharge');
+      r.onsuccess = () => {
+        const v = r.result as Record<string, string> | undefined;
+        ok(v?.['.recharge-reserve'] ?? '');
+      };
+    });
+  }), { timeout: 10_000 }).toBe('20');
+
+  await page.reload();
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  await allerA(page, 'recharge');
+  await expect(page.locator('.recharge-cible'),
+    'la charge voulue à l’arrivée a été oubliée').toHaveValue('20');
+  await expect(page.locator('.recharge-reserve'),
+    'la réserve minimale a été oubliée').toHaveValue('20');
+});

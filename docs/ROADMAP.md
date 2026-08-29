@@ -534,6 +534,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #107 — MEM-1, ce qui était réglé se souvient (trois oublis du
+      30/08) : masse et bridages relus (la reconstruction champ par champ
+      les perdait), réglages d'arrêt gardés sous une clé commune — et la
+      classe `recharge-reserve`, qui nommait deux choses, faisait échouer
+      la relecture en silence ; le seuil de zoom des recherches « dans la
+      vue » se dit AVANT le clic.
 - [x] PR #106 — FEN-6 (trois retours du 29/08 au soir) : le plafond du rail
       ne s'applique plus aux panneaux nichés (fin de la double barre
       d'ascenseur), le choix du repère remonte en tête de « Mon véhicule »,

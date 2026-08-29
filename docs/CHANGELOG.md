@@ -2,6 +2,35 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.80.0] — 2026-08-30 — MEM-1 : ce qui était réglé se souvient (PR #107)
+
+Trois oublis signalés par Armelin le 30/08, trois causes différentes.
+
+- **Le véhicule oubliait masse et bridages thermiques.** « Je dois les
+  saisir à chaque fois. » Ils ÉTAIENT écrits — l'enregistrement porte le
+  véhicule entier — mais la relecture reconstruisait l'objet CHAMP PAR
+  CHAMP et en oubliait trois. Un objet reconstruit à la main perd ce qu'on
+  ajoute ailleurs : les trois manquants sont relus, et un parcours les
+  nomme pour que l'oubli ne se refasse pas.
+- **Les réglages d'arrêt ne survivaient pas au trajet.** Ils décrivent une
+  MANIÈRE DE ROULER (charge voulue à l'arrivée, réserve, plafond, pauses,
+  détour des lieux), pas un trajet : ils se gardent désormais sous une clé
+  commune. AU PASSAGE, UN DÉFAUT PLUS PROFOND : la classe
+  `recharge-reserve` nommait DEUX choses sans rapport — le `<select>` du
+  formulaire et un paragraphe d'explication. La relecture tombait sur le
+  paragraphe, échouait silencieusement, et TOUS les réglages suivants
+  restaient à leur défaut. Une classe ne nomme qu'une chose ; et la
+  relecture vérifie maintenant le type de l'élément avant de l'écrire.
+- **Les recherches « dans la vue » avaient l'air actives sans l'être.**
+  « Les boutons Pharmacie, restaurants… ne fonctionnent pas », « quand je
+  tape McDonald, il ne se passe rien ». Elles fonctionnaient : mais au zoom
+  d'un trajet entier (mesuré : 6,1) il n'y a rien à interroger, et rien ne
+  le disait tant qu'on n'avait pas cliqué. Les boutons et le champ sont
+  désormais DÉSACTIVÉS sous le zoom 12, avec la raison écrite, et
+  redeviennent vivants dès qu'on se rapproche — sans recharger.
+
+645 tests unitaires, 200 parcours E2E (+3).
+
 ## [0.79.0] — 2026-08-29 — FEN-6 : un seul ascenseur, un repère qu'on trouve, une attente qu'on voit (PR #106)
 
 Trois retours d'Armelin du 29/08 au soir :

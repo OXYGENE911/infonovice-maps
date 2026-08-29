@@ -238,3 +238,26 @@ test('le catalogue annonce d’où viennent ses chiffres', async ({ page }) => {
   await expect(page.locator('.veh-note-catalogue')).toContainText('WLTP');
   await expect(page.locator('.veh-note-catalogue')).toContainText('vos propres relevés');
 });
+
+test('MÉMOIRE : masse et bridages thermiques survivent au rechargement', async ({ page }) => {
+  /* Armelin, le 30/08 : « dans les paramètres du véhicule, les informations
+     de la masse, de charge sous 0° ou par temps de canicule ne sont pas
+     mémorisées et je dois les saisir à chaque fois ». Elles ÉTAIENT écrites
+     — l'enregistrement porte le véhicule entier — mais la relecture
+     reconstruisait l'objet champ par champ et en oubliait trois. */
+  await ouvrirVehicule(page);
+  await page.getByLabel('Batterie', { exact: true }).fill('87.7');
+  await page.getByLabel('Masse').fill('2150');
+  await page.getByLabel('Charge max sous 0 °C').fill('30');
+  await page.getByLabel('Charge max en canicule').fill('60');
+  // L'écriture est asynchrone : on attend qu'elle ait eu lieu.
+  await expect(page.getByLabel('Masse')).toHaveValue('2150');
+
+  await page.reload();
+  await ouvrirVehicule(page);
+  await expect(page.getByLabel('Masse'), 'la masse a été oubliée').toHaveValue('2150');
+  await expect(page.getByLabel('Charge max sous 0 °C'),
+    'le bridage par grand froid a été oublié').toHaveValue('30');
+  await expect(page.getByLabel('Charge max en canicule'),
+    'le bridage en canicule a été oublié').toHaveValue('60');
+});

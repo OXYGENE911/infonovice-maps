@@ -145,10 +145,19 @@ export class PanneauPoi extends HTMLElement {
     if (this.#carte) return;
     this.#carte = c;
     c.on('moveend', () => {
+      /* LE SEUIL SE DIT AVANT LE CLIC, PAS APRÈS (30/08). Armelin : « les
+         boutons Pharmacie, restaurants… ne fonctionnent pas », et « quand
+         je tape McDonald, il ne se passe rien ». Ils fonctionnaient — mais
+         sous le zoom 12 ils n'ont rien à chercher, et rien ne le disait
+         TANT QU'ON N'AVAIT PAS CLIQUÉ. Un bouton qui a l'air actif et ne
+         fait rien est un mensonge d'interface ; désactivé avec sa raison,
+         il informe. Le zoom d'un trajet planifié tourne autour de 6. */
+      this.#majSeuilVue();
       if (this.#actives.size === 0) return;
       clearTimeout(this.#minuteur);
       this.#minuteur = setTimeout(() => { this.#rechargerActives(); }, 500);
     });
+    this.#majSeuilVue();
     // setStyle détruit les sources : on repose données ET couches (le même
     // contrat que le tracé d'itinéraire).
     c.on('style.load', () => { this.#poserTout(); });
@@ -229,6 +238,7 @@ export class PanneauPoi extends HTMLElement {
               <button type="button" class="poi-categorie" data-cle="${c.cle}"
                 aria-pressed="false">${c.libelle}</button>`).join('')}
           </div>
+          <p class="poi-seuil-vue poi-filtre-note" role="status" hidden></p>
           <p class="poi-categorie-etat" role="status"></p>
         </fieldset>
 
@@ -1001,6 +1011,34 @@ export class PanneauPoi extends HTMLElement {
       this.#effacerCategorie();
       etat.textContent = e instanceof ErreurCategories
         ? e.message : 'La recherche de lieux est indisponible pour le moment.';
+    }
+  }
+
+  /**
+   * Dit, EN PERMANENCE, si la vue permet ces recherches.
+   *
+   * Les catégories et le filtre par nom travaillent sur l'EMPRISE VISIBLE :
+   * sous le zoom 12, il n'y a rien à interroger — chercher les pharmacies
+   * de la moitié de la France rendrait cent lieux au hasard, et le service
+   * est un commun bénévole. La règle ne change pas ; ce qui change, c'est
+   * qu'elle se voit.
+   */
+  #majSeuilVue(): void {
+    const zoom = this.#carte?.getZoom() ?? 0;
+    const trop = zoom < ZOOM_MIN;
+    const raison = 'Rapprochez-vous pour chercher dans la vue (zoom 12 au'
+      + ' moins) — au zoom d’un trajet entier, il n’y a rien à interroger.';
+    for (const b of this.querySelectorAll<HTMLButtonElement>('.poi-categorie')) {
+      b.disabled = trop;
+      if (trop) b.setAttribute('title', raison); else b.removeAttribute('title');
+    }
+    const note = this.querySelector<HTMLElement>('.poi-seuil-vue');
+    if (note) { note.textContent = trop ? raison : ''; note.hidden = !trop; }
+    const champNom = this.querySelector<HTMLInputElement>('.poi-nom-station');
+    if (champNom) {
+      champNom.disabled = trop;
+      champNom.placeholder = trop
+        ? 'Rapprochez-vous pour filtrer par nom' : 'McDonald, Aire de Beaune…';
     }
   }
 

@@ -882,7 +882,7 @@ etat-connexion { display: contents; }
 .recharge-liste li { display: grid; gap: 1px; }
 .recharge-nom { font: 600 12.5px var(--police); color: var(--texte-1); }
 .recharge-detail { font: 400 11.5px var(--police); color: var(--texte-3); }
-.recharge-reserve { margin: 8px 0 0; font: 400 11.5px var(--police);
+.recharge-note-reserve { margin: 8px 0 0; font: 400 11.5px var(--police);
   color: var(--texte-3); line-height: 1.45; }
 .recharge-aller {
   display: block; width: 100%; text-align: left; padding: 0;
@@ -2655,6 +2655,14 @@ body.en-guidage #carte .maplibregl-ctrl-bottom-left {
    zoom, le bouton d'information de carte IGN ainsi que le bouton Me
    localiser ». Elle vit à droite ; les commandes s'écartent de sa largeur. */
 body.en-guidage #carte .maplibregl-ctrl-bottom-right { padding-right: 34px; }
+
+/* LE SEUIL DE VUE, DIT AVANT LE CLIC (30/08). Un bouton désactivé doit se
+   VOIR désactivé : sans cela on le presse trois fois avant de comprendre. */
+.poi-categorie:disabled {
+  opacity: .5; cursor: not-allowed; border-style: dashed;
+}
+.poi-nom-station:disabled { opacity: .6; cursor: not-allowed; }
+.poi-seuil-vue[hidden] { display: none; }
 
 /* L'ATTENTE QUI SE VOIT — « il y a un recalcul en arrière-plan, mais rien
    affiché à l'écran » (Armelin, 29/08). Une phrase seule peut passer pour un

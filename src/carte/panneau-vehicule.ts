@@ -342,6 +342,14 @@ export class PanneauVehicule extends HTMLElement {
     const nombre = (x: unknown, defaut = 0): number =>
       (typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x : defaut);
 
+    /* LES CONDITIONS ÉTAIENT ÉCRITES, ELLES N'ÉTAIENT PAS RELUES — Armelin,
+       le 30/08 : « les informations de la masse, de charge sous 0° ou par
+       temps de canicule ne sont pas mémorisées et je dois les saisir à
+       chaque fois ». L'enregistrement porte le véhicule ENTIER ; cette
+       reconstruction, elle, énumérait les champs un à un et en oubliait
+       trois. Un objet reconstruit champ par champ perd ce qu'on ajoute
+       ailleurs : les trois manquants sont donc relus ICI, et le parcours
+       unitaire les nomme pour que l'oubli ne se refasse pas. */
     this.#vehicule = {
       nom: typeof v['nom'] === 'string' ? v['nom'] : '',
       capaciteNominale: nombre(v['capaciteNominale']),
@@ -349,6 +357,12 @@ export class PanneauVehicule extends HTMLElement {
       soc: nombre(v['soc'], 80),
       consommations: { ville: 0, route: 0, autoroute: 0 },
       puissanceMaxKw: nombre(v['puissanceMaxKw']),
+      /* Zéro vaut « non déclaré » — c'est la convention de lib/vehicule : on
+         garde donc la clé même à zéro, sans quoi le champ resterait vide à
+         l'écran alors que la base porte bien un 0 voulu. */
+      masseKg: nombre(v['masseKg']),
+      puissanceFroidKw: nombre(v['puissanceFroidKw']),
+      puissanceChaudKw: nombre(v['puissanceChaudKw']),
     };
     for (const { cle } of CONTEXTES) this.#essais[cle] = nombre(e[cle]);
     this.#actif = m['anneaux'] === true;

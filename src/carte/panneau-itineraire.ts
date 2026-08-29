@@ -35,7 +35,7 @@ import {
   type StationRapide, type ReseauNational,
 } from '../lib/index-bornes';
 import { chargerCommodites, TYPES_COMMODITE, ErreurCommodites } from '../lib/commodites';
-import { lirePreference } from '../lib/stockage';
+import { lirePreference, ecrirePreference } from '../lib/stockage';
 import { PREF_VEHICULE } from './panneau-vehicule';
 import { ErreurPoi } from '../lib/poi';
 import { poserIconesPuissance, nomIcone } from './icone-puissance';
@@ -78,6 +78,14 @@ export interface PorteCouchesBornes {
 /* LES PAGES QUI COMMANDENT LA CARTE — voir #allerA. Elles gardent la
    colonne : leur effet se lit SUR la carte, pas dans la page. */
 const PAGES_COLONNE = new Set<string>(['couches', 'recharge']);
+
+/* LES RÉGLAGES QUI DÉCRIVENT UNE MANIÈRE DE ROULER, et qui se gardent donc
+   d'un trajet à l'autre. La clé leur est commune : un seul enregistrement,
+   une seule relecture, et rien à oublier quand la liste s'allonge. */
+export const PREF_REGLAGES = 'reglages-recharge';
+const REGLAGES_MEMORISES = ['.recharge-cible', '.recharge-reserve', '.recharge-plafond',
+  '.recharge-pause-min', '.recharge-pause-intervalle', '.recharge-pause-profil',
+  '.monuments-detour'] as const;
 
 const VUES = {
   accueil: 'Où allez-vous ?',
@@ -798,6 +806,7 @@ export class PanneauItineraire extends HTMLElement {
         this.#allerA((bouton.dataset['vers'] ?? 'accueil') as CleVue);
       });
     }
+    void this.#restaurerReglages();
     this.querySelector('.vue-retour')?.addEventListener('click', () => {
       this.#allerA('accueil');
     });
@@ -828,11 +837,17 @@ export class PanneauItineraire extends HTMLElement {
     /* LE PROFIL DE PAUSE RELÈVE LES ENVIRONS — un appel, puis le rejouage
        local, comme les conditions. Son échec est BÉNIN et DIT. */
     this.querySelector('.recharge-pause-profil')?.addEventListener('change', () => {
+      void this.#enregistrerReglages();
       void this.#appliquerProfilPause();
     });
-    for (const cls of ['.recharge-cible', '.recharge-reserve', '.recharge-plafond',
-      '.recharge-pause-min', '.recharge-pause-intervalle']) {
+    /* CES RÉGLAGES SE GARDENT (30/08). Armelin : « dans la section arrêt de
+       recharge, les paramètres de préférence pour arriver ou partir d'une
+       borne ne sont pas mémorisés, ce qui m'oblige à devoir les
+       reconfigurer à chaque fois ». Ils décrivent une MANIÈRE DE ROULER,
+       pas un trajet : ils survivent donc au trajet, comme le véhicule. */
+    for (const cls of REGLAGES_MEMORISES) {
       this.querySelector(cls)?.addEventListener('change', () => {
+        void this.#enregistrerReglages();
         /* LE PLAN SE REJOUE, IL NE SE RECHERCHE PAS. Les bornes du trajet sont
            déjà en mémoire : remettre `#rechargePour` à zéro relancerait tout
            le chargement de l'index pour un calcul qui prend une milliseconde.
@@ -1167,6 +1182,42 @@ export class PanneauItineraire extends HTMLElement {
    * L'échec du relevé est BÉNIN : le plan sort sans bonus, et l'état le dit
    * en une ligne plutôt que d'inventer des environs.
    */
+  /**
+   * Garde les réglages de manière de rouler — et les rend au retour.
+   *
+   * TOUT PASSE PAR LA VALEUR DES `<select>`, jamais par un état parallèle :
+   * c'est le formulaire qui fait foi, et le relire évite d'inventer une
+   * deuxième vérité qui divergerait de lui.
+   */
+  async #enregistrerReglages(): Promise<void> {
+    const memo: Record<string, string> = {};
+    for (const cls of REGLAGES_MEMORISES) {
+      const champ = this.querySelector<HTMLSelectElement>(cls);
+      if (champ) memo[cls] = champ.value;
+    }
+    await ecrirePreference(PREF_REGLAGES, memo);
+  }
+
+  /** Rend les réglages gardés. Silencieux si la base est vide ou abîmée. */
+  async #restaurerReglages(): Promise<void> {
+    const memo = await lirePreference<unknown>(PREF_REGLAGES);
+    if (!memo || typeof memo !== 'object') return;
+    const m = memo as Record<string, unknown>;
+    for (const cls of REGLAGES_MEMORISES) {
+      const valeur = m[cls];
+      if (typeof valeur !== 'string') continue;
+      const champ = this.querySelector(cls);
+      /* DEUX GARDES, ET LA SECONDE A ÉTÉ PAYÉE : d'abord que l'élément SOIT
+         un <select> — une classe partagée par erreur avec un paragraphe
+         faisait échouer la boucle entière, silencieusement, et les réglages
+         suivants restaient à leur défaut. Ensuite qu'une valeur relue soit
+         encore une option : un choix disparu d'une version à l'autre
+         laisserait le select vide. */
+      if (!(champ instanceof HTMLSelectElement)) continue;
+      if ([...champ.options].some((o) => o.value === valeur)) champ.value = valeur;
+    }
+  }
+
   async #appliquerProfilPause(): Promise<void> {
     const etat = this.querySelector<HTMLElement>('.recharge-pause-etat');
     const cle = this.querySelector<HTMLSelectElement>('.recharge-pause-profil')?.value ?? '';
@@ -2719,7 +2770,13 @@ export class PanneauItineraire extends HTMLElement {
     }
 
     const reserve = document.createElement('p');
-    reserve.className = 'recharge-reserve';
+    /* CETTE CLASSE A ÉTÉ RENOMMÉE (30/08) : elle nommait DEUX choses sans
+       rapport — ce paragraphe d'explication et le <select> de réserve du
+       formulaire. `querySelector('.recharge-reserve')` rendait donc l'un ou
+       l'autre selon l'ordre du DOM, et la relecture des réglages tombait sur
+       un <p> sans `.options` : elle s'interrompait là, laissant les réglages
+       suivants à leur valeur par défaut. Une classe ne nomme qu'une chose. */
+    reserve.className = 'recharge-note-reserve';
     /* LA NOTE SUIT LE CALCUL (28/08) : quand météo et relief sont relevés,
        « à plat, à consommation constante » serait un mensonge — et quand ils
        ne le sont pas, l'ancien aveu reste le bon. */
