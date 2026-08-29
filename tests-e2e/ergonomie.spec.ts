@@ -27,14 +27,15 @@ test.beforeEach(async ({ page }) => {
    Chercher où recharger n'est pas régler l'affichage de la carte.
 
    Le menu de droite garde ce qui répond vraiment à « que voir sur la carte » :
-   le fond, le trafic, les transports — et « mes lieux ». */
+   le fond, le trafic — et « mes lieux ». (Les transports en commun sont
+   RETIRÉS depuis le 29/08/2026, décision d'Armelin après essai.) */
 /* UN SEUL BOUTON, depuis le 27/08/2026. Armelin : « il y a trois boutons dans
    la page d'accueil "Itinéraire", "Recharge et services" et "Véhicule", qui
    pourraient tous être regroupés dans un unique bouton "Itinéraire" […] Un
    seul bouton est plus efficace à comprendre que trois boutons où il faudra se
    rappeler dans quel menu on peut trouver quelle option. » */
 const RAIL = ['Itinéraire'] as const;
-const RANGES_DANS_LE_MENU = ['.fonds', '.trafic', '.transports', '.favoris'] as const;
+const RANGES_DANS_LE_MENU = ['.fonds', '.trafic', '.favoris'] as const;
 
 const entree = (page: Page, nom: string): Locator =>
   page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: nom }).first();

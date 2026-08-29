@@ -2,6 +2,23 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.58.0] — 2026-08-29 — Retrait des transports en commun (PR #83)
+
+Décision d'Armelin, confirmée après essai le 29/08 : « je ne vois aucun
+véhicule circuler sur la carte. Pour alléger les menus, il faut mieux
+supprimer cette section. » La roadmap le prévoyait en toutes lettres depuis
+le 27/08 : « si Armelin le confirme après un essai, on retirera le tout
+proprement. » C'est fait :
+
+- **Retrait complet** : le panneau, la couche carte, le décodeur GTFS-RT,
+  l'annuaire des réseaux temps réel, leurs 45 tests unitaires et leurs 13
+  parcours E2E. Une couche qu'on ne voit pas vivre alourdit le menu sans
+  informer. Le code reste dans l'histoire git si le besoin renaît.
+- Le menu des réglages descend à trois sections : Affichage (fonds,
+  trafic), Mes lieux (favoris).
+
+585 tests unitaires (−45), 188 parcours E2E (−13).
+
 ## [0.57.0] — 2026-08-28 — Le mode copilote (PR #82)
 
 La troisième décision tranchée du §4 du triage. Sans serveur, pas de second
