@@ -20,6 +20,7 @@ import { versFragment, depuisFragment } from '../lib/partage-url';
 import { installerFeuilleBasse } from './feuille-basse';
 import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
 import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
+import { PREF_FILTRES } from './panneau-poi';
 import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 import {
@@ -185,6 +186,19 @@ export class PanneauItineraire extends HTMLElement {
   #agrementsPour: { iti: Itineraire; profil: string } | null = null;
 
   #annulationAgrements: AbortController | null = null;
+
+  /* LE PLAN SE CALCULE TOUT SEUL (retour d'Armelin du 29/08 : « il faut
+     cliquer sur Arrêts de recharge pour que le planificateur se mette à
+     calculer, mais ce n'est pas intuitif ») : un trajet calculé avec un
+     véhicule renseigné déclenche le plan sans qu'on y pense — débordé d'une
+     seconde pour laisser passer les rafales de recalcul. */
+  #minuteurPlanAuto: ReturnType<typeof setTimeout> | undefined;
+
+  /** Vrai pendant le calcul automatique — le résumé le dit. */
+  #planEnCours = false;
+
+  /** Les réseaux préférés ont-ils été hérités du filtre carte pour CE trajet ? */
+  #reseauxHerites = false;
   #socDepart = 100;
 
   set fiche(f: FicheBorne) { this.#fiche = f; }
@@ -675,6 +689,19 @@ export class PanneauItineraire extends HTMLElement {
     this.#allerA('accueil');
     this.querySelector('.iti-effacer')?.addEventListener('click', () => this.#effacer());
 
+    /* UN VÉHICULE MODIFIÉ INVALIDE LE PLAN (29/08) : capacité, autonomie ou
+       bridage changés, le plan décrit une autre voiture. Il se refait tout
+       seul, avec le même amorti que le calcul de trajet — la saisie champ à
+       champ ne déclenche qu'un recalcul. */
+    document.addEventListener('vehicule-change', () => {
+      if (!this.#dernier) return;
+      this.#rechargePour = null;
+      clearTimeout(this.#minuteurPlanAuto);
+      this.#minuteurPlanAuto = setTimeout(() => {
+        void this.#planifierRecharge(this.#vue !== 'recharge');
+      }, 1200);
+    });
+
     /* SUR TÉLÉPHONE, LE VOLET EST UNE FEUILLE BASSE (décision d'Armelin du
        28/08) : la carte respire au-dessus, la poignée règle la hauteur. */
     installerFeuilleBasse(
@@ -958,18 +985,36 @@ export class PanneauItineraire extends HTMLElement {
     };
   }
 
-  async #planifierRecharge(): Promise<void> {
+  async #planifierRecharge(auto = false): Promise<void> {
     const corps = this.querySelector('.iti-recharge-corps') as HTMLElement;
     const iti = this.#dernier;
-    if (this.#vue !== 'recharge' || !iti || this.#rechargePour === iti) return;
+    if ((!auto && this.#vue !== 'recharge') || !iti || this.#rechargePour === iti) return;
     this.#rechargePour = iti;
 
     const profil = await this.#lireVehicule();
     if (!profil) {
-      corps.textContent = 'Renseignez d’abord votre véhicule (panneau « Véhicule ») :'
-        + ' batterie, santé et autonomie constatée.';
+      /* En automatique, PAS de véhicule = pas de plan, en silence : le
+         message d'invite n'a de sens que quand on OUVRE la page. */
+      if (!auto) {
+        corps.textContent = 'Renseignez d’abord votre véhicule (panneau « Véhicule ») :'
+          + ' batterie, santé et autonomie constatée.';
+      }
       this.#rechargePour = null;   // réessayable une fois le profil rempli
       return;
+    }
+    this.#planEnCours = true;
+    this.#majResume();
+
+    /* LES RÉSEAUX PRÉFÉRÉS S'HÉRITENT DU FILTRE CARTE (retour d'Armelin du
+       29/08 : « à chaque nouveau trajet, il faut encore recocher les
+       réseaux » — le doublon). Cochés dans « Recharge et services », ils
+       arrivent COCHÉS ici — et restent modifiables pour CE trajet. */
+    if (!this.#reseauxHerites) {
+      this.#reseauxHerites = true;
+      const memoFiltres = await lirePreference<{ reseaux?: unknown }>(PREF_FILTRES);
+      const herites = Array.isArray(memoFiltres?.reseaux)
+        ? memoFiltres.reseaux.filter((r): r is string => typeof r === 'string') : [];
+      this.#reseauxPreferes = new Set(herites);
     }
 
     corps.textContent = `Chargement du réseau national de recharge (${POIDS_ANNONCE},`
@@ -1012,6 +1057,8 @@ export class PanneauItineraire extends HTMLElement {
     } catch (e) {
       if (annulation.signal.aborted) return;
       this.#rechargePour = null;
+      this.#planEnCours = false;
+      this.#majResume();
       corps.textContent = e instanceof ErreurIndex || e instanceof ErreurPoi
         ? e.message : 'Recherche des bornes indisponible pour le moment.';
     }
@@ -1785,8 +1832,13 @@ export class PanneauItineraire extends HTMLElement {
     const base = `${formaterDistance(iti.distance)} — ${formaterDuree(iti.duree)}`;
     const plan = this.#planCourant;
     if (!plan || !plan.faisable) {
+      /* PENDANT LE CALCUL AUTOMATIQUE, ON LE DIT (retour du 29/08 : « il
+         faut attendre quelques secondes mais il faut le savoir ») : le
+         résumé annonce que les arrêts arrivent, au lieu d'un silence qu'on
+         prend pour un oubli. */
       resultat.textContent = this.#profil === 'car'
-        ? `${base} de route, hors recharge`
+        ? `${base} de route` + (this.#planEnCours
+          ? ' — calcul des arrêts de recharge…' : ', hors recharge')
         : base;
       return;
     }
@@ -2369,6 +2421,7 @@ export class PanneauItineraire extends HTMLElement {
     corps.replaceChildren();
     // Le résumé du haut apprend le temps de charge : voir `#majResume`.
     this.#planCourant = plan;
+    this.#planEnCours = false;
     this.#majResume();
     /* LA CARTE PASSE EN MODE TRAJET : les bornes nationales s'effacent, seules
        restent celles du corridor et les arrêts du plan. Même sur un REFUS —
@@ -2912,6 +2965,12 @@ export class PanneauItineraire extends HTMLElement {
       /* Les environs relevés décrivaient les bornes de L'ANCIEN trajet. */
       this.#agrements = null;
       this.#agrementsPour = null;
+      this.#reseauxHerites = false;
+      /* LE PLAN PART TOUT SEUL, une seconde après le calme : les rafales de
+         recalcul (cases cochées, étapes déplacées) ne déclenchent qu'UN
+         calcul de plan — et donc UN relevé de conditions. */
+      clearTimeout(this.#minuteurPlanAuto);
+      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, 1200);
       const etatPause = this.querySelector<HTMLElement>('.recharge-pause-etat');
       if (etatPause) etatPause.textContent = '';
       this.#rechercheReseau = '';
@@ -2995,6 +3054,8 @@ export class PanneauItineraire extends HTMLElement {
     this.#sequence += 1; // tue toute réponse d'itinéraire encore en vol
     this.#dernier = null; this.#calculPour = null; this.#depart = null; this.#arrivee = null;
     this.#libelleDepart = ''; this.#libelleArrivee = '';
+    clearTimeout(this.#minuteurPlanAuto);
+    this.#planEnCours = false;
     this.#marqueurs.forEach((m) => m.remove()); this.#marqueurs = [];
     this.#marqueursTrajet.forEach((m) => m.remove()); this.#marqueursTrajet = [];
     const carte = this.#carte;
