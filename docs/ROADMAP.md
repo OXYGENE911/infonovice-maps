@@ -534,6 +534,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #83 — RETRAIT des transports en commun (décision d'Armelin
+      CONFIRMÉE après essai le 29/08, comme la roadmap le prévoyait) :
+      panneau, couche, GTFS-RT, annuaire et tests — le tout, proprement.
 - [x] PR #82 — le mode copilote (DÉCISION d'Armelin du 28/08) : un panneau
       pour le passager pendant le suivi — recharges à venir avec SOC prévus
       et commodités à la demande, tous les événements devant soi, arrivée et

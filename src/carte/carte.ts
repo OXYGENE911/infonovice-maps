@@ -23,7 +23,6 @@ import { PanneauItineraire } from './panneau-itineraire';
 import { PanneauPoi } from './panneau-poi';
 import { PanneauFavoris } from './panneau-favoris';
 import { PanneauTrafic } from './panneau-trafic';
-import { PanneauTransports } from './panneau-transports';
 import { PanneauVehicule } from './panneau-vehicule';
 import { MenuReglages } from './menu-reglages';
 import { ajouterFavori } from '../lib/favoris';
@@ -118,7 +117,12 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      Les stations-service et les parkings suivent : ce sont, comme les bornes,
      des endroits où l'on s'arrête en route. Le menu de droite garde ce qui
      répond vraiment à « que voir sur la carte » — le fond, le trafic, les
-     transports — et « mes lieux ». */
+     et « mes lieux ». Les transports en commun ONT EXISTÉ ici (PR #16) et
+     ont été RETIRÉS le 29/08/2026, sur décision d'Armelin après essai :
+     « je ne vois aucun véhicule circuler sur la carte » — une couche qu'on
+     ne voit pas vivre alourdit le menu sans informer. Le retrait est
+     complet (panneau, GTFS-RT, annuaire des réseaux, tests) : le code
+     reste dans l'histoire git si le besoin renaît. */
   const poi = new PanneauPoi();
   poi.carte = carte;
   panneau.loger('couches', poi);
@@ -130,9 +134,6 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   trafic.carte = carte;
   menu.ajouter('', trafic);
 
-  const transports = new PanneauTransports();
-  transports.carte = carte;
-  menu.ajouter('', transports);
 
   /* LA VISIONNEUSE DE PHOTOS — une seule pour l'application, posée au body :
      une modale doit couvrir la carte, pas vivre dedans. */
