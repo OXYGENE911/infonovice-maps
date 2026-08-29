@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { ouvrirVolet } from './volets';
 import { PNG_1PX, simulerTuiles, simulerCommunes } from './tuiles-simulees';
 import { allerA, retour } from './planificateur';
@@ -7,6 +7,21 @@ test.beforeEach(async ({ page }) => {
   await simulerTuiles(page);
   await simulerCommunes(page);
 });
+
+/**
+ * S'assure que la bulle d'attribution est OUVERTE — c'est par elle qu'on
+ * atteint les pages légales depuis le 30/08.
+ *
+ * ELLE N'EST PAS DANS LE MÊME ÉTAT PARTOUT, et cliquer aveuglément la
+ * refermerait : MapLibre l'ouvre par défaut, et nous la replions sur
+ * téléphone seulement (390 px ne portent pas quatre liens plus la source).
+ * On regarde donc avant d'agir.
+ */
+async function ouvrirLaBulle(page: Page): Promise<void> {
+  const bulle = page.locator('.maplibregl-ctrl-attrib');
+  const ouverte = await bulle.evaluate((e) => e.classList.contains('maplibregl-compact-show'));
+  if (!ouverte) await page.locator('.maplibregl-ctrl-attrib-button').click();
+}
 
 // Depuis la PR #2, la page EST la carte : on vérifie que MapLibre s'amorce,
 // que les contrôles parlent français, et que la souveraineté tient.
@@ -1554,7 +1569,7 @@ test('VITRINE : les pages de texte s’ouvrent depuis la carte, SANS JavaScript'
      quitté le pied de carte, qui se disputait le coin bas avec l'attribution
      IGN. Ils vivent maintenant AVEC elle — et l'on y accède comme l'usager,
      par le bouton. */
-  await page.locator('.maplibregl-ctrl-attrib-button').click().catch(() => {});
+  await ouvrirLaBulle(page);
   await page.locator('.maplibregl-ctrl-attrib a[href="/a-propos.html"]').click();
   await expect(page).toHaveTitle(/À propos/);
   await expect(page.locator('h1')).toHaveText('Une carte qui ne vous suit pas');
@@ -1642,7 +1657,7 @@ test('PROFESSIONNELS : la page dit ce qu’elle ne fait pas, et contacte SANS se
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
   // Même chemin qu'« À propos » : la bulle du « i » (30/08).
-  await page.locator('.maplibregl-ctrl-attrib-button').click().catch(() => {});
+  await ouvrirLaBulle(page);
   await page.locator('.maplibregl-ctrl-attrib a[href="/offre-flottes.html"]').click();
   await expect(page).toHaveTitle(/Flottes et professionnels/);
 
