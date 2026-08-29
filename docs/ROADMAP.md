@@ -534,6 +534,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #95 — FEN-2, les fenêtres flottantes POUR DE BON (Armelin, 29/08 :
+      la configuration n'en était toujours pas une) : chaque page du
+      planificateur et le menu des réglages se détachent en fenêtre haute
+      comme son contenu, sur un voile ; l'accueil reste la feuille de BS-1.
+      Deux défauts mesurés tombent avec : la poignée étirée (72 px de vide)
+      et le sous-menu Fonds hors écran (y = 852 sur 844).
 - [x] PR #93 — le partage par la feuille du SYSTÈME (demande des amis
       d'Armelin, 29/08) : navigator.share pour le lien du trajet et les
       fichiers GPX/KML (Web Share niveau 2) — les deux niveaux d'Android

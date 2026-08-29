@@ -40,6 +40,7 @@
      mandat UX du 28/08 les jette dans des jetons : qui recouvre qui se lit
      ici, et nulle part ailleurs. */
   --z-cartouche: 5;      /* fiches borne/lieu, bandeau de suivi : sur la carte */
+  --z-fenetre-fond: 9;   /* le voile d'une fenêtre flottante : sous elle, sur la carte */
   --z-volet-ouvert: 10;  /* un volet du rail déplié passe devant ses voisins */
   --z-entete: 20;        /* l'en-tête flottant */
   --z-suggestions: 25;   /* la liste d'adresses, au-dessus de TOUT l'ordinaire */

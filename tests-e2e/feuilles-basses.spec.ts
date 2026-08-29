@@ -71,15 +71,63 @@ test('la poignée RÈGLE la hauteur : plein écran au tirer, fermée au geste fr
   expect(rouverte.height).toBeLessThan(VUE.height * 0.6);
 });
 
-test('le MENU aussi est une feuille — même mécanique, même poignée', async ({ page }) => {
+/* LE MENU N'EST PLUS UNE FEUILLE — Armelin, le 29/08 : « ce serait mieux
+ * d'afficher le menu sous forme de fenêtre flottante ». Il l'ouvrait, y
+ * lisait « un grand vide noir en haut » (la poignée s'étirait sur 72 px
+ * mesurés dans un corps en grille) et son sous-menu « Fonds » tombait SOUS
+ * l'écran (mesuré : y = 852 px sur 844). Une fenêtre haute comme son
+ * contenu règle les deux. Le planificateur, lui, garde sa feuille : c'est
+ * le panneau qu'on ouvre et referme sans arrêt. */
+test('le MENU est une FENÊTRE flottante : détachée des quatre bords, haute comme son contenu', async ({ page }) => {
   await page.setViewportSize(VUE);
   await ouvrirCarte(page);
   await page.locator('summary[aria-label="Menu : réglages, couches et lieux"]').click();
 
   const corps = (await page.locator('.reglages-corps').boundingBox())!;
-  expect(corps.y + corps.height).toBeGreaterThan(VUE.height - 2);
-  expect(corps.width).toBeGreaterThan(VUE.width - 3);
-  await expect(page.locator('.reglages .feuille-poignee')).toBeVisible();
+  expect(corps.x, 'la fenêtre touche le bord gauche').toBeGreaterThan(4);
+  expect(corps.x + corps.width, 'la fenêtre touche le bord droit').toBeLessThan(VUE.width - 4);
+  expect(corps.y + corps.height, 'la fenêtre touche le bas').toBeLessThan(VUE.height - 4);
+  // Haute comme son contenu, pas comme un demi-écran : plus de vide en tête.
+  expect(corps.height).toBeLessThan(VUE.height * 0.62);
+  await expect(page.locator('.reglages .feuille-poignee'),
+    'une fenêtre ne se tire pas : pas de poignée').toBeHidden();
+
+  /* ET LE SOUS-MENU « FONDS » SE VOIT AU CLIC, dans le cadre. */
+  await page.locator('.reglages-corps .fonds summary').click();
+  const choix = page.locator('.reglages-corps .fonds fieldset');
+  await expect(choix).toBeVisible();
+  const boite = (await choix.boundingBox())!;
+  expect(boite.y + boite.height, 'le choix des fonds tombe hors de l’écran')
+    .toBeLessThanOrEqual(VUE.height);
+});
+
+test('une PAGE du planificateur est une fenêtre — et le retour rend la feuille', async ({ page }) => {
+  /* Armelin, le 29/08 : « quand je clique sur un pictogramme, je n'ai
+     toujours pas de fenêtre flottante pour la configuration ». L'accueil
+     reste la feuille qu'il avait demandée ; la page se détache. */
+  await page.setViewportSize(VUE);
+  await ouvrirCarte(page);
+  await page.locator('.iti > summary').click();
+
+  const feuille = (await page.locator('.iti-corps').boundingBox())!;
+  expect(feuille.y + feuille.height, 'l’accueil doit rester une feuille')
+    .toBeGreaterThan(VUE.height - 2);
+
+  await page.locator('.iti-vers[data-vers="vehicule"]').click();
+  await expect(page.locator('.vue[data-vue="vehicule"]')).toBeVisible();
+  await expect(page.locator('details.iti')).toHaveAttribute('data-page', 'vehicule');
+  const fenetre = (await page.locator('.iti-corps').boundingBox())!;
+  expect(fenetre.x, 'la fenêtre touche le bord gauche').toBeGreaterThan(4);
+  expect(fenetre.x + fenetre.width).toBeLessThan(VUE.width - 4);
+  expect(fenetre.y + fenetre.height, 'la fenêtre touche le bas').toBeLessThan(VUE.height - 4);
+  await expect(page.locator('.iti .feuille-poignee')).toBeHidden();
+
+  // Retour : la feuille revient, poignée comprise — rien n'est perdu.
+  await page.locator('.vue-retour').click();
+  await expect(page.locator('details.iti')).not.toHaveAttribute('data-page', /.*/);
+  const revenue = (await page.locator('.iti-corps').boundingBox())!;
+  expect(revenue.y + revenue.height).toBeGreaterThan(VUE.height - 2);
+  await expect(page.locator('.iti .feuille-poignee')).toBeVisible();
 });
 
 test('sur GRAND écran, rien ne change : volets latéraux, poignée absente', async ({ page }) => {

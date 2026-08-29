@@ -1902,6 +1902,14 @@ export class PanneauItineraire extends HTMLElement {
     titre.textContent = VUES[vue];
     const retour = this.querySelector('.vue-retour') as HTMLElement;
     retour.hidden = vue === 'accueil';
+    /* LA PAGE OUVERTE EST UNE FENÊTRE, PAS UN TIROIR (FEN-2, 29/08 —
+       Armelin : « quand je clique sur un pictogramme, je n'ai toujours pas
+       de fenêtre flottante pour la configuration »). L'accueil reste la
+       feuille basse qu'il avait demandée (BS-1) ; TOUTE AUTRE PAGE se
+       détache en fenêtre, et le CSS s'accroche à cet attribut. */
+    const volet = this.querySelector('details.iti') as HTMLElement;
+    if (vue === 'accueil') delete volet.dataset['page'];
+    else volet.dataset['page'] = vue;
     /* LE CORPS REMONTE EN HAUT à chaque changement de page. Sans cela, on
        arrivait sur la météo au milieu de son texte, parce que la feuille de
        route d'avant avait fait défiler le conteneur. */

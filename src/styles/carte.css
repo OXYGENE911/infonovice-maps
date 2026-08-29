@@ -2197,3 +2197,75 @@ summary .picto-menu {
   width: 17px; height: 17px; vertical-align: -3.5px; margin-right: 7px;
   color: var(--accent);
 }
+
+/* ==========================================================================
+   FEN-2 — LES FENÊTRES FLOTTANTES (Armelin, 29/08 : « quand je clique sur un
+   pictogramme, je n'ai toujours pas de fenêtre flottante pour la
+   configuration », et « ce serait mieux d'afficher le menu sous forme de
+   fenêtre flottante »)
+   --------------------------------------------------------------------------
+   CE QUI CHANGE, ET CE QUI NE CHANGE PAS. L'ACCUEIL du planificateur reste
+   la feuille basse qu'Armelin avait demandée le 28/08 (BS-1) : c'est le
+   panneau qu'on ouvre et referme sans arrêt, le pouce l'atteint. Mais dès
+   qu'on entre dans une PAGE — mon véhicule, les options, les arrêts — ce
+   n'est plus un tiroir : c'est une fenêtre, détachée de tous les bords,
+   haute comme son contenu, posée sur un voile qui dit « le reste attend ».
+   Le menu des réglages devient une fenêtre lui aussi : il ne se tire pas,
+   on le lit.
+   ========================================================================== */
+
+/* LE VOILE. Il vit sur #carte (contexte d'empilement racine, position
+   fixed) et NON sur body : un voile body-level se peindrait par-dessus la
+   fenêtre elle-même, prisonnière de la carte. Purement visuel — la
+   fermeture au clic extérieur appartient déjà à panneaux.ts. */
+#carte::after {
+  content: ''; position: absolute; inset: 0; z-index: var(--z-fenetre-fond);
+  background: rgba(8, 24, 48, .34);
+  opacity: 0; pointer-events: none; transition: opacity 160ms ease;
+}
+#carte:has(details.iti[open][data-page])::after,
+#carte:has(details.reglages[open])::after { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  #carte::after { transition: none; }
+}
+@media (prefers-color-scheme: dark) {
+  #carte::after { background: rgba(0, 0, 0, .5); }
+}
+
+/* UNE FENÊTRE NE SE TIRE PAS : la poignée de feuille disparaît. Et elle ne
+   s'étirait pas non plus — dans un corps en grille, elle occupait 72 px de
+   vide mesurés en haut du menu (« un grand vide noir en haut », Armelin). */
+.feuille-poignee { align-self: start; }
+#carte .iti[data-page] .iti-corps > .feuille-poignee { display: none; }
+
+@media (max-width: 640px) {
+  /* LA PAGE : une fenêtre posée bas — le pouce garde ce qu'il avait — mais
+     DÉTACHÉE des quatre bords, arrondie partout, et haute comme son seul
+     contenu. */
+  #carte .iti[open][data-page] .iti-corps,
+  details.reglages[open] .reglages-corps {
+    left: 10px; right: 10px; bottom: calc(var(--sur-barre-basse) + 14px);
+    top: auto; height: auto;
+    max-height: min(76dvh, calc(100dvh - var(--hauteur-entete, 45px) - 90px));
+    border: 1px solid var(--bord); border-radius: 18px;
+    box-shadow: var(--ombre-flottante);
+    padding-bottom: 14px;
+  }
+  /* Le menu n'a plus de poignée à compenser : il retrouve son coussin. */
+  details.reglages[open] .reglages-corps { padding-top: 12px; }
+  details.reglages[open] .reglages-corps > .feuille-poignee { display: none; }
+  /* La tête de page colle en haut de la FENÊTRE, plus sous une poignée. */
+  #carte .iti[data-page] .iti-corps .vue-tete { top: 0; }
+}
+
+/* LE SOUS-MENU « FONDS » NE TOMBE PLUS SOUS L'ÉCRAN. Armelin, le 29/08 :
+   « quand je clique sur "menu" puis sur "fond", le sous-menu est caché et
+   l'utilisateur ne le voit pas ». Le panneau est `position: absolute` sous
+   sa pastille — juste, posé seul sur la carte ; DANS le menu, il se
+   retrouvait hors du cadre (mesuré : y = 852 px sur un écran de 844). À
+   l'intérieur du menu, il reprend sa place dans le flux et pousse ce qui
+   suit : on le voit à l'instant du clic. */
+.reglages-corps .fonds fieldset {
+  position: static; min-width: 0; margin-top: 8px;
+  box-shadow: none; background: var(--fond-doux);
+}
