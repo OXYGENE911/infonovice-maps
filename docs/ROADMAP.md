@@ -534,6 +534,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #92 — PIC-1, les pictogrammes de menu (variante A CHOISIE par
+      Armelin le 29/08 — « si cela ne me convient pas, on partira sur la
+      variante B ») : onze pictos au trait engendrés par le code
+      (icone-menu.ts), posés à côté des libellés dans les sept rangées du
+      planificateur et les quatre pastilles ; décoratifs par contrat
+      (aria-hidden, aucune couleur en dur). La variante B reste en réserve
+      pour une éventuelle barre d'outils du copilote.
 - [x] PR #91 — FEN-1, la fenêtre flottante (proposition maquettée en
       artefact, VALIDÉE par Armelin le 29/08) : volet borné à 680 px qui
       défile dedans, coins 16 px + ombre `--ombre-flottante` dès 641 px

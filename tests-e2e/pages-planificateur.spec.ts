@@ -159,3 +159,30 @@ test('la position connue sert de départ, sans jamais être demandée d’office
     .toHaveValue('Ma position', { timeout: 20_000 });
   await expect(page.locator('.iti-resultat')).toContainText('465 km', { timeout: 15_000 });
 });
+
+test('PIC-1 : chaque entrée de menu porte son picto — et le libellé reste entier', async ({ page }) => {
+  /* Variante A validée par Armelin le 29/08 : picto ET texte. Le picto est
+     une ancre pour l'œil, jamais un remplacement — un menu de pictos seuls
+     redeviendrait un rébus (la variante B est écartée pour cette raison). */
+  await ouvrirTrajet(page);
+
+  const rangee = page.locator('.iti-vers');
+  await expect(rangee).toHaveCount(7);
+  for (let i = 0; i < 7; i += 1) {
+    await expect(rangee.nth(i).locator('svg.picto-menu'),
+      'une rangée de menu sans picto').toHaveCount(1);
+  }
+  // Les libellés n'ont pas bougé d'une lettre : le sens reste dans le texte.
+  await expect(page.locator('.iti-vers span:first-of-type')).toHaveText([
+    'Mon véhicule', 'Recharge et services', 'Options du trajet',
+    'Arrêts de recharge', 'Lieux d’exception', 'Feuille de route', 'Partager ou exporter',
+  ]);
+
+  /* Les pastilles du rail aussi : Itinéraire, Fonds, Trafic, Favoris. Le
+     picto y est DÉCORATIF (aria-hidden) — les lecteurs d'écran ne voient
+     rien changer, les aria-label non plus. */
+  for (const pastille of ['.iti > summary', '.fonds summary', '.trafic summary', '.favoris summary']) {
+    await expect(page.locator(pastille).locator('svg.picto-menu[aria-hidden="true"]'),
+      `pastille sans picto : ${pastille}`).toHaveCount(1);
+  }
+});

@@ -2161,3 +2161,29 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
     box-shadow: var(--ombre-flottante);
   }
 }
+
+/* ==========================================================================
+   PIC-1 — LES PICTOGRAMMES DE MENU (variante A, validée par Armelin le 29/08)
+   Onze pictos au trait dessinés par le code (icone-menu.ts), en couleur
+   accent : l'œil accroche le picto avant de lire, on balaie le menu sans le
+   lire en entier. Le libellé reste seul porteur du sens (aria-hidden).
+   ========================================================================== */
+.picto-menu {
+  fill: none; stroke: currentColor;
+  stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round;
+}
+/* L'éclair des arrêts de recharge : la seule forme PLEINE — la même
+   silhouette que les pastilles de la carte. */
+.picto-menu .picto-menu-plein { fill: currentColor; stroke: none; }
+
+/* Dans les rangées du menu : le picto à gauche, le libellé prend la place,
+   le chevron reste collé à droite. */
+.iti-vers .picto-menu { width: 20px; height: 20px; flex: none; color: var(--accent); }
+.iti-vers span:first-of-type { flex: 1 1 auto; }
+
+/* Dans les pastilles du rail (Itinéraire, Fonds, Trafic, Favoris) : plus
+   petit, calé sur la ligne de texte. */
+summary .picto-menu {
+  width: 17px; height: 17px; vertical-align: -3.5px; margin-right: 7px;
+  color: var(--accent);
+}

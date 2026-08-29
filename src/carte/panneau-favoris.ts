@@ -11,6 +11,7 @@ import {
 } from '../lib/favoris';
 import { REPERES, lireRepere, effacerRepere, ecrireRepere } from '../lib/reperes';
 import { adresseInverse } from '../lib/adresse';
+import { pictoMenu } from './icone-menu';
 import { formaterCoordonnees } from '../lib/coordonnees';
 import { RechercheAdresse } from './recherche';
 import { lireHabitudes, oublierHabitudes } from '../lib/routines';
@@ -29,7 +30,7 @@ export class PanneauFavoris extends HTMLElement {
     if (this.firstElementChild) return;
     this.innerHTML = `
       <details class="favoris">
-        <summary aria-label="Ouvrir les favoris">Favoris</summary>
+        <summary aria-label="Ouvrir les favoris">${pictoMenu('favoris')}Favoris</summary>
         <div class="favoris-corps">
           <!-- LES REPÈRES D'ABORD : « rentrer chez moi » doit être un geste,
                pas une recherche dans une liste. -->

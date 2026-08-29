@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.67.0] — 2026-08-29 — PIC-1 : les pictogrammes de menu, variante A (PR #92)
+
+La seconde livraison validée par Armelin le 29/08 sur la maquette — et il a
+retranché le 29/08 : « tu livreras la variante A. Si cela ne me convient
+pas, on partira sur la variante B ».
+
+- **Onze pictos au trait** (1,9 px, couleur accent), dessinés PAR LE CODE
+  dans `icone-menu.ts` — le précédent des éclairs et des commodités : aucun
+  binaire au dépôt, jamais un émoji, jamais un logo.
+- **Sept rangées du planificateur** (véhicule, recharge et services,
+  options, arrêts, lieux d'exception, feuille de route, partager) et
+  **quatre pastilles** (Itinéraire, Fonds, Trafic, Favoris) reçoivent leur
+  picto À CÔTÉ du texte : l'œil accroche l'ancre avant de lire, le libellé
+  reste entier — la variante B (grille compacte) est écartée pour le menu
+  principal, ses libellés tronqués perdaient leur sens.
+- **Décoratifs par contrat** : aria-hidden, hors tabulation, aucune couleur
+  en dur (le test unitaire l'exige) — les lecteurs d'écran ne voient rien
+  changer, le mode sombre non plus.
+
+597 tests unitaires (+4), 187 parcours E2E (+1).
+
 ## [0.66.0] — 2026-08-29 — FEN-1 : le volet devient une fenêtre flottante (PR #91)
 
 Proposition maquettée puis VALIDÉE par Armelin le 29/08 (« valide les deux,

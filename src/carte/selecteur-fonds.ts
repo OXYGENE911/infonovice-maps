@@ -3,6 +3,7 @@
 // une case cadastre ; le choix est persisté en IndexedDB et rétabli au
 // chargement.
 import { FONDS, type Fond, type OptionsStyle } from './style-ign';
+import { pictoMenu } from './icone-menu';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 
 export const PREF_FONDS = 'fonds';
@@ -31,7 +32,7 @@ export class SelecteurFonds extends HTMLElement {
     const { fond, cadastre } = this.#options;
     this.innerHTML = `
       <details class="fonds">
-        <summary aria-label="Choisir le fond de carte">Fonds</summary>
+        <summary aria-label="Choisir le fond de carte">${pictoMenu('fonds')}Fonds</summary>
         <fieldset>
           <legend>Fond de carte</legend>
           ${(Object.keys(FONDS) as Fond[]).map((f) => `
