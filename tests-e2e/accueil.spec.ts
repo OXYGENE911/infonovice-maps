@@ -1736,3 +1736,37 @@ test('PHOTO-1 : la fiche d’un lieu porte sa photo Wikimedia — auteur et lice
   expect(refDemandee).toContain('PA00078023');
   expect(refDemandee, 'aucune position ne doit partir').not.toContain('47.3');
 });
+
+test('POI : sous le zoom 12, les recherches se DISENT inertes — avant le clic', async ({ page }) => {
+  /* Armelin, le 30/08 : « les boutons Pharmacie, restaurants, boulangeries,
+     supermarchés et toilettes ne fonctionnent pas », et « dans le filtre des
+     bornes, quand je tape McDonald, il ne se passe rien ». Ils fonctionnaient
+     — mais au zoom d'un trajet entier (mesuré : 6,1) ils n'ont rien à
+     chercher, et rien ne le disait TANT QU'ON N'AVAIT PAS CLIQUÉ. Un bouton
+     qui a l'air actif et ne fait rien est un mensonge d'interface. */
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 390_000, duration: 13_000,
+    }),
+  }));
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  await allerA(page, 'couches');
+
+  // AU ZOOM DU TRAJET : boutons désactivés, raison écrite, champ inerte.
+  await expect(page.locator('.poi-categorie').first()).toBeDisabled();
+  await expect(page.locator('.poi-seuil-vue')).toContainText('Rapprochez-vous');
+  await expect(page.locator('.poi-nom-station')).toBeDisabled();
+
+  // EN SE RAPPROCHANT, tout redevient vivant — sans recharger la page.
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [2.35, 48.85], zoom: 14 });
+  });
+  await expect(page.locator('.poi-categorie').first()).toBeEnabled();
+  await expect(page.locator('.poi-seuil-vue')).toBeHidden();
+  await expect(page.locator('.poi-nom-station')).toBeEnabled();
+});
