@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.59.0] — 2026-08-29 — Le plan de recharge se calcule tout seul (PR #84)
+
+Trois retours d'Armelin du 29/08 soldés d'un coup :
+
+- **« Il faut cliquer sur Arrêts de recharge pour que le planificateur
+  calcule — pas intuitif. »** Un trajet calculé avec un véhicule renseigné
+  déclenche le plan TOUT SEUL, une seconde après le calme (les rafales de
+  recalcul — cases, étapes — ne coûtent qu'un calcul). Sans véhicule,
+  silence : l'invite n'a de sens que quand on ouvre la page.
+- **« Il faut attendre sans aucune barre de chargement. »** Le résumé DIT
+  ce qui se passe : « 390 km — 3 h de route — calcul des arrêts de
+  recharge… », puis le total charge comprise.
+- **Un véhicule modifié INVALIDE le plan** : capacité, autonomie ou
+  bridage changés, le plan décrivait une autre voiture — il se refait tout
+  seul (défaut débusqué par le parcours hiver, que l'automatisation avait
+  mis au jour : le plan se figeait sur le profil d'avant la saisie).
+- **Le DOUBLON des réseaux** : les réseaux cochés dans « Recharge et
+  services » (le filtre carte, persisté) arrivent COCHÉS dans le plan de
+  chaque nouveau trajet — et restent modifiables pour ce trajet-là.
+
+585 tests unitaires, 189 parcours E2E (+1).
+
 ## [0.58.0] — 2026-08-29 — Retrait des transports en commun (PR #83)
 
 Décision d'Armelin, confirmée après essai le 29/08 : « je ne vois aucun

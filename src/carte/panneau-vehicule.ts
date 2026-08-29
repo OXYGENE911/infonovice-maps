@@ -275,6 +275,10 @@ export class PanneauVehicule extends HTMLElement {
     void ecrirePreference(PREF_VEHICULE, {
       vehicule: this.#vehicule, essais: this.#essais, anneaux: this.#actif,
     });
+    /* LE PLANIFICATEUR DOIT LE SAVOIR (29/08) : un plan de recharge calculé
+       sur l'ANCIEN profil — capacité, bridage thermique — décrit une autre
+       voiture. L'événement l'invalide, il se refera tout seul. */
+    document.dispatchEvent(new CustomEvent('vehicule-change'));
   }
 
   async #restaurer(): Promise<void> {

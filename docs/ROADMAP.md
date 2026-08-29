@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #84 — le plan de recharge se calcule TOUT SEUL (retours du
+      29/08) : déclenché au calcul du trajet quand un véhicule est renseigné,
+      annoncé dans le résumé pendant le travail ; les réseaux du filtre carte
+      arrivent cochés dans le plan (fin du doublon).
 - [x] PR #83 — RETRAIT des transports en commun (décision d'Armelin
       CONFIRMÉE après essai le 29/08, comme la roadmap le prévoyait) :
       panneau, couche, GTFS-RT, annuaire et tests — le tout, proprement.
