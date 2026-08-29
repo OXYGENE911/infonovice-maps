@@ -500,7 +500,9 @@ test('le COPILOTE connaît le plan : l’arrêt, ses SOC prévus, ses commodité
   await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
   const overpassApresDemarrage = appelsOverpass;
 
-  await page.getByRole('button', { name: 'Ouvrir le panneau du copilote' }).click();
+  // Depuis NAV-3 (29/08), le bouton du copilote vit dans la barre DÉPLIÉE.
+  await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
+  await page.locator('.bg-copilote-bouton').click();
   const copilote = page.locator('.bg-copilote');
   await expect(copilote).toContainText('Recharges à venir', { timeout: 15_000 });
   await expect(copilote).toContainText('Aire de Beaune');

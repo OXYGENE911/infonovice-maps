@@ -12,6 +12,9 @@ const NOMS: NomPicto[] = [
   'itineraire', 'favoris', 'fonds', 'trafic',
   // PIC-2 (29/08) : les options du trajet.
   'pieton', 'rapide', 'court', 'autoroute', 'tunnel', 'pont',
+  // NAV-3 (29/08) : la barre de suivi.
+  'orient-cap', 'orient-nord', 'orient-libre', 'vue-3d', 'vue-plat',
+  'copilote', 'croix',
 ];
 
 describe('pictoMenu', () => {
@@ -21,7 +24,8 @@ describe('pictoMenu', () => {
       expect(svg, nom).toContain('aria-hidden="true"');
       expect(svg, nom).toContain('focusable="false"');
       expect(svg, nom).toContain('viewBox="0 0 24 24"');
-      expect(svg, nom).toContain('class="picto-menu"');
+      // La classe porte AUSSI le nom : voir `pictoMenu`.
+      expect(svg, nom).toContain('class="picto-menu picto-' + nom + '"');
     }
   });
 
@@ -34,9 +38,13 @@ describe('pictoMenu', () => {
     }
   });
 
-  it('l’éclair des arrêts de recharge est la seule forme pleine', () => {
+  it('les formes PLEINES sont nommées, et elles seules', () => {
+    /* L'éclair des arrêts (la silhouette des pastilles de carte) et les
+       aiguilles de boussole : un trait creux ne dirait pas de quel côté
+       elles pointent. Toute autre forme pleine serait une entorse au
+       vocabulaire — d'où cette liste, qu'il faut modifier sciemment. */
     const pleins = NOMS.filter((n) => pictoMenu(n).includes('picto-menu-plein'));
-    expect(pleins).toEqual(['recharge']);
+    expect(pleins).toEqual(['recharge', 'orient-cap', 'orient-nord']);
   });
 
   it('autant de tracés que de pictos — pas de doublon copié-collé', () => {

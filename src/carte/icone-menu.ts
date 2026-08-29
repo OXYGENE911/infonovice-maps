@@ -19,7 +19,12 @@ export type NomPicto =
   /* PIC-2 (29/08) — « poursuivre les autres améliorations graphiques […]
      notamment les icônes pour les options ». La page Options n'était que
      des mots : mode de déplacement, optimisation, évitements. */
-  | 'pieton' | 'rapide' | 'court' | 'autoroute' | 'tunnel' | 'pont';
+  | 'pieton' | 'rapide' | 'court' | 'autoroute' | 'tunnel' | 'pont'
+  /* NAV-3 (29/08) — la barre de suivi passe aux icônes : « remplacer le
+     bouton Vue à plat et Cap en haut par un unique bouton en forme d'icône
+     de boussole en mode pressoir ». */
+  | 'orient-cap' | 'orient-nord' | 'orient-libre' | 'vue-3d' | 'vue-plat'
+  | 'copilote' | 'croix';
 
 /* Chaque tracé vit dans un carré de 24 × 24. Le trait est porté par la
    classe CSS .picto-menu (fill none, stroke currentColor) ; l'éclair des
@@ -67,6 +72,30 @@ const TRACES: Record<NomPicto, string> = {
   // Un tunnel : la voûte, et la route qui y entre.
   tunnel: '<path d="M3.6 19.6V13a8.4 8.4 0 0 1 16.8 0v6.6"/>'
     + '<path d="M8.6 19.6V13a3.4 3.4 0 0 1 6.8 0v6.6"/><path d="M2.4 19.6h19.2"/>',
+  /* ---- NAV-3 : la barre de suivi ---- */
+  /* TROIS ÉTATS, TROIS DESSINS. Le bouton est « en mode pressoir » : on
+     clique, l'état change, ET LE LOGO AVEC — sans quoi rien ne dit dans
+     quel état on se trouve. */
+  'orient-cap': '<circle cx="12" cy="12" r="8.6"/>'
+    + '<polygon class="picto-menu-plein" points="12,6.2 15.6,16 12,13.9 8.4,16"/>',
+  'orient-nord': '<circle cx="12" cy="12" r="8.6"/>'
+    + '<path d="M12 1.8v2.2M12 20v2.2M1.8 12h2.2M20 12h2.2"/>'
+    + '<polygon class="picto-menu-plein" points="12,7.4 14.4,15 12,13.4 9.6,15"/>',
+  'orient-libre': '<circle cx="12" cy="12" r="8.6"/>'
+    + '<path d="M8.4 9.4a4.8 4.8 0 0 1 7.2 0M15.6 14.6a4.8 4.8 0 0 1-7.2 0"/>'
+    + '<path d="M8.4 9.4 8 6.6M15.6 14.6l.4 2.8"/>',
+  /* LE PLAN VU DE BIAIS : un parallélogramme, c'est la vue inclinée ; un
+     rectangle, c'est la vue à plat. Le premier dessin (deux bords qui
+     fuient vers un point) se lisait « A » à vingt-deux pixels — vu sur
+     capture avant d'être refait, comme le pont de PIC-2. */
+  'vue-3d': '<path d="M7.4 6.6h13.2l-4 10.8H3.4Z"/><path d="M9.6 10.6h8.4"/>',
+  'vue-plat': '<rect x="3.6" y="6.6" width="16.8" height="10.8" rx="2"/>'
+    + '<path d="M3.6 12h16.8"/>',
+  // Le copilote : un buste de passager.
+  copilote: '<circle cx="12" cy="7" r="3"/>'
+    + '<path d="M5.6 20a6.4 6.4 0 0 1 12.8 0"/>',
+  croix: '<path d="M6.6 6.6 17.4 17.4M17.4 6.6 6.6 17.4"/>',
+
   /* Un pont en arc : le tablier droit, l'arche DESSOUS, et les suspentes
      qui les relient. Le premier dessin (tablier + deux appuis) se lisait
      « table » à dix-sept pixels — vérifié sur capture avant de le refaire. */
@@ -81,5 +110,10 @@ const TRACES: Record<NomPicto, string> = {
  * voient RIEN changer.
  */
 export function pictoMenu(nom: NomPicto): string {
-  return `<svg class="picto-menu" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${TRACES[nom]}</svg>`;
+  /* LE NOM EST PORTÉ PAR UNE CLASSE, et ce n'est pas de la décoration : un
+     bouton « pressoir » change de dessin avec son état (NAV-3), et rien
+     d'autre dans le DOM ne dirait LEQUEL est affiché — ni pour le CSS, ni
+     pour un parcours qui le vérifie. */
+  return `<svg class="picto-menu picto-${nom}" viewBox="0 0 24 24"`
+    + ` aria-hidden="true" focusable="false">${TRACES[nom]}</svg>`;
 }

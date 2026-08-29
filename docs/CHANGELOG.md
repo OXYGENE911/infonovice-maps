@@ -2,6 +2,39 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.78.0] — 2026-08-29 — NAV-3 : la barre de suivi réduite à ce qu'on lit en roulant (PR #105)
+
+Armelin, le 29/08 : « la barre de navigation en bas sur mobile est beaucoup
+trop grande et les informations les plus indispensables sont écrites en trop
+petit […] les seules informations qui doivent apparaître pendant la
+navigation, c'est : le nombre de kilomètres restants, le temps restant,
+l'heure d'arrivée estimée, un bouton pour arrêter ».
+
+- **TROIS CHIFFRES, EN GRAND** (22 px au lieu de 13, chacun sous son
+  libellé) : ce qui reste, le temps de route, l'heure d'arrivée. La phrase
+  complète demeure pour qui écoute la page — masquée à l'œil, jamais
+  retirée de l'arbre d'accessibilité.
+- **UNE CROIX ROUGE** de 48 px remplace le bouton « Arrêter le suivi » : on
+  la cherche parfois dans l'urgence.
+- **LE RESTE SE DÉPLIE**, par les deux gestes qu'Armelin a décrits : un
+  appui sur la barre, ou un glissement vers le haut. Le bouton « Réduire »
+  disparaît — la barre EST repliée, ce qui était son intention.
+- **DES ICÔNES À LA PLACE DES PHRASES** : la boussole « en mode pressoir »
+  (son dessin change avec les trois états : cap, nord, libre), la vue
+  inclinée ou à plat, le copilote. Le nom accessible porte l'état en toutes
+  lettres — l'icône parle à l'œil, la phrase à qui écoute.
+- **LES BOUTONS + ET − DISPARAISSENT** : « ils n'ont pas leur place sur un
+  écran tactile où tout le monde zoome avec les doigts ». Ils coûtaient
+  aussi le chevauchement signalé. La boussole reste : aucun geste ne la
+  remplace, et c'est elle qui redresse une carte tournée par erreur.
+- **LA BARRE DU TRAJET NE COUPE PLUS RIEN** : les commandes de vue et
+  l'attribution IGN s'écartent de sa largeur (mesuré : 346 contre 354).
+- Le picto de vue inclinée a été refait après capture — le premier se
+  lisait « A » à vingt-deux pixels. Et les pictos portent désormais leur
+  nom en classe : un bouton pressoir doit dire LEQUEL il affiche.
+
+645 tests unitaires, 196 parcours E2E.
+
 ## [0.77.0] — 2026-08-29 — GUID-3 : le guidage avait une manœuvre de retard (PR #104)
 
 Armelin, au volant le 29/08, captures à l'appui : « le GPS confond sa gauche

@@ -37,6 +37,7 @@ import type { EvenementTrajet } from '../lib/trafic';
 import { flecheManoeuvre } from './icone-manoeuvre';
 import { refermerPanneaux } from './panneaux';
 import { classeRoute, numeroRoute, libelleClasse } from '../lib/classe-route';
+import { pictoMenu } from './icone-menu';
 import { CurseurVehicule, capEntre, formeValide, PREF_CURSEUR } from './curseur-vehicule';
 import { lirePreference } from '../lib/stockage';
 import { segmentsFrise } from '../lib/frise';
@@ -202,28 +203,49 @@ export class BandeauGuidage extends HTMLElement {
              déplace actuellement »). La manœuvre a déménagé dans le
              cartouche flottant ; ici restent la voie, ce qui reste à faire,
              et ce qui arrive. -->
-        <p class="bg-voie"></p>
-        <p class="bg-restant" role="status"></p>
+        <!-- LA RANGÉE ESSENTIELLE (NAV-3, 29/08). Armelin : « la barre de
+             navigation en bas sur mobile est beaucoup trop grande et les
+             informations les plus indispensables sont écrites en trop petit
+             […] les seules informations qui doivent apparaître pendant la
+             navigation, c'est le nombre de kilomètres restants, le temps
+             restant, l'heure d'arrivée estimée, et un bouton pour arrêter ».
+             Trois chiffres, gros ; une croix ; le reste se déplie. -->
+        <div class="bg-essentiel">
+          <button type="button" class="bg-deplier" aria-expanded="false"
+            aria-label="Afficher les commandes du suivi">
+            <p class="bg-voie"></p>
+            <p class="bg-chiffres" aria-hidden="true">
+              <span class="bg-chiffre"><b class="bg-km"></b><i>restants</i></span>
+              <span class="bg-chiffre"><b class="bg-temps"></b><i>de route</i></span>
+              <span class="bg-chiffre"><b class="bg-eta"></b><i>arrivée</i></span>
+            </p>
+          </button>
+          <button type="button" class="bg-arreter" aria-label="Arrêter le suivi">
+            ${pictoMenu('croix')}</button>
+        </div>
+        <!-- LA PHRASE COMPLÈTE RESTE, POUR QUI ÉCOUTE LA PAGE. Elle n'est
+             pas masquée par l'attribut hidden — un élément caché sort de
+             l'arbre d'accessibilité, et les trois chiffres, eux, sont
+             décoratifs pour un lecteur d'écran (« 390 km / restants » lu
+             en morceaux ne s'entend pas). Masquée À L'ŒIL SEULEMENT. -->
+        <p class="bg-restant bg-lu-seulement" role="status"></p>
         <p class="bg-trafic" role="status"></p>
         <p class="bg-arret"></p>
         <p class="bg-alerte" role="alert" hidden></p>
-        <div class="bg-boutons">
-          <!-- LE BANDEAU SE RÉDUIT : « réduire la taille du cartouche en bas
-               qui prend 1/3 de l'écran » (Armelin, 27/08/2026). Réduit, il
-               garde la manœuvre et le restant — ce qu'on lit en roulant. -->
-          <button type="button" class="bg-reduire" aria-pressed="false"
-            aria-label="Réduire le bandeau">Réduire</button>
-          <!-- LA VUE 3D SE REFUSE : certains lisent mieux à plat. Le choix
-               tient la session. -->
+        <!-- CE QUI SE DÉPLIE. « Soit l'utilisateur scrolle la barre vers le
+             haut pour afficher les options cachées, soit il appuie une fois
+             sur la barre pour la déployer » — les deux gestes marchent.
+             Les libellés sont devenus des ICÔNES : « un unique bouton en
+             forme de boussole en mode pressoir », dont le dessin change
+             avec l'état. -->
+        <div class="bg-boutons" hidden>
           <button type="button" class="bg-3d" aria-pressed="true"
-            aria-label="Passer la carte à plat">Vue à plat</button>
-          <!-- L'ORIENTATION À TROIS ÉTATS (NAV-1) : le bouton DIT l'état
-               courant et le clic passe au suivant — cap, nord, libre. -->
+            aria-label="Passer la carte à plat">${pictoMenu('vue-3d')}</button>
           <button type="button" class="bg-orientation"
-            aria-label="Changer l’orientation de la carte">Cap en haut</button>
+            aria-label="Changer l’orientation de la carte : cap en haut">
+            ${pictoMenu('orient-cap')}</button>
           <button type="button" class="bg-copilote-bouton" aria-pressed="false"
-            aria-label="Ouvrir le panneau du copilote">Copilote</button>
-          <button type="button" class="bg-arreter">Arrêter le suivi</button>
+            aria-label="Ouvrir le panneau du copilote">${pictoMenu('copilote')}</button>
         </div>
       </div>
       <!-- LE CARTOUCHE D'INSTRUCTION (GUID-2, 29/08) — « des fenêtres
@@ -313,26 +335,29 @@ export class BandeauGuidage extends HTMLElement {
       this.#en3D = !this.#en3D;
       const bouton = this.querySelector('.bg-3d') as HTMLButtonElement;
       bouton.setAttribute('aria-pressed', String(this.#en3D));
-      bouton.textContent = this.#en3D ? 'Vue à plat' : 'Vue 3D';
+      /* L'ICÔNE DIT CE QU'ON OBTIENDRA EN CLIQUANT — la perspective quand on
+         est à plat, le plan quand on est incliné. C'est la convention d'un
+         bouton « pressoir » : il montre la sortie, pas l'état. */
+      bouton.innerHTML = pictoMenu(this.#en3D ? 'vue-plat' : 'vue-3d');
       bouton.setAttribute('aria-label',
         this.#en3D ? 'Passer la carte à plat' : 'Incliner la carte');
-      this.#carte?.easeTo({ pitch: this.#en3D ? PITCH_SUIVI : 0, duration: 500 });
+      this.#carte?.easeTo({ pitch: this.#en3D ? PITCH_SUIVI : 0, duration: 400 });
     });
     this.querySelector('.bg-orientation')?.addEventListener('click', () => {
       this.#modeOrientation = modeSuivant(this.#modeOrientation);
       const bouton = this.querySelector('.bg-orientation') as HTMLButtonElement;
-      bouton.textContent = libelleMode(this.#modeOrientation);
-      /* LA BOUSSOLE NE S'OUVRE QUE SUR CE GESTE — et seulement en mode cap :
-         iOS exige un geste ET une permission pour DeviceOrientation, et
-         l'écouter sans besoin gaspillerait des réveils capteur. */
+      const picto = this.#modeOrientation === 'cap' ? 'orient-cap'
+        : this.#modeOrientation === 'nord' ? 'orient-nord' : 'orient-libre';
+      bouton.innerHTML = pictoMenu(picto);
+      /* LE LIBELLÉ VIT DANS L'ARIA : l'icône dit l'état à l'œil, la phrase
+         le dit à qui écoute la page. Aucun des deux ne suffit seul. */
+      bouton.setAttribute('aria-label',
+        `Changer l’orientation de la carte : ${libelleMode(this.#modeOrientation).toLowerCase()}`);
       if (this.#modeOrientation === 'cap') void this.#ouvrirBoussole();
       else this.#fermerBoussole();
-      /* L'état choisi s'applique SANS attendre le prochain fixe : passer au
-         nord doit redresser la carte au clic, pas au prochain mouvement. */
       if (this.#modeOrientation === 'nord') {
-        this.#carte?.easeTo({ bearing: 0, duration: 500 });
-      } else if (this.#modeOrientation === 'cap' && this.#capLisse !== null) {
-        this.#carte?.easeTo({ bearing: this.#capLisse, duration: 500 });
+        this.#capLisse = null;
+        this.#carte?.easeTo({ bearing: 0, duration: 400 });
       }
     });
     this.querySelector('.bg-copilote-bouton')?.addEventListener('click', () => {
@@ -349,12 +374,31 @@ export class BandeauGuidage extends HTMLElement {
       if (panneau) panneau.hidden = true;
       this.querySelector('.bg-copilote-bouton')?.setAttribute('aria-pressed', 'false');
     });
-    this.querySelector('.bg-reduire')?.addEventListener('click', () => {
-      const reduit = this.classList.toggle('bg-compact');
-      const bouton = this.querySelector('.bg-reduire') as HTMLButtonElement;
-      bouton.setAttribute('aria-pressed', String(reduit));
-      bouton.textContent = reduit ? 'Agrandir' : 'Réduire';
-      bouton.setAttribute('aria-label', reduit ? 'Agrandir le bandeau' : 'Réduire le bandeau');
+    /* LE DÉPLIAGE — DEUX GESTES, comme Armelin les a décrits (29/08) :
+       « soit l'utilisateur scrolle la barre de navigation vers le haut pour
+       afficher les options cachées, soit il appuie une fois sur la barre
+       pour faire déployer le menu ». Le bouton « Réduire » disparaît : la
+       barre est désormais REPLIÉE par défaut, ce qui était l'intention. */
+    const deplier = this.querySelector('.bg-deplier') as HTMLButtonElement;
+    const basculer = (ouvert?: boolean): void => {
+      const etat = ouvert ?? !this.classList.contains('bg-deploye');
+      this.classList.toggle('bg-deploye', etat);
+      deplier.setAttribute('aria-expanded', String(etat));
+      const boutons = this.querySelector('.bg-boutons') as HTMLElement;
+      boutons.hidden = !etat;
+      this.#publierHauteur?.();
+    };
+    deplier.addEventListener('click', () => { basculer(); });
+    /* Le glissement : vers le HAUT on ouvre, vers le BAS on referme. Trente
+       pixels séparent un geste d'un tremblement de doigt sur une route. */
+    let departY: number | null = null;
+    deplier.addEventListener('pointerdown', (e) => { departY = e.clientY; });
+    deplier.addEventListener('pointerup', (e) => {
+      if (departY === null) return;
+      const dy = e.clientY - departY;
+      departY = null;
+      if (dy < -30) basculer(true);
+      else if (dy > 30) basculer(false);
     });
   }
 
@@ -733,10 +777,29 @@ export class BandeauGuidage extends HTMLElement {
       .filter((a) => a.avancementM > e.avancementM)
       .reduce((t, a) => t + a.dureeMin * 60, 0);
     const arrivee = heureArriveeEstimee(e.restantS + chargeRestanteS, new Date());
+    /* TROIS CHIFFRES, CHACUN DANS SA CASE ET EN GRAND (NAV-3). La ligne
+       d'avant les cousait ensemble en treize pixels : « les informations
+       les plus indispensables sont écrites en trop petit », et c'est vrai —
+       ce sont les seules qu'on lit vraiment en roulant. */
+    const heure = arrivee
+      ? arrivee.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      : '—';
+    (this.querySelector('.bg-km') as HTMLElement).textContent = formaterDistance(e.restantM);
+    (this.querySelector('.bg-temps') as HTMLElement).textContent =
+      e.restantS > 0 ? formaterDuree(Math.round(e.restantS + chargeRestanteS)) : '—';
+    (this.querySelector('.bg-eta') as HTMLElement).textContent = heure;
+    /* « Charges comprises » n'entre pas dans un chiffre : le mot vit sous
+       l'heure, en petit, et seulement quand il est vrai. */
+    const mentionEta = this.querySelector('.bg-eta')?.nextElementSibling;
+    if (mentionEta) {
+      mentionEta.textContent = chargeRestanteS > 0 ? 'charges comprises' : 'arrivée';
+    }
+    /* La ligne d'origine reste, MASQUÉE : elle porte encore la phrase
+       complète pour les lecteurs d'écran et les parcours qui la lisent. */
     (this.querySelector('.bg-restant') as HTMLElement).textContent = [
       `${formaterDistance(e.restantM)} restants`,
       e.restantS > 0 ? formaterDuree(Math.round(e.restantS + chargeRestanteS)) : null,
-      arrivee ? `arrivée vers ${arrivee.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+      arrivee ? `arrivée vers ${heure}`
         + (chargeRestanteS > 0 ? ', charges comprises' : '') : null,
     ].filter(Boolean).join(' · ');
 

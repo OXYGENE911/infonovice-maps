@@ -228,29 +228,48 @@ test('l’écran reste allumé pendant le suivi, et le verrou se REND à l’arr
     .toBeGreaterThanOrEqual(1);
 });
 
-test('le bandeau se RÉDUIT — et garde ce qu’on lit en roulant', async ({ page }) => {
-  /* « Réduire la taille du cartouche en bas qui prend 1/3 de l'écran »
-     (Armelin, 27/08/2026). Réduit : la manœuvre et le restant restent, la
-     note de limite — lue au démarrage — se range. */
+test('NAV-3 : la barre est REPLIÉE — trois chiffres, une croix — et se déplie d’un appui', async ({ page }) => {
+  /* Armelin, le 29/08 : « la barre de navigation en bas sur mobile est
+     beaucoup trop grande et les informations les plus indispensables sont
+     écrites en trop petit […] les seules informations qui doivent
+     apparaître, c'est le nombre de kilomètres restants, le temps restant,
+     l'heure d'arrivée estimée, et un bouton pour arrêter ». Le bouton
+     « Réduire » n'existe plus : la barre EST repliée, et se déplie. */
+  await page.setViewportSize({ width: 390, height: 844 });
   await ouvrirTrajet(page);
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   const bandeau = page.locator('bandeau-guidage');
-  /* Depuis GUID-2, la note de limite a déménagé dans le copilote : la barre
-     du bas ne porte plus que la voie, le restant et les boutons. C'est la
-     VOIE qui se range quand on réduit. */
-  await expect(bandeau.locator('.bg-voie')).toBeVisible({ timeout: 15_000 });
+  await expect(bandeau.locator('.bg-chiffres')).toBeVisible({ timeout: 15_000 });
 
-  const avant = (await bandeau.locator('.bg').boundingBox())!.height;
-  await page.getByRole('button', { name: 'Réduire le bandeau' }).click();
-  await expect(bandeau.locator('.bg-voie')).toBeHidden();
-  await expect(bandeau.locator('.bg-restant')).toBeVisible();
-  // Le cartouche d'instruction, lui, ne se réduit pas : il flotte ailleurs.
-  await expect(bandeau.locator('.bg-instruction')).toBeVisible();
-  const apres = (await bandeau.locator('.bg').boundingBox())!.height;
-  expect(apres, 'réduit, le bandeau doit être plus petit').toBeLessThan(avant);
+  // LES TROIS CHIFFRES SONT LÀ, ET ILS SONT GROS : 22 px, pas 13.
+  await expect(bandeau.locator('.bg-km')).toContainText('km');
+  await expect(bandeau.locator('.bg-eta')).toContainText(':');
+  const taille = await bandeau.locator('.bg-km').evaluate(
+    (el) => Number.parseFloat(getComputedStyle(el).fontSize));
+  expect(taille, 'les chiffres du volant doivent être gros').toBeGreaterThanOrEqual(20);
 
-  await page.getByRole('button', { name: 'Agrandir le bandeau' }).click();
-  await expect(bandeau.locator('.bg-voie')).toBeVisible();
+  // REPLIÉE : les commandes secondaires ne prennent pas de place.
+  await expect(bandeau.locator('.bg-boutons')).toBeHidden();
+  const replie = (await bandeau.locator('.bg').boundingBox())!.height;
+
+  // UN APPUI SUR LA BARRE la déplie — c'est le premier des deux gestes.
+  await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
+  await expect(bandeau.locator('.bg-boutons')).toBeVisible();
+  const deplie = (await bandeau.locator('.bg').boundingBox())!.height;
+  expect(deplie, 'dépliée, la barre doit être plus haute').toBeGreaterThan(replie);
+
+  // Et un second appui la referme.
+  await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
+  await expect(bandeau.locator('.bg-boutons')).toBeHidden();
+
+  /* LA CROIX ROUGE ARRÊTE LE SUIVI — « une grosse icône en forme de croix
+     rouge » à la place du bouton large. Grosse : on la cherche parfois
+     dans l'urgence. */
+  const croix = (await bandeau.locator('.bg-arreter').boundingBox())!;
+  expect(Math.min(croix.width, croix.height),
+    'la croix doit rester une grosse cible').toBeGreaterThanOrEqual(44);
+  await bandeau.locator('.bg-arreter').click();
+  await expect(bandeau).toBeHidden();
 });
 
 test('le prochain événement trafic du corridor s’ANNONCE — et se tait derrière soi', async ({ page }) => {
@@ -471,7 +490,10 @@ test('la vue s’incline en suivi, se refuse d’un bouton, se redresse à l’a
   await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
   await expect.poll(inclinaison, { timeout: 10_000 }).toBe(55);
 
-  // Certains lisent mieux à plat : le bouton rend la carte, et se souvient.
+  /* Certains lisent mieux à plat : le bouton rend la carte, et se souvient.
+     Depuis NAV-3 il vit dans la barre DÉPLIÉE, et porte une icône — son
+     nom accessible reste la phrase. */
+  await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
   await page.getByRole('button', { name: 'Passer la carte à plat' }).click();
   await expect.poll(inclinaison, { timeout: 10_000 }).toBe(0);
   await page.getByRole('button', { name: 'Incliner la carte' }).click();
@@ -585,8 +607,14 @@ test('l’orientation à TROIS ÉTATS — cap, nord, vue libre — et le cap se 
     Math.round((window as unknown as { __carte: { getBearing(): number } }).__carte.getBearing()));
 
   // CAP (défaut) : le premier cap est pris ENTIER — la carte ne part pas de travers.
-  const bouton = page.getByRole('button', { name: 'Changer l’orientation de la carte' });
-  await expect(bouton).toHaveText('Cap en haut');
+  /* Depuis NAV-3, le bouton est « en mode pressoir » : une icône de
+     boussole dont le DESSIN change avec l'état — et dont le nom accessible
+     porte cet état en toutes lettres, pour qui écoute la page. Il vit dans
+     la barre dépliée. */
+  await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
+  const bouton = page.locator('.bg-orientation');
+  await expect(bouton).toHaveAttribute('aria-label', /cap en haut/);
+  await expect(bouton.locator('svg')).toHaveClass(/picto-orient-cap/);
   await cap(90);
   await expect.poll(bearing, { timeout: 10_000 }).toBe(90);
   /* LE LISSAGE : le fixe suivant à 100° ne tourne que de 35 % de l'écart —
@@ -596,7 +624,8 @@ test('l’orientation à TROIS ÉTATS — cap, nord, vue libre — et le cap se 
 
   // NORD : redressée AU CLIC, et le nord TIENT sous les fixes suivants.
   await bouton.click();
-  await expect(bouton).toHaveText('Nord en haut');
+  await expect(bouton).toHaveAttribute('aria-label', /nord en haut/);
+  await expect(bouton.locator('svg')).toHaveClass(/picto-orient-nord/);
   await expect.poll(bearing, { timeout: 10_000 }).toBe(0);
   await cap(120);
   await page.waitForTimeout(1000);
@@ -604,7 +633,8 @@ test('l’orientation à TROIS ÉTATS — cap, nord, vue libre — et le cap se 
 
   // LIBRE : la carte suit la voiture sans toucher à la rotation posée.
   await bouton.click();
-  await expect(bouton).toHaveText('Vue libre');
+  await expect(bouton).toHaveAttribute('aria-label', /vue libre/);
+  await expect(bouton.locator('svg')).toHaveClass(/picto-orient-libre/);
   await page.evaluate(() => {
     (window as unknown as { __carte: { setBearing(b: number): void } }).__carte.setBearing(45);
   });
@@ -614,7 +644,7 @@ test('l’orientation à TROIS ÉTATS — cap, nord, vue libre — et le cap se 
 
   // Et le cycle revient au cap.
   await bouton.click();
-  await expect(bouton).toHaveText('Cap en haut');
+  await expect(bouton).toHaveAttribute('aria-label', /cap en haut/);
 });
 
 test('à l’ARRÊT, la boussole oriente la carte — ouverte par le geste, jamais d’office', async ({ page }) => {
@@ -717,7 +747,9 @@ test('le COPILOTE : les événements de la route listés, la météo sur DEMANDE
   await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
 
   // L'événement arrive de façon asynchrone : on rejoue un fixe jusqu'à lui.
-  await page.getByRole('button', { name: 'Ouvrir le panneau du copilote' }).click();
+  // Le bouton du copilote vit dans la barre DÉPLIÉE depuis NAV-3.
+  await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
+  await page.locator('.bg-copilote-bouton').click();
   const copilote = page.locator('.bg-copilote');
   await expect(copilote).toBeVisible();
   await expect(copilote).toContainText('Pour le passager');
@@ -963,8 +995,12 @@ test('GUID-2 : l’instruction flotte en haut à gauche, la barre du bas est min
 
   /* ELLE NE MASQUE NI LES COMMANDES DE VUE NI L'ATTRIBUTION IGN — cette
      dernière n'est pas décorative : c'est la contrepartie de la licence. */
-  const zoom = (await page.locator('.maplibregl-ctrl-zoom-in').boundingBox())!;
-  expect(zoom.y + zoom.height, 'le bandeau recouvre le zoom').toBeLessThan(barre.y);
+  /* Les boutons + et − ont disparu le 29/08 (« tout le monde est habitué à
+     zoomer avec les doigts ») : c'est la BOUSSOLE, restée seule dans le
+     groupe, qui doit rester dégagée. */
+  const boussole = (await page.locator('.maplibregl-ctrl-compass').boundingBox())!;
+  expect(boussole.y + boussole.height, 'le bandeau recouvre les commandes de vue')
+    .toBeLessThan(barre.y);
   const attribution = (await page.locator('.maplibregl-ctrl-attrib').boundingBox())!;
   expect(attribution.y + attribution.height, 'le bandeau recouvre l’attribution IGN')
     .toBeLessThanOrEqual(barre.y);
