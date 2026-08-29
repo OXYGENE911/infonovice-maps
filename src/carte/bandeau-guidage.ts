@@ -35,6 +35,8 @@ import { limiteA, type LimiteTrajet } from '../lib/limites';
 import type { EvenementTrajet } from '../lib/trafic';
 import { flecheManoeuvre } from './icone-manoeuvre';
 import { refermerPanneaux } from './panneaux';
+import { CurseurVehicule, capEntre, formeValide, PREF_CURSEUR } from './curseur-vehicule';
+import { lirePreference } from '../lib/stockage';
 
 /** Un arrêt de recharge à annoncer pendant le trajet. */
 export interface ArretAAnnoncer {
@@ -99,6 +101,10 @@ export class BandeauGuidage extends HTMLElement {
   #camera = true;
   #reprise: ReturnType<typeof setTimeout> | undefined;
   #dernierePosition: [number, number] | null = null;
+  /* LE CURSEUR DE LA VOITURE (NAV-2, 29/08 — Armelin : « c'est un objet
+     fantôme qui se déplace et on ne peut pas savoir où on est »). Il naît
+     au premier fixe du suivi et meurt à son arrêt. */
+  readonly #curseur = new CurseurVehicule();
   /* L'ÉCRAN RESTE ALLUMÉ PENDANT LE SUIVI (Screen Wake Lock) : un téléphone
      qui se verrouille au premier feu rouge n'est pas un suivi. Le verrou
      TOMBE quand l'onglet passe en arrière-plan — le navigateur l'impose — et
@@ -400,6 +406,12 @@ export class BandeauGuidage extends HTMLElement {
     this.#camera = true;
     if (this.#en3D) this.#carte?.easeTo({ pitch: PITCH_SUIVI, duration: 600 });
     this.#dernierePosition = null;
+    /* La forme choisie se relit à chaque départ : elle a pu changer dans la
+       page « Mon véhicule » entre deux trajets. Son échec n'empêche rien —
+       la flèche par défaut reste. */
+    void lirePreference<string>(PREF_CURSEUR)
+      .then((f) => { this.#curseur.forme = formeValide(f); })
+      .catch(() => { /* rien à dire : la forme par défaut fait le travail */ });
     (this.querySelector('.bg-recentrer') as HTMLElement).hidden = true;
     void this.#prendreVerrou();
     document.addEventListener('visibilitychange', this.#surVisibilite);
@@ -408,6 +420,7 @@ export class BandeauGuidage extends HTMLElement {
 
   arreter(): void {
     this.#fermerBoussole();
+    this.#curseur.retirer();
     if (this.#veille !== null) {
       navigator.geolocation.clearWatch(this.#veille);
       this.#veille = null;
@@ -485,6 +498,19 @@ export class BandeauGuidage extends HTMLElement {
     const lon = coords.longitude;
     const lat = coords.latitude;
     const e = etatGuidage(o, { lon, lat });
+
+    /* LE CURSEUR AVANT TOUT LE RESTE : c'est la seule chose qui dise « vous
+       êtes ici ». Son cap vient du GPS quand il en donne un, du déplacement
+       depuis le fixe précédent sinon — deux fixes valent une direction là
+       où `heading` reste nul (à l'arrêt, sur un ordinateur, à la sortie
+       d'un tunnel). Le curseur ne dépend d'AUCUN service : il paraît même
+       si la feuille de route, la météo et le relief sont tombés. */
+    const capMesure = typeof coords.heading === 'number' && Number.isFinite(coords.heading)
+      && typeof coords.speed === 'number' && (coords.speed ?? 0) > 2
+      ? coords.heading
+      : (this.#dernierePosition ? capEntre(this.#dernierePosition, [lon, lat]) : null);
+    if (this.#carte) this.#curseur.poser(this.#carte, lon, lat, capMesure);
+
     this.#dernierePosition = [lon, lat];
 
     /* LA VITESSE GPS, EN TOUTES LETTRES — « un petit cercle indiquant la

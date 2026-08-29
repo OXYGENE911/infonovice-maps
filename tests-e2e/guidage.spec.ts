@@ -865,3 +865,42 @@ test('une feuille de route en panne n’empêche PAS le suivi', async ({ page })
     .toContainText('Suivez l’itinéraire', { timeout: 20_000 });
   await expect(bandeau.locator('.bg-restant')).toContainText('restants');
 });
+
+test('NAV-2 : la voiture a un CURSEUR sur la carte, orienté, et sa forme se choisit', async ({ page, context }) => {
+  /* Armelin, le 29/08, après un essai au volant : « il n'y a pas d'icône
+     représentant ma voiture au milieu de la carte sur le trajet. C'est un
+     objet fantôme qui se déplace et on ne peut pas savoir où on est. » */
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+
+  const curseur = page.locator('.curseur-porte svg.curseur-vehicule');
+  await expect(curseur, 'aucun curseur sur la carte').toBeVisible({ timeout: 15_000 });
+  await expect(curseur).toHaveClass(/curseur-fleche/);
+
+  /* IL SUIT LA VOITURE. On avance vers le sud-est le long du tracé : le
+     marqueur se déplace, et son cap se déduit du déplacement quand le GPS
+     simulé ne donne pas de `heading`. */
+  const porte = page.locator('.curseur-porte');
+  const avant = (await porte.boundingBox())!;
+  await context.setGeolocation({ longitude: 3.2, latitude: 47.6 });
+  await expect.poll(async () => {
+    const b = await porte.boundingBox();
+    return b ? Math.round(Math.abs(b.x - avant.x) + Math.abs(b.y - avant.y)) : 0;
+  }, { timeout: 20_000 }).toBeGreaterThan(5);
+  const rotation = await porte.evaluate((e) => e.style.transform);
+  expect(rotation, 'le curseur ne s’oriente pas').toMatch(/rotate/);
+
+  /* LA FORME SE CHOISIT — « comme une flèche, une voiture etc. ». Le choix
+     vit dans « Mon véhicule », se garde sur l'appareil, et le suivi suivant
+     le relit. */
+  await page.getByRole('button', { name: 'Arrêter le suivi' }).click();
+  await page.locator('.iti > summary').click();
+  await page.locator('.iti-vers[data-vers="vehicule"]').click();
+  // On clique la VIGNETTE, comme l'usager : la case est masquée sous elle.
+  await page.locator('.veh-curseur:has(input[value="voiture"])').click();
+  await expect(page.locator('.veh-curseur input[value="voiture"]')).toBeChecked();
+  await page.locator('.vue-retour').click();
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('.curseur-porte svg.curseur-vehicule'))
+    .toHaveClass(/curseur-voiture/, { timeout: 15_000 });
+});

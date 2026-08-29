@@ -22,6 +22,9 @@ import {
   CATALOGUE, libelleModele, libelleDansMarque, parMarque,
   modeleParCle, autonomiesProposees,
 } from '../lib/catalogue-vehicules';
+import {
+  FORMES, curseurSVG, formeValide, FORME_DEFAUT, PREF_CURSEUR, type FormeCurseur,
+} from './curseur-vehicule';
 
 export const PREF_VEHICULE = 'vehicule';
 const SOURCE = 'rayon-action';
@@ -156,6 +159,21 @@ export class PanneauVehicule extends HTMLElement {
           <label class="veh-bascule">
             <input type="checkbox" class="veh-anneaux"> Afficher mon rayon d’action
           </label>
+
+          <!-- LE REPÈRE SUR LA CARTE (NAV-2, demande d'Armelin du 29/08 :
+               « une personnalisation de cette icône […] comme une flèche,
+               une voiture etc. »). Trois vignettes qui MONTRENT ce qu'elles
+               proposent : nommer « flèche » et « voiture » obligerait à
+               essayer pour voir. -->
+          <p class="veh-titre">Mon repère pendant la navigation</p>
+          <div class="veh-curseurs" role="radiogroup" aria-label="Forme du repère">
+            ${FORMES.map((f) => `
+              <label class="veh-curseur">
+                <input type="radio" name="veh-curseur" value="${f.cle}">
+                ${curseurSVG(f.cle, 26)}
+                <span>${f.libelle}</span>
+              </label>`).join('')}
+          </div>
           <div class="veh-bilan" role="status"></div>
         </fieldset>
       </details>`;
@@ -239,6 +257,7 @@ export class PanneauVehicule extends HTMLElement {
       this.#poser();
     });
 
+    this.#installerCurseur();
     void this.#restaurer();
   }
 
@@ -279,6 +298,29 @@ export class PanneauVehicule extends HTMLElement {
        sur l'ANCIEN profil — capacité, bridage thermique — décrit une autre
        voiture. L'événement l'invalide, il se refera tout seul. */
     document.dispatchEvent(new CustomEvent('vehicule-change'));
+  }
+
+  /**
+   * Le repère de navigation : le choix se pose, se garde, et se voit.
+   *
+   * IL VIT À PART DU VÉHICULE (clé `curseur-vehicule`) parce qu'il ne DÉCRIT
+   * pas la voiture : c'est un goût d'affichage, il survit au changement de
+   * modèle. Le bandeau de suivi le relit à chaque départ.
+   */
+  #installerCurseur(): void {
+    const cases = this.querySelectorAll<HTMLInputElement>('input[name="veh-curseur"]');
+    for (const c of cases) {
+      c.addEventListener('change', () => {
+        if (c.checked) void ecrirePreference(PREF_CURSEUR, c.value as FormeCurseur);
+      });
+    }
+    void lirePreference<string>(PREF_CURSEUR).then((f) => {
+      const choisie = formeValide(f);
+      for (const c of cases) c.checked = c.value === choisie;
+    }).catch(() => {
+      // Base illisible : la flèche par défaut se coche, rien ne se casse.
+      for (const c of cases) c.checked = c.value === FORME_DEFAUT;
+    });
   }
 
   async #restaurer(): Promise<void> {

@@ -2,6 +2,30 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.70.0] — 2026-08-29 — NAV-2 : la voiture a enfin un curseur (PR #96)
+
+Armelin, le 29/08, après un essai au volant : « il n'y a pas d'icône
+représentant ma voiture au milieu de la carte sur le trajet. C'est un objet
+fantôme qui se déplace et on ne peut pas savoir où on est. » Le point bleu
+de MapLibre n'existe QUE si l'on a pressé « Me localiser » — au volant,
+personne ne le fait : la carte glissait sous un curseur absent.
+
+- **Un curseur posé sur la carte pendant tout le suivi**, orienté vers la
+  route : cap GPS quand il en donne un, cap DÉDUIT de deux fixes sinon
+  (`heading` reste nul à l'arrêt, sur un ordinateur, à la sortie d'un
+  tunnel). Il tourne AVEC la carte, et ne dépend d'aucun service : il
+  paraît même si feuille de route, météo et relief sont tombés.
+- **Trois formes au choix** — flèche, voiture, point —, choisies dans « Mon
+  véhicule » sur des vignettes qui MONTRENT ce qu'elles proposent, gardées
+  sur l'appareil (clé à part : c'est un goût d'affichage, il survit au
+  changement de modèle). Dessinées par le code, comme les éclairs et les
+  pictos : rien de binaire au dépôt. Le jour où des images plus travaillées
+  arriveront, seule la table des formes changera.
+- Liseré blanc et ombre portée : sur un fond satellite ou une autoroute
+  grise, un aplat bleu sans contour disparaît.
+
+604 tests unitaires (+7), 192 parcours E2E (+1).
+
 ## [0.69.0] — 2026-08-29 — FEN-2 : les pages et le menu deviennent des fenêtres (PR #95)
 
 Armelin, le 29/08, après essai : « quand je clique sur un pictogramme, je

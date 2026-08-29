@@ -534,6 +534,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #96 — NAV-2, le curseur du véhicule (Armelin, 29/08 : « un objet
+      fantôme qui se déplace ») : un repère orienté pendant tout le suivi —
+      cap GPS, ou déduit de deux fixes quand le récepteur se tait —, en
+      flèche, voiture ou point au choix, gardé sur l'appareil. Dessiné par
+      le code ; des images plus travaillées ne changeraient que la table
+      des formes.
 - [x] PR #95 — FEN-2, les fenêtres flottantes POUR DE BON (Armelin, 29/08 :
       la configuration n'en était toujours pas une) : chaque page du
       planificateur et le menu des réglages se détachent en fenêtre haute
