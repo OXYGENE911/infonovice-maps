@@ -2,6 +2,36 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.72.0] — 2026-08-29 — GUID-2 : l'instruction devient une fenêtre, la barre du bas se vide (PR #98)
+
+Quatre retours d'Armelin du 29/08 sur le mode navigation, tous tenus :
+
+- **La barre du bas est COLLÉE EN BAS** — elle flottait au-dessus de
+  l'attribution IGN. C'est l'attribution et les commandes de vue qui
+  remontent désormais : le bandeau publie sa hauteur mesurée, elles s'en
+  dégagent d'autant. « Cette barre masque de suite les boutons de zoom et
+  de géolocalisation » : plus maintenant, et l'attribution reste lisible —
+  ce n'est pas un ornement, c'est la contrepartie de la licence.
+- **Elle est MINIMALE** : la voie courante (« le nom de la rue sur laquelle
+  on se déplace »), le restant, et les boutons. La flèche, l'instruction et
+  la distance en sont sorties ; les deux textes d'explication (« pas de
+  navigation guidée », légende des couleurs) ont rejoint le copilote — on
+  les lit à l'arrêt, jamais au volant.
+- **UN CARTOUCHE FLOTTANT EN HAUT À GAUCHE** porte la manœuvre : flèche,
+  phrase, distance, et l'écusson du numéro de route.
+- **Il prend la couleur de la route** — bleu autoroute, vert nationale,
+  orange départementale (la convention est celle d'Armelin). La classe se
+  lit sur le numéro fourni par le service : MESURÉ le 29/08, `cpx_numero`
+  rend « D39 », « D415 », « D606 ». Tout ce qui n'est pas une route
+  numérotée reste neutre : un cartouche bleu sur une avenue serait un faux
+  panneau.
+- CE QUI N'EST PAS PROMIS, ET POURQUOI : les schémas de placement sur la
+  chaussée. La réponse du service ne contient AUCUN champ de voies
+  (cherché sur deux itinéraires réels le 29/08) — on ne dessine pas ce
+  qu'on ne sait pas.
+
+621 tests unitaires (+7), 193 parcours E2E (+1).
+
 ## [0.71.0] — 2026-08-29 — FRISE-2 : la barre du trajet passe à droite, et porte le trafic (PR #97)
 
 Trois retours d'Armelin du 29/08, tous tenus :
