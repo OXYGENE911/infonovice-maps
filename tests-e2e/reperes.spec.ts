@@ -119,3 +119,32 @@ test('la BAN muette n’empêche PAS d’enregistrer le repère', async ({ page 
   // Enregistré sous ses coordonnées, faute d'adresse.
   await expect(page.locator('.fav-reperes')).toContainText(/Travail — \d/, { timeout: 15_000 });
 });
+
+test('un repère se définit PAR ADRESSE — le boulot se saisit depuis chez soi', async ({ page }) => {
+  /* Le retour d'Armelin du 29/08 : « si on est chez soi pour la première
+     utilisation, il n'est pas possible de saisir l'adresse du boulot ; il
+     faudrait obligatoirement se rendre sur place et cliquer Définir ici ». */
+  await page.route('**/api-adresse.data.gouv.fr/search/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ features: [{
+      geometry: { coordinates: [2.2945, 48.8584] },
+      properties: { label: '5 avenue Anatole France, Paris', type: 'housenumber',
+        postcode: '75007', city: 'Paris', context: '75, Paris' },
+    }] }),
+  }));
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await ouvrirVolet(page, '.favoris');
+
+  await page.getByRole('button', { name: 'Définir mon travail en saisissant une adresse' }).click();
+  const saisie = page.locator('.fav-repere-saisie input');
+  await saisie.fill('anatole france');
+  await page.getByRole('option', { name: /Anatole France/ }).click();
+
+  // Le repère est posé sous son ADRESSE, sans bouger de chez soi.
+  await expect(page.locator('.favoris-etat')).toContainText('Travail enregistré');
+  await expect(page.locator('.fav-reperes-liste')).toContainText('Anatole France');
+  // Et le planificateur le propose aussitôt en raccourci.
+  await page.locator('.iti > summary').click();
+  await expect(page.getByRole('button', { name: 'Partir de Travail' })).toBeVisible();
+});
