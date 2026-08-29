@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #90 — le mode « arrivée réelle » (DERNIÈRE décision du §4) :
+      l'heure d'arrivée compte les charges (suivi et copilote, « charges
+      comprises ») ; « Départ à » décale l'arrivée affichée ET la météo du
+      plan. LE §4 DU TRIAGE EST SOLDÉ.
 - [x] PR #89 — finitions du 29/08 : pastilles d'arrêts en bleu marque,
       durée à droite, theme-color au fond (fin de la barre noire mobile),
       marque sous 400 px, un seul ascenseur dans le planificateur.
