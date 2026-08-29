@@ -2314,8 +2314,10 @@ summary .picto-menu {
   background: rgba(8, 24, 48, .16);
   opacity: 0; pointer-events: none; transition: opacity 160ms ease;
 }
-#carte:has(details.iti[open][data-page])::after,
-#carte:has(details.reglages[open])::after,
+/* LE VOILE N'ACCOMPAGNE QUE LES FENÊTRES CENTRÉES. Voiler la carte
+   pendant qu'on règle un filtre de bornes reviendrait à éteindre ce qu'on
+   cherche à voir — c'est la même raison qui garde ces pages en colonne. */
+#carte:has(details.iti[open][data-fenetre="centree"])::after,
 /* FEN-3 : un cartouche de détail est une fenêtre lui aussi — il pose donc
    le même voile. PAS pendant le suivi : au volant, on regarde la route,
    et assombrir la carte pour un cartouche serait exactement l'inverse de
@@ -2373,23 +2375,63 @@ summary .picto-menu {
      bord et de sa pastille, la carte visible tout autour. */
   .maplibregl-ctrl.porte-iti, .maplibregl-ctrl.porte-menu { transform: none; }
 
-  #carte .iti[open][data-page] .iti-corps,
-  details.reglages[open] .reglages-corps {
+  /* AU CENTRE DE L'ÉCRAN, ET C'EST LE FOND DE L'AFFAIRE (FEN-5, 29/08).
+     FEN-4 avait bien décroché la page de sa colonne… pour la reposer douze
+     pixels plus loin, au même endroit qu'avant : « la colorimétrie est
+     revenue mais je n'ai toujours pas de fenêtre flottante ». Il avait
+     raison — une fenêtre ancrée là où le tiroir se trouvait RESTE un
+     tiroir à l'œil, quels que soient son rayon et son ombre. Elle se pose
+     donc au centre, sur la carte voilée : l'endroit où personne ne peut la
+     confondre avec une colonne. */
+  #carte .iti[open][data-fenetre="centree"] .iti-corps {
     position: fixed;
-    top: calc(var(--hauteur-entete, 45px) + 72px);
-    width: min(420px, calc(100vw - 48px));
+    top: 50%; left: 50%; right: auto; bottom: auto;
+    transform: translate(-50%, -50%);
+    width: min(460px, calc(100vw - 64px));
     min-width: 0; max-width: none; margin: 0;
     height: auto;
-    max-height: min(72vh, calc(100vh - var(--hauteur-entete, 45px) - 150px));
+    max-height: min(72vh, calc(100vh - var(--hauteur-entete, 45px) - 120px));
     border: 1px solid var(--bord); border-radius: 18px;
-    box-shadow: var(--ombre-flottante);
+    box-shadow: var(--ombre-fenetre-centree);
     overflow-y: auto; overscroll-behavior: contain;
   }
-  /* Chacune reste du côté où l'œil la cherche : le planificateur à gauche,
-     le menu des réglages à droite. */
-  #carte .iti[open][data-page] .iti-corps { left: 24px; right: auto; }
-  details.reglages[open] .reglages-corps { right: 24px; left: auto; }
+  /* Elle ARRIVE, elle n'apparaît pas : cent vingt millisecondes suffisent à
+     dire d'où elle vient. Coupé pour qui a demandé moins de mouvement. */
+  @media (prefers-reduced-motion: no-preference) {
+    #carte .iti[open][data-fenetre="centree"] .iti-corps {
+      animation: fenetre-arrive 120ms ease-out;
+    }
+  }
+
+  /* L'AUTRE FAMILLE — celle qui commande la carte (filtres de bornes, plan
+     de recharge) — garde sa colonne, et le menu des réglages avec elle :
+     on y coche pour regarder la carte, pas pour lire la page. Elles portent
+     l'habit de fenêtre (rayon, ombre), pas sa position. */
+  #carte .iti[open][data-fenetre="colonne"] .iti-corps,
+  details.reglages[open] .reglages-corps {
+    border-radius: 18px; box-shadow: var(--ombre-flottante);
+  }
 }
+
+@keyframes fenetre-arrive {
+  from { transform: translate(-50%, -48%) scale(.97); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* LA TÊTE DE FENÊTRE : la flèche remonte d'une page, la croix congédie
+   tout. Le titre tient le milieu — c'est une barre de titre, et elle se
+   lit comme telle. */
+.vue-fermer {
+  flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px;
+  border: 1px solid var(--bord-2); background: var(--fond);
+  cursor: pointer; font: 400 14px var(--police); color: var(--texte-2);
+  line-height: 1;
+}
+.vue-fermer[hidden] { display: none; }
+.vue-fermer:hover { border-color: var(--accent); color: var(--accent); }
+.vue-fermer:focus-visible { outline: none; box-shadow: var(--focus); }
+/* Le titre prend la place laissée entre les deux boutons. */
+.vue-tete .vue-titre { flex: 1 1 auto; }
 
 /* LE SOUS-MENU « FONDS » NE TOMBE PLUS SOUS L'ÉCRAN. Armelin, le 29/08 :
    « quand je clique sur "menu" puis sur "fond", le sous-menu est caché et

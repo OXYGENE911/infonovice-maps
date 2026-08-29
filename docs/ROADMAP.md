@@ -534,6 +534,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #103 — FEN-5, la fenêtre AU CENTRE (« je n'ai toujours pas de
+      fenêtre flottante », 2e retour) : page centrée sur carte voilée,
+      croix de fermeture dans la tête de page, ombre et arrivée propres.
+      DEUX FAMILLES séparées par la mesure : les pages qui COMMANDENT la
+      carte (couches, recharge, menu réglages) gardent la colonne — douze
+      parcours ont montré qu'une fenêtre centrée couvre l'endroit qu'on
+      clique.
 - [x] PR #102 — FEN-4, le correctif du bureau (retour d'Armelin du 29/08 :
       « la fenêtre est grisée […] et je n'ai toujours pas les fenêtres
       flottantes ») : montée du conteneur porteur sur TOUS les écrans (le

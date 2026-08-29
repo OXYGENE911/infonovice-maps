@@ -2,6 +2,36 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.76.0] — 2026-08-29 — FEN-5 : la fenêtre se pose AU CENTRE (PR #103)
+
+« La colorimétrie est revenue mais je n'ai toujours pas de fenêtre
+flottante » (Armelin, 29/08). Il avait raison : FEN-4 avait bien décroché
+la page de sa colonne… pour la reposer douze pixels plus loin, au même
+endroit qu'avant. Une fenêtre ancrée là où le tiroir se trouvait RESTE un
+tiroir à l'œil, quels que soient son rayon et son ombre.
+
+- **La page se pose au centre de l'écran**, sur la carte voilée, 460 px de
+  large, avec une ombre qui porte plus loin (une fenêtre posée au milieu
+  flotte plus haut qu'un panneau adossé à un bord) et cent vingt
+  millisecondes d'arrivée — coupées pour qui a demandé moins de mouvement.
+- **Une fenêtre se ferme** : la tête de page porte désormais une croix à
+  côté de la flèche. La flèche remonte d'une page, la croix congédie tout.
+  C'est ce geste, autant que la position, qui fait lire une fenêtre.
+- **DEUX FAMILLES DE PAGES, ET LA MESURE QUI LES A SÉPARÉES.** Posées au
+  centre, TOUTES les pages devenaient des fenêtres franches — et douze
+  parcours E2E se sont mis à échouer, tous pour la même raison : ils
+  cliquent la CARTE pendant que la page est ouverte, et une fenêtre
+  centrée recouvre exactement l'endroit qu'on vise. Ce n'était pas un
+  défaut de test mais un usage réel : on coche un filtre de bornes POUR
+  regarder la carte changer. Une page qui COMMANDE la carte (« Recharge et
+  services », « Arrêts de recharge », et le menu des réglages) garde donc
+  sa colonne — et son voile avec, puisque voiler la carte qu'on règle
+  reviendrait à éteindre ce qu'on cherche à voir. Les autres (« Mon
+  véhicule », « Options », « Feuille de route », « Partager », « Lieux
+  d'exception ») se posent au centre.
+
+634 tests unitaires, 196 parcours E2E.
+
 ## [0.75.1] — 2026-08-29 — FEN-4 : la fenêtre du bureau, et le voile qui la grisait (PR #102)
 
 Armelin, le 29/08, sur ordinateur : « quand je clique sur les options
