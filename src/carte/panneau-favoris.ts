@@ -12,6 +12,7 @@ import {
 import { REPERES, lireRepere, effacerRepere, ecrireRepere } from '../lib/reperes';
 import { adresseInverse } from '../lib/adresse';
 import { formaterCoordonnees } from '../lib/coordonnees';
+import { RechercheAdresse } from './recherche';
 import { telecharger } from '../lib/trace';
 import {
   versFragmentFavoris, depuisFragmentFavoris, sansDejaConnus,
@@ -271,6 +272,47 @@ export class PanneauFavoris extends HTMLElement {
         });
         ligne.appendChild(definir);
       }
+
+      /* « PAR ADRESSE… » — le retour d'Armelin du 29/08 : « si on est chez
+         soi pour la première utilisation, il n'est pas possible de saisir
+         l'adresse du boulot ; il faudrait obligatoirement se rendre sur
+         place ». On tape l'adresse, la BAN la trouve, le repère est posé —
+         d'où qu'on soit. Le bouton existe AUSSI quand le repère est défini :
+         on déménage, on change de bureau. */
+      const parAdresse = document.createElement('button');
+      parAdresse.type = 'button';
+      parAdresse.className = 'fav-repere-adresse';
+      parAdresse.textContent = 'Par adresse…';
+      parAdresse.setAttribute('aria-label',
+        `Définir mon ${libelle.toLowerCase()} en saisissant une adresse`);
+      parAdresse.addEventListener('click', () => {
+        const deja = ligne.nextElementSibling;
+        if (deja instanceof HTMLElement && deja.classList.contains('fav-repere-saisie')) {
+          deja.remove();
+          return;
+        }
+        // Une seule saisie ouverte à la fois : l'autre repère range la sienne.
+        this.querySelector('.fav-repere-saisie')?.remove();
+        const saisie = document.createElement('div');
+        saisie.className = 'fav-repere-saisie';
+        const champ = new RechercheAdresse();
+        champ.surSelection = (r) => {
+          void ecrireRepere(cle, { lon: r.lon, lat: r.lat }, r.libelle)
+            .then(() => this.rafraichir())
+            .then(() => {
+              const etat = this.querySelector('.favoris-etat');
+              if (etat) etat.textContent = `${libelle} enregistré : ${r.libelle}.`;
+            })
+            .catch(() => {
+              const etat = this.querySelector('.favoris-etat');
+              if (etat) etat.textContent = 'Enregistrement impossible (stockage local indisponible).';
+            });
+        };
+        saisie.append(champ);
+        ligne.after(saisie);
+        champ.querySelector('input')?.focus();
+      });
+      ligne.appendChild(parAdresse);
 
       if (repere) {
         const oubli = document.createElement('button');
