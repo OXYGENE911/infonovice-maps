@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #108 — MOB-1, les chevauchements du bas d'écran (quatre captures du
+      30/08) : rond de vitesse au-dessus de l'échelle mesurée, trois chiffres
+      sur une ligne (l'heure d'arrivée redevient visible), barre du trajet
+      au-dessus de « Recentrer », liens légaux dans la bulle du « i »
+      (repliée sur téléphone, ouverte au bureau).
 - [x] PR #107 — MEM-1, ce qui était réglé se souvient (trois oublis du
       30/08) : masse et bridages relus (la reconstruction champ par champ
       les perdait), réglages d'arrêt gardés sous une clé commune — et la

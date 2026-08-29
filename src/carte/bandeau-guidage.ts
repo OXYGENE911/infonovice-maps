@@ -792,7 +792,11 @@ export class BandeauGuidage extends HTMLElement {
        l'heure, en petit, et seulement quand il est vrai. */
     const mentionEta = this.querySelector('.bg-eta')?.nextElementSibling;
     if (mentionEta) {
-      mentionEta.textContent = chargeRestanteS > 0 ? 'charges comprises' : 'arrivée';
+      /* « CHARGES COMPRISES » TIENT EN UN MOT SOUS L'HEURE : la phrase
+         entière poussait la colonne à s'enrouler sur deux lignes, et c'est
+         l'heure d'arrivée elle-même qui disparaissait de la vue. Le détail
+         complet reste dans la phrase lue par les lecteurs d'écran. */
+      mentionEta.textContent = chargeRestanteS > 0 ? 'avec charges' : 'arrivée';
     }
     /* La ligne d'origine reste, MASQUÉE : elle porte encore la phrase
        complète pour les lecteurs d'écran et les parcours qui la lisent. */

@@ -51,7 +51,23 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     minZoom: 4,
     maxZoom: 19,
     locale: LOCALE_FR,
-    attributionControl: { compact: true },
+    /* LES LIENS LÉGAUX VIVENT DANS L'ATTRIBUTION (30/08). Armelin : « le
+       cartouche À propos / Professionnels / Vie privée / Mentions légales
+       est affiché un peu haut dans la fenêtre au lieu d'être tout en bas.
+       Ce serait bien de le cacher dans le bouton "i" afin que cela ne
+       s'affiche que lorsqu'on clique dessus. » C'est exactement la place de
+       ces liens : la même bulle que la source des données, derrière le même
+       « i ». Le pied de page autonome reste dans le HTML pour qui n'a pas
+       JavaScript — il s'efface dès que la carte est là. */
+    attributionControl: {
+      compact: true,
+      customAttribution: [
+        '<a href="/a-propos.html">À propos</a>',
+        '<a href="/offre-flottes.html">Professionnels</a>',
+        '<a href="/vie-privee.html">Vie privée</a>',
+        '<a href="/mentions-legales.html">Mentions légales</a>',
+      ],
+    },
   });
 
   /* LES COMMANDES DE VUE VONT EN BAS À DROITE, le menu reste SEUL en haut.
@@ -475,6 +491,28 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   // Poignée de débogage et d'E2E : lire l'état de la carte depuis la console
   // ou Playwright. Lecture seule par convention — rien du produit n'en dépend.
   (window as unknown as { __carte: CarteMapLibre }).__carte = carte;
+
+  /* SUR TÉLÉPHONE, LA BULLE PART REPLIÉE. MapLibre ouvre son attribution
+     compacte par défaut ; sur 390 px de large, nos quatre liens plus la
+     source IGN prennent deux lignes en travers de la carte. Repliée, tout
+     reste à UN TOUCHER du « i » — la convention de toutes les cartes
+     mobiles. SUR GRAND ÉCRAN ON N'Y TOUCHE PAS : la place ne manque pas, et
+     l'attribution de la Géoplateforme est la contrepartie de la licence,
+     pas un ornement qu'on range parce qu'il gêne. */
+  if (window.matchMedia('(max-width: 640px)').matches) {
+    const replier = (): void => {
+      conteneur.querySelector('.maplibregl-ctrl-attrib.maplibregl-compact')
+        ?.classList.remove('maplibregl-compact-show');
+    };
+    replier();
+    carte.once('load', replier);
+  }
+
+  /* LE PIED DE PAGE AUTONOME S'EFFACE DÈS QUE LA CARTE EST LÀ : ses liens
+     vivent désormais dans l'attribution, derrière le « i ». Il reste dans le
+     HTML — et donc à l'écran — pour qui n'a pas JavaScript : les mentions
+     légales ne sont pas négociables. */
+  document.body.classList.add('carte-prete');
 
   return carte;
 }
