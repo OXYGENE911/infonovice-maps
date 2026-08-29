@@ -2,6 +2,31 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.79.0] — 2026-08-29 — FEN-6 : un seul ascenseur, un repère qu'on trouve, une attente qu'on voit (PR #106)
+
+Trois retours d'Armelin du 29/08 au soir :
+
+- **UN SEUL ASCENSEUR PAR FENÊTRE.** « La fenêtre s'ouvre avec une double
+  barre d'ascenseur, ce qui n'est pas joli ni ergonomique » — mesuré :
+  `.iti-corps` 574/648 ET `.veh-corps` 567/860. Le plafond du rail était
+  écrit en descendance libre : il attrapait aussi les panneaux nichés DANS
+  une page. Il ne désigne plus que le volet porté par le rail.
+- **LE CHOIX DU REPÈRE VIENT EN TÊTE** de « Mon véhicule ». « Il faut
+  scroller tout en bas pour voir apparaître la personnalisation du repère ;
+  si l'utilisateur ne scrolle pas, impossible de savoir que l'option
+  existe. » Un réglage qu'on ne trouve pas n'existe pas.
+- **L'ATTENTE DES LIEUX D'EXCEPTION SE VOIT.** « Il y a un recalcul en
+  arrière-plan, mais rien affiché à l'écran […] l'utilisateur peut quitter
+  la fenêtre avant même que le résultat ne s'affiche. » Le message existait
+  — mais il n'avait pas le temps d'être PEINT : au deuxième passage le
+  fichier vient du cache, l'attente réseau est nulle, et le calcul des
+  détours (14 350 monuments contre la polyligne) bloque le fil principal
+  sans qu'un seul rendu ait eu lieu. Deux trames sont désormais rendues
+  avant le calcul, et un point qui bat accompagne la phrase : un texte seul
+  peut passer pour un résultat.
+
+645 tests unitaires, 197 parcours E2E (+1).
+
 ## [0.78.0] — 2026-08-29 — NAV-3 : la barre de suivi réduite à ce qu'on lit en roulant (PR #105)
 
 Armelin, le 29/08 : « la barre de navigation en bas sur mobile est beaucoup

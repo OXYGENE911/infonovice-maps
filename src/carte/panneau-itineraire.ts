@@ -1653,12 +1653,30 @@ export class PanneauItineraire extends HTMLElement {
     const iti = this.#dernier;
     if (this.#vue !== 'monuments' || !iti || this.#monumentsPour === iti) return;
     this.#monumentsPour = iti;
-    corps.textContent = 'Lecture du répertoire des monuments classés (890 Ko,'
-      + ' une fois par visite)…';
+    /* L'ATTENTE SE VOIT, ET C'EST TOUT LE POINT (29/08). Armelin : « quand
+       je clique sur lieu d'exception, il y a un recalcul en arrière-plan,
+       mais rien affiché à l'écran […] l'utilisateur peut quitter la fenêtre
+       avant même que le résultat ne s'affiche ». Le message existait — mais
+       il n'avait pas le temps d'être PEINT : au deuxième passage le fichier
+       vient du cache, l'attente réseau est nulle, et le calcul des détours
+       (14 350 monuments contre la polyligne) bloque le fil principal sans
+       qu'un seul rendu ait eu lieu. */
+    const attendre = (texte: string): Promise<void> => {
+      corps.replaceChildren(this.#attente(texte));
+      // DEUX TRAMES : la première programme le rendu, la seconde le suit.
+      return new Promise((ok) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => { ok(); }));
+      });
+    };
+    await attendre('Lecture du répertoire des monuments classés (890 Ko, une fois par visite)…');
     try {
       const monuments = await chargerMonuments();
       if (this.#dernier !== iti || this.#vue !== 'monuments') return;
       const detourMin = this.#valeurReglage('.monuments-detour', 10);
+      /* LE CALCUL EST LONG ET IL BLOQUE : on le dit AVANT de le lancer, et
+         l'on rend la main au navigateur pour qu'il puisse l'écrire. */
+      await attendre(`Recherche des monuments à moins de ${detourMin} min du trajet…`);
+      if (this.#dernier !== iti || this.#vue !== 'monuments') return;
       const trouves = monumentsDuTrajet(
         monuments, iti.geometrie.coordinates as [number, number][], detourMin,
       );
@@ -1683,6 +1701,24 @@ export class PanneauItineraire extends HTMLElement {
     void this.#calculer();
     this.#allerA('accueil');
     return true;
+  }
+
+  /**
+   * Le témoin d'attente : une phrase ET un point qui bat.
+   *
+   * UN TEXTE SEUL NE DIT PAS QUE ÇA TRAVAILLE — il peut aussi bien être un
+   * résultat. Le battement, lui, ne laisse aucun doute ; et il s'arrête de
+   * lui-même quand le contenu est remplacé.
+   */
+  #attente(texte: string): HTMLElement {
+    const p = document.createElement('p');
+    p.className = 'iti-attente';
+    p.setAttribute('role', 'status');
+    const point = document.createElement('span');
+    point.className = 'iti-attente-point';
+    point.setAttribute('aria-hidden', 'true');
+    p.append(point, texte);
+    return p;
   }
 
   #afficherLieux(trouves: SurLeTrajet<Monument>[], detourMin: number): void {

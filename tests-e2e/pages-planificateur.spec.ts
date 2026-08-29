@@ -202,3 +202,36 @@ test('PIC-1 : chaque entrée de menu porte son picto — et le libellé reste en
       `pastille sans picto : ${pastille}`).toHaveCount(1);
   }
 });
+
+test('FEN-6 : UN SEUL ascenseur dans la fenêtre, et le repère se voit sans défiler', async ({ page }) => {
+  /* Armelin, le 29/08 au soir : « en mode desktop, la fenêtre s'ouvre avec
+     une double barre d'ascenseur, ce qui n'est pas joli ni ergonomique » —
+     mesuré : .iti-corps 574/648 ET .veh-corps 567/860, deux plafonds pour
+     un seul panneau. Et : « il faut scroller tout en bas pour voir la
+     personnalisation du repère ; si l'utilisateur ne scrolle pas, impossible
+     de savoir que l'option existe ». */
+  await ouvrirTrajet(page);
+  await allerA(page, 'vehicule');
+
+  // UN SEUL ascenseur dans toute la fenêtre.
+  const ascenseurs = await page.evaluate(() => {
+    const trouves: string[] = [];
+    const parcourir = (e: Element): void => {
+      const s = getComputedStyle(e);
+      if ((s.overflowY === 'auto' || s.overflowY === 'scroll')
+        && e.scrollHeight > e.clientHeight + 2) trouves.push(e.className.toString());
+      for (const f of e.children) parcourir(f);
+    };
+    parcourir(document.querySelector('.iti-corps')!);
+    return trouves;
+  });
+  expect(ascenseurs, 'deux ascenseurs imbriqués dans une seule fenêtre').toHaveLength(1);
+
+  /* LE REPÈRE EST EN TÊTE : visible sans avoir à défiler — on le compare au
+     bas du cadre, pas à la hauteur du contenu. */
+  const cadre = (await page.locator('.iti-corps').boundingBox())!;
+  const repere = (await page.locator('.veh-curseurs').boundingBox())!;
+  expect(repere.y + repere.height,
+    'le choix du repère est hors de vue à l’ouverture')
+    .toBeLessThan(cadre.y + cadre.height);
+});
