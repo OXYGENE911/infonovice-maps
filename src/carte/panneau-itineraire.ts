@@ -614,6 +614,18 @@ export class PanneauItineraire extends HTMLElement {
                affichant des boutons que peu de gens comprendront ». GPX et
                KML sont des mots de métier ; « partager » est un geste. -->
           <section class="vue" data-vue="partage" hidden>
+            <!-- LA FEUILLE DE PARTAGE DU SYSTÈME D'ABORD — la demande des
+                 amis d'Armelin (29/08) : « le même type de partage que sur
+                 mobile Android ». C'est navigator.share, l'API standard :
+                 le SYSTÈME propose ses applis (messagerie, courriel, Drive,
+                 Bluetooth…) puis Copier / Imprimer / Enregistrer — deux
+                 niveaux qu'aucune liste maison n'égalera, et zéro service
+                 tiers. Le bouton n'apparaît que là où l'API existe : un
+                 bouton qui ne ferait rien serait un mensonge. -->
+            <button type="button" class="iti-partager-sys" hidden>Partager…</button>
+            <p class="vue-note iti-partager-sys-note" hidden>La feuille de
+              partage de votre appareil : messagerie, courriel, enregistrement…
+              C’est votre système qui propose, jamais nous.</p>
             <button type="button" class="iti-lien">Copier le lien du trajet</button>
             <p class="vue-note">Le lien contient le trajet, rien d’autre : ni
               compte, ni identifiant, ni trace. Il s’ouvre sur n’importe quel
@@ -736,13 +748,23 @@ export class PanneauItineraire extends HTMLElement {
     );
     this.querySelector('.iti-inverser')?.addEventListener('click', () => { this.#inverser(); });
     this.querySelector('.iti-gpx')?.addEventListener('click', () => {
-      if (this.#dernier) telecharger(versGPX(this.#dernier, this.#nomTrajet()),
+      if (this.#dernier) void this.#livrerFichier(versGPX(this.#dernier, this.#nomTrajet()),
         'itineraire-infonovice.gpx', 'application/gpx+xml');
     });
     this.querySelector('.iti-kml')?.addEventListener('click', () => {
-      if (this.#dernier) telecharger(versKML(this.#dernier, this.#nomTrajet()),
+      if (this.#dernier) void this.#livrerFichier(versKML(this.#dernier, this.#nomTrajet()),
         'itineraire-infonovice.kml', 'application/vnd.google-earth.kml+xml');
     });
+    /* Le partage du système ne se montre que là où il existe (téléphones,
+       et quelques navigateurs de bureau) — même règle que les favoris
+       (panneau-favoris.ts) : l'API d'abord, le repli reste visible. */
+    const partagerSys = this.querySelector<HTMLButtonElement>('.iti-partager-sys');
+    if (partagerSys && typeof navigator.share === 'function') {
+      partagerSys.hidden = false;
+      const note = this.querySelector<HTMLElement>('.iti-partager-sys-note');
+      if (note) note.hidden = false;
+      partagerSys.addEventListener('click', () => { void this.#partagerSysteme(); });
+    }
     this.querySelector('.iti-lien')?.addEventListener('click', (e) => {
       // Le lien décrit le trajet CALCULÉ (le cliché), pas l'état des champs :
       // entre les deux, l'usager a pu cocher ou saisir sans que rien n'aboutisse.
@@ -835,6 +857,48 @@ export class PanneauItineraire extends HTMLElement {
 
   #nomTrajet(): string {
     return `Itinéraire Infonovice Maps (${PROFILS[this.#profil]})`;
+  }
+
+  /**
+   * Le lien du trajet dans la feuille de partage du SYSTÈME. Deux niveaux,
+   * fournis par l'appareil lui-même : ses applis (messagerie, courriel,
+   * Drive, Bluetooth…), puis Copier / Imprimer / Enregistrer. Rien ne part
+   * de chez nous : le système reçoit un lien, et l'usager choisit.
+   */
+  async #partagerSysteme(): Promise<void> {
+    // Le cliché CALCULÉ, comme « Copier le lien » : jamais l'état des champs.
+    const c = this.#calculPour;
+    if (!c) return;
+    const url = location.origin + location.pathname + versFragment(c);
+    try {
+      await navigator.share({ title: this.#nomTrajet(), url });
+    } catch {
+      /* Refermer la feuille sans choisir est un CHOIX (AbortError), pas une
+         panne — aucun message. Les autres échecs n'ont pas de meilleur
+         remède que « Copier le lien », déjà à l'écran. */
+    }
+  }
+
+  /**
+   * Un fichier (GPX, KML) part par la feuille de partage quand l'appareil
+   * sait la remplir de fichiers (Web Share niveau 2 — c'est là qu'on
+   * l'envoie vers un Drive, un courriel ou « Enregistrer ») ; sinon il se
+   * télécharge, comme toujours. Le repli est la règle, jamais l'excuse :
+   * aucun appareil ne perd ce qu'il avait.
+   */
+  async #livrerFichier(contenu: string, nom: string, type: string): Promise<void> {
+    const fichier = new File([contenu], nom, { type });
+    if (navigator.canShare?.({ files: [fichier] })) {
+      try {
+        await navigator.share({ files: [fichier], title: nom });
+        return;
+      } catch (erreur) {
+        // La feuille refermée sans choisir : rien à faire, surtout pas un
+        // téléchargement que personne n'a demandé.
+        if ((erreur as DOMException).name === 'AbortError') return;
+      }
+    }
+    telecharger(contenu, nom, type);
   }
 
   /** Replie et vide les sections profil/feuille (cachées si `cachees`). */

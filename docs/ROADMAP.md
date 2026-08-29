@@ -534,6 +534,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #93 — le partage par la feuille du SYSTÈME (demande des amis
+      d'Armelin, 29/08) : navigator.share pour le lien du trajet et les
+      fichiers GPX/KML (Web Share niveau 2) — les deux niveaux d'Android
+      (applis puis Copier/Imprimer/Enregistrer) fournis par l'appareil,
+      zéro service tiers ; bouton visible seulement où l'API existe,
+      téléchargement d'avant intact partout ailleurs.
 - [x] PR #92 — PIC-1, les pictogrammes de menu (variante A CHOISIE par
       Armelin le 29/08 — « si cela ne me convient pas, on partira sur la
       variante B ») : onze pictos au trait engendrés par le code
