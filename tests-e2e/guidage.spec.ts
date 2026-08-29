@@ -315,14 +315,17 @@ test('le prochain événement trafic du corridor s’ANNONCE — et se tait derr
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
 
-  /* À 10 % du trajet, les travaux de 20 % sont DEVANT : annonce, distance,
-     source. Le fixe est repoussé en boucle — les événements arrivent après
-     le démarrage. */
+  /* À 19 % DU TRAJET, les travaux de 20 % sont devant et À MOINS DE DIX
+     KILOMÈTRES : annonce, distance, source. LE SEUIL A CHANGÉ le 30/08 —
+     Armelin : « la ligne pour indiquer les travaux ne devrait s'afficher
+     que 10 km avant » ; le fixe à 10 % du trajet les laissait à quarante
+     kilomètres, la barre repliée se tait maintenant si loin. Le fixe est
+     repoussé en boucle — les événements arrivent après le démarrage. */
   const trafic = page.locator('.bg-trafic');
   await expect.poll(async () => {
     await page.evaluate(() => {
       (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
-        longitude: 2.3522 + 2.4835 * 0.10, latitude: 48.8566 - 3.0926 * 0.10,
+        longitude: 2.3522 + 2.4835 * 0.19, latitude: 48.8566 - 3.0926 * 0.19,
       });
     });
     return trafic.textContent();
