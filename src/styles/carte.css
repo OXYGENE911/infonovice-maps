@@ -1045,11 +1045,21 @@ fiche-lieu {
   display: block;
 }
 fiche-borne[hidden], fiche-lieu[hidden] { display: none; }
+/* OUVERT, UN CARTOUCHE PASSE AU-DESSUS DE SON VOILE. Le rang ordinaire des
+   cartouches (5) est SOUS le voile (9) : sans cette montée, la fenêtre se
+   serait assombrie elle-même — le piège de FEN-2, retrouvé ici. */
+fiche-borne:not([hidden]), fiche-lieu:not([hidden]) { z-index: var(--z-volet-ouvert); }
 
+/* FEN-3 (29/08) — TOUTES LES SURFACES FLOTTANTES PARLENT LA MÊME LANGUE.
+   Armelin demandait de « poursuivre […] les fenêtres flottantes » : les
+   pages et le menu l'étaient devenues (FEN-2), les cartouches de détail et
+   le copilote gardaient l'ancien habit. Même rayon de 18, même ombre de
+   fenêtre : deux surfaces qui flottent côte à côte ne peuvent pas se
+   dessiner autrement l'une de l'autre. */
 .fb {
   display: flex; flex-direction: column; max-height: inherit;
   background: var(--fond); border: 1px solid var(--bord-2);
-  border-radius: var(--rayon); box-shadow: var(--ombre-m); overflow: hidden;
+  border-radius: 18px; box-shadow: var(--ombre-flottante); overflow: hidden;
 }
 .fb:focus-visible { outline: none; box-shadow: var(--ombre-m), var(--focus); }
 
@@ -2042,7 +2052,14 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
      l'en-tête, le pied se tait : sous une feuille, il serait illisible — il
      revient à la fermeture. */
   body:has(details.iti[open]) .pied-carte,
-  body:has(details.reglages[open]) .pied-carte { visibility: hidden; }
+  body:has(details.reglages[open]) .pied-carte,
+  /* FEN-3 : un cartouche de détail recouvre lui aussi le bas de l'écran —
+     vu sur capture, « À propos / Professionnels » traversait la fiche d'un
+     monument. Le pied de page vit dans <body>, peint APRÈS #carte (fixe,
+     donc contexte d'empilement) : aucun z-index intérieur ne passe
+     au-dessus de lui. Il se tait, et revient à la fermeture. */
+  body:has(fiche-borne:not([hidden])) .pied-carte,
+  body:has(fiche-lieu:not([hidden])) .pied-carte { visibility: hidden; }
 
   #carte .iti[open] .iti-corps,
   details.reglages[open] .reglages-corps {
@@ -2140,8 +2157,8 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
   z-index: 2;
   pointer-events: auto;
   max-height: min(48vh, 420px); overflow-y: auto; overscroll-behavior: contain;
-  padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon);
-  background: var(--fond); box-shadow: var(--ombre-m);
+  padding: 12px 14px; border: 1px solid var(--bord); border-radius: 18px;
+  background: var(--fond); box-shadow: var(--ombre-flottante);
 }
 .bg-copilote[hidden] { display: none; }
 .bg-copilote-tete { display: flex; align-items: center; justify-content: space-between; }
@@ -2290,7 +2307,13 @@ summary .picto-menu {
   opacity: 0; pointer-events: none; transition: opacity 160ms ease;
 }
 #carte:has(details.iti[open][data-page])::after,
-#carte:has(details.reglages[open])::after { opacity: 1; }
+#carte:has(details.reglages[open])::after,
+/* FEN-3 : un cartouche de détail est une fenêtre lui aussi — il pose donc
+   le même voile. PAS pendant le suivi : au volant, on regarde la route,
+   et assombrir la carte pour un cartouche serait exactement l'inverse de
+   ce qu'il faut. */
+#carte:has(fiche-borne:not([hidden])):not(:has(bandeau-guidage:not([hidden])))::after,
+#carte:has(fiche-lieu:not([hidden])):not(:has(bandeau-guidage:not([hidden])))::after { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   #carte::after { transition: none; }
 }

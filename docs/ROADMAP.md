@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #101 — FEN-3, l'habit de fenêtre pour TOUTES les surfaces
+      flottantes (fiches borne/lieu, copilote) + voile étendu aux
+      cartouches, jamais en suivi ; pied de page qui se tait dessous. Et la
+      MESURE qui ferme les schémas de manœuvre : ni voies ni ronds-points
+      dans la réponse du moteur (docs/apis.md).
 - [x] PR #100 — PIC-2, les pictos des options (demande du 29/08) : six
       tracés de plus (piéton, chronomètre, ligne droite, chaussée, voûte,
       arc) dans la famille de PIC-1 ; l'état coché se voit sur le libellé ET
