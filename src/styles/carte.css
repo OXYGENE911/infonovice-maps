@@ -121,6 +121,11 @@ body { font-family: var(--police); background: var(--fond); }
    champ garde l'essentiel de la largeur (min-width: 0 le laisse céder). */
 @media (max-width: 400px) {
   .entete-marque { font-size: 11.5px; letter-spacing: 0; }
+  /* …mais elle CÈDE quand l'en-tête se charge : bandeau hors-ligne ou
+     bouton d'installation présents, chaque pixel redevient utile — sous
+     les polices Linux de la CI, les trois ensemble débordaient (mesuré). */
+  .entete:has(.hors-ligne:not(:empty)) .entete-marque,
+  .entete:has(.installer:not([hidden])) .entete-marque { display: none; }
 }
 
 /* LES CONTRÔLES DU COIN BAS-DROIT NE SE CHEVAUCHENT PLUS. La capture du
