@@ -384,7 +384,9 @@ test('le bouton de contact des Professionnels se LIT — blanc sur bleu', async 
 test('FENÊTRE FLOTTANTE : le volet ouvert se détache — borné à 680 px, l’ombre de fenêtre', async ({ page }) => {
   /* FEN-1, validée par Armelin le 29/08 : un volet haut comme l'écran
      redevient un tiroir, quel que soit son habillage. On mesure la hauteur
-     ET l'habillage — rayon 16, ombre de fenêtre — au lieu de les croire. */
+     ET l'habillage — rayon, ombre de fenêtre — au lieu de les croire.
+     Le rayon est passé de 16 à 18 avec FEN-4 : toutes les surfaces
+     flottantes portent le même, celui des cartouches et du copilote. */
   await page.setViewportSize({ width: 1280, height: 900 });
   await ouvrirLaCarte(page);
   await page.locator('.iti > summary').click();
@@ -399,6 +401,6 @@ test('FENÊTRE FLOTTANTE : le volet ouvert se détache — borné à 680 px, l�
     const c = getComputedStyle(el);
     return { rayon: c.borderRadius, ombre: c.boxShadow };
   });
-  expect(style.rayon).toBe('16px');
+  expect(style.rayon).toBe('18px');
   expect(style.ombre, 'l’ombre de fenêtre manque').toContain('50px');
 });

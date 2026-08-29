@@ -130,7 +130,41 @@ test('une PAGE du planificateur est une fenêtre — et le retour rend la feuill
   await expect(page.locator('.iti .feuille-poignee')).toBeVisible();
 });
 
-test('sur GRAND écran, rien ne change : volets latéraux, poignée absente', async ({ page }) => {
+test('FEN-4 : sur GRAND ÉCRAN aussi, une page est une fenêtre — et le voile ne la grise PAS', async ({ page }) => {
+  /* Armelin, le 29/08, sur bureau : « quand je clique sur les options
+     d'itinéraire, la fenêtre est grisée dans tous les menus et un éclairage
+     qui diminue et je n'ai toujours pas les fenêtres flottantes ». DEUX
+     défauts en un : le voile de FEN-2 se peignait PAR-DESSUS le panneau
+     (la montée du conteneur porteur ne vivait que dans le bloc téléphone),
+     et FEN-2 n'avait détaché que le téléphone. */
+  await ouvrirCarte(page);
+  await page.locator('.iti > summary').click();
+  await page.locator('.iti-vers[data-vers="options"]').click();
+  await expect(page.locator('.vue[data-vue="options"]')).toBeVisible();
+
+  // LE PORTEUR PASSE AU-DESSUS DU VOILE : la fenêtre n'est plus grisée.
+  const rangs = await page.evaluate(() => ({
+    porteur: Number(getComputedStyle(
+      document.querySelector('#carte .maplibregl-ctrl-top-left')!).zIndex),
+    voile: Number(getComputedStyle(document.querySelector('#carte')!, '::after').zIndex),
+  }));
+  expect(rangs.porteur, 'le voile recouvre la fenêtre').toBeGreaterThan(rangs.voile);
+
+  // ELLE SE DÉTACHE : décollée du bord, décollée de sa pastille, arrondie.
+  const pastille = (await page.locator('.iti > summary').boundingBox())!;
+  const fenetre = (await page.locator('.iti-corps').boundingBox())!;
+  expect(fenetre.x, 'la fenêtre colle au bord').toBeGreaterThanOrEqual(20);
+  expect(fenetre.y, 'la fenêtre colle à sa pastille')
+    .toBeGreaterThan(pastille.y + pastille.height + 10);
+  await expect(page.locator('.iti-corps')).toHaveCSS('border-radius', '18px');
+  await expect(page.locator('.iti-corps')).toHaveCSS('position', 'fixed');
+
+  // Et le retour à l'accueil rend le volet latéral d'origine.
+  await page.locator('.vue-retour').click();
+  await expect(page.locator('.iti-corps')).toHaveCSS('position', 'static');
+});
+
+test('sur GRAND écran, l’accueil ne change pas : volet latéral, poignée absente', async ({ page }) => {
   /* La feuille est un remède au pouce et au petit écran — pas une mode à
      imposer au bureau, où les panneaux latéraux laissent lire la carte. */
   await ouvrirCarte(page);

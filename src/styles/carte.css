@@ -2035,16 +2035,6 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
      seulement : sur grand écran, les volets n'ont pas de fixed à ancrer. */
   .maplibregl-ctrl.porte-iti, .maplibregl-ctrl.porte-menu { transform: none; }
 
-  /* LES CONTENEURS MAPLIBRE (z-index 2) SONT DES CONTEXTES D'EMPILEMENT : le
-     z-index de la feuille reste enfermé dans le sien, et les contrôles
-     bas-droite — conteneur frère, peint après — passaient PAR-DESSUS. On
-     monte le conteneur PORTEUR quand sa feuille est ouverte : c'est lui qui
-     porte le rang, pas la feuille. */
-  #carte .maplibregl-ctrl-top-left:has(details.iti[open]),
-  #carte .maplibregl-ctrl-top-right:has(details.reglages[open]) {
-    z-index: var(--z-volet-ouvert);
-  }
-
   /* LE PIED DE PAGE S'EFFACE SOUS UNE FEUILLE OUVERTE. Il vit dans <body>,
      peint APRÈS `#carte` — qui, en `position: fixed`, est un contexte
      d'empilement à lui seul : aucun z-index intérieur ne peut passer
@@ -2297,13 +2287,31 @@ summary .picto-menu {
    on le lit.
    ========================================================================== */
 
+/* LA MONTÉE DU PORTEUR — SUR TOUS LES ÉCRANS, et c'est ce qui manquait.
+   Les conteneurs MapLibre (z-index 2) sont des CONTEXTES D'EMPILEMENT : le
+   rang d'un volet reste enfermé dans le sien. Cette règle vivait dans le
+   bloc téléphone seulement : sur grand écran, le voile de FEN-2 (rang 9)
+   se peignait donc PAR-DESSUS le panneau qu'il devait mettre en valeur —
+   « la fenêtre est grisée dans tous les menus et un éclairage qui
+   diminue » (Armelin, 29/08, sur bureau). C'est le porteur qui porte le
+   rang, pas le volet. */
+#carte .maplibregl-ctrl-top-left:has(details.iti[open]),
+#carte .maplibregl-ctrl-top-right:has(details.reglages[open]) {
+  z-index: var(--z-volet-ouvert);
+}
+
 /* LE VOILE. Il vit sur #carte (contexte d'empilement racine, position
    fixed) et NON sur body : un voile body-level se peindrait par-dessus la
    fenêtre elle-même, prisonnière de la carte. Purement visuel — la
    fermeture au clic extérieur appartient déjà à panneaux.ts. */
 #carte::after {
   content: ''; position: absolute; inset: 0; z-index: var(--z-fenetre-fond);
-  background: rgba(8, 24, 48, .34);
+  /* PLUS LÉGER SUR GRAND ÉCRAN. Sur téléphone, la fenêtre couvre presque
+     tout : le voile a peu de carte à assombrir. Au bureau, il en assombrit
+     les neuf dixièmes — Armelin l'a lu comme « un éclairage qui diminue »
+     (29/08). Il suffit qu'il détache la fenêtre, pas qu'il éteigne la
+     carte. Le mobile reprend sa valeur pleine plus bas. */
+  background: rgba(8, 24, 48, .16);
   opacity: 0; pointer-events: none; transition: opacity 160ms ease;
 }
 #carte:has(details.iti[open][data-page])::after,
@@ -2318,7 +2326,9 @@ summary .picto-menu {
   #carte::after { transition: none; }
 }
 @media (prefers-color-scheme: dark) {
-  #carte::after { background: rgba(0, 0, 0, .5); }
+  /* En sombre, la carte est déjà basse : le voile suit la même retenue que
+     le clair — franc sur téléphone (plus bas), léger au bureau. */
+  #carte::after { background: rgba(0, 0, 0, .28); }
 }
 
 /* UNE FENÊTRE NE SE TIRE PAS : la poignée de feuille disparaît. Et elle ne
@@ -2328,6 +2338,13 @@ summary .picto-menu {
 #carte .iti[data-page] .iti-corps > .feuille-poignee { display: none; }
 
 @media (max-width: 640px) {
+  /* Sur téléphone, la fenêtre couvre presque l'écran : le voile peut être
+     franc sans rien éteindre de ce qu'on regarde. */
+  #carte::after { background: rgba(8, 24, 48, .34); }
+  @media (prefers-color-scheme: dark) {
+    #carte::after { background: rgba(0, 0, 0, .5); }
+  }
+
   /* LA PAGE : une fenêtre posée bas — le pouce garde ce qu'il avait — mais
      DÉTACHÉE des quatre bords, arrondie partout, et haute comme son seul
      contenu. */
@@ -2345,6 +2362,33 @@ summary .picto-menu {
   details.reglages[open] .reglages-corps > .feuille-poignee { display: none; }
   /* La tête de page colle en haut de la FENÊTRE, plus sous une poignée. */
   #carte .iti[data-page] .iti-corps .vue-tete { top: 0; }
+}
+
+@media (min-width: 641px) {
+  /* SUR GRAND ÉCRAN AUSSI, UNE PAGE EST UNE FENÊTRE — Armelin, le 29/08 :
+     « en mode desktop […] je n'ai toujours pas les fenêtres flottantes ».
+     FEN-2 n'avait détaché que le téléphone : au bureau, la page restait
+     collée sous la pastille du rail, dans la colonne — un tiroir avec des
+     coins arrondis. Elle s'en décroche : posée sur la carte, écartée du
+     bord et de sa pastille, la carte visible tout autour. */
+  .maplibregl-ctrl.porte-iti, .maplibregl-ctrl.porte-menu { transform: none; }
+
+  #carte .iti[open][data-page] .iti-corps,
+  details.reglages[open] .reglages-corps {
+    position: fixed;
+    top: calc(var(--hauteur-entete, 45px) + 72px);
+    width: min(420px, calc(100vw - 48px));
+    min-width: 0; max-width: none; margin: 0;
+    height: auto;
+    max-height: min(72vh, calc(100vh - var(--hauteur-entete, 45px) - 150px));
+    border: 1px solid var(--bord); border-radius: 18px;
+    box-shadow: var(--ombre-flottante);
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  /* Chacune reste du côté où l'œil la cherche : le planificateur à gauche,
+     le menu des réglages à droite. */
+  #carte .iti[open][data-page] .iti-corps { left: 24px; right: auto; }
+  details.reglages[open] .reglages-corps { right: 24px; left: auto; }
 }
 
 /* LE SOUS-MENU « FONDS » NE TOMBE PLUS SOUS L'ÉCRAN. Armelin, le 29/08 :

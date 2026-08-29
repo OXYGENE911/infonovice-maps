@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #102 — FEN-4, le correctif du bureau (retour d'Armelin du 29/08 :
+      « la fenêtre est grisée […] et je n'ai toujours pas les fenêtres
+      flottantes ») : montée du conteneur porteur sur TOUS les écrans (le
+      voile recouvrait le panneau), page et menu détachés en fenêtre au
+      bureau, voile allégé sur grand écran.
 - [x] PR #101 — FEN-3, l'habit de fenêtre pour TOUTES les surfaces
       flottantes (fiches borne/lieu, copilote) + voile étendu aux
       cartouches, jamais en suivi ; pied de page qui se tait dessous. Et la
