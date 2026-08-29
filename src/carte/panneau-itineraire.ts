@@ -21,6 +21,7 @@ import { installerFeuilleBasse } from './feuille-basse';
 import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
 import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
+import { apprendreTrajet, lireHabitudes, suggerer } from '../lib/routines';
 import { profilItineraire, denivele } from '../lib/altimetrie';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 import { stationsDuTrajet, distanceM, type SurLeTrajet } from '../lib/le-long-du-trajet';
@@ -354,6 +355,13 @@ export class PanneauItineraire extends HTMLElement {
                  position est connue — « une fois qu'on a mis le champ
                  destination, ça calcule automatiquement par rapport à notre
                  position actuelle » (Armelin, décrivant ABRP). -->
+            <!-- LES ROUTINES (décision d'Armelin du 29/08) : le trajet
+                 HABITUEL du moment se propose en un geste — « Au travail »
+                 un matin de semaine, « À la maison » le soir, les habitudes
+                 apprises LOCALEMENT sinon. Rien ne quitte le navigateur, et
+                 le volet Favoris sait tout effacer. -->
+            <div class="iti-routines" role="group" aria-label="Trajets habituels" hidden></div>
+
             <label class="iti-champ-principal">Départ
               <span class="iti-porte" data-role="depart"></span>
             </label>
@@ -1929,11 +1937,38 @@ export class PanneauItineraire extends HTMLElement {
        derrière un bouton « Favoris… » qui ouvre une boîte dédiée, avec
        recherche — le mandat UX le demande en toutes lettres. */
     const entrees: { libelle: string; point: PointGeo; titre: string }[] = [];
+    const reperesLus: { domicile?: PointGeo & { libelle: string };
+      travail?: PointGeo & { libelle: string } } = {};
     for (const { cle, libelle } of REPERES) {
       const r = await lireRepere(cle as CleRepere);
-      if (r) entrees.push({ libelle, point: r, titre: r.libelle });
+      if (r) {
+        entrees.push({ libelle, point: r, titre: r.libelle });
+        if (cle === 'domicile') reperesLus.domicile = { lon: r.lon, lat: r.lat, libelle: r.libelle };
+        if (cle === 'travail') reperesLus.travail = { lon: r.lon, lat: r.lat, libelle: r.libelle };
+      }
     }
     const nbFavoris = (await listerFavoris()).length;
+
+    /* LES ROUTINES DU MOMENT — en tête de l'accueil, un geste et le trajet
+       part (allerVers : destination posée, départ déduit ou demandé). */
+    const routines = this.querySelector<HTMLElement>('.iti-routines');
+    if (routines) {
+      routines.replaceChildren();
+      const suggestions = suggerer(await lireHabitudes(), reperesLus, new Date());
+      for (const sug of suggestions) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'iti-routine';
+        b.textContent = `→ ${sug.nom}`;
+        b.title = sug.motif;
+        b.setAttribute('aria-label', `${sug.nom} — trajet habituel (${sug.motif})`);
+        b.addEventListener('click', () => {
+          this.allerVers({ lon: sug.point.lon, lat: sug.point.lat }, sug.nom);
+        });
+        routines.append(b);
+      }
+      routines.hidden = suggestions.length === 0;
+    }
 
     for (const boite of this.querySelectorAll<HTMLElement>('.iti-raccourcis')) {
       const role = boite.dataset['pour'] === 'arrivee' ? 'arrivee' : 'depart';
@@ -2731,6 +2766,16 @@ export class PanneauItineraire extends HTMLElement {
       if (jeton !== this.#sequence) return;
       this.#dernier = iti;
       this.#calculPour = { depart, arrivee, profil, etapes: inter, eviter, optimisation };
+      /* ON APPREND la destination (routines, 29/08) — nom et point, rien
+         d'autre : ni départ, ni tracé. Un lien rejoué s'apprend AUSSI (c'est
+         un trajet voulu) — sans nom, sous ses coordonnées, et le premier
+         trajet nommé le renommera. La reprise hors-route, elle, n'apprendra
+         rien le jour où elle existera ici : un raté n'est pas un choix. */
+      if (this.#libelleDepart !== 'Reprise d’itinéraire') {
+        void apprendreTrajet(
+          this.#libelleArrivee || formaterCoordonnees(arrivee), arrivee, new Date(),
+        );
+      }
       // Le résumé AVANT la pose : distance et durée ne dépendent pas de la
       // carte, et la pose peut légitimement attendre (style en cours de
       // chargement) — l'utilisateur ne doit pas payer cette attente.

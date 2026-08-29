@@ -13,6 +13,7 @@ import { REPERES, lireRepere, effacerRepere, ecrireRepere } from '../lib/reperes
 import { adresseInverse } from '../lib/adresse';
 import { formaterCoordonnees } from '../lib/coordonnees';
 import { RechercheAdresse } from './recherche';
+import { lireHabitudes, oublierHabitudes } from '../lib/routines';
 import { telecharger } from '../lib/trace';
 import {
   versFragmentFavoris, depuisFragmentFavoris, sansDejaConnus,
@@ -59,6 +60,13 @@ export class PanneauFavoris extends HTMLElement {
             un autre téléphone, un autre ordinateur, ou quelqu’un d’autre —
             jamais vos repères (domicile, travail). Il ne passe par aucun
             serveur.</p>
+          <!-- LES HABITUDES SE VOIENT ET S'EFFACENT (décision du 29/08) :
+               une routine qu'on ne peut ni voir ni effacer serait un
+               mouchard. Tout vit dans CE navigateur. -->
+          <p class="favoris-habitudes" hidden>
+            <span class="favoris-habitudes-texte"></span>
+            <button type="button" class="favoris-habitudes-oubli">Tout oublier</button>
+          </p>
           <p class="favoris-etat" role="status"></p>
         </div>
       </details>`;
@@ -92,6 +100,12 @@ export class PanneauFavoris extends HTMLElement {
           fichier.value = '';
           void this.rafraichir();
         });
+    });
+    this.querySelector('.favoris-habitudes-oubli')?.addEventListener('click', () => {
+      void oublierHabitudes().then(() => this.rafraichir()).then(() => {
+        const etat = this.querySelector('.favoris-etat');
+        if (etat) etat.textContent = 'Habitudes de trajet oubliées.';
+      });
     });
     this.querySelector('.favoris-partager')?.addEventListener('click', () => {
       void this.#partager();
@@ -337,6 +351,16 @@ export class PanneauFavoris extends HTMLElement {
 
   async rafraichir(): Promise<void> {
     await this.#rendreReperes();
+    /* Les habitudes apprises : combien, et le bouton pour tout oublier. */
+    const habitudes = await lireHabitudes();
+    const ligne = this.querySelector<HTMLElement>('.favoris-habitudes');
+    const texte = this.querySelector<HTMLElement>('.favoris-habitudes-texte');
+    if (ligne && texte) {
+      ligne.hidden = habitudes.length === 0;
+      texte.textContent = `Habitudes de trajet : ${habitudes.length}`
+        + ` destination${habitudes.length > 1 ? 's' : ''} retenue${habitudes.length > 1 ? 's' : ''}`
+        + ' sur cet appareil, jamais ailleurs.';
+    }
     const liste = this.querySelector('.favoris-liste') as HTMLUListElement;
     const vide = this.querySelector('.favoris-vide') as HTMLElement;
     const favoris = await listerFavoris();
