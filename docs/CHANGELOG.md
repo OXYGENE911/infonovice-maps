@@ -25,7 +25,7 @@ Trois retours d'Armelin du 29/08, tous tenus :
 - **Un drapeau à damier au sommet** marque l'arrivée — deux dégradés
   croisés, aucune image à héberger.
 
-607 tests unitaires (+3), 192 parcours E2E.
+614 tests unitaires (+10), 192 parcours E2E.
 ## [0.70.0] — 2026-08-29 — NAV-2 : la voiture a enfin un curseur (PR #96)
 
 Armelin, le 29/08, après un essai au volant : « il n'y a pas d'icône
