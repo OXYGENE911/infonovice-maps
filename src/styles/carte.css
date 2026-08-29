@@ -1904,42 +1904,74 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
 /* Sur le bord GAUCHE de l'écran, au-dessus du bandeau : la droite porte déjà
    zoom, boussole et géolocalisation. Départ en bas, arrivée en haut — le
    sens de la route quand la carte est au cap. */
+/* LA BARRE DU TRAJET — refondue le 29/08 (FRISE-2) sur trois retours
+   d'Armelin : « le panneau de vitesse à gauche est coupé en deux par la
+   barre verticale » (elle passe À DROITE), « devrait s'étaler encore plus
+   sur la longueur et le trait devrait être plus épais » (elle monte
+   jusque sous l'en-tête et triple d'épaisseur), et « on ne devrait
+   afficher que les éléments planifiés » (les losanges d'événements ont
+   cédé la place à la COULEUR de la piste). */
 .bg-frise {
-  position: absolute; left: 10px; bottom: calc(100% + 76px);
-  width: 14px; height: min(34vh, 300px);
+  position: absolute; right: 10px; left: auto;
+  bottom: calc(100% + 14px);
+  width: 18px;
+  /* Elle court du bas du bandeau jusque sous l'en-tête, sans jamais le
+     toucher : la hauteur est ce qui reste de l'écran, plafonnée. */
+  height: min(52vh, 460px);
   pointer-events: none;
 }
 .bg-frise[hidden] { display: none; }
-.bg-frise-piste {
-  position: absolute; left: 50%; top: 0; bottom: 0;
-  width: 4px; transform: translateX(-50%);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--fond) 70%, transparent);
-  border: 1px solid var(--bord-2);
+
+/* La légende vit avec le texte de limite : même discrétion, même rôle —
+   dire ce que l'affichage a le droit d'affirmer. */
+.bg-legende-frise {
+  margin: 4px 0 0; font: 400 10.5px/1.5 var(--police); color: var(--texte-3);
 }
-/* Les arrêts de recharge : les MÊMES pastilles vertes numérotées que la
-   carte et la liste — un seul vocabulaire. */
+
+/* LES SEGMENTS DE TRAFIC. Le vert ne dit pas « ça roule » — il dit « aucun
+   incident signalé » : Bison Futé publie des événements ponctuels, pas un
+   débit par tronçon (étude du 27/08). La légende du bandeau l'écrit. */
+.bg-frise-segment {
+  position: absolute; left: 50%; width: 8px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fond) 75%, transparent);
+}
+.bg-frise-libre { background: #2E9E63; }
+.bg-frise-ralenti { background: #E8912C; }
+.bg-frise-bloque { background: #C0392B; }
+
+/* LE DRAPEAU À DAMIER — l'arrivée, au sommet (demande d'Armelin). Deux
+   dégradés croisés font le damier : aucune image à héberger. */
+.bg-frise-arrivee {
+  position: absolute; left: 50%; top: -14px;
+  transform: translateX(-50%);
+  width: 18px; height: 14px; border-radius: 3px;
+  border: 1.5px solid var(--blanc);
+  box-shadow: var(--ombre-s);
+  background-color: var(--blanc);
+  background-image:
+    linear-gradient(45deg, #16181C 25%, transparent 25%, transparent 75%, #16181C 75%),
+    linear-gradient(45deg, #16181C 25%, transparent 25%, transparent 75%, #16181C 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 4px;
+}
+
+/* Les arrêts de recharge : les MÊMES pastilles bleu marque que la carte et
+   la liste — un seul vocabulaire, et rien d'autre sur la barre. */
 .bg-frise-arret {
   position: absolute; left: 50%; transform: translate(-50%, 50%);
-  width: 16px; height: 16px; border-radius: 50%;
-  /* Le MÊME bleu marque que les pastilles de la carte (29/08) : un seul
-     vocabulaire — le vert reste aux paliers de puissance. */
+  width: 18px; height: 18px; border-radius: 50%;
   background: #0C447C; border: 2px solid var(--blanc);
-  color: var(--blanc); font: 700 9px/12px var(--police); text-align: center;
+  color: var(--blanc); font: 700 10px/14px var(--police); text-align: center;
   box-shadow: var(--ombre-s);
 }
-/* Les événements Bison Futé : des losanges ambre — ponctuels, comme la
-   donnée. Jamais un dégradé de fluidité qu'elle ne contient pas. */
-.bg-frise-evt {
-  position: absolute; left: 50%; transform: translate(-50%, 50%) rotate(45deg);
-  width: 9px; height: 9px; border-radius: 2px;
-  background: var(--ambre-fonce); border: 1.5px solid var(--blanc);
-}
+
 /* La voiture : le point accent, par-dessus tout le reste. */
 .bg-frise-curseur {
   position: absolute; left: 50%; transform: translate(-50%, 50%);
-  width: 12px; height: 12px; border-radius: 50%;
-  background: var(--accent-vif); border: 2px solid var(--blanc);
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--accent-vif); border: 2.5px solid var(--blanc);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-vif) 35%, transparent);
 }
 

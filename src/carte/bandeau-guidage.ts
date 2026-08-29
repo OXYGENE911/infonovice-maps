@@ -37,6 +37,7 @@ import { flecheManoeuvre } from './icone-manoeuvre';
 import { refermerPanneaux } from './panneaux';
 import { CurseurVehicule, capEntre, formeValide, PREF_CURSEUR } from './curseur-vehicule';
 import { lirePreference } from '../lib/stockage';
+import { segmentsFrise } from '../lib/frise';
 
 /** Un arrêt de recharge à annoncer pendant le trajet. */
 export interface ArretAAnnoncer {
@@ -204,6 +205,15 @@ export class BandeauGuidage extends HTMLElement {
         <p class="bg-limite">Suivi d’itinéraire, pas navigation guidée :
           aucune voix — mais si vous quittez la route, l’itinéraire se
           recalcule tout seul.</p>
+        <!-- LA LÉGENDE DE LA BARRE, ET SON HONNÊTETÉ. Le vert ne dit pas
+             « ça roule » : Bison Futé publie des ÉVÉNEMENTS ponctuels, pas
+             un débit par tronçon (étude du 27/08, qui avait pour cela
+             écarté une barre de fluidité). Il dit « aucun incident
+             signalé » — ce qui est vrai, et ce que la légende écrit. -->
+        <p class="bg-legende-frise">Barre du trajet, à droite : vert = aucun
+          incident signalé, orange = ralentissement annoncé, rouge = bouchon,
+          accident ou route coupée. Seuls les arrêts de recharge planifiés y
+          portent une pastille.</p>
         <div class="bg-boutons">
           <!-- LE BANDEAU SE RÉDUIT : « réduire la taille du cartouche en bas
                qui prend 1/3 de l'écran » (Armelin, 27/08/2026). Réduit, il
@@ -893,10 +903,32 @@ export class BandeauGuidage extends HTMLElement {
       `${Math.min(Math.max((m / total) * 100, 0), 100).toFixed(2)}%`;
 
     frise.replaceChildren();
-    const piste = document.createElement('span');
-    piste.className = 'bg-frise-piste';
-    frise.append(piste);
 
+    /* LA PISTE PORTE LE TRAFIC (FRISE-2, 29/08). Chaque segment est peint à
+       sa place : vert = AUCUN INCIDENT SIGNALÉ (jamais « ça roule » : Bison
+       Futé publie des événements, pas un débit), orange = ralentissement
+       annoncé, rouge = bouchon, accident ou route coupée. */
+    for (const s of segmentsFrise(total, this.#evenements)) {
+      const segment = document.createElement('span');
+      segment.className = `bg-frise-segment bg-frise-${s.niveau}`;
+      segment.style.bottom = pct(s.deM);
+      segment.style.height = pct(s.aM - s.deM);
+      frise.append(segment);
+    }
+
+    /* LE DRAPEAU À DAMIER AU SOMMET : « pour indiquer visuellement que ça
+       correspond à l'arrivée » (Armelin). Sans lui, le haut de la barre
+       était un bout de trait qui ne disait rien. */
+    const arrivee = document.createElement('span');
+    arrivee.className = 'bg-frise-arrivee';
+    arrivee.setAttribute('aria-hidden', 'true');
+    frise.append(arrivee);
+
+    /* SEULS LES ARRÊTS PLANIFIÉS PORTENT UNE PASTILLE — Armelin, le 29/08 :
+       « on ne devrait afficher sur cette barre que les éléments planifiés
+       comme les arrêts aux bornes de recharge ». Les événements Bison Futé
+       ne sont plus des losanges posés dessus : ils SONT la couleur de la
+       piste, ce qui les explique au lieu de les juxtaposer. */
     for (const [i, a] of (this.#options?.arrets ?? []).entries()) {
       const point = document.createElement('span');
       point.className = 'bg-frise-arret';
@@ -904,12 +936,7 @@ export class BandeauGuidage extends HTMLElement {
       point.textContent = String(i + 1);
       frise.append(point);
     }
-    for (const evt of this.#evenements) {
-      const point = document.createElement('span');
-      point.className = 'bg-frise-evt';
-      point.style.bottom = pct(evt.avancementM);
-      frise.append(point);
-    }
+
     const curseur = document.createElement('span');
     curseur.className = 'bg-frise-curseur';
     curseur.style.bottom = pct(avancementM);

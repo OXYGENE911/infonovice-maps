@@ -2,6 +2,30 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.71.0] — 2026-08-29 — FRISE-2 : la barre du trajet passe à droite, et porte le trafic (PR #97)
+
+Trois retours d'Armelin du 29/08, tous tenus :
+
+- **À DROITE** — « le panneau de vitesse à gauche est coupé en deux par la
+  barre verticale ». Elle libère le côté gauche.
+- **Plus longue, plus épaisse** — elle monte jusque sous l'en-tête (52 vh au
+  plus) et son trait triple d'épaisseur.
+- **Elle porte le trafic** — vert, orange, rouge. AVEC UNE RÉSERVE ÉCRITE
+  SOUS LE BANDEAU : le vert ne dit pas « ça roule », il dit « AUCUN
+  INCIDENT SIGNALÉ ». Bison Futé publie des événements ponctuels, pas un
+  débit par tronçon (c'est ce qui avait fait écarter une barre de fluidité
+  le 27/08) ; un événement peint donc une bande d'un kilomètre de part et
+  d'autre, et le pire l'emporte quand deux se chevauchent. Restrictions,
+  interdictions poids lourds et informations ne colorent RIEN : elles ne
+  disent rien du temps de parcours d'une voiture.
+- **Seuls les arrêts planifiés y portent une pastille** — « on ne devrait
+  afficher sur cette barre que les éléments planifiés ». Les losanges
+  d'événements ont cédé la place à la couleur de la piste : elle les
+  explique au lieu de les juxtaposer.
+- **Un drapeau à damier au sommet** marque l'arrivée — deux dégradés
+  croisés, aucune image à héberger.
+
+614 tests unitaires (+10), 192 parcours E2E.
 ## [0.70.0] — 2026-08-29 — NAV-2 : la voiture a enfin un curseur (PR #96)
 
 Armelin, le 29/08, après un essai au volant : « il n'y a pas d'icône

@@ -534,6 +534,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #97 — FRISE-2, la barre du trajet (trois retours du 29/08) : à
+      DROITE (elle coupait le panneau de vitesse), plus longue et plus
+      épaisse, peinte aux couleurs du trafic — vert = AUCUN INCIDENT
+      SIGNALÉ, jamais « ça roule » : Bison Futé publie des événements, pas
+      un débit —, drapeau à damier à l'arrivée, et plus rien dessus que les
+      arrêts planifiés.
 - [x] PR #96 — NAV-2, le curseur du véhicule (Armelin, 29/08 : « un objet
       fantôme qui se déplace ») : un repère orienté pendant tout le suivi —
       cap GPS, ou déduit de deux fixes quand le récepteur se tait —, en
