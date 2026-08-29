@@ -2,6 +2,26 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.68.0] — 2026-08-29 — Le partage passe par la feuille du système (PR #93)
+
+La demande des amis d'Armelin (29/08) : « le même type de partage que sur
+mobile Android ». C'est `navigator.share`, l'API standard — la feuille de
+partage de l'APPAREIL, avec ses deux niveaux : les applis (messagerie,
+courriel, Drive, Bluetooth, Signal, SMS…), puis Copier / Imprimer /
+Enregistrer. Aucun service tiers, rien ne part de chez nous.
+
+- **« Partager… »** en tête de la page Partage : le lien du trajet calculé
+  part dans la feuille du système. Le bouton n'apparaît QUE là où l'API
+  existe — un bouton qui ne ferait rien serait un mensonge. Quand il est
+  là, « Copier le lien » redevient un bouton secondaire.
+- **GPX et KML par la feuille aussi** (Web Share niveau 2) quand l'appareil
+  sait la remplir de fichiers — c'est là qu'on les envoie vers un Drive, un
+  courriel ou « Enregistrer ». Sinon : le téléchargement d'avant, intact.
+- Refermer la feuille sans choisir est un CHOIX (AbortError) : ni message,
+  ni téléchargement que personne n'a demandé.
+
+597 tests unitaires, 190 parcours E2E (+3).
+
 ## [0.67.0] — 2026-08-29 — PIC-1 : les pictogrammes de menu, variante A (PR #92)
 
 La seconde livraison validée par Armelin le 29/08 sur la maquette — et il a

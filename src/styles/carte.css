@@ -1726,13 +1726,23 @@ body.en-guidage fiche-borne, body.en-guidage fiche-lieu { display: none; }
 .iti-exports button:hover { border-color: var(--accent); color: var(--accent); }
 .iti-exports button:focus-visible { outline: none; box-shadow: var(--focus); }
 
-.iti-lien {
+.iti-lien, .iti-partager-sys {
   width: 100%; padding: 11px 12px; border-radius: 10px;
   border: 1px solid var(--accent); background: var(--accent);
   cursor: pointer; font: 700 13px var(--police); color: var(--blanc);
 }
-.iti-lien:hover { background: var(--accent-vif); border-color: var(--accent-vif); }
-.iti-lien:focus-visible { outline: none; box-shadow: var(--focus); }
+.iti-lien:hover, .iti-partager-sys:hover { background: var(--accent-vif); border-color: var(--accent-vif); }
+.iti-lien:focus-visible, .iti-partager-sys:focus-visible { outline: none; box-shadow: var(--focus); }
+/* Quand la feuille du système existe, ELLE est le geste premier : « Copier
+   le lien » redevient un bouton secondaire, même habit que les exports. */
+.iti-partager-sys:not([hidden]) ~ .iti-lien {
+  background: var(--fond); border-color: var(--bord-2); color: var(--texte-1);
+  font-weight: 600;
+}
+.iti-partager-sys:not([hidden]) ~ .iti-lien:hover {
+  background: var(--fond-doux); border-color: var(--accent); color: var(--accent);
+}
+.iti-partager-sys[hidden] { display: none; }
 
 .iti-effacer {
   width: 100%; padding: 9px 12px; border-radius: 9px;
