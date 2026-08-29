@@ -1260,21 +1260,33 @@ fiche-borne[hidden], fiche-lieu[hidden] { display: none; }
    3. IL NE COUVRE PAS TOUTE LA CARTE. Voir la route qu'on suit est la moitié
       de l'information ; un bandeau plein écran l'effacerait.
    ========================================================================== */
+/* LE BANDEAU EST COLLÉ EN BAS (GUID-2, 29/08 — Armelin : « la barre
+   d'informations en bas n'est pas affichée tout en bas de l'écran »). Il
+   flottait au-dessus de l'attribution IGN, qui doit rester lisible : c'est
+   ELLE qui remonte désormais, avec les commandes de vue, par-dessus le
+   bandeau — voir `--hauteur-bandeau` plus bas. */
 bandeau-guidage {
   position: absolute; z-index: calc(var(--z-cartouche) + 1);
-  left: 12px; right: 12px;
-  bottom: calc(var(--attribution-sommet, 26px) + 12px);
+  left: 0; right: 0; bottom: 0;
   display: block; pointer-events: none;
 }
 bandeau-guidage[hidden] { display: none; }
 
 .bg {
   pointer-events: auto;
-  max-width: 520px; margin: 0 auto;
-  padding: 12px 14px;
-  background: var(--fond); border: 1px solid var(--bord-2);
-  border-radius: var(--rayon); box-shadow: var(--ombre-m);
+  max-width: 560px; margin: 0 auto;
+  padding: 10px 14px max(10px, var(--sur-barre-basse));
+  background: var(--fond); border: 1px solid var(--bord-2); border-bottom: none;
+  border-radius: 16px 16px 0 0; box-shadow: 0 -8px 28px rgba(10, 30, 60, .18);
 }
+
+/* LA VOIE COURANTE — la seule chose qu'Armelin voulait garder en bas :
+   « le nom de la rue sur laquelle on se déplace actuellement ». */
+.bg-voie {
+  margin: 0 0 2px; font: 700 15px var(--police); color: var(--texte-1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bg-voie:empty { display: none; }
 
 .bg-manoeuvre {
   display: flex; align-items: center; gap: 10px;
@@ -1353,7 +1365,11 @@ bandeau-guidage.bg-compact .bg-trafic { display: none; }
    27/08/2026). Réduit, il garde la manœuvre, le restant et les boutons :
    ce qu'on lit en roulant. La note de limite a été lue au démarrage ; le
    prochain arrêt revit en agrandissant. */
+/* RÉDUIT, IL NE RESTE QUE CE QU'ON LIT EN ROULANT : la distance restante
+   et les boutons. La note de limite a déménagé dans le copilote (GUID-2) ;
+   la voie et le prochain arrêt se rangent. */
 bandeau-guidage.bg-compact .bg-limite,
+bandeau-guidage.bg-compact .bg-voie,
 bandeau-guidage.bg-compact .bg-arret { display: none; }
 bandeau-guidage.bg-compact .bg { padding: 8px 12px; }
 bandeau-guidage.bg-compact .bg-manoeuvre { padding-bottom: 4px; }
@@ -2342,3 +2358,81 @@ summary .picto-menu {
   border-color: var(--accent); background: var(--bleu-50); color: var(--accent);
 }
 .veh-curseur:has(input:focus-visible) { outline: none; box-shadow: var(--focus); }
+
+/* ==========================================================================
+   GUID-2 — LE CARTOUCHE D'INSTRUCTION, ET LA BARRE DU BAS RENDUE MINIMALE
+   --------------------------------------------------------------------------
+   Armelin, le 29/08 : « je propose d'afficher des fenêtres flottantes
+   rectangulaires en haut à gauche pour donner des indications graphiques et
+   textuelles pour les instructions de navigation […] Les fenêtres flottantes
+   d'instructions doivent s'afficher dans des cartouches de couleurs en
+   fonction de la route empruntée, comme du Bleu pour les indications sur
+   autoroute, du vert pour les nationales et du orange pour les
+   départementales ». La convention de couleurs est la sienne.
+   ========================================================================== */
+.bg-cartouche {
+  /* FIXE, ET NON ABSOLU : le bandeau est désormais ancré en bas (position
+     absolue), et un cartouche absolu s'y serait accroché — mesuré à y = 777
+     sur un écran de 844, c'est-à-dire DANS la barre du bas qu'il devait
+     quitter. Le repère est l'écran. */
+  position: fixed; z-index: calc(var(--z-cartouche) + 1);
+  /* EN HAUT À GAUCHE, SOUS LA PASTILLE DU RAIL : elle reste atteignable —
+     on peut vouloir rouvrir le planificateur en roulant. */
+  top: calc(var(--hauteur-entete, 45px) + 58px); left: 12px;
+  width: min(300px, calc(100vw - 24px));
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 14px;
+  background: var(--fond); border: 1px solid var(--bord-2);
+  border-left: 6px solid var(--gris-400);
+  box-shadow: var(--ombre-flottante);
+  pointer-events: auto;
+}
+.bg-cartouche[hidden] { display: none; }
+.bg-cartouche .bg-fleche { color: var(--gris-400); }
+.bg-cartouche .bg-fleche svg { width: 38px; height: 38px; }
+.bg-cartouche-texte { flex: 1 1 auto; min-width: 0; }
+.bg-cartouche .bg-instruction {
+  margin: 0; font: 700 15.5px/1.25 var(--police); color: var(--texte-1);
+}
+.bg-cartouche .bg-distance {
+  margin: 2px 0 0; font: 700 14px var(--police); color: var(--texte-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* L'ÉCUSSON DE ROUTE — le « panneau » demandé, avec ce que la donnée porte :
+   le numéro de `cpx_numero` (mesuré : D39, D415, D606). Rien n'est dessiné
+   quand la voie n'en a pas : un écusson vide serait un faux panneau. */
+.bg-ecusson {
+  flex: 0 0 auto; align-self: flex-start;
+  padding: 3px 7px; border-radius: 6px;
+  border: 1.5px solid var(--blanc);
+  background: var(--gris-400); color: var(--blanc);
+  font: 700 12.5px var(--police); letter-spacing: .02em;
+  box-shadow: var(--ombre-s);
+}
+.bg-ecusson[hidden] { display: none; }
+
+/* LES TROIS COULEURS D'ARMELIN. Le bord épais porte la couleur : le fond
+   reste clair, parce qu'un cartouche plein bleu de nuit éblouit — et que le
+   texte doit rester lisible dans les deux thèmes. */
+.bg-cartouche[data-classe="autoroute"] { border-left-color: #1E63B4; }
+.bg-cartouche[data-classe="autoroute"] .bg-fleche { color: #1E63B4; }
+.bg-cartouche[data-classe="autoroute"] .bg-ecusson { background: #1E63B4; }
+.bg-cartouche[data-classe="nationale"] { border-left-color: #1E7A4B; }
+.bg-cartouche[data-classe="nationale"] .bg-fleche { color: #1E7A4B; }
+.bg-cartouche[data-classe="nationale"] .bg-ecusson { background: #1E7A4B; }
+.bg-cartouche[data-classe="departementale"] { border-left-color: #C4741A; }
+.bg-cartouche[data-classe="departementale"] .bg-fleche { color: #C4741A; }
+.bg-cartouche[data-classe="departementale"] .bg-ecusson { background: #C4741A; }
+.bg-cartouche[data-classe="locale"] { border-left-color: var(--accent); }
+.bg-cartouche[data-classe="locale"] .bg-fleche { color: var(--accent); }
+
+/* LES COMMANDES DE VUE ET L'ATTRIBUTION SE DÉGAGENT DU BANDEAU. Il est
+   désormais collé en bas : sans cette réserve, il recouvrirait le zoom, la
+   géolocalisation et l'attribution IGN — qui n'est pas décorative, c'est la
+   contrepartie de la licence. La hauteur est MESURÉE par le bandeau
+   lui-même (--hauteur-bandeau) : elle change avec ce qu'il annonce. */
+body.en-guidage #carte .maplibregl-ctrl-bottom-right,
+body.en-guidage #carte .maplibregl-ctrl-bottom-left {
+  padding-bottom: calc(var(--hauteur-bandeau, 120px) + 10px);
+}
