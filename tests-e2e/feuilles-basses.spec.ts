@@ -141,3 +141,46 @@ test('sur GRAND écran, rien ne change : volets latéraux, poignée absente', as
   expect(corps.y + corps.height).toBeLessThan(719);
   await expect(page.locator('.iti .feuille-poignee')).toBeHidden();
 });
+
+test('FEN-3 : un cartouche de détail est une fenêtre — au-dessus de son voile, et le pied de page se tait', async ({ page }) => {
+  /* « Poursuivre […] les fenêtres flottantes » (Armelin, 29/08) : les pages
+     et le menu l'étaient devenus, les cartouches de détail gardaient
+     l'ancien habit. DEUX PIÈGES DÉJÀ PAYÉS AILLEURS se retrouvaient ici —
+     le voile qui passe PAR-DESSUS sa propre fenêtre (rang 5 contre 9), et
+     le pied de page qui traverse tout ce qui vit dans #carte. */
+  await page.setViewportSize(VUE);
+  await page.route('**/donnees/monuments.json', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([[2.35, 48.857, 'Chapelle d’essai', 'Paris', 'PA00000001', '', '']]),
+  }));
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [2.4, 48.87]] },
+      distance: 5_000, duration: 600,
+    }),
+  }));
+  // Wikidata muet : la fiche vit sans photo, et ce parcours ne parle pas d'elle.
+  await page.route('**query.wikidata.org/**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json', body: '{"results":{"bindings":[]}}',
+  }));
+  await page.goto('/#iti=2.35220,48.85660;2.40000,48.87000;car');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('5,0 km', { timeout: 15_000 });
+  await page.locator('.iti-vers[data-vers="monuments"]').click();
+  await page.locator('.monuments-voir').first().click();
+
+  const fiche = page.locator('fiche-lieu');
+  await expect(fiche).toBeVisible();
+  // Elle passe AU-DESSUS du voile : une fenêtre ne s'assombrit pas elle-même.
+  const rangs = await page.evaluate(() => ({
+    fiche: Number(getComputedStyle(document.querySelector('fiche-lieu')!).zIndex),
+    voile: Number(getComputedStyle(document.querySelector('#carte')!, '::after').zIndex),
+  }));
+  expect(rangs.fiche).toBeGreaterThan(rangs.voile);
+  // Et le pied de page cesse de la traverser.
+  await expect(page.locator('.pied-carte')).toBeHidden();
+  await fiche.locator('.fb-fermer').click();
+  await expect(page.locator('.pied-carte')).toBeVisible();
+});

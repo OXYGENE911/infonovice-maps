@@ -673,5 +673,23 @@ de la notice seulement, jamais en lot.
 RIEN N'EST LIVRÉ : la voie à 96 % demande la dérogation. C'est une
 DÉCISION d'Armelin, pas un choix technique.
 
+## Schémas de manœuvre : ce que le moteur ne dit pas (mesuré le 29/08/2026)
+
+Armelin, le 29/08 : « pourquoi pas afficher des schémas complexes pour
+indiquer un rond-point ou des flèches pour préciser où se placer sur la
+chaussée pour tourner à une intersection ou pour sortir d'une autoroute ».
+Deux mesures ont été faites sur le service d'itinéraire de la Géoplateforme
+avant d'écrire la moindre ligne :
+
+| Ce qu'il faudrait | Ce que le service donne | Verdict |
+|---|---|---|
+| Les VOIES d'une intersection (où se placer) | **aucun champ de voies** dans la réponse — cherché sur deux itinéraires complets, zéro occurrence de `lane`/`nb_voies` | impossible : on ne dessine pas ce qu'on ne sait pas |
+| Le ROND-POINT et son numéro de sortie | le décodeur du projet sait lire `instruction.exit`… mais **le moteur n'émet jamais `roundabout` ni `rotary`** : quatre itinéraires traversant des giratoires (rocade de Rennes, Niort, Chartres, Vannes — 63 étapes) rendent `turn`, `fork`, `continue`, `end of road`, jamais un rond-point | écarté : le schéma serait du code mort |
+| Le NUMÉRO de la route (l'écusson des panneaux) | `attributes.name.cpx_numero` — relevé « D39 », « D415 », « D606 » | **LIVRÉ** (GUID-2) : cartouche coloré par classe de route |
+
+Ce qui reste possible sans nouvelle donnée : la flèche de manœuvre (livrée),
+l'écusson (livré), et la couleur de classe (livrée). Le reste attend un
+moteur qui le publie — pas une invention de notre part.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.

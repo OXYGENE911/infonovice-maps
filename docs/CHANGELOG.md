@@ -2,6 +2,33 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.75.0] — 2026-08-29 — FEN-3 : toutes les surfaces flottantes parlent la même langue (PR #101)
+
+La suite de « poursuivre […] les fenêtres flottantes » : les pages et le
+menu l'étaient devenues (FEN-2), les cartouches de détail et le copilote
+gardaient l'ancien habit.
+
+- **Fiches de borne et de lieu, panneau du copilote** : même rayon de 18,
+  même ombre de fenêtre. Deux surfaces qui flottent côte à côte ne peuvent
+  pas se dessiner autrement l'une de l'autre.
+- **Le voile s'étend aux cartouches** — mais JAMAIS pendant le suivi : au
+  volant, assombrir la carte pour un cartouche serait l'inverse de ce qu'il
+  faut.
+- DEUX PIÈGES DÉJÀ CONNUS, RETROUVÉS ICI et corrigés : le voile (rang 9)
+  passait par-dessus la fiche (rang 5) — une fenêtre qui s'assombrit
+  elle-même ; et le pied de page traversait la fiche (vu sur capture : « À
+  propos / Professionnels » au travers d'un monument), parce qu'il vit dans
+  `<body>` et se peint après `#carte`. Il se tait sous un cartouche, comme
+  il se taisait déjà sous une feuille.
+- **MESURE CONSIGNÉE** (docs/apis.md) sur les schémas de manœuvre demandés
+  le 29/08 : le service n'expose AUCUN champ de voies (deux itinéraires,
+  zéro occurrence) — le placement sur la chaussée reste impossible ; et il
+  n'émet JAMAIS `roundabout` ni `rotary` (quatre itinéraires traversant des
+  giratoires — rocade de Rennes, Niort, Chartres, Vannes, 63 étapes) : un
+  schéma de rond-point serait du code mort. L'écusson de route, lui, est
+  livré (GUID-2).
+
+634 tests unitaires, 195 parcours E2E (+1).
 ## [0.74.0] — 2026-08-29 — PIC-2 : les options portent leurs pictos (PR #100)
 
 « Poursuivre les autres améliorations graphiques […] notamment les icônes
