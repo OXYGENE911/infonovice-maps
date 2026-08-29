@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.69.0] — 2026-08-29 — FEN-2 : les pages et le menu deviennent des fenêtres (PR #95)
+
+Armelin, le 29/08, après essai : « quand je clique sur un pictogramme, je
+n'ai toujours pas de fenêtre flottante pour la configuration » — FEN-1
+n'avait habillé que le volet, pas ses pages. Et : « ce serait mieux
+d'afficher le menu sous forme de fenêtre flottante ».
+
+- **Toute page du planificateur** (mon véhicule, options, arrêts…) se
+  détache en FENÊTRE : décollée des quatre bords, arrondie partout, haute
+  comme son seul contenu, posée sur un voile qui dit que le reste attend.
+  L'ACCUEIL garde la feuille basse demandée le 28/08 (BS-1) : c'est le
+  panneau qu'on ouvre et referme sans cesse, le pouce l'atteint.
+- **Le menu des réglages est une fenêtre** lui aussi — et deux défauts
+  tombent avec : le « grand vide noir en haut » (la poignée s'étirait sur
+  72 px mesurés dans un corps en grille) et le sous-menu **Fonds** qui
+  tombait sous l'écran (mesuré : y = 852 px sur un écran de 844). Il
+  reprend sa place dans le flux : on le voit à l'instant du clic.
+- Une fenêtre ne se tire pas : la poignée disparaît, et revient avec la
+  feuille au retour à l'accueil.
+
+597 tests unitaires, 191 parcours E2E (+1).
+
 ## [0.68.0] — 2026-08-29 — Le partage passe par la feuille du système (PR #93)
 
 La demande des amis d'Armelin (29/08) : « le même type de partage que sur
