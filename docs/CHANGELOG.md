@@ -33,7 +33,7 @@ l'heure d'arrivée estimée, un bouton pour arrêter ».
   lisait « A » à vingt-deux pixels. Et les pictos portent désormais leur
   nom en classe : un bouton pressoir doit dire LEQUEL il affiche.
 
-634 tests unitaires, 196 parcours E2E.
+645 tests unitaires, 196 parcours E2E.
 ## [0.77.0] — 2026-08-29 — GUID-3 : le guidage avait une manœuvre de retard (PR #104)
 
 Armelin, au volant le 29/08, captures à l'appui : « le GPS confond sa gauche
