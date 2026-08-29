@@ -2,6 +2,42 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.62.0] — 2026-08-29 — Le recalcul automatique hors-route (PR #87)
+
+La demande d'Armelin du 29/08 : « un mode de recalcul automatique si on
+s'est trompé de route. »
+
+- **Le bandeau CONSTATE, le planificateur CALCULE** : huit secondes d'écart
+  au-delà de cinquante mètres (le tunnel et le GPS qui divague sont
+  écartés), et l'itinéraire se refait depuis la position — arrivée,
+  évitements et optimisation tenus, étapes encore DEVANT conservées,
+  étapes passées abandonnées. Le suivi REPART sur le nouveau tracé sans un
+  geste ; le plan de recharge se refait tout seul (PR #84). Trente secondes
+  de silence entre deux demandes.
+- **Le texte d'honnêteté suit** : « aucune voix — mais si vous quittez la
+  route, l'itinéraire se recalcule tout seul. »
+- Deux pièges payés : performance.now() démarre AVEC la page (un garde-fou
+  initialisé à zéro interdisait tout recalcul les trente premières
+  secondes) ; #demarrerSuivi est une bascule — la relance la traverse.
+- En passant, un défaut de la PR #77 : la feuille de route du démarrage
+  suivait fastest même en « le plus court » — l'optimisation rétablie.
+
+585 tests unitaires, 181 parcours E2E (+1).
+
+## [0.61.0] — 2026-08-29 — Les repères se définissent par adresse (PR #86)
+
+(Consignée ICI, avec la PR #87 : l'entrée s'était perdue dans une fusion
+avortée — la PR #86 est partie sans elle, l'écart est réparé.)
+
+Le retour d'Armelin du 29/08 : « si on est chez soi pour la première
+utilisation, il n'est pas possible de saisir l'adresse du boulot ; il
+faudrait obligatoirement se rendre sur place et cliquer Définir ici. »
+
+- **« Par adresse… »** sur chaque repère (domicile, travail) : on tape, la
+  BAN propose, le repère est posé — d'où qu'on soit. Le bouton existe aussi
+  quand le repère est défini : on déménage, on change de bureau.
+- « Définir ici » (centre de la carte) et l'appui long restent.
+
 ## [0.60.0] — 2026-08-29 — Le menu du planificateur s'allège (PR #85)
 
 Les retours d'Armelin du 29/08 sur les « menus à rallonge » :

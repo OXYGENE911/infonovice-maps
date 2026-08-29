@@ -24,7 +24,7 @@ import { PREF_FILTRES } from './panneau-poi';
 import { apprendreTrajet, lireHabitudes, suggerer } from '../lib/routines';
 import { profilItineraire, denivele } from '../lib/altimetrie';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
-import { stationsDuTrajet, distanceM, type SurLeTrajet } from '../lib/le-long-du-trajet';
+import { stationsDuTrajet, distanceM, situerSurLeTrace, type SurLeTrajet } from '../lib/le-long-du-trajet';
 import {
   planifierArrets, cleBorne, type PlanRecharge, type BorneCandidate,
 } from '../lib/arrets';
@@ -189,6 +189,10 @@ export class PanneauItineraire extends HTMLElement {
 
   /** Les réseaux préférés ont-ils été hérités du filtre carte pour CE trajet ? */
   #reseauxHerites = false;
+
+  /** Vrai quand le prochain calcul réussi doit RELANCER le suivi — le
+      recalcul automatique hors-route (demande d'Armelin du 29/08). */
+  #reprendreSuivi = false;
   #socDepart = 100;
 
   set fiche(f: FicheBorne) { this.#fiche = f; }
@@ -662,6 +666,15 @@ export class PanneauItineraire extends HTMLElement {
        bridage changés, le plan décrit une autre voiture. Il se refait tout
        seul, avec le même amorti que le calcul de trajet — la saisie champ à
        champ ne déclenche qu'un recalcul. */
+    /* LE RECALCUL AUTOMATIQUE HORS-ROUTE (demande d'Armelin du 29/08 :
+       « un mode de recalcul automatique si on s'est trompé de route »). Le
+       bandeau constate l'écart qui dure ; ICI on refait l'itinéraire depuis
+       la position, on garde les étapes encore DEVANT, et le suivi repart
+       tout seul sur le nouveau tracé. */
+    document.addEventListener('recalcul-hors-route', (e) => {
+      const d = (e as CustomEvent<{ lon: number; lat: number }>).detail;
+      void this.#recalculerDepuis({ lon: d.lon, lat: d.lat });
+    });
     document.addEventListener('vehicule-change', () => {
       if (!this.#dernier) return;
       this.#rechargePour = null;
@@ -1791,11 +1804,40 @@ export class PanneauItineraire extends HTMLElement {
    * recharger vaut mieux que ne rien avoir parce qu'un service tiers est
    * tombé. Le bandeau dit alors « Suivez l'itinéraire », ce qui est vrai.
    */
-  async #demarrerSuivi(): Promise<void> {
+  /**
+   * Refait l'itinéraire depuis la position — le trajet s'est perdu, pas
+   * l'intention. L'arrivée et les évitements tiennent ; les étapes DÉJÀ
+   * PASSÉES tombent (repasser par elles ferait faire demi-tour) ; le plan
+   * de recharge se refera tout seul (PR #84) ; et le suivi REPART sur le
+   * nouveau tracé sans un geste.
+   */
+  async #recalculerDepuis(position: PointGeo): Promise<void> {
+    const cliche = this.#calculPour;
+    const iti = this.#dernier;
+    if (!cliche || !iti || !this.#guidage?.actif) return;
+
+    /* Les étapes encore devant : chacune se projette sur l'ANCIEN tracé, et
+       seules celles au-delà de la voiture (500 m de marge : une étape à
+       hauteur de calandre est une étape faite) restent au programme. */
+    const trace = iti.geometrie.coordinates as [number, number][];
+    const ici = situerSurLeTrace({ lon: position.lon, lat: position.lat }, trace);
+    const restantes = cliche.etapes.filter((p) =>
+      situerSurLeTrace(p, trace).avancement > ici.avancement + 500);
+    const etapes = this.querySelector('etapes-itineraire') as EtapesItineraire;
+    etapes.points = restantes;
+
+    this.#reprendreSuivi = true;
+    this.#poser('depart', position, 'Reprise d’itinéraire');
+  }
+
+  async #demarrerSuivi(relance = false): Promise<void> {
     const bandeau = this.#guidage;
     const iti = this.#dernier;
     if (!bandeau || !iti) return;
-    if (bandeau.actif) { bandeau.arreter(); this.#majBoutonDemarrer(); return; }
+    /* LE BOUTON EST UNE BASCULE — la RELANCE du recalcul hors-route ne l'est
+       pas : appelée pendant un suivi actif, elle doit repartir sur le
+       nouveau tracé (demarrer() commence de toute façon par arreter()). */
+    if (bandeau.actif && !relance) { bandeau.arreter(); this.#majBoutonDemarrer(); return; }
 
     const bouton = this.querySelector<HTMLButtonElement>('.iti-demarrer');
     if (bouton) { bouton.disabled = true; bouton.textContent = 'Préparation…'; }
@@ -1810,7 +1852,7 @@ export class PanneauItineraire extends HTMLElement {
       try {
         etapes = await etapesItineraire(
           cliche.depart, cliche.arrivee, cliche.profil,
-          { etapes: cliche.etapes, eviter: cliche.eviter },
+          { etapes: cliche.etapes, eviter: cliche.eviter, optimisation: cliche.optimisation },
         );
       } catch { /* le suivi vaut mieux sans instructions que pas de suivi */ }
     }
@@ -2783,6 +2825,12 @@ export class PanneauItineraire extends HTMLElement {
          « imposer Beaune » sur un Lille-Brest désignerait une borne qui n'est
          plus sur la route, et le planificateur refuserait un trajet
          parfaitement faisable sans que l'usager comprenne pourquoi. */
+      if (this.#reprendreSuivi) {
+        this.#reprendreSuivi = false;
+        /* Le suivi repart SUR LE NOUVEAU TRACÉ — c'est tout le sens du
+           recalcul automatique : pas un geste de plus au volant. */
+        void this.#demarrerSuivi(true);
+      }
       this.#planCourant = null;
       this.#bornesTrajet = [];
       this.#imposees.clear();
