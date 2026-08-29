@@ -2708,3 +2708,24 @@ body.en-guidage #carte .maplibregl-ctrl-bottom-right { padding-right: 34px; }
 @media (prefers-reduced-motion: reduce) {
   .iti-attente-point { animation: none; opacity: .9; }
 }
+
+/* LA BARRE DIT QU'ELLE S'OUVRE (30/08). Armelin : « il n'y a aucune
+   indication visuelle laissant penser à l'utilisateur qu'il peut appuyer sur
+   la barre d'état ou la scroller pour avoir des informations
+   complémentaires ». Une poignée — la même que les feuilles basses — et un
+   chevron qui pivote : deux signes que tout le monde a déjà vus. */
+.bg-poignee {
+  display: block; width: 40px; height: 4px; margin: 0 auto 8px;
+  border-radius: 999px; background: var(--bord-2);
+}
+.bg-deplier::after {
+  content: ''; position: absolute; right: 2px; top: 14px;
+  width: 9px; height: 9px; border-right: 2px solid var(--texte-3);
+  border-bottom: 2px solid var(--texte-3);
+  transform: rotate(-135deg); transition: transform 160ms ease;
+}
+bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
+.bg-deplier { position: relative; }
+@media (prefers-reduced-motion: reduce) {
+  .bg-deplier::after { transition: none; }
+}

@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #109 — NAV-4, la barre s'annonce et se tait de loin (deux retours du
+      30/08) : poignée + chevron pivotant (rien ne disait qu'on pouvait
+      déplier), travaux et prochain arrêt annoncés à 10 km au lieu de 50 —
+      et rendus par le dépliage, qui rejoue le dernier fixe pour répondre
+      tout de suite.
 - [x] PR #108 — MOB-1, les chevauchements du bas d'écran (quatre captures du
       30/08) : rond de vitesse au-dessus de l'échelle mesurée, trois chiffres
       sur une ligne (l'heure d'arrivée redevient visible), barre du trajet

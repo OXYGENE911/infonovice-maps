@@ -248,6 +248,12 @@ test('NAV-3 : la barre est REPLIÉE — trois chiffres, une croix — et se dép
     (el) => Number.parseFloat(getComputedStyle(el).fontSize));
   expect(taille, 'les chiffres du volant doivent être gros').toBeGreaterThanOrEqual(20);
 
+  /* ELLE DIT QU'ELLE S'OUVRE (30/08) : « il n'y a aucune indication
+     visuelle laissant penser à l'utilisateur qu'il peut appuyer sur la
+     barre ». Une poignée et un chevron — deux signes déjà vus partout. */
+  await expect(bandeau.locator('.bg-poignee')).toBeVisible();
+  await expect(bandeau.locator('.bg-deplier')).toHaveAttribute('aria-expanded', 'false');
+
   // REPLIÉE : les commandes secondaires ne prennent pas de place.
   await expect(bandeau.locator('.bg-boutons')).toBeHidden();
   const replie = (await bandeau.locator('.bg').boundingBox())!.height;
@@ -1012,4 +1018,68 @@ test('GUID-2 : l’instruction flotte en haut à gauche, la barre du bas est min
      dans le cartouche, hors d'elle. */
   const fleche = (await bandeau.locator('.bg-fleche').boundingBox())!;
   expect(fleche.y, 'la flèche est restée dans la barre du bas').toBeLessThan(barre.y);
+});
+
+test('NAV-4 : travaux et recharge s’annoncent à DIX kilomètres — et se lisent en dépliant', async ({ page }) => {
+  /* Armelin, le 30/08 : « la ligne pour indiquer les travaux ne devrait
+     s'afficher automatiquement que 10 km avant d'arriver à la zone de
+     travaux. Idem pour la prochaine arrivée à la borne de recharge ». Une
+     barre qui annonce à cinquante kilomètres occupe l'écran une demi-heure
+     pour rien. Rien n'est perdu : en dépliant, tout revient. */
+  /* LE SERVICE PARLE EN DEUX TEMPS, et sur DEUX hôtes : l'horodate sur
+     www, les événements sur www1. Le parcours voisin le fait déjà ainsi —
+     s'en écarter rendait une collection vide, donc rien à annoncer. */
+  await page.route('**/www.bison-fute.gouv.fr/data/iteration/date.json', (route) =>
+    route.fulfill({ contentType: 'application/json', body: '[1787353503716]' }));
+  await page.route('**/www1.bison-fute.gouv.fr/data/**/evenementsOL6.json', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ type: 'FeatureCollection', features: [
+      /* Des travaux à ~31 km du départ : ENTRE les deux seuils. Au-delà
+         de dix kilomètres, la barre repliée se tait ; en deçà de cinquante,
+         elle en parle une fois dépliée. Le point est interpolé sur la
+         diagonale simulée depuis celui du parcours voisin (~78 km), lui-même
+         calculé par inversion de la reprojection Lambert-93 du projet. */
+      { geometry: { type: 'Point', coordinates: [667099, 6834630] },
+        properties: { type: 'TRAVAUX', etat_evenement: 'EFFECTIF', urlcpc: '' } },
+    ] }),
+  }));
+  /* ON PILOTE LES FIXES : les événements du corridor arrivent APRÈS le
+     démarrage, et l'affichage se refait à chaque position. Rejouer un fixe
+     est le seul rendez-vous fiable — la même mécanique que le parcours de
+     la barre du trajet. */
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: () => void }).__pousserFixe = () => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null,
+        speed: null, heading: null, longitude: 2.3522, latitude: 48.8566 } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  const bandeau = page.locator('bandeau-guidage');
+  const fixe = (): Promise<void> => page.evaluate(() => {
+    (window as unknown as { __pousserFixe: () => void }).__pousserFixe();
+  });
+  await fixe();
+  await expect(bandeau.locator('.bg-chiffres')).toBeVisible({ timeout: 15_000 });
+
+  // REPLIÉE, l'annonce lointaine se tait — même une fois les travaux connus.
+  await expect.poll(async () => {
+    await fixe();
+    return bandeau.locator('.bg-trafic').textContent();
+  }, { timeout: 10_000 }).toBe('');
+
+  // DÉPLIÉE, elle revient : rangée, pas perdue.
+  await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
+  await expect.poll(async () => {
+    await fixe();
+    return bandeau.locator('.bg-trafic').textContent();
+  }, { timeout: 15_000 }).toContain('Travaux');
 });

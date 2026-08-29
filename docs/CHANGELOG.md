@@ -2,6 +2,25 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.82.0] — 2026-08-30 — NAV-4 : la barre dit qu'elle s'ouvre, et se tait de loin (PR #109)
+
+Deux retours d'Armelin du 30/08 sur la barre de suivi.
+
+- **RIEN NE DISAIT QU'ON POUVAIT LA DÉPLIER.** « Il n'y a aucune indication
+  visuelle laissant penser à l'utilisateur qu'il peut appuyer sur la barre
+  d'état ou la scroller pour avoir des informations complémentaires. » Une
+  poignée — la même que les feuilles basses — et un chevron qui pivote :
+  deux signes que tout le monde a déjà vus.
+- **TRAVAUX ET RECHARGE S'ANNONCENT À DIX KILOMÈTRES**, plus à cinquante.
+  Une barre qui prévient une demi-heure à l'avance occupe l'écran pour
+  rien ; à dix kilomètres, elle prévient au moment où l'on peut encore
+  décider. RIEN N'EST PERDU : dépliée, la barre reprend sa portée de
+  cinquante kilomètres — et rejoue le dernier fixe pour répondre TOUT DE
+  SUITE, sans quoi le geste n'aurait d'effet qu'à la position suivante
+  (donc jamais, à l'arrêt ou dans un tunnel).
+
+645 tests unitaires, 197 parcours E2E (+1).
+
 ## [0.81.0] — 2026-08-30 — MOB-1 : plus rien ne se recouvre en bas d'écran (PR #108)
 
 Quatre chevauchements relevés sur capture par Armelin le 30/08.

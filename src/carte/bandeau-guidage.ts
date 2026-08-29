@@ -72,6 +72,11 @@ const ZOOM_SUIVI = 15.5;
    taille d'écran — la limite est connue et assumée. */
 const PITCH_SUIVI = 55;
 
+/* À QUELLE DISTANCE ON ANNONCE. Dix kilomètres : de quoi décider (sortir,
+   changer d'arrêt) sans occuper l'écran pendant une demi-heure. Au-delà,
+   l'information n'est pas perdue — elle attend qu'on déplie la barre. */
+const ANNONCE_M = 10_000;
+
 /* LA CAMÉRA REVIENT TOUTE SEULE APRÈS VINGT SECONDES sans nouveau geste.
    Armelin, le 27/08/2026 : « je ne peux plus dézoomer sur la carte car le
    zoom sur ma position se force automatiquement. Ce serait bien de pouvoir
@@ -151,6 +156,10 @@ export class BandeauGuidage extends HTMLElement {
      mitraille pendant qu'on cherche une sortie serait pire que l'ancien
      message. */
   #horsRouteDepuis: number | null = null;
+  /** Le dernier fixe reçu — rejoué quand l'affichage change sans lui. */
+  #derniersCoords: { longitude: number; latitude: number;
+    speed?: number | null; heading?: number | null } | null = null;
+
   /** Le plus loin qu'on soit allé sur le tracé — voir `partiAContresens`. */
   #avancementMax = 0;
 
@@ -213,6 +222,13 @@ export class BandeauGuidage extends HTMLElement {
         <div class="bg-essentiel">
           <button type="button" class="bg-deplier" aria-expanded="false"
             aria-label="Afficher les commandes du suivi">
+            <!-- RIEN NE DISAIT QU'ON POUVAIT DÉPLIER (30/08). Armelin : « il
+                 n'y a aucune indication visuelle laissant penser à
+                 l'utilisateur qu'il peut appuyer sur la barre d'état ou la
+                 scroller pour avoir des informations complémentaires ». Une
+                 poignée — la même que les feuilles basses — et un chevron
+                 qui pivote : deux signes que tout le monde a déjà vus. -->
+            <span class="bg-poignee" aria-hidden="true"></span>
             <p class="bg-voie"></p>
             <p class="bg-chiffres" aria-hidden="true">
               <span class="bg-chiffre"><b class="bg-km"></b><i>restants</i></span>
@@ -384,8 +400,16 @@ export class BandeauGuidage extends HTMLElement {
       const etat = ouvert ?? !this.classList.contains('bg-deploye');
       this.classList.toggle('bg-deploye', etat);
       deplier.setAttribute('aria-expanded', String(etat));
-      const boutons = this.querySelector('.bg-boutons') as HTMLElement;
+        const boutons = this.querySelector('.bg-boutons') as HTMLElement;
       boutons.hidden = !etat;
+      /* DÉPLIÉE, ELLE MONTRE CE QU'ELLE RANGEAIT : les annonces au-delà de
+         dix kilomètres reprennent leur place, et l'on retrouve le prochain
+         arrêt même à deux cents bornes de là. */
+      this.classList.toggle('bg-tout-voir', etat);
+      /* ET L'ON REJOUE LE DERNIER FIXE : sans cela, ce que le dépliage
+         doit révéler n'apparaîtrait qu'au fixe SUIVANT — à l'arrêt, ou
+         dans un tunnel, jamais. Le geste doit répondre tout de suite. */
+      if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
       this.#publierHauteur?.();
     };
     deplier.addEventListener('click', () => { basculer(); });
@@ -591,6 +615,7 @@ export class BandeauGuidage extends HTMLElement {
   }): void {
     const o = this.#options;
     if (!o) return;
+    this.#derniersCoords = coords;
     const lon = coords.longitude;
     const lat = coords.latitude;
     const e = etatGuidage(o, { lon, lat });
@@ -812,9 +837,17 @@ export class BandeauGuidage extends HTMLElement {
        colorie pas une fluidité qui n'existe pas dans la donnée. Au-delà de
        50 km, silence : l'événement de l'arrivée ne concerne pas le volant. */
     const trafic = this.querySelector('.bg-trafic') as HTMLElement;
+    /* DIX KILOMÈTRES, PAS CINQUANTE (30/08). Armelin : « la ligne pour
+       indiquer les travaux ne devrait s'afficher automatiquement que 10 km
+       avant d'arriver à la zone de travaux. Idem pour la prochaine arrivée
+       à la borne de recharge ». Une barre qui annonce à cinquante
+       kilomètres occupe l'écran une demi-heure pour rien ; à dix, elle
+       prévient au moment où l'on peut encore décider. Au-delà, tout reste
+       lisible EN DÉPLIANT — rien n'est perdu, seulement rangé. */
+    const portee = this.classList.contains('bg-tout-voir') ? 50_000 : ANNONCE_M;
     const prochainEvt = e.horsRoute ? undefined
       : this.#evenements.find((v) => v.avancementM > e.avancementM
-        && v.avancementM - e.avancementM < 50_000);
+        && v.avancementM - e.avancementM < portee);
     trafic.textContent = prochainEvt
       ? `${prochainEvt.libelle} ${distanceEnMots(prochainEvt.avancementM - e.avancementM)}`
         + ' (Bison Futé)'
@@ -822,7 +855,12 @@ export class BandeauGuidage extends HTMLElement {
 
     /* LE PROCHAIN ARRÊT DE RECHARGE — ce qui manque le plus en électrique, et
        qu'aucune application de navigation généraliste ne porte. */
-    const prochain = o.arrets.find((a) => a.avancementM > e.avancementM);
+    /* MÊME RÈGLE POUR L'ARRÊT DE RECHARGE : il paraît à dix kilomètres, et
+       se lit avant cela en dépliant la barre. */
+    const tousDevant = o.arrets.filter((a) => a.avancementM > e.avancementM);
+    const prochainLoin = tousDevant[0];
+    const prochain = prochainLoin
+      && prochainLoin.avancementM - e.avancementM < portee ? prochainLoin : undefined;
     (this.querySelector('.bg-arret') as HTMLElement).textContent = prochain
       ? `Recharge : ${prochain.nom}`
         + `${prochain.reseau ? ` (${prochain.reseau})` : ''}`
