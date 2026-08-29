@@ -648,7 +648,14 @@ etat-connexion { display: contents; }
 /* Un panneau ouvert POUSSE ses voisins au lieu de les recouvrir. Le prix à
    payer est un rail qui s'allonge ; le bénéfice est qu'aucun bouton ne
    devient inatteignable. Le panneau lui-même défile s'il est trop haut. */
-#carte .maplibregl-ctrl-top-left details > :not(summary) {
+/* LE PLAFOND NE VAUT QUE POUR LE VOLET DE TÊTE, ET C'EST TOUT LE POINT.
+   Écrit en descendance libre, il attrapait AUSSI les <details> nichés dans
+   une page — le panneau « Mon véhicule » en est un : il recevait son propre
+   plafond et son propre ascenseur À L'INTÉRIEUR de la fenêtre, d'où « une
+   double barre d'ascenseur, ce qui n'est pas joli ni ergonomique » (Armelin,
+   29/08 ; mesuré : .iti-corps 574/648 ET .veh-corps 567/860). Le chemin
+   d'enfants ci-dessous ne désigne que le volet porté par le rail. */
+#carte .maplibregl-ctrl-top-left > .maplibregl-ctrl > * > details > :not(summary) {
   /* LA HAUTEUR SUIT L'ÉCRAN, elle n'est plus bridée à 460 pixels. Ce plafond
      convenait à un volet de quelques lignes ; depuis que le planificateur
      montre des PAGES (27/08/2026), il coupait son menu en deux et obligeait à
@@ -2648,3 +2655,22 @@ body.en-guidage #carte .maplibregl-ctrl-bottom-left {
    zoom, le bouton d'information de carte IGN ainsi que le bouton Me
    localiser ». Elle vit à droite ; les commandes s'écartent de sa largeur. */
 body.en-guidage #carte .maplibregl-ctrl-bottom-right { padding-right: 34px; }
+
+/* L'ATTENTE QUI SE VOIT — « il y a un recalcul en arrière-plan, mais rien
+   affiché à l'écran » (Armelin, 29/08). Une phrase seule peut passer pour un
+   résultat ; un point qui bat ne laisse aucun doute. */
+.iti-attente {
+  margin: 0; display: flex; align-items: center; gap: 8px;
+  font: 400 12.5px/1.5 var(--police); color: var(--texte-2);
+}
+.iti-attente-point {
+  flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--accent); animation: iti-bat 900ms ease-in-out infinite;
+}
+@keyframes iti-bat {
+  0%, 100% { opacity: .25; transform: scale(.75); }
+  50% { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iti-attente-point { animation: none; opacity: .9; }
+}

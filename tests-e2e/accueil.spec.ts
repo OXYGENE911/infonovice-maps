@@ -866,6 +866,11 @@ test('LIEUX D’EXCEPTION : liste à la demande, détour réglable, étape ajout
   await allerA(page, 'monuments');
 
   const corps = page.locator('.iti-monuments-corps');
+  /* L'ATTENTE SE VOIT (29/08) : « il y a un recalcul en arrière-plan, mais
+     rien affiché à l'écran […] l'utilisateur peut quitter la fenêtre avant
+     même que le résultat ne s'affiche ». Le témoin bat pendant la recherche,
+     et laisse la place au résultat. */
+  await expect(corps.locator('.iti-attente')).toBeVisible();
   // À 10 minutes (défaut), le château répond, l'abbaye à 20 km se tait.
   await expect(corps).toContainText('Château de la Colline', { timeout: 15_000 });
   await expect(corps).not.toContainText('Abbaye lointaine');

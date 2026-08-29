@@ -127,6 +127,26 @@ export class PanneauVehicule extends HTMLElement {
             autoroute : remplacez-la par vos propres relevés dès votre premier
             long trajet.</p>
 
+          <!-- LE REPÈRE SUR LA CARTE (NAV-2, demande d'Armelin du 29/08 :
+               « une personnalisation de cette icône […] comme une flèche,
+               une voiture etc. »). Trois vignettes qui MONTRENT ce qu'elles
+               proposent : nommer « flèche » et « voiture » obligerait à
+               essayer pour voir.
+               IL VIENT EN TÊTE DEPUIS LE 29/08 AU SOIR : « il faut scroller
+               tout en bas de l'ascenseur pour voir apparaître la
+               personnalisation du repère […] si l'utilisateur ne scrolle pas
+               tout en bas, impossible de savoir que l'option existe ». Un
+               réglage qu'on ne trouve pas n'existe pas. -->
+          <p class="veh-titre">Mon repère pendant la navigation</p>
+          <div class="veh-curseurs" role="radiogroup" aria-label="Forme du repère">
+            ${FORMES.map((f) => `
+              <label class="veh-curseur">
+                <input type="radio" name="veh-curseur" value="${f.cle}">
+                ${curseurSVG(f.cle, 26)}
+                <span>${f.libelle}</span>
+              </label>`).join('')}
+          </div>
+
           <label class="veh-ligne">Nom
             <span><input type="text" class="veh-nom" placeholder="VinFast VF8"
               aria-label="Nom du véhicule"></span>
@@ -142,6 +162,7 @@ export class PanneauVehicule extends HTMLElement {
                RELEVÉS du propriétaire (le BMS ne les publie pas) : le VF 8
                d'Armelin plafonne à 30 kW sous 0 °C et 60 kW par batterie
                très chaude. -->
+
           <p class="veh-titre">Par grand froid, canicule ou montagne (facultatif)</p>
           ${champ('masseKg', 'Masse', 'kg', '10')}
           ${champ('puissanceFroidKw', 'Charge max sous 0 °C', 'kW')}
@@ -160,20 +181,6 @@ export class PanneauVehicule extends HTMLElement {
             <input type="checkbox" class="veh-anneaux"> Afficher mon rayon d’action
           </label>
 
-          <!-- LE REPÈRE SUR LA CARTE (NAV-2, demande d'Armelin du 29/08 :
-               « une personnalisation de cette icône […] comme une flèche,
-               une voiture etc. »). Trois vignettes qui MONTRENT ce qu'elles
-               proposent : nommer « flèche » et « voiture » obligerait à
-               essayer pour voir. -->
-          <p class="veh-titre">Mon repère pendant la navigation</p>
-          <div class="veh-curseurs" role="radiogroup" aria-label="Forme du repère">
-            ${FORMES.map((f) => `
-              <label class="veh-curseur">
-                <input type="radio" name="veh-curseur" value="${f.cle}">
-                ${curseurSVG(f.cle, 26)}
-                <span>${f.libelle}</span>
-              </label>`).join('')}
-          </div>
           <div class="veh-bilan" role="status"></div>
         </fieldset>
       </details>`;

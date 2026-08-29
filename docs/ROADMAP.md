@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #106 — FEN-6 (trois retours du 29/08 au soir) : le plafond du rail
+      ne s'applique plus aux panneaux nichés (fin de la double barre
+      d'ascenseur), le choix du repère remonte en tête de « Mon véhicule »,
+      et la recherche des lieux d'exception affiche une attente RÉELLEMENT
+      peinte — deux trames avant le calcul bloquant.
 - [x] PR #105 — NAV-3, la barre de suivi minimale (spécifiée par Armelin le
       29/08) : trois chiffres en 22 px (restant, temps, arrivée), croix rouge
       de 48 px, le reste déplié d'un appui OU d'un glissement ; boussole
