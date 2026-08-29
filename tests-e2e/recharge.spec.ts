@@ -515,6 +515,97 @@ test('le COPILOTE connaît le plan : l’arrêt, ses SOC prévus, ses commodité
   expect(appelsOverpass).toBe(overpassApresDemarrage + 1);
 });
 
+test('le plan se calcule TOUT SEUL, le DIT pendant qu’il travaille — et hérite des réseaux cochés', async ({ page }) => {
+  /* Retours d'Armelin du 29/08 : « il faut cliquer sur Arrêts de recharge
+     pour que le planificateur calcule — pas intuitif », « il faut attendre
+     sans aucune barre de chargement », et le DOUBLON des réseaux (« à chaque
+     nouveau trajet, il faut encore recocher »). Trois contrats : le plan
+     part tout seul après le calcul, le résumé dit qu'il travaille, et les
+     réseaux cochés sur la carte arrivent COCHÉS dans le plan. */
+  await page.route('**/api-adresse.data.gouv.fr/search/**', (route) => {
+    const q = new URL(route.request().url()).searchParams.get('q') ?? '';
+    const [libelle, lon, lat] = q.includes('lyon')
+      ? ['Lyon', 4.8357, 45.7640] : ['Paris', 2.3522, 48.8566];
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ features: [{
+      geometry: { coordinates: [lon, lat] },
+      properties: { label: libelle, type: 'municipality', postcode: '', city: libelle },
+    }] }) });
+  });
+  /* L'index répond avec 700 ms de retard : la fenêtre où le résumé DOIT
+     annoncer le calcul devient mesurable, au lieu d'un éclair pariable. */
+  await page.route('**/public.opendatasoft.com/**', async (route) => {
+    const url = decodeURIComponent(route.request().url());
+    await new Promise((ok) => { setTimeout(ok, 700); });
+    if (url.includes('/exports/json')) {
+      /* Deux Ionity qui COUVRENT le trajet, et une Tesla-leurre plus
+         puissante juste à côté de la seconde : sans l'héritage des réseaux,
+         le score la préférerait. */
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify([
+        { id_station_itinerance: 'FRTIERS', nom_station: 'Aire du Tiers', nom_enseigne: 'Ionity',
+          nom_operateur: 'Ionity', condition_acces: 'Accès libre', prise_type_combo_ccs: '1',
+          prise_type_chademo: '0', prise_type_2: '0', p: 150, pdc: 8, lon: 3.2, lat: 47.8 },
+        { id_station_itinerance: 'FRDEUX', nom_station: 'Aire des Deux Tiers', nom_enseigne: 'Ionity',
+          nom_operateur: 'Ionity', condition_acces: 'Accès libre', prise_type_combo_ccs: '1',
+          prise_type_chademo: '0', prise_type_2: '0', p: 150, pdc: 8, lon: 4.2, lat: 46.6 },
+        { id_station_itinerance: 'FRTESLA', nom_station: 'Aire Supercharge', nom_enseigne: 'Tesla',
+          nom_operateur: 'Tesla', condition_acces: 'Accès libre', prise_type_combo_ccs: '1',
+          prise_type_chademo: '0', prise_type_2: '0', p: 250, pdc: 16, lon: 4.19, lat: 46.61 },
+      ]) });
+    }
+    return route.fulfill({ contentType: 'application/json',
+      body: JSON.stringify({ total_count: 0, results: [] }) });
+  });
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  // Le filtre CARTE a « Ionity » coché — la préférence persistée.
+  await page.evaluate(async () => {
+    const ouvrir = (): Promise<IDBDatabase> => new Promise((ok, non) => {
+      const d = indexedDB.open('infonovice-maps', 2);
+      d.onsuccess = () => ok(d.result);
+      d.onerror = () => non(d.error);
+    });
+    const db = await ouvrir();
+    await new Promise<void>((ok) => {
+      const t = db.transaction('preferences', 'readwrite');
+      t.objectStore('preferences').put({ reseaux: ['Ionity'] }, 'poi-filtres-bornes');
+      t.oncomplete = () => ok();
+    });
+  });
+  /* Le véhicule se saisit AVANT tout trajet — le cas du propriétaire qui a
+     déjà son profil : saisirVehicule ne convient pas ici, sa dernière
+     assertion attend une entrée qui n'existe qu'avec un trajet. */
+  await ouvrirVolet(page, '.vehicule');
+  await page.getByLabel('Batterie', { exact: true }).fill('87.7');
+  await page.getByLabel('Santé (SOCE)').fill('94');
+  await page.getByLabel('Charge (SOC)').fill('100');
+  await page.getByLabel('Charge max', { exact: true }).fill('150');
+  await page.getByLabel('Sur autoroute').fill('280');
+  await expect(page.locator('.veh-bilan-lignes')).toContainText('Sur autoroute');
+  await retour(page);
+
+  // Le trajet se planifie — et RIEN d'autre : aucune page à ouvrir.
+  const champs = page.locator('.vue-accueil input[type="search"]');
+  await champs.nth(0).fill('paris');
+  await page.getByRole('option', { name: 'Paris' }).first().click();
+  await champs.nth(1).fill('lyon');
+  await page.getByRole('option', { name: 'Lyon' }).first().click();
+
+  const resultat = page.locator('.iti-resultat');
+  // Pendant le travail, le résumé LE DIT — plus de silence qu'on prend
+  // pour un oubli.
+  await expect(resultat).toContainText('calcul des arrêts de recharge…', { timeout: 10_000 });
+  // Puis le total arrive, charge comprise, sans avoir ouvert la page.
+  await expect(resultat).toContainText('au total', { timeout: 15_000 });
+
+  /* ET LES RÉSEAUX HÉRITÉS ONT DÉCIDÉ : l'arrêt retenu est Ionity — la
+     Tesla, pourtant plus puissante, n'était pas cochée sur la carte. */
+  await allerA(page, 'recharge');
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps.locator('.recharge-liste')).toContainText('Aire des Deux Tiers');
+  await expect(corps.locator('.recharge-liste'), 'la Tesla non cochée a été retenue')
+    .not.toContainText('Supercharge');
+});
+
 test('AUCUN appel tant que la section est repliée — les quotas sont un bien commun', async ({ page }) => {
   let appels = 0;
   await page.route('**/public.opendatasoft.com/**', (route) => {
