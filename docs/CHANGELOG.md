@@ -2,6 +2,32 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.75.1] — 2026-08-29 — FEN-4 : la fenêtre du bureau, et le voile qui la grisait (PR #102)
+
+Armelin, le 29/08, sur ordinateur : « quand je clique sur les options
+d'itinéraire, la fenêtre est grisée dans tous les menus et un éclairage qui
+diminue, et je n'ai toujours pas les fenêtres flottantes ». DEUX défauts en
+un seul symptôme :
+
+- **Le voile se peignait PAR-DESSUS le panneau.** La montée du conteneur
+  porteur — les conteneurs MapLibre sont des contextes d'empilement, le
+  rang d'un volet reste enfermé dans le sien — ne vivait que dans le bloc
+  téléphone. Sur grand écran, le voile (rang 9) recouvrait donc le panneau
+  (rang 2) : la fenêtre se grisait elle-même. La règle vaut maintenant sur
+  TOUS les écrans, et le parcours E2E compare les deux rangs.
+- **FEN-2 n'avait détaché que le téléphone.** Au bureau, la page restait
+  collée sous la pastille du rail, dans la colonne — un tiroir à coins
+  arrondis. Elle s'en décroche : posée sur la carte, écartée du bord et de
+  sa pastille, 420 px de large, la carte visible tout autour. Le menu des
+  réglages fait de même, à droite. L'ACCUEIL, lui, reste le volet latéral
+  qu'il a toujours été.
+- **Le voile s'allège au bureau** (0,16 au lieu de 0,34) : sur téléphone la
+  fenêtre couvre presque l'écran, au bureau elle en couvre un cinquième —
+  il suffit qu'il détache la fenêtre, pas qu'il éteigne la carte.
+- Toutes les fenêtres partagent désormais le rayon 18 des cartouches.
+
+634 tests unitaires, 196 parcours E2E (+1).
+
 ## [0.75.0] — 2026-08-29 — FEN-3 : toutes les surfaces flottantes parlent la même langue (PR #101)
 
 La suite de « poursuivre […] les fenêtres flottantes » : les pages et le
