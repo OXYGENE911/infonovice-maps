@@ -380,3 +380,25 @@ test('le bouton de contact des Professionnels se LIT — blanc sur bleu', async 
     .toBe('rgb(255, 255, 255)');
   expect(styles.fond).not.toBe(styles.couleur);
 });
+
+test('FENÊTRE FLOTTANTE : le volet ouvert se détache — borné à 680 px, l’ombre de fenêtre', async ({ page }) => {
+  /* FEN-1, validée par Armelin le 29/08 : un volet haut comme l'écran
+     redevient un tiroir, quel que soit son habillage. On mesure la hauteur
+     ET l'habillage — rayon 16, ombre de fenêtre — au lieu de les croire. */
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await ouvrirLaCarte(page);
+  await page.locator('.iti > summary').click();
+  await page.locator('.iti-vers[data-vers="vehicule"]').click();
+  const corps = page.locator('.iti-corps');
+  const boite = (await corps.boundingBox())!;
+  expect(boite.height, 'le volet reprend toute la hauteur d’écran').toBeLessThanOrEqual(682);
+  // Le contenu plus long DÉFILE dedans : l'unique ascenseur, pas un tiroir.
+  const deborde = await corps.evaluate((el) => el.scrollHeight > el.clientHeight);
+  expect(deborde, 'la page véhicule devrait défiler dans la fenêtre').toBe(true);
+  const style = await corps.evaluate((el) => {
+    const c = getComputedStyle(el);
+    return { rayon: c.borderRadius, ombre: c.boxShadow };
+  });
+  expect(style.rayon).toBe('16px');
+  expect(style.ombre, 'l’ombre de fenêtre manque').toContain('50px');
+});
