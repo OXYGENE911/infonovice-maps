@@ -534,6 +534,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #89 — finitions du 29/08 : pastilles d'arrêts en bleu marque,
+      durée à droite, theme-color au fond (fin de la barre noire mobile),
+      marque sous 400 px, un seul ascenseur dans le planificateur.
 - [x] PR #88 — les routines locales (DÉCISION d'Armelin du 29/08) : repères
       au bon moment + habitudes apprises localement (3 trajets = 1 routine),
       visibles et effaçables d'un bouton — jamais hors de l'appareil.

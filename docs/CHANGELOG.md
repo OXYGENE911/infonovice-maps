@@ -2,6 +2,24 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.64.0] — 2026-08-29 — Finitions : pastilles, logo mobile, barre noire, ascenseurs (PR #89)
+
+Le solde des retours visuels d'Armelin du 29/08 :
+
+- **Les pastilles d'arrêts changent de couleur ET de taille** : le vert
+  #1E9E5A était EXACTEMENT celui du palier « charge très rapide » — les
+  arrêts passent au bleu marque (#0C447C), rayon 18 au lieu de 15, et la
+  durée s'écrit À DROITE de la pastille, en plus grand. La frise du suivi
+  parle la même couleur.
+- **La barre noire du haut de l'écran mobile** : c'était le theme-color
+  #0F1B2D — la barre du navigateur suit désormais le FOND de l'application
+  (blanc en clair, sombre en sombre), l'écran de lancement PWA aussi.
+- **Le logo revient en mobile** : la marque reste sous 400 px, en petit.
+- **Un ascenseur, pas trois** : le rail gauche ne défile plus — la PAGE
+  ouverte du planificateur défile, seule.
+
+593 tests unitaires, 183 parcours E2E.
+
 ## [0.63.0] — 2026-08-29 — Les routines locales (PR #88)
 
 La décision d'Armelin du 29/08 (§4 du triage). Le bon trajet au bon
