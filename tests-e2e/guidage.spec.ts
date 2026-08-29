@@ -98,18 +98,22 @@ test('le bouton « Démarrer » lance le suivi, instructions comprises', async (
   const bandeau = page.locator('bandeau-guidage');
   await expect(bandeau).toBeVisible({ timeout: 15_000 });
 
-  /* L'instruction vient de la feuille de route, et elle est en FRANÇAIS.
-     Depuis GUID-2 (29/08), elle vit dans le CARTOUCHE FLOTTANT en haut à
-     gauche, et ne redit plus la voie : celle-ci porte l'écusson de route et
-     le bas du bandeau — la même information écrite trois fois tenait mal
-     dans un cartouche de trois cents pixels. */
-  await expect(bandeau.locator('.bg-instruction')).toContainText('Départ', { timeout: 15_000 });
+  /* L'INSTRUCTION EST CELLE QUI ARRIVE, PAS CELLE QU'ON VIENT DE FAIRE.
+     Au départ sur l'A6, ce qui vient est le virage à droite vers l'A7 :
+     afficher « Départ » serait nommer l'instant qu'on quitte. Le défaut a
+     été relevé au volant par Armelin le 29/08 (« le GPS confond sa gauche
+     et sa droite ») : il avait UNE MANŒUVRE DE RETARD — le service rend
+     l'instruction du DÉBUT d'étape et la longueur qui suit.
+     ET DEUX VOIES, QUI NE SONT PAS LA MÊME : le cartouche annonce celle où
+     l'on VA (A7), la barre du bas nomme celle où l'on EST (A6). */
+  await expect(bandeau.locator('.bg-instruction'))
+    .toContainText('Tournez à droite', { timeout: 15_000 });
   await expect(bandeau.locator('.bg-cartouche')).toBeVisible();
-  await expect(bandeau.locator('.bg-ecusson'), 'l’écusson porte le numéro de route')
-    .toHaveText('A6');
+  await expect(bandeau.locator('.bg-ecusson'), 'l’écusson porte la voie VISÉE')
+    .toHaveText('A7');
   await expect(bandeau.locator('.bg-cartouche'),
     'le cartouche prend la couleur de la route').toHaveAttribute('data-classe', 'autoroute');
-  await expect(bandeau.locator('.bg-voie'), 'la barre du bas nomme la voie courante')
+  await expect(bandeau.locator('.bg-voie'), 'la barre du bas nomme la voie COURANTE')
     .toHaveText('A6');
   await expect(bandeau.locator('.bg-restant')).toContainText('restants');
   await expect(bandeau.locator('.bg-restant')).toContainText('arrivée vers');
@@ -136,7 +140,8 @@ test('quitter la route se DIT, l’instruction ne continue pas comme si de rien'
   await ouvrirTrajet(page);
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   const bandeau = page.locator('bandeau-guidage');
-  await expect(bandeau.locator('.bg-instruction')).toContainText('Départ', { timeout: 15_000 });
+  await expect(bandeau.locator('.bg-instruction'))
+    .toContainText('Tournez à droite', { timeout: 15_000 });
 
   // Cinquante kilomètres à l'ouest du tracé : on n'est plus dessus.
   await context.setGeolocation({ longitude: 1.6, latitude: 48.5 });
@@ -564,9 +569,16 @@ test('l’orientation à TROIS ÉTATS — cap, nord, vue libre — et le cap se 
   await ouvrirTrajet(page);
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+  /* LE POINT D'ESSAI EST SUR LE TRACÉ, ET IL DOIT L'ÊTRE. Le précédent
+     (2,36 / 48,85) en était à 166 m — mesuré — donc HORS ROUTE au sens de
+     l'application. Le parcours ne s'en apercevait pas tant que le recalcul
+     automatique attendait huit secondes ; passé à quatre le 29/08 (« le
+     recalcul intervient trop tardivement »), le recalcul se déclenchait au
+     milieu du test et redémarrait le suivi, ce qui remet la caméra. Ce
+     parcours parle d'ORIENTATION : il roule donc sur la route. */
   const cap = (n: number) => page.evaluate((h) => {
     (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
-      longitude: 2.36, latitude: 48.85, speed: 24.2, heading: h,
+      longitude: 2.3820, latitude: 48.8195, speed: 24.2, heading: h,
     });
   }, n);
   const bearing = () => page.evaluate(() =>

@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #104 — GUID-3, la manœuvre de retard (défaut le plus grave à ce
+      jour, relevé au volant le 29/08) : on annonce la manœuvre À VENIR et la
+      voie VISÉE, plus celle qu'on vient de quitter ; seuil hors-route 150 →
+      80 m, constat 8 → 4 s, repos 30 → 15 s, et le DEMI-TOUR détecté par le
+      recul de l'avancement (le tour de rond-point ne réveillait rien).
 - [x] PR #103 — FEN-5, la fenêtre AU CENTRE (« je n'ai toujours pas de
       fenêtre flottante », 2e retour) : page centrée sur carte voilée,
       croix de fermeture dans la tête de page, ombre et arrivée propres.

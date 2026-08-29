@@ -2,6 +2,41 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.77.0] — 2026-08-29 — GUID-3 : le guidage avait une manœuvre de retard (PR #104)
+
+Armelin, au volant le 29/08, captures à l'appui : « le GPS confond sa gauche
+et sa droite pendant la navigation ». Il ne les confondait pas : IL AVAIT UN
+TOUR DE RETARD — et c'est le défaut le plus grave trouvé jusqu'ici.
+
+- **CE QUI ARRIVE, PAS CE QU'ON VIENT DE FAIRE.** Le service rend
+  l'instruction du DÉBUT de chaque étape et la longueur qui SUIT (vérifié
+  sur une réponse réelle : `depart` puis 30 m, `turn sharp left` puis 46 m,
+  `turn right` puis 205 m…). Le bandeau affichait l'instruction de l'étape
+  COURANTE — donc la manœuvre déjà exécutée — avec la distance de la
+  PROCHAINE : « tournez à droite dans 200 m » quand la route tournait à
+  gauche. C'est désormais la manœuvre à venir qui s'affiche, et six tests
+  unitaires figent ce contrat.
+- **DEUX VOIES, QUI NE SONT PAS LA MÊME** : le cartouche annonce la voie où
+  l'on VA (avec son écusson et sa couleur), la barre du bas nomme celle où
+  l'on EST. Les confondre revenait à écrire le nom de la rue qu'on quitte
+  au-dessus de la flèche qui en sort.
+
+Et le recalcul automatique, « trop tardif » (rond-point fait en entier sans
+réaction) :
+
+- **Le seuil hors-route descend de 150 m à 80 m.** À 150, on a le temps de
+  prendre une rue entière. 80 reste au-dessus du tremblement d'un récepteur
+  en rue encaissée (30 à 50 m) : on n'annonce pas « vous avez quitté
+  l'itinéraire » à quelqu'un qui roule droit.
+- **Quatre secondes de constat au lieu de huit, quinze de repos au lieu de
+  trente.**
+- **LE DEMI-TOUR EST VU** : après un tour de rond-point on repart sur la
+  même route, à deux mètres du tracé — l'écart ne voit rien, mais
+  l'avancement RECULE. Cent cinquante mètres de recul ne sont pas du bruit :
+  le trajet se refait depuis la position, et le bandeau le dit.
+
+645 tests unitaires (+11), 196 parcours E2E.
+
 ## [0.76.0] — 2026-08-29 — FEN-5 : la fenêtre se pose AU CENTRE (PR #103)
 
 « La colorimétrie est revenue mais je n'ai toujours pas de fenêtre
