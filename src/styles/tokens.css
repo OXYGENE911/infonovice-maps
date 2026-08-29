@@ -26,6 +26,9 @@
 
   --ombre-s: 0 1px 2px rgba(10, 30, 60, .05);
   --ombre-m: 0 6px 24px -8px rgba(10, 30, 60, .14);
+  /* L'élévation d'une FENÊTRE FLOTTANTE (FEN-1, validée par Armelin le
+     29/08) : au-dessus de la carte, et ça se voit. */
+  --ombre-flottante: 0 18px 50px -12px rgba(10, 30, 60, .28);
   --rayon: 14px;
   --focus: 0 0 0 3px rgba(55, 138, 221, .35);
 
@@ -52,6 +55,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --ombre-flottante: 0 18px 50px -12px rgba(0, 0, 0, .55);
     --fond: #0E1014;
     --fond-doux: #13161C;
     --texte-1: #F0F2F5;

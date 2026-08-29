@@ -637,7 +637,13 @@ etat-connexion { display: contents; }
      faire défiler pour atteindre « Feuille de route » — exactement le travers
      qu'on venait de corriger. Le retrait laisse la place au pied de page et
      aux commandes de vue. */
-  max-height: calc(100vh - var(--hauteur-entete, 45px) - 96px);
+  /* …ET 680 px AU PLUS (FEN-1, 29/08) : un volet haut comme l'écran
+     redevient un tiroir, quel que soit son habillage. Les 176 px réservés
+     comptent le bandeau-résumé AU-DESSUS du corps (~75 px) et le pied de
+     page en bas de carte (~80 px) — qui se peint PAR-DESSUS le volet
+     (#carte est le contexte d'empilement racine) : un bouton du volet
+     glissé dessous devient incliquable. */
+  max-height: min(calc(100vh - var(--hauteur-entete, 45px) - 176px), 680px);
   overflow-y: auto;
 }
 
@@ -1644,7 +1650,13 @@ body.en-guidage fiche-borne, body.en-guidage fiche-lieu { display: none; }
   gap: 0;
   display: block;
   /* L'UNIQUE ascenseur du volet : la page. Le rail ne borne plus rien. */
-  max-height: calc(100vh - var(--hauteur-entete, 45px) - 84px);
+  /* LA FENÊTRE FLOTTANTE (FEN-1, validée le 29/08) : la hauteur est bornée
+     À 680 px AUSSI — un volet haut comme l'écran redevient un tiroir, quel
+     que soit son habillage. Le contenu plus long défile dedans. Mêmes
+     176 px réservés que la règle du rail (bandeau-résumé + pied de page)
+     — les deux plafonds doivent rester JUMEAUX, c'est la règle du rail,
+     plus spécifique, qui gagne. */
+  max-height: min(calc(100vh - var(--hauteur-entete, 45px) - 176px), 680px);
   overflow-y: auto; overscroll-behavior: contain;
   scrollbar-width: thin;
 }
@@ -2132,3 +2144,20 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
 }
 .iti-heure:focus-visible { outline: none; box-shadow: var(--focus); }
 .iti-heure-note { text-transform: none; letter-spacing: 0; font-weight: 400; }
+
+/* --- La fenêtre flottante (FEN-1, validée par Armelin le 29/08) --- */
+/* GRAND ÉCRAN SEULEMENT : sur téléphone, la feuille basse garde sa peau.
+   Le volet ouvert se DÉTACHE — rayon plus franc, ombre de fenêtre — et sa
+   hauteur suit le contenu (bornée plus haut, à 680 px). La mécanique ne
+   change pas : une page, un titre, une flèche. */
+@media (min-width: 641px) {
+  #carte .iti[open] .iti-corps {
+    margin-top: 10px;
+    border-radius: 16px;
+    box-shadow: var(--ombre-flottante);
+  }
+  .reglages[open] .reglages-corps {
+    border-radius: 16px;
+    box-shadow: var(--ombre-flottante);
+  }
+}

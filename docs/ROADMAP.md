@@ -534,6 +534,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #91 — FEN-1, la fenêtre flottante (proposition maquettée en
+      artefact, VALIDÉE par Armelin le 29/08) : volet borné à 680 px qui
+      défile dedans, coins 16 px + ombre `--ombre-flottante` dès 641 px
+      (réglages d'affichage compris), réserve basse qui laisse le pied de
+      page cliquable — il se peint PAR-DESSUS le volet. PIC-1 (pictos de
+      menu) suit dans sa propre PR.
 - [x] PR #90 — le mode « arrivée réelle » (DERNIÈRE décision du §4) :
       l'heure d'arrivée compte les charges (suivi et copilote, « charges
       comprises ») ; « Départ à » décale l'arrivée affichée ET la météo du

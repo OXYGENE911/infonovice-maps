@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.66.0] — 2026-08-29 — FEN-1 : le volet devient une fenêtre flottante (PR #91)
+
+Proposition maquettée puis VALIDÉE par Armelin le 29/08 (« valide les deux,
+livre FEN-1 et PIC-1 ») — le volet du planificateur cessait d'être un tiroir
+collé à l'écran :
+
+- **Borné à 680 px de haut** quel que soit l'écran : au-delà, le contenu
+  défile DANS le volet (ascenseur fin), plus jamais un panneau qui court du
+  haut en bas de la carte.
+- **Détaché visuellement** (à partir de 641 px de large) : coins arrondis
+  16 px, ombre de fenêtre portée (`--ombre-flottante`, déclinée sombre),
+  respiration de 10 px sous le bandeau-résumé. Les réglages d'affichage
+  (bas-droite) reçoivent le même habillage.
+- **Le pied de page reste cliquable ET le volet aussi** : la réserve basse
+  compte désormais le pied de carte (~80 px), qui se peint PAR-DESSUS le
+  volet (#carte est le contexte d'empilement racine) — un bouton du volet
+  glissé dessous devenait incliquable, l'E2E « effacer depuis une page »
+  l'a prouvé.
+
+593 tests unitaires, 186 parcours E2E (+1).
+
 ## [0.65.0] — 2026-08-29 — Le mode « arrivée réelle » (PR #90)
 
 La DERNIÈRE décision du §4 du triage. Deux mensonges d'heure corrigés :
