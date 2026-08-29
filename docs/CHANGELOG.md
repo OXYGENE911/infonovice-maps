@@ -2,6 +2,30 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.63.0] — 2026-08-29 — Les routines locales (PR #88)
+
+La décision d'Armelin du 29/08 (§4 du triage). Le bon trajet au bon
+moment, appris ICI et nulle part ailleurs :
+
+- **Les repères déclarés d'abord** : « → Au travail » un matin de semaine,
+  « → À la maison » le soir — proposés en tête du planificateur, un geste
+  et le trajet part (allerVers).
+- **Les habitudes apprises** : trois trajets calculés vers le même endroit
+  dans la même tranche (matin, après-midi, soir — la nuit ne suggère rien)
+  font une routine, proposée avec son MOTIF (« habituel le matin »). Deux
+  allers chez le dentiste n'en font pas une. Trois suggestions au plus.
+- **RGPD by design, et VISIBLE** : nom et point de la destination, rien
+  d'autre — ni départ, ni tracé, ni durée ; quarante habitudes au plus ;
+  le volet Favoris les compte (« retenues sur cet appareil, jamais
+  ailleurs ») et les efface d'un bouton. Une routine qu'on ne peut ni voir
+  ni effacer serait un mouchard.
+- Le choix est PUR et testé à sec (l'heure entre en paramètre, jamais lue
+  d'une horloge cachée) ; les parcours E2E pilotent l'horloge du
+  navigateur. Et un piège CSS payé une troisième fois : `[hidden]` doit
+  gagner sur `display: flex`.
+
+593 tests unitaires (+8), 183 parcours E2E (+2).
+
 ## [0.62.0] — 2026-08-29 — Le recalcul automatique hors-route (PR #87)
 
 La demande d'Armelin du 29/08 : « un mode de recalcul automatique si on

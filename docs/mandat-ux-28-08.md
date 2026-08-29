@@ -123,8 +123,10 @@ s'écraser.
   (recharges à venir + commodités à la demande, événements devant soi,
   arrivée + météo sur demande). Le partage de position entre deux appareils
   exigerait un serveur — écarté d'office, consigné ;
-- routines locales, mode « arrivée réelle » : à cadrer individuellement,
-  chacun est un chantier.
+- routines locales : TRANCHÉ PAR ARMELIN le 29/08 → LIVRÉ (PR #88,
+  0.63.0) — repères au bon moment, habitudes locales (3 trajets = 1
+  routine), comptées et effaçables depuis Favoris ;
+- mode « arrivée réelle » : à cadrer — le dernier chantier du §4.
 
 Chaque PR de cette série reprend la discipline habituelle : mesures avant
 promesses, tests avec chaque livraison, CI verte avant fusion, consignation
