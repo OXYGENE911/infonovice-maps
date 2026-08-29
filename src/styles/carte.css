@@ -2269,3 +2269,42 @@ summary .picto-menu {
   position: static; min-width: 0; margin-top: 8px;
   box-shadow: none; background: var(--fond-doux);
 }
+   NAV-2 — LE CURSEUR DU VÉHICULE (Armelin, 29/08 : « c'est un objet fantôme
+   qui se déplace et on ne peut pas savoir où on est »)
+   --------------------------------------------------------------------------
+   Un aplat bleu marque sur une autoroute grise ou un fond satellite se
+   perdrait : le liseré blanc n'est pas une bordure décorative, c'est ce qui
+   rend le curseur lisible partout. L'ombre porte le même travail.
+   ========================================================================== */
+.curseur-porte { line-height: 0; pointer-events: none; }
+.curseur-vehicule {
+  display: block;
+  fill: var(--accent); stroke: var(--blanc); stroke-width: 2.2;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 2px 4px rgba(6, 20, 40, .45));
+}
+/* Le pare-brise de la silhouette : creusé en blanc, pas en trait. */
+.curseur-vehicule .curseur-creux { fill: var(--blanc); stroke: none; }
+
+/* LE CHOIX DE LA FORME, dans « Mon véhicule » : trois vignettes qui MONTRENT
+   ce qu'elles proposent — un menu déroulant nommant « flèche » et « voiture »
+   obligerait à essayer pour voir. */
+.veh-curseurs { display: flex; gap: 8px; margin: 2px 0 4px; }
+.veh-curseur {
+  /* RELATIVE, ET C'EST NÉCESSAIRE : la case radio est masquée en absolu ;
+     sans ancre ici, elle se calait sur la page entière — un clic sur la
+     vignette atterrissait sur le corps du volet, pas sur elle (relevé par
+     le parcours E2E). */
+  position: relative;
+  flex: 1; display: grid; justify-items: center; gap: 4px;
+  padding: 8px 4px; border: 1px solid var(--bord-2); border-radius: 10px;
+  background: var(--fond); cursor: pointer;
+  font: 600 11.5px var(--police); color: var(--texte-2);
+}
+.veh-curseur input { position: absolute; opacity: 0; pointer-events: none; }
+.veh-curseur .curseur-vehicule { width: 26px; height: 26px; }
+.veh-curseur:hover { border-color: var(--accent); }
+.veh-curseur:has(input:checked) {
+  border-color: var(--accent); background: var(--bleu-50); color: var(--accent);
+}
+.veh-curseur:has(input:focus-visible) { outline: none; box-shadow: var(--focus); }
