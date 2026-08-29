@@ -45,8 +45,8 @@ test('une seule page à l’écran, jamais deux', async ({ page }) => {
   expect(await visibles()).toEqual(['accueil']);
   await allerA(page, 'feuille');
   expect(await visibles(), 'deux pages ouvertes en même temps').toEqual(['feuille']);
-  await allerA(page, 'meteo');
-  expect(await visibles()).toEqual(['meteo']);
+  await allerA(page, 'monuments');
+  expect(await visibles()).toEqual(['monuments']);
   await retour(page);
   expect(await visibles()).toEqual(['accueil']);
 });

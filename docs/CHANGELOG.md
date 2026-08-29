@@ -2,6 +2,25 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.60.0] — 2026-08-29 — Le menu du planificateur s'allège (PR #85)
+
+Les retours d'Armelin du 29/08 sur les « menus à rallonge » :
+
+- **« Sur le trajet » est RETIRÉ** — la carte montre déjà toutes les bornes
+  et stations du corridor, la page listait ce qu'on voyait.
+- **« Météo à l'arrivée » est RETIRÉE du planificateur** — elle vit dans le
+  COPILOTE pendant le suivi, à l'heure d'arrivée réelle, là où elle sert.
+- **« Profil altimétrique » DÉMÉNAGE dans le copilote** — même dessin, mêmes
+  dénivelés, sur demande, la réponse survit aux fixes. (Le relief COMPTE
+  déjà dans le plan de recharge depuis la PR #80 — la page ne faisait que
+  montrer.)
+- **« Lieux d'exception » REMONTE** en deuxième position du menu des
+  détails : « tout en bas d'un menu interminable, on peut vite l'oublier ».
+- Le menu des détails descend de sept entrées à quatre : Arrêts de
+  recharge, Lieux d'exception, Feuille de route, Partager ou exporter.
+
+585 tests unitaires, 179 parcours E2E (cinq pages retirées ; le copilote reprend leurs vérifications).
+
 ## [0.59.0] — 2026-08-29 — Le plan de recharge se calcule tout seul (PR #84)
 
 Trois retours d'Armelin du 29/08 soldés d'un coup :
