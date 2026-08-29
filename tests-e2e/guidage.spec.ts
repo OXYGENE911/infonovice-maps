@@ -337,22 +337,28 @@ test('la FRISE du trajet : événements posés à leur kilomètre, curseur qui a
       (el) => (el as HTMLElement).style.bottom));
 
   /* AU DÉPART : la frise paraît au premier fixe, le curseur est en bas, et
-     le losange des travaux est posé à SON kilomètre — autour de 20 %.
-     L'événement arrive de façon asynchrone après le démarrage : on REJOUE
-     un fixe jusqu'à ce qu'il soit sur la frise (même mécanique que la ligne
-     de texte du bandeau). */
+     les travaux COLORENT la piste à leur kilomètre — autour de 20 %.
+     Depuis FRISE-2 (29/08), les événements ne sont plus des losanges posés
+     par-dessus : ils SONT la couleur du segment, ce qui les explique au
+     lieu de les juxtaposer (Armelin : « on ne devrait afficher sur cette
+     barre que les éléments planifiés »). L'événement arrive de façon
+     asynchrone : on REJOUE un fixe jusqu'à ce qu'il soit peint. */
   await expect.poll(async () => {
     await page.evaluate(() => {
       (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
         longitude: 2.3522, latitude: 48.8566 });
     });
-    return page.locator('.bg-frise-evt').count();
+    return page.locator('.bg-frise-ralenti').count();
   }, { timeout: 15_000 }).toBe(1);
   await expect(frise).toBeVisible();
   expect(await hauteurDe('.bg-frise-curseur')).toBeLessThan(3);
-  const evt = await hauteurDe('.bg-frise-evt');
-  expect(evt, 'les travaux ne sont pas à leur kilomètre').toBeGreaterThan(12);
+  const evt = await hauteurDe('.bg-frise-ralenti');
+  expect(evt, 'les travaux ne colorent pas leur kilomètre').toBeGreaterThan(12);
   expect(evt).toBeLessThan(30);
+  // Le reste de la route reste vert : aucun incident n'y est signalé.
+  expect(await page.locator('.bg-frise-libre').count()).toBe(2);
+  // Et le sommet porte le drapeau à damier de l'arrivée.
+  await expect(page.locator('.bg-frise-arrivee')).toBeVisible();
 
   // À MI-ROUTE : le curseur a avancé — il est la voiture, pas une décoration.
   await page.evaluate(() => {
