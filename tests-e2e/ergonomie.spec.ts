@@ -402,5 +402,8 @@ test('FENÊTRE FLOTTANTE : le volet ouvert se détache — borné à 680 px, l�
     return { rayon: c.borderRadius, ombre: c.boxShadow };
   });
   expect(style.rayon).toBe('18px');
-  expect(style.ombre, 'l’ombre de fenêtre manque').toContain('50px');
+  /* L'ombre est celle des fenêtres CENTRÉES depuis FEN-5 : posée au milieu
+     de l'écran, une fenêtre flotte plus haut qu'un panneau adossé à un bord
+     — son ombre porte plus loin, sans quoi elle paraît collée. */
+  expect(style.ombre, 'l’ombre de fenêtre manque').toContain('70px');
 });

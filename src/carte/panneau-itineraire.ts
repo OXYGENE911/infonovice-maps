@@ -75,6 +75,10 @@ export interface PorteCouchesBornes {
 }
 
 /** Les pages du planificateur, et leur titre. */
+/* LES PAGES QUI COMMANDENT LA CARTE — voir #allerA. Elles gardent la
+   colonne : leur effet se lit SUR la carte, pas dans la page. */
+const PAGES_COLONNE = new Set<string>(['couches', 'recharge']);
+
 const VUES = {
   accueil: 'Où allez-vous ?',
   vehicule: 'Mon véhicule',
@@ -356,6 +360,13 @@ export class PanneauItineraire extends HTMLElement {
             <button type="button" class="vue-retour" hidden
               aria-label="Revenir au trajet">←</button>
             <h2 class="vue-titre">Où allez-vous ?</h2>
+            <!-- UNE FENÊTRE SE FERME (FEN-5, 29/08). Armelin, deux fois :
+                 « je n'ai toujours pas de fenêtre flottante ». La flèche
+                 REMONTE d'une page ; il manquait le geste qui congédie tout
+                 — c'est lui, autant que la position, qui fait lire une
+                 fenêtre plutôt qu'un tiroir. -->
+            <button type="button" class="vue-fermer" hidden
+              aria-label="Fermer la fenêtre">✕</button>
           </div>
 
           <!-- ======================= ACCUEIL ======================= -->
@@ -789,6 +800,14 @@ export class PanneauItineraire extends HTMLElement {
     }
     this.querySelector('.vue-retour')?.addEventListener('click', () => {
       this.#allerA('accueil');
+    });
+    /* FERMER, C'EST RANGER LA FENÊTRE ET REVENIR À L'ACCUEIL : rouvrir le
+       planificateur sur la page des options qu'on venait de quitter serait
+       une surprise — la même règle qu'au premier jour des pages. */
+    this.querySelector('.vue-fermer')?.addEventListener('click', () => {
+      this.#allerA('accueil');
+      const volet = this.querySelector('details.iti') as HTMLDetailsElement | null;
+      if (volet) volet.open = false;
     });
 
     /* LES PÉAGES DU TRAJET — un appel Overpass, au clic seulement. Le bouton
@@ -1905,6 +1924,9 @@ export class PanneauItineraire extends HTMLElement {
     titre.textContent = VUES[vue];
     const retour = this.querySelector('.vue-retour') as HTMLElement;
     retour.hidden = vue === 'accueil';
+    // La croix ne paraît qu'avec la fenêtre : sur l'accueil, le volet se
+    // referme par sa pastille, comme il l'a toujours fait.
+    (this.querySelector('.vue-fermer') as HTMLElement).hidden = vue === 'accueil';
     /* LA PAGE OUVERTE EST UNE FENÊTRE, PAS UN TIROIR (FEN-2, 29/08 —
        Armelin : « quand je clique sur un pictogramme, je n'ai toujours pas
        de fenêtre flottante pour la configuration »). L'accueil reste la
@@ -1913,6 +1935,18 @@ export class PanneauItineraire extends HTMLElement {
     const volet = this.querySelector('details.iti') as HTMLElement;
     if (vue === 'accueil') delete volet.dataset['page'];
     else volet.dataset['page'] = vue;
+
+    /* DEUX FAMILLES DE PAGES, ET LA MESURE QUI LES A SÉPARÉES (FEN-5).
+       Posées AU CENTRE, toutes les pages devenaient des fenêtres franches
+       — mais douze parcours E2E se sont mis à échouer, tous pour la même
+       raison : ils cliquent la CARTE pendant que la page est ouverte, et
+       une fenêtre centrée recouvre exactement l'endroit qu'on vise. Ce
+       n'est pas un défaut de test, c'est un usage réel — on coche un
+       filtre de bornes POUR regarder la carte changer.
+       Une page qui COMMANDE la carte reste donc à côté d'elle ; une page
+       qu'on consulte ou qu'on règle hors carte se pose au centre. */
+    if (vue === 'accueil') delete volet.dataset['fenetre'];
+    else volet.dataset['fenetre'] = PAGES_COLONNE.has(vue) ? 'colonne' : 'centree';
     /* LE CORPS REMONTE EN HAUT à chaque changement de page. Sans cela, on
        arrivait sur la météo au milieu de son texte, parce que la feuille de
        route d'avant avait fait défiler le conteneur. */

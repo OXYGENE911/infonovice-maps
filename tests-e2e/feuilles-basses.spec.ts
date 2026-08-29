@@ -150,18 +150,36 @@ test('FEN-4 : sur GRAND ÉCRAN aussi, une page est une fenêtre — et le voile 
   }));
   expect(rangs.porteur, 'le voile recouvre la fenêtre').toBeGreaterThan(rangs.voile);
 
-  // ELLE SE DÉTACHE : décollée du bord, décollée de sa pastille, arrondie.
-  const pastille = (await page.locator('.iti > summary').boundingBox())!;
+  /* ELLE SE POSE AU CENTRE (FEN-5). Le premier correctif l'avait décrochée
+     de sa colonne… pour la reposer douze pixels plus loin : « la
+     colorimétrie est revenue mais je n'ai toujours pas de fenêtre
+     flottante ». Une fenêtre ancrée là où le tiroir se trouvait RESTE un
+     tiroir à l'œil. On mesure donc le CENTRAGE, pas un écart au bord. */
   const fenetre = (await page.locator('.iti-corps').boundingBox())!;
-  expect(fenetre.x, 'la fenêtre colle au bord').toBeGreaterThanOrEqual(20);
-  expect(fenetre.y, 'la fenêtre colle à sa pastille')
-    .toBeGreaterThan(pastille.y + pastille.height + 10);
+  const ecran = page.viewportSize()!;
+  expect(Math.abs((fenetre.x + fenetre.width / 2) - ecran.width / 2),
+    'la fenêtre n’est pas centrée').toBeLessThan(4);
+  expect(fenetre.x, 'la fenêtre reste dans la colonne de gauche')
+    .toBeGreaterThan(ecran.width * 0.25);
   await expect(page.locator('.iti-corps')).toHaveCSS('border-radius', '18px');
   await expect(page.locator('.iti-corps')).toHaveCSS('position', 'fixed');
+  // ET ELLE SE FERME : une fenêtre a une croix, pas seulement une flèche.
+  await expect(page.locator('.vue-fermer')).toBeVisible();
 
   // Et le retour à l'accueil rend le volet latéral d'origine.
   await page.locator('.vue-retour').click();
   await expect(page.locator('.iti-corps')).toHaveCSS('position', 'static');
+  await expect(page.locator('.vue-fermer'), 'l’accueil n’est pas une fenêtre')
+    .toBeHidden();
+
+  /* LA CROIX CONGÉDIE TOUT : elle ferme la fenêtre ET le volet, et l'on
+     revient à l'accueil — rouvrir sur la page qu'on venait de quitter
+     serait une surprise. */
+  await page.locator('.iti-vers[data-vers="options"]').click();
+  await page.locator('.vue-fermer').click();
+  await expect(page.locator('.iti')).not.toHaveAttribute('open', '');
+  await page.locator('.iti > summary').click();
+  await expect(page.locator('.vue-accueil')).toBeVisible();
 });
 
 test('sur GRAND écran, l’accueil ne change pas : volet latéral, poignée absente', async ({ page }) => {
