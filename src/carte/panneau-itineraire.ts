@@ -689,6 +689,19 @@ export class PanneauItineraire extends HTMLElement {
     this.#allerA('accueil');
     this.querySelector('.iti-effacer')?.addEventListener('click', () => this.#effacer());
 
+    /* UN VÉHICULE MODIFIÉ INVALIDE LE PLAN (29/08) : capacité, autonomie ou
+       bridage changés, le plan décrit une autre voiture. Il se refait tout
+       seul, avec le même amorti que le calcul de trajet — la saisie champ à
+       champ ne déclenche qu'un recalcul. */
+    document.addEventListener('vehicule-change', () => {
+      if (!this.#dernier) return;
+      this.#rechargePour = null;
+      clearTimeout(this.#minuteurPlanAuto);
+      this.#minuteurPlanAuto = setTimeout(() => {
+        void this.#planifierRecharge(this.#vue !== 'recharge');
+      }, 1200);
+    });
+
     /* SUR TÉLÉPHONE, LE VOLET EST UNE FEUILLE BASSE (décision d'Armelin du
        28/08) : la carte respire au-dessus, la poignée règle la hauteur. */
     installerFeuilleBasse(
