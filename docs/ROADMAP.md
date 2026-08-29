@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #105 — NAV-3, la barre de suivi minimale (spécifiée par Armelin le
+      29/08) : trois chiffres en 22 px (restant, temps, arrivée), croix rouge
+      de 48 px, le reste déplié d'un appui OU d'un glissement ; boussole
+      « pressoir » et vue inclinée en icônes ; boutons + et − retirés
+      (écran tactile) ; la barre du trajet ne coupe plus les commandes.
 - [x] PR #104 — GUID-3, la manœuvre de retard (défaut le plus grave à ce
       jour, relevé au volant le 29/08) : on annonce la manœuvre À VENIR et la
       voie VISÉE, plus celle qu'on vient de quitter ; seuil hors-route 150 →

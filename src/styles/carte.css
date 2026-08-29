@@ -2580,3 +2580,71 @@ body.en-guidage #carte .maplibregl-ctrl-bottom-left {
   margin: 4px 0 0; font: 400 10.5px/1.45 var(--police); color: var(--texte-3);
 }
 .fb-photo-credit a { color: inherit; }
+
+/* ==========================================================================
+   NAV-3 — LA BARRE DE SUIVI, RÉDUITE À CE QU'ON LIT EN ROULANT
+   --------------------------------------------------------------------------
+   Armelin, le 29/08 : « la barre de navigation en bas sur mobile est
+   beaucoup trop grande et les informations les plus indispensables sont
+   écrites en trop petit […] les seules informations qui doivent apparaître
+   pendant la navigation, c'est : le nombre de kilomètres restants, le temps
+   restant, l'heure d'arrivée estimée, un bouton pour arrêter ». Le reste se
+   déplie — d'un appui ou d'un glissement vers le haut.
+   ========================================================================== */
+.bg-essentiel { display: flex; align-items: center; gap: 10px; }
+
+/* La zone d'appui EST la barre : toute sa largeur, moins la croix. */
+.bg-deplier {
+  flex: 1 1 auto; min-width: 0; display: block; text-align: left;
+  padding: 2px 0; border: none; background: none; cursor: pointer;
+  touch-action: pan-y;
+}
+.bg-deplier:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 10px; }
+
+.bg-chiffres {
+  margin: 0; display: flex; align-items: baseline; gap: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.bg-chiffre { display: flex; flex-direction: column; line-height: 1.1; }
+/* GROS, ET C'EST LE FOND DE LA DEMANDE : ces trois nombres sont ce qu'on
+   lit d'un coup d'œil à 90 km/h. Le reste peut être petit ; pas eux. */
+.bg-chiffre b { font: 700 22px var(--police); color: var(--texte-1); }
+.bg-chiffre i {
+  font: 500 10.5px var(--police); color: var(--texte-3);
+  font-style: normal; text-transform: uppercase; letter-spacing: .04em;
+}
+
+/* LA CROIX ROUGE — « remplacer le gros bouton Arrêter le suivi par une
+   grosse icône en forme de croix rouge ». Grosse : c'est le seul geste
+   qu'on cherche parfois dans l'urgence. */
+.bg-arreter {
+  flex: 0 0 auto; width: 48px; height: 48px; padding: 0;
+  display: grid; place-items: center;
+  border: 1px solid #C0392B; border-radius: 50%;
+  background: #C0392B; color: var(--blanc); cursor: pointer;
+}
+.bg-arreter .picto-menu { width: 24px; height: 24px; stroke-width: 2.4; }
+.bg-arreter:hover { background: #A5322A; border-color: #A5322A; }
+.bg-arreter:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* Les commandes dépliées : des icônes, plus des phrases. */
+.bg-boutons[hidden] { display: none; }
+.bg-3d, .bg-orientation, .bg-copilote-bouton {
+  width: 44px; height: 44px; padding: 0; display: grid; place-items: center;
+}
+.bg-3d .picto-menu, .bg-orientation .picto-menu, .bg-copilote-bouton .picto-menu {
+  width: 22px; height: 22px; color: var(--texte-1);
+}
+.bg-copilote-bouton[aria-pressed="true"] .picto-menu { color: var(--accent); }
+
+/* Masqué à l'œil, lu par qui écoute — voir le commentaire du gabarit. */
+.bg-lu-seulement {
+  position: absolute; width: 1px; height: 1px; margin: -1px;
+  padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+/* LA BARRE DU TRAJET NE COUPE PLUS LES COMMANDES. Armelin, le 29/08 : « la
+   barre verticale de navigation coupe en deux les boutons de contrôle du
+   zoom, le bouton d'information de carte IGN ainsi que le bouton Me
+   localiser ». Elle vit à droite ; les commandes s'écartent de sa largeur. */
+body.en-guidage #carte .maplibregl-ctrl-bottom-right { padding-right: 34px; }

@@ -15,7 +15,12 @@ test('la carte s’amorce : canevas présent, contrôles en français', async ({
   await page.goto('/');
   await expect(page).toHaveTitle(/Infonovice Maps/);
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole('button', { name: 'Zoomer', exact: true })).toBeVisible();
+  /* LES BOUTONS + ET − ONT DISPARU le 29/08 (Armelin : « ils n'ont pas
+     leur place sur un écran tactile où tout le monde zoome avec les
+     doigts »). La boussole reste — aucun geste ne la remplace — et c'est
+     elle qui prouve désormais que les commandes de vue sont en français. */
+  await expect(page.getByRole('button', { name: 'Zoomer', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Remettre le nord en haut' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Me localiser' })).toBeVisible();
   // L'attribution IGN est une obligation de la Géoplateforme, pas un ornement.
   await expect(page.locator('.maplibregl-ctrl-attrib')).toContainText('IGN');

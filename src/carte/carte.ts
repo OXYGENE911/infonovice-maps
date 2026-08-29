@@ -57,7 +57,16 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   /* LES COMMANDES DE VUE VONT EN BAS À DROITE, le menu reste SEUL en haut.
      Mêler « où je regarde » et « ce que j'affiche » dans une même colonne
      obligeait l'œil à trier ; les cartes grand public séparent les deux. */
-  carte.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-right');
+  /* LES BOUTONS + ET − N'EXISTENT PLUS SUR ÉCRAN TACTILE. Armelin, le
+     29/08 : « les boutons + et − n'ont pas leur place sur un écran tactile
+     où tout le monde est habitué à zoomer avec les doigts. Je pense qu'on
+     peut faire disparaître ces deux boutons. » Il a raison — et ils
+     coûtaient deux fois : de la place, et le chevauchement avec la barre du
+     trajet. La BOUSSOLE reste : elle ne se remplace par aucun geste, et
+     c'est elle qui redresse une carte tournée par erreur. */
+  carte.addControl(new NavigationControl({
+    visualizePitch: true, showZoom: false, showCompass: true,
+  }), 'bottom-right');
 
   /* LE MODE SOMBRE DU FOND PLAN est un filtre CSS sur le canevas — le
      vectoriel ferait mieux, mais il exigerait glyphes et sprites hébergés ;

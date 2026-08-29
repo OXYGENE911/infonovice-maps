@@ -110,8 +110,10 @@ test('le haut-droit ne porte QUE le menu', async ({ page }) => {
     'un coin qui se remplit redevient un fouillis').toHaveCount(1);
   await expect(page.locator('.maplibregl-ctrl-top-right .reglages')).toBeVisible();
 
-  // Et les commandes de vue sont bien en bas, atteignables.
-  await expect(page.getByRole('button', { name: 'Zoomer', exact: true })).toBeVisible();
+  /* Et les commandes de vue sont bien en bas, atteignables. Le zoom n'y
+     est plus depuis le 29/08 : sur un écran tactile, deux doigts le font
+     mieux — et les boutons chevauchaient la barre du trajet. */
+  await expect(page.getByRole('button', { name: 'Remettre le nord en haut' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Me localiser' })).toBeVisible();
 });
 
