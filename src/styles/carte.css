@@ -242,15 +242,6 @@ body { font-family: var(--police); background: var(--fond); }
   color: var(--texte-2); font: 600 12.5px var(--police); cursor: pointer;
 }
 .iti-effacer:focus-visible { outline: none; box-shadow: var(--focus); }
-
-/* --- Profil altimétrique (PR #7) --- */
-.iti-alti summary {
-  cursor: pointer; font: 600 13px var(--police); color: var(--texte-2);
-  padding: 3px 0;
-}
-.iti-alti summary:focus-visible { outline: none; box-shadow: var(--focus); }
-.iti-alti-corps { padding-top: 6px; font: 400 13px var(--police); color: var(--texte-2); }
-.iti-alti-corps svg { display: block; width: 100%; height: 72px; }
 .alti-aire { fill: #2272C4; opacity: 0.16; }
 .alti-ligne { fill: none; stroke: #2272C4; stroke-width: 2; }
 .alti-bilan { margin: 5px 0 0; font: 600 12.5px var(--police); color: var(--texte-1); }
@@ -443,26 +434,7 @@ etapes-itineraire { display: grid; gap: 7px; }
    (fonds sous POI, radios sous Favoris) avant ce correctif GÉNÉRAL. */
 .maplibregl-ctrl-top-left .maplibregl-ctrl { position: relative; }
 .maplibregl-ctrl-top-left .maplibregl-ctrl:has(details[open]) { z-index: var(--z-volet-ouvert); }
-
-/* --- Sur le trajet (PR #11) --- */
-.iti-trajet summary {
-  cursor: pointer; font: 600 13px var(--police); color: var(--texte-2);
-  padding: 3px 0;
-}
-.iti-trajet summary:focus-visible { outline: none; box-shadow: var(--focus); }
-.iti-trajet-reglages { display: grid; gap: 6px; padding: 8px 0 2px;
-  font: 400 12.5px var(--police); color: var(--texte-2); }
-.iti-trajet-reglages label { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.iti-trajet-reglages select {
-  padding: 5px 8px; border-radius: 8px; border: 1px solid var(--bord-2);
-  background: var(--fond-doux); color: var(--texte-1); font: 600 12.5px var(--police);
-}
-.iti-trajet-reglages select:focus-visible { outline: none; box-shadow: var(--focus); }
-.iti-trajet-corps { padding-top: 6px; font: 400 13px var(--police); color: var(--texte-2); }
 .trajet-resume { margin: 0 0 6px; font: 650 12.5px var(--police); color: var(--texte-1); }
-.trajet-liste { margin: 0; padding-left: 20px; max-height: 240px; overflow-y: auto;
-  display: grid; gap: 7px; }
-.trajet-liste li { display: grid; gap: 1px; }
 .trajet-aller {
   justify-self: start; text-align: left; padding: 0; border: 0; background: none;
   color: var(--accent); font: 600 13px var(--police); cursor: pointer;
@@ -541,18 +513,6 @@ etapes-itineraire { display: grid; gap: 7px; }
   color: var(--texte-1); font: 600 15px var(--police); cursor: pointer;
 }
 .photo-fermer:focus-visible { outline: none; box-shadow: var(--focus); }
-
-/* --- Météo à l'arrivée (PR #13) --- */
-.iti-meteo summary {
-  cursor: pointer; font: 600 13px var(--police); color: var(--texte-2);
-  padding: 3px 0;
-}
-.iti-meteo summary:focus-visible { outline: none; box-shadow: var(--focus); }
-.iti-meteo-corps { padding-top: 6px; font: 400 13px var(--police); color: var(--texte-2); }
-.meteo-ligne { margin: 0; display: flex; gap: 9px; align-items: baseline;
-  font: 600 13.5px var(--police); color: var(--texte-1); }
-.meteo-symbole { font-size: 19px; line-height: 1; }
-.meteo-source { margin: 6px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); }
 
 /* --- Info trafic (PR #14) — même livrée que les autres volets --- */
 .porte-trafic { pointer-events: auto; margin: 8px 0 0 12px !important; }
@@ -1758,13 +1718,6 @@ body.en-guidage fiche-borne, body.en-guidage fiche-lieu { display: none; }
 .iti-effacer:hover { border-color: #C0564A; color: #C0564A; }
 .iti-effacer:focus-visible { outline: none; box-shadow: var(--focus); }
 
-/* Les listes internes ne bornent plus leur hauteur : la page les porte, et
-   c'est elle qui défile. Deux niveaux de défilement au plus — la règle posée
-   le 26/08 après qu'une case à cocher soit devenue inatteignable. */
-.recharge-toutes-liste, .feuille-etapes, .trajet-liste, .recharge-liste {
-  max-height: none; overflow: visible;
-}
-
 /* LE VÉHICULE ET LES COUCHES SONT DES PAGES DU PLANIFICATEUR (27/08/2026).
    Leurs composants gardent leur <details> interne — le réécrire pour rendre un
    corps nu aurait touché deux fichiers de plusieurs centaines de lignes pour
@@ -2108,14 +2061,16 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
 }
 .bg-copilote-arret-nom { margin: 0; font: 650 13px var(--police); color: var(--texte-1); }
 .bg-copilote-arret-detail { margin: 2px 0 0; font: 400 12.5px/1.5 var(--police); color: var(--texte-2); }
-.bg-copilote-commodites, .bg-copilote-meteo {
+.bg-copilote-commodites, .bg-copilote-meteo, .bg-copilote-alti {
   margin-top: 6px; padding: 6px 11px; border-radius: 9px;
   border: 1px solid var(--bord-2); background: var(--fond);
   cursor: pointer; font: 600 12px var(--police); color: var(--texte-2);
 }
-.bg-copilote-commodites:hover, .bg-copilote-meteo:hover { border-color: var(--accent); color: var(--accent); }
-.bg-copilote-commodites:focus-visible,
-.bg-copilote-meteo:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-copilote-commodites:hover, .bg-copilote-meteo:hover,
+.bg-copilote-alti:hover { border-color: var(--accent); color: var(--accent); }
+.bg-copilote-commodites:focus-visible, .bg-copilote-meteo:focus-visible,
+.bg-copilote-alti:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-copilote-sortie svg { width: 100%; height: 64px; display: block; margin-top: 6px; }
 .bg-copilote-sortie { margin: 6px 0 0; font: 400 12.5px/1.5 var(--police); color: var(--texte-2); }
 .bg-copilote-evenements { margin: 0; padding-left: 18px; font: 400 12.5px/1.6 var(--police); color: var(--texte-2); }
 .bg-copilote-arrivee { margin: 0; font: 500 13px var(--police); color: var(--texte-1); }

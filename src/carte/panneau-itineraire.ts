@@ -21,12 +21,9 @@ import { installerFeuilleBasse } from './feuille-basse';
 import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
 import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
-import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
+import { profilItineraire, denivele } from '../lib/altimetrie';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
-import {
-  chercherLeLongDuTrajet, stationsDuTrajet, distanceM,
-  type Categorie, type SurLeTrajet,
-} from '../lib/le-long-du-trajet';
+import { stationsDuTrajet, distanceM, type SurLeTrajet } from '../lib/le-long-du-trajet';
 import {
   planifierArrets, cleBorne, type PlanRecharge, type BorneCandidate,
 } from '../lib/arrets';
@@ -38,7 +35,7 @@ import {
 import { chargerCommodites, TYPES_COMMODITE, ErreurCommodites } from '../lib/commodites';
 import { lirePreference } from '../lib/stockage';
 import { PREF_VEHICULE } from './panneau-vehicule';
-import { ErreurPoi, type PoiCarburant, type PoiBorne } from '../lib/poi';
+import { ErreurPoi } from '../lib/poi';
 import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import { palierDe } from '../lib/puissance';
 import { chargerPeages, ErreurPeages } from '../lib/peages';
@@ -49,7 +46,7 @@ import {
   type Monument,
 } from '../lib/monuments';
 import { svgCommodite } from './icone-commodite';
-import { meteoA, phraseMeteo, symboleTemps, heureArrivee, formaterHeure, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
+import { meteoA } from '../lib/meteo';
 import type { FicheBorne } from './fiche-borne';
 import type { FicheLieu } from './fiche-lieu';
 import type { BandeauGuidage } from './bandeau-guidage';
@@ -114,18 +111,10 @@ export class PanneauItineraire extends HTMLElement {
     depart: PointGeo; arrivee: PointGeo; profil: Profil;
     etapes: PointGeo[]; eviter: Eviter[]; optimisation: Optimisation;
   } | null = null;
-  /** Itinéraire dont le profil altimétrique est chargé (ou en cours). */
-  #profilPour: Itineraire | null = null;
   /** Itinéraire dont la feuille de route est chargée (ou en cours). */
   #feuillePour: Itineraire | null = null;
-  /** Itinéraire dont la recherche « sur le trajet » est faite (ou en cours). */
-  #trajetPour: Itineraire | null = null;
   #rechargePour: Itineraire | null = null;
   #annulationRecharge: AbortController | null = null;
-  /** Itinéraire dont la météo d'arrivée est chargée (ou en cours), et QUAND :
-      un bulletin d'arrivée périme avec l'horloge, pas avec l'itinéraire. */
-  #meteoPour: Itineraire | null = null;
-  #meteoLe: Date | null = null;
   /** Itinéraire dont les lieux d'exception sont calculés (ou en cours). */
   #monumentsPour: Itineraire | null = null;
   #marqueursMonuments: Marker[] = [];
@@ -408,19 +397,19 @@ export class PanneauItineraire extends HTMLElement {
                 <span>Options du trajet</span><span aria-hidden="true">›</span></button>
             </nav>
 
+            <!-- LE MENU S'EST ALLÉGÉ LE 29/08, sur les retours d'Armelin :
+                 « Sur le trajet » retiré (la carte montre déjà toutes les
+                 bornes), « Météo à l'arrivée » retiré (elle vit dans le
+                 COPILOTE pendant le suivi), « Profil altimétrique » déplacé
+                 dans le copilote aussi — et « Lieux d'exception » REMONTE :
+                 tout en bas d'un menu à rallonge, « on peut vite l'oublier ». -->
             <nav class="iti-menu" aria-label="Détails du trajet" hidden>
               <button type="button" class="iti-vers" data-vers="recharge">
                 <span>Arrêts de recharge</span><span aria-hidden="true">›</span></button>
-              <button type="button" class="iti-vers" data-vers="feuille">
-                <span>Feuille de route</span><span aria-hidden="true">›</span></button>
-              <button type="button" class="iti-vers" data-vers="trajet">
-                <span>Sur le trajet</span><span aria-hidden="true">›</span></button>
-              <button type="button" class="iti-vers" data-vers="meteo">
-                <span>Météo à l’arrivée</span><span aria-hidden="true">›</span></button>
-              <button type="button" class="iti-vers" data-vers="alti">
-                <span>Profil altimétrique</span><span aria-hidden="true">›</span></button>
               <button type="button" class="iti-vers" data-vers="monuments">
                 <span>Lieux d’exception</span><span aria-hidden="true">›</span></button>
+              <button type="button" class="iti-vers" data-vers="feuille">
+                <span>Feuille de route</span><span aria-hidden="true">›</span></button>
               <button type="button" class="iti-vers iti-vers-partage" data-vers="partage">
                 <span>Partager ou exporter</span><span aria-hidden="true">›</span></button>
             </nav>
@@ -567,36 +556,8 @@ export class PanneauItineraire extends HTMLElement {
             <div class="iti-feuille-corps" role="status"></div>
           </section>
 
-          <!-- ======================= SUR LE TRAJET ======================= -->
-          <section class="vue" data-vue="trajet" hidden>
-            <div class="iti-trajet-reglages">
-              <label>Chercher
-                <select class="trajet-quoi">
-                  <option value="carburants">Stations-service</option>
-                  <option value="bornes">Bornes de recharge</option>
-                </select>
-              </label>
-              <label>à moins de
-                <select class="trajet-rayon">
-                  <option value="1000">1 km</option>
-                  <option value="3000" selected>3 km</option>
-                  <option value="10000">10 km</option>
-                </select>
-                du trajet
-              </label>
-            </div>
-            <div class="iti-trajet-corps" role="status"></div>
-          </section>
 
-          <!-- ======================= MÉTÉO ======================= -->
-          <section class="vue" data-vue="meteo" hidden>
-            <div class="iti-meteo-corps" role="status"></div>
-          </section>
 
-          <!-- ======================= ALTIMÉTRIE ======================= -->
-          <section class="vue" data-vue="alti" hidden>
-            <div class="iti-alti-corps" role="status"></div>
-          </section>
 
           <!-- ================== LIEUX D'EXCEPTION ================== -->
           <!-- Les monuments CLASSÉS de la base Mérimée à un détour
@@ -773,14 +734,6 @@ export class PanneauItineraire extends HTMLElement {
         void this.#planifierRecharge();
       });
     }
-    // Changer de catégorie ou de rayon relance la recherche — mais seulement
-    // si la section est ouverte : un réglage invisible ne consomme rien.
-    for (const cls of ['.trajet-quoi', '.trajet-rayon']) {
-      this.querySelector(cls)?.addEventListener('change', () => {
-        this.#trajetPour = null;
-        void this.#chercherSurLeTrajet();
-      });
-    }
     /* Changer le détour maximal rejoue le calcul des lieux — LOCAL : l'index
        est déjà en mémoire, aucune relecture réseau. */
     this.querySelector('.monuments-detour')?.addEventListener('change', () => {
@@ -828,7 +781,6 @@ export class PanneauItineraire extends HTMLElement {
    * recalcul, il reste — c'est le même trajet qu'on affine.
    */
   #reinitialiserSections(cachees: boolean): void {
-    this.#trajetPour = null;
     this.#annulationTrajet?.abort();
     this.#rechargePour = null;
     this.#annulationRecharge?.abort();
@@ -839,7 +791,6 @@ export class PanneauItineraire extends HTMLElement {
        appartiennent à l'itinéraire qui les a produites, et la couche
        nationale reprend sa place. */
     this.#retirerBornesTrajet();
-    this.#meteoPour = null; this.#meteoLe = null;
     for (const cls of
       ['iti-alti', 'iti-feuille', 'iti-trajet', 'iti-meteo', 'iti-recharge',
         'iti-peages', 'iti-monuments', 'iti-comparer'] as const) {
@@ -852,7 +803,6 @@ export class PanneauItineraire extends HTMLElement {
       const bouton = this.querySelector<HTMLButtonElement>(cls);
       if (bouton) bouton.disabled = false;
     }
-    this.#profilPour = null;
     this.#feuillePour = null;
     const menu = this.querySelector('.iti-menu:not(.iti-menu-toujours)') as HTMLElement | null;
     if (menu) menu.hidden = cachees;
@@ -861,84 +811,7 @@ export class PanneauItineraire extends HTMLElement {
     if (cachees) this.#allerA('accueil');
   }
 
-  /** La météo À L'HEURE D'ARRIVÉE estimée (départ maintenant + durée) : le
-      temps qu'il fait là-bas en ce moment n'intéresse pas qui arrive dans
-      cinq heures. À la demande, un seul appel par itinéraire. */
-  async #chargerMeteo(): Promise<void> {
-    const corps = this.querySelector('.iti-meteo-corps') as HTMLElement;
-    const iti = this.#dernier;
-    const cliche = this.#calculPour;
-    if (this.#vue !== 'meteo' || !iti || !cliche) return;
-    /* LE BULLETIN NE SE FIGE PAS : il décrit « maintenant + durée », donc il
-       PÉRIME avec l'horloge. Se contenter de « déjà calculé pour cet
-       itinéraire » affichait, deux heures plus tard, une arrivée déjà passée
-       (revue du 22/08). On rejoue passé un quart d'heure. */
-    const maintenant = new Date();
-    if (this.#meteoPour === iti
-      && this.#meteoLe && maintenant.getTime() - this.#meteoLe.getTime() < 15 * 60_000) return;
-    this.#meteoPour = iti;
-    this.#meteoLe = maintenant;
-    corps.textContent = 'Prévision en cours…';
-    try {
-      const arrivee = heureArrivee(iti.duree, maintenant);
-      const m = await meteoA(cliche.arrivee.lon, cliche.arrivee.lat, arrivee);
-      if (this.#dernier !== iti) return;
-      corps.replaceChildren();
-      // AU-DELÀ DE L'HORIZON, ON SE TAIT. Le service ne prévoit que trois
-      // jours ; un trajet à pied de plusieurs jours retombait sur la dernière
-      // heure connue, présentée comme la prévision d'arrivée (revue du 22/08).
-      if (m.ecartMinutes > ECART_MAX_MINUTES) {
-        corps.textContent = 'Arrivée trop lointaine : aucune prévision fiable à cette échéance.';
-        return;
-      }
-      const ligne = document.createElement('p');
-      ligne.className = 'meteo-ligne';
-      const symbole = document.createElement('span');
-      symbole.className = 'meteo-symbole';
-      symbole.setAttribute('aria-hidden', 'true');
-      symbole.textContent = symboleTemps(m.code);
-      const texte = document.createElement('span');
-      texte.textContent = `Arrivée vers ${formaterHeure(arrivee, m.decalageLieu, maintenant)}`
-        + ` (heure locale) — ${phraseMeteo(m)}`;
-      ligne.append(symbole, texte);
-      const source = document.createElement('p');
-      source.className = 'meteo-source';
-      // L'écart de souveraineté se dit À L'ENDROIT où il se produit, pas
-      // seulement dans une page « À propos » que personne n'ouvre.
-      source.textContent = 'Prévision Open-Meteo (service européen) — voir « À propos ».';
-      corps.append(ligne, source);
-    } catch (e) {
-      if (this.#dernier !== iti) return;
-      this.#meteoPour = null; this.#meteoLe = null; // réessayable tout de suite
-      corps.textContent = e instanceof ErreurMeteo
-        ? e.message : 'Météo indisponible pour le moment.';
-    }
-  }
 
-  /** « Sur le trajet » — à la demande, au plus six appels par couche, et le
-      résultat vaut pour l'itinéraire TRACÉ (le cliché), pas pour les champs. */
-  async #chercherSurLeTrajet(): Promise<void> {
-    const corps = this.querySelector('.iti-trajet-corps') as HTMLElement;
-    const iti = this.#dernier;
-    if (this.#vue !== 'trajet' || !iti || this.#trajetPour === iti) return;
-    this.#trajetPour = iti;
-    const quoi = (this.querySelector('.trajet-quoi') as HTMLSelectElement).value as Categorie;
-    const rayon = Number((this.querySelector('.trajet-rayon') as HTMLSelectElement).value);
-    corps.textContent = 'Recherche le long du trajet…';
-    this.#annulationTrajet?.abort();
-    const annulation = new AbortController();
-    this.#annulationTrajet = annulation;
-    try {
-      const trouves = await chercherLeLongDuTrajet(iti.geometrie, quoi, rayon, annulation.signal);
-      if (this.#dernier !== iti || annulation.signal.aborted) return;
-      this.#afficherSurLeTrajet(trouves, quoi);
-    } catch (e) {
-      if (annulation.signal.aborted) return;
-      this.#trajetPour = null; // réessayable
-      corps.textContent = e instanceof ErreurPoi
-        ? e.message : 'Recherche le long du trajet indisponible pour le moment.';
-    }
-  }
 
   /* LES ARRÊTS DE RECHARGE — À LA DEMANDE, comme tout le reste de ce panneau.
      Le calcul est LOCAL (lib/arrets.ts) ; le seul appel réseau cherche les
@@ -1888,9 +1761,6 @@ export class PanneauItineraire extends HTMLElement {
     // Chaque page charge ce qu'elle montre — jamais avant qu'on la demande.
     if (vue === 'recharge') void this.#planifierRecharge();
     if (vue === 'feuille') void this.#chargerFeuille();
-    if (vue === 'trajet') void this.#chercherSurLeTrajet();
-    if (vue === 'meteo') void this.#chargerMeteo();
-    if (vue === 'alti') void this.#chargerProfil();
     if (vue === 'monuments') void this.#chargerLieux();
   }
 
@@ -2755,65 +2625,6 @@ export class PanneauItineraire extends HTMLElement {
     return volet;
   }
 
-  /** Construit la liste EN textContent : les libellés viennent des services. */
-  #afficherSurLeTrajet(trouves: SurLeTrajet<PoiCarburant | PoiBorne>[], quoi: Categorie): void {
-    const corps = this.querySelector('.iti-trajet-corps') as HTMLElement;
-    corps.replaceChildren();
-    this.#marqueursTrajet.forEach((m) => m.remove());
-    this.#marqueursTrajet = [];
-    if (trouves.length === 0) {
-      corps.textContent = 'Rien trouvé dans ce rayon le long du trajet.';
-      return;
-    }
-    const resume = document.createElement('p');
-    resume.className = 'trajet-resume';
-    resume.textContent = `${trouves.length} ${quoi === 'carburants' ? 'station' : 'borne'}${trouves.length > 1 ? 's' : ''} sur le trajet`;
-    const liste = document.createElement('ol');
-    liste.className = 'trajet-liste';
-    for (const t of trouves.slice(0, 30)) {
-      const item = document.createElement('li');
-      const aller = document.createElement('button');
-      aller.type = 'button';
-      aller.className = 'trajet-aller';
-      const p = t.poi as Partial<PoiCarburant> & Partial<PoiBorne>;
-      const titre = quoi === 'carburants'
-        ? [p.adresse, p.ville].filter(Boolean).join(', ') || 'Station-service'
-        : p.nom ?? 'Borne de recharge';
-      aller.textContent = titre;
-      aller.setAttribute('aria-label', `Voir ${titre} sur la carte`);
-      aller.addEventListener('click', () => {
-        this.#carte?.flyTo({ center: [t.poi.lon, t.poi.lat], zoom: 15 });
-      });
-      const detail = document.createElement('span');
-      detail.className = 'trajet-detail';
-      const bouts = [
-        `km ${Math.round(t.avancement / 1000)}`,
-        t.ecart < 100 ? 'sur la route' : `${formaterDistance(t.ecart)} du trajet`,
-      ];
-      if (quoi === 'carburants' && p.prix?.length) {
-        const [libelle, valeur] = p.prix[0]!;
-        bouts.push(`${libelle} ${valeur.toFixed(2).replace('.', ',')} €`);
-      }
-      if (quoi === 'bornes' && p.puissance) bouts.push(`${p.puissance} kW`);
-      detail.textContent = bouts.join(' · ');
-      item.append(aller, detail);
-      liste.append(item);
-      // Un marqueur discret par point trouvé, dans la couleur de sa catégorie.
-      if (this.#carte) {
-        this.#marqueursTrajet.push(
-          new Marker({ color: quoi === 'carburants' ? '#E89C2C' : '#3FA877', scale: 0.6 })
-            .setLngLat([t.poi.lon, t.poi.lat]).addTo(this.#carte),
-        );
-      }
-    }
-    corps.append(resume, liste);
-    if (trouves.length > 30) {
-      const note = document.createElement('p');
-      note.className = 'trajet-note';
-      note.textContent = `Les 30 premières sont listées, sur ${trouves.length} trouvées.`;
-      corps.append(note);
-    }
-  }
 
   async #chargerFeuille(): Promise<void> {
     const corps = this.querySelector('.iti-feuille-corps') as HTMLElement;
@@ -2895,36 +2706,6 @@ export class PanneauItineraire extends HTMLElement {
     window.print();
   }
 
-  async #chargerProfil(): Promise<void> {
-    const corps = this.querySelector('.iti-alti-corps') as HTMLElement;
-    const iti = this.#dernier;
-    if (this.#vue !== 'alti' || !iti || this.#profilPour === iti) return;
-    this.#profilPour = iti;
-    corps.textContent = 'Calcul du profil…';
-    try {
-      const points = await profilItineraire(iti.geometrie);
-      // Un nouvel itinéraire a pu arriver pendant l'appel : ce profil ne le
-      // concerne pas, on ne touche à rien.
-      if (this.#dernier !== iti) return;
-      const t = versTraceSVG(points, 280, 72);
-      const d = denivele(points);
-      // Uniquement des nombres formatés par nos soins : ce innerHTML ne porte
-      // aucune donnée externe (la règle textContent vaut pour les libellés).
-      corps.innerHTML = `
-        <svg viewBox="0 0 280 72" preserveAspectRatio="none" role="img"
-          aria-label="Profil altimétrique, de ${Math.round(t.zMin)} à ${Math.round(t.zMax)} mètres d’altitude">
-          <polygon class="alti-aire" points="${t.aire}"></polygon>
-          <polyline class="alti-ligne" points="${t.ligne}"></polyline>
-        </svg>
-        <p class="alti-bilan">D+ ${Math.round(d.montee)} m · D− ${Math.round(d.descente)} m ·
-          de ${Math.round(t.zMin)} à ${Math.round(t.zMax)} m</p>`;
-    } catch (e) {
-      if (this.#dernier !== iti) return;
-      this.#profilPour = null; // réessayable à la prochaine ouverture
-      corps.textContent = e instanceof ErreurAltimetrie
-        ? e.message : 'Profil indisponible pour le moment.';
-    }
-  }
 
   async #calculer(): Promise<void> {
     this.#majBoutons();
