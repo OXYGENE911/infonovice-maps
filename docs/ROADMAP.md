@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #99 — PHOTO-1, la photo des lieux d'exception (DÉCISION d'Armelin
+      du 29/08 : « OK pour Wikimedia ») : Wikidata (P380 → P18) puis Commons
+      pour la vignette ET son crédit, à l'ouverture d'une fiche seulement.
+      DEUXIÈME dérogation de souveraineté du projet, écrite sur « À propos »
+      comme la première ; attribution obligatoire sous chaque image.
 - [x] PR #98 — GUID-2, le cartouche d'instruction (quatre retours du
       29/08) : la barre du bas collée en bas, vidée de la manœuvre et des
       textes d'explication (partis au copilote), ne masquant plus zoom,

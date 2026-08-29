@@ -2436,3 +2436,20 @@ body.en-guidage #carte .maplibregl-ctrl-bottom-right,
 body.en-guidage #carte .maplibregl-ctrl-bottom-left {
   padding-bottom: calc(var(--hauteur-bandeau, 120px) + 10px);
 }
+/* ==========================================================================
+   PHOTO-1 — LA PHOTO D'UN LIEU D'EXCEPTION (décision d'Armelin du 29/08 :
+   « OK pour Wikimedia »)
+   --------------------------------------------------------------------------
+   L'attribution vit SOUS l'image, jamais ailleurs : ces photos sont libres,
+   elles ne sont pas anonymes. Elle est petite, mais elle est là.
+   ========================================================================== */
+.fb-photo { margin: 0 0 10px; }
+.fb-photo[hidden] { display: none; }
+.fb-photo-image {
+  display: block; width: 100%; height: auto; max-height: 210px;
+  object-fit: cover; border-radius: 10px; background: var(--fond-doux);
+}
+.fb-photo-credit {
+  margin: 4px 0 0; font: 400 10.5px/1.45 var(--police); color: var(--texte-3);
+}
+.fb-photo-credit a { color: inherit; }

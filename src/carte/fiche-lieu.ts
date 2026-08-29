@@ -21,6 +21,7 @@ import type { Map as CarteMapLibre } from 'maplibre-gl';
 import type { Monument } from '../lib/monuments';
 import { refermerPanneaux } from './panneaux';
 import type { PorteItineraire } from './fiche-borne';
+import { photoDuMonument, type PhotoLieu } from '../lib/photos-monuments';
 
 /** L'autre cartouche de l'application — un seul ouvert à la fois. */
 export interface CartoucheHomologue { fermer(): void }
@@ -29,6 +30,8 @@ export class FicheLieu extends HTMLElement {
   #carte: CarteMapLibre | null = null;
   #itineraire: PorteItineraire | null = null;
   #homologue: CartoucheHomologue | null = null;
+  /** L'appel de photo en cours — abandonné dès qu'une autre fiche s'ouvre. */
+  #photoEnCours: AbortController | null = null;
   /* « PASSER PAR LÀ » — la même action que la page des lieux : le monument
      devient une étape. Posée par carte.ts ; sans elle, le bouton ne paraît
      pas plutôt que d'échouer au clic. */
@@ -70,9 +73,13 @@ export class FicheLieu extends HTMLElement {
 
   fermer(): void {
     this.hidden = true;
+    /* Une fiche refermée n'attend plus rien : la photo en vol est abandonnée
+       plutôt que peinte dans un cartouche que personne ne regarde. */
+    this.#photoEnCours?.abort();
+    this.#photoEnCours = null;
   }
 
-  /** Ouvre le cartouche sur un lieu. Tout est déjà en mémoire : aucun appel. */
+  /** Ouvre le cartouche sur un lieu. La photo, elle, se demande au réseau. */
   ouvrir(lieu: Monument): void {
     refermerPanneaux(document);
     // Deux cartouches ouverts se recouvriraient : l'autre se range.
@@ -81,13 +88,71 @@ export class FicheLieu extends HTMLElement {
 
     (this.querySelector('.fb-titre') as HTMLElement).textContent = lieu.titre;
     const corps = this.querySelector('.fb-corps') as HTMLElement;
+    const photo = document.createElement('figure');
+    photo.className = 'fb-photo';
+    photo.hidden = true;
     corps.replaceChildren(
       this.#bandeau(),
+      photo,
       this.#actions(lieu),
       this.#identite(lieu),
       this.#provenance(lieu),
     );
     (this.querySelector('.fb') as HTMLElement).focus();
+    void this.#chargerPhoto(lieu, photo);
+  }
+
+  /**
+   * LA PHOTO DU LIEU (PHOTO-1 — décision d'Armelin du 29/08 : « OK pour
+   * Wikimedia »).
+   *
+   * À LA DEMANDE, ET SEULEMENT ICI : deux appels quand une fiche s'ouvre,
+   * jamais en lot pour une liste de trente monuments qu'on ne regardera
+   * pas. L'appel précédent est ABANDONNÉ quand une autre fiche s'ouvre —
+   * sans quoi la photo du château arriverait sur la fiche de l'église.
+   *
+   * L'ÉCHEC NE SE VOIT PAS, ET C'EST VOULU : une fiche sans photo reste une
+   * fiche (4 % des classés n'en ont aucune, mesuré) ; un message d'erreur
+   * pour une illustration absente serait du bruit.
+   */
+  async #chargerPhoto(lieu: Monument, figure: HTMLElement): Promise<void> {
+    this.#photoEnCours?.abort();
+    const controle = new AbortController();
+    this.#photoEnCours = controle;
+    let photo: PhotoLieu | null = null;
+    try {
+      photo = await photoDuMonument(lieu.reference, 480, controle.signal);
+    } catch {
+      return; // Service muet ou hors ligne : la fiche vit sans image.
+    }
+    // La fiche a pu changer pendant l'appel : on ne peint pas dans le vide.
+    if (controle.signal.aborted || !photo) return;
+
+    const image = document.createElement('img');
+    image.className = 'fb-photo-image';
+    image.src = photo.vignette;
+    image.alt = `Photographie de ${lieu.titre}`;
+    image.loading = 'lazy';
+    /* UNE IMAGE QUI NE CHARGE PAS NE LAISSE PAS UN CADRE CASSÉ : la figure
+       entière disparaît. */
+    image.addEventListener('error', () => { figure.hidden = true; });
+
+    /* L'ATTRIBUTION EST UNE OBLIGATION, pas une politesse : ces photos sont
+       libres, elles ne sont pas anonymes. Auteur et licence passent par
+       `textContent` — jamais par `innerHTML` : ce sont des chaînes tierces. */
+    const credit = document.createElement('figcaption');
+    credit.className = 'fb-photo-credit';
+    credit.textContent = `${photo.auteur} — ${photo.licence} · Wikimedia Commons`;
+    if (photo.page) {
+      const lien = document.createElement('a');
+      lien.href = photo.page;
+      lien.target = '_blank';
+      lien.rel = 'noopener noreferrer';
+      lien.textContent = 'voir le fichier';
+      credit.append(' · ', lien);
+    }
+    figure.replaceChildren(image, credit);
+    figure.hidden = false;
   }
 
   /* Le bandeau dit le STATUT — c'est lui qui fait le « lieu d'exception ». */

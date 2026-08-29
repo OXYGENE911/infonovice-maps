@@ -1663,3 +1663,66 @@ test('PROFESSIONNELS : la page dit ce qu’elle ne fait pas, et contacte SANS se
   await page.locator('.page-retour').click();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
 });
+
+test('PHOTO-1 : la fiche d’un lieu porte sa photo Wikimedia — auteur et licence compris', async ({ page }) => {
+  /* Décision d'Armelin du 29/08 : « OK pour Wikimedia ». Les deux services
+     sont simulés — ce que ce parcours défend, c'est la CHAÎNE : la
+     référence Mérimée part chez Wikidata, le fichier trouvé part chez
+     Commons, et rien ne s'affiche sans son crédit. */
+  await page.route('**/donnees/monuments.json', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([
+      [3.6, 47.301, 'Château de la Colline', 'Beaune', 'PA00078023', '12e s.', ''],
+    ]),
+  }));
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 390_000, duration: 13_000,
+    }),
+  }));
+  let refDemandee = '';
+  await page.route('**query.wikidata.org/**', (route) => {
+    refDemandee = decodeURIComponent(route.request().url());
+    return route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      contentType: 'application/json',
+      body: JSON.stringify({ results: { bindings: [{ img: { value:
+        'http://commons.wikimedia.org/wiki/Special:FilePath/Ch%C3%A2teau.jpg' } }] } }),
+    });
+  });
+  await page.route('**commons.wikimedia.org/**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json',
+    body: JSON.stringify({ query: { pages: { 42: { imageinfo: [{
+      thumburl: 'https://upload.wikimedia.org/480px-Chateau.jpg',
+      descriptionurl: 'https://commons.wikimedia.org/wiki/File:Chateau.jpg',
+      extmetadata: {
+        Artist: { value: '<a href="//x">Jean Photographe</a>' },
+        LicenseShortName: { value: 'CC BY-SA 4.0' },
+      },
+    }] } } } }),
+  }));
+
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  await allerA(page, 'monuments');
+  await page.locator('.monuments-voir', { hasText: 'Château de la Colline' }).click();
+
+  const fiche = page.locator('fiche-lieu');
+  const photo = fiche.locator('.fb-photo');
+  await expect(photo).toBeVisible({ timeout: 15_000 });
+  await expect(photo.locator('img')).toHaveAttribute(
+    'src', 'https://upload.wikimedia.org/480px-Chateau.jpg');
+  // L'ATTRIBUTION EST UNE OBLIGATION : auteur, licence, source, et le lien.
+  await expect(photo.locator('figcaption')).toContainText('Jean Photographe');
+  await expect(photo.locator('figcaption')).toContainText('CC BY-SA 4.0');
+  await expect(photo.locator('figcaption')).toContainText('Wikimedia Commons');
+  // Le HTML rendu par l'API ne devient JAMAIS du balisage dans la page.
+  await expect(photo.locator('figcaption a')).toHaveCount(1);
+  // C'est bien la référence Mérimée du ministère qui est partie, rien d'autre.
+  expect(refDemandee).toContain('PA00078023');
+  expect(refDemandee, 'aucune position ne doit partir').not.toContain('47.3');
+});

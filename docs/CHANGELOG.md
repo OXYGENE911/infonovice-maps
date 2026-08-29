@@ -2,6 +2,31 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.73.0] — 2026-08-29 — PHOTO-1 : les lieux d'exception ont leur photo (PR #99)
+
+Armelin, le 29/08 : « quand on clique sur un lieu, on a juste le nom du
+lieu et ses caractéristiques. Ne serait-ce pas possible d'y afficher une ou
+plusieurs photos ? » — puis, l'étude rendue : « OK pour Wikimedia ».
+
+- **La fiche d'un monument porte sa photographie**, tirée de Wikimedia
+  Commons via Wikidata (référence Mérimée P380 → image P18). Mesuré le
+  29/08 : 23 monuments classés sur 24.
+- **DEUXIÈME ÉCART DE SOUVERAINETÉ DU PROJET**, traité comme le premier
+  (Open-Meteo) : décision explicite d'Armelin ET mention publique — la page
+  « À propos » porte désormais deux sections d'exception, celle-ci
+  expliquant la mesure qui l'a décidée (Panoramax couvre 75 % mais en vues
+  de rue ; la base Mémoire ne répond pas et n'est pas libre de droits).
+- **L'attribution est obligatoire** : auteur, licence et lien vers le
+  fichier sous chaque image. Ces photos sont libres, elles ne sont pas
+  anonymes. Auteur et licence arrivent en HTML de l'API : ils entrent dans
+  la page par `textContent`, jamais par `innerHTML`.
+- **Frugal, et abandonnable** : deux appels à l'OUVERTURE d'une fiche,
+  jamais en lot pour une liste de trente monuments ; l'appel en vol est
+  abandonné dès qu'une autre fiche s'ouvre ou que celle-ci se ferme. Ce qui
+  part est la référence du ministère — jamais la position, jamais
+  l'identité. Sans photo, la fiche reste une fiche : aucun message.
+
+634 tests unitaires (+13), 194 parcours E2E (+1).
 ## [0.72.0] — 2026-08-29 — GUID-2 : l'instruction devient une fenêtre, la barre du bas se vide (PR #98)
 
 Quatre retours d'Armelin du 29/08 sur le mode navigation, tous tenus :
