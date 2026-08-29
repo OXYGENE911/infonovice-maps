@@ -126,7 +126,10 @@ s'écraser.
 - routines locales : TRANCHÉ PAR ARMELIN le 29/08 → LIVRÉ (PR #88,
   0.63.0) — repères au bon moment, habitudes locales (3 trajets = 1
   routine), comptées et effaçables depuis Favoris ;
-- mode « arrivée réelle » : à cadrer — le dernier chantier du §4.
+- mode « arrivée réelle » : TRANCHÉ PAR ARMELIN le 29/08 → LIVRÉ (PR #90,
+  0.65.0) — l'heure d'arrivée compte les charges restantes (suivi et
+  copilote, « charges comprises ») ; « Départ à » au planificateur décale
+  l'arrivée affichée ET les relevés météo du plan. LE §4 EST SOLDÉ.
 
 Chaque PR de cette série reprend la discipline habituelle : mesures avant
 promesses, tests avec chaque livraison, CI verte avant fusion, consignation

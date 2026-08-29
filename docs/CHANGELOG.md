@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.65.0] — 2026-08-29 — Le mode « arrivée réelle » (PR #90)
+
+La DERNIÈRE décision du §4 du triage. Deux mensonges d'heure corrigés :
+
+- **En suivi, l'heure d'arrivée compte les charges restantes** — elle ne
+  comptait que la ROUTE : deux arrêts de trente minutes devant soi, une
+  heure de mensonge. Le bandeau et le copilote affichent l'arrivée réelle,
+  et le DISENT : « arrivée vers 11:18, charges comprises ».
+- **« Départ à » au planificateur** : vide, on part maintenant ; réglée
+  (une heure passée vise demain), elle décale l'heure d'arrivée affichée au
+  résumé — « arrivée vers 18:40 », « demain » dit quand le jour change —
+  ET les relevés météo du plan : partir à 6 h ou à 18 h ne donne pas le
+  même plan d'hiver (la fixture E2E au gel vespéral le prouve, bridage et
+  consommation suivent).
+- Le résumé porte l'arrivée réelle dans TOUS ses états : route seule
+  (« hors recharge »), aucun arrêt nécessaire, ou total charges comprises.
+
+LE §4 DU TRIAGE DU 28/08 EST ENTIÈREMENT SOLDÉ : bottom sheets (#78),
+pauses humaines (#81), copilote (#82), routines (#88), arrivée réelle (#90).
+
+593 tests unitaires, 185 parcours E2E (+2).
+
 ## [0.64.0] — 2026-08-29 — Finitions : pastilles, logo mobile, barre noire, ascenseurs (PR #89)
 
 Le solde des retours visuels d'Armelin du 29/08 :

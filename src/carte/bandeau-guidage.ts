@@ -593,11 +593,19 @@ export class BandeauGuidage extends HTMLElement {
       distance.textContent = e.etape ? distanceEnMots(e.jusquALaManoeuvreM) : '';
     }
 
-    const arrivee = heureArriveeEstimee(e.restantS, new Date());
+    /* L'ARRIVÉE RÉELLE (décision d'Armelin du 29/08) : l'heure affichée
+       comptait la ROUTE seule — avec deux arrêts de trente minutes devant,
+       elle mentait d'une heure. Les charges restantes entrent, et on le
+       DIT. */
+    const chargeRestanteS = o.arrets
+      .filter((a) => a.avancementM > e.avancementM)
+      .reduce((t, a) => t + a.dureeMin * 60, 0);
+    const arrivee = heureArriveeEstimee(e.restantS + chargeRestanteS, new Date());
     (this.querySelector('.bg-restant') as HTMLElement).textContent = [
       `${formaterDistance(e.restantM)} restants`,
-      e.restantS > 0 ? formaterDuree(Math.round(e.restantS)) : null,
-      arrivee ? `arrivée vers ${arrivee.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : null,
+      e.restantS > 0 ? formaterDuree(Math.round(e.restantS + chargeRestanteS)) : null,
+      arrivee ? `arrivée vers ${arrivee.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+        + (chargeRestanteS > 0 ? ', charges comprises' : '') : null,
     ].filter(Boolean).join(' · ');
 
     /* LE PROCHAIN ÉVÉNEMENT TRAFIC DEVANT SOI — « Travaux dans 12 km ».
@@ -774,10 +782,14 @@ export class BandeauGuidage extends HTMLElement {
     section('À l’arrivée');
     const arrivee = document.createElement('p');
     arrivee.className = 'bg-copilote-arrivee';
-    const heure = heureArriveeEstimee(e.restantS, new Date());
+    const chargeDevantS = o.arrets
+      .filter((a) => a.avancementM > e.avancementM)
+      .reduce((t, a) => t + a.dureeMin * 60, 0);
+    const heure = heureArriveeEstimee(e.restantS + chargeDevantS, new Date());
     arrivee.textContent = `${formaterDistance(e.restantM)} restants`
-      + (e.restantS > 0 ? ` · ${formaterDuree(Math.round(e.restantS))}` : '')
-      + (heure ? ` · vers ${heure.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : '');
+      + (e.restantS > 0 ? ` · ${formaterDuree(Math.round(e.restantS + chargeDevantS))}` : '')
+      + (heure ? ` · vers ${heure.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+        + (chargeDevantS > 0 ? ' (charges comprises)' : '') : '');
     corps.append(arrivee);
 
     const cleMeteo = 'meteo-arrivee';

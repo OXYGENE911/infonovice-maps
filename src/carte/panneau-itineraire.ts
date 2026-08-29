@@ -197,6 +197,12 @@ export class PanneauItineraire extends HTMLElement {
   /** Vrai quand le prochain calcul réussi doit RELANCER le suivi — le
       recalcul automatique hors-route (demande d'Armelin du 29/08). */
   #reprendreSuivi = false;
+
+  /* L'HEURE DE DÉPART (mode « arrivée réelle », 29/08) : vide, on part
+     maintenant. Réglée, elle décale l'heure d'arrivée affichée ET les
+     relevés météo du plan — partir à 6 h ou à 18 h ne donne pas le même
+     plan d'hiver. */
+  #departA: Date | null = null;
   #socDepart = 100;
 
   set fiche(f: FicheBorne) { this.#fiche = f; }
@@ -387,6 +393,13 @@ export class PanneauItineraire extends HTMLElement {
             </label>
             <div class="iti-raccourcis" data-pour="arrivee"
               role="group" aria-label="Choisir une arrivée enregistrée"></div>
+
+            <!-- L'HEURE DE DÉPART — le mode « arrivée réelle » (29/08).
+                 Vide : maintenant. Une heure déjà passée vise DEMAIN. -->
+            <label class="iti-depart-heure">Départ à
+              <input type="time" class="iti-heure" aria-label="Heure de départ">
+              <span class="iti-heure-note">vide : maintenant</span>
+            </label>
 
             <p class="iti-resultat" role="status" hidden></p>
             <p class="iti-erreur" role="alert" hidden></p>
@@ -665,6 +678,32 @@ export class PanneauItineraire extends HTMLElement {
     void this.#majRaccourcis();
     this.#allerA('accueil');
     this.querySelector('.iti-effacer')?.addEventListener('click', () => this.#effacer());
+
+    /* L'HEURE DE DÉPART change l'arrivée affichée ET les relevés météo :
+       les conditions du trajet sont invalidées, le plan se refera. */
+    this.querySelector('.iti-heure')?.addEventListener('change', () => {
+      const brut = (this.querySelector('.iti-heure') as HTMLInputElement).value;
+      if (!brut) {
+        this.#departA = null;
+      } else {
+        const [h, m] = brut.split(':').map(Number);
+        const quand = new Date();
+        quand.setHours(h ?? 0, m ?? 0, 0, 0);
+        // Une heure déjà passée (cinq minutes de grâce) vise DEMAIN.
+        if (quand.getTime() < Date.now() - 5 * 60_000) {
+          quand.setDate(quand.getDate() + 1);
+        }
+        this.#departA = quand;
+      }
+      this.#conditions = null;
+      this.#conditionsPour = null;
+      this.#rechargePour = null;
+      this.#majResume();
+      if (this.#dernier) {
+        clearTimeout(this.#minuteurPlanAuto);
+        this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, 800);
+      }
+    });
 
     /* UN VÉHICULE MODIFIÉ INVALIDE LE PLAN (29/08) : capacité, autonomie ou
        bridage changés, le plan décrit une autre voiture. Il se refait tout
@@ -1004,7 +1043,9 @@ export class PanneauItineraire extends HTMLElement {
     const conditions: ConditionsTrajet = {
       vitesseMoyenneKmh: iti.duree > 0 ? (iti.distance / iti.duree) * 3.6 : undefined,
     };
-    const maintenant = new Date();
+    /* L'heure de DÉPART choisie, pas « maintenant » : la météo d'un départ
+       à 18 h n'est pas celle de 8 h — c'est tout le mode arrivée réelle. */
+    const maintenant = this.#departA ?? new Date();
     const arriveeEstimee = new Date(maintenant.getTime() + iti.duree * 1000);
     const sommets = iti.geometrie.coordinates;
     const [pDep, pArr] = [sommets[0], sommets[sommets.length - 1]];
@@ -1733,6 +1774,16 @@ export class PanneauItineraire extends HTMLElement {
     if (!iti) { resultat.hidden = true; return; }
     resultat.hidden = false;
 
+    /* L'HEURE D'ARRIVÉE RÉELLE (29/08) : départ choisi (ou maintenant) +
+       route + charges. « demain » est dit quand le jour change. */
+    const heureArriveeReelle = (totalS: number): string => {
+      const depart = this.#departA ?? new Date();
+      const a = new Date(depart.getTime() + totalS * 1000);
+      const heure = a.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      const demain = a.getDate() !== new Date().getDate();
+      return ` · arrivée vers ${demain ? 'demain ' : ''}${heure}`;
+    };
+
     const base = `${formaterDistance(iti.distance)} — ${formaterDuree(iti.duree)}`;
     const plan = this.#planCourant;
     if (!plan || !plan.faisable) {
@@ -1740,21 +1791,23 @@ export class PanneauItineraire extends HTMLElement {
          faut attendre quelques secondes mais il faut le savoir ») : le
          résumé annonce que les arrêts arrivent, au lieu d'un silence qu'on
          prend pour un oubli. */
-      resultat.textContent = this.#profil === 'car'
+      resultat.textContent = (this.#profil === 'car'
         ? `${base} de route` + (this.#planEnCours
           ? ' — calcul des arrêts de recharge…' : ', hors recharge')
-        : base;
+        : base) + heureArriveeReelle(iti.duree);
       return;
     }
     if (plan.arrets.length === 0) {
-      resultat.textContent = `${base} — aucun arrêt de recharge nécessaire`;
+      resultat.textContent = `${base} — aucun arrêt de recharge nécessaire`
+        + heureArriveeReelle(iti.duree);
       return;
     }
     const charge = Math.round(plan.dureeRechargeMin);
     const total = iti.duree + charge * 60;
     resultat.textContent = `${formaterDistance(iti.distance)} —`
       + ` ${formaterDuree(total)} au total`
-      + ` (${formaterDuree(iti.duree)} de route + ${formaterDuree(charge * 60)} de charge)`;
+      + ` (${formaterDuree(iti.duree)} de route + ${formaterDuree(charge * 60)} de charge)`
+      + heureArriveeReelle(total);
   }
 
   /* ---- navigation entre les pages ---- */
@@ -2940,6 +2993,9 @@ export class PanneauItineraire extends HTMLElement {
     this.#libelleDepart = ''; this.#libelleArrivee = '';
     clearTimeout(this.#minuteurPlanAuto);
     this.#planEnCours = false;
+    this.#departA = null;
+    const heure = this.querySelector<HTMLInputElement>('.iti-heure');
+    if (heure) heure.value = '';
     this.#marqueurs.forEach((m) => m.remove()); this.#marqueurs = [];
     this.#marqueursTrajet.forEach((m) => m.remove()); this.#marqueursTrajet = [];
     const carte = this.#carte;

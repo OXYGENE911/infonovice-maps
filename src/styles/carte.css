@@ -2119,3 +2119,16 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
 }
 .favoris-habitudes-oubli:hover { border-color: #C0564A; color: #C0564A; }
 .favoris-habitudes-oubli:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* --- L'heure de départ (mode arrivée réelle, 29/08) --- */
+.iti-depart-heure {
+  display: flex; align-items: center; gap: 8px;
+  font: 700 11px var(--police); color: var(--texte-3);
+  text-transform: uppercase; letter-spacing: .07em;
+}
+.iti-heure {
+  padding: 5px 8px; border: 1px solid var(--bord-2); border-radius: 8px;
+  background: var(--fond); color: var(--texte-1); font: 500 13px var(--police);
+}
+.iti-heure:focus-visible { outline: none; box-shadow: var(--focus); }
+.iti-heure-note { text-transform: none; letter-spacing: 0; font-weight: 400; }
