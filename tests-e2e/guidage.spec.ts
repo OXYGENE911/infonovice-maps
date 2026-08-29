@@ -117,7 +117,8 @@ test('le bandeau DIT qu’il n’est pas une navigation guidée', async ({ page 
   const bandeau = page.locator('bandeau-guidage');
   await expect(bandeau).toBeVisible({ timeout: 15_000 });
   await expect(bandeau.locator('.bg-limite')).toContainText('pas navigation guidée');
-  await expect(bandeau.locator('.bg-limite')).toContainText('aucun recalcul');
+  // Depuis le 29/08, le recalcul hors-route EST automatique — et c'est écrit.
+  await expect(bandeau.locator('.bg-limite')).toContainText('se recalcule tout seul');
 });
 
 test('quitter la route se DIT, l’instruction ne continue pas comme si de rien', async ({ page, context }) => {
@@ -131,7 +132,7 @@ test('quitter la route se DIT, l’instruction ne continue pas comme si de rien'
 
   await expect(bandeau.locator('.bg-instruction'), 'le suivi a continué à guider hors route')
     .toContainText('quitté l’itinéraire', { timeout: 20_000 });
-  await expect(bandeau.locator('.bg-alerte')).toContainText('Recalculez');
+  await expect(bandeau.locator('.bg-alerte')).toContainText('Nouvel itinéraire depuis votre position');
 });
 
 test('un geste sur la carte SUSPEND la caméra, « Recentrer » la rend', async ({ page, context }) => {
@@ -721,6 +722,74 @@ test('le COPILOTE : les événements de la route listés, la météo sur DEMANDE
   // La croix referme, le bouton dit son état.
   await copilote.getByRole('button', { name: 'Fermer le panneau du copilote' }).click();
   await expect(copilote).toBeHidden();
+});
+
+test('HORS-ROUTE : l’itinéraire se recalcule TOUT SEUL, et le suivi repart', async ({ page }) => {
+  /* La demande d'Armelin du 29/08 : « un mode de recalcul automatique si on
+     s'est trompé de route ». Le bandeau constate huit secondes d'écart, le
+     planificateur refait l'itinéraire DEPUIS la position, le suivi repart —
+     pas un geste au volant. Trente secondes de silence entre deux demandes. */
+  const urls: string[] = [];
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    urls.push(decodeURIComponent(route.request().url()));
+    const url = route.request().url();
+    const corps: Record<string, unknown> = {
+      geometry: GEOMETRIE, distance: 390_000, duration: 10_800,
+    };
+    if (/getSteps=true/i.test(url)) {
+      corps['portions'] = [{ steps: [
+        { instruction: { type: 'depart' }, distance: 390_000,
+          attributes: { name: { cpx_numero: 'A6' } } },
+      ] }];
+    }
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify(corps) });
+  });
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null,
+        speed: 24, heading: 90, ...c } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+  const appelsAvant = urls.length;
+
+  /* Cinquante kilomètres à l'ouest, fixe après fixe : l'écart DURE — c'est
+     lui qui déclenche, pas un point isolé (tunnel, GPS qui divague). */
+  await expect.poll(async () => {
+    await page.evaluate(() => {
+      (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+        longitude: 1.6, latitude: 48.5 });
+    });
+    return urls.length;
+  }, { timeout: 25_000, intervals: [700] }).toBeGreaterThan(appelsAvant);
+
+  // Le NOUVEL itinéraire part de la position hors-route…
+  const recalcul = urls.slice(appelsAvant).find((u) => u.includes('start=1.6'));
+  expect(recalcul, 'le recalcul ne part pas de la position').toBeTruthy();
+  // …le champ départ le dit, et le suivi est REPARTI tout seul.
+  await expect(page.locator('[data-role="depart"] input'))
+    .toHaveValue('Reprise d’itinéraire', { timeout: 15_000 });
+  await expect(page.locator('bandeau-guidage')).toBeVisible();
+  /* Un fixe SUR le nouveau tracé (le point de départ même) : le suivi
+     guide de nouveau — plus de « quitté l'itinéraire ». Rejoué : le premier
+     fixe peut partir avant que la relance ait rebranché la veille. */
+  await expect.poll(async () => {
+    await page.evaluate(() => {
+      (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+        longitude: 2.3522, latitude: 48.8566 });
+    });
+    return page.locator('.bg-instruction').innerText();
+  }, { timeout: 15_000, intervals: [600] }).not.toContain('quitté');
 });
 
 test('démarrer DÉGAGE la vue : volets refermés, recherche d’adresse effacée', async ({ page }) => {

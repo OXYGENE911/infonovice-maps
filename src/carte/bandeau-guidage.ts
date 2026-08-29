@@ -3,7 +3,9 @@
  * CE QU'IL PROMET, ET CE QU'IL REFUSE DE PROMETTRE. Armelin, le 25/08/2026 :
  * « il n'y a pas de bouton pour démarrer l'itinéraire ». Ce bandeau est la
  * réponse — mais il s'appelle SUIVI et non navigation, et il l'écrit à
- * l'écran. Pas de voix, pas de recalcul automatique quand on quitte la route.
+ * l'écran. Pas de voix ; depuis le 29/08 (demande d'Armelin), quitter la
+ * route déclenche en revanche un recalcul automatique — constaté ici,
+ * calculé par le planificateur.
  * Une application qui annonce « navigation » et rend un suivi trompe au
  * moment précis où l'on ne peut pas regarder l'écran pour vérifier.
  *
@@ -129,6 +131,21 @@ export class BandeauGuidage extends HTMLElement {
   /** Le dernier état du guidage — le copilote se rafraîchit dessus. */
   #etat: { avancementM: number; restantM: number; restantS: number } | null = null;
 
+  /* LE RECALCUL AUTOMATIQUE HORS-ROUTE (demande d'Armelin du 29/08). Le
+     bandeau ne calcule rien : il CONSTATE que l'écart dure — huit secondes
+     au-delà de cinquante mètres, le temps d'écarter le tunnel et le GPS qui
+     divague — et demande au planificateur de refaire l'itinéraire depuis la
+     position. Trente secondes entre deux demandes : un recalcul qui
+     mitraille pendant qu'on cherche une sortie serait pire que l'ancien
+     message. */
+  #horsRouteDepuis: number | null = null;
+
+  /* −Infinity, PAS zéro : performance.now() démarre à zéro AVEC la page, et
+     un garde « > 30 s depuis le dernier » initialisé à zéro interdisait tout
+     recalcul pendant les trente premières secondes de vie de l'application —
+     attrapé par le parcours E2E avant d'être compris. */
+  #dernierRecalculMs = Number.NEGATIVE_INFINITY;
+
   /** La vue inclinée du suivi — un choix de l'usager, retenu pour la session. */
   #en3D = true;
   #surVisibilite = (): void => { void this.#prendreVerrou(); };
@@ -179,7 +196,8 @@ export class BandeauGuidage extends HTMLElement {
         <p class="bg-arret"></p>
         <p class="bg-alerte" role="alert" hidden></p>
         <p class="bg-limite">Suivi d’itinéraire, pas navigation guidée :
-          aucune voix, et aucun recalcul si vous quittez la route.</p>
+          aucune voix — mais si vous quittez la route, l’itinéraire se
+          recalcule tout seul.</p>
         <div class="bg-boutons">
           <!-- LE BANDEAU SE RÉDUIT : « réduire la taille du cartouche en bas
                qui prend 1/3 de l'écran » (Armelin, 27/08/2026). Réduit, il
@@ -347,6 +365,8 @@ export class BandeauGuidage extends HTMLElement {
     /* Le copilote du trajet précédent ne décrit plus rien : fermé, vidé. */
     this.#copiloteOuvert = false;
     this.#etat = null;
+    this.#horsRouteDepuis = null;
+    this.#dernierRecalculMs = Number.NEGATIVE_INFINITY;
     const copilote = this.querySelector<HTMLElement>('.bg-copilote');
     if (copilote) copilote.hidden = true;
     this.querySelector<HTMLElement>('.bg-copilote-corps')?.replaceChildren();
@@ -552,9 +572,20 @@ export class BandeauGuidage extends HTMLElement {
          tournerait sur la foi d'une instruction périmée. */
       instruction.textContent = 'Vous avez quitté l’itinéraire.';
       distance.textContent = `À ${formaterDistance(e.ecartM)} du trajet`;
-      this.#alerte('Recalculez l’itinéraire depuis votre position :'
-        + ' ce suivi ne le fait pas tout seul.');
+      this.#alerte('Nouvel itinéraire depuis votre position dans un instant…');
+      const maintenant = performance.now();
+      if (e.ecartM > 50) {
+        if (this.#horsRouteDepuis === null) this.#horsRouteDepuis = maintenant;
+        else if (maintenant - this.#horsRouteDepuis > 8_000
+          && maintenant - this.#dernierRecalculMs > 30_000) {
+          this.#dernierRecalculMs = maintenant;
+          document.dispatchEvent(new CustomEvent('recalcul-hors-route', {
+            detail: { lon, lat },
+          }));
+        }
+      }
     } else {
+      this.#horsRouteDepuis = null;
       this.#alerte('');
       instruction.textContent = e.etape
         ? [e.etape.texte, e.etape.voie].filter(Boolean).join(' — ')

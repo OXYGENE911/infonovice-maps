@@ -534,6 +534,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #87 — le recalcul automatique hors-route (demande du 29/08) : le
+      bandeau constate l'écart qui dure, le planificateur refait depuis la
+      position, le suivi repart tout seul — étapes passées abandonnées.
+- [x] PR #86 — les repères se définissent PAR ADRESSE (retour du 29/08) :
+      le boulot se saisit depuis chez soi — « Définir ici » et l'appui long
+      restent.
 - [x] PR #85 — le menu du planificateur s'allège (retours du 29/08) :
       « Sur le trajet » et « Météo à l'arrivée » retirés, « Profil
       altimétrique » déménagé dans le copilote, « Lieux d'exception »
