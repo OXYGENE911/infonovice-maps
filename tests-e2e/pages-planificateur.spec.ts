@@ -178,6 +178,22 @@ test('PIC-1 : chaque entrée de menu porte son picto — et le libellé reste en
     'Arrêts de recharge', 'Lieux d’exception', 'Feuille de route', 'Partager ou exporter',
   ]);
 
+  /* PIC-2 (29/08) — « poursuivre les autres améliorations graphiques […]
+     notamment les icônes pour les options ». La page Options n'était que
+     des mots : chacun de ses sept réglages porte désormais son picto, et
+     LA BASCULE SE VOIT TOUJOURS — le picto s'est glissé entre la case et
+     le libellé, ce qui aurait rompu un sélecteur de frère ADJACENT. */
+  await allerA(page, 'options');
+  const options = page.locator('.vue[data-vue="options"]');
+  await expect(options.locator('svg.picto-menu')).toHaveCount(7);
+  const voiture = options.locator('.iti-profil:has(input[value="car"])');
+  await expect(voiture.locator('span')).toHaveText('Voiture');
+  await expect(voiture.locator('span')).toHaveCSS('border-color', 'rgb(34, 114, 196)');
+  // Décoché, le libellé reprend sa bordure ordinaire : l'état SE VOIT.
+  await page.locator('.iti-profil:has(input[value="pedestrian"])').click();
+  await expect(voiture.locator('span')).not.toHaveCSS('border-color', 'rgb(34, 114, 196)');
+  await retour(page);
+
   /* Les pastilles du rail aussi : Itinéraire, Fonds, Trafic, Favoris. Le
      picto y est DÉCORATIF (aria-hidden) — les lecteurs d'écran ne voient
      rien changer, les aria-label non plus. */

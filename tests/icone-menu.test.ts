@@ -10,6 +10,8 @@ const NOMS: NomPicto[] = [
   'recharge', 'monuments', 'feuille', 'partage',
   'vehicule', 'couches', 'options',
   'itineraire', 'favoris', 'fonds', 'trafic',
+  // PIC-2 (29/08) : les options du trajet.
+  'pieton', 'rapide', 'court', 'autoroute', 'tunnel', 'pont',
 ];
 
 describe('pictoMenu', () => {
@@ -37,7 +39,7 @@ describe('pictoMenu', () => {
     expect(pleins).toEqual(['recharge']);
   });
 
-  it('onze pictos, onze tracés distincts — pas de doublon copié-collé', () => {
+  it('autant de tracés que de pictos — pas de doublon copié-collé', () => {
     const traces = new Set(NOMS.map((n) => pictoMenu(n)));
     expect(traces.size).toBe(NOMS.length);
   });

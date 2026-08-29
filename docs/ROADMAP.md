@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #100 — PIC-2, les pictos des options (demande du 29/08) : six
+      tracés de plus (piéton, chronomètre, ligne droite, chaussée, voûte,
+      arc) dans la famille de PIC-1 ; l'état coché se voit sur le libellé ET
+      sur le picto. Le sélecteur de frère adjacent, rompu par l'insertion du
+      picto, est passé en frère général — mesuré par le parcours.
 - [x] PR #99 — PHOTO-1, la photo des lieux d'exception (DÉCISION d'Armelin
       du 29/08 : « OK pour Wikimedia ») : Wikidata (P380 → P18) puis Commons
       pour la vignette ET son crédit, à l'ouverture d'une fiche seulement.

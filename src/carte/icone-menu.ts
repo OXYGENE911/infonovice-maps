@@ -15,7 +15,11 @@
 export type NomPicto =
   | 'recharge' | 'monuments' | 'feuille' | 'partage'
   | 'vehicule' | 'couches' | 'options'
-  | 'itineraire' | 'favoris' | 'fonds' | 'trafic';
+  | 'itineraire' | 'favoris' | 'fonds' | 'trafic'
+  /* PIC-2 (29/08) — « poursuivre les autres améliorations graphiques […]
+     notamment les icônes pour les options ». La page Options n'était que
+     des mots : mode de déplacement, optimisation, évitements. */
+  | 'pieton' | 'rapide' | 'court' | 'autoroute' | 'tunnel' | 'pont';
 
 /* Chaque tracé vit dans un carré de 24 × 24. Le trait est porté par la
    classe CSS .picto-menu (fill none, stroke currentColor) ; l'éclair des
@@ -45,6 +49,30 @@ const TRACES: Record<NomPicto, string> = {
   fonds: '<path d="m12 3 8 4.5-8 4.5-8-4.5ZM4 12.4 12 17l8-4.6M4 16.6 12 21l8-4.4"/>',
   trafic: '<path d="M10.4 4.6 3.2 17.4A1.8 1.8 0 0 0 4.8 20h14.4a1.8 1.8 0 0 0 1.6-2.6L13.6 4.6a1.85 1.85 0 0 0-3.2 0Z"/>'
     + '<path d="M12 9.5v4.4M12 16.7v.2"/>',
+
+  /* ---- PIC-2 : les options du trajet ---- */
+  // Un marcheur : tête, buste, deux jambes, un bras — la silhouette la plus
+  // courte qui reste lisible à vingt pixels.
+  pieton: '<circle cx="12.6" cy="4.6" r="2"/>'
+    + '<path d="M12.6 8v5.2M12.6 13.2 9.6 20M12.6 13.2 15.6 20M9.2 10.2l3.4-1.6 3.6 2.2"/>',
+  // Un chronomètre : le temps, pas la vitesse — c'est « le plus RAPIDE ».
+  rapide: '<circle cx="12" cy="13.6" r="7"/>'
+    + '<path d="M12 9.8v3.8l2.6 1.8M10 2.8h4M12 2.8v2.2M18.6 6.4l1.4 1.4"/>',
+  // Deux points, et la ligne droite entre eux : « le plus COURT ».
+  court: '<circle cx="5.4" cy="18.6" r="2"/><circle cx="18.6" cy="5.4" r="2"/>'
+    + '<path d="M7 17 17 7"/>',
+  // Une chaussée à deux voies vue en perspective, bande centrale comprise.
+  autoroute: '<path d="M8.4 3.4 4 20.6M15.6 3.4 20 20.6"/>'
+    + '<path d="M12 5v2.6M12 10.6v2.8M12 16.4v3" style="stroke-dasharray:none"/>',
+  // Un tunnel : la voûte, et la route qui y entre.
+  tunnel: '<path d="M3.6 19.6V13a8.4 8.4 0 0 1 16.8 0v6.6"/>'
+    + '<path d="M8.6 19.6V13a3.4 3.4 0 0 1 6.8 0v6.6"/><path d="M2.4 19.6h19.2"/>',
+  /* Un pont en arc : le tablier droit, l'arche DESSOUS, et les suspentes
+     qui les relient. Le premier dessin (tablier + deux appuis) se lisait
+     « table » à dix-sept pixels — vérifié sur capture avant de le refaire. */
+  pont: '<path d="M2.4 10.6h19.2"/>'
+    + '<path d="M4.4 18.6a7.6 7.6 0 0 1 15.2 0"/>'
+    + '<path d="M7.2 10.6v2.6M12 10.6v-2.4M16.8 10.6v2.6M4.4 10.6v8M19.6 10.6v8"/>',
 };
 
 /**

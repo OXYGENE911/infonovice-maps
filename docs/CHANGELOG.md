@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.74.0] — 2026-08-29 — PIC-2 : les options portent leurs pictos (PR #100)
+
+« Poursuivre les autres améliorations graphiques […] notamment les icônes
+pour les options » (Armelin, 29/08). La page Options n'était que des mots.
+
+- **Six pictos de plus**, dans la même famille au trait que les onze de
+  PIC-1 : piéton, chronomètre (le plus rapide), ligne droite entre deux
+  points (le plus court), chaussée (autoroutes), voûte (tunnels), arc
+  (ponts). Le mode voiture reprend celui de « Mon véhicule » — un objet,
+  un dessin.
+- **L'état coché se voit deux fois** : le libellé ET son picto passent à
+  l'accent.
+- PIÈGE ÉVITÉ, ET CONSIGNÉ : le picto se glisse ENTRE la case et le
+  libellé, ce qui rompait le sélecteur de frère ADJACENT (`+ span`) qui
+  peignait l'état coché — un réglage qui ne se voit plus n'est plus un
+  réglage. Passé en frère général (`~ span`), et le parcours E2E mesure
+  désormais la couleur de bordure des deux états.
+- Le picto du pont a été REFAIT après capture : le premier dessin (tablier
+  et deux appuis) se lisait « table » à dix-sept pixels.
+
+634 tests unitaires, 194 parcours E2E.
+
 ## [0.73.0] — 2026-08-29 — PHOTO-1 : les lieux d'exception ont leur photo (PR #99)
 
 Armelin, le 29/08 : « quand on clique sur un lieu, on a juste le nom du
