@@ -236,31 +236,45 @@ test('ouvrir le planificateur referme le menu des réglages, et l’inverse', as
   await expect(page.locator('details.reglages[open]')).toHaveCount(0);
 });
 
-test('le pied de page ne recouvre rien', async ({ page }) => {
+test('les liens légaux ne recouvrent plus rien — ils vivent dans la bulle du « i »', async ({ page }) => {
+  /* CE PARCOURS A CHANGÉ DE NATURE le 30/08. Il défendait un pied de page
+     posé sur la carte, qui se disputait le coin bas avec l'attribution IGN
+     et les commandes de vue — trois occupants pour une bande. Armelin :
+     « le cartouche À propos / Professionnels / Vie privée / Mentions
+     légales est affiché un peu haut dans la fenêtre au lieu d'être tout en
+     bas. Ce serait bien de le cacher dans le bouton "i" ». Les liens ont
+     donc rejoint l'attribution : il n'y a plus de conflit à arbitrer, et ce
+     qu'il faut défendre maintenant, c'est qu'ils restent ATTEIGNABLES. */
   await ouvrirLaCarte(page);
 
-  const pied = page.locator('.pied-carte');
+  // Le pied autonome s'efface dès que la carte est là — mais il reste dans
+  // le HTML pour qui n'a pas JavaScript : les mentions légales ne sont pas
+  // négociables.
+  await expect(page.locator('.pied-carte')).toBeHidden();
+  await expect(page.locator('.pied-carte a[href="/mentions-legales.html"]')).toHaveCount(1);
+
+  // Et ils sont là, dans l'attribution, avec la source des données.
   const attribution = page.locator('.maplibregl-ctrl-attrib');
-  await expect(pied).toBeVisible();
   await expect(attribution).toBeVisible();
+  await expect(attribution).toContainText('IGN');
+  for (const lien of ['/a-propos.html', '/offre-flottes.html',
+    '/vie-privee.html', '/mentions-legales.html']) {
+    await expect(attribution.locator(`a[href="${lien}"]`),
+      `le lien ${lien} a disparu de la bulle`).toHaveCount(1);
+  }
 
-  // L'attribution est une OBLIGATION de la Géoplateforme : la masquer, même à
-  // moitié, n'est pas un défaut cosmétique.
-  const boitePied = await boite(pied);
-  expect(seChevauchent(boitePied, await boite(attribution)),
-    'les liens légaux se posent sur l’attribution IGN').toBe(false);
-
-  /* ET AUCUN AUTRE OCCUPANT DES COINS BAS. Un premier correctif dégageait
-     l'attribution et posait aussitôt le pied sur un bouton fraîchement
-     déplacé : une collision réparée, une créée. */
+  /* L'ATTRIBUTION NE RECOUVRE AUCUN CONTRÔLE DU BAS — c'est ce qui restait
+     à défendre du parcours d'origine. */
+  const boiteAttribution = await boite(attribution);
   const voisins = page.locator(
     '.maplibregl-ctrl-bottom-right .maplibregl-ctrl, .maplibregl-ctrl-bottom-left .maplibregl-ctrl');
   const nombre = await voisins.count();
   for (let i = 0; i < nombre; i++) {
     const voisin = voisins.nth(i);
     if (!(await voisin.isVisible())) continue;
-    expect(seChevauchent(boitePied, await boite(voisin)),
-      `les liens légaux recouvrent un contrôle du bas (n° ${i})`).toBe(false);
+    if (await voisin.evaluate((e) => e.classList.contains('maplibregl-ctrl-attrib'))) continue;
+    expect(seChevauchent(boiteAttribution, await boite(voisin)),
+      `l’attribution recouvre un contrôle du bas (n° ${i})`).toBe(false);
   }
 });
 
@@ -408,4 +422,67 @@ test('FENÊTRE FLOTTANTE : le volet ouvert se détache — borné à 680 px, l�
      de l'écran, une fenêtre flotte plus haut qu'un panneau adossé à un bord
      — son ombre porte plus loin, sans quoi elle paraît collée. */
   expect(style.ombre, 'l’ombre de fenêtre manque').toContain('70px');
+});
+
+test('MOB-1 : sur téléphone, rien ne se recouvre — échelle, barre du trajet, liens légaux', async ({ page, context }) => {
+  /* Trois chevauchements relevés sur capture par Armelin le 30/08 : le rond
+     de vitesse GPS sur l'échelle, la barre verticale sur « Recentrer », et
+     le cartouche des liens légaux « affiché un peu haut » au lieu d'être
+     rangé derrière le « i ». Tout se mesure en rectangles. */
+  await page.setViewportSize({ width: 390, height: 844 });
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ longitude: 2.3522, latitude: 48.8566 });
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
+      distance: 770_000, duration: 29_880,
+    }),
+  }));
+  /* D'ABORD LA CARTE NUE : les liens légaux vivent dans la bulle du « i »,
+     repliée sur téléphone, et le pied de page autonome s'efface — deux fois
+     les mêmes liens n'informent pas deux fois. (Le planificateur ouvert
+     recouvre ce coin : on regarde donc avant de charger un trajet, comme
+     l'usager qui consulte les mentions légales.) */
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.pied-carte')).toBeHidden();
+  await expect(page.locator('.maplibregl-ctrl-attrib')).not.toHaveClass(/compact-show/);
+  await page.locator('.maplibregl-ctrl-attrib-button').click();
+  await expect(page.locator('.maplibregl-ctrl-attrib a[href="/a-propos.html"]')).toBeVisible();
+
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await page.reload();
+  await expect(page.locator('.iti-resultat')).toContainText('770 km', { timeout: 15_000 });
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('.bg-chiffres')).toBeVisible({ timeout: 15_000 });
+
+  // LES TROIS CHIFFRES SUR UNE SEULE LIGNE — l'heure d'arrivée comprise.
+  const lignes = await page.locator('.bg-chiffre').evaluateAll(
+    (els) => new Set(els.map((e) => Math.round(e.getBoundingClientRect().y))).size);
+  expect(lignes, 'les chiffres s’enroulent sur deux lignes').toBe(1);
+  await expect(page.locator('.bg-eta')).toContainText(':');
+
+  // LE ROND DE VITESSE NE COUVRE PLUS L'ÉCHELLE.
+  const echelle = (await page.locator('.maplibregl-ctrl-scale').boundingBox())!;
+  const vitesse = await page.locator('.bg-vitesse').boundingBox();
+  if (vitesse) {
+    expect(vitesse.y + vitesse.height, 'le rond de vitesse couvre l’échelle')
+      .toBeLessThanOrEqual(echelle.y + 1);
+  }
+
+  /* LA BARRE DU TRAJET LAISSE LA PLACE À « RECENTRER » — un geste sur la
+     carte suspend la caméra et fait paraître le bouton. */
+  /* LE GESTE EST UNE MOLETTE, pas un panBy : c'est l'événement d'ORIGINE
+     qui distingue un geste d'usager de nos propres easeTo — la même
+     mécanique que le parcours « un geste suspend la caméra ». */
+  const cadre = (await page.locator('#carte canvas.maplibregl-canvas').boundingBox())!;
+  await page.mouse.move(cadre.x + cadre.width / 2, cadre.y + 200);
+  await page.mouse.wheel(0, 600);
+  const recentrer = page.locator('.bg-recentrer');
+  await expect(recentrer).toBeVisible({ timeout: 10_000 });
+  const bouton = (await recentrer.boundingBox())!;
+  const frise = (await page.locator('.bg-frise').boundingBox())!;
+  expect(frise.y + frise.height, 'la barre du trajet recouvre « Recentrer »')
+    .toBeLessThanOrEqual(bouton.y + 1);
 });

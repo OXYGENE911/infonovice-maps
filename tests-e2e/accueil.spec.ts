@@ -1550,8 +1550,12 @@ test('VITRINE : les pages de texte s’ouvrent depuis la carte, SANS JavaScript'
 
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
-  // Le pied de carte donne accès aux trois pages.
-  await page.locator('.pied-carte a[href="/a-propos.html"]').click();
+  /* LA BULLE DU « i » DONNE ACCÈS AUX PAGES depuis le 30/08 : les liens ont
+     quitté le pied de carte, qui se disputait le coin bas avec l'attribution
+     IGN. Ils vivent maintenant AVEC elle — et l'on y accède comme l'usager,
+     par le bouton. */
+  await page.locator('.maplibregl-ctrl-attrib-button').click().catch(() => {});
+  await page.locator('.maplibregl-ctrl-attrib a[href="/a-propos.html"]').click();
   await expect(page).toHaveTitle(/À propos/);
   await expect(page.locator('h1')).toHaveText('Une carte qui ne vous suit pas');
   await expect(page.locator('.page-promesses li').first()).toContainText('Aucun traceur');
@@ -1637,7 +1641,9 @@ test('PROFESSIONNELS : la page dit ce qu’elle ne fait pas, et contacte SANS se
 
   await page.goto('/');
   await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 15_000 });
-  await page.locator('.pied-carte a[href="/offre-flottes.html"]').click();
+  // Même chemin qu'« À propos » : la bulle du « i » (30/08).
+  await page.locator('.maplibregl-ctrl-attrib-button').click().catch(() => {});
+  await page.locator('.maplibregl-ctrl-attrib a[href="/offre-flottes.html"]').click();
   await expect(page).toHaveTitle(/Flottes et professionnels/);
 
   scripts.length = 0;

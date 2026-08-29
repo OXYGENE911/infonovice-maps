@@ -231,8 +231,9 @@ test('FEN-3 : un cartouche de détail est une fenêtre — au-dessus de son voil
     voile: Number(getComputedStyle(document.querySelector('#carte')!, '::after').zIndex),
   }));
   expect(rangs.fiche).toBeGreaterThan(rangs.voile);
-  // Et le pied de page cesse de la traverser.
-  await expect(page.locator('.pied-carte')).toBeHidden();
+  /* LE PIED DE PAGE QUI LA TRAVERSAIT N'EXISTE PLUS À L'ÉCRAN (30/08) : ses
+     liens sont passés dans la bulle du « i ». Ce qui reste à vérifier, c'est
+     que la fiche se referme proprement. */
   await fiche.locator('.fb-fermer').click();
-  await expect(page.locator('.pied-carte')).toBeVisible();
+  await expect(fiche).toBeHidden();
 });

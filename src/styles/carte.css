@@ -689,6 +689,11 @@ etat-connexion { display: contents; }
    sa hauteur : elle garde 10 px de marge propre, et se caler sur la hauteur
    seule laissait deux pixels de recouvrement. Même défaut que l'en-tête à la
    PR #3, même remède : on mesure. */
+/* SANS JAVASCRIPT, LE PIED RESTE. Avec la carte, ses liens ont rejoint
+   l'attribution (le « i ») : deux fois les mêmes liens sur la même carte
+   n'informent pas deux fois, ils encombrent. */
+.carte-prete .pied-carte { display: none; }
+
 .pied-carte {
   bottom: calc(var(--attribution-sommet, 34px) + 8px) !important;
   /* ET ILS PASSENT À GAUCHE. Déplacer le sélecteur de fonds en bas-droite y a
@@ -1428,9 +1433,15 @@ bandeau-guidage.bg-compact .bg-3d { padding: 5px 10px; font-size: 12px; }
 
 /* LA VITESSE GPS — un cercle à gauche, au-dessus du bandeau. Tabulaire :
    « 87 » et « 117 » ne font pas sauter le cadre. */
+/* LE ROND DE VITESSE NE COUVRE PLUS L'ÉCHELLE (30/08). Armelin : « il y a
+   un rectangle blanc correspondant à l'échelle qui est masqué par le rond de
+   la vitesse GPS ». Les deux vivent en bas à gauche : le rond monte d'une
+   hauteur d'échelle. La barre d'échelle n'est pas décorative — c'est elle
+   qui donne le sens des distances qu'on lit. */
 .bg-vitesse {
   pointer-events: none; margin: 0;
-  position: absolute; left: 0; bottom: calc(100% + 10px);
+  position: absolute; left: 0;
+  bottom: calc(100% + 10px + var(--echelle-hauteur, 26px));
   width: 56px; height: 56px; border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: var(--fond); border: 2px solid var(--bord-2); box-shadow: var(--ombre-m);
@@ -1964,7 +1975,13 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
    cédé la place à la COULEUR de la piste). */
 .bg-frise {
   position: absolute; right: 10px; left: auto;
-  bottom: calc(100% + 14px);
+  /* ELLE PASSE AU-DESSUS DE « RECENTRER » (30/08). Armelin : « ce serait
+     bien de relever un peu la barre verticale à droite afin qu'elle ne soit
+     pas superposée sur le bouton Recentrer quand il apparaît ». Le bouton
+     est haut de ~38 px et vit au même endroit : la barre lui laisse la
+     place, qu'il soit là ou non — une barre qui saute quand un bouton
+     paraît serait pire que le chevauchement. */
+  bottom: calc(100% + 62px);
   width: 18px;
   /* Elle court du bas du bandeau jusque sous l'en-tête, sans jamais le
      toucher : la hauteur est ce qui reste de l'écran, plafonnée. */
@@ -2050,13 +2067,10 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
      revient à la fermeture. */
   body:has(details.iti[open]) .pied-carte,
   body:has(details.reglages[open]) .pied-carte,
-  /* FEN-3 : un cartouche de détail recouvre lui aussi le bas de l'écran —
-     vu sur capture, « À propos / Professionnels » traversait la fiche d'un
-     monument. Le pied de page vit dans <body>, peint APRÈS #carte (fixe,
-     donc contexte d'empilement) : aucun z-index intérieur ne passe
-     au-dessus de lui. Il se tait, et revient à la fermeture. */
-  body:has(fiche-borne:not([hidden])) .pied-carte,
-  body:has(fiche-lieu:not([hidden])) .pied-carte { visibility: hidden; }
+  /* (La règle qui faisait taire le pied de page sous un cartouche a été
+     retirée le 30/08 : le pied autonome ne s'affiche plus dès que la carte
+     est là — ses liens vivent dans la bulle du « i ». Elle n'avait plus
+     rien à cacher.) */
 
   #carte .iti[open] .iti-corps,
   details.reglages[open] .reglages-corps {
@@ -2608,11 +2622,23 @@ body.en-guidage #carte .maplibregl-ctrl-bottom-left {
 }
 .bg-deplier:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 10px; }
 
+/* LES TROIS CHIFFRES TIENNENT SUR UNE LIGNE (30/08). Armelin : « les
+   kilomètres restants, le temps de trajet restant sont écrits sur deux
+   niveaux au lieu d'une seule ligne. Il manque d'ailleurs l'heure d'arrivée
+   à destination » — elle était bien là, mais renvoyée à la ligne par le
+   débordement. Trois colonnes égales, un espacement qui cède avant le
+   texte, et rien ne s'enroule : `min-width: 0` est ce qui autorise une
+   colonne de grille à devenir plus étroite que son contenu. */
 .bg-chiffres {
-  margin: 0; display: flex; align-items: baseline; gap: 16px;
-  font-variant-numeric: tabular-nums;
+  margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px; font-variant-numeric: tabular-nums;
 }
-.bg-chiffre { display: flex; flex-direction: column; line-height: 1.1; }
+.bg-chiffre {
+  display: flex; flex-direction: column; line-height: 1.1; min-width: 0;
+}
+.bg-chiffre b, .bg-chiffre i {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 /* GROS, ET C'EST LE FOND DE LA DEMANDE : ces trois nombres sont ce qu'on
    lit d'un coup d'œil à 90 km/h. Le reste peut être petit ; pas eux. */
 .bg-chiffre b { font: 700 22px var(--police); color: var(--texte-1); }

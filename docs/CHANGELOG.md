@@ -2,6 +2,33 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.81.0] — 2026-08-30 — MOB-1 : plus rien ne se recouvre en bas d'écran (PR #108)
+
+Quatre chevauchements relevés sur capture par Armelin le 30/08.
+
+- **Le rond de vitesse GPS couvrait l'échelle.** Les deux vivent en bas à
+  gauche : le rond monte d'une hauteur d'échelle, MESURÉE (elle dépend de
+  la police et du fuseau) comme l'en-tête et l'attribution. La barre
+  d'échelle n'est pas décorative : c'est elle qui donne le sens des
+  distances qu'on lit.
+- **Les trois chiffres s'enroulaient sur deux lignes**, et c'est l'heure
+  d'arrivée qui disparaissait de la vue. Trois colonnes égales qui cèdent
+  avant le texte, et « charges comprises » devient « avec charges » sous
+  l'heure — le détail complet reste dans la phrase lue par les lecteurs
+  d'écran.
+- **La barre du trajet se posait sur « Recentrer ».** Elle lui laisse la
+  place, qu'il soit là ou non : une barre qui saute quand un bouton paraît
+  serait pire que le chevauchement.
+- **Les liens légaux ont rejoint la bulle du « i »**, avec l'attribution
+  IGN — c'est leur place. Le pied de page autonome s'efface dès que la
+  carte est là, et RESTE dans le HTML pour qui n'a pas JavaScript : les
+  mentions légales ne sont pas négociables. Sur téléphone la bulle part
+  REPLIÉE (390 px de large ne portent pas quatre liens plus une source) ;
+  sur grand écran on n'y touche pas — l'attribution de la Géoplateforme est
+  la contrepartie de la licence, pas un ornement qu'on range parce qu'il
+  gêne.
+
+645 tests unitaires, 195 parcours E2E.
 ## [0.80.0] — 2026-08-30 — MEM-1 : ce qui était réglé se souvient (PR #107)
 
 Trois oublis signalés par Armelin le 30/08, trois causes différentes.

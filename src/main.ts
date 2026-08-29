@@ -57,6 +57,20 @@ if (conteneur) {
     publier();
   };
 
+  /* L'ÉCHELLE SE MESURE AUSSI (30/08) : le rond de vitesse GPS vit dans le
+     même coin et la recouvrait — « un rectangle blanc correspondant à
+     l'échelle qui est masqué par le rond de la vitesse GPS ». Sa hauteur
+     dépend de la police et du fuseau : on la MESURE, comme l'en-tête et
+     l'attribution, plutôt que de la deviner. */
+  const suivreEchelle = (echelle: HTMLElement): void => {
+    const publier = (): void => {
+      const hauteur = Math.round(echelle.getBoundingClientRect().height);
+      document.documentElement.style.setProperty('--echelle-hauteur', `${hauteur + 10}px`);
+    };
+    new ResizeObserver(publier).observe(echelle);
+    publier();
+  };
+
   const dejaLa = conteneur.querySelector<HTMLElement>('.maplibregl-ctrl-attrib');
   if (dejaLa) suivreAttribution(dejaLa);
   else {
@@ -65,6 +79,18 @@ if (conteneur) {
       if (!venue) return;
       guetteur.disconnect();
       suivreAttribution(venue);
+    });
+    guetteur.observe(conteneur, { childList: true, subtree: true });
+  }
+
+  const echelle = conteneur.querySelector<HTMLElement>('.maplibregl-ctrl-scale');
+  if (echelle) suivreEchelle(echelle);
+  else {
+    const guetteur = new MutationObserver(() => {
+      const venue = conteneur.querySelector<HTMLElement>('.maplibregl-ctrl-scale');
+      if (!venue) return;
+      guetteur.disconnect();
+      suivreEchelle(venue);
     });
     guetteur.observe(conteneur, { childList: true, subtree: true });
   }

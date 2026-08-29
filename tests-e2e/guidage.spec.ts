@@ -888,7 +888,10 @@ test('« Arrêter » referme le bandeau, et la vue redevient elle-même', async 
   await bandeau.getByRole('button', { name: 'Arrêter le suivi' }).click();
   await expect(bandeau).toBeHidden();
   await expect(page.locator('.entete recherche-adresse input')).toBeVisible();
-  await expect(page.locator('.pied-carte')).toBeVisible();
+  /* LE PIED DE PAGE AUTONOME N'EXISTE PLUS À L'ÉCRAN depuis le 30/08 : ses
+     liens vivent dans la bulle du « i », avec l'attribution. Ce qui doit
+     revenir après le suivi, c'est donc CELLE-CI. */
+  await expect(page.locator('.maplibregl-ctrl-attrib')).toBeVisible();
 
   // Et le planificateur se rouvre sur son bouton, rendu à son nom d'origine.
   await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Itinéraire' }).click();
