@@ -98,8 +98,19 @@ test('le bouton « Démarrer » lance le suivi, instructions comprises', async (
   const bandeau = page.locator('bandeau-guidage');
   await expect(bandeau).toBeVisible({ timeout: 15_000 });
 
-  // L'instruction vient de la feuille de route, et elle est en FRANÇAIS.
-  await expect(bandeau.locator('.bg-instruction')).toContainText('A6', { timeout: 15_000 });
+  /* L'instruction vient de la feuille de route, et elle est en FRANÇAIS.
+     Depuis GUID-2 (29/08), elle vit dans le CARTOUCHE FLOTTANT en haut à
+     gauche, et ne redit plus la voie : celle-ci porte l'écusson de route et
+     le bas du bandeau — la même information écrite trois fois tenait mal
+     dans un cartouche de trois cents pixels. */
+  await expect(bandeau.locator('.bg-instruction')).toContainText('Départ', { timeout: 15_000 });
+  await expect(bandeau.locator('.bg-cartouche')).toBeVisible();
+  await expect(bandeau.locator('.bg-ecusson'), 'l’écusson porte le numéro de route')
+    .toHaveText('A6');
+  await expect(bandeau.locator('.bg-cartouche'),
+    'le cartouche prend la couleur de la route').toHaveAttribute('data-classe', 'autoroute');
+  await expect(bandeau.locator('.bg-voie'), 'la barre du bas nomme la voie courante')
+    .toHaveText('A6');
   await expect(bandeau.locator('.bg-restant')).toContainText('restants');
   await expect(bandeau.locator('.bg-restant')).toContainText('arrivée vers');
   /* ET LA FLÈCHE DE MANŒUVRE, DESSINÉE — « indiquer les flèches de direction
@@ -125,7 +136,7 @@ test('quitter la route se DIT, l’instruction ne continue pas comme si de rien'
   await ouvrirTrajet(page);
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   const bandeau = page.locator('bandeau-guidage');
-  await expect(bandeau.locator('.bg-instruction')).toContainText('A6', { timeout: 15_000 });
+  await expect(bandeau.locator('.bg-instruction')).toContainText('Départ', { timeout: 15_000 });
 
   // Cinquante kilomètres à l'ouest du tracé : on n'est plus dessus.
   await context.setGeolocation({ longitude: 1.6, latitude: 48.5 });
@@ -219,18 +230,22 @@ test('le bandeau se RÉDUIT — et garde ce qu’on lit en roulant', async ({ pa
   await ouvrirTrajet(page);
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   const bandeau = page.locator('bandeau-guidage');
-  await expect(bandeau.locator('.bg-limite')).toBeVisible({ timeout: 15_000 });
+  /* Depuis GUID-2, la note de limite a déménagé dans le copilote : la barre
+     du bas ne porte plus que la voie, le restant et les boutons. C'est la
+     VOIE qui se range quand on réduit. */
+  await expect(bandeau.locator('.bg-voie')).toBeVisible({ timeout: 15_000 });
 
   const avant = (await bandeau.locator('.bg').boundingBox())!.height;
   await page.getByRole('button', { name: 'Réduire le bandeau' }).click();
-  await expect(bandeau.locator('.bg-limite')).toBeHidden();
-  await expect(bandeau.locator('.bg-instruction')).toBeVisible();
+  await expect(bandeau.locator('.bg-voie')).toBeHidden();
   await expect(bandeau.locator('.bg-restant')).toBeVisible();
+  // Le cartouche d'instruction, lui, ne se réduit pas : il flotte ailleurs.
+  await expect(bandeau.locator('.bg-instruction')).toBeVisible();
   const apres = (await bandeau.locator('.bg').boundingBox())!.height;
   expect(apres, 'réduit, le bandeau doit être plus petit').toBeLessThan(avant);
 
   await page.getByRole('button', { name: 'Agrandir le bandeau' }).click();
-  await expect(bandeau.locator('.bg-limite')).toBeVisible();
+  await expect(bandeau.locator('.bg-voie')).toBeVisible();
 });
 
 test('le prochain événement trafic du corridor s’ANNONCE — et se tait derrière soi', async ({ page }) => {
@@ -909,4 +924,41 @@ test('NAV-2 : la voiture a un CURSEUR sur la carte, orienté, et sa forme se cho
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   await expect(page.locator('.curseur-porte svg.curseur-vehicule'))
     .toHaveClass(/curseur-voiture/, { timeout: 15_000 });
+});
+
+test('GUID-2 : l’instruction flotte en haut à gauche, la barre du bas est minimale et NE MASQUE PLUS RIEN', async ({ page }) => {
+  /* Armelin, le 29/08 : « la barre d'informations en bas n'est pas affichée
+     tout en bas de l'écran. Et cette barre masque de suite les boutons de
+     navigation de zoom et de géolocalisation à droite. De plus, cette barre
+     affiche également les flèches et indication de navigation […] ce qui
+     agrandit la fenêtre du bas qui doit rester minimaliste. » Tout se
+     mesure en rectangles. */
+  await page.setViewportSize({ width: 390, height: 844 });
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  const bandeau = page.locator('bandeau-guidage');
+  await expect(bandeau).toBeVisible({ timeout: 15_000 });
+
+  // LE CARTOUCHE EST EN HAUT À GAUCHE — pas dans la barre du bas.
+  const cartouche = (await bandeau.locator('.bg-cartouche').boundingBox())!;
+  expect(cartouche.x, 'le cartouche doit être à gauche').toBeLessThan(30);
+  expect(cartouche.y, 'le cartouche doit être en haut').toBeLessThan(300);
+
+  // LA BARRE EST COLLÉE EN BAS, et le cartouche est bien au-dessus d'elle.
+  const barre = (await bandeau.locator('.bg').boundingBox())!;
+  expect(Math.round(barre.y + barre.height), 'la barre ne touche pas le bas').toBe(844);
+  expect(cartouche.y + cartouche.height).toBeLessThan(barre.y);
+
+  /* ELLE NE MASQUE NI LES COMMANDES DE VUE NI L'ATTRIBUTION IGN — cette
+     dernière n'est pas décorative : c'est la contrepartie de la licence. */
+  const zoom = (await page.locator('.maplibregl-ctrl-zoom-in').boundingBox())!;
+  expect(zoom.y + zoom.height, 'le bandeau recouvre le zoom').toBeLessThan(barre.y);
+  const attribution = (await page.locator('.maplibregl-ctrl-attrib').boundingBox())!;
+  expect(attribution.y + attribution.height, 'le bandeau recouvre l’attribution IGN')
+    .toBeLessThanOrEqual(barre.y);
+
+  /* LA BARRE NE PORTE PLUS LA MANŒUVRE : la flèche et l'instruction vivent
+     dans le cartouche, hors d'elle. */
+  const fleche = (await bandeau.locator('.bg-fleche').boundingBox())!;
+  expect(fleche.y, 'la flèche est restée dans la barre du bas').toBeLessThan(barre.y);
 });

@@ -534,6 +534,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #98 — GUID-2, le cartouche d'instruction (quatre retours du
+      29/08) : la barre du bas collée en bas, vidée de la manœuvre et des
+      textes d'explication (partis au copilote), ne masquant plus zoom,
+      géolocalisation ni attribution (elle publie sa hauteur) ; l'instruction
+      flotte en haut à gauche dans un cartouche coloré par la classe de
+      route, écusson compris. Les schémas de voies restent NON promis : le
+      service n'expose aucun champ de voies (mesuré).
 - [x] PR #97 — FRISE-2, la barre du trajet (trois retours du 29/08) : à
       DROITE (elle coupait le panneau de vitesse), plus longue et plus
       épaisse, peinte aux couleurs du trafic — vert = AUCUN INCIDENT

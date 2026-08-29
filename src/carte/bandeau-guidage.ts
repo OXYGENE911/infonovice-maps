@@ -35,6 +35,7 @@ import { limiteA, type LimiteTrajet } from '../lib/limites';
 import type { EvenementTrajet } from '../lib/trafic';
 import { flecheManoeuvre } from './icone-manoeuvre';
 import { refermerPanneaux } from './panneaux';
+import { classeRoute, numeroRoute, libelleClasse } from '../lib/classe-route';
 import { CurseurVehicule, capEntre, formeValide, PREF_CURSEUR } from './curseur-vehicule';
 import { lirePreference } from '../lib/stockage';
 import { segmentsFrise } from '../lib/frise';
@@ -106,6 +107,8 @@ export class BandeauGuidage extends HTMLElement {
      fantôme qui se déplace et on ne peut pas savoir où on est »). Il naît
      au premier fixe du suivi et meurt à son arrêt. */
   readonly #curseur = new CurseurVehicule();
+  /** Republie la hauteur du bandeau — appelée quand il paraît ou disparaît. */
+  #publierHauteur: (() => void) | null = null;
   /* L'ÉCRAN RESTE ALLUMÉ PENDANT LE SUIVI (Screen Wake Lock) : un téléphone
      qui se verrouille au premier feu rouge n'est pas un suivi. Le verrou
      TOMBE quand l'onglet passe en arrière-plan — le navigateur l'impose — et
@@ -188,32 +191,19 @@ export class BandeauGuidage extends HTMLElement {
     this.setAttribute('aria-label', 'Suivi de l’itinéraire');
     this.innerHTML = `
       <div class="bg">
-        <div class="bg-manoeuvre">
-          <!-- LA FLÈCHE ANTICIPE LA PHRASE : « indiquer les flèches de
-               direction à chaque intersection ou sortie » (27/08/2026). La
-               phrase reste la vérité ; la flèche se lit depuis un support. -->
-          <span class="bg-fleche" aria-hidden="true"></span>
-          <div class="bg-manoeuvre-texte">
-            <p class="bg-instruction"></p>
-            <p class="bg-distance"></p>
-          </div>
-        </div>
+        <!-- LA BARRE DU BAS EST MINIMALE (GUID-2, 29/08 — Armelin : « cette
+             barre de navigation affiche également les flèches et indication
+             de navigation […] ce qui agrandit la fenêtre du bas qui doit
+             rester minimaliste. A la limite, la barre de navigation en bas
+             peut seulement afficher le nom de la rue sur laquelle on se
+             déplace actuellement »). La manœuvre a déménagé dans le
+             cartouche flottant ; ici restent la voie, ce qui reste à faire,
+             et ce qui arrive. -->
+        <p class="bg-voie"></p>
         <p class="bg-restant" role="status"></p>
         <p class="bg-trafic" role="status"></p>
         <p class="bg-arret"></p>
         <p class="bg-alerte" role="alert" hidden></p>
-        <p class="bg-limite">Suivi d’itinéraire, pas navigation guidée :
-          aucune voix — mais si vous quittez la route, l’itinéraire se
-          recalcule tout seul.</p>
-        <!-- LA LÉGENDE DE LA BARRE, ET SON HONNÊTETÉ. Le vert ne dit pas
-             « ça roule » : Bison Futé publie des ÉVÉNEMENTS ponctuels, pas
-             un débit par tronçon (étude du 27/08, qui avait pour cela
-             écarté une barre de fluidité). Il dit « aucun incident
-             signalé » — ce qui est vrai, et ce que la légende écrit. -->
-        <p class="bg-legende-frise">Barre du trajet, à droite : vert = aucun
-          incident signalé, orange = ralentissement annoncé, rouge = bouchon,
-          accident ou route coupée. Seuls les arrêts de recharge planifiés y
-          portent une pastille.</p>
         <div class="bg-boutons">
           <!-- LE BANDEAU SE RÉDUIT : « réduire la taille du cartouche en bas
                qui prend 1/3 de l'écran » (Armelin, 27/08/2026). Réduit, il
@@ -232,6 +222,24 @@ export class BandeauGuidage extends HTMLElement {
             aria-label="Ouvrir le panneau du copilote">Copilote</button>
           <button type="button" class="bg-arreter">Arrêter le suivi</button>
         </div>
+      </div>
+      <!-- LE CARTOUCHE D'INSTRUCTION (GUID-2, 29/08) — « des fenêtres
+           flottantes rectangulaires en haut à gauche pour donner des
+           indications graphiques et textuelles ». Il quitte la barre du bas,
+           qui redevient minimale, et prend la COULEUR DE LA ROUTE :
+           bleu autoroute, vert nationale, orange départementale (convention
+           énoncée par Armelin). L'écusson porte le numéro quand la donnée en
+           donne un — mesuré le 29/08 : le champ cpx_numero rend « D39 », « D415 »,
+           « D606 ». Aucun champ de VOIES n'existe dans la réponse du service
+           (cherché sur deux itinéraires) : le placement sur la chaussée
+           n'est pas promis. -->
+      <div class="bg-cartouche" role="status" aria-live="polite" hidden>
+        <span class="bg-fleche" aria-hidden="true"></span>
+        <div class="bg-cartouche-texte">
+          <p class="bg-instruction"></p>
+          <p class="bg-distance"></p>
+        </div>
+        <span class="bg-ecusson" hidden></span>
       </div>
       <!-- LE RECENTRAGE, HORS DU BANDEAU : il flotte sur la carte, là où le
            regard est quand on vient de la déplacer. Il ne paraît que quand la
@@ -260,6 +268,18 @@ export class BandeauGuidage extends HTMLElement {
         </div>
         <p class="bg-copilote-note">Pour le passager — le conducteur garde les
           yeux sur la route.</p>
+        <!-- CE QUE L'APPLICATION NE FAIT PAS, ET CE QUE LES COULEURS DISENT :
+             deux textes qui expliquent au lieu d'occuper la route. Ils
+             vivaient dans la barre du bas, qu'Armelin voulait minimale
+             (29/08) — ils sont ici, à leur place : on les lit à l'arrêt ou en
+             passager, jamais au volant. -->
+        <p class="bg-limite">Suivi d’itinéraire, pas navigation guidée :
+          aucune voix — mais si vous quittez la route, l’itinéraire se
+          recalcule tout seul.</p>
+        <p class="bg-legende-frise">Barre du trajet, à droite : vert = aucun
+          incident signalé, orange = ralentissement annoncé, rouge = bouchon,
+          accident ou route coupée. Seuls les arrêts de recharge planifiés y
+          portent une pastille.</p>
         <div class="bg-copilote-corps"></div>
       </section>
       <!-- LA FRISE DU TRAJET — la « barre verticale » du mandat du 28/08,
@@ -269,6 +289,21 @@ export class BandeauGuidage extends HTMLElement {
            qu'elle montre est déjà DIT en texte dans le bandeau (prochain
            arrêt, prochain événement) — d'où aria-hidden. -->
       <div class="bg-frise" aria-hidden="true" hidden></div>`;
+    /* CE QUE LE BANDEAU MESURE, IL LE PUBLIE (GUID-2, 29/08 — Armelin :
+       « cette barre masque de suite les boutons de navigation de zoom et de
+       géolocalisation à droite »). Sa hauteur varie avec ce qu'il annonce
+       (alerte, arrêt, réduit ou non) : la coder en dur redonnerait le même
+       recouvrement au premier message. Les commandes de vue et
+       l'attribution IGN se dégagent d'autant — voir carte.css. Même
+       mécanique que --attribution-sommet et --hauteur-entete. */
+    const carte = this.querySelector('.bg') as HTMLElement;
+    const publierHauteur = (): void => {
+      const h = this.hidden ? 0 : Math.round(carte.getBoundingClientRect().height);
+      document.documentElement.style.setProperty('--hauteur-bandeau', `${h}px`);
+    };
+    new ResizeObserver(publierHauteur).observe(carte);
+    this.#publierHauteur = publierHauteur;
+
     this.querySelector('.bg-arreter')?.addEventListener('click', () => { this.arreter(); });
     this.querySelector('.bg-recentrer')?.addEventListener('click', () => { this.#recentrer(); });
     this.querySelector('.bg-3d')?.addEventListener('click', () => {
@@ -373,6 +408,7 @@ export class BandeauGuidage extends HTMLElement {
     if (!('geolocation' in navigator)) {
       this.#alerte('Ce navigateur ne sait pas donner votre position.');
       this.hidden = false;
+      this.#publierHauteur?.();
       return false;
     }
     this.#options = o;
@@ -388,6 +424,7 @@ export class BandeauGuidage extends HTMLElement {
     this.querySelector<HTMLElement>('.bg-copilote-corps')?.replaceChildren();
     this.querySelector('.bg-copilote-bouton')?.setAttribute('aria-pressed', 'false');
     this.hidden = false;
+    this.#publierHauteur?.();
     this.#alerte('');
     /* ON DÉGAGE LA VUE. Volets refermés, et une classe sur le document qui
        efface ce qui ne sert pas au volant — la recherche d'adresse d'abord,
@@ -437,6 +474,7 @@ export class BandeauGuidage extends HTMLElement {
     }
     this.#options = null;
     this.hidden = true;
+    this.#publierHauteur?.();
     clearTimeout(this.#reprise);
     (this.querySelector('.bg-recentrer') as HTMLElement | null)?.setAttribute('hidden', '');
     (this.querySelector('.bg-vitesse') as HTMLElement | null)?.setAttribute('hidden', '');
@@ -602,6 +640,26 @@ export class BandeauGuidage extends HTMLElement {
       fleche.hidden = true;
     }
 
+    /* LE CARTOUCHE PREND LA COULEUR DE LA ROUTE (GUID-2). Il ne paraît que
+       s'il a quelque chose à dire : sans étape — feuille de route en panne,
+       ou trajet terminé — il s'efface au lieu de flotter à vide. */
+    const cartouche = this.querySelector('.bg-cartouche') as HTMLElement;
+    const ecusson = this.querySelector('.bg-ecusson') as HTMLElement;
+    const voieCourante = e.horsRoute ? '' : (e.etape?.voie ?? '');
+    const classe = classeRoute(voieCourante);
+    cartouche.hidden = !e.etape && !e.horsRoute;
+    cartouche.dataset['classe'] = classe;
+    const numero = numeroRoute(voieCourante);
+    ecusson.textContent = numero;
+    ecusson.hidden = numero === '';
+    /* L'écusson est un signe : il se DIT en toutes lettres à qui écoute la
+       page, sans quoi « D606 » resterait une suite de caractères. */
+    if (numero !== '') ecusson.setAttribute('aria-label', `${libelleClasse(classe)} ${numero}`);
+
+    /* LA VOIE COURANTE, EN BAS ET SEULE — ce qu'Armelin voulait y garder.
+       Le numéro y suffit quand la voie en porte un ; sinon, son nom. */
+    (this.querySelector('.bg-voie') as HTMLElement).textContent = voieCourante;
+
     if (e.horsRoute) {
       /* ON LE DIT, ON NE DEVINE PAS. Continuer d'annoncer une manœuvre pour
          une route qu'on ne suit plus est bien pire que de se taire : l'usager
@@ -623,9 +681,11 @@ export class BandeauGuidage extends HTMLElement {
     } else {
       this.#horsRouteDepuis = null;
       this.#alerte('');
-      instruction.textContent = e.etape
-        ? [e.etape.texte, e.etape.voie].filter(Boolean).join(' — ')
-        : 'Suivez l’itinéraire';
+      /* LA VOIE NE SE REDIT PLUS ICI : elle porte l'écusson du cartouche et
+         le bas du bandeau. « Tournez à droite — D606 » sur trois lignes
+         dans un cartouche large de deux cent quatre-vingts pixels était la
+         même information écrite trois fois. */
+      instruction.textContent = e.etape ? e.etape.texte : 'Suivez l’itinéraire';
       distance.textContent = e.etape ? distanceEnMots(e.jusquALaManoeuvreM) : '';
     }
 
