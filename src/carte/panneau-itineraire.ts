@@ -62,7 +62,11 @@ const SOURCE = 'itineraire';
 const SOURCE_CORRIDOR = 'iti-bornes-trajet';
 const SOURCE_ARRETS = 'iti-arrets';
 /** La couleur des arrêts retenus — celle des bornes, mais pleine et cerclée. */
-const COULEUR_ARRET = '#1E9E5A';
+/* BLEU MARQUE, PAS LE VERT DU PALIER : « les étapes de recharge ne
+   devraient pas afficher un rond vert, pour les différencier des bornes
+   ultra rapides » (Armelin, 29/08) — le vert #1E9E5A était EXACTEMENT la
+   couleur du palier « charge très rapide ». */
+const COULEUR_ARRET = '#0C447C';
 
 /** Ce que le planificateur sait demander à la couche des bornes nationales. */
 export interface PorteCouchesBornes {
@@ -1207,7 +1211,9 @@ export class PanneauItineraire extends HTMLElement {
         carte.addLayer({
           id: 'iti-arrets-pastille', type: 'circle', source: SOURCE_ARRETS,
           paint: {
-            'circle-radius': 15,
+            /* 18, pas 15 : « encore trop petits par rapport aux autres
+               ronds » (29/08). */
+            'circle-radius': 18,
             'circle-color': COULEUR_ARRET,
             'circle-stroke-width': 3,
             'circle-stroke-color': '#FFFFFF',
@@ -1217,7 +1223,7 @@ export class PanneauItineraire extends HTMLElement {
           id: 'iti-arrets-rang', type: 'symbol', source: SOURCE_ARRETS,
           layout: {
             'text-field': ['get', 'rang'],
-            'text-size': 15,
+            'text-size': 17,
             'text-allow-overlap': true,
             'text-ignore-placement': true,
           },
@@ -1229,8 +1235,12 @@ export class PanneauItineraire extends HTMLElement {
           id: 'iti-arrets-duree', type: 'symbol', source: SOURCE_ARRETS,
           layout: {
             'text-field': ['get', 'duree'],
-            'text-size': 11.5,
-            'text-offset': [0, 2.1],
+            /* À DROITE de la pastille et plus grande, pas en dessous en
+               petit : « le texte est trop petit et devrait se situer à
+               droite du rond » (29/08). */
+            'text-size': 13.5,
+            'text-anchor': 'left',
+            'text-offset': [1.7, 0],
             'text-allow-overlap': true,
             'text-ignore-placement': true,
           },

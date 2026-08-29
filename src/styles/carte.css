@@ -116,10 +116,16 @@ body { font-family: var(--police); background: var(--fond); }
   /* Le rail « Itinéraire » se cale sous l'en-tête réduit : la variable
      --hauteur-entete est MESURÉE par main.ts, rien à recalibrer ici. */
 }
-/* SOUS 400 px, LA MARQUE S'EFFACE : le nom vit dans l'onglet et l'icône
-   PWA — à l'écran, chaque pixel revient au champ de recherche. */
+/* SOUS 400 px, LA MARQUE RESTE — Armelin, le 29/08 : « en mode mobile, on
+   ne voit nulle part le logo Infonovice Maps ». Elle se fait PETITE : le
+   champ garde l'essentiel de la largeur (min-width: 0 le laisse céder). */
 @media (max-width: 400px) {
-  .entete-marque { display: none; }
+  .entete-marque { font-size: 11.5px; letter-spacing: 0; }
+  /* …mais elle CÈDE quand l'en-tête se charge : bandeau hors-ligne ou
+     bouton d'installation présents, chaque pixel redevient utile — sous
+     les polices Linux de la CI, les trois ensemble débordaient (mesuré). */
+  .entete:has(.hors-ligne:not(:empty)) .entete-marque,
+  .entete:has(.installer:not([hidden])) .entete-marque { display: none; }
 }
 
 /* LES CONTRÔLES DU COIN BAS-DROIT NE SE CHEVAUCHENT PLUS. La capture du
@@ -605,10 +611,12 @@ etat-connexion { display: contents; }
 /* LE RAIL — une seule surface, pas six pastilles éparpillées. */
 #carte .maplibregl-ctrl-top-left {
   display: flex; flex-direction: column; align-items: flex-start;
-  /* Le rail ne descend jamais sous le pied de page : au-delà, il défile. */
-  max-height: calc(100vh - var(--hauteur-entete, 45px) - 64px);
-  overflow-y: auto; overflow-x: hidden;
-  scrollbar-width: thin;
+  /* LE RAIL NE DÉFILE PLUS — Armelin, le 29/08 : « on voit graphiquement
+     trois menus déroulants pour scroller dans la fenêtre ». Depuis le
+     retrait des volets (il ne reste qu'Itinéraire à gauche), c'est la PAGE
+     ouverte qui défile, SEULE — un ascenseur, pas trois. */
+  max-height: none;
+  overflow: visible;
 }
 #carte .maplibregl-ctrl-top-left .maplibregl-ctrl { margin: 0 0 8px 12px !important; }
 /* DIX PIXELS DE DÉGAGEMENT EN TÊTE DE RAIL, et ce n'est pas décoratif. La
@@ -1635,6 +1643,10 @@ body.en-guidage fiche-borne, body.en-guidage fiche-lieu { display: none; }
   padding: 0;
   gap: 0;
   display: block;
+  /* L'UNIQUE ascenseur du volet : la page. Le rail ne borne plus rien. */
+  max-height: calc(100vh - var(--hauteur-entete, 45px) - 84px);
+  overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .vue-tete {
@@ -1888,7 +1900,9 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
 .bg-frise-arret {
   position: absolute; left: 50%; transform: translate(-50%, 50%);
   width: 16px; height: 16px; border-radius: 50%;
-  background: #2E7D32; border: 2px solid var(--blanc);
+  /* Le MÊME bleu marque que les pastilles de la carte (29/08) : un seul
+     vocabulaire — le vert reste aux paliers de puissance. */
+  background: #0C447C; border: 2px solid var(--blanc);
   color: var(--blanc); font: 700 9px/12px var(--police); text-align: center;
   box-shadow: var(--ombre-s);
 }

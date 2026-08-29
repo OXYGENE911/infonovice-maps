@@ -59,8 +59,11 @@ export default defineConfig({
         lang: 'fr',
         start_url: BASE,
         display: 'standalone',
-        background_color: '#0F1B2D',
-        theme_color: '#0F1B2D',
+        /* Blanc, pas la charte sombre : la barre du navigateur et l'écran
+           de lancement suivent le FOND de l'application (retrait de la
+           « barre noire » relevée par Armelin le 29/08). */
+        background_color: '#FFFFFF',
+        theme_color: '#FFFFFF',
         // Chemins RELATIFS : le navigateur les résout contre l'URL du
         // manifeste lui-même, donc ils suivent la base sans qu'on les touche
         // (en absolu, /icones/... aurait ignoré la base et cassé sous
