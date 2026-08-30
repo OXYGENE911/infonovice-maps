@@ -731,6 +731,27 @@ Ce qui reste possible sans nouvelle donnée : la flèche de manœuvre (livrée),
 l'écusson (livré), et la couleur de classe (livrée). Le reste attend un
 moteur qui le publie — pas une invention de notre part.
 
+### CORRECTION DU 30/08 (3) : `turn:lanes` existe, lui aussi — dans OSM
+
+Troisième note prise en défaut le même jour, et toujours la même erreur de
+méthode : il était écrit « il n'existe pas de `turn:lanes` ici ». C'était
+vrai du service d'itinéraire, et faux d'OpenStreetMap — où `turn:lanes` EST
+l'étiquette standard de l'affectation par voie.
+
+Relevé le 30/08 :
+
+| Mesure | Résultat |
+|---|---|
+| Chemins portant `turn:lanes*` dans Paris intra-muros | **503** |
+| Le long d'un trajet de 16,5 km à travers Paris | **30** chemins |
+| Manœuvres de ce trajet avec une affectation à moins de 60 m | **5 sur 17 (29 %)** |
+| Valeurs les plus fréquentes | `left|through|through`, `through|through;right`, `left;through|through;right` |
+| Valeur réelle du périphérique | `through|through|through|slight_right` et `|||slight_right|slight_right` |
+
+La couverture est PARTIELLE — sept manœuvres sur dix n'en ont pas. On montre
+quand on sait, on retombe sur le conseil de placement déduit (VOIE-1) sinon,
+et les deux ne se ressemblent pas à l'écran.
+
 ### CORRECTION DU 30/08 (2) : « numéro de sortie » et « destination » existent — dans OSM
 
 Deuxième note prise en défaut le même jour, et la même erreur de méthode :

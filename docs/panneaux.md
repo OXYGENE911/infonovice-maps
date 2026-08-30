@@ -75,9 +75,43 @@ Trois raisons de préférer le CSS à des images :
 | **Numéro de sortie** (« Sortie 14 ») | **LIVRÉ** (SORTIE-1) | pas dans le service d'itinéraire, mais dans OpenStreetMap : `ref` du nœud `motorway_junction` |
 | **Destination** (« Lyon, Évry ») | **LIVRÉ** (SORTIE-1) | étiquette `destination` des bretelles, « Lyon;Évry » |
 | **Flèches de voies** (où se placer) | **LIVRÉ** (VOIE-1) — voir ci-dessous | `nombre_de_voies` relevé sur `bdtopo-pgr`, recousu sur le tracé suivi |
+| **Affectation par voie** (ce que chaque voie autorise) | **LIVRÉ** (AFFECT-1) — voir ci-dessous | `turn:lanes` d'OpenStreetMap, sur 29 % des manœuvres mesurées |
 | **Schéma de rond-point** | **LIVRÉ** (ROND-1) — voir ci-dessous | le moteur n'émet toujours pas `roundabout` (revérifié sur les DEUX moteurs) : le schéma est dessiné d'après la géométrie |
 
 Le détail de chaque mesure est dans [`apis.md`](apis.md).
+
+### L'affectation par voie (AFFECT-1, livré le 30/08)
+
+Quand OpenStreetMap connaît le marquage, chaque file porte **ses** flèches et
+celles qui servent la manœuvre restent en clair : c'est le panneau des GPS du
+commerce, et cette fois la donnée le permet.
+
+D'où ça vient : de `turn:lanes`, l'étiquette standard du marquage au sol.
+**Ma note qui disait qu'elle n'existait pas était fausse** — elle décrivait le
+service d'itinéraire, pas OSM. Relevé le 30/08 : 503 chemins dans Paris
+intra-muros, 30 le long d'un trajet de 16,5 km à travers la ville, et
+**5 manœuvres sur 17 (29 %)** avec une affectation à moins de soixante mètres.
+
+Le format, tel qu'il est : `left|through|through;right` — une barre par voie,
+de gauche à droite, un point-virgule quand une voie autorise plusieurs
+mouvements. Quatre décisions :
+
+- **Une case vide vaut « tout droit », et seulement pour tout droit.** Sur le
+  périphérique, `|||slight_right|slight_right` se lit « trois voies qui
+  continuent, deux qui sortent » : la règle du marquage français veut qu'une
+  voie qui tourne soit fléchée. Mais pour un VIRAGE, une case vide ne dit
+  rien — on préfère alors ne rien montrer.
+- **On regroupe par côté, pas par mot exact.** Le moteur annonce « tournez à
+  droite » là où OSM peint `slight_right` : exiger le mot exact ferait taire
+  l'affichage précisément là où il sert.
+- **Le sens compte, et c'est le piège.** Sur une route à double sens,
+  `turn:lanes:forward` décrit les voies de qui suit le sens de numérisation
+  du chemin. Prendre la mauvaise, c'est afficher les voies du trafic d'en
+  face — pire qu'un écran vide. On compare donc notre cap au sien.
+- **Deux niveaux, jamais mélangés.** Quand l'affectation manque — sept fois
+  sur dix — on retombe sur le conseil de placement de VOIE-1, qui DÉDUIT un
+  côté et n'éclaire qu'une voie. L'un est relevé, l'autre déduit : ils ne se
+  ressemblent pas à l'écran.
 
 ### Le schéma de rond-point (ROND-1, livré le 30/08)
 

@@ -2559,6 +2559,7 @@ export class PanneauItineraire extends HTMLElement {
         bandeau.sorties = corridor.sorties;
         bandeau.destinations = corridor.destinations;
         bandeau.giratoires = corridor.giratoires;
+        bandeau.affectations = corridor.affectations;
       })
       .catch(() => { /* bénin : voir ci-dessus */ });
 

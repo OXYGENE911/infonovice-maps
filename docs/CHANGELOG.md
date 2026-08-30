@@ -2,6 +2,40 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.94.0] — 2026-08-30 — AFFECT-1 : l'affectation par voie (PR #122)
+
+Armelin, le 30/08 : « fais l'affectation par voie ».
+
+- **CHAQUE FILE PORTE SES FLÈCHES, et celles qui servent restent en clair.**
+  C'est le panneau des GPS du commerce — et cette fois la donnée le permet.
+- **TROISIÈME NOTE PRISE EN DÉFAUT DANS LA JOURNÉE, MÊME ERREUR.** Il était
+  écrit qu'« il n'existe pas de `turn:lanes` ici ». Vrai du service
+  d'itinéraire, faux d'OpenStreetMap, où c'est l'étiquette standard. Relevé :
+  503 chemins dans Paris intra-muros, 30 le long d'un trajet de 16,5 km, et
+  5 manœuvres sur 17 (29 %) avec une affectation à moins de 60 m.
+- **PLUSIEURS VOIES PEUVENT SERVIR**, ce que la déduction ne savait pas
+  faire : là où VOIE-1 disait « la plus à gauche », le marquage dit « les
+  deux premières ».
+- **UNE CASE VIDE VAUT « TOUT DROIT », ET SEULEMENT POUR TOUT DROIT.** Sur le
+  périphérique, `|||slight_right|slight_right` se lit « trois voies qui
+  continuent, deux qui sortent » : une voie qui tourne est fléchée, une voie
+  qui continue ne l'est pas toujours. Pour un virage, une case vide ne dit
+  rien — on ne montre alors rien.
+- **ON REGROUPE PAR CÔTÉ, PAS PAR MOT EXACT** : le moteur dit « tournez à
+  droite » là où OSM peint `slight_right`.
+- **LE SENS COMPTE, ET C'EST LE PIÈGE** : sur une route à double sens,
+  prendre `turn:lanes:forward` au lieu de `:backward` afficherait les voies
+  du trafic d'en face — pire qu'un écran vide. On compare notre cap au sien.
+- **DEUX NIVEAUX, JAMAIS MÉLANGÉS** : sans affectation — sept fois sur dix —
+  on retombe sur le conseil de placement de VOIE-1, qui DÉDUIT un côté et
+  n'éclaire qu'une voie. L'un est relevé, l'autre déduit.
+- **AUCUN APPEL DE PLUS** : `turn:lanes` et ses deux variantes de sens
+  entrent dans la même requête Overpass que tout le reste du corridor.
+
+Tests : 22 unitaires (découpage du format, familles de mouvements, cases
+vides, sens de parcours, chevauchement de tronçons), 6 E2E dont deux sur le
+repli. 777 unitaires, 245 E2E.
+
 ## [0.93.0] — 2026-08-30 — ROND-1 : le schéma de rond-point (PR #121)
 
 Armelin, le 29/08 : « pourquoi pas afficher des schémas complexes pour

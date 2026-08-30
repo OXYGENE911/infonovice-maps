@@ -23,12 +23,14 @@ import {
   type Sortie, type DestinationBretelle,
 } from './sorties';
 import { versGiratoires, type Giratoire } from './giratoire';
+import { versAffectations, type AffectationTrajet } from './affectation';
 
 export interface Corridor {
   limites: LimiteTrajet[];
   sorties: Sortie[];
   destinations: DestinationBretelle[];
   giratoires: Giratoire[];
+  affectations: AffectationTrajet[];
 }
 
 /** Le corps de la requête unique — PURE. */
@@ -50,6 +52,12 @@ export function requeteCorridor(trace: readonly [number, number][]): string {
        18 Ko). Sans les branches, on saurait dessiner l'anneau mais pas
        compter les sorties. */
     + `way(around:40,${points})[junction=roundabout]->.anneaux;`
+    /* L'AFFECTATION PAR VOIE, dans la même union : `turn:lanes` et ses deux
+       variantes de sens. Vingt-cinq mètres comme les limites — on cherche LA
+       chaussée qu'on suit, pas la contre-allée. */
+    + `way(around:25,${points})["turn:lanes"];`
+    + `way(around:25,${points})["turn:lanes:forward"];`
+    + `way(around:25,${points})["turn:lanes:backward"];`
     + ');out geom tags;'
     + 'node(w.anneaux)->.bords;way(bn.bords)[highway];out geom tags;';
 }
@@ -70,12 +78,13 @@ export function versCorridor(brut: unknown, trace: readonly [number, number][]):
     sorties: versSorties(liste, trace),
     destinations: versDestinations(liste, trace),
     giratoires: versGiratoires(liste, trace),
+    affectations: versAffectations(liste, trace),
   };
 }
 
 /** Vide — ce que rend un corridor dont on n'a rien pu relever. */
 export const CORRIDOR_VIDE: Corridor = {
-  limites: [], sorties: [], destinations: [], giratoires: [],
+  limites: [], sorties: [], destinations: [], giratoires: [], affectations: [],
 };
 
 /**
