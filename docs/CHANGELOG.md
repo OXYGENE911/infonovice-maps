@@ -2,6 +2,46 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.92.0] — 2026-08-30 — SORTIE-1 : le numéro de sortie et la destination (PR #120)
+
+Armelin, le 30/08, après avoir lu le tableau de ce qui manquait : « fais le
+numéro de sortie et la destination. »
+
+- **LE PANNEAU PORTE « SORTIE 14 » ET LES VILLES DESSERVIES.** « Lyon · Évry
+  · Fontainebleau », comme sur la tôle.
+- **UNE MESURE EN CORRIGE UNE AUTRE, POUR LA DEUXIÈME FOIS DANS LA JOURNÉE.**
+  Il était écrit que ces deux données étaient « absentes ». C'était vrai du
+  service d'itinéraire, et faux d'OpenStreetMap — que ce projet consomme
+  déjà pour les limites de vitesse. La note avait cherché la donnée là où
+  elle n'était pas. Relevé le 30/08 sur un corridor Paris → Melun : 18 nœuds
+  de sortie numérotés sur 46, et 82 bretelles annonçant leurs villes.
+- **DEUX OBJETS, DEUX LECTURES.** Le numéro est le `ref` du nœud de
+  divergence, POSÉ sur la manœuvre (fenêtre symétrique de 150 m) ; les
+  villes sont l'étiquette `destination` de la bretelle, qui COMMENCE sur la
+  manœuvre (fenêtre vers l'avant).
+- **TROIS VILLES AU PLUS.** Les bretelles en annoncent jusqu'à six ; un
+  panneau réel en aligne trois ou quatre. Les trois premières sont les plus
+  structurantes — c'est l'ordre du panneau qu'OpenStreetMap reprend.
+- **À DÉFAUT DE VILLES, LE NOM DE LA SORTIE** : « Châtillon-la-Borde » dit
+  où l'on va, et vaut mieux que le vide.
+- **LA COUVERTURE EST PARTIELLE, ET L'APPLICATION SE TAIT.** Un numéro
+  absent n'est pas un numéro faux : c'est un panneau qui n'en porte pas.
+- **UN SEUL APPEL OVERPASS POUR TOUT LE CORRIDOR** (nouveau
+  `lib/corridor.ts`) : limites de vitesse, sorties et destinations vivent
+  toutes dans OpenStreetMap le long du même tracé. Les demander séparément
+  ferait deux requêtes de vingt secondes à un service tenu par des
+  bénévoles — ce que le CLAUDE.md interdit.
+- **`nat_ref` ÉCARTÉ APRÈS VÉRIFICATION** : présent sur 82 % des bretelles,
+  il ressemble à un numéro mais n'en est pas un (`89A901905CD_1D`).
+- **UN DÉFAUT TROUVÉ PAR UN TEST** : un `null` dans la réponse d'Overpass
+  faisait tomber le relevé entier. La donnée vient d'un service ; elle ne
+  doit jamais lever.
+
+Tests : 19 unitaires (couture des deux objets, refus d'un `ref` qui n'est pas
+un numéro, coupe à trois villes, fenêtres, requête unique, tri de la
+réponse), 6 E2E dont deux qui vérifient qu'Overpass n'est appelé QU'UNE FOIS
+et que la requête demande bien les trois relevés. 737 unitaires, 233 E2E.
+
 ## [0.91.0] — 2026-08-30 — EURO-1 : le cartouche vert européen (PR #119)
 
 Le dernier cartouche de l'IISR que la donnée permettait, et qui attendait

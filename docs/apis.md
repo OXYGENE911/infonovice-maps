@@ -725,10 +725,39 @@ avant d'écrire la moindre ligne :
 | Les VOIES d'une intersection (où se placer) | **aucun champ de voies** dans la réponse — cherché sur deux itinéraires complets, zéro occurrence de `lane`/`nb_voies` | impossible : on ne dessine pas ce qu'on ne sait pas |
 | Le ROND-POINT et son numéro de sortie | le décodeur du projet sait lire `instruction.exit`… mais **le moteur n'émet jamais `roundabout` ni `rotary`** : quatre itinéraires traversant des giratoires (rocade de Rennes, Niort, Chartres, Vannes — 63 étapes) rendent `turn`, `fork`, `continue`, `end of road`, jamais un rond-point | écarté : le schéma serait du code mort |
 | Le NUMÉRO de la route (l'écusson des panneaux) | `attributes.name.cpx_numero` — relevé « D39 », « D415 », « D606 » | **LIVRÉ** (GUID-2) : cartouche coloré par classe de route |
+| Le NUMÉRO DE SORTIE et la DESTINATION | rien dans le service d'itinéraire — mais **tout dans OpenStreetMap** (voir la correction ci-dessous) | **LIVRÉ** (SORTIE-1) |
 
 Ce qui reste possible sans nouvelle donnée : la flèche de manœuvre (livrée),
 l'écusson (livré), et la couleur de classe (livrée). Le reste attend un
 moteur qui le publie — pas une invention de notre part.
+
+### CORRECTION DU 30/08 (2) : « numéro de sortie » et « destination » existent — dans OSM
+
+Deuxième note prise en défaut le même jour, et la même erreur de méthode :
+elle disait « absent » après avoir cherché dans le SERVICE D'ITINÉRAIRE, sans
+regarder OpenStreetMap — que ce projet consomme déjà pour les limites de
+vitesse. Relevé le 30/08 sur un corridor Paris → Melun (71 km, un appel
+Overpass de 19 s, rayon 40 m autour du tracé décimé) :
+
+| Ce qu'il faut | Où c'est | Couverture relevée |
+|---|---|---|
+| **Numéro de sortie** | nœud `highway=motorway_junction`, étiquette `ref` | 18 nœuds numérotés sur 46 relevés — « 5 », « 1 », « 16 », « 14a » |
+| **Nom de la sortie** | même nœud, étiquette `name` | « Châtillon-la-Borde », « Sens » |
+| **Destinations** | bretelle `*_link`, étiquette `destination` | 82 bretelles sur le corridor ; « Lyon;Évry », « Troyes;Corbeil-Essonnes;Sénart;Melun » |
+| **Route rejointe** | même bretelle, `destination:ref` | « A 6a », « N 104 » |
+| Couleur réglementaire par destination | `destination:colour` | **4 bretelles sur 437** dans le carré mesuré — trop rare pour être utilisée ; la couleur se déduit de la classe (lib/panneau.ts) |
+
+Ce qui a été ÉCARTÉ après vérification : `nat_ref`, présent sur 82 % des
+bretelles, ressemble à un numéro mais n'en est pas un — ce sont des
+identifiants de gestionnaire (`89A901905CD_1D`).
+
+La couverture est PARTIELLE, et c'est la règle de la maison qui tranche : on
+affiche ce qu'on a, on se tait sur le reste. Un numéro de sortie absent n'est
+pas un numéro faux ; c'est un panneau qui n'en porte pas.
+
+**UN SEUL APPEL** : ces éléments voyagent dans la même requête Overpass que
+les limites de vitesse (`lib/corridor.ts`). Overpass est tenu par des
+bénévoles, et le CLAUDE.md du projet en fait une règle.
 
 ### CORRECTION DU 30/08 : la ligne « aucun champ de voies » était fausse
 

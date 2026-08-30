@@ -2897,3 +2897,26 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
   font: 700 11.5px var(--police); letter-spacing: .02em;
   text-align: center;
 }
+
+/* ==========================================================================
+   SORTIE-1 — LE NUMÉRO DE SORTIE ET LES VILLES DESSERVIES (Armelin, 30/08 :
+   « fais le numéro de sortie et la destination »)
+   ========================================================================== */
+/* LE NUMÉRO EST UN ENCART DANS LE PANNEAU, comme sur la route : encre du
+   panneau sur fond d'encre atténuée — il ne prend pas une couleur à lui,
+   qui voudrait dire autre chose (le rouge est un numéro de route). */
+.bg-sortie {
+  flex: 0 0 auto; align-self: flex-start;
+  padding: 2px 7px; border-radius: 4px;
+  border: 1.5px solid var(--panneau-encre); color: var(--panneau-encre);
+  font: 700 11.5px var(--police); white-space: nowrap;
+}
+.bg-sortie[hidden] { display: none; }
+/* LES VILLES SUR LEUR PROPRE LIGNE : c'est le contenu principal d'un vrai
+   panneau de direction, et le point médian les sépare comme sur la tôle. */
+.bg-destination {
+  flex-basis: 100%; order: 8; margin: 3px 0 0 48px;
+  font: 600 13px/1.25 var(--police); color: var(--panneau-encre);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bg-destination[hidden] { display: none; }

@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #120 — SORTIE-1, le numéro de sortie et la destination (demande du
+      30/08) : relevés dans OpenStreetMap, où ils existent — la note qui les
+      disait absents avait cherché dans le service d'itinéraire. Un SEUL
+      appel Overpass porte désormais limites, sorties et destinations
+      (lib/corridor.ts) : le service est tenu par des bénévoles.
 - [x] PR #119 — EURO-1, le cartouche vert européen (type E41) : porté par la
       MÊME requête que les voies, recousu de la même façon ; « E15/E50 »
       donne deux cartouches, deux au plus s'affichent. Il s'ajoute au

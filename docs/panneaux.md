@@ -72,12 +72,40 @@ Trois raisons de préférer le CSS à des images :
 | Ce qu'il faudrait | État | Raison |
 |---|---|---|
 | Cartouche **vert européen** (E41) | **LIVRÉ** (EURO-1) | `cpx_numero_route_europeenne` relevé par la même seconde requête que les voies, recousu de la même façon |
-| **Numéro de sortie** (« Sortie 14 ») | absent | le moteur n'émet pas d'`exit` sur les bretelles d'autoroute |
-| **Destination** (« Lyon, Dijon ») | absent | aucun champ de destination dans la réponse |
+| **Numéro de sortie** (« Sortie 14 ») | **LIVRÉ** (SORTIE-1) | pas dans le service d'itinéraire, mais dans OpenStreetMap : `ref` du nœud `motorway_junction` |
+| **Destination** (« Lyon, Évry ») | **LIVRÉ** (SORTIE-1) | étiquette `destination` des bretelles, « Lyon;Évry » |
 | **Flèches de voies** (où se placer) | **LIVRÉ** (VOIE-1) — voir ci-dessous | `nombre_de_voies` relevé sur `bdtopo-pgr`, recousu sur le tracé suivi |
 | **Schéma de rond-point** | écarté | le moteur n'émet jamais `roundabout` (mesuré sur quatre giratoires, 63 étapes) |
 
 Le détail de chaque mesure est dans [`apis.md`](apis.md).
+
+### Le numéro de sortie et les villes desservies (SORTIE-1, livré le 30/08)
+
+Le panneau porte, comme sur la route, un encart **« Sortie 14 »** et la liste
+des villes desservies — **« Lyon · Évry · Fontainebleau »**.
+
+D'où ça vient : d'**OpenStreetMap**, que ce projet consomme déjà pour les
+limites de vitesse. Le numéro est le `ref` du nœud `highway=motorway_junction`
+posé au point où la bretelle se détache ; les villes sont l'étiquette
+`destination` de la bretelle elle-même (« Lyon;Évry »). Ce sont deux objets
+différents, lus de deux façons : le nœud est POSÉ sur la manœuvre (fenêtre
+symétrique de 150 m), la bretelle COMMENCE dessus (fenêtre vers l'avant).
+
+Trois décisions de fond :
+
+- **Trois villes au plus.** Les bretelles en annoncent jusqu'à six ; un
+  panneau réel en aligne trois ou quatre, et le cartouche fait 300 px. Les
+  trois premières sont les plus structurantes — c'est l'ordre du panneau
+  qu'OpenStreetMap reprend.
+- **À défaut de villes, le nom de la sortie.** « Châtillon-la-Borde » dit où
+  l'on va : mieux vaut le nom que le vide.
+- **La couverture est partielle, et l'application se tait.** 18 nœuds
+  numérotés sur 46 relevés (mesure du 30/08). Un numéro absent n'est pas un
+  numéro faux ; c'est un panneau qui n'en porte pas.
+
+Et **un seul appel** : ces relevés voyagent dans la même requête Overpass que
+les limites de vitesse (`lib/corridor.ts`) — le service est tenu par des
+bénévoles.
 
 ### Le cartouche vert européen (EURO-1, livré le 30/08)
 
