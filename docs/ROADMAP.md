@@ -534,6 +534,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #111 — ZOOM-1, le zoom d'approche (demande du 30/08) : 17,2 sous
+      260 m d'un vrai virage, retour à la vue TROUVÉE en entrant (pas à un
+      défaut), hystérésis 260/420 contre le battement du récepteur.
 - [x] PR #109 — NAV-4, la barre s'annonce et se tait de loin (deux retours du
       30/08) : poignée + chevron pivotant (rien ne disait qu'on pouvait
       déplier), travaux et prochain arrêt annoncés à 10 km au lieu de 50 —

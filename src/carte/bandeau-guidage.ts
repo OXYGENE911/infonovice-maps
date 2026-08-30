@@ -26,7 +26,7 @@ import {
 } from '../lib/orientation';
 import {
   etatGuidage, distanceEnMots, heureArriveeEstimee, type OptionsGuidage,
-  partiAContresens,
+  partiAContresens, approcheManoeuvre,
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
 import { chargerCommodites, ErreurCommodites, TYPES_COMMODITE, type Commodite } from '../lib/commodites';
@@ -62,6 +62,10 @@ export interface DemarrageGuidage extends OptionsGuidage {
 
 /** Le zoom du suivi : assez près pour lire la rue, assez loin pour anticiper. */
 const ZOOM_SUIVI = 15.5;
+/* À L'INTERSECTION, ON SE RAPPROCHE. 17,2 montre les voies et l'amorce des
+   rues qui partent — de quoi choisir la bonne sans deviner. Au-delà, on ne
+   voit plus d'où l'on vient. */
+const ZOOM_APPROCHE = 17.2;
 
 /* L'INCLINAISON DU SUIVI — la « vue 3D » demandée le 27/08/2026, ESSAYÉE
    AVANT D'ÊTRE PROMISE (le cadrage l'exigeait) : capture du fond Plan IGN
@@ -156,6 +160,11 @@ export class BandeauGuidage extends HTMLElement {
      mitraille pendant qu'on cherche une sortie serait pire que l'ancien
      message. */
   #horsRouteDepuis: number | null = null;
+  /* LE ZOOM D'APPROCHE (ZOOM-1, 30/08). On garde le zoom qu'on a TROUVÉ en
+     entrant dans l'approche, et on le rend en sortant : rendre un zoom
+     « par défaut » effacerait le réglage que l'usager venait de poser. */
+  #zoomAvantApproche: number | null = null;
+
   /** Le dernier fixe reçu — rejoué quand l'affichage change sans lui. */
   #derniersCoords: { longitude: number; latitude: number;
     speed?: number | null; heading?: number | null } | null = null;
@@ -491,6 +500,7 @@ export class BandeauGuidage extends HTMLElement {
     this.#horsRouteDepuis = null;
     this.#dernierRecalculMs = Number.NEGATIVE_INFINITY;
     this.#avancementMax = 0;
+    this.#zoomAvantApproche = null;
     const copilote = this.querySelector<HTMLElement>('.bg-copilote');
     if (copilote) copilote.hidden = true;
     this.querySelector<HTMLElement>('.bg-copilote-corps')?.replaceChildren();
@@ -687,9 +697,28 @@ export class BandeauGuidage extends HTMLElement {
          précédent et FIGE ce qu'il ne nomme pas — le premier fixe arrivait
          pendant l'animation d'inclinaison du démarrage et la gelait à 2°.
          Mesuré par le parcours E2E avant d'être compris. */
-      this.#carte?.easeTo({
+      /* ON SE RAPPROCHE À L'INTERSECTION, ET L'ON REVIENT APRÈS (ZOOM-1,
+         demande d'Armelin du 30/08). La décision est pure et à deux seuils
+         (voir `approcheManoeuvre`) ; ce qui vit ici, c'est la MÉMOIRE du
+         zoom d'avant — on le rend tel qu'on l'a trouvé, plutôt que
+         d'imposer une valeur par défaut qui effacerait le réglage de
+         l'usager. */
+      /* LA CARTE EST LIÉE ICI, ET ON NE SORT PAS SANS ELLE : un `return`
+         sauterait tout ce qui suit — instruction, chiffres, barre du trajet
+         — alors que rien de cela ne dépend d'elle. */
+      const carte = this.#carte;
+      const dedans = this.#zoomAvantApproche !== null;
+      const approche = !e.horsRoute
+        && approcheManoeuvre(e.jusquALaManoeuvreM, e.manoeuvre?.manoeuvre ?? null, dedans);
+      if (approche && !dedans && carte) this.#zoomAvantApproche = carte.getZoom();
+      const zoomRendu = this.#zoomAvantApproche;
+      if (!approche && dedans) this.#zoomAvantApproche = null;
+
+      carte?.easeTo({
         center: [lon, lat],
-        zoom: Math.max(this.#carte.getZoom(), ZOOM_SUIVI),
+        zoom: approche
+          ? Math.max(carte?.getZoom() ?? 0, ZOOM_APPROCHE)
+          : (zoomRendu ?? Math.max(carte?.getZoom() ?? 0, ZOOM_SUIVI)),
         pitch: this.#en3D ? PITCH_SUIVI : 0,
         /* Nord : cap zéro tenu. Cap : le cap lissé. Libre : on ne nomme PAS
            bearing — easeTo fige ce qu'il ne nomme pas, et c'est ici une

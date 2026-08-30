@@ -1086,3 +1086,79 @@ test('NAV-4 : travaux et recharge s’annoncent à DIX kilomètres — et se lis
     return bandeau.locator('.bg-trafic').textContent();
   }, { timeout: 15_000 }).toContain('Travaux');
 });
+
+test('ZOOM-1 : la carte se rapproche à l’intersection, et rend la vue d’avant', async ({ page }) => {
+  /* Armelin, le 30/08 : « est-ce que l'algorithme peut effectuer
+     automatiquement un zoom lors de l'arrivée à une intersection […] pour
+     revenir ensuite à la vue initiale quand l'obstacle est passé ? » Oui —
+     et c'est la VUE D'AVANT qui revient, pas une valeur par défaut : le
+     réglage que l'usager vient de poser lui appartient. */
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null,
+        speed: null, heading: null, ...c } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+
+  /* La feuille simulée tourne à droite après 200 km : on avance jusqu'à
+     200 m de ce virage, puis on le dépasse. Les fractions sont celles du
+     tracé simulé (390 km de Paris à Lyon). */
+  const zoom = (): Promise<number> => page.evaluate(() =>
+    (window as unknown as { __carte: { getZoom(): number } }).__carte.getZoom());
+  const avancerA = async (part: number): Promise<void> => {
+    await page.evaluate((p) => {
+      (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+        longitude: 2.3522 + 2.4835 * p, latitude: 48.8566 - 3.0926 * p, speed: 25,
+      });
+    }, part);
+  };
+
+  /* LOIN DU VIRAGE : la vue de route. ON ATTEND QU'ELLE SOIT PRISE — au
+     démarrage la carte montre encore le trajet entier (zoom ~6), et
+     relever cette valeur-là ferait comparer la fin à un état transitoire. */
+  await avancerA(0.25);
+  await expect.poll(zoom, { timeout: 10_000 }).toBeGreaterThan(15);
+  const vueDeRoute = await zoom();
+  expect(vueDeRoute, 'la vue de suivi devrait rester une vue de route')
+    .toBeLessThan(16.5);
+
+  /* ON S'APPROCHE DU VIRAGE JUSQU'À CE QUE LE BANDEAU L'ANNONCE EN MÈTRES.
+     Calculer la fraction exacte serait fragile : la longueur RÉELLE du
+     tracé simulé n'est pas celle que la fixture déclare, et deux cents
+     mètres d'écart suffisent à basculer d'une étape à l'autre. On avance
+     donc jusqu'à ce que l'application dise elle-même « dans N m ». */
+  const distance = page.locator('.bg-distance');
+  /* LE PAS EST FIN — la fenêtre est étroite : mesuré, on passe de « dans
+     350 m » à « dans 250 m » entre 0,5100 et 0,5102 du tracé, et l'étape
+     bascule dès 0,5108. Un pas trop gros saute l'approche entière. */
+  let part = 0.5090;
+  await expect.poll(async () => {
+    part += 0.0002;
+    await avancerA(part);
+    /* ON LIT LA DISTANCE ANNONCÉE, EN MÈTRES. « dans 350 m » satisfait un
+       motif « des mètres » sans être une APPROCHE : c'est le nombre qui
+       décide, pas l'unité. Au-delà de mille, l'application écrit des
+       kilomètres — donc pas encore. */
+    const texte = (await distance.textContent()) ?? '';
+    const m = /dans (\d+) m$/.exec(texte);
+    return m ? Number(m[1]) : 99_999;
+  }, { timeout: 20_000 }).toBeLessThan(250);
+
+  // À CETTE DISTANCE, la carte s'est resserrée.
+  await expect.poll(zoom, { timeout: 10_000 }).toBeGreaterThan(17);
+
+  // PASSÉ LE VIRAGE, à plus de 420 m : la vue d'avant revient.
+  await avancerA(0.53);
+  await expect.poll(zoom, { timeout: 10_000 }).toBeLessThan(vueDeRoute + 0.6);
+});

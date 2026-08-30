@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.83.0] — 2026-08-30 — ZOOM-1 : la carte se rapproche à l'intersection (PR #111)
+
+« Est-ce que l'algorithme peut effectuer automatiquement un zoom lors de
+l'arrivée à une intersection […] pour revenir ensuite à la vue initiale
+quand l'obstacle est passé ? » (Armelin, 30/08). Oui.
+
+- **À 260 m d'un virage, la carte passe au zoom 17,2** — de quoi voir les
+  voies et l'amorce des rues qui partent, sans perdre d'où l'on vient.
+- **C'est la VUE D'AVANT qui revient**, pas une valeur par défaut : le zoom
+  trouvé en entrant dans l'approche est gardé et rendu en sortant. Le
+  réglage que l'usager vient de poser lui appartient.
+- **DEUX SEUILS, ET C'EST NÉCESSAIRE** : on entre à 260 m, on ne ressort
+  qu'au-delà de 420. Avec un seuil unique, l'imprécision du récepteur
+  autour de la limite ferait entrer et sortir la carte plusieurs fois par
+  seconde — un battement insupportable au volant. Un test rejoue exactement
+  cette suite de mesures tremblantes.
+- **Seules les vraies manœuvres comptent** : virages, ronds-points,
+  arrivée. « Tout droit » n'en est pas une — zoomer pour une ligne droite
+  ferait respirer la carte sans raison.
+
+650 tests unitaires (+5), 203 parcours E2E (+1).
+
 ## [0.82.0] — 2026-08-30 — NAV-4 : la barre dit qu'elle s'ouvre, et se tait de loin (PR #109)
 
 Deux retours d'Armelin du 30/08 sur la barre de suivi.

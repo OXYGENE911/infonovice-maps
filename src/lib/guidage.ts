@@ -44,6 +44,41 @@ export const ECART_HORS_ROUTE_M = 80;
  * pas du bruit de récepteur (il se compte en dizaines de mètres) : c'est
  * un demi-tour.
  */
+/* LES MANŒUVRES QUI MÉRITENT QU'ON SE RAPPROCHE. « Tout droit » n'en est
+   pas une : zoomer pour une ligne droite ferait respirer la carte sans
+   raison, et l'on perdrait la vue d'ensemble au moment où elle sert. */
+const MANOEUVRES_SERREES = new Set<string>([
+  'right', 'left', 'sharp right', 'sharp left', 'slight right', 'slight left',
+  'uturn', 'rond-point', 'arrivee',
+]);
+
+/** On se rapproche à cette distance de la manœuvre. */
+export const APPROCHE_M = 260;
+/** …et l'on ressort au-delà de celle-ci — l'écart évite le clignotement. */
+export const SORTIE_APPROCHE_M = 420;
+
+/**
+ * Faut-il resserrer la carte sur la manœuvre qui vient ? — PURE.
+ *
+ * LA DEMANDE (Armelin, 30/08) : « est-ce que l'algorithme peut effectuer
+ * automatiquement un zoom lors de l'arrivée à une intersection ou changement
+ * d'autoroute ou carrefour complexe pour revenir ensuite à la vue initiale
+ * quand l'obstacle est passé ? »
+ *
+ * DEUX SEUILS, ET C'EST NÉCESSAIRE. Avec un seuil unique, la moindre
+ * imprécision du récepteur autour de la limite ferait entrer et sortir la
+ * carte du zoom plusieurs fois par seconde — un battement insupportable au
+ * volant. On entre à 260 m, on ne ressort qu'au-delà de 420 : l'état
+ * courant fait partie de la décision, et c'est ce qui la stabilise.
+ */
+export function approcheManoeuvre(
+  distanceM: number, manoeuvre: string | null, dedans: boolean,
+): boolean {
+  if (manoeuvre === null || !MANOEUVRES_SERREES.has(manoeuvre)) return false;
+  if (!Number.isFinite(distanceM) || distanceM < 0) return false;
+  return dedans ? distanceM < SORTIE_APPROCHE_M : distanceM < APPROCHE_M;
+}
+
 export function partiAContresens(
   avancementM: number, maxAtteintM: number, margeM = 150,
 ): boolean {
