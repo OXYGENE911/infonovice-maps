@@ -45,6 +45,12 @@ DÉFAUT PAYÉ, TROISIÈME DE LA SÉRIE : `.poi-etat` nommait déjà autre chose
 dans le panneau des services, et un parcours a buté dessus avant l'usager.
 Après `.bg-voie` et `recharge-reserve`, le préfixe se choisit d'avance.
 
+DEUXIÈME DÉFAUT, LU DANS LA CI DE main : le parcours des lieux d'exception
+attendait un témoin d'attente qui avait déjà cédé la place au résultat quand
+l'assertion arrivait — la CI a rougi sur main le 30/08 pour cette seule
+raison. Le parcours tient désormais la réponse simulée, mesure, puis relâche :
+on ne court pas après un état fugace en espérant arriver à temps.
+
 ## [0.104.0] — 2026-08-30 — COPILOTE-1 : le copilote montre au lieu de faire cliquer (PR #132)
 
 - **LES COMMODITÉS SONT STRUCTURÉES, comme dans la fiche de borne.** Armelin :
