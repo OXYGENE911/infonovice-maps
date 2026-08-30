@@ -40,6 +40,10 @@ import {
   giratoireA, libelleRang, libelleRangCourt, type Giratoire,
 } from '../lib/giratoire';
 import {
+  affectationA, voiesPour, libelleAffectation,
+  type Affectation, type AffectationTrajet,
+} from '../lib/affectation';
+import {
   voiesA, cotePlacement, voieConseillee, libellePlacement, europeA,
   type ReleveVoies, type ReleveEurope,
 } from '../lib/voies';
@@ -98,6 +102,33 @@ const ANNONCE_M = 10_000;
    arriverait avant la sortie précédente ; plus tard, elle arriverait après
    le trait continu. */
 const SEUIL_VOIES_M = 900;
+
+/**
+ * La flèche d'un mouvement de voie, en SVG — PURE.
+ *
+ * ELLES SONT DESSINÉES, PAS ÉCRITES : « through;right » en toutes lettres ne
+ * se lit pas à quatre-vingt-dix kilomètres-heure. Le vocabulaire est celui
+ * d'OpenStreetMap ; ce qu'on ne sait pas dessiner devient une flèche droite,
+ * qui est le mouvement par défaut d'une voie.
+ */
+function flecheDeVoie(mouvement: string): string {
+  const tige = 'M9 17V9';
+  const pointe = 'M6.2 11.4 9 8.4l2.8 3';
+  const formes: Record<string, string> = {
+    through: `<path d="${tige}"/><path d="${pointe}"/>`,
+    right: '<path d="M9 17v-4a2 2 0 0 1 2-2h3"/><path d="M12.2 8.8 15.2 11l-3 2.2"/>',
+    left: '<path d="M9 17v-4a2 2 0 0 0-2-2H4"/><path d="M6.8 8.8 3.8 11l3 2.2"/>',
+    slight_right: '<path d="M8 17v-3.5L13 9"/><path d="M9.8 8.2 13.6 8.4l.2 3.8"/>',
+    slight_left: '<path d="M10 17v-3.5L5 9"/><path d="M8.2 8.2 4.4 8.4l-.2 3.8"/>',
+    sharp_right: '<path d="M9 17v-5a1.6 1.6 0 0 1 1.6-1.6H14"/><path d="M11.6 8 14.6 10.4l-3 2.2"/>',
+    sharp_left: '<path d="M9 17v-5a1.6 1.6 0 0 0-1.6-1.6H4"/><path d="M6.4 8 3.4 10.4l3 2.2"/>',
+    reverse: '<path d="M11 17v-4a2 2 0 0 0-4 0v1"/><path d="M5.2 12.2 7 14.4l1.8-2.2"/>',
+  };
+  const merge = { merge_to_right: 'slight_right', merge_to_left: 'slight_left' } as const;
+  const cle = merge[mouvement as keyof typeof merge] ?? mouvement;
+  return `<svg viewBox="0 0 18 20" aria-hidden="true" focusable="false">`
+    + `${formes[cle] ?? formes['through']}</svg>`;
+}
 
 /**
  * Le dessin d'un giratoire, en SVG — PURE.
@@ -165,6 +196,17 @@ export class BandeauGuidage extends HTMLElement {
      Paris-Lyon (mesuré le 30/08). Tant qu'elle n'est pas là, ou si elle
      échoue, la chaussée ne se dessine pas — le suivi vaut sans elle. */
   #voies: readonly ReleveVoies[] = [];
+
+  /* L'AFFECTATION PAR VOIE — relevée par le MÊME appel Overpass. Quand elle
+     existe (29 % des manœuvres mesurées le 30/08), elle REMPLACE le conseil
+     de placement : savoir ce que chaque voie autorise vaut mieux que déduire
+     un côté. */
+  #affectations: readonly AffectationTrajet[] = [];
+
+  set affectations(a: readonly AffectationTrajet[]) {
+    this.#affectations = a;
+    if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+  }
 
   /* LES GIRATOIRES — relevés par le MÊME appel Overpass, et rejoués de la
      même façon quand ils arrivent. */
@@ -816,18 +858,34 @@ export class BandeauGuidage extends HTMLElement {
   #majVoies(e: EtatGuidage): void {
     const boite = this.querySelector('.bg-chaussee') as HTMLElement | null;
     if (!boite) return;
-    const cote = e.horsRoute ? null : cotePlacement(e.manoeuvre?.manoeuvre ?? 'straight');
-    const voies = e.horsRoute ? null : voiesA(this.#voies, e.avancementM);
+    const manoeuvre = e.manoeuvre?.manoeuvre ?? 'straight';
+    const trop = e.horsRoute || e.jusquALaManoeuvreM > SEUIL_VOIES_M;
+
+    /* D'ABORD CE QU'ON SAIT, ENSUITE CE QU'ON DÉDUIT (AFFECT-1, 30/08).
+       L'affectation par voie dit ce que CHAQUE voie autorise — c'est le vrai
+       panneau. Elle ne couvre que 29 % des manœuvres (mesuré le 30/08) :
+       ailleurs, on retombe sur le conseil de placement, qui déduit un côté
+       de la manœuvre. Deux niveaux d'information, jamais mélangés. */
+    const affectation = trop ? null : affectationA(this.#affectations, e.avancementM);
+    const retenues = affectation ? voiesPour(affectation, manoeuvre) : [];
+    if (affectation && retenues.length > 0) {
+      this.#poserFiles(boite, affectation, retenues);
+      return;
+    }
+
+    const cote = trop ? null : cotePlacement(manoeuvre);
+    const voies = trop ? null : voiesA(this.#voies, e.avancementM);
     const conseillee = voies === null ? null : voieConseillee(voies, cote);
-    if (voies === null || conseillee === null || e.jusquALaManoeuvreM > SEUIL_VOIES_M) {
+    if (voies === null || conseillee === null) {
       boite.hidden = true;
       boite.replaceChildren();
+      delete boite.dataset['etat'];
       return;
     }
     /* ON NE REDESSINE QUE SI QUELQUE CHOSE A CHANGÉ : le GPS bat toutes les
        secondes, et remplacer les mêmes cinq éléments à chaque fixe ferait
        clignoter la chaussée sous les yeux. */
-    const signature = `${voies}-${conseillee}`;
+    const signature = `deduit-${voies}-${conseillee}`;
     if (boite.dataset['etat'] === signature) return;
     boite.dataset['etat'] = signature;
     boite.hidden = false;
@@ -844,6 +902,35 @@ export class BandeauGuidage extends HTMLElement {
       barres.push(barre);
     }
     boite.replaceChildren(...barres);
+  }
+
+  /**
+   * Les files avec leurs flèches — le vrai panneau d'affectation (AFFECT-1).
+   *
+   * CHAQUE VOIE PORTE CE QU'ELLE AUTORISE, et celles qui servent la manœuvre
+   * restent en clair pendant que les autres s'éteignent. C'est ce que
+   * montrent les GPS du commerce, et cette fois la donnée le permet : elle
+   * vient de `turn:lanes`, le marquage relevé par OpenStreetMap — pas d'une
+   * déduction.
+   */
+  #poserFiles(boite: HTMLElement, voies: Affectation, retenues: readonly number[]): void {
+    const signature = `affecte-${voies.map((v) => v.join('+')).join('|')}-${retenues.join(',')}`;
+    if (boite.dataset['etat'] === signature) return;
+    boite.dataset['etat'] = signature;
+    boite.hidden = false;
+    boite.setAttribute('aria-label', libelleAffectation(voies, retenues));
+    boite.replaceChildren(...voies.map((mouvements, i) => {
+      const file = document.createElement('span');
+      file.className = 'bg-file bg-file-fleches';
+      file.setAttribute('aria-hidden', 'true');
+      if (retenues.includes(i + 1)) file.dataset['conseillee'] = 'oui';
+      /* UNE VOIE NON PEINTE RESTE UNE VOIE : on dessine alors la flèche
+         droite, qui est ce qu'elle autorise en pratique — la règle du
+         marquage français veut qu'une voie qui tourne soit fléchée. */
+      const dessins = mouvements.length === 0 ? ['through'] : mouvements;
+      file.innerHTML = dessins.map(flecheDeVoie).join('');
+      return file;
+    }));
   }
 
   /**

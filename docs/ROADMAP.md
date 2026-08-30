@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #122 — AFFECT-1, l'affectation par voie (demande du 30/08) :
+      `turn:lanes` d'OpenStreetMap — la note qui la disait inexistante
+      décrivait le service d'itinéraire, pas OSM. Chaque file porte ses
+      flèches, plusieurs peuvent servir, et le repli déduit de VOIE-1 reste
+      pour les sept manœuvres sur dix qui n'ont pas de marquage relevé.
 - [x] PR #121 — ROND-1, le schéma de rond-point (demandes des 29 et 30/08) :
       le moteur ne nomme jamais les giratoires (revérifié sur les DEUX
       moteurs), donc le schéma est dessiné d'après l'anneau OSM et notre
