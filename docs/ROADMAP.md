@@ -534,6 +534,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #128 — FEUX-2, les feux du trajet sur la carte (demande du 30/08) :
+      une case à cocher à côté du comptage, un point par carrefour, à la
+      demande et une seule fois par trajet.
 - [x] PR #127 — FEUX-1, les feux comptés sur les trois variantes (question
       du 30/08) : on ne sait pas optimiser dessus — le moteur ne prend aucun
       coût personnalisé — mais on compte les carrefours à feux de chaque

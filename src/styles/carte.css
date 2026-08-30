@@ -953,6 +953,16 @@ etat-connexion { display: contents; }
    un temps, c'est un confort, et la ligne des durées se compare déjà chiffre
    à chiffre. */
 .comparer-feux { margin: 1px 0 0; font: 400 11.5px var(--police); color: var(--texte-2); }
+
+/* FEUX-2 — la bascule qui pose les feux sur la carte. Elle vit à côté du
+   comptage : même donnée, même question. */
+.iti-feux { margin-top: 10px; }
+.iti-feux-bascule {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  font: 400 13px var(--police); color: var(--texte-1);
+}
+.iti-feux-bascule input { width: 16px; height: 16px; accent-color: var(--accent); }
+.iti-feux-corps { margin: 4px 0 0; font: 400 11.5px/1.5 var(--police); color: var(--texte-3); }
 .comparer-erreur { margin: 0; font: 400 11.5px var(--police); color: var(--texte-3); }
 .comparer-note { margin: 2px 0 0; font: 400 11px/1.5 var(--police); color: var(--texte-3); }
 .comparer-titre { margin: 0; font: 650 12.5px var(--police); color: var(--texte-1); }
