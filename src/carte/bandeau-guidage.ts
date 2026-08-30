@@ -26,13 +26,16 @@ import {
 } from '../lib/orientation';
 import {
   etatGuidage, distanceEnMots, heureArriveeEstimee, type OptionsGuidage,
-  partiAContresens, approcheManoeuvre,
+  partiAContresens, approcheManoeuvre, type EtatGuidage,
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
 import { chargerCommodites, ErreurCommodites, TYPES_COMMODITE, type Commodite } from '../lib/commodites';
 import { meteoA, phraseMeteo, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
 import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
 import { limiteA, type LimiteTrajet } from '../lib/limites';
+import {
+  voiesA, cotePlacement, voieConseillee, libellePlacement, type ReleveVoies,
+} from '../lib/voies';
 import type { EvenementTrajet } from '../lib/trafic';
 import { flecheManoeuvre } from './icone-manoeuvre';
 import { refermerPanneaux } from './panneaux';
@@ -82,6 +85,13 @@ const PITCH_SUIVI = 55;
    l'information n'est pas perdue — elle attend qu'on déplie la barre. */
 const ANNONCE_M = 10_000;
 
+/* JUSQU'OÙ LE CONSEIL DE PLACEMENT A UN SENS. Neuf cents mètres : sur
+   autoroute c'est une trentaine de secondes — le temps de changer de file
+   sans se précipiter — et en ville c'est déjà loin. Plus tôt, la consigne
+   arriverait avant la sortie précédente ; plus tard, elle arriverait après
+   le trait continu. */
+const SEUIL_VOIES_M = 900;
+
 /* LA CAMÉRA REVIENT TOUTE SEULE APRÈS VINGT SECONDES sans nouveau geste.
    Armelin, le 27/08/2026 : « je ne peux plus dézoomer sur la carte car le
    zoom sur ma position se force automatiquement. Ce serait bien de pouvoir
@@ -101,6 +111,22 @@ export class BandeauGuidage extends HTMLElement {
   #limites: readonly LimiteTrajet[] = [];
 
   set limites(l: readonly LimiteTrajet[]) { this.#limites = l; }
+
+  /* LE NOMBRE DE VOIES du tracé (lib/voies.ts) — livré APRÈS le démarrage,
+     comme les limites : la seconde requête met seize secondes sur un
+     Paris-Lyon (mesuré le 30/08). Tant qu'elle n'est pas là, ou si elle
+     échoue, la chaussée ne se dessine pas — le suivi vaut sans elle. */
+  #voies: readonly ReleveVoies[] = [];
+
+  set voies(v: readonly ReleveVoies[]) {
+    this.#voies = v;
+    /* ON REJOUE LE DERNIER FIXE, sans quoi la chaussée attendrait le
+       suivant : la requête arrive seize secondes après le démarrage, et à
+       l'arrêt — au feu, sur une aire — le récepteur peut ne plus rien
+       envoyer. Elle paraîtrait alors une fois la sortie passée. C'est le
+       même rejeu que celui du dépliage de la barre. */
+    if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+  }
 
   /* LES ÉVÉNEMENTS TRAFIC DU CORRIDOR (Bison Futé) — livrés après le
      démarrage et rafraîchis par le planificateur. La barre de fluidité est
@@ -306,6 +332,20 @@ export class BandeauGuidage extends HTMLElement {
           <p class="bg-distance"></p>
         </div>
         <span class="bg-ecusson" hidden></span>
+        <!-- LA CHAUSSÉE ET LE CÔTÉ OÙ SE PLACER (VOIE-1, 30/08). Armelin :
+             « des flèches pour préciser où se placer sur la chaussée pour
+             tourner à une intersection ou pour sortir d'une autoroute ».
+             CE N'EST PAS LE PANNEAU D'AFFECTATION PAR VOIE des GPS du
+             commerce : la donnée dit COMBIEN de voies porte la chaussée,
+             jamais ce que chaque voie autorise. On dessine donc les voies
+             et l'on éclaire CELLE OÙ SE METTRE, déduite de la manœuvre —
+             et le libellé lu à voix haute le dit en toutes lettres. -->
+        <!-- CHAUSSÉE ET FILES, PAS « VOIES » : la classe .bg-voie nomme déjà
+             le nom de rue de la barre du bas. Le premier jet l'a réutilisée,
+             et un parcours a compté QUATRE barres là où la chaussée en a
+             trois — la quatrième était le nom de rue. C'est la deuxième
+             collision de ce genre (recharge-reserve, le 30/08). -->
+        <p class="bg-chaussee" hidden role="status"></p>
       </div>
       <!-- LE RECENTRAGE, HORS DU BANDEAU : il flotte sur la carte, là où le
            regard est quand on vient de la déplacer. Il ne paraît que quand la
@@ -662,6 +702,48 @@ export class BandeauGuidage extends HTMLElement {
     }
   }
 
+  /**
+   * La chaussée et le côté où se placer (VOIE-1, 30/08).
+   *
+   * QUATRE CONDITIONS, ET AUCUNE N'EST DÉCORATIVE : on est sur la route, la
+   * manœuvre a un côté (tout droit n'en a pas), elle est ASSEZ PROCHE pour
+   * qu'un changement de file ait du sens, et la chaussée porte au moins deux
+   * voies. Il en manque une, la chaussée disparaît — elle ne reste pas à
+   * l'écran à conseiller un placement pour une sortie déjà passée.
+   */
+  #majVoies(e: EtatGuidage): void {
+    const boite = this.querySelector('.bg-chaussee') as HTMLElement | null;
+    if (!boite) return;
+    const cote = e.horsRoute ? null : cotePlacement(e.manoeuvre?.manoeuvre ?? 'straight');
+    const voies = e.horsRoute ? null : voiesA(this.#voies, e.avancementM);
+    const conseillee = voies === null ? null : voieConseillee(voies, cote);
+    if (voies === null || conseillee === null || e.jusquALaManoeuvreM > SEUIL_VOIES_M) {
+      boite.hidden = true;
+      boite.replaceChildren();
+      return;
+    }
+    /* ON NE REDESSINE QUE SI QUELQUE CHOSE A CHANGÉ : le GPS bat toutes les
+       secondes, et remplacer les mêmes cinq éléments à chaque fixe ferait
+       clignoter la chaussée sous les yeux. */
+    const signature = `${voies}-${conseillee}`;
+    if (boite.dataset['etat'] === signature) return;
+    boite.dataset['etat'] = signature;
+    boite.hidden = false;
+    /* LE LIBELLÉ EST LU, LES BARRES SONT VUES. Un lecteur d'écran n'a que
+       faire de cinq rectangles : il reçoit la phrase, qui dit aussi que le
+       conseil est déduit — voir lib/voies.ts. */
+    boite.setAttribute('aria-label', libellePlacement(voies, conseillee));
+    const barres: HTMLElement[] = [];
+    for (let i = 1; i <= voies; i += 1) {
+      const barre = document.createElement('span');
+      barre.className = 'bg-file';
+      barre.setAttribute('aria-hidden', 'true');
+      if (i === conseillee) barre.dataset['conseillee'] = 'oui';
+      barres.push(barre);
+    }
+    boite.replaceChildren(...barres);
+  }
+
   #alerte(message: string): void {
     const p = this.querySelector('.bg-alerte') as HTMLElement;
     p.textContent = message;
@@ -821,6 +903,8 @@ export class BandeauGuidage extends HTMLElement {
     const numeroteur = cartoucheNumero(classe);
     if (numeroteur) ecusson.dataset['cartouche'] = numeroteur;
     else delete ecusson.dataset['cartouche'];
+
+    this.#majVoies(e);
     /* L'écusson est un signe : il se DIT en toutes lettres à qui écoute la
        page, sans quoi « D606 » resterait une suite de caractères. */
     if (numero !== '') ecusson.setAttribute('aria-label', `${libelleClasse(classe)} ${numero}`);

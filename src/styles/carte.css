@@ -1329,7 +1329,7 @@ bandeau-guidage[hidden] { display: none; }
 
 /* LA VOIE COURANTE — la seule chose qu'Armelin voulait garder en bas :
    « le nom de la rue sur laquelle on se déplace actuellement ». */
-.bg-voie {
+.bg-file {
   margin: 0 0 2px; font: 700 15px var(--police); color: var(--texte-1);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
@@ -2847,3 +2847,35 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
 /* La bifurcation est faite de traits fins et longs : au trait commun, elle
    s'efface à côté de la boussole. Deux dixièmes suffisent (mesuré à 22 px). */
 .bg-bis .picto-menu { stroke-width: 2; }
+
+/* ==========================================================================
+   VOIE-1 — LA CHAUSSÉE ET LE CÔTÉ OÙ SE PLACER (Armelin, 29/08 : « des
+   flèches pour préciser où se placer sur la chaussée pour tourner à une
+   intersection ou pour sortir d'une autoroute »)
+   ========================================================================== */
+/* ELLE VIT DANS LE PANNEAU, donc elle en prend l'encre : des voies grises
+   sur fond bleu autoroutier ne se verraient pas. Les barres sont des VOIES
+   vues d'en haut — pas des flèches par voie : nous ne savons pas ce que
+   chaque voie autorise, et le dessin ne doit pas le laisser croire. */
+/* LA LIGNE SUPPLÉMENTAIRE EXIGE `flex-wrap`, sinon le panneau ne passe pas à
+   la ligne : il RÉTRÉCIT ses voisins. Vu sur capture — « Tournez à droite »
+   s'était brisé en trois lignes pour laisser passer la chaussée. */
+.bg-cartouche { flex-wrap: wrap; }
+.bg-chaussee {
+  flex-basis: 100%; order: 9; margin: 4px 0 0;
+  /* SOUS LE TEXTE, pas sous la flèche : la chaussée est large de 48 px de
+     moins, ce qui la cale à l'aplomb de l'instruction qu'elle précise. */
+  margin-left: 48px; max-width: 132px;
+  display: flex; gap: 3px; align-items: flex-end; height: 18px;
+}
+.bg-chaussee[hidden] { display: none; }
+.bg-file {
+  flex: 1 1 0; height: 9px; border-radius: 2px;
+  background: var(--panneau-encre); opacity: .3;
+}
+/* LA VOIE CONSEILLÉE : pleine, plus haute, à l'encre franche du panneau.
+   C'est le seul élément à distinguer — en éclairer deux laisserait croire à
+   une affectation par voie que la donnée ne porte pas. */
+.bg-file[data-conseillee="oui"] {
+  height: 18px; opacity: 1;
+}

@@ -534,6 +534,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #118 — VOIE-1, la chaussée et où s'y placer (demandes des 29 et
+      30/08) : deux itinéraires — les manœuvres sur osrm, `nombre_de_voies`
+      sur pgr — recousus par projection, ce que la mesure autorise (même
+      trajet, écart médian nul, 98,1 % sous 60 m). Les files se dessinent,
+      celle où se mettre s'éclaire ; le côté est DÉDUIT de la manœuvre et
+      l'interface le dit. Pas d'affectation par voie : la donnée ne la porte
+      pas.
 - [x] PR #117 — PAN-1, de vrais panneaux de direction (demande du 30/08) :
       l'IISR relevée puis appliquée — fonds bleu/vert/blanc, inscriptions et
       listels selon la règle, cartouches de numérotation E42 rouge et E43
