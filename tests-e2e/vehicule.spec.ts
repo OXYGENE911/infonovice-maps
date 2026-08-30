@@ -198,6 +198,7 @@ test('choisir un modèle remplit le formulaire, et le bilan suit', async ({ page
   // Rien n'est prétendu tant que rien n'est choisi.
   await expect(page.getByLabel('Batterie', { exact: true })).toHaveValue('');
 
+  await page.locator('.veh-marques-boite > summary').click();
   await page.locator('.veh-marque', { hasText: 'VinFast' }).locator('summary').click();
   await page.getByRole('button', { name: 'Choisir VinFast VF 8 (Eco)' }).click();
 
@@ -276,6 +277,13 @@ test('MÉMOIRE : masse et bridages thermiques survivent au rechargement', async 
 
 test('le catalogue s’ouvre REPLIÉ : on voit les marques, pas cent trente modèles', async ({ page }) => {
   await ouvrirVehicule(page);
+  /* LA BOÎTE EST FERMÉE À L'OUVERTURE : trente-deux marques dépliées
+     repoussaient le choix du repère hors de vue, ce que FEN-6 interdit. La
+     RECHERCHE, elle, reste visible — c'est le chemin rapide. */
+  await expect(page.locator('.veh-marques-boite')).not.toHaveAttribute('open', '');
+  await expect(page.locator('.veh-recherche')).toBeVisible();
+
+  await page.locator('.veh-marques-boite > summary').click();
   const marques = page.locator('.veh-marque');
   expect(await marques.count()).toBeGreaterThan(20);
   // Aucune dépliée : c'est tout l'objet de la demande.
@@ -288,6 +296,16 @@ test('le catalogue s’ouvre REPLIÉ : on voit les marques, pas cent trente mod�
   await page.locator('.veh-marque', { hasText: 'Renault' }).locator('summary').click();
   await expect(page.locator('.veh-marque[open]')).toHaveCount(1);
   expect(await page.locator('.veh-marque[open] .veh-modele').count()).toBeGreaterThan(0);
+});
+
+test('CHERCHER OUVRE LA BOÎTE : on ne tape pas dans le vide', async ({ page }) => {
+  await ouvrirVehicule(page);
+  await page.locator('.veh-recherche').fill('t');
+  await expect(page.locator('.veh-marques-boite')).toHaveAttribute('open', '');
+  /* Effacer ne la REFERME pas : refermer sous les doigts de qui vide son
+     champ pour recommencer se prendrait pour une panne. */
+  await page.locator('.veh-recherche').fill('');
+  await expect(page.locator('.veh-marques-boite')).toHaveAttribute('open', '');
 });
 
 test('la recherche trouve une MARQUE, et la rend entière', async ({ page }) => {

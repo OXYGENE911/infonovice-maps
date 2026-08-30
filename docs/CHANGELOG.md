@@ -22,14 +22,21 @@ spécifique. »
 - **CHOISIR NE REFERME PLUS LA MARQUE.** Le premier jet redessinait la liste
   après le choix, ce qui refermait la marque sous le doigt de l'usager.
   Seul le modèle choisi change d'état désormais, et il se marque comme tel.
+- **LA LISTE ENTIÈRE VIT DANS UNE BOÎTE FERMÉE, la recherche au-dessus
+  reste toujours visible.** Le premier jet posait les trente-deux marques à
+  même le formulaire : elles repoussaient le choix du repère à 1 500 px,
+  hors de vue à l'ouverture — ce que FEN-6 interdit. Lui donner un ascenseur
+  propre était l'autre issue, et FEN-6 l'interdit aussi (« deux ascenseurs,
+  un dans l'autre »). La CI l'a attrapé : le parcours FEN-6 existait déjà.
+  La boîte s'ouvre d'elle-même dès la première lettre tapée.
 - **LE <select> RESTE, MASQUÉ À L'ŒIL SEULEMENT.** Il porte le nom
   accessible, la navigation clavier native et l'état choisi : un lecteur
   d'écran y retrouve la liste entière. Les marques repliées sont sa peau,
   pas son remplacement — un E2E le vérifie explicitement.
 
-Tests : 5 unitaires sur la recherche pure (`chercherModeles`), 4 E2E sur le
-repli, la recherche par marque, la recherche par modèle et la recherche
-infructueuse. 669 unitaires, 207 E2E.
+Tests : 5 unitaires sur la recherche pure (`chercherModeles`), 5 E2E sur le
+repli, l'ouverture par la recherche, la recherche par marque, la recherche
+par modèle et la recherche infructueuse. 669 unitaires, 209 E2E.
 
 ## [0.86.0] — 2026-08-30 — PLAN-1 : le plan reste le vôtre (PR #114)
 

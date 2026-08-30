@@ -2768,11 +2768,21 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
 }
 .veh-recherche:focus-visible { outline: none; box-shadow: var(--focus); }
 
-/* Les marques : repliées, on descend à la sienne et l'on s'arrête. */
+/* Les marques : repliées, on descend à la sienne et l'on s'arrête.
+   PAS D'ASCENSEUR PROPRE ICI, et c'est une règle de la maison : « ça fait
+   deux ascenseurs, un dans l'autre » (Armelin, 29/08 — FEN-6). Repliée, la
+   liste tient de toute façon dans la fenêtre ; c'est la fenêtre qui défile. */
 .veh-marques {
-  display: grid; gap: 3px; max-height: 260px; overflow-y: auto;
-  margin-bottom: 8px; padding-right: 2px;
+  display: grid; gap: 3px; margin-bottom: 8px;
 }
+.veh-marques-boite { margin-bottom: 8px; }
+.veh-marques-boite > summary {
+  cursor: pointer; padding: 7px 10px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  font: 600 12.5px var(--police); color: var(--texte-1);
+}
+.veh-marques-boite > summary:focus-visible { outline: none; box-shadow: var(--focus); }
+.veh-marques-boite[open] > summary { margin-bottom: 6px; }
 .veh-marque > summary {
   cursor: pointer; padding: 6px 8px; border-radius: 8px;
   background: var(--fond-doux);

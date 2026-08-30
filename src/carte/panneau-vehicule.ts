@@ -117,7 +117,18 @@ export class PanneauVehicule extends HTMLElement {
               placeholder="Renault, VF 8, Zoe…"
               aria-label="Chercher une marque ou un modèle">
           </label>
-          <div class="veh-marques"></div>
+          <!-- LA LISTE ENTIÈRE EST DANS UNE BOÎTE FERMÉE, et ce n'est pas
+               un caprice : dépliées, trente-deux marques repoussaient le
+               choix du repère à 1 500 px — hors de vue à l'ouverture, ce que
+               FEN-6 interdit (Armelin, 29/08). La lui donner un ascenseur
+               propre était l'autre issue, et FEN-6 l'interdit aussi (« deux
+               ascenseurs, un dans l'autre »). Reste celle-ci : la recherche
+               au-dessus reste TOUJOURS visible — c'est le chemin rapide —,
+               et la boîte s'ouvre d'elle-même dès qu'on cherche. -->
+          <details class="veh-marques-boite">
+            <summary>Toutes les marques</summary>
+            <div class="veh-marques"></div>
+          </details>
           <label class="veh-ligne veh-ligne-catalogue veh-lu-seulement">Modèle
             <span><select class="veh-catalogue" aria-label="Choisir un modèle de véhicule">
               <option value="">— saisie manuelle —</option>
@@ -390,7 +401,15 @@ export class PanneauVehicule extends HTMLElement {
     /* PAS DE DÉBOUNCE ICI : la recherche est LOCALE (cent trente modèles en
        mémoire). Attendre 300 ms pour filtrer un tableau donnerait une
        impression de lourdeur sans rien économiser. */
-    recherche.addEventListener('input', rendre);
+    const boiteMarques = this.querySelector<HTMLDetailsElement>('.veh-marques-boite');
+    recherche.addEventListener('input', () => {
+      rendre();
+      /* CHERCHER, C'EST DEMANDER À VOIR : la boîte s'ouvre sur la première
+         lettre. Elle ne se REFERME pas quand on efface — refermer sous les
+         doigts de qui vient de vider son champ pour recommencer serait pris
+         pour une panne. */
+      if (boiteMarques && recherche.value !== '') boiteMarques.open = true;
+    });
     rendre();
   }
 
