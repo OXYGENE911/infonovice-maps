@@ -2,6 +2,55 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.105.0] — 2026-08-30 — POI-2 : le filtre des lieux, sur la carte (PR #135)
+
+- **LE FILTRE S'ATTEINT EN UN GESTE, DEPUIS LA CARTE.** Armelin : « ce serait
+  bien d'afficher quelque part sur la carte une icône pour afficher les POI
+  comme un filtre, avec Restaurants, Shoppings, Supermarchés, Vêtements,
+  Cafés, Hôtels, Bars, Attractions, Musées, Cinémas, Centres commerciaux, DAB,
+  Parkings, Lavage auto, Garages auto, Pharmacie, Pressing, etc., de manière
+  ergonomique. » Il fallait auparavant ouvrir le planificateur, descendre dans
+  « Recharge et services », cocher, puis revenir à la carte.
+- **DOUZE FAMILLES, PAS DIX-SEPT CASES.** Dix-sept étiquettes ne tiennent pas
+  sur un téléphone, et personne ne cherche « cinémas » sans chercher
+  « musées ». On regroupe donc par famille — ce qu'on cherche d'un même
+  geste — en gardant CHAQUE étiquette de sa liste dans le filtre de sa
+  famille : rien n'est perdu, tout tient en douze boutons. Le « etc. » de sa
+  demande est honoré au passage (théâtres, auberges, points de vue, bureaux
+  de change, coiffeurs).
+- **UNE SEULE REQUÊTE POUR TOUTES LES FAMILLES COCHÉES.** Overpass est tenu
+  par des bénévoles : douze requêtes là où une union suffit seraient douze
+  fois trop. Le plafond de lieux vaut pour l'union, sans quoi une vue de
+  centre-ville rendrait mille points illisibles.
+- **ET IL NE CHERCHE JAMAIS TOUT SEUL** : ni au déplacement, ni au zoom, ni au
+  clic d'une pastille. Seul « Chercher dans cette vue » interroge le service,
+  et l'état DIT toujours pourquoi il ne rend rien — trop loin, rien de coché,
+  ou la vue a bougé depuis la dernière recherche. Le choix des familles
+  survit au rechargement : c'est un réglage, pas un geste de session.
+- **LA COULEUR DU POINT EST CELLE DE SA FAMILLE**, lue sur ses étiquettes :
+  la réponse d'une requête à douze filtres ne dit pas lequel a répondu, c'est
+  donc un tableau ordonné qui tranche (une pharmacie qui vend des cosmétiques
+  reste une pharmacie). Le panneau devient ainsi la légende de la carte.
+- **UNE CONSÉQUENCE ASSUMÉE** : le volet « Recharge et services » du
+  planificateur montre les mêmes douze familles — une seule liste, deux
+  endroits. « Boulangeries » n'y est plus une case à part : elle est entrée
+  dans « Commerces ».
+
+Tests : 12 unitaires (classement par famille, ordre de priorité, union
+d'URL, plafond), 6 E2E (ouverture en un geste, aucun appel spontané, l'état
+qui dit pourquoi, l'union en un seul appel, la vue qui a bouge, la survie au
+rechargement). 842 unitaires, 271 E2E.
+
+DÉFAUT PAYÉ, TROISIÈME DE LA SÉRIE : `.poi-etat` nommait déjà autre chose
+dans le panneau des services, et un parcours a buté dessus avant l'usager.
+Après `.bg-voie` et `recharge-reserve`, le préfixe se choisit d'avance.
+
+DEUXIÈME DÉFAUT, LU DANS LA CI DE main : le parcours des lieux d'exception
+attendait un témoin d'attente qui avait déjà cédé la place au résultat quand
+l'assertion arrivait — la CI a rougi sur main le 30/08 pour cette seule
+raison. Le parcours tient désormais la réponse simulée, mesure, puis relâche :
+on ne court pas après un état fugace en espérant arriver à temps.
+
 ## [0.104.0] — 2026-08-30 — COPILOTE-1 : le copilote montre au lieu de faire cliquer (PR #132)
 
 - **LES COMMODITÉS SONT STRUCTURÉES, comme dans la fiche de borne.** Armelin :

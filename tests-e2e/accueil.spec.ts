@@ -1026,18 +1026,29 @@ test('LIEUX D’EXCEPTION : liste à la demande, détour réglable, étape ajout
      minutes, qu'on peut AJOUTER à la planification. L'index est simulé pour
      contrôler les distances : un château à ~200 m du tracé, une abbaye à
      20 km — le réglage du détour tranche entre les deux. */
-  await page.route('**/donnees/monuments.json', (route) => route.fulfill({
-    contentType: 'application/json',
-    /* LES DISTANCES SONT PERPENDICULAIRES À LA DIAGONALE, pas verticales : la
-       première abbaye posée « à 20 km au nord » n'était qu'à 4 km du tracé,
-       et le test mesurait l'inverse de ce qu'il croyait. Château à ~200 m,
-       abbaye à ~17 km — le réglage 10/20 minutes tranche entre les deux. */
-    body: JSON.stringify([
-      [3.6, 47.301, 'Château de la Colline', 'Beaune', 'PA00078023',
-        '12e s.;16e s.', '2 rue du Donjon'],
-      [3.5, 47.75, 'Abbaye lointaine', 'Ailleurs', 'PA00078099', '', ''],
-    ]),
-  }));
+  /* L'INDEX NE RÉPOND QUE QUAND LE TEST LE DÉCIDE. Sans cette retenue, le
+     parcours courait après un état qui passe : le témoin d'attente avait
+     déjà cédé la place au résultat quand l'assertion arrivait, et la CI a
+     rougi sur main le 30/08 pour cette seule raison. On ne mesure pas un
+     témoin fugace en espérant arriver à temps — on tient la réponse, on
+     mesure, puis on relâche. */
+  let repondre: () => void = () => {};
+  const indexTenu = new Promise<void>((resoudre) => { repondre = resoudre; });
+  await page.route('**/donnees/monuments.json', async (route) => {
+    await indexTenu;
+    return route.fulfill({
+      contentType: 'application/json',
+      /* LES DISTANCES SONT PERPENDICULAIRES À LA DIAGONALE, pas verticales :
+         la première abbaye posée « à 20 km au nord » n'était qu'à 4 km du
+         tracé, et le test mesurait l'inverse de ce qu'il croyait. Château à
+         ~200 m, abbaye à ~17 km — le réglage 10/20 minutes tranche. */
+      body: JSON.stringify([
+        [3.6, 47.301, 'Château de la Colline', 'Beaune', 'PA00078023',
+          '12e s.;16e s.', '2 rue du Donjon'],
+        [3.5, 47.75, 'Abbaye lointaine', 'Ailleurs', 'PA00078099', '', ''],
+      ]),
+    });
+  });
   const urls: string[] = [];
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
     urls.push(decodeURIComponent(route.request().url()));
@@ -1060,6 +1071,7 @@ test('LIEUX D’EXCEPTION : liste à la demande, détour réglable, étape ajout
      même que le résultat ne s'affiche ». Le témoin bat pendant la recherche,
      et laisse la place au résultat. */
   await expect(corps.locator('.iti-attente')).toBeVisible();
+  repondre();
   // À 10 minutes (défaut), le château répond, l'abbaye à 20 km se tait.
   await expect(corps).toContainText('Château de la Colline', { timeout: 15_000 });
   await expect(corps).not.toContainText('Abbaye lointaine');

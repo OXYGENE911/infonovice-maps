@@ -21,6 +21,7 @@ import { installerPanneaux } from './panneaux';
 import { RechercheAdresse } from './recherche';
 import { PanneauItineraire } from './panneau-itineraire';
 import { PanneauPoi } from './panneau-poi';
+import { FiltrePoi } from './filtre-poi';
 import { PanneauFavoris } from './panneau-favoris';
 import { PanneauTrafic } from './panneau-trafic';
 import { PanneauVehicule } from './panneau-vehicule';
@@ -158,6 +159,16 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   const trafic = new PanneauTrafic();
   trafic.carte = carte;
   menu.ajouter('', trafic);
+
+  /* LE FILTRE DES LIEUX, À MÊME LA CARTE (POI-2, 30/08). Armelin : « ce
+     serait bien d'afficher quelque part sur la carte une icône pour afficher
+     les POI comme un filtre […] que l'utilisateur puisse configurer
+     rapidement un filtre pour choisir les POI qu'il souhaite voir autour de
+     lui ». Ce qu'on cherche autour de soi se décide EN REGARDANT la carte :
+     il vit donc sur la carte, pas au fond d'un menu. */
+  const filtrePoi = new FiltrePoi();
+  filtrePoi.carte = carte;
+  conteneur.appendChild(filtrePoi);
 
 
   /* LA VISIONNEUSE DE PHOTOS — une seule pour l'application, posée au body :

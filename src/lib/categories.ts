@@ -15,6 +15,8 @@ export interface LieuCategorie {
   nom: string | null;
   lon: number;
   lat: number;
+  /** La famille à laquelle il appartient — voir `familleDe`. */
+  famille?: string;
 }
 
 /** L'emprise de la vue : ouest, sud, est, nord (l'ordre de MapLibre). */
@@ -26,20 +28,74 @@ export interface Categorie {
   libelle: string;
   /** Le filtre Overpass, clé et valeurs OSM standard. */
   filtre: string;
+  /** La couleur du point sur la carte — une famille, une teinte. */
+  couleur: string;
 }
 
-/* CINQ CATÉGORIES, PAS QUINZE. Celles qu'on cherche VRAIMENT en route ou en
-   ville inconnue — la demande du mandat cite pharmacies, parkings (déjà une
-   couche à part entière) et restaurants. Chaque filtre reste sur les valeurs
-   OSM les mieux renseignées : promettre « coiffeurs » sur un tag rare ferait
-   une carte vide qu'on prendrait pour une panne. */
+/* DOUZE FAMILLES, PAS DIX-SEPT ÉTIQUETTES (POI-2, 30/08). Armelin a donné une
+   liste : « restaurants, shoppings, supermarchés, vêtements, cafés, hôtels,
+   bars, attractions, musées, cinémas, centres commerciaux, DAB, parkings,
+   lavage auto, garages auto, pharmacie, pressing, etc. » — et ce « etc. » dit
+   bien que la liste n'est pas close.
+   DIX-SEPT CASES NE TIENNENT PAS SUR UN TÉLÉPHONE, et l'on ne cherche pas
+   « cinémas » sans chercher « musées ». On regroupe donc par FAMILLE — ce
+   qu'on cherche d'un même geste — en gardant CHAQUE étiquette de sa liste
+   dans le filtre de sa famille. Rien n'est perdu ; tout tient en douze
+   boutons.
+   CHAQUE FILTRE RESTE SUR DES VALEURS BIEN RENSEIGNÉES : promettre une
+   catégorie sur un tag rare ferait une carte vide qu'on prendrait pour une
+   panne. */
 export const CATEGORIES: readonly Categorie[] = [
-  { cle: 'pharmacie', libelle: 'Pharmacies', filtre: '["amenity"="pharmacy"]' },
-  { cle: 'restaurant', libelle: 'Restaurants', filtre: '["amenity"~"^(restaurant|fast_food)$"]' },
-  { cle: 'boulangerie', libelle: 'Boulangeries', filtre: '["shop"="bakery"]' },
-  { cle: 'supermarche', libelle: 'Supermarchés', filtre: '["shop"~"^(supermarket|convenience)$"]' },
-  { cle: 'wc', libelle: 'Toilettes', filtre: '["amenity"="toilets"]' },
+  { cle: 'restaurant', libelle: 'Restaurants', couleur: '#D9534F',
+    filtre: '["amenity"~"^(restaurant|fast_food)$"]' },
+  { cle: 'cafe', libelle: 'Cafés et bars', couleur: '#8A5A2B',
+    filtre: '["amenity"~"^(cafe|bar|pub)$"]' },
+  { cle: 'commerce', libelle: 'Commerces', couleur: '#2272C4',
+    filtre: '["shop"~"^(supermarket|convenience|bakery|mall|department_store|clothes|shoes)$"]' },
+  { cle: 'hotel', libelle: 'Hôtels', couleur: '#6C4FA1',
+    filtre: '["tourism"~"^(hotel|motel|guest_house)$"]' },
+  { cle: 'culture', libelle: 'Culture et visites', couleur: '#B8860B',
+    filtre: '["tourism"~"^(museum|attraction|viewpoint)$"]' },
+  { cle: 'cinema', libelle: 'Cinémas et théâtres', couleur: '#C2185B',
+    filtre: '["amenity"~"^(cinema|theatre)$"]' },
+  { cle: 'pharmacie', libelle: 'Pharmacies', couleur: '#1E9E5A',
+    filtre: '["amenity"="pharmacy"]' },
+  { cle: 'argent', libelle: 'Banques et DAB', couleur: '#00796B',
+    filtre: '["amenity"~"^(atm|bank|bureau_de_change)$"]' },
+  { cle: 'parking', libelle: 'Parkings', couleur: '#455A64',
+    filtre: '["amenity"="parking"]' },
+  { cle: 'auto', libelle: 'Garages et lavage', couleur: '#5D4037',
+    filtre: '["shop"~"^(car_repair|car_parts)$"]' },
+  { cle: 'services', libelle: 'Services', couleur: '#546E7A',
+    filtre: '["shop"~"^(laundry|dry_cleaning|hairdresser)$"]' },
+  { cle: 'wc', libelle: 'Toilettes', couleur: '#0097A7',
+    filtre: '["amenity"="toilets"]' },
 ];
+
+/* CE QUI RANGE UN LIEU DANS SA FAMILLE, à la lecture de ses étiquettes. Les
+   douze filtres partent en UNE requête — Overpass est bénévole — et la
+   réponse ne dit pas lequel a répondu : c'est donc ce tableau qui tranche,
+   DANS L'ORDRE. Le premier qui correspond gagne, et l'ordre compte : une
+   pharmacie qui vend des cosmétiques reste une pharmacie. */
+const RANGEMENT: readonly { cle: string; test: (t: Record<string, string>) => boolean }[] = [
+  { cle: 'pharmacie', test: (t) => t['amenity'] === 'pharmacy' },
+  { cle: 'restaurant', test: (t) => ['restaurant', 'fast_food'].includes(t['amenity'] ?? '') },
+  { cle: 'cafe', test: (t) => ['cafe', 'bar', 'pub'].includes(t['amenity'] ?? '') },
+  { cle: 'cinema', test: (t) => ['cinema', 'theatre'].includes(t['amenity'] ?? '') },
+  { cle: 'argent', test: (t) => ['atm', 'bank', 'bureau_de_change'].includes(t['amenity'] ?? '') },
+  { cle: 'parking', test: (t) => t['amenity'] === 'parking' },
+  { cle: 'wc', test: (t) => t['amenity'] === 'toilets' },
+  { cle: 'hotel', test: (t) => ['hotel', 'motel', 'guest_house'].includes(t['tourism'] ?? '') },
+  { cle: 'culture', test: (t) => ['museum', 'attraction', 'viewpoint'].includes(t['tourism'] ?? '') },
+  { cle: 'auto', test: (t) => ['car_repair', 'car_parts'].includes(t['shop'] ?? '') },
+  { cle: 'services', test: (t) => ['laundry', 'dry_cleaning', 'hairdresser'].includes(t['shop'] ?? '') },
+  { cle: 'commerce', test: (t) => t['shop'] !== undefined },
+];
+
+/** La famille d'un lieu d'après ses étiquettes — PURE. `null` si aucune. */
+export function familleDe(tags: Record<string, string>): string | null {
+  return RANGEMENT.find((r) => r.test(tags))?.cle ?? null;
+}
 
 /** Au-delà, on tronque et on le DIT : une vue dense en centre-ville déborde vite. */
 export const PLAFOND_LIEUX = 100;
@@ -54,6 +110,24 @@ export function urlCategorie(categorie: Categorie, vue: EmpriseVue): string {
   const requete = '[out:json][timeout:25];'
     + `nwr${categorie.filtre}(${emprise});`
     + `out center tags ${PLAFOND_LIEUX};`;
+  return `https://overpass.openstreetmap.fr/api/interpreter?data=${encodeURIComponent(requete)}`;
+}
+
+/**
+ * L'URL Overpass de PLUSIEURS familles dans une emprise — PURE.
+ *
+ * UNE SEULE REQUÊTE POUR TOUTES LES FAMILLES COCHÉES : Overpass est tenu par
+ * des bénévoles, et douze requêtes là où une suffit seraient douze fois trop.
+ * Le plafond vaut pour l'UNION — une vue de centre-ville rendrait sinon mille
+ * lieux, illisibles autant qu'inutiles.
+ */
+export function urlFamilles(cles: readonly string[], vue: EmpriseVue): string {
+  const emprise = [vue.sud, vue.ouest, vue.nord, vue.est]
+    .map((v) => v.toFixed(5)).join(',');
+  const choisies = CATEGORIES.filter((c) => cles.includes(c.cle));
+  const requete = '[out:json][timeout:25];('
+    + choisies.map((c) => `nwr${c.filtre}(${emprise});`).join('')
+    + `);out center tags ${PLAFOND_LIEUX};`;
   return `https://overpass.openstreetmap.fr/api/interpreter?data=${encodeURIComponent(requete)}`;
 }
 
@@ -82,7 +156,15 @@ export function versLieux(brut: unknown): LieuCategorie[] {
     const identite = ['brand', 'operator', 'name']
       .map((k) => tags[k])
       .find((v): v is string => typeof v === 'string' && v.trim() !== '');
-    rendu.push({ nom: identite?.trim() ?? null, lon, lat });
+    /* LA FAMILLE SE LIT SUR LES ÉTIQUETTES, parce que la réponse d'une
+       requête à douze filtres ne dit pas lequel a répondu. */
+    const propres: Record<string, string> = {};
+    for (const [k, v] of Object.entries(tags)) if (typeof v === 'string') propres[k] = v;
+    const famille = familleDe(propres);
+    rendu.push({
+      nom: identite?.trim() ?? null, lon, lat,
+      ...(famille ? { famille } : {}),
+    });
   }
   return rendu;
 }
