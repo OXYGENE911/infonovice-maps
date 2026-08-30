@@ -58,6 +58,8 @@ const SOURCE = 'itineraire';
 /* LES VARIANTES A/B/C — une seule source pour les trois : elles se
    distinguent par une propriété, pas par un calque de plus. */
 const SOURCE_VARIANTES = 'itineraire-variantes';
+/* Les lieux d'exception, en CALQUE (30/08) : voir `#poserLieuxSurCarte`. */
+const SOURCE_LIEUX = 'itineraire-lieux';
 
 /* LES TROIS VARIANTES, ET CE QU'ELLES SONT VRAIMENT (ITI-3, demande
    d'Armelin du 30/08 : « je souhaite avoir un itinéraire A, B et C pour
@@ -156,7 +158,9 @@ export class PanneauItineraire extends HTMLElement {
   #annulationRecharge: AbortController | null = null;
   /** Itinéraire dont les lieux d'exception sont calculés (ou en cours). */
   #monumentsPour: Itineraire | null = null;
-  #marqueursMonuments: Marker[] = [];
+  /* LES LIEUX POSÉS SUR LA CARTE, dans l'ordre du calque : le clic rend un
+     rang, cette liste rend le lieu. */
+  #lieuxPoses: Monument[] = [];
   #annulationTrajet: AbortController | null = null;
   #marqueursTrajet: Marker[] = [];
   #marqueurs: Marker[] = [];
@@ -180,6 +184,9 @@ export class PanneauItineraire extends HTMLElement {
   #bornesTrajet: SurLeTrajet<StationRapide>[] = [];
   /** Les clés que l'usager impose, et celles qu'il refuse. */
   #imposees = new Set<string>();
+  /* LES ARRÊTS DE COURTOISIE (30/08) : ajoutés à la main, ils n'entrent PAS
+     dans le calcul tant que l'usager ne le demande pas. Voir `basculerArret`. */
+  #courtoisie = new Set<string>();
   #ecartees = new Set<string>();
   /** Exploitants retenus pour ce trajet. Vide = tous. */
   #reseauxPreferes = new Set<string>();
@@ -621,6 +628,13 @@ export class PanneauItineraire extends HTMLElement {
               </label>
               <p class="recharge-pause-etat" role="status"></p>
             </div>
+            <!-- LE RECALCUL EST UN GESTE, PAS UNE FATALITÉ (30/08). Ajouter
+                 un arrêt ne refait plus le plan : il s'insère comme arrêt de
+                 courtoisie. Ce bouton rend la main au calcul quand l'usager
+                 le veut — « ce qui offre le choix de personnaliser avec un
+                 recalcul automatique ou tout gérer en manuel ». -->
+            <button type="button" class="recharge-recalculer" hidden>Recalculer
+              les arrêts en gardant les miens</button>
             <div class="iti-recharge-corps" role="status"></div>
           </section>
 
@@ -857,6 +871,9 @@ export class PanneauItineraire extends HTMLElement {
        filtres de bornes. */
     /* LE PROFIL DE PAUSE RELÈVE LES ENVIRONS — un appel, puis le rejouage
        local, comme les conditions. Son échec est BÉNIN et DIT. */
+    this.querySelector('.recharge-recalculer')?.addEventListener('click', () => {
+      this.#refairePlan();
+    });
     this.querySelector('.recharge-pause-profil')?.addEventListener('change', () => {
       void this.#enregistrerReglages();
       void this.#appliquerProfilPause();
@@ -972,8 +989,7 @@ export class PanneauItineraire extends HTMLElement {
     this.#rechargePour = null;
     this.#annulationRecharge?.abort();
     this.#monumentsPour = null;
-    this.#marqueursMonuments.forEach((m) => m.remove());
-    this.#marqueursMonuments = [];
+    this.#effacerLieuxCarte();
     /* LE MODE TRAJET S'ÉTEINT AVEC SON TRAJET : les bornes du corridor
        appartiennent à l'itinéraire qui les a produites, et la couche
        nationale reprend sa place. */
@@ -1305,7 +1321,9 @@ export class PanneauItineraire extends HTMLElement {
       socArrivee: this.#valeurReglage('.recharge-cible', 10),
       reserve: this.#valeurReglage('.recharge-reserve', 10),
       plafondCharge: this.#valeurReglage('.recharge-plafond', 100),
-      imposees: [...this.#imposees],
+      /* AU RECALCUL, LES ARRÊTS DE COURTOISIE DEVIENNENT DES CONSIGNES :
+         c'est le sens du geste — « garde mes arrêts, refais le reste ». */
+      imposees: [...this.#imposees, ...this.#courtoisie],
       ecartees: [...this.#ecartees],
       conditions: this.#conditionsPour === iti ? this.#conditions ?? {} : {},
       profilConditions: this.#profilConditions,
@@ -1494,16 +1512,68 @@ export class PanneauItineraire extends HTMLElement {
     return this.#bornesTrajet.some((t) => this.#cleDe(t) === cle) ? 'candidat' : null;
   }
 
-  /** Impose ou écarte une borne du plan, et le refait — tout est local. */
+  /**
+   * Ajoute ou retire un arrêt — SANS refaire le plan quand on en ajoute un.
+   *
+   * LA DEMANDE (Armelin, 30/08) : « à chaque fois que j'ajoute une borne de
+   * recharge entre deux bornes, la borne suivante saute pour être
+   * recalculée ailleurs. Je ne veux pas de recalcul automatique si j'ajoute
+   * une borne en plus entre deux arrêts par souci de commodité. Il suffit de
+   * garder la planification initiale et de considérer l'arrêt comme un arrêt
+   * de courtoisie, café ou WC ou déjeuner… sauf si l'utilisateur demande à
+   * recalculer, ce qui offre le choix entre automatique et manuel. »
+   *
+   * DEUX GESTES DIFFÉRENTS, DONC DEUX EFFETS DIFFÉRENTS. AJOUTER est une
+   * commodité : le plan calculé reste tel quel, la borne s'y insère à son
+   * kilomètre comme arrêt de COURTOISIE — zéro kilowattheure, zéro minute,
+   * ce qu'elle est. RETIRER, lui, refait le plan : une borne écartée change
+   * ce qui est atteignable, et laisser un plan qui compte sur elle serait un
+   * mensonge. Le bouton « Recalculer les arrêts » rend la main au calcul
+   * quand l'usager le veut.
+   */
   basculerArret(cle: string, action: 'imposer' | 'ecarter'): void {
     if (action === 'imposer') {
-      this.#imposees.add(cle);
+      this.#courtoisie.add(cle);
       this.#ecartees.delete(cle);
-    } else {
-      this.#ecartees.add(cle);
-      this.#imposees.delete(cle);
+      this.#insererCourtoisie(cle);
+      return;
     }
+    this.#ecartees.add(cle);
+    this.#imposees.delete(cle);
+    this.#courtoisie.delete(cle);
     this.#refairePlan();
+  }
+
+  /**
+   * Glisse un arrêt de courtoisie dans le plan affiché, à son kilomètre.
+   *
+   * RIEN N'EST RECALCULÉ : ni les durées, ni les états de charge des autres
+   * arrêts. C'est le sens même de la demande — le plan d'avant tient, on y
+   * ajoute une pause. Les SOC de l'arrêt inséré sont ceux de son voisin
+   * précédent : on n'y charge pas, donc on en repart comme on y est arrivé.
+   */
+  #insererCourtoisie(cle: string): void {
+    const plan = this.#planCourant;
+    const trouvee = this.#bornesTrajet.find((t) => this.#cleDe(t) === cle);
+    if (!plan?.faisable || !trouvee) { this.#refairePlan(); return; }
+    if (plan.arrets.some((a) => cleBorne(a.borne) === cle)) return;
+
+    const precedent = [...plan.arrets]
+      .filter((a) => a.borne.avancementM < trouvee.avancement)
+      .pop();
+    const soc = precedent?.socDepart ?? 0;
+    const arret = {
+      borne: {
+        nom: trouvee.poi.nom, lon: trouvee.poi.lon, lat: trouvee.poi.lat,
+        reseau: trouvee.poi.reseau, id: trouvee.poi.id,
+        avancementM: trouvee.avancement, ecartM: trouvee.ecart,
+        puissanceKw: trouvee.poi.puissance,
+      },
+      socArrivee: soc, socDepart: soc, dureeMin: 0, energieKwh: 0,
+    };
+    const arrets = [...plan.arrets, arret]
+      .sort((a, b) => a.borne.avancementM - b.borne.avancementM);
+    this.#afficherRecharge({ ...plan, arrets });
   }
 
   /**
@@ -1957,11 +2027,69 @@ export class PanneauItineraire extends HTMLElement {
     return p;
   }
 
+  /**
+   * Pose les lieux d'exception en CALQUE, sous les arrêts de recharge.
+   *
+   * Le clic ouvre la fiche, comme le faisait le marqueur : c'est lui qu'on
+   * voit sur la carte, et le renvoyer vers la liste serait le chemin inverse
+   * du regard. Le calque porte l'index du lieu ; la liste courante fait foi.
+   */
+  #poserLieuxSurCarte(lieux: SurLeTrajet<Monument>[]): void {
+    const carte = this.#carte;
+    if (!carte) return;
+    this.#lieuxPoses = lieux.map((t) => t.poi);
+    const donnees = {
+      type: 'FeatureCollection' as const,
+      features: lieux.map((t, i) => ({
+        type: 'Feature' as const,
+        properties: { rang: i, titre: t.poi.titre },
+        geometry: { type: 'Point' as const, coordinates: [t.poi.lon, t.poi.lat] },
+      })),
+    };
+    try {
+      const existante = carte.getSource(SOURCE_LIEUX) as GeoJSONSource | undefined;
+      if (existante) { existante.setData(donnees); return; }
+      carte.addSource(SOURCE_LIEUX, { type: 'geojson', data: donnees });
+      /* AVANT la pastille des arrêts dans l'ordre de pose = DESSOUS à
+         l'écran. C'est toute la correction du 30/08. */
+      const dessous = carte.getLayer('iti-arrets-pastille') ? 'iti-arrets-pastille' : undefined;
+      carte.addLayer({
+        id: 'iti-lieux', type: 'circle', source: SOURCE_LIEUX,
+        paint: {
+          'circle-radius': 8,
+          'circle-color': '#8A5AC2',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#FFFFFF',
+        },
+      }, dessous);
+      carte.on('click', 'iti-lieux', (e) => {
+        const rang = e.features?.[0]?.properties?.['rang'];
+        const lieu = typeof rang === 'number' ? this.#lieuxPoses[rang] : undefined;
+        if (lieu) this.#ficheLieu?.ouvrir(lieu);
+      });
+      carte.on('mouseenter', 'iti-lieux', () => {
+        carte.getCanvas().style.cursor = 'pointer';
+      });
+      carte.on('mouseleave', 'iti-lieux', () => {
+        carte.getCanvas().style.cursor = '';
+      });
+    } catch (e) {
+      if (e instanceof Error && /style is not done loading/i.test(e.message)) return;
+      throw e;
+    }
+  }
+
+  /** Efface les lieux de la carte — page quittée, ou trajet effacé. */
+  #effacerLieuxCarte(): void {
+    this.#lieuxPoses = [];
+    const source = this.#carte?.getSource(SOURCE_LIEUX) as GeoJSONSource | undefined;
+    source?.setData({ type: 'FeatureCollection', features: [] });
+  }
+
   #afficherLieux(trouves: SurLeTrajet<Monument>[], detourMin: number): void {
     const corps = this.querySelector('.iti-monuments-corps') as HTMLElement;
     corps.replaceChildren();
-    this.#marqueursMonuments.forEach((m) => m.remove());
-    this.#marqueursMonuments = [];
+    this.#effacerLieuxCarte();
 
     if (trouves.length === 0) {
       corps.textContent = `Aucun monument classé à moins de ${detourMin} min`
@@ -2027,22 +2155,16 @@ export class PanneauItineraire extends HTMLElement {
       item.append(voir, detail, detour);
       liste.append(item);
 
-      if (this.#carte) {
-        const marqueur = new Marker({ color: '#8A5AC2', scale: 0.72 })
-          .setLngLat([t.poi.lon, t.poi.lat]).addTo(this.#carte);
-        /* LE MARQUEUR AUSSI SE CLIQUE : c'est lui qu'on voit sur la carte —
-           le renvoyer vers la liste serait le chemin inverse du regard. */
-        const element = marqueur.getElement();
-        element.style.cursor = 'pointer';
-        element.setAttribute('role', 'button');
-        element.setAttribute('aria-label', `Détail de ${t.poi.titre}`);
-        element.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.#ficheLieu?.ouvrir(t.poi);
-        });
-        this.#marqueursMonuments.push(marqueur);
-      }
     }
+    /* LES LIEUX PASSENT SOUS LES ARRÊTS (30/08). Armelin : « le rond
+       d'indication des lieux d'exception est affiché en premier plan devant
+       les ronds d'arrêt de recharge. Il faut toujours afficher les ronds
+       d'arrêt prévu en premier plan. » C'ÉTAIT STRUCTUREL, pas un réglage
+       oublié : les lieux étaient des marqueurs du DOM, posés au-dessus du
+       canevas, quand les arrêts sont peints DANS le canevas — aucun z-index
+       ne pouvait les départager. Les lieux deviennent donc un calque de
+       carte, inséré SOUS la pastille des arrêts. */
+    this.#poserLieuxSurCarte(montres);
     corps.append(liste);
 
     const note = document.createElement('p');
@@ -2817,6 +2939,11 @@ export class PanneauItineraire extends HTMLElement {
     corps.replaceChildren();
     // Le résumé du haut apprend le temps de charge : voir `#majResume`.
     this.#planCourant = plan;
+    /* LE BOUTON DE RECALCUL NE PARAÎT QUE S'IL A QUELQUE CHOSE À FAIRE :
+       tant qu'aucun arrêt n'a été ajouté à la main, le plan EST celui du
+       calcul, et proposer de le refaire n'aurait aucun sens. */
+    const recalculer = this.querySelector<HTMLElement>('.recharge-recalculer');
+    if (recalculer) recalculer.hidden = this.#courtoisie.size === 0;
     this.#planEnCours = false;
     this.#majResume();
     /* LA CARTE PASSE EN MODE TRAJET : les bornes nationales s'effacent, seules
@@ -3131,10 +3258,18 @@ export class PanneauItineraire extends HTMLElement {
       plus.title = 'S’arrêter ici';
       plus.setAttribute('aria-pressed', String(impose));
       plus.setAttribute('aria-label', `Imposer un arrêt à ${t.poi.nom}`);
+      /* LE « + » DE LA LISTE PASSE PAR LE MÊME CHEMIN QUE LA FICHE (30/08) :
+         ajouter est une commodité qui n'entraîne AUCUN recalcul, retirer en
+         entraîne un. Deux entrées pour un seul geste — les faire diverger
+         serait le meilleur moyen de corriger l'une et d'oublier l'autre. */
       plus.addEventListener('click', () => {
-        if (impose) this.#imposees.delete(cle);
-        else { this.#imposees.add(cle); this.#ecartees.delete(cle); }
-        this.#refairePlan();
+        if (impose || this.#courtoisie.has(cle)) {
+          this.#imposees.delete(cle);
+          this.#courtoisie.delete(cle);
+          this.#refairePlan();
+          return;
+        }
+        this.basculerArret(cle, 'imposer');
       });
 
       const moins = document.createElement('button');

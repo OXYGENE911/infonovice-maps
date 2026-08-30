@@ -850,7 +850,14 @@ export class BandeauGuidage extends HTMLElement {
          entière poussait la colonne à s'enrouler sur deux lignes, et c'est
          l'heure d'arrivée elle-même qui disparaissait de la vue. Le détail
          complet reste dans la phrase lue par les lecteurs d'écran. */
-      mentionEta.textContent = chargeRestanteS > 0 ? 'avec charges' : 'arrivée';
+      /* « ARRIVÉE », TOUJOURS (30/08). Armelin : « il y a écrit un horaire
+         avec la mention "avec charges". Je ne sais pas s'il s'agit du temps
+         restant à rouler avec les charges incluses ou l'heure d'arrivée. Ce
+         n'est pas clair. Il faudrait tout simplement écrire "Arrivée". »
+         Il a raison : un libellé qui qualifie le CALCUL laisse douter de ce
+         que le nombre EST. Que les charges soient comptées se lit dans la
+         phrase complète, sous l'heure, et dans le copilote. */
+      mentionEta.textContent = 'arrivée';
     }
     /* La ligne d'origine reste, MASQUÉE : elle porte encore la phrase
        complète pour les lecteurs d'écran et les parcours qui la lisent. */
@@ -890,10 +897,19 @@ export class BandeauGuidage extends HTMLElement {
     const prochainLoin = tousDevant[0];
     const prochain = prochainLoin
       && prochainLoin.avancementM - e.avancementM < portee ? prochainLoin : undefined;
+    /* LE TEMPS AUTANT QUE LES KILOMÈTRES (30/08). Armelin : « je veux voir
+       […] l'information du temps restant et des kilomètres restants avant la
+       prochaine borne de recharge ». Le temps se déduit de la vitesse
+       moyenne du trajet — la même règle que l'heure d'arrivée, et elle est
+       dite : ce n'est pas une prédiction à la minute. */
+    const versArret = prochain ? prochain.avancementM - e.avancementM : 0;
+    const minutesVersArret = e.restantM > 0 && e.restantS > 0
+      ? Math.round((versArret / e.restantM) * e.restantS / 60) : 0;
     (this.querySelector('.bg-arret') as HTMLElement).textContent = prochain
       ? `Recharge : ${prochain.nom}`
         + `${prochain.reseau ? ` (${prochain.reseau})` : ''}`
-        + ` ${distanceEnMots(prochain.avancementM - e.avancementM)}`
+        + ` ${distanceEnMots(versArret)}`
+        + `${minutesVersArret > 0 ? ` · ${minutesVersArret} min de route` : ''}`
         + `${prochain.dureeMin > 0 ? ` · ${Math.round(prochain.dureeMin)} min sur place` : ''}`
       : '';
 

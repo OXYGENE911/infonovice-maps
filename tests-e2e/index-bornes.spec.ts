@@ -207,12 +207,12 @@ test('le nom de station filtre l’index LOCALEMENT, sourd aux graphies', async 
   await expect(page.locator('.poi-etat')).toContainText('3 stations dans la vue',
     { timeout: 20_000 });
 
-  await page.getByLabel('Nom de station contient').fill('mcdonald');
+  await page.getByLabel('Chercher un réseau ou un nom de station').fill('mcdonald');
   await expect(page.locator('.poi-etat')).toContainText('2 stations dans la vue',
     { timeout: 10_000 });
 
   // Effacer le champ rend tout — un filtre qui colle serait une panne muette.
-  await page.getByLabel('Nom de station contient').fill('');
+  await page.getByLabel('Chercher un réseau ou un nom de station').fill('');
   await expect(page.locator('.poi-etat')).toContainText('3 stations dans la vue',
     { timeout: 10_000 });
 });
@@ -522,7 +522,7 @@ test('on trouve un réseau qui n’est pas dans les douze premiers', async ({ pa
   await expect(page.locator('.poi-reseaux')).toContainText('sur 16');
 
   // La recherche ouvre la liste à tout ce qui correspond.
-  await page.getByLabel('Chercher un réseau de recharge').fill('fastned');
+  await page.getByLabel('Chercher un réseau ou un nom de station').fill('fastned');
   await expect(page.locator('.poi-reseau')).toHaveCount(1);
   await expect(page.locator('.poi-reseaux')).toContainText('Fastned France');
 });

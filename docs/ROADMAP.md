@@ -534,6 +534,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #114 — PLAN-1, le plan reste le vôtre (six retours du 30/08 soir) :
+      l'ajout d'un arrêt n'entraîne plus de recalcul (arrêt de courtoisie +
+      bouton de recalcul volontaire), plus de dernier arrêt d'une minute
+      (second passage sans cette borne), « Arrivée » au lieu d'« avec
+      charges », lieux d'exception passés en CALQUE sous les arrêts (c'était
+      DOM contre canevas), temps jusqu'à la prochaine borne, et fusion des
+      deux champs de recherche réseau/nom de station.
 - [x] PR #113 — PEAGE-1, le coût des péages (demande du 30/08) : prix par
       tronçon et total, grille AREA engendrée (16 Ko) ; ce qui n'est pas
       chiffrable est NOMMÉ. APRR écarté sur mesure — fichier corrompu à la

@@ -2,6 +2,43 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.86.0] — 2026-08-30 — PLAN-1 : le plan reste le vôtre (PR #114)
+
+Six retours d'Armelin du 30/08 au soir, tous sur ce que le plan et la barre
+racontent.
+
+- **UN ARRÊT AJOUTÉ NE FAIT PLUS SAUTER LES SUIVANTS.** « Je ne veux pas de
+  recalcul automatique si j'ajoute une borne entre deux arrêts par souci de
+  commodité. » Ajouter est désormais une COMMODITÉ : la borne s'insère à son
+  kilomètre comme arrêt de courtoisie — zéro kilowattheure, zéro minute, ce
+  qu'elle est — et le plan calculé ne bouge pas. RETIRER, lui, refait le
+  plan : une borne écartée change ce qui est atteignable. Un bouton
+  « Recalculer les arrêts en gardant les miens » rend la main au calcul
+  quand on le veut.
+- **PLUS DE DERNIER ARRÊT D'UNE MINUTE.** Le calcul est glouton : à chaque
+  borne il charge JUSTE ce qu'il faut, ce qui donne parfois un dernier arrêt
+  dérisoire. On écarte alors cette borne et l'on refait le plan — privé
+  d'elle, le calcul charge davantage à l'arrêt d'avant. Si ce second plan
+  échoue ou coûte plus d'arrêts, on garde le premier : une minute vaut mieux
+  qu'un refus.
+- **« ARRIVÉE », PAS « AVEC CHARGES ».** « Je ne sais pas s'il s'agit du
+  temps restant ou de l'heure d'arrivée. » Un libellé qui qualifie le CALCUL
+  laisse douter de ce que le nombre EST.
+- **LES ARRÊTS PASSENT DEVANT LES LIEUX D'EXCEPTION.** C'était STRUCTUREL :
+  les lieux étaient des marqueurs du DOM, posés au-dessus du canevas, quand
+  les arrêts sont peints DANS le canevas — aucun z-index ne pouvait les
+  départager. Les lieux deviennent un calque de carte, inséré sous la
+  pastille des arrêts.
+- **LE TEMPS AUTANT QUE LES KILOMÈTRES** avant la prochaine borne, dans la
+  barre dépliée.
+- **UN SEUL CHAMP DE RECHERCHE** pour le réseau ET le nom de station. Les
+  deux cherchaient bien deux choses différentes — l'exploitant, le site —
+  mais rien ne le disait et l'un paraissait mort. Fondus : on tape
+  « McDonald », la liste des réseaux se réduit à ceux qui en ont, et la
+  carte ne montre plus que ces stations-là.
+
+664 tests unitaires (+3), 203 parcours E2E (+1).
+
 ## [0.85.0] — 2026-08-30 — PEAGE-1 : le coût des péages, là où la donnée existe (PR #113)
 
 « Est-ce possible d'afficher une estimation du coût en péage sur chaque

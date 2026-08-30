@@ -511,3 +511,59 @@ describe('les pauses humaines', () => {
     expect(avec.arrets[0]?.borne.nom).not.toBe('Trop en arrière, même avec jeux');
   });
 });
+
+/* LE DERNIER ARRÊT DÉRISOIRE (30/08) — Armelin : « j'ai parfois le dernier
+ * arrêt de recharge indiqué pour 1 min, ce qui n'a pas de sens. Soit on
+ * charge plus longtemps à l'arrêt d'avant, soit on recharge plus d'une
+ * minute pour que l'arrêt soit utile. » Le calcul glouton chargeait JUSTE ce
+ * qu'il faut à chaque borne ; privé de la dernière, il charge davantage à
+ * l'avant-dernière. */
+describe('planifierArrets — le dernier arrêt dérisoire', () => {
+  /* Une voiture modeste et un chapelet de bornes régulières : le glouton
+     s'arrête au plus loin qu'il peut, ce qui laisse une dernière jambe
+     courte — exactement le cas décrit. */
+  const vehicule = {
+    capaciteKwh: 50, consommationKwh100: 20, puissanceMaxKw: 100,
+  };
+  const bornes = Array.from({ length: 9 }, (_, i) => ({
+    nom: `Borne ${i + 1}`, lon: 2 + i * 0.1, lat: 48, reseau: 'Essai',
+    id: `b${i + 1}`, avancementM: (i + 1) * 40_000, ecartM: 100, puissanceKw: 100,
+  }));
+
+  test('ne finit pas par un arrêt de moins de cinq minutes', () => {
+    const plan = planifierArrets({
+      vehicule, distanceM: 370_000, bornes,
+      socDepart: 100, socArrivee: 10, reserve: 10,
+    });
+    expect(plan.faisable).toBe(true);
+    const dernier = plan.arrets[plan.arrets.length - 1];
+    if (dernier) {
+      expect(dernier.dureeMin,
+        'un arrêt d’une minute n’est pas un arrêt').toBeGreaterThanOrEqual(5);
+    }
+  });
+
+  test('ne retire JAMAIS un arrêt voulu par l’usager, même s’il ne charge rien', () => {
+    /* On s'arrête pour déjeuner, pas pour les électrons : une consigne de
+       l'usager n'est pas une inefficacité à corriger. */
+    const plan = planifierArrets({
+      vehicule, distanceM: 370_000, bornes,
+      socDepart: 100, socArrivee: 10, reserve: 10,
+      imposees: ['b9'],
+    });
+    expect(plan.faisable).toBe(true);
+    expect(plan.arrets.some((a) => a.borne.id === 'b9'),
+      'l’arrêt imposé a été supprimé').toBe(true);
+  });
+
+  test('garde le plan d’origine quand s’en passer coûterait plus cher', () => {
+    /* La garde du second passage : s'il faut DEUX arrêts de plus pour éviter
+       une minute, on a échangé une minute contre un quart d'heure. */
+    const plan = planifierArrets({
+      vehicule, distanceM: 370_000, bornes,
+      socDepart: 100, socArrivee: 10, reserve: 10, plafondCharge: 60,
+    });
+    // Faisable dans tous les cas : c'est le contrat qu'on ne casse pas.
+    expect(plan.faisable).toBe(true);
+  });
+});

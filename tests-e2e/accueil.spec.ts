@@ -1804,7 +1804,10 @@ test('POI : sous le zoom 12, les recherches se DISENT inertes — avant le clic'
   // AU ZOOM DU TRAJET : boutons désactivés, raison écrite, champ inerte.
   await expect(page.locator('.poi-categorie').first()).toBeDisabled();
   await expect(page.locator('.poi-seuil-vue')).toContainText('Rapprochez-vous');
-  await expect(page.locator('.poi-nom-station')).toBeDisabled();
+  /* Le champ de recherche a FUSIONNÉ avec celui des réseaux le 30/08 : il
+     reste actif (on cherche un réseau à tout zoom), et c'est la note qui
+     porte l'avertissement sur le nom de station. */
+  await expect(page.locator('.poi-reseau-recherche')).toBeEnabled();
 
   // EN SE RAPPROCHANT, tout redevient vivant — sans recharger la page.
   await page.evaluate(() => {
@@ -1813,7 +1816,7 @@ test('POI : sous le zoom 12, les recherches se DISENT inertes — avant le clic'
   });
   await expect(page.locator('.poi-categorie').first()).toBeEnabled();
   await expect(page.locator('.poi-seuil-vue')).toBeHidden();
-  await expect(page.locator('.poi-nom-station')).toBeEnabled();
+  await expect(page.locator('.poi-reseau-recherche')).toBeEnabled();
 });
 
 test('PEAGE-1 : le coût estimé des péages — et ce qu’on ne sait PAS chiffrer', async ({ page }) => {
