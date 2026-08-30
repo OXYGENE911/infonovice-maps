@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   CATALOGUE, libelleModele, libelleDansMarque, parMarque,
   modeleParCle, consommationDepuis, autonomiesProposees, PART_AUTOROUTE,
+  chercherModeles
 } from '../src/lib/catalogue-vehicules';
 import { PRISES } from '../src/lib/poi';
 
@@ -226,5 +227,50 @@ describe('libelleDansMarque', () => {
       const libelles = g.modeles.map(libelleDansMarque);
       expect(new Set(libelles).size, g.marque).toBe(libelles.length);
     }
+  });
+});
+
+/* LA RECHERCHE DU CATALOGUE (CAT-1, demande d'Armelin du 30/08) : « le choix
+ * des véhicules est trop long à scroller […] ajouter une barre de recherche
+ * pour un modèle ou une marque spécifique ». Ce qui se teste à sec, c'est la
+ * DIFFÉRENCE entre chercher une marque et chercher un modèle. */
+describe('chercherModeles', () => {
+  it('sans recherche, rend TOUTES les marques, repliées', () => {
+    const r = chercherModeles('');
+    expect(r.length).toBe(parMarque().length);
+    expect(r.every((g) => !g.ouvrir), 'tout doit rester replié').toBe(true);
+  });
+
+  it('une MARQUE cherchée rend la marque ENTIÈRE, ouverte', () => {
+    /* On tape « vinfast » parce qu'on veut voir ce que VinFast propose :
+       n'en montrer qu'un modèle serait répondre à côté. */
+    const r = chercherModeles('vinfast');
+    expect(r).toHaveLength(1);
+    expect(r[0]!.marque).toBe('VinFast');
+    expect(r[0]!.ouvrir).toBe(true);
+    const tous = parMarque().find((g) => g.marque === 'VinFast')!;
+    expect(r[0]!.modeles).toHaveLength(tous.modeles.length);
+  });
+
+  it('un MODÈLE cherché ne rend que les modèles qui répondent', () => {
+    const r = chercherModeles('vf 8');
+    expect(r.length).toBeGreaterThan(0);
+    for (const g of r) {
+      expect(g.ouvrir).toBe(true);
+      for (const m of g.modeles) {
+        expect(libelleModele(m).toLowerCase()).toContain('vf 8');
+      }
+    }
+  });
+
+  it('ignore accents et casse — on tape vite, et sans accent', () => {
+    const avec = chercherModeles('Mégane');
+    const sans = chercherModeles('megane');
+    expect(sans.length).toBe(avec.length);
+    expect(sans.length).toBeGreaterThan(0);
+  });
+
+  it('rend une liste vide quand rien ne correspond, sans lever', () => {
+    expect(chercherModeles('zzzz-inexistant')).toEqual([]);
   });
 });

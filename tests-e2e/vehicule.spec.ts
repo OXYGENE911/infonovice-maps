@@ -198,17 +198,23 @@ test('choisir un modèle remplit le formulaire, et le bilan suit', async ({ page
   // Rien n'est prétendu tant que rien n'est choisi.
   await expect(page.getByLabel('Batterie', { exact: true })).toHaveValue('');
 
-  await page.getByLabel('Choisir un modèle de véhicule')
-    .selectOption({ label: 'VF 8 (Eco)' });
+  await page.locator('.veh-marque', { hasText: 'VinFast' }).locator('summary').click();
+  await page.getByRole('button', { name: 'Choisir VinFast VF 8 (Eco)' }).click();
 
   await expect(page.getByLabel('Batterie', { exact: true })).toHaveValue('82.4');
   await expect(page.getByLabel('Charge max', { exact: true })).toHaveValue('150');
   await expect(page.getByLabel('Nom du véhicule')).toHaveValue('VinFast VF 8 (Eco)');
-  /* GROUPÉ PAR MARQUE : dans la liste, on lit « VF 8 (Eco) » sous « VinFast »,
-     et non « VinFast VF 8 (Eco) » — répéter la marque sous elle-même serait du
-     bruit. Le NOM enregistré, lui, la garde : il vit hors de tout groupe. */
+  /* GROUPÉ PAR MARQUE : sous « VinFast » on lit « VF 8 (Eco) », et non
+     « VinFast VF 8 (Eco) » — répéter la marque sous elle-même serait du bruit.
+     Le NOM enregistré, lui, la garde : il vit hors de tout groupe. */
+  await expect(page.getByRole('button', { name: 'Choisir VinFast VF 8 (Eco)' }))
+    .toHaveText('VF 8 (Eco)');
+  /* LE <select> RESTE SOUS LA PEAU : masqué à l'œil, il porte le nom
+     accessible et l'état choisi pour un lecteur d'écran. Le perdre en
+     habillant la liste serait une régression invisible. */
   await expect(page.locator('.veh-catalogue optgroup[label="VinFast"]')).toHaveCount(1);
-  await expect(page.locator('.veh-catalogue optgroup').first()).toBeAttached();
+  await expect(page.getByLabel('Choisir un modèle de véhicule'))
+    .toHaveValue('vinfast-vf8');
   /* LA SANTÉ REVIENT À 100 % : le catalogue décrit une voiture neuve, et
      garder la dégradation d'un véhicule précédent l'appliquerait à un modèle
      qui n'a rien à voir. */
@@ -220,8 +226,8 @@ test('choisir un modèle remplit le formulaire, et le bilan suit', async ({ page
 
 test('les valeurs du catalogue restent MODIFIABLES — il propose, il ne verrouille pas', async ({ page }) => {
   await ouvrirVehicule(page);
-  await page.getByLabel('Choisir un modèle de véhicule')
-    .selectOption({ label: 'Spring' });
+  await page.locator('.veh-recherche').fill('spring');
+  await page.getByRole('button', { name: /^Choisir Dacia Spring/ }).first().click();
   await expect(page.getByLabel('Batterie', { exact: true })).toHaveValue('26.8');
 
   // L'usager corrige : c'est SA voiture, pas la fiche du constructeur.
@@ -260,4 +266,56 @@ test('MÉMOIRE : masse et bridages thermiques survivent au rechargement', async 
     'le bridage par grand froid a été oublié').toHaveValue('30');
   await expect(page.getByLabel('Charge max en canicule'),
     'le bridage en canicule a été oublié').toHaveValue('60');
+});
+
+/* CAT-1 — Armelin, le 30/08 : « le choix des véhicules est trop long à
+   scroller quand il y a trop de véhicules électriques dans la liste. Il
+   faudrait les replier par marque […] on clique sur une marque pour déplier
+   et voir les modèles existants, et ajouter une barre de recherche pour
+   aller plus vite. » */
+
+test('le catalogue s’ouvre REPLIÉ : on voit les marques, pas cent trente modèles', async ({ page }) => {
+  await ouvrirVehicule(page);
+  const marques = page.locator('.veh-marque');
+  expect(await marques.count()).toBeGreaterThan(20);
+  // Aucune dépliée : c'est tout l'objet de la demande.
+  await expect(page.locator('.veh-marque[open]')).toHaveCount(0);
+  /* Les modèles SONT dans le document — c'est ce qui permet au lecteur
+     d'écran de tout parcourir — mais aucun n'est à l'écran. */
+  await expect(page.locator('.veh-modele').first()).toBeHidden();
+
+  // On déplie SA marque, et elle seule.
+  await page.locator('.veh-marque', { hasText: 'Renault' }).locator('summary').click();
+  await expect(page.locator('.veh-marque[open]')).toHaveCount(1);
+  expect(await page.locator('.veh-marque[open] .veh-modele').count()).toBeGreaterThan(0);
+});
+
+test('la recherche trouve une MARQUE, et la rend entière', async ({ page }) => {
+  await ouvrirVehicule(page);
+  await page.locator('.veh-recherche').fill('tesla');
+  await expect(page.locator('.veh-marque')).toHaveCount(1);
+  /* DÉPLIÉE D'OFFICE : avoir cherché une marque, c'est avoir demandé à voir
+     ses modèles. Un second clic pour ouvrir l'unique résultat serait un geste
+     de trop. */
+  await expect(page.locator('.veh-marque[open]')).toHaveCount(1);
+});
+
+test('la recherche trouve un MODÈLE, sans se soucier des accents', async ({ page }) => {
+  await ouvrirVehicule(page);
+  await page.locator('.veh-recherche').fill('ZOE');
+  await expect(page.locator('.veh-marque')).toHaveCount(1);
+  await expect(page.locator('.veh-modele')).toHaveCount(1);
+  await expect(page.locator('.veh-modele')).toContainText('Zoe');
+  // Et le modèle choisi se voit, une fois choisi.
+  await page.locator('.veh-modele').click();
+  await expect(page.locator('.veh-modele')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('une recherche sans résultat le DIT, et laisse la saisie à la main', async ({ page }) => {
+  await ouvrirVehicule(page);
+  await page.locator('.veh-recherche').fill('zzzz');
+  await expect(page.locator('.veh-marque')).toHaveCount(0);
+  await expect(page.locator('.veh-marques')).toContainText('Aucune marque ni modèle');
+  // Le formulaire, lui, reste ouvert : le catalogue propose, il ne barre pas.
+  await expect(page.getByLabel('Batterie', { exact: true })).toBeEditable();
 });

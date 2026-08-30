@@ -534,6 +534,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #115 — CAT-1, le catalogue se cherche et se replie (demande du
+      30/08) : 32 marques repliées au lieu de 137 modèles à la file, une
+      barre de recherche qui rend une MARQUE entière et dépliée mais ne
+      filtre que les MODÈLES quand on cherche un modèle, accents et
+      majuscules ignorés ; le <select> reste sous la peau pour le lecteur
+      d'écran.
 - [x] PR #114 — PLAN-1, le plan reste le vôtre (six retours du 30/08 soir) :
       l'ajout d'un arrêt n'entraîne plus de recalcul (arrêt de courtoisie +
       bouton de recalcul volontaire), plus de dernier arrêt d'une minute
