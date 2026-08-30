@@ -2,6 +2,43 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.95.0] — 2026-08-30 — VOIX-1 : le guidage vocal (PR #123)
+
+Armelin, le 30/08 : « fais le guidage vocal ».
+
+- **LA VOIX EST CELLE DU NAVIGATEUR, ET D'AUCUN SERVICE.** `speechSynthesis`
+  est dans le navigateur : gratuite, présente depuis dix ans, et rien ne
+  quitte l'appareil. Une synthèse en ligne — il en existe d'excellentes —
+  enverrait à un tiers l'itinéraire complet de l'usager, phrase après phrase.
+  C'est exactement ce que ce projet refuse.
+- **UNE RÉSERVE MESURÉE, ET ELLE EST PUBLIQUE.** Toutes les voix ne sont pas
+  locales : la spécification expose `localService`, et certains navigateurs
+  proposent des voix de SERVEUR. On préfère TOUJOURS une voix locale et l'on
+  ne se rabat sur une voix distante que si l'appareil n'en a aucune autre.
+  C'est écrit sur la page « Vie privée », comme la règle du projet l'exige.
+- **ELLE SE TAIT TANT QU'ON NE LA DEMANDE PAS**, et le choix survit à la
+  fermeture (IndexedDB, sur l'appareil).
+- **TROIS PALIERS, JAMAIS DEUX FOIS LE MÊME** : mille mètres, trois cents,
+  cinquante. Un GPS qui parle sans cesse finit coupé, et un GPS coupé ne
+  prévient plus de rien. Et jamais un palier plus loin que l'étape elle-même,
+  sans quoi deux annonces se contrediraient.
+- **ON SE TAIT SUR CE QUI NE SE JOUE PAS.** « Continuez tout droit » sur
+  quinze kilomètres userait l'attention qu'il faudra avoir à la sortie. Sauf
+  dans un giratoire, où « tout droit » veut dire « la deuxième sortie ».
+- **ELLE DIT CE QUE L'ÉCRAN MONTRE** — le rang du giratoire, le numéro de
+  sortie, les villes desservies, la route visée — parce qu'elle lit le MÊME
+  contexte : ils ne peuvent pas se contredire.
+- **ELLE RÉPOND EN S'ALLUMANT** : s'il y a une manœuvre à annoncer, elle
+  l'annonce ; sinon elle se présente. On ne découvre pas au premier virage
+  que la voix ne marche pas.
+- **UN DÉFAUT TROUVÉ PAR UN TEST** : la recherche du palier parcourait la
+  liste à l'endroit et rendait « loin » jusqu'au dernier mètre — la voix
+  n'aurait jamais dit « dans 300 mètres ».
+
+Tests : 24 unitaires (paliers, formulation, mémoire des annonces, choix de la
+voix locale), 7 E2E avec une synthèse vocale espionnée — les phrases
+RÉELLEMENT prononcées, pas un état interne. 801 unitaires, 253 E2E.
+
 ## [0.94.0] — 2026-08-30 — AFFECT-1 : l'affectation par voie (PR #122)
 
 Armelin, le 30/08 : « fais l'affectation par voie ».

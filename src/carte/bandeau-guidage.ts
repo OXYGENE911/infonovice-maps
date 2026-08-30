@@ -53,8 +53,12 @@ import { refermerPanneaux } from './panneaux';
 import { classeRoute, numeroRoute, libelleClasse } from '../lib/classe-route';
 import { fondPanneau, encreSur, cartoucheNumero } from '../lib/panneau';
 import { pictoMenu } from './icone-menu';
+import { Voix } from './voix';
+import {
+  palierA, phraseAnnonce, MemoireAnnonces, type ContexteAnnonce,
+} from '../lib/annonces';
 import { CurseurVehicule, capEntre, formeValide, PREF_CURSEUR } from './curseur-vehicule';
-import { lirePreference } from '../lib/stockage';
+import { lirePreference, ecrirePreference } from '../lib/stockage';
 import { segmentsFrise } from '../lib/frise';
 
 /** Un arrêt de recharge à annoncer pendant le trajet. */
@@ -102,6 +106,10 @@ const ANNONCE_M = 10_000;
    arriverait avant la sortie précédente ; plus tard, elle arriverait après
    le trait continu. */
 const SEUIL_VOIES_M = 900;
+
+/* LA CLÉ DU CHOIX DE VOIX, dans le même magasin que les autres préférences :
+   IndexedDB local, jamais un serveur (CLAUDE.md). */
+export const PREF_VOIX = 'guidage-vocal';
 
 /**
  * La flèche d'un mouvement de voie, en SVG — PURE.
@@ -196,6 +204,18 @@ export class BandeauGuidage extends HTMLElement {
      Paris-Lyon (mesuré le 30/08). Tant qu'elle n'est pas là, ou si elle
      échoue, la chaussée ne se dessine pas — le suivi vaut sans elle. */
   #voies: readonly ReleveVoies[] = [];
+
+  /* LA VOIX (VOIX-1, 30/08) — celle du navigateur. Le choix de l'usager
+     survit à la fermeture : on ne redemande pas à chaque trajet. */
+  #voix = new Voix();
+
+  #parle = false;
+
+  /* Vrai dès qu'une annonce est sortie — sert à savoir si l'allumage a déjà
+     dit quelque chose d'utile. */
+  #aParle = false;
+
+  #annonces = new MemoireAnnonces();
 
   /* L'AFFECTATION PAR VOIE — relevée par le MÊME appel Overpass. Quand elle
      existe (29 % des manœuvres mesurées le 30/08), elle REMPLACE le conseil
@@ -427,6 +447,13 @@ export class BandeauGuidage extends HTMLElement {
             ${pictoMenu('orient-cap')}</button>
           <button type="button" class="bg-copilote-bouton" aria-pressed="false"
             aria-label="Ouvrir le panneau du copilote">${pictoMenu('copilote')}</button>
+          <!-- LE GUIDAGE VOCAL (VOIX-1, 30/08). La voix est celle du
+               NAVIGATEUR : aucun service, aucun coût, et rien qui quitte
+               l'appareil — une synthèse en ligne enverrait à un tiers
+               l'itinéraire complet, phrase après phrase. Le bouton ne
+               paraît que si l'appareil sait parler. -->
+          <button type="button" class="bg-voix" aria-pressed="false" hidden
+            aria-label="Activer le guidage vocal">${pictoMenu('voix-muette')}</button>
           <!-- L'ITINÉRAIRE BIS (BIS-1, 30/08). Armelin : « quand on est en
                mode navigation et qu'on a un obstacle ou une route fermée non
                prévue, ce serait bien d'avoir dans la barre d'état une icône
@@ -555,6 +582,30 @@ export class BandeauGuidage extends HTMLElement {
     this.#publierHauteur = publierHauteur;
 
     this.querySelector('.bg-arreter')?.addEventListener('click', () => { this.arreter(); });
+    /* LE BOUTON NE PARAÎT QUE SI L'APPAREIL SAIT PARLER : proposer une voix
+       qui n'existe pas est une promesse qu'on ne tient pas. */
+    const bVoix = this.querySelector<HTMLButtonElement>('.bg-voix');
+    if (bVoix && Voix.disponible) {
+      bVoix.hidden = false;
+      bVoix.addEventListener('click', () => {
+        this.#reglerVoix(!this.#parle);
+        void ecrirePreference(PREF_VOIX, this.#parle);
+        /* ON RÉPOND TOUT DE SUITE, ET C'EST DEUX FOIS NÉCESSAIRE. D'abord
+           parce qu'on ne sait pas si la voix marche avant le premier virage
+           — le pire moment pour le découvrir ; les navigateurs exigent
+           d'ailleurs un geste d'usager avant de laisser une page parler.
+           Ensuite parce que l'annonce suivante attendrait le prochain fixe
+           GPS, qui peut ne jamais venir à l'arrêt.
+           ANNONCER VAUT MIEUX QUE SE PRÉSENTER : s'il y a une manœuvre à
+           dire, on la dit — c'est une démonstration ET une information. La
+           phrase de présentation ne sert que s'il n'y a rien à annoncer. */
+        if (this.#parle) {
+          this.#aParle = false;
+          if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+          if (!this.#aParle) this.#voix.dire('Guidage vocal activé');
+        }
+      });
+    }
     /* LE BIS SE DEMANDE D'ICI, IL SE CALCULE AILLEURS : la barre sait où
        l'on est et où l'on va, le planificateur sait calculer. Elle passe
        donc la position et le cap, et attend la réponse — même partage des
@@ -758,6 +809,14 @@ export class BandeauGuidage extends HTMLElement {
     void lirePreference<string>(PREF_CURSEUR)
       .then((f) => { this.#curseur.forme = formeValide(f); })
       .catch(() => { /* rien à dire : la forme par défaut fait le travail */ });
+    /* LA VOIX SE PRÉPARE AU DÉMARRAGE, pas au premier virage : le navigateur
+       charge ses voix en tâche de fond, et les demander au moment de parler
+       revient à ne rien dire de la première manœuvre. */
+    this.#annonces.vider();
+    this.#voix.preparer();
+    void lirePreference<boolean>(PREF_VOIX)
+      .then((v) => { this.#reglerVoix(v === true); })
+      .catch(() => { /* sans préférence lue, la voix reste muette */ });
     (this.querySelector('.bg-recentrer') as HTMLElement).hidden = true;
     void this.#prendreVerrou();
     document.addEventListener('visibilitychange', this.#surVisibilite);
@@ -766,6 +825,10 @@ export class BandeauGuidage extends HTMLElement {
 
   arreter(): void {
     this.#fermerBoussole();
+    /* ON SE TAIT AVANT TOUT LE RESTE : une phrase qui continue après l'arrêt
+       du suivi annoncerait un virage qu'on ne prend plus. */
+    this.#voix.taire();
+    this.#annonces.vider();
     this.#curseur.retirer();
     if (this.#veille !== null) {
       navigator.geolocation.clearWatch(this.#veille);
@@ -1066,6 +1129,52 @@ export class BandeauGuidage extends HTMLElement {
     boite.innerHTML = schemaGiratoire(g);
   }
 
+  /** Allume ou éteint la voix, et le dit au bouton. */
+  #reglerVoix(actif: boolean): void {
+    this.#parle = actif;
+    if (!actif) this.#voix.taire();
+    const b = this.querySelector<HTMLButtonElement>('.bg-voix');
+    if (!b) return;
+    b.setAttribute('aria-pressed', String(actif));
+    b.setAttribute('aria-label', actif ? 'Couper le guidage vocal' : 'Activer le guidage vocal');
+    b.innerHTML = pictoMenu(actif ? 'voix' : 'voix-muette');
+  }
+
+  /**
+   * Ce qu'il faut dire, s'il faut le dire (VOIX-1, 30/08).
+   *
+   * LA DÉCISION EST AILLEURS (lib/annonces.ts) : ici on ne fait que réunir ce
+   * que le panneau sait déjà — le rang du giratoire, le numéro de sortie, les
+   * villes — et le passer à qui formule. Le même contexte nourrit l'écran et
+   * la voix : ils ne peuvent donc pas se contredire.
+   */
+  #annoncer(e: EtatGuidage): void {
+    if (!this.#parle || e.horsRoute || !e.manoeuvre) return;
+    const palier = palierA(e.jusquALaManoeuvreM, e.manoeuvre.distance);
+    if (palier === null) return;
+    const point = e.avancementM + e.jusquALaManoeuvreM;
+    if (!this.#annonces.aDire(point, palier)) return;
+
+    const giratoire = giratoireA(this.#giratoires, e.avancementM);
+    const sortie = sortieA(this.#sorties, point);
+    const bretelle = destinationA(this.#destinations, point);
+    const contexte: ContexteAnnonce = {
+      manoeuvre: e.manoeuvre.manoeuvre,
+      ...(giratoire ? { rangGiratoire: giratoire.rang } : {}),
+      ...(sortie?.numero ? { sortie: sortie.numero } : {}),
+      ...(bretelle ? { villes: bretelle.villes } : {}),
+      ...(e.manoeuvre.voie ? { voie: e.manoeuvre.voie } : {}),
+    };
+    const phrase = phraseAnnonce(palier, e.jusquALaManoeuvreM, contexte);
+    /* ON NOTE MÊME CE QU'ON NE DIT PAS : sans cela, une manœuvre muette
+       (« tout droit ») ferait recalculer la phrase à chaque fixe GPS
+       jusqu'au carrefour suivant. */
+    this.#annonces.noter(point, palier);
+    if (phrase === '') return;
+    this.#voix.dire(phrase);
+    this.#aParle = true;
+  }
+
   #alerte(message: string): void {
     const p = this.querySelector('.bg-alerte') as HTMLElement;
     p.textContent = message;
@@ -1292,6 +1401,8 @@ export class BandeauGuidage extends HTMLElement {
       instruction.textContent = e.manoeuvre ? e.manoeuvre.texte : 'Suivez l’itinéraire';
       distance.textContent = e.manoeuvre ? distanceEnMots(e.jusquALaManoeuvreM) : '';
     }
+
+    this.#annoncer(e);
 
     /* LE ROND-POINT PARLE EN DERNIER, ET C'EST L'ORDRE QUI COMPTE : il
        REMPLACE l'instruction du moteur, qui ignore les giratoires et y dit

@@ -1389,20 +1389,22 @@ bandeau-guidage.bg-compact .bg-trafic { display: none; }
 
 .bg-boutons { display: flex; gap: 8px; margin-top: 10px; }
 .bg-arreter, .bg-reduire, .bg-3d, .bg-orientation, .bg-copilote-bouton,
-.bg-bis {
+.bg-bis, .bg-voix {
   padding: 8px 12px;
   border: 1px solid var(--bord-2); border-radius: 8px; background: var(--fond-doux);
   cursor: pointer; font: 600 13px var(--police); color: var(--texte-1);
 }
 .bg-arreter { flex: 1 1 auto; }
 .bg-reduire, .bg-3d, .bg-orientation, .bg-copilote-bouton,
-.bg-bis { flex: 0 0 auto; }
+.bg-bis, .bg-voix { flex: 0 0 auto; }
 .bg-arreter:hover, .bg-reduire:hover, .bg-3d:hover, .bg-orientation:hover,
-.bg-copilote-bouton:hover, .bg-bis:hover { border-color: var(--accent); color: var(--accent); }
+.bg-copilote-bouton:hover, .bg-bis:hover,
+.bg-voix:hover { border-color: var(--accent); color: var(--accent); }
 .bg-arreter:focus-visible, .bg-reduire:focus-visible, .bg-3d:focus-visible,
 .bg-orientation:focus-visible,
 .bg-copilote-bouton:focus-visible,
-.bg-bis:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-bis:focus-visible,
+.bg-voix:focus-visible { outline: none; box-shadow: var(--focus); }
 /* Le bouton du copilote DIT son état : ouvert, il est plein. */
 .bg-copilote-bouton[aria-pressed="true"] {
   background: var(--accent); border-color: var(--accent); color: var(--blanc);
@@ -2694,7 +2696,7 @@ body.en-guidage #carte .maplibregl-ctrl-bottom-left {
   width: 44px; height: 44px; padding: 0; display: grid; place-items: center;
 }
 .bg-3d .picto-menu, .bg-orientation .picto-menu, .bg-copilote-bouton .picto-menu,
-.bg-bis .picto-menu {
+.bg-bis .picto-menu, .bg-voix .picto-menu {
   width: 22px; height: 22px; color: var(--texte-1);
 }
 .bg-copilote-bouton[aria-pressed="true"] .picto-menu { color: var(--accent); }
@@ -2971,4 +2973,14 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
 .bg-gir-rang {
   fill: var(--panneau-encre); stroke: none;
   font: 700 12px var(--police);
+}
+
+/* VOIX-1 — LE BOUTON DU GUIDAGE VOCAL. Allumé, il prend l'accent : c'est le
+   seul bouton de la barre dont l'état change ce que l'application FAIT (elle
+   parle), et non ce qu'elle montre. */
+.bg-voix[aria-pressed="true"] {
+  border-color: var(--accent); color: var(--accent); background: var(--bleu-50);
+}
+@media (prefers-color-scheme: dark) {
+  .bg-voix[aria-pressed="true"] { background: #14263A; }
 }
