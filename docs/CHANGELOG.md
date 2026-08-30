@@ -2,6 +2,42 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.87.0] — 2026-08-30 — CAT-1 : le catalogue se cherche et se replie (PR #115)
+
+Armelin, le 30/08 : « le choix des véhicules est trop long à scroller quand il
+y a trop de véhicules électriques dans la liste. Il faudrait les replier par
+marque […] on clique sur une marque pour déplier et voir les modèles
+existants, et ajouter une barre de recherche pour un modèle ou une marque
+spécifique. »
+
+- **TRENTE-DEUX MARQUES REPLIÉES, PLUS CENT TRENTE-SEPT MODÈLES À LA FILE.**
+  La liste s'ouvre sur les seules marques ; on déplie la sienne, et elle
+  seule. Ce qui se déroulait sur plusieurs écrans tient désormais dans un.
+- **UNE BARRE DE RECHERCHE, ET DEUX RÉPONSES SELON CE QU'ON CHERCHE.**
+  Chercher une MARQUE la rend entière et dépliée — l'avoir nommée, c'est
+  avoir demandé à voir ses modèles. Chercher un MODÈLE ne rend que les
+  modèles qui correspondent. Accents et majuscules sont ignorés : « zoe »,
+  « ZOÉ » et « Zoe » trouvent la même voiture. Une recherche vide le DIT et
+  laisse la saisie à la main — le catalogue propose, il ne barre pas.
+- **CHOISIR NE REFERME PLUS LA MARQUE.** Le premier jet redessinait la liste
+  après le choix, ce qui refermait la marque sous le doigt de l'usager.
+  Seul le modèle choisi change d'état désormais, et il se marque comme tel.
+- **LA LISTE ENTIÈRE VIT DANS UNE BOÎTE FERMÉE, la recherche au-dessus
+  reste toujours visible.** Le premier jet posait les trente-deux marques à
+  même le formulaire : elles repoussaient le choix du repère à 1 500 px,
+  hors de vue à l'ouverture — ce que FEN-6 interdit. Lui donner un ascenseur
+  propre était l'autre issue, et FEN-6 l'interdit aussi (« deux ascenseurs,
+  un dans l'autre »). La CI l'a attrapé : le parcours FEN-6 existait déjà.
+  La boîte s'ouvre d'elle-même dès la première lettre tapée.
+- **LE <select> RESTE, MASQUÉ À L'ŒIL SEULEMENT.** Il porte le nom
+  accessible, la navigation clavier native et l'état choisi : un lecteur
+  d'écran y retrouve la liste entière. Les marques repliées sont sa peau,
+  pas son remplacement — un E2E le vérifie explicitement.
+
+Tests : 5 unitaires sur la recherche pure (`chercherModeles`), 5 E2E sur le
+repli, l'ouverture par la recherche, la recherche par marque, la recherche
+par modèle et la recherche infructueuse. 669 unitaires, 209 E2E.
+
 ## [0.86.0] — 2026-08-30 — PLAN-1 : le plan reste le vôtre (PR #114)
 
 Six retours d'Armelin du 30/08 au soir, tous sur ce que le plan et la barre

@@ -20,7 +20,7 @@ import {
 import { collectionAnneaux } from '../lib/cercle';
 import {
   CATALOGUE, libelleModele, libelleDansMarque, parMarque,
-  modeleParCle, autonomiesProposees,
+  modeleParCle, autonomiesProposees, chercherModeles,
 } from '../lib/catalogue-vehicules';
 import {
   FORMES, curseurSVG, formeValide, FORME_DEFAUT, PREF_CURSEUR, type FormeCurseur,
@@ -102,7 +102,34 @@ export class PanneauVehicule extends HTMLElement {
                péage à l'entrée : beaucoup ne le franchissent pas, et ceux qui
                le franchissent y mettent des approximations. Chaque champ reste
                modifiable après application. -->
-          <label class="veh-ligne veh-ligne-catalogue">Modèle
+          <!-- LE CATALOGUE SE CHERCHE ET SE REPLIE (CAT-1, 30/08). Armelin :
+               « le choix des véhicules est trop long à scroller quand il y a
+               trop de véhicules électriques dans la liste. Il faudrait les
+               replier par marque […] on clique sur une marque pour déplier
+               et voir les modèles existants, et ajouter une barre de
+               recherche pour aller plus vite. »
+               LE <select> RESTE, MASQUÉ À L'ŒIL : c'est lui qui porte le nom
+               accessible, la navigation au clavier native et l'état choisi —
+               un lecteur d'écran y retrouve la liste entière. Les marques
+               repliées ci-dessous sont sa peau, pas son remplacement. -->
+          <label class="veh-recherche-ligne">Chercher un véhicule
+            <input type="search" class="veh-recherche"
+              placeholder="Renault, VF 8, Zoe…"
+              aria-label="Chercher une marque ou un modèle">
+          </label>
+          <!-- LA LISTE ENTIÈRE EST DANS UNE BOÎTE FERMÉE, et ce n'est pas
+               un caprice : dépliées, trente-deux marques repoussaient le
+               choix du repère à 1 500 px — hors de vue à l'ouverture, ce que
+               FEN-6 interdit (Armelin, 29/08). La lui donner un ascenseur
+               propre était l'autre issue, et FEN-6 l'interdit aussi (« deux
+               ascenseurs, un dans l'autre »). Reste celle-ci : la recherche
+               au-dessus reste TOUJOURS visible — c'est le chemin rapide —,
+               et la boîte s'ouvre d'elle-même dès qu'on cherche. -->
+          <details class="veh-marques-boite">
+            <summary>Toutes les marques</summary>
+            <div class="veh-marques"></div>
+          </details>
+          <label class="veh-ligne veh-ligne-catalogue veh-lu-seulement">Modèle
             <span><select class="veh-catalogue" aria-label="Choisir un modèle de véhicule">
               <option value="">— saisie manuelle —</option>
               <!-- GROUPÉ PAR MARQUE. Cent trente modèles à plat forment un
@@ -264,6 +291,7 @@ export class PanneauVehicule extends HTMLElement {
       this.#poser();
     });
 
+    this.#installerCatalogue();
     this.#installerCurseur();
     void this.#restaurer();
   }
@@ -314,6 +342,77 @@ export class PanneauVehicule extends HTMLElement {
    * pas la voiture : c'est un goût d'affichage, il survit au changement de
    * modèle. Le bandeau de suivi le relit à chaque départ.
    */
+  /**
+   * Le catalogue repliable et cherchable (CAT-1, 30/08).
+   *
+   * IL PILOTE LE <select>, IL NE LE DOUBLE PAS. Choisir un modèle ici pose la
+   * valeur du select et lui envoie un `change` : toute la logique
+   * d'application du modèle reste à un seul endroit, celui qui existait
+   * déjà. Deux chemins pour un seul geste seraient deux chemins à corriger.
+   */
+  #installerCatalogue(): void {
+    const boite = this.querySelector<HTMLElement>('.veh-marques');
+    const recherche = this.querySelector<HTMLInputElement>('.veh-recherche');
+    const select = this.querySelector<HTMLSelectElement>('.veh-catalogue');
+    if (!boite || !recherche || !select) return;
+
+    const rendre = (): void => {
+      const groupes = chercherModeles(recherche.value);
+      boite.replaceChildren();
+      if (groupes.length === 0) {
+        const rien = document.createElement('p');
+        rien.className = 'veh-note';
+        rien.textContent = 'Aucune marque ni modèle ne correspond.'
+          + ' Vous pouvez saisir les valeurs à la main.';
+        boite.append(rien);
+        return;
+      }
+      for (const g of groupes) {
+        const marque = document.createElement('details');
+        marque.className = 'veh-marque';
+        marque.open = g.ouvrir;
+        const titre = document.createElement('summary');
+        titre.textContent = `${g.marque} (${g.modeles.length})`;
+        marque.append(titre);
+        for (const m of g.modeles) {
+          const bouton = document.createElement('button');
+          bouton.type = 'button';
+          bouton.className = 'veh-modele';
+          bouton.textContent = libelleDansMarque(m);
+          bouton.setAttribute('aria-label', `Choisir ${libelleModele(m)}`);
+          if (select.value === m.cle) bouton.setAttribute('aria-pressed', 'true');
+          bouton.addEventListener('click', () => {
+            select.value = m.cle;
+            select.dispatchEvent(new Event('change'));
+            /* ON NE REDESSINE PAS LA LISTE : la redessiner refermerait la
+               marque qu'on vient d'ouvrir, sous le doigt de l'usager. Seule
+               la marque choisie change d'état, et elle seule est repeinte. */
+            for (const autre of boite.querySelectorAll('.veh-modele')) {
+              autre.removeAttribute('aria-pressed');
+            }
+            bouton.setAttribute('aria-pressed', 'true');
+          });
+          marque.append(bouton);
+        }
+        boite.append(marque);
+      }
+    };
+
+    /* PAS DE DÉBOUNCE ICI : la recherche est LOCALE (cent trente modèles en
+       mémoire). Attendre 300 ms pour filtrer un tableau donnerait une
+       impression de lourdeur sans rien économiser. */
+    const boiteMarques = this.querySelector<HTMLDetailsElement>('.veh-marques-boite');
+    recherche.addEventListener('input', () => {
+      rendre();
+      /* CHERCHER, C'EST DEMANDER À VOIR : la boîte s'ouvre sur la première
+         lettre. Elle ne se REFERME pas quand on efface — refermer sous les
+         doigts de qui vient de vider son champ pour recommencer serait pris
+         pour une panne. */
+      if (boiteMarques && recherche.value !== '') boiteMarques.open = true;
+    });
+    rendre();
+  }
+
   #installerCurseur(): void {
     const cases = this.querySelectorAll<HTMLInputElement>('input[name="veh-curseur"]');
     for (const c of cases) {

@@ -323,6 +323,48 @@ export function libelleModele(m: ModeleVehicule): string {
 
 /** Recherche par clé. `null` — et non un modèle par défaut — quand rien ne
     correspond : proposer une Zoe à qui roule en Kangoo serait pire que rien. */
+/** Réduit un texte à sa forme comparable : sans accents, sans casse. */
+function reduire(texte: string): string {
+  return texte.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+/**
+ * Les marques et modèles qui répondent à une recherche — PURE.
+ *
+ * LA DEMANDE (Armelin, 30/08) : « le choix des véhicules est trop long à
+ * scroller quand il y a trop de véhicules électriques dans la liste. Il
+ * faudrait les replier par marque […] et ajouter une barre de recherche pour
+ * un modèle ou une marque spécifique pour aller plus vite. »
+ *
+ * DEUX FAÇONS DE RÉPONDRE, ET C'EST VOULU. Une recherche qui vise la MARQUE
+ * (« renault ») rend la marque entière : on cherchait son constructeur, on
+ * veut voir ses modèles. Une recherche qui vise un MODÈLE (« zoe ») ne rend
+ * que les modèles qui correspondent — montrer toute la marque noierait la
+ * réponse. Une recherche vide rend tout, replié.
+ */
+export function chercherModeles(
+  recherche: string,
+): { marque: string; modeles: ModeleVehicule[]; ouvrir: boolean }[] {
+  const q = reduire(recherche);
+  const groupes = parMarque();
+  if (q === '') return groupes.map((g) => ({ ...g, ouvrir: false }));
+
+  const rendu: { marque: string; modeles: ModeleVehicule[]; ouvrir: boolean }[] = [];
+  for (const g of groupes) {
+    const marqueCorrespond = reduire(g.marque).includes(q);
+    const modelesTrouves = g.modeles.filter(
+      (m) => reduire(libelleModele(m)).includes(q),
+    );
+    if (marqueCorrespond) {
+      // La marque entière, ouverte : on cherchait un constructeur.
+      rendu.push({ marque: g.marque, modeles: g.modeles, ouvrir: true });
+    } else if (modelesTrouves.length > 0) {
+      rendu.push({ marque: g.marque, modeles: modelesTrouves, ouvrir: true });
+    }
+  }
+  return rendu;
+}
+
 export function modeleParCle(cle: string): ModeleVehicule | null {
   return CATALOGUE.find((m) => m.cle === cle) ?? null;
 }
