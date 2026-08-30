@@ -74,10 +74,35 @@ Trois raisons de préférer le CSS à des images :
 | Cartouche **vert européen** (E41) | code prêt (`routesEuropeennes`), non alimenté | le champ `cpx_numero_route_europeenne` existe sur la ressource `bdtopo-pgr`, qui ne rend **aucune** instruction de manœuvre (mesuré le 30/08 : 203 tronçons, zéro instruction) |
 | **Numéro de sortie** (« Sortie 14 ») | absent | le moteur n'émet pas d'`exit` sur les bretelles d'autoroute |
 | **Destination** (« Lyon, Dijon ») | absent | aucun champ de destination dans la réponse |
-| **Flèches de voies** (où se placer) | absent | `nombre_de_voies` existe sur `bdtopo-pgr` — même blocage que ci-dessus |
+| **Flèches de voies** (où se placer) | **LIVRÉ** (VOIE-1) — voir ci-dessous | `nombre_de_voies` relevé sur `bdtopo-pgr`, recousu sur le tracé suivi |
 | **Schéma de rond-point** | écarté | le moteur n'émet jamais `roundabout` (mesuré sur quatre giratoires, 63 étapes) |
 
 Le détail de chaque mesure est dans [`apis.md`](apis.md).
+
+### La chaussée et le côté où se placer (VOIE-1, livré le 30/08)
+
+Le panneau porte, sous l'instruction, les **files de la chaussée** avec celle
+où se mettre en clair. Ce n'est **pas** le panneau d'affectation par voie des
+GPS du commerce, et la différence est de fond :
+
+- la donnée dit **combien** de voies porte la chaussée — jamais ce que chaque
+  voie autorise, il n'existe pas de `turn:lanes` ici ;
+- le côté est donc **déduit de la manœuvre**, pas lu sur un marquage : on
+  sort et l'on tourne à droite par la droite. Le libellé lu à voix haute le
+  dit en toutes lettres ;
+- **une seule** file s'éclaire, la plus extérieure : en éclairer deux
+  laisserait croire à une affectation que la donnée ne porte pas ;
+- rien ne s'affiche si la manœuvre n'a pas de côté (tout droit, rond-point),
+  si elle est à plus de 900 m, ou si la chaussée n'a qu'une voie.
+
+Comment c'est obtenu : **deux itinéraires**. Le guidage reste sur
+`bdtopo-osrm` (les manœuvres) ; une seconde requête part sur `bdtopo-pgr`
+(les attributs) après le démarrage du suivi — 16,7 s et 658 Ko sur un
+Paris-Lyon, d'où l'attente en arrière-plan. Les tronçons de la seconde sont
+**recousus** sur le tracé de la première par projection, ce que la mesure
+autorise : les deux moteurs rendent le même trajet (466 km de part et
+d'autre, écart médian nul, 98,1 % des points sous 60 m). Les 1,9 % restants
+sont **jetés**, pas approchés.
 
 ## 4. Le prompt pour GPT-6 — si l'on veut des images malgré tout
 
@@ -123,6 +148,29 @@ des schémas de manœuvre complexes si un moteur finit par les publier.
 > **Interdits** : aucun logo, aucune marque, aucun blason de collectivité,
 > aucune photographie, aucun panneau de prescription (limitation de vitesse,
 > interdiction) — ce sont des signes réglementés qu'on n'invente pas.
+
+### Ce que le prompt a rendu, et sa vérification (30/08/2026)
+
+Armelin a fait tourner le prompt et fourni les 18 fichiers, rangés dans
+[`panneaux/`](panneaux/). Vérification faite, fichier par fichier :
+
+| Contrôle | Résultat |
+|---|---|
+| Couleurs | **exactes** — six valeurs en tout dans les 18 fichiers : `#0B4EA2`, `#146B3A`, `#C8102E`, `#F2C200`, `#FFFFFF`, `#1A1A1A`. Aucune dérive. |
+| Zone de dessin | `viewBox="0 0 320 96"` sur les 18 |
+| Listel | `x="3" y="3"`, `stroke-width="1.5"` — en retrait, comme demandé |
+| Texte | resté du texte, avec `title` et `desc` accessibles |
+| Interdits | aucun logo, aucune photo, aucun panneau de prescription |
+
+Une seule réserve, mineure : la pile de polices nomme **DIN 1451
+Mittelschrift**, qui est la police de la signalisation ALLEMANDE — la France
+utilise les « Caractères » L1/L4. Comme cette police n'est presque jamais
+installée, le rendu tombe sur Arial et la différence ne se voit pas. À
+corriger si ces planches sortent un jour du dossier de documentation.
+
+**Ces fichiers ne sont PAS chargés par l'application** : le panneau affiché
+pendant la navigation reste du CSS, pour les trois raisons ci-dessus. Ils
+servent d'illustration et de référence visuelle.
 
 **Avant d'intégrer quoi que ce soit qui en sorte**, deux vérifications qui ne
 se délèguent pas :

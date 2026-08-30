@@ -26,6 +26,7 @@ import { apprendreTrajet, lireHabitudes, suggerer } from '../lib/routines';
 import { profilItineraire, denivele } from '../lib/altimetrie';
 import { chargerGrille, estimerPeages } from '../lib/peages-tarifs';
 import { pointLateral, choisirBis, traceDevant } from '../lib/bis';
+import { chargerVoies, recoudreVoies } from '../lib/voies';
 import { capEntre } from './curseur-vehicule';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 import { stationsDuTrajet, distanceM, situerSurLeTrace, type SurLeTrajet } from '../lib/le-long-du-trajet';
@@ -2551,6 +2552,24 @@ export class PanneauItineraire extends HTMLElement {
         if (bandeau.actif && this.#dernier === iti) bandeau.limites = limites;
       })
       .catch(() => { /* bénin : voir ci-dessus */ });
+
+    /* LE NOMBRE DE VOIES arrive de la même façon, et pour la même raison :
+       c'est une SECONDE requête d'itinéraire, sur la ressource qui porte les
+       attributs de route — seize secondes sur un Paris-Lyon (mesuré le
+       30/08). « Démarrer » ne l'attend pas. Elle est recousue sur le tracé
+       SUIVI, celui d'osrm : les deux moteurs rendent le même trajet (écart
+       médian nul, 98,1 % des points sous 60 m), et ce qui s'en écarte est
+       jeté par `recoudreVoies` plutôt qu'approché. */
+    if (cliche) {
+      chargerVoies(cliche.depart, cliche.arrivee, cliche.etapes)
+        .then((troncons) => {
+          if (!bandeau.actif || this.#dernier !== iti) return;
+          bandeau.voies = recoudreVoies(
+            troncons, iti.geometrie.coordinates as [number, number][],
+          );
+        })
+        .catch(() => { /* bénin : sans voies, le conseil ne paraît pas */ });
+    }
     /* LES ÉVÉNEMENTS TRAFIC DU CORRIDOR — livrés puis RAFRAÎCHIS toutes les
        cinq minutes tant que le suivi tourne sur CE trajet : un accident
        arrive pendant qu'on roule. La couche trafic de la carte (PR #14) fait

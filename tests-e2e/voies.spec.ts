@@ -1,0 +1,158 @@
+import { test, expect, type Page } from '@playwright/test';
+import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
+
+/* LES VOIES ET LE CÔTÉ OÙ SE PLACER (VOIE-1, demandes d'Armelin des 29 et
+ * 30/08 : « des flèches pour préciser où se placer sur la chaussée […] fais
+ * les flèches de voies avec les deux itinéraires »).
+ *
+ * CE QUE CES PARCOURS DÉFENDENT : que la chaussée ne paraisse QUE lorsque
+ * les quatre conditions sont réunies — une manœuvre qui a un côté, assez
+ * proche, sur une chaussée d'au moins deux voies dont on connaît le nombre.
+ * Et surtout : que la SECONDE requête soit bien une seconde requête, sur
+ * l'autre ressource, et que son échec ne casse rien. */
+
+const GEOMETRIE = {
+  type: 'LineString',
+  coordinates: [[2.3522, 48.8566], [4.8357, 45.764]],
+};
+
+/** La réponse de la ressource riche : des tronçons, aucune instruction. */
+function reponseVoies(voies: string) {
+  return {
+    geometry: GEOMETRIE, distance: 390_000, duration: 13_000,
+    portions: [{ steps: [
+      /* Le premier point de chaque tronçon EST sur le tracé suivi : c'est ce
+         que la mesure du 30/08 constate (écart médian nul entre les deux
+         moteurs), et c'est ce que la couture exige. */
+      { geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566]] },
+        attributes: { nombre_de_voies: voies }, distance: 100, instruction: {} },
+      { geometry: { type: 'LineString', coordinates: [[2.36, 48.84]] },
+        attributes: { nombre_de_voies: voies }, distance: 100, instruction: {} },
+    ] }],
+  };
+}
+
+/**
+ * Lance un suivi. `voies` est ce que rend la ressource riche ; `manoeuvre`
+ * le modificateur de la manœuvre à venir.
+ */
+async function suivre(
+  page: Page,
+  o: { voies?: string; manoeuvre?: string; voiesEnPanne?: boolean } = {},
+): Promise<void> {
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    const url = route.request().url();
+    /* LES DEUX RESSOURCES SE DISTINGUENT DANS L'URL, et c'est le cœur de la
+       fonctionnalité : `bdtopo-pgr` porte les attributs, `bdtopo-osrm` les
+       manœuvres. Les confondre rendrait un suivi sans instructions. */
+    if (/resource=bdtopo-pgr/.test(url)) {
+      if (o.voiesEnPanne) return route.fulfill({ status: 503, body: '{}' });
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(reponseVoies(o.voies ?? '3')),
+      });
+    }
+    if (/getSteps=true/i.test(url)) {
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          geometry: GEOMETRIE, distance: 390_000, duration: 13_000,
+          /* L'ÉTAPE COURANTE EST COURTE : la manœuvre suivante tombe ainsi
+             sous le seuil de neuf cents mètres, comme à l'approche réelle. */
+          portions: [{ steps: [
+            { instruction: { type: 'depart' }, distance: 400,
+              attributes: { name: { cpx_numero: 'A6' } } },
+            { instruction: { type: 'turn', modifier: o.manoeuvre ?? 'right' },
+              distance: 389_600, attributes: { name: { cpx_numero: 'A7' } } },
+          ] }],
+        }),
+      });
+    }
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ geometry: GEOMETRIE, distance: 390_000, duration: 13_000 }),
+    });
+  });
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('.bg-cartouche')).toBeVisible({ timeout: 15_000 });
+}
+
+test.beforeEach(async ({ page, context }) => {
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ longitude: 2.3522, latitude: 48.8566 });
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json', body: JSON.stringify({ elements: [] }),
+  }));
+  await page.route('**/www.bison-fute.gouv.fr/**', (route) => route.fulfill({
+    contentType: 'application/json', body: '[]',
+  }));
+});
+
+test('la chaussée se dessine, et la voie de DROITE s’éclaire pour une sortie à droite', async ({ page }) => {
+  await suivre(page, { voies: '3', manoeuvre: 'right' });
+
+  const voies = page.locator('.bg-chaussee');
+  await expect(voies).toBeVisible({ timeout: 15_000 });
+  await expect(voies.locator('.bg-file')).toHaveCount(3);
+  // La dernière, et elle seule : en éclairer deux laisserait croire à une
+  // affectation par voie que la donnée ne porte pas.
+  await expect(voies.locator('.bg-file[data-conseillee="oui"]')).toHaveCount(1);
+  await expect(voies.locator('.bg-file').nth(2)).toHaveAttribute('data-conseillee', 'oui');
+
+  /* LE CONSEIL SE DIT EN TOUTES LETTRES : cinq rectangles ne s'entendent
+     pas, et c'est la phrase qui porte l'information pour qui écoute. */
+  await expect(voies).toHaveAttribute('aria-label', '3 voies, placez-vous sur la voie de droite');
+});
+
+test('à gauche, c’est la PREMIÈRE voie qui s’éclaire', async ({ page }) => {
+  await suivre(page, { voies: '4', manoeuvre: 'left' });
+  const voies = page.locator('.bg-chaussee');
+  await expect(voies.locator('.bg-file')).toHaveCount(4);
+  await expect(voies.locator('.bg-file').first()).toHaveAttribute('data-conseillee', 'oui');
+  await expect(voies).toHaveAttribute('aria-label', '4 voies, placez-vous sur la voie de gauche');
+});
+
+test('TOUT DROIT : aucune chaussée — une consigne inutile use la confiance', async ({ page }) => {
+  await suivre(page, { voies: '3', manoeuvre: 'straight' });
+  await expect(page.locator('.bg-chaussee')).toBeHidden();
+});
+
+test('UNE SEULE VOIE : rien à conseiller, donc rien à l’écran', async ({ page }) => {
+  /* « Serrez à droite » quand il n'existe qu'une voie est du bruit, et du
+     bruit qui inquiète. */
+  await suivre(page, { voies: '1', manoeuvre: 'right' });
+  await expect(page.locator('.bg-chaussee')).toBeHidden();
+});
+
+test('LA SECONDE REQUÊTE EN PANNE NE CASSE RIEN : le suivi continue', async ({ page }) => {
+  /* Elle coûte seize secondes et deux tiers de méga-octet au service public :
+     son échec doit être bénin, jamais fatal. */
+  await suivre(page, { voiesEnPanne: true });
+  await expect(page.locator('.bg-chaussee')).toBeHidden();
+  await expect(page.locator('.bg-instruction')).toContainText('Tournez à droite');
+  await expect(page.locator('.bg-cartouche')).toBeVisible();
+});
+
+test('LES DEUX RESSOURCES SONT BIEN INTERROGÉES, chacune pour ce qu’elle sait', async ({ page }) => {
+  const urls: string[] = [];
+  page.on('request', (r) => {
+    if (r.url().includes('/navigation/itineraire')) urls.push(r.url());
+  });
+  await suivre(page, { voies: '3', manoeuvre: 'right' });
+  await expect(page.locator('.bg-chaussee')).toBeVisible({ timeout: 15_000 });
+
+  const pgr = urls.filter((u) => u.includes('resource=bdtopo-pgr'));
+  const osrm = urls.filter((u) => u.includes('resource=bdtopo-osrm'));
+  expect(osrm.length, 'le guidage reste sur la ressource des manœuvres')
+    .toBeGreaterThan(0);
+  /* UNE SEULE FOIS : la requête est lourde, et le service public est un bien
+     commun. Elle part au démarrage du suivi, pas à chaque fixe GPS. */
+  expect(pgr).toHaveLength(1);
+  expect(pgr[0]).toContain('waysAttributes=nombre_de_voies');
+});

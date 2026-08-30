@@ -2,6 +2,51 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.90.0] — 2026-08-30 — VOIE-1 : la chaussée, et où s'y placer (PR #118)
+
+Armelin, le 29/08 : « des flèches pour préciser où se placer sur la chaussée
+pour tourner à une intersection ou pour indiquer où se situer pour sortir
+d'une autoroute » ; puis, le 30/08, après la mesure : « fais les flèches de
+voies avec les deux itinéraires. »
+
+- **LES FILES DE LA CHAUSSÉE, SOUS L'INSTRUCTION, ET CELLE OÙ SE METTRE EN
+  CLAIR.** Trois voies sur autoroute, la droite éclairée pour une sortie à
+  droite ; deux voies sur départementale, la gauche éclairée pour un virage
+  à gauche.
+- **CE N'EST PAS LE PANNEAU D'AFFECTATION PAR VOIE des GPS du commerce, et
+  l'écart est de fond.** La donnée dit COMBIEN de voies porte la chaussée,
+  jamais ce que chaque voie autorise — il n'existe pas de `turn:lanes` ici.
+  Le côté est donc DÉDUIT de la manœuvre (on sort à droite par la droite),
+  et le libellé lu à voix haute le dit. UNE SEULE file s'éclaire, la plus
+  extérieure : en éclairer deux laisserait croire à une affectation que la
+  donnée ne porte pas.
+- **QUATRE CONDITIONS, AUCUNE DÉCORATIVE.** Rien ne s'affiche si la manœuvre
+  n'a pas de côté (tout droit, rond-point), si elle est à plus de 900 m, si
+  la chaussée n'a qu'une voie, ou si l'on ne connaît pas leur nombre.
+- **DEUX ITINÉRAIRES, ET UNE COUTURE FONDÉE SUR UNE MESURE.** Le guidage
+  reste sur la ressource des manœuvres ; une seconde requête part sur celle
+  des attributs après le démarrage (16,7 s et 658 Ko sur un Paris-Lyon —
+  d'où l'arrière-plan, comme les limites cartographiées). Les tronçons sont
+  recousus par projection sur le tracé suivi : les deux moteurs rendent le
+  MÊME trajet (466 km de part et d'autre, écart médian NUL, 98,1 % des
+  points sous 60 m). Les 1,9 % restants sont JETÉS, pas approchés — un
+  nombre de voies pris sur la chaussée d'en face serait un mensonge.
+- **L'ÉCHEC DE LA SECONDE REQUÊTE EST BÉNIN** : sans elle, le suivi est
+  celui d'avant. Un parcours le vérifie.
+- **UNE COLLISION DE CLASSE ÉVITÉE DE JUSTESSE.** Le premier jet nommait les
+  barres `.bg-voie` — nom déjà porté par le nom de rue de la barre du bas.
+  Un parcours a compté QUATRE barres sur une chaussée à trois. Renommé en
+  chaussée et files. C'est la deuxième collision de ce genre en deux jours.
+- **LES 18 PANNEAUX ENGENDRÉS PAR GPT-6** (fournis par Armelin) sont rangés
+  dans docs/panneaux/ et VÉRIFIÉS fichier par fichier : six couleurs en
+  tout, exactement celles de la règle, zone de dessin et listel conformes,
+  texte resté du texte. Ils illustrent, ils ne sont pas chargés par
+  l'application — le panneau affiché reste du CSS.
+
+Tests : 13 unitaires sur la couture et les refus, 6 E2E dont un qui vérifie
+que les DEUX ressources sont interrogées, chacune pour ce qu'elle sait, et
+que la lourde ne part qu'une fois. 706 unitaires, 224 E2E.
+
 ## [0.89.0] — 2026-08-30 — PAN-1 : de vrais panneaux de direction (PR #117)
 
 Armelin, le 30/08 : « dans les rectangles annonçant les directions, ce serait
