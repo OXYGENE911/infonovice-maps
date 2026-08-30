@@ -34,6 +34,9 @@ import { meteoA, phraseMeteo, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/mete
 import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
 import { limiteA, type LimiteTrajet } from '../lib/limites';
 import {
+  sortieA, destinationA, type Sortie, type DestinationBretelle,
+} from '../lib/sorties';
+import {
   voiesA, cotePlacement, voieConseillee, libellePlacement, europeA,
   type ReleveVoies, type ReleveEurope,
 } from '../lib/voies';
@@ -118,6 +121,22 @@ export class BandeauGuidage extends HTMLElement {
      Paris-Lyon (mesuré le 30/08). Tant qu'elle n'est pas là, ou si elle
      échoue, la chaussée ne se dessine pas — le suivi vaut sans elle. */
   #voies: readonly ReleveVoies[] = [];
+
+  /* LES SORTIES ET LEURS DESTINATIONS — relevées par le MÊME appel Overpass
+     que les limites de vitesse (lib/corridor.ts). */
+  #sorties: readonly Sortie[] = [];
+
+  #destinations: readonly DestinationBretelle[] = [];
+
+  set sorties(s: readonly Sortie[]) {
+    this.#sorties = s;
+    if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+  }
+
+  set destinations(d: readonly DestinationBretelle[]) {
+    this.#destinations = d;
+    if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+  }
 
   /* LES ROUTES EUROPÉENNES du tracé — livrées par le MÊME appel que les
      voies, et rejouées de la même façon. */
@@ -348,6 +367,13 @@ export class BandeauGuidage extends HTMLElement {
              l'autre. La donnée vient de la seconde requête, celle des
              attributs de route (docs/apis.md). -->
         <span class="bg-europe" hidden></span>
+        <!-- LE NUMÉRO DE SORTIE ET LES VILLES DESSERVIES (SORTIE-1, 30/08).
+             Relevés dans OpenStreetMap, où ils EXISTENT — la note qui les
+             disait absents avait cherché dans le service d'itinéraire. La
+             couverture est partielle : on affiche ce qu'on a, on se tait sur
+             le reste. Un numéro absent n'est pas un numéro faux. -->
+        <span class="bg-sortie" hidden></span>
+        <p class="bg-destination" hidden></p>
         <!-- LA CHAUSSÉE ET LE CÔTÉ OÙ SE PLACER (VOIE-1, 30/08). Armelin :
              « des flèches pour préciser où se placer sur la chaussée pour
              tourner à une intersection ou pour sortir d'une autoroute ».
@@ -799,6 +825,55 @@ export class BandeauGuidage extends HTMLElement {
     }));
   }
 
+  /**
+   * Le numéro de sortie et les villes desservies (SORTIE-1, 30/08).
+   *
+   * LES DEUX SE LISENT AU POINT DE MANŒUVRE, chacun à sa façon : le nœud de
+   * divergence est POSÉ dessus (fenêtre symétrique), la bretelle COMMENCE
+   * dessus (fenêtre vers l'avant). Ce sont deux objets d'OpenStreetMap, pas
+   * deux vues du même.
+   *
+   * ILS NE PARAISSENT QU'À L'APPROCHE, comme la chaussée : un numéro de
+   * sortie affiché trente kilomètres avant n'aide personne et occupe la
+   * place de ce qui est vital.
+   */
+  #majSortie(e: EtatGuidage): void {
+    const chip = this.querySelector('.bg-sortie') as HTMLElement | null;
+    const ligne = this.querySelector('.bg-destination') as HTMLElement | null;
+    if (!chip || !ligne) return;
+    const proche = !e.horsRoute && e.jusquALaManoeuvreM <= SEUIL_VOIES_M;
+    const point = e.avancementM + e.jusquALaManoeuvreM;
+
+    const sortie = proche ? sortieA(this.#sorties, point) : null;
+    const numero = sortie?.numero ?? null;
+    if (numero === null) {
+      chip.hidden = true;
+      chip.textContent = '';
+    } else if (chip.textContent !== `Sortie ${numero}`) {
+      chip.hidden = false;
+      chip.textContent = `Sortie ${numero}`;
+      chip.setAttribute('aria-label', `sortie numéro ${numero}`);
+    }
+
+    /* LES VILLES VIENNENT DE LA BRETELLE ; à défaut, le NOM de la sortie
+       fait l'affaire — « Châtillon-la-Borde » dit où l'on va, même sans
+       liste de villes. Mieux vaut le nom que le vide. */
+    const bretelle = proche ? destinationA(this.#destinations, point) : null;
+    const villes = bretelle?.villes ?? (sortie?.nom ? [sortie.nom] : []);
+    const texte = villes.join(' · ');
+    if (texte === '') {
+      ligne.hidden = true;
+      ligne.textContent = '';
+      return;
+    }
+    if (ligne.textContent === texte) return;
+    ligne.hidden = false;
+    ligne.textContent = texte;
+    /* LU AUTREMENT QUE VU : le point médian se lit « Lyon Évry » à voix
+       haute, ce qui n'est pas une phrase. On dit « vers ». */
+    ligne.setAttribute('aria-label', `vers ${villes.join(', ')}`);
+  }
+
   #alerte(message: string): void {
     const p = this.querySelector('.bg-alerte') as HTMLElement;
     p.textContent = message;
@@ -959,6 +1034,7 @@ export class BandeauGuidage extends HTMLElement {
     if (numeroteur) ecusson.dataset['cartouche'] = numeroteur;
     else delete ecusson.dataset['cartouche'];
 
+    this.#majSortie(e);
     this.#majEurope(e);
     this.#majVoies(e);
     /* L'écusson est un signe : il se DIT en toutes lettres à qui écoute la

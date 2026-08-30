@@ -45,7 +45,7 @@ import { ErreurPoi } from '../lib/poi';
 import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import { palierDe } from '../lib/puissance';
 import { chargerPeages, ErreurPeages } from '../lib/peages';
-import { chargerLimites } from '../lib/limites';
+import { chargerCorridor } from '../lib/corridor';
 import { chargerTrafic, evenementsDuTrajet } from '../lib/trafic';
 import {
   chargerMonuments, monumentsDuTrajet, ErreurMonuments, KM_PAR_MINUTE,
@@ -2547,9 +2547,17 @@ export class PanneauItineraire extends HTMLElement {
        l'échec est bénin — le panneau de limite n'apparaît pas, et le suivi
        vaut mieux sans lui que pas de suivi. Livrées SEULEMENT si le suivi
        tourne encore sur CE trajet. */
-    chargerLimites(iti.geometrie)
-      .then((limites) => {
-        if (bandeau.actif && this.#dernier === iti) bandeau.limites = limites;
+    /* UN SEUL APPEL OVERPASS POUR TOUT LE CORRIDOR (SORTIE-1, 30/08) :
+       limites de vitesse, numéros de sortie et destinations des bretelles
+       vivent tous dans OpenStreetMap le long du même tracé. Les demander
+       séparément ferait deux requêtes de vingt secondes à un service tenu
+       par des bénévoles. */
+    chargerCorridor(iti.geometrie)
+      .then((corridor) => {
+        if (!bandeau.actif || this.#dernier !== iti) return;
+        bandeau.limites = corridor.limites;
+        bandeau.sorties = corridor.sorties;
+        bandeau.destinations = corridor.destinations;
       })
       .catch(() => { /* bénin : voir ci-dessus */ });
 
