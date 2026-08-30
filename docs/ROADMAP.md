@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #124 — TRAFIC-1, les annonces de trafic parlées (demande du 30/08) :
+      elles parlent dans les BLANCS de la navigation — silence tant qu'une
+      manœuvre est à moins d'un kilomètre. Trois kilomètres de portée pour la
+      voix, dix pour l'écran.
 - [x] PR #123 — VOIX-1, le guidage vocal (demande du 30/08) : la synthèse
       du NAVIGATEUR, aucun service, rien qui quitte l'appareil ; voix locale
       préférée et réserve écrite sur la page « Vie privée ». Trois paliers,

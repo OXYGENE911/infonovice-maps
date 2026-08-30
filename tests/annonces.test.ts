@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   palierA, phraseAnnonce, distanceDite, MemoireAnnonces, PALIERS,
+  traficADire, phraseTrafic, PORTEE_TRAFIC_M, GARDE_MANOEUVRE_M,
 } from '../src/lib/annonces';
 
 /* LE GUIDAGE VOCAL (VOIX-1, demande d'Armelin du 30/08).
@@ -143,5 +144,65 @@ describe('MemoireAnnonces', () => {
     m.noter(1_200, 'proche');
     m.vider();
     expect(m.aDire(1_200, 'proche')).toBe(true);
+  });
+});
+
+/* LE TRAFIC PARLÉ (TRAFIC-1, 30/08). Ce qui se teste ici est la RÈGLE
+ * D'INTERRUPTION — la seule chose qui manquait quand la fonctionnalité a été
+ * proposée. Une annonce de travaux qui couvre « tournez à droite » est pire
+ * qu'une annonce de travaux qui n'existe pas. */
+
+describe('traficADire', () => {
+  const evenements = [
+    { avancementM: 2_000, libelle: 'Travaux' },
+    { avancementM: 9_000, libelle: 'Accident' },
+  ];
+
+  it('annonce l’événement qui vient, dans la portée de la voix', () => {
+    const t = traficADire(evenements, 0, 5_000);
+    expect(t?.libelle).toBe('Travaux');
+    expect(t?.distanceM).toBe(2_000);
+  });
+
+  it('SE TAIT quand une manœuvre approche — elle passe d’abord', () => {
+    /* C'est la règle qui manquait : on n'interrompt pas, on attend. */
+    expect(traficADire(evenements, 0, GARDE_MANOEUVRE_M - 1)).toBeNull();
+    expect(traficADire(evenements, 0, GARDE_MANOEUVRE_M)).not.toBeNull();
+  });
+
+  it('ne parle pas d’un événement trop loin, ni de celui qu’on a passé', () => {
+    expect(traficADire(evenements, 0, 5_000, 1_000)).toBeNull();
+    // À hauteur des travaux, ils sont derrière — et l'accident encore à 7 km.
+    expect(traficADire(evenements, 2_000, 5_000)).toBeNull();
+    // Deux kilomètres et demi plus loin, l'accident entre dans la portée.
+    expect(traficADire(evenements, 6_500, 5_000)?.libelle).toBe('Accident');
+    expect(traficADire([], 0, 5_000)).toBeNull();
+  });
+
+  it('porte à trois kilomètres, là où l’écran affiche à dix', () => {
+    /* L'œil lit quand il veut, la voix s'impose : elle attend d'être utile. */
+    expect(PORTEE_TRAFIC_M).toBe(3_000);
+  });
+});
+
+describe('phraseTrafic', () => {
+  it('dit « signalé » — Bison Futé rapporte des déclarations, pas des mesures', () => {
+    expect(phraseTrafic('Travaux', 2_400)).toBe('Travaux signalé dans 2 kilomètres');
+    expect(phraseTrafic('Accident', 900)).toBe('Accident signalé dans 900 mètres');
+  });
+
+  it('ne fait pas de phrase sans libellé', () => {
+    expect(phraseTrafic('', 2_000)).toBe('');
+    expect(phraseTrafic('   ', 2_000)).toBe('');
+  });
+});
+
+describe('MemoireAnnonces, motif trafic', () => {
+  it('range le trafic dans la MÊME mémoire, sous son propre motif', () => {
+    /* Deux mémoires séparées auraient deux fois les mêmes défauts. */
+    const m = new MemoireAnnonces();
+    m.noter(2_000, 'trafic');
+    expect(m.aDire(2_000, 'trafic')).toBe(false);
+    expect(m.aDire(2_000, 'proche'), 'la manœuvre au même point reste à dire').toBe(true);
   });
 });

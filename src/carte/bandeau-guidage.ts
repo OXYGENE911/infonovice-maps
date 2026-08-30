@@ -55,7 +55,8 @@ import { fondPanneau, encreSur, cartoucheNumero } from '../lib/panneau';
 import { pictoMenu } from './icone-menu';
 import { Voix } from './voix';
 import {
-  palierA, phraseAnnonce, MemoireAnnonces, type ContexteAnnonce,
+  palierA, phraseAnnonce, traficADire, phraseTrafic,
+  MemoireAnnonces, type ContexteAnnonce,
 } from '../lib/annonces';
 import { CurseurVehicule, capEntre, formeValide, PREF_CURSEUR } from './curseur-vehicule';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
@@ -1151,7 +1152,11 @@ export class BandeauGuidage extends HTMLElement {
   #annoncer(e: EtatGuidage): void {
     if (!this.#parle || e.horsRoute || !e.manoeuvre) return;
     const palier = palierA(e.jusquALaManoeuvreM, e.manoeuvre.distance);
-    if (palier === null) return;
+    /* LE TRAFIC PARLE DANS LES BLANCS (TRAFIC-1, 30/08) : quand aucune
+       manœuvre n'est à annoncer, et seulement si la prochaine est assez
+       loin. La règle vit dans lib/annonces.ts — on n'interrompt pas, on
+       attend. */
+    if (palier === null) { this.#annoncerTrafic(e); return; }
     const point = e.avancementM + e.jusquALaManoeuvreM;
     if (!this.#annonces.aDire(point, palier)) return;
 
@@ -1170,6 +1175,17 @@ export class BandeauGuidage extends HTMLElement {
        (« tout droit ») ferait recalculer la phrase à chaque fixe GPS
        jusqu'au carrefour suivant. */
     this.#annonces.noter(point, palier);
+    if (phrase === '') return;
+    this.#voix.dire(phrase);
+    this.#aParle = true;
+  }
+
+  /** L'événement de trafic, dit une fois, dans un blanc de la navigation. */
+  #annoncerTrafic(e: EtatGuidage): void {
+    const evt = traficADire(this.#evenements, e.avancementM, e.jusquALaManoeuvreM);
+    if (!evt || !this.#annonces.aDire(evt.avancementM, 'trafic')) return;
+    this.#annonces.noter(evt.avancementM, 'trafic');
+    const phrase = phraseTrafic(evt.libelle, evt.distanceM);
     if (phrase === '') return;
     this.#voix.dire(phrase);
     this.#aParle = true;
