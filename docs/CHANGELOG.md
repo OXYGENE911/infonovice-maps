@@ -22,7 +22,7 @@ sur un seul réseau, et c'est dit.
   attendues. Vinci, Sanef, SAPN et ATMB ne publient rien. Tout est consigné
   dans docs/apis.md.
 
-656 tests unitaires (+11), 200 parcours E2E (+1).
+661 tests unitaires (+11), 204 parcours E2E (+1).
 ## [0.84.0] — 2026-08-30 — ITI-3 : trois itinéraires A, B, C (PR #112)
 
 « Quand je planifie un itinéraire, je souhaite avoir un itinéraire A, B et
