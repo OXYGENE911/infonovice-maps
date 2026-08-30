@@ -801,6 +801,75 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
   expect(appelsCarbu, 'appel parti sous le zoom minimal').toBe(appelsAvant);
 });
 
+test('FEUX-1 : les feux comptés par variante — et « la moins arrêtée » désignée', async ({ page }) => {
+  /* Armelin, le 30/08 : « existe-t-il un moyen d'afficher les feux rouges
+     afin d'optimiser les trajets avec le moins de feux ? » On ne sait pas
+     OPTIMISER — le service ne prend aucun coût personnalisé — mais on sait
+     COMPTER sur les trois tracés qu'on calcule déjà.
+     TROIS TRACÉS DISTINCTS ici, pour que les comptes diffèrent vraiment. */
+  const PARIS: [number, number] = [2.3522, 48.8566];
+  const LYON: [number, number] = [4.8357, 45.764];
+  const COUDE: [number, number] = [3.0, 48.0];
+  const MILIEU: [number, number] = [(PARIS[0] + LYON[0]) / 2, (PARIS[1] + LYON[1]) / 2];
+  /* Deux cents mètres AVANT le coude, sur le segment qui y mène : deux
+     carrefours distincts, pas deux têtes du même. */
+  const AVANT_COUDE: [number, number] = [
+    COUDE[0] - 0.0018 * (COUDE[0] - PARIS[0]),
+    COUDE[1] - 0.0018 * (COUDE[1] - PARIS[1]),
+  ];
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    const url = decodeURIComponent(route.request().url());
+    const sansAutoroute = url.includes('"value":"autoroute"');
+    const court = url.includes('optimization=shortest');
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        geometry: {
+          type: 'LineString',
+          coordinates: sansAutoroute ? [PARIS, COUDE, LYON]
+            : court ? [PARIS, [3.5, 47.2], LYON] : [PARIS, LYON],
+        },
+        distance: sansAutoroute ? 455_000 : court ? 360_000 : 390_000,
+        duration: sansAutoroute ? 19_000 : court ? 15_500 : 13_000,
+      }),
+    });
+  });
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json',
+    body: JSON.stringify({ elements: [
+      // Au départ : sur les trois tracés.
+      { type: 'node', id: 1, lon: PARIS[0], lat: PARIS[1] },
+      // Sur A seulement (son milieu) : A en aura deux.
+      { type: 'node', id: 2, lon: MILIEU[0], lat: MILIEU[1] },
+      // Sur C seulement, deux carrefours : C en aura trois.
+      { type: 'node', id: 3, lon: COUDE[0], lat: COUDE[1] },
+      { type: 'node', id: 4, lon: AVANT_COUDE[0], lat: AVANT_COUDE[1] },
+    ] }),
+  }));
+  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify({ total_count: 0, results: [] }),
+  }));
+  await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  await allerA(page, 'options');
+  await page.getByRole('button', { name: /Comparer trois itinéraires/ }).click();
+
+  const corps = page.locator('.iti-comparer-corps');
+  await expect(corps.locator('[data-variante="A"] .comparer-feux'))
+    .toHaveText('2 feux tricolores', { timeout: 15_000 });
+  await expect(corps.locator('[data-variante="B"] .comparer-feux')).toHaveText('1 feu tricolore');
+  await expect(corps.locator('[data-variante="C"] .comparer-feux')).toHaveText('3 feux tricolores');
+
+  /* LA MOINS ARRÊTÉE EST DÉSIGNÉE, et c'est la réponse à la question posée.
+     Elle n'est PAS la plus rapide : c'est tout l'intérêt de l'afficher. */
+  await expect(corps.locator('[data-variante="B"] .comparer-marque'))
+    .toContainText('la moins arrêtée');
+  await expect(corps.locator('[data-variante="A"] .comparer-marque'))
+    .not.toContainText('la moins arrêtée');
+});
+
 test('ITI-3 : TROIS itinéraires A, B, C — chiffrés, tracés, et adoptables', async ({ page }) => {
   /* Armelin, le 30/08 : « quand je planifie un itinéraire, je souhaite avoir
      un itinéraire A, B et C pour voir les routes alternatives empruntées ».
@@ -827,6 +896,26 @@ test('ITI-3 : TROIS itinéraires A, B, C — chiffrés, tracés, et adoptables',
   await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify({ total_count: 0, results: [] }),
   }));
+  /* LES FEUX DES TROIS TRACÉS (FEUX-1) : un seul appel Overpass, dont la
+     réponse est attribuée à chaque variante par la géométrie. Ici les trois
+     tracés simulés sont IDENTIQUES — le moteur ne rend qu'une géométrie —
+     donc les trois comptent les mêmes feux, et aucune n'est « la moins
+     arrêtée ». C'est exactement ce qu'il faut vérifier : pas de vainqueur
+     sans écart. */
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json',
+    body: JSON.stringify({ elements: [
+      // Deux têtes de feux du MÊME carrefour, sur le tracé : un seul arrêt.
+      { type: 'node', id: 1, lon: 2.3522, lat: 48.8566 },
+      { type: 'node', id: 2, lon: 2.35222, lat: 48.85662 },
+      /* Un second carrefour : le MILIEU EXACT du segment Paris-Lyon. Le
+         premier jet le posait à « 3,5 / 47,4 », qui a l'air sur la ligne et
+         en est à trois kilomètres — le tracé simulé n'a que deux points, et
+         tout ce qui n'est pas sur la corde est loin. */
+      { type: 'node', id: 3, lon: (2.3522 + 4.8357) / 2, lat: (48.8566 + 45.764) / 2 },
+    ] }),
+  }));
   await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
@@ -849,6 +938,12 @@ test('ITI-3 : TROIS itinéraires A, B, C — chiffrés, tracés, et adoptables',
      plus courte sont désignées — et ce ne sont pas les mêmes. */
   await expect(a.locator('.comparer-marque')).toContainText('la plus rapide');
   await expect(b.locator('.comparer-marque')).toContainText('la plus courte');
+
+  /* LES FEUX SONT COMPTÉS PAR CARREFOUR, pas par tête de feu : deux nœuds au
+     même croisement font UN arrêt. Deux carrefours sur ce tracé. */
+  await expect(a.locator('.comparer-feux')).toHaveText('2 feux tricolores');
+  await expect(corps.locator('.comparer-marque', { hasText: 'la moins arrêtée' }),
+    'sans écart de feux, personne n’est « la moins arrêtée »').toHaveCount(0);
 
   // Sans véhicule renseigné, la note le dit au lieu d'inventer une recharge.
   await expect(corps.locator('.comparer-note')).toContainText('Renseignez votre véhicule');

@@ -813,5 +813,33 @@ identiques : c'est une PR à part entière, à mesurer avant de la promettre.
 Le découpage des numéros européens (`routesEuropeennes`) et le cartouche
 vert existent déjà, prêts, dans `src/lib/panneau.ts`.
 
+## Feux tricolores : la donnée existe, l'optimisation non (mesuré le 30/08/2026)
+
+Armelin : « existe-t-il un moyen d'afficher les feux rouges sur la carte,
+afin de pouvoir optimiser les trajets les plus courts avec le moins de feux
+rouges ? »
+
+| Question | Réponse | Mesure |
+|---|---|---|
+| La donnée existe-t-elle ? | **oui** | `highway=traffic_signals` — **1 204 feux** dans un carré de Paris centre-nord, un appel Overpass de 0,8 s |
+| Peut-on OPTIMISER dessus ? | **non** | le service d'itinéraire ne prend aucun coût personnalisé et ne rend pas d'alternatives (mesuré en PR #6, reconfirmé le 29/08) |
+| Que peut-on faire alors ? | **compter** | les feux de chacun des trois itinéraires A/B/C déjà calculés — chiffre compté sur le tracé réel, pas estimé |
+
+**LE PIÈGE DU COMPTAGE, et c'est le cœur du module `lib/feux.ts`** : un
+carrefour à feux porte PLUSIEURS nœuds — un par branche d'accès. Compter les
+nœuds donnerait quatre feux pour un seul croisement, soit un facteur trois à
+quatre. On regroupe donc les nœuds proches **le long du trajet** (40 m) et
+l'on compte les CARREFOURS : c'est ce qu'un conducteur compte, lui qui
+s'arrête une fois.
+
+**UN SEUL APPEL POUR LES TROIS VARIANTES** : leurs corridors se recouvrent
+largement, on demande donc leur union et l'on attribue ensuite chaque feu par
+la géométrie. Overpass est tenu par des bénévoles.
+
+Limite assumée : un feu **traversé deux fois** (boucle, demi-tour) ne compte
+qu'une fois — la projection retient le point le plus proche. Le cas est rare,
+et le chiffre sert à COMPARER trois itinéraires, pas à promettre un décompte
+exact.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.
