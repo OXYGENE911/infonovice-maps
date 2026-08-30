@@ -2,7 +2,12 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.0.0] — 2026-08-30 — FEUX-2 : les feux du trajet sur la carte (PR #128)
+## [0.100.0] — 2026-08-30 — FEUX-2 : les feux du trajet sur la carte (PR #128)
+
+<!-- 0.100.0 ET NON 1.0.0 : passer en 1.0 dit « le produit est stable et
+     complet », et c'est une décision d'Armelin, pas une conséquence
+     mécanique du compteur. 0.100.0 est un numéro semver valide ; le 1.0
+     attendra qu'il le prononce. -->
 
 Armelin : « fais l'affichage des feux sur la carte ».
 
