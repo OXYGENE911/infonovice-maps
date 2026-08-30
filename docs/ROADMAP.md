@@ -534,6 +534,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #132 — COPILOTE-1 (30/08) : commodités structurées comme dans la
+      fiche de borne (fonction extraite, pas recopiée), profil et météo sans
+      clic supplémentaire, et le rond du véhicule sur le profil.
 - [x] PR #131 — ERGO-3, des dessins au lieu d'un formulaire (30/08) : maison,
       immeuble et étoile sur les raccourcis d'itinéraire ; les autonomies
       prennent la couleur de leur anneau, ce qui donne au rayon d'action la
