@@ -29,6 +29,7 @@
  * venir, pas d'un marquage au sol.
  */
 import { situerSurLeTrace } from './le-long-du-trajet';
+import { routesEuropeennes } from './panneau';
 import type { Manoeuvre } from './feuille-de-route';
 
 /** Un tronçon de la ressource riche, réduit à ce qui sert ici. */
@@ -37,6 +38,11 @@ export interface TronconVoies {
   point: [number, number];
   /** `nombre_de_voies` tel que le service le rend — 0 quand il ne sait pas. */
   voies: number;
+  /* LE NUMÉRO EUROPÉEN VOYAGE AVEC (EURO-1, 30/08) : c'est la MÊME requête
+     qui le porte, et une seconde requête pour un seul champ serait deux fois
+     seize secondes prises au service public. Brut, tel que rendu —
+     « E15/E50 », « E54 », ou vide (mesuré le 30/08). */
+  europe?: string;
 }
 
 /** Un relevé recousu sur le tracé suivi. */
@@ -85,6 +91,64 @@ export function recoudreVoies(
     if (rendu[rendu.length - 1]?.voies !== r.voies) rendu.push(r);
   }
   return rendu;
+}
+
+/** Un numéro de route européenne recousu sur le tracé suivi. */
+export interface ReleveEurope {
+  avancementM: number;
+  /** Une ou plusieurs routes : « E15/E50 » en porte DEUX. */
+  routes: string[];
+}
+
+/**
+ * Recoud les numéros européens sur le tracé suivi — PURE.
+ *
+ * MÊME COUTURE QUE LES VOIES, MÊME REFUS : trop loin du tracé, c'est une
+ * autre chaussée. Et le même repli : deux relevés consécutifs qui portent
+ * les mêmes routes n'en font qu'un — sur un Paris-Lyon, l'E15 court sur des
+ * centaines de tronçons.
+ */
+export function recoudreEurope(
+  troncons: readonly TronconVoies[], trace: readonly [number, number][],
+): ReleveEurope[] {
+  if (trace.length < 2) return [];
+  const bruts: ReleveEurope[] = [];
+  for (const t of troncons) {
+    const routes = routesEuropeennes(t.europe ?? '');
+    if (routes.length === 0) continue;
+    const { ecart, avancement } = situerSurLeTrace(
+      { lon: t.point[0], lat: t.point[1] }, trace as [number, number][],
+    );
+    if (ecart > ECART_MAX_M) continue;
+    bruts.push({ avancementM: avancement, routes });
+  }
+  bruts.sort((a, b) => a.avancementM - b.avancementM);
+  const rendu: ReleveEurope[] = [];
+  for (const r of bruts) {
+    const avant = rendu[rendu.length - 1];
+    if (!avant || avant.routes.join('/') !== r.routes.join('/')) rendu.push(r);
+  }
+  return rendu;
+}
+
+/**
+ * Les routes européennes à un avancement donné — PURE.
+ *
+ * MÊME LECTURE QUE LES VOIES, ET MÊME SILENCE hors portée : une route garde
+ * son numéro européen jusqu'à ce qu'un tronçon dise le contraire, mais un
+ * relevé vieux d'un kilomètre et demi ne prouve plus rien.
+ */
+export function europeA(
+  releves: readonly ReleveEurope[], avancementM: number,
+  porteeM: number = PORTEE_RELEVE_M,
+): string[] {
+  let retenu: ReleveEurope | null = null;
+  for (const r of releves) {
+    if (r.avancementM > avancementM) break; // triés
+    retenu = r;
+  }
+  if (!retenu) return [];
+  return avancementM - retenu.avancementM > porteeM ? [] : retenu.routes;
 }
 
 /**
@@ -176,7 +240,9 @@ export function urlVoies(
   let url = `${SERVICE}?resource=bdtopo-pgr&profile=car&optimization=fastest`
     + `&start=${depart.lon},${depart.lat}&end=${arrivee.lon},${arrivee.lat}`
     + '&geometryFormat=geojson&distanceUnit=meter&timeUnit=second'
-    + '&getSteps=true&waysAttributes=nombre_de_voies';
+    /* DEUX ATTRIBUTS EN UN APPEL : le service en accepte dix, et chaque
+       requête coûte seize secondes. */
+    + '&getSteps=true&waysAttributes=nombre_de_voies%7Ccpx_numero_route_europeenne';
   if (etapes.length) {
     url += `&intermediates=${etapes.map((p) => `${p.lon},${p.lat}`).join('|')}`;
   }
@@ -200,9 +266,20 @@ export function versTroncons(brut: unknown): TronconVoies[] {
          la conversion, et le refus de ce qui n'est pas un nombre. */
       const brutVoies = (e as { attributes?: Record<string, unknown> })
         ?.attributes?.['nombre_de_voies'];
-      const voies = Number(brutVoies);
-      if (!Number.isFinite(voies)) continue;
-      rendu.push({ point: [lon, lat], voies });
+      /* UN TRONÇON SANS NOMBRE DE VOIES RESTE UN TRONÇON : il peut porter
+         un numéro européen, et le jeter pour un champ absent perdrait
+         l'autre. Zéro veut dire « je ne sais pas » — `recoudreVoies` le
+         refusera, `recoudreEurope` n'en a pas besoin. */
+      const brutNombre = Number(brutVoies);
+      const voies = Number.isFinite(brutNombre) ? brutNombre : 0;
+      const brutEurope = (e as { attributes?: Record<string, unknown> })
+        ?.attributes?.['cpx_numero_route_europeenne'];
+      /* LE NUMÉRO EUROPÉEN N'EST PAS UNE CONDITION : un tronçon sans lui
+         reste un tronçon dont on connaît les voies. Les deux champs vivent
+         dans le même appel, pas dans le même destin. */
+      rendu.push(typeof brutEurope === 'string' && brutEurope !== ''
+        ? { point: [lon, lat], voies, europe: brutEurope }
+        : { point: [lon, lat], voies });
     }
   }
   return rendu;

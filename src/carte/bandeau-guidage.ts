@@ -34,7 +34,8 @@ import { meteoA, phraseMeteo, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/mete
 import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
 import { limiteA, type LimiteTrajet } from '../lib/limites';
 import {
-  voiesA, cotePlacement, voieConseillee, libellePlacement, type ReleveVoies,
+  voiesA, cotePlacement, voieConseillee, libellePlacement, europeA,
+  type ReleveVoies, type ReleveEurope,
 } from '../lib/voies';
 import type { EvenementTrajet } from '../lib/trafic';
 import { flecheManoeuvre } from './icone-manoeuvre';
@@ -117,6 +118,15 @@ export class BandeauGuidage extends HTMLElement {
      Paris-Lyon (mesuré le 30/08). Tant qu'elle n'est pas là, ou si elle
      échoue, la chaussée ne se dessine pas — le suivi vaut sans elle. */
   #voies: readonly ReleveVoies[] = [];
+
+  /* LES ROUTES EUROPÉENNES du tracé — livrées par le MÊME appel que les
+     voies, et rejouées de la même façon. */
+  #europe: readonly ReleveEurope[] = [];
+
+  set routesEurope(r: readonly ReleveEurope[]) {
+    this.#europe = r;
+    if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+  }
 
   set voies(v: readonly ReleveVoies[]) {
     this.#voies = v;
@@ -332,6 +342,12 @@ export class BandeauGuidage extends HTMLElement {
           <p class="bg-distance"></p>
         </div>
         <span class="bg-ecusson" hidden></span>
+        <!-- LE CARTOUCHE VERT EUROPÉEN (EURO-1, 30/08) — type E41 de l'IISR.
+             Il s'AJOUTE au cartouche national, il ne le remplace pas : sur
+             l'A6 on lit « A6 » en rouge ET « E15 » en vert, l'un sous
+             l'autre. La donnée vient de la seconde requête, celle des
+             attributs de route (docs/apis.md). -->
+        <span class="bg-europe" hidden></span>
         <!-- LA CHAUSSÉE ET LE CÔTÉ OÙ SE PLACER (VOIE-1, 30/08). Armelin :
              « des flèches pour préciser où se placer sur la chaussée pour
              tourner à une intersection ou pour sortir d'une autoroute ».
@@ -744,6 +760,45 @@ export class BandeauGuidage extends HTMLElement {
     boite.replaceChildren(...barres);
   }
 
+  /**
+   * Le cartouche vert européen (EURO-1, 30/08).
+   *
+   * IL SE LIT LÀ OÙ L'ON VA, comme l'écusson national qu'il accompagne : le
+   * panneau annonce la route qu'on PREND, pas celle qu'on quitte. On lit
+   * donc les relevés cinquante mètres après la manœuvre — de quoi être sur
+   * le tronçon suivant sans dépasser le premier.
+   *
+   * DEUX AU PLUS, et c'est une contrainte de place : le panneau fait trois
+   * cents pixels de large et porte déjà une instruction, une distance et un
+   * cartouche national. Les tronçons à trois routes européennes existent,
+   * mais les afficher réduirait l'instruction — qui, elle, est vitale.
+   */
+  #majEurope(e: EtatGuidage): void {
+    const boite = this.querySelector('.bg-europe') as HTMLElement | null;
+    if (!boite) return;
+    const routes = e.horsRoute ? []
+      : europeA(this.#europe, e.avancementM + e.jusquALaManoeuvreM + 50).slice(0, 2);
+    if (routes.length === 0) {
+      boite.hidden = true;
+      boite.replaceChildren();
+      delete boite.dataset['etat'];
+      return;
+    }
+    const signature = routes.join('/');
+    if (boite.dataset['etat'] === signature) return;
+    boite.dataset['etat'] = signature;
+    boite.hidden = false;
+    boite.replaceChildren(...routes.map((r) => {
+      const chip = document.createElement('b');
+      chip.className = 'bg-ecusson-europe';
+      chip.textContent = r;
+      /* IL SE DIT EN TOUTES LETTRES : « E15 » lu caractère par caractère ne
+         s'entend pas comme une route. */
+      chip.setAttribute('aria-label', `route européenne ${r}`);
+      return chip;
+    }));
+  }
+
   #alerte(message: string): void {
     const p = this.querySelector('.bg-alerte') as HTMLElement;
     p.textContent = message;
@@ -904,6 +959,7 @@ export class BandeauGuidage extends HTMLElement {
     if (numeroteur) ecusson.dataset['cartouche'] = numeroteur;
     else delete ecusson.dataset['cartouche'];
 
+    this.#majEurope(e);
     this.#majVoies(e);
     /* L'écusson est un signe : il se DIT en toutes lettres à qui écoute la
        page, sans quoi « D606 » resterait une suite de caractères. */
