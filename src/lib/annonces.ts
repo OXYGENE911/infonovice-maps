@@ -133,6 +133,67 @@ export function phraseAnnonce(
   return phrase.charAt(0).toUpperCase() + phrase.slice(1);
 }
 
+/* ==========================================================================
+   LE TRAFIC PARLÉ (TRAFIC-1, demande d'Armelin du 30/08)
+   ========================================================================== */
+
+/* TROIS KILOMÈTRES. Le bandeau, lui, affiche l'événement dix kilomètres
+   avant : l'œil peut le lire quand il veut, la voix s'impose. À 130 km/h
+   trois kilomètres font quatre-vingts secondes — le temps de décider sans
+   avoir oublié à l'arrivée. */
+export const PORTEE_TRAFIC_M = 3_000;
+
+/* CE QUI PRIME SUR LE TRAFIC : la manœuvre. Tant qu'un virage est à moins
+   d'un kilomètre, on se tait sur les travaux — l'annonce couperait
+   l'instruction, ou pire, la remplacerait dans l'oreille de qui conduit. Un
+   accident dans trois kilomètres attendra le prochain kilomètre de ligne
+   droite. */
+export const GARDE_MANOEUVRE_M = 1_000;
+
+/** Un événement à portée de voix. */
+export interface TraficADire {
+  /** Position de l'événement le long du trajet, en mètres. */
+  avancementM: number;
+  libelle: string;
+  distanceM: number;
+}
+
+/**
+ * L'événement de trafic à annoncer maintenant, s'il y en a un — PURE.
+ *
+ * LA MANŒUVRE PASSE D'ABORD, TOUJOURS. C'est la règle qui manquait quand
+ * cette fonctionnalité a été proposée : « il ne manque que la règle de quand
+ * interrompre ». La voici — on n'interrompt pas, on attend.
+ */
+export function traficADire(
+  evenements: readonly { avancementM: number; libelle: string }[],
+  avancementM: number, distanceManoeuvreM: number,
+  porteeM: number = PORTEE_TRAFIC_M,
+): TraficADire | null {
+  if (distanceManoeuvreM < GARDE_MANOEUVRE_M) return null;
+  for (const e of evenements) {
+    const devant = e.avancementM - avancementM;
+    if (devant <= 0 || devant > porteeM) continue;
+    return { avancementM: e.avancementM, libelle: e.libelle, distanceM: devant };
+  }
+  return null;
+}
+
+/**
+ * La phrase d'un événement de trafic — PURE.
+ *
+ * « SIGNALÉ », ET LE MOT COMPTE : Bison Futé rapporte des déclarations, pas
+ * des mesures. À l'écran, la source est écrite ; à l'oreille, l'adjectif la
+ * remplace — dire « Bison Futé » à chaque annonce serait lourd, et taire
+ * toute réserve serait faux.
+ */
+export function phraseTrafic(libelle: string, distanceM: number): string {
+  const quoi = libelle.trim();
+  if (quoi === '') return '';
+  const distance = distanceDite('loin', distanceM);
+  return `${quoi.charAt(0).toUpperCase()}${quoi.slice(1)} signalé ${distance}`;
+}
+
 /**
  * La mémoire de ce qui a déjà été dit.
  *
@@ -143,13 +204,17 @@ export function phraseAnnonce(
 export class MemoireAnnonces {
   #dites = new Set<string>();
 
-  /** Vrai si ce palier n'a pas encore été dit pour cette manœuvre. */
-  aDire(manoeuvreM: number, palier: Palier): boolean {
-    return !this.#dites.has(`${Math.round(manoeuvreM)}-${palier}`);
+  /* LE MOTIF EST UN TEXTE LIBRE, et non le seul palier : le trafic se note
+     dans la même mémoire, sous son propre motif. Deux mémoires séparées
+     auraient deux fois les mêmes défauts à corriger. */
+
+  /** Vrai si ce motif n'a pas encore été dit pour ce point du trajet. */
+  aDire(reference: number, motif: Palier | 'trafic'): boolean {
+    return !this.#dites.has(`${Math.round(reference)}-${motif}`);
   }
 
-  noter(manoeuvreM: number, palier: Palier): void {
-    this.#dites.add(`${Math.round(manoeuvreM)}-${palier}`);
+  noter(reference: number, motif: Palier | 'trafic'): void {
+    this.#dites.add(`${Math.round(reference)}-${motif}`);
   }
 
   /** Tout oublier — au démarrage d'un suivi, ou après un recalcul. */

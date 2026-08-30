@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.96.0] — 2026-08-30 — TRAFIC-1 : les annonces de trafic parlées (PR #124)
+
+Armelin, le 30/08 : « fais les annonces de trafic parlées ».
+
+- **LA RÈGLE QUI MANQUAIT : on n'interrompt pas, on attend.** Tant qu'une
+  manœuvre est à moins d'un kilomètre, le trafic se tait — une annonce de
+  travaux qui couvre « tournez à droite » est pire qu'une annonce de travaux
+  qui n'existe pas.
+- **TROIS KILOMÈTRES POUR LA VOIX, DIX POUR L'ÉCRAN.** L'œil lit quand il
+  veut, la voix s'impose : elle attend d'être utile. À 130 km/h, trois
+  kilomètres font quatre-vingts secondes — le temps de décider sans avoir
+  oublié à l'arrivée.
+- **UNE FOIS PAR ÉVÉNEMENT**, dans la même mémoire que les manœuvres : deux
+  mémoires séparées auraient deux fois les mêmes défauts.
+- **« SIGNALÉ », ET LE MOT COMPTE** : Bison Futé rapporte des déclarations,
+  pas des mesures. À l'écran la source est écrite ; à l'oreille, l'adjectif
+  la remplace.
+
+Tests : 8 unitaires (portée, garde de manœuvre, formulation, mémoire), 2 E2E
+avec une synthèse espionnée et un événement Bison Futé en Lambert-93 — dont
+un qui vérifie le SILENCE quand une manœuvre approche. 808 unitaires, 255 E2E.
+
 ## [0.95.0] — 2026-08-30 — VOIX-1 : le guidage vocal (PR #123)
 
 Armelin, le 30/08 : « fais le guidage vocal ».

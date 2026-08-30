@@ -51,11 +51,28 @@ const dites = (page: Page): Promise<string[]> =>
  * Un suivi dont la manœuvre est à `distance` mètres — c'est elle qui décide
  * du palier atteint, donc de ce qui se dit.
  */
-async function suivre(page: Page, distance: number): Promise<void> {
+async function suivre(page: Page, distance: number, trafic = false): Promise<void> {
   await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
     headers: { 'Access-Control-Allow-Origin': '*' },
     contentType: 'application/json', body: '{"elements":[]}',
   }));
+  /* BISON FUTÉ : le suivi relève les événements du corridor au démarrage.
+     Sans bouchon, la ligne reste vide — c'est le cas des autres parcours. */
+  if (trafic) {
+    await page.route('**/www.bison-fute.gouv.fr/data/iteration/date.json',
+      (route) => route.fulfill({ contentType: 'application/json', body: '[1787353503716]' }));
+    await page.route('**/www1.bison-fute.gouv.fr/data/**/evenementsOL6.json',
+      (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+        type: 'FeatureCollection',
+        features: [{
+          /* EN LAMBERT-93, comme le service : ce point tombe SUR le tracé, à
+             sept cents mètres du départ. Un événement EFFECTIF — les
+             prévisionnels sont tus par lib/trafic.ts. */
+          geometry: { type: 'Point', coordinates: [652685.0, 6861522.0] },
+          properties: { type: 'TRAVAUX', etat_evenement: 'EFFECTIF', urlcpc: '' },
+        }],
+      }) }));
+  }
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
     const url = route.request().url();
     if (/resource=bdtopo-pgr/.test(url)) {
@@ -154,7 +171,11 @@ test('la COUPER la fait taire, et le choix survit au rechargement', async ({ pag
     .toHaveAttribute('aria-pressed', 'false');
 
   /* LE CHOIX EST UNE PRÉFÉRENCE, pas un réglage de session : on ne redemande
-     pas à chaque trajet. Elle vit dans IndexedDB, sur l'appareil. */
+     pas à chaque trajet. Elle vit dans IndexedDB, sur l'appareil.
+     ON LAISSE L'ÉCRITURE ABOUTIR avant de recharger : recharger cinquante
+     millisecondes après un clic est une course que ce parcours crée et
+     qu'aucun usager ne court. */
+  await page.waitForTimeout(400);
   await page.reload();
   await suivre(page, 400);
   await expect(page.getByRole('button', { name: 'Activer le guidage vocal' }))
@@ -171,4 +192,24 @@ test('elle se TAIT à l’arrêt du suivi', async ({ page }) => {
   const avant = (await dites(page)).length;
   await page.waitForTimeout(800);
   expect(await dites(page)).toHaveLength(avant);
+});
+
+test('LE TRAFIC PARLE DANS LES BLANCS, jamais par-dessus une manœuvre', async ({ page }) => {
+  /* TRAFIC-1 (30/08). La règle qui manquait quand la fonctionnalité a été
+     proposée : on n'interrompt pas, on attend. Ici la manœuvre est à huit
+     kilomètres — la voie est libre pour annoncer les travaux. */
+  await suivre(page, 8_000, true);
+  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
+  await page.waitForTimeout(1_500);
+  const phrases = await dites(page);
+  expect(phrases.some((p) => p.includes('signalé')), JSON.stringify(phrases)).toBe(true);
+});
+
+test('IL SE TAIT quand une manœuvre approche', async ({ page }) => {
+  /* Manœuvre à quatre cents mètres : l'annonce de travaux couperait
+     l'instruction, ou pire, la remplacerait dans l'oreille de qui conduit. */
+  await suivre(page, 400, true);
+  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
+  await page.waitForTimeout(1_500);
+  expect((await dites(page)).some((p) => p.includes('signalé'))).toBe(false);
 });
