@@ -503,9 +503,13 @@ test('la vue s’incline en suivi, se refuse d’un bouton, se redresse à l’a
      Depuis NAV-3 il vit dans la barre DÉPLIÉE, et porte une icône — son
      nom accessible reste la phrase. */
   await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
-  await page.getByRole('button', { name: 'Passer la carte à plat' }).click();
+  /* LE BOUTON DIT SA VUE, PAS SON GESTE (ERGO-2, 30/08) : « 3D » quand la
+     carte est inclinée, « 2D » quand elle est à plat — et son nom accessible
+     porte la phrase entière. Armelin : « pour que l'utilisateur comprenne
+     qu'il faut appuyer de nouveau sur le bouton pour changer de vue ». */
+  await page.getByRole('button', { name: /Appuyer pour passer à plat/ }).click();
   await expect.poll(inclinaison, { timeout: 10_000 }).toBe(0);
-  await page.getByRole('button', { name: 'Incliner la carte' }).click();
+  await page.getByRole('button', { name: /Appuyer pour passer en relief/ }).click();
   await expect.poll(inclinaison, { timeout: 10_000 }).toBe(55);
 
   // L'arrêt redresse : l'inclinaison n'a de sens qu'en suivi.
@@ -643,15 +647,22 @@ test('l’orientation à DEUX ÉTATS, par la boussole de la carte — et le cap 
   await page.waitForTimeout(1000);
   expect(await bearing(), 'le nord tient sous les fixes').toBe(0);
 
-  /* ET UN SECOND APPUI REMET LA CARTE DANS LE SENS DE LA VOITURE — c'est
-     mot pour mot ce qui était demandé.
-     ON NORMALISE L'ANGLE : MapLibre range les caps dans (-180, 180], donc
-     200° s'y lit -160. Comparer les nombres bruts ferait échouer un test sur
-     une carte parfaitement orientée. */
-  await bouton.click();
-  await cap(200);
+  /* ET UN SECOND APPUI REMET LA CARTE DANS LE SENS DE LA VOITURE, TOUT DE
+     SUITE — sans attendre un nouveau fixe. C'est la correction du 30/08 au
+     soir : à l'arrêt, le récepteur ne donne aucun cap (il en faut 7 km/h),
+     et la carte restait au nord indéfiniment. Le DERNIER CAP CONNU est
+     rendu : ici 120°, celui du fixe poussé pendant le mode nord.
+     ON NORMALISE L'ANGLE : MapLibre range les caps dans (-180, 180]. */
   const capCarte = async () => (((await bearing()) % 360) + 360) % 360;
-  await expect.poll(capCarte, { timeout: 10_000 }).toBe(200);
+  await bouton.click();
+  await expect.poll(capCarte, { timeout: 10_000 }).toBe(120);
+
+  /* ET LE LISSAGE REPREND SON TRAVAIL : un fixe à 200° ne fait pas sauter la
+     carte, il l'y amène — 35 % de l'écart par mesure. */
+  await cap(200);
+  await expect.poll(capCarte, { timeout: 10_000 }).toBe(148);
+  await cap(200);
+  await expect.poll(capCarte, { timeout: 10_000 }).toBe(166);
 });
 
 test('à l’ARRÊT, la boussole oriente la carte — ouverte par le geste, jamais d’office', async ({ page }) => {

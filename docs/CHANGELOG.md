@@ -2,6 +2,41 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.101.0] — 2026-08-30 — ERGO-2 : cinq retours du volant, dont deux de mes défauts (PR #129)
+
+- **LA VOITURE EST ENFIN BASSE DANS L'ÉCRAN.** « Elle est toujours centrée au
+  milieu ; j'avais demandé qu'elle apparaisse plus bas. » Mon premier calcul
+  visait deux tiers de la carte VISIBLE — ce qui, avec une barre de deux
+  cents pixels, retombe pile au milieu de l'ÉCRAN. Le calcul était juste, la
+  cible était mauvaise. À 78 %, la voiture se pose à cent quarante pixels
+  au-dessus de la barre. MESURÉ cette fois, pas typé.
+- **LA BOUSSOLE BASCULE VRAIMENT, ET DANS LES DEUX SENS.** « Ça ne
+  fonctionne pas. » Deux défauts, tous deux de moi : j'avais remis le lissage
+  du cap à zéro le matin même — perdant le dernier cap connu — et mon
+  recentrage ne NOMMAIT pas le cap, alors qu'`easeTo` fige ce qu'il ne nomme
+  pas. À l'arrêt, le récepteur ne donne aucun cap (il en faut 7 km/h) : la
+  carte restait donc au nord indéfiniment. Le dernier cap connu est
+  désormais rendu tout de suite. L'écouteur passe aussi par DÉLÉGATION : la
+  boussole est refaite à chaque changement de fond.
+- **ELLE PORTE SES POINTS CARDINAUX** — N en rouge, E, S, O. Deux pièges
+  payés au passage : la classe est `maplibregl-ctrl-icon` et non
+  `compass-arrow`, et MapLibre écrit un sélecteur à 0-3-1 qu'une règle à
+  0-2-0 ne peut pas battre. Une règle CSS qui ne s'applique pas ne se plaint
+  jamais.
+- **LE BOUTON DE VUE DIT « 2D » OU « 3D »** au lieu d'un parallélogramme :
+  « pour que l'utilisateur comprenne qu'il faut appuyer de nouveau ».
+- **LA PASTILLE DE VITESSE SE DÉCOLLE DE L'ÉCHELLE** (dix-huit pixels au lieu
+  de dix) : « le rectangle blanc est littéralement collé au cercle ».
+- **ET LA BULLE DES LIENS NE L'ATTEINT PLUS.** Trois approches essayées, deux
+  jetées : un `:has()` écrit, chargé, matché — et sans effet ; puis une
+  classe posée d'après l'état interne de MapLibre, dont la logique est
+  INVERSÉE (`open` marque le replié, `compact-show` l'ouvert). La retenue :
+  la bulle s'arrête à 62 % de la largeur, côté droit. Ce qui n'a pas d'état
+  ne peut pas se désynchroniser.
+
+Tests : 6 E2E dédiés, dont deux qui mesurent la position de la voiture en
+pixels et la bascule de la boussole SANS nouveau fixe. 822 unitaires, 264 E2E.
+
 ## [0.100.0] — 2026-08-30 — FEUX-2 : les feux du trajet sur la carte (PR #128)
 
 <!-- 0.100.0 ET NON 1.0.0 : passer en 1.0 dit « le produit est stable et

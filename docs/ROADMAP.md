@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #129 — ERGO-2, cinq retours du volant (30/08) : voiture basse dans
+      l'écran, boussole qui bascule vraiment (deux défauts de la livraison du
+      matin), points cardinaux, bouton 2D/3D en toutes lettres, pastille
+      décollée de l'échelle et bulle des liens qui ne l'atteint plus.
 - [x] PR #128 — FEUX-2, les feux du trajet sur la carte (demande du 30/08) :
       une case à cocher à côté du comptage, un point par carrefour, à la
       demande et une seule fois par trajet.
