@@ -1162,3 +1162,79 @@ test('ZOOM-1 : la carte se rapproche à l’intersection, et rend la vue d’ava
   await avancerA(0.53);
   await expect.poll(zoom, { timeout: 10_000 }).toBeLessThan(vueDeRoute + 0.6);
 });
+
+/* L'ITINÉRAIRE BIS (BIS-1, demande d'Armelin du 30/08 : « quand on est en
+ * mode navigation et qu'on a un obstacle ou une route fermée non prévue, ce
+ * serait bien d'avoir dans la barre d'état une icône pour calculer
+ * automatiquement un itinéraire bis avant d'arriver à l'obstacle »).
+ *
+ * CE QUE CES PARCOURS DÉFENDENT : que le bouton ne PROMET pas ce que le
+ * service ne sait pas faire. Il n'existe aucun paramètre « éviter ce
+ * tronçon » : le bis est une route qui S'ÉCARTE, mesurée sur les tracés
+ * rendus — et quand aucune ne s'écarte, l'application le dit. */
+
+/** Le détour simulé : il quitte la ligne droite dès le départ, plein nord. */
+const DETOUR = {
+  type: 'LineString',
+  coordinates: [
+    [2.3522, 48.8566], [2.36, 48.88], [2.5, 49.0], [3.5, 47.5], [4.8357, 45.764],
+  ],
+};
+
+async function suivreEtDeplier(page: Page): Promise<void> {
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
+}
+
+test('le bis trouve une route qui S’ÉCARTE, et dit où elle sort', async ({ page }) => {
+  /* LE SERVICE REND UN DÉTOUR dès qu'on lui donne un point intermédiaire —
+     c'est exactement ce que fait le bis : il passe par un point posé de
+     côté, et le moteur l'accroche à une autre route. */
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    const url = route.request().url();
+    const avecEtape = /intermediates=/i.test(url);
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        geometry: avecEtape ? DETOUR : GEOMETRIE,
+        distance: avecEtape ? 430_000 : 390_000,
+        duration: avecEtape ? 15_000 : 13_000,
+      }),
+    });
+  });
+  await suivreEtDeplier(page);
+
+  await page.getByRole('button', { name: 'Chercher un itinéraire bis' }).click();
+  const mot = page.locator('.bg-bis-mot');
+  await expect(mot).toContainText('Itinéraire bis', { timeout: 15_000 });
+  // IL DIT OÙ L'ON SORT : c'est la seule chose qui permette de décider.
+  await expect(mot).toContainText('sortie dans');
+});
+
+test('le bis REFUSE de proposer une route qui repasse par ici', async ({ page }) => {
+  /* Le service rend le MÊME tracé quoi qu'on lui demande — le cas d'une
+     route unique, une vallée, une île. Proposer ce « bis » enverrait
+     l'usager dans l'obstacle en lui disant qu'il l'évite. */
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ geometry: GEOMETRIE, distance: 390_000, duration: 13_000 }),
+  }));
+  await suivreEtDeplier(page);
+
+  await page.getByRole('button', { name: 'Chercher un itinéraire bis' }).click();
+  await expect(page.locator('.bg-bis-mot'))
+    .toContainText('repassent par ici', { timeout: 15_000 });
+});
+
+test('le bis DIT quand le service ne rend rien, au lieu de se taire', async ({ page }) => {
+  await suivreEtDeplier(page);
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    status: 500, contentType: 'application/json', body: '{}',
+  }));
+
+  await page.getByRole('button', { name: 'Chercher un itinéraire bis' }).click();
+  await expect(page.locator('.bg-bis-mot'))
+    .toContainText('aucun itinéraire bis', { timeout: 25_000 });
+});

@@ -534,6 +534,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #116 — BIS-1, l'itinéraire bis (demande du 30/08) : une icône dans
+      la barre de suivi, quatre calculs réels par un point latéral (2,5 et
+      5 km, gauche et droite), et une MESURE de divergence pour garder celui
+      qui quitte la route actuelle le plus tôt ; refus explicite quand aucun
+      ne s'écarte. Le moteur n'ayant aucun « éviter ce tronçon », le bouton
+      ne promet pas d'éviter l'obstacle — il promet de s'écarter.
 - [x] PR #115 — CAT-1, le catalogue se cherche et se replie (demande du
       30/08) : 32 marques repliées au lieu de 137 modèles à la file, une
       barre de recherche qui rend une MARQUE entière et dépliée mais ne
