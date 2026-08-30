@@ -25,6 +25,8 @@ import { PREF_FILTRES } from './panneau-poi';
 import { apprendreTrajet, lireHabitudes, suggerer } from '../lib/routines';
 import { profilItineraire, denivele } from '../lib/altimetrie';
 import { chargerGrille, estimerPeages } from '../lib/peages-tarifs';
+import { pointLateral, choisirBis, traceDevant } from '../lib/bis';
+import { capEntre } from './curseur-vehicule';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 import { stationsDuTrajet, distanceM, situerSurLeTrace, type SurLeTrajet } from '../lib/le-long-du-trajet';
 import {
@@ -787,6 +789,11 @@ export class PanneauItineraire extends HTMLElement {
     document.addEventListener('recalcul-hors-route', (e) => {
       const d = (e as CustomEvent<{ lon: number; lat: number }>).detail;
       void this.#recalculerDepuis({ lon: d.lon, lat: d.lat });
+    });
+    /* L'ITINÉRAIRE BIS (BIS-1, 30/08) — demandé par la barre, calculé ici. */
+    document.addEventListener('itineraire-bis', (e) => {
+      const d = (e as CustomEvent<{ lon: number; lat: number; cap: number | null }>).detail;
+      void this.#itineraireBis({ lon: d.lon, lat: d.lat }, d.cap);
     });
     document.addEventListener('vehicule-change', () => {
       if (!this.#dernier) return;
@@ -2399,6 +2406,89 @@ export class PanneauItineraire extends HTMLElement {
 
     this.#reprendreSuivi = true;
     this.#poser('depart', position, 'Reprise d’itinéraire');
+  }
+
+  /**
+   * Chercher une route qui QUITTE celle-ci, tout de suite (BIS-1, 30/08).
+   *
+   * CE QU'ON NE PEUT PAS FAIRE, ET QU'ON NE PRÉTEND PAS FAIRE. Le service
+   * public d'itinéraire n'a aucun paramètre « éviter ce tronçon » (capacités
+   * relevées le 21/08, reconfirmées le 28/08). On ne peut donc pas lui dire
+   * où est l'obstacle. Ce bouton ne promet pas de l'éviter : il cherche une
+   * route qui s'écarte de celle-ci dans les six kilomètres.
+   *
+   * COMMENT. Quatre calculs RÉELS en parallèle, chacun passant par un point
+   * posé de côté — le moteur accroche ce point à la route la plus proche, ce
+   * qui force un vrai détour. Deux distances, deux côtés : à 2,5 km on prend
+   * la sortie suivante, à 5 km on change de vallée. Puis l'on MESURE lequel
+   * quitte le tracé actuel le plus tôt (lib/bis.ts), et l'on adopte
+   * celui-là. Si aucun ne s'en écarte, on le DIT — proposer un « bis » qui
+   * repasse par l'obstacle serait pire que ne rien proposer.
+   */
+  async #itineraireBis(position: PointGeo, cap: number | null): Promise<void> {
+    const cliche = this.#calculPour;
+    const iti = this.#dernier;
+    const repondre = (message: string): void => {
+      document.dispatchEvent(new CustomEvent('itineraire-bis-resultat', {
+        detail: { message },
+      }));
+    };
+    if (!cliche || !iti) { repondre('Aucun itinéraire à dérouter.'); return; }
+
+    const trace = iti.geometrie.coordinates as [number, number][];
+    const devant = traceDevant(trace, position);
+    /* SANS CAP, PAS DE CÔTÉ : le cap dit où est « devant », donc où sont la
+       gauche et la droite. Il vient du récepteur ou de deux fixes successifs
+       (bandeau-guidage) ; à l'arrêt il peut manquer. On se rabat alors sur la
+       direction du tracé lui-même, qui est ce qu'on suit de toute façon. */
+    const capUtile = cap ?? (devant.length > 1
+      ? capEntre(devant[0]!, devant[devant.length - 1]!) : null);
+    if (capUtile === null) { repondre('Direction inconnue : impossible de chercher un bis.'); return; }
+
+    /* Les étapes encore devant restent au programme — même règle que le
+       recalcul hors-route : une étape déjà passée n'est plus une étape. */
+    const ici = situerSurLeTrace({ lon: position.lon, lat: position.lat }, trace);
+    const restantes = cliche.etapes.filter((p) =>
+      situerSurLeTrace(p, trace).avancement > ici.avancement + 500);
+
+    const essais = ([2_500, 5_000] as const).flatMap((d) =>
+      (['gauche', 'droite'] as const).map((cote) => ({ d, cote })));
+    const candidats = (await Promise.all(essais.map(async ({ d, cote }) => {
+      const [lon, lat] = pointLateral([position.lon, position.lat], capUtile, d, cote);
+      const via = { lon, lat };
+      try {
+        const alt = await calculerItineraire(
+          position, cliche.arrivee, cliche.profil,
+          { etapes: [via, ...restantes], eviter: cliche.eviter,
+            optimisation: cliche.optimisation },
+        );
+        return {
+          cle: `${cote}-${d}`, libelle: `${cote} à ${d / 1000} km`,
+          trace: alt.geometrie.coordinates as [number, number][],
+          distanceM: alt.distance, dureeS: alt.duree, via,
+        };
+      } catch { return null; }
+    }))).filter((c): c is NonNullable<typeof c> => c !== null);
+
+    if (candidats.length === 0) { repondre('Le service n’a rendu aucun itinéraire bis.'); return; }
+    const choix = choisirBis(devant, candidats);
+    if (!choix) {
+      repondre('Aucun bis trouvé : toutes les routes essayées repassent par ici.');
+      return;
+    }
+
+    /* ON ADOPTE PAR LE CHEMIN ORDINAIRE : le point latéral devient une étape,
+       et le calcul reprend depuis la position. Tout ce qui suit — plan de
+       recharge, feuille de route, reprise du suivi — se refait tout seul,
+       sans second chemin à maintenir. */
+    const gagnant = candidats.find((c) => c.cle === choix.candidat.cle);
+    if (!gagnant) { repondre('Aucun bis trouvé.'); return; }
+    const etapes = this.querySelector('etapes-itineraire') as EtapesItineraire;
+    etapes.points = [gagnant.via, ...restantes];
+    this.#reprendreSuivi = true;
+    this.#poser('depart', position, 'Itinéraire bis');
+    repondre(`Itinéraire bis : sortie dans ${formaterDistance(choix.divergenceM)}`
+      + `, ${formaterDuree(gagnant.dureeS)} jusqu’à l’arrivée.`);
   }
 
   async #demarrerSuivi(relance = false): Promise<void> {

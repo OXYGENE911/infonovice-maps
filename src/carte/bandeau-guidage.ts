@@ -257,6 +257,11 @@ export class BandeauGuidage extends HTMLElement {
         <p class="bg-trafic" role="status"></p>
         <p class="bg-arret"></p>
         <p class="bg-alerte" role="alert" hidden></p>
+        <!-- LE MOT DU BIS A SA PROPRE LIGNE, et ce n'est pas un détail :
+             la ligne d'alerte est réécrite à CHAQUE fixe GPS (hors-route,
+             contresens), ce qui effacerait la réponse au bout d'une
+             seconde. -->
+        <p class="bg-bis-mot" role="status" hidden></p>
         <!-- CE QUI SE DÉPLIE. « Soit l'utilisateur scrolle la barre vers le
              haut pour afficher les options cachées, soit il appuie une fois
              sur la barre pour la déployer » — les deux gestes marchent.
@@ -271,6 +276,16 @@ export class BandeauGuidage extends HTMLElement {
             ${pictoMenu('orient-cap')}</button>
           <button type="button" class="bg-copilote-bouton" aria-pressed="false"
             aria-label="Ouvrir le panneau du copilote">${pictoMenu('copilote')}</button>
+          <!-- L'ITINÉRAIRE BIS (BIS-1, 30/08). Armelin : « quand on est en
+               mode navigation et qu'on a un obstacle ou une route fermée non
+               prévue, ce serait bien d'avoir dans la barre d'état une icône
+               pour calculer automatiquement un itinéraire bis avant
+               d'arriver à l'obstacle ». Le bouton NE PROMET PAS d'éviter
+               l'obstacle — le service public n'a aucun paramètre « éviter ce
+               tronçon » : il cherche une route qui quitte celle-ci dans les
+               six kilomètres, et le dit quand il n'en trouve pas. -->
+          <button type="button" class="bg-bis"
+            aria-label="Chercher un itinéraire bis">${pictoMenu('bis')}</button>
         </div>
       </div>
       <!-- LE CARTOUCHE D'INSTRUCTION (GUID-2, 29/08) — « des fenêtres
@@ -355,6 +370,23 @@ export class BandeauGuidage extends HTMLElement {
     this.#publierHauteur = publierHauteur;
 
     this.querySelector('.bg-arreter')?.addEventListener('click', () => { this.arreter(); });
+    /* LE BIS SE DEMANDE D'ICI, IL SE CALCULE AILLEURS : la barre sait où
+       l'on est et où l'on va, le planificateur sait calculer. Elle passe
+       donc la position et le cap, et attend la réponse — même partage des
+       rôles que le recalcul hors-route juste au-dessus. */
+    this.querySelector('.bg-bis')?.addEventListener('click', () => {
+      const c = this.#derniersCoords;
+      if (!c) { this.#direBis('Position inconnue : le bis attend un point GPS.'); return; }
+      this.#direBis('Recherche d’un itinéraire bis…');
+      document.dispatchEvent(new CustomEvent('itineraire-bis', {
+        detail: { lon: c.longitude, lat: c.latitude, cap: this.#capLisse },
+      }));
+    });
+    /* La réponse revient par le document : le planificateur ne connaît pas
+       la barre, et n'a pas à la connaître. */
+    document.addEventListener('itineraire-bis-resultat', (e) => {
+      this.#direBis((e as CustomEvent<{ message: string }>).detail.message);
+    });
     this.querySelector('.bg-recentrer')?.addEventListener('click', () => { this.#recentrer(); });
     this.querySelector('.bg-3d')?.addEventListener('click', () => {
       this.#en3D = !this.#en3D;
@@ -610,6 +642,22 @@ export class BandeauGuidage extends HTMLElement {
     } catch {
       /* Refusé (économie d'énergie, batterie faible) : bénin — l'écran suit
          alors le réglage du téléphone, exactement comme avant ce verrou. */
+    }
+  }
+
+  /* CE QUE LE BIS RÉPOND, ET COMBIEN DE TEMPS. Neuf secondes : le temps de
+     lire une phrase au volant sans que la barre reste encombrée d'un message
+     périmé. Un message vide range la ligne tout de suite. */
+  #minuteurBis: ReturnType<typeof setTimeout> | undefined;
+
+  #direBis(message: string): void {
+    const p = this.querySelector('.bg-bis-mot') as HTMLElement | null;
+    if (!p) return;
+    p.textContent = message;
+    p.hidden = message === '';
+    clearTimeout(this.#minuteurBis);
+    if (message !== '') {
+      this.#minuteurBis = setTimeout(() => { this.#direBis(''); }, 9_000);
     }
   }
 

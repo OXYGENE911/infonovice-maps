@@ -2,6 +2,39 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.88.0] — 2026-08-30 — BIS-1 : l'itinéraire bis (PR #116)
+
+Armelin, le 30/08 : « quand on est en mode navigation et qu'on a un obstacle
+ou une route fermée non prévue, ce serait bien d'avoir dans la barre d'état
+une icône pour calculer automatiquement un itinéraire bis avant d'arriver à
+l'obstacle. »
+
+- **UNE ICÔNE DANS LA BARRE, ET UNE RÉPONSE EN CLAIR.** Un bouton en forme
+  de bifurcation, dans les commandes de la barre de suivi. Il répond sur sa
+  propre ligne : « Itinéraire bis : sortie dans 2,7 km, 4 h 10 jusqu'à
+  l'arrivée » — la sortie est dite, car c'est elle qui permet de décider.
+- **CE QU'IL NE PROMET PAS, ET POURQUOI.** Le service public d'itinéraire
+  n'a AUCUN paramètre « éviter ce tronçon » (capacités relevées le 21/08,
+  reconfirmées le 28/08) : on ne peut pas lui dire où est l'obstacle. Le
+  bouton ne prétend donc pas l'éviter — il cherche une route qui QUITTE
+  celle-ci dans les six kilomètres.
+- **QUATRE CALCULS RÉELS, PUIS UNE MESURE.** Chacun passe par un point posé
+  de côté — 2,5 km et 5 km, à gauche et à droite : le moteur accroche ce
+  point à la route la plus proche, ce qui force un vrai détour. On mesure
+  ensuite, sur les tracés rendus, lequel s'écarte le plus tôt du tracé
+  actuel ; à sortie comparable (500 m près), le plus rapide gagne.
+- **IL REFUSE PLUTÔT QUE DE MENTIR.** Si aucun candidat ne s'écarte —
+  vallée unique, île, route littorale — il le DIT : « toutes les routes
+  essayées repassent par ici ». Un « bis » qui ramène dans l'obstacle en
+  promettant de l'éviter serait pire que pas de bis du tout.
+- **L'ADOPTION PASSE PAR LE CHEMIN ORDINAIRE.** Le point latéral devient une
+  étape et le calcul repart de la position : plan de recharge, feuille de
+  route et reprise du suivi se refont seuls, sans second chemin à maintenir.
+
+Tests : 15 unitaires sur la logique pure (point latéral, divergence mesurée,
+troncature, tracé devant soi, choix et refus), 3 E2E (une route qui s'écarte,
+une qui repasse par ici, un service muet). 684 unitaires, 212 E2E.
+
 ## [0.87.0] — 2026-08-30 — CAT-1 : le catalogue se cherche et se replie (PR #115)
 
 Armelin, le 30/08 : « le choix des véhicules est trop long à scroller quand il

@@ -20,6 +20,8 @@ export type NomPicto =
      notamment les icônes pour les options ». La page Options n'était que
      des mots : mode de déplacement, optimisation, évitements. */
   | 'pieton' | 'rapide' | 'court' | 'autoroute' | 'tunnel' | 'pont'
+  /* BIS-1 (30/08) — l'itinéraire bis se demande d'une icône dans la barre. */
+  | 'bis'
   /* NAV-3 (29/08) — la barre de suivi passe aux icônes : « remplacer le
      bouton Vue à plat et Cap en haut par un unique bouton en forme d'icône
      de boussole en mode pressoir ». */
@@ -95,6 +97,17 @@ const TRACES: Record<NomPicto, string> = {
   copilote: '<circle cx="12" cy="7" r="3"/>'
     + '<path d="M5.6 20a6.4 6.4 0 0 1 12.8 0"/>',
   croix: '<path d="M6.6 6.6 17.4 17.4M17.4 6.6 6.6 17.4"/>',
+
+  /* L'ITINÉRAIRE BIS : on QUITTE cette route pour une autre. La route
+     actuelle continue, une branche s'en détache vers la droite et porte la
+     pointe. Deux dessins ont été écartés SUR CAPTURE avant celui-ci (même
+     méthode que le pont de PIC-2) : une fourche parfaitement symétrique se
+     lisait « diapason » et ne disait pas laquelle prendre ; une route
+     droite avec une sortie qui descend se lisait « drapeau ». */
+  bis: '<path d="M12 22V13"/>'
+    + '<path d="M12 13c0-4-1.2-5-2.4-8.6"/>'
+    + '<path d="M12 13c0-3.4 2-4.4 4.4-6.4"/>'
+    + '<polygon class="picto-menu-plein" points="20.2,2.6 18.4,8.6 14.6,4.6"/>',
 
   /* Un pont en arc : le tablier droit, l'arche DESSOUS, et les suspentes
      qui les relient. Le premier dessin (tablier + deux appuis) se lisait
