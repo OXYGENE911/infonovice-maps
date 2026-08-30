@@ -2,6 +2,51 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.106.0] — 2026-08-31 — POI-3 : le filtre se passe de son bouton (PR #136)
+
+- **LA RECHERCHE SUIT LA CARTE.** Armelin : « ce serait bien que les POI
+  sélectionnés s'affichent tout seuls, dès lors où le niveau de zoom est
+  suffisant […] Cela évitera d'avoir à cliquer sur un bouton de recherche.
+  Plus c'est simple pour l'utilisateur et plus facile sera l'adoption. » Il a
+  raison : un bouton de recherche est un péage payé à chaque rue.
+- **MA RÉSERVE D'HIER APPELAIT UNE GARDE, PAS UN REFUS.** J'avais écrit que le
+  filtre ne chercherait JAMAIS tout seul, parce qu'Overpass est un commun
+  bénévole. La contrainte était juste, la conclusion trop courte. Quatre
+  gardes rendent l'automatisme gratuit pour le service : le zoom minimal, la
+  **mémoire des zones déjà couvertes** (`lib/couverture.ts` — revenir sur ses
+  pas ne redemande RIEN), une recherche **plus large que la vue** pour
+  absorber les petits déplacements, et le repos (on n'agit qu'à l'arrêt de la
+  carte, jamais deux fois dans la même seconde et demie). Traverser une ville
+  coûte quelques requêtes, pas une par image.
+- **LES LIEUX S'ACCUMULENT** au lieu de clignoter : le restaurant repéré ne
+  disparaît plus au premier glissement du doigt.
+- **LA LIGNE D'ÉTAT NE SE TAIT PLUS.** Elle disait le zoom manquant, puis le
+  choix manquant, puis se vidait une fois le choix fait — au seul moment où
+  l'usager attend qu'on lui dise ce qui se passe. Un panneau muet se prend
+  pour un panneau en panne. Une panne du service se dit, et se REDIT au
+  déplacement suivant : une carte vide sans explication passe pour une carte
+  sans lieux.
+- **IL NE CHEVAUCHE PLUS LE PLANIFICATEUR** (« en mode desktop, le bouton de
+  filtre est superposé sur le bouton itinéraire »). Mon `top`/`left` en dur
+  visait exactement la place d'un contrôle « top-left » de MapLibre — celle du
+  planificateur. Confié au même empilement, il se range dessous tout seul, sur
+  tous les écrans. C'est MESURÉ en pixels par un parcours, pas confié à une
+  règle CSS.
+- **UN ENTONNOIR** à la place des trois barres, qui se lisaient comme un
+  réglage de son.
+
+Tests : 13 unitaires sur la mémoire des zones, 8 E2E dont trois nouveaux — la
+recherche qui part seule, l'aller-retour qui ne redemande rien, et la ligne
+qui ne se tait jamais. 855 unitaires, 273 E2E.
+
+DÉFAUT PAYÉ, ET C'EST LE MÊME QUE LA VEILLE AU QUATRIÈME DEGRÉ : pour lever
+la collision de `.poi-etat`, j'avais passé le renommage sur TOUT le fichier
+CSS. Les règles du panneau des services ont suivi alors qu'elles ne me
+concernaient pas : il est resté sans style pendant deux versions, et ma propre
+ligne héritait d'un positionnement absolu qui n'était pas le sien — la
+bandelette flottante visible sur les captures. Un renommage se fait par
+sélecteur, pas par fichier.
+
 ## [0.105.0] — 2026-08-30 — POI-2 : le filtre des lieux, sur la carte (PR #135)
 
 - **LE FILTRE S'ATTEINT EN UN GESTE, DEPUIS LA CARTE.** Armelin : « ce serait

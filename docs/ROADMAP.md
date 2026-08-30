@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #136 — POI-3, le filtre se passe de son bouton (31/08) : la
+      recherche suit la carte, gardée par la mémoire des zones déjà
+      couvertes ; la ligne d'état ne se tait plus ; le filtre ne chevauche
+      plus le planificateur et porte un entonnoir.
 - [x] PR #135 — POI-2, le filtre des lieux sur la carte (30/08) : une bulle
       sur la carte, douze familles au lieu de dix-sept cases, UNE requête
       Overpass pour l'union des familles cochées, aucune recherche spontanée,

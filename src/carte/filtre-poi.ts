@@ -13,11 +13,29 @@
  * gestes pour une question qui se pose en un. Le bouton vit donc à côté du
  * zoom, et les familles sont des pastilles qu'on active d'un doigt.
  *
- * CE QU'IL NE FAIT PAS, ET C'EST DÉLIBÉRÉ : il ne cherche RIEN tout seul. Ni
- * au déplacement de la carte, ni au zoom. Overpass est tenu par des
- * bénévoles ; une carte qui interroge à chaque geste serait un abus, et
- * l'usager n'y gagnerait qu'une lenteur. On cherche AU CLIC, et le panneau
- * dit quand la vue a bougé depuis la dernière recherche.
+ * IL CHERCHE TOUT SEUL DEPUIS LE 31/08, ET C'EST GARDÉ. Armelin : « ce
+ * serait bien que les POI sélectionnés s'affichent tout seuls […] Plus c'est
+ * simple pour l'utilisateur et plus facile sera l'adoption. » Il a raison :
+ * un bouton de recherche est un péage que l'usager paie à chaque rue.
+ *
+ * MA RÉSERVE D'HIER ÉTAIT JUSTE, MAIS ELLE APPELAIT UNE GARDE, PAS UN REFUS.
+ * Overpass est tenu par des bénévoles, et le mandat interdit de marteler les
+ * communs. Quatre gardes rendent donc l'automatisme gratuit pour le service :
+ *
+ *   1. LE ZOOM — sous `ZOOM_MIN_POI`, on ne cherche pas : l'emprise d'une
+ *      région rendrait cent lieux au hasard.
+ *   2. LA MÉMOIRE DES ZONES (lib/couverture.ts) — une vue déjà couverte ne
+ *      redemande RIEN. Revenir sur ses pas est gratuit.
+ *   3. LA MARGE — on cherche plus large qu'on ne regarde, donc un petit
+ *      déplacement reste couvert au lieu de relancer une requête.
+ *   4. LE REPOS — on n'agit qu'à l'ARRÊT de la carte, après une pause, et
+ *      jamais deux fois dans la même seconde.
+ *
+ * Traverser une ville coûte ainsi quelques requêtes, pas une par image.
+ *
+ * ET LA LIGNE D'ÉTAT NE SE TAIT JAMAIS : elle disait le zoom et le choix
+ * manquant, puis se vidait une fois le choix fait — le seul moment où
+ * l'usager attend qu'on lui dise ce qui se passe.
  */
 import type {
   Map as CarteMapLibre, GeoJSONSource, DataDrivenPropertyValueSpecification,
@@ -28,6 +46,9 @@ import {
   type LieuCategorie,
 } from '../lib/categories';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
+import {
+  elargir, estCouverte, memoriser, type Emprise,
+} from '../lib/couverture';
 
 const SOURCE = 'filtre-poi';
 const COUCHE = 'filtre-poi-points';
@@ -41,6 +62,22 @@ export const PREF_FAMILLES = 'familles-poi';
    du planificateur (12) : ici l'on cherche DOUZE familles à la fois. */
 export const ZOOM_MIN_POI = 13;
 
+/* LE REPOS AVANT DE CHERCHER. Six cents millisecondes après l'arrêt de la
+   carte : un déplacement qui se poursuit ne déclenche rien, et l'usager qui
+   s'arrête n'attend pas. */
+export const REPOS_MS = 600;
+
+/* JAMAIS DEUX REQUÊTES DANS LA MÊME SECONDE ET DEMIE. C'est le garde-fou de
+   dernier ressort : même si les autres gardes cédaient, le service ne verrait
+   pas une rafale. */
+export const INTERVALLE_MIN_MS = 1_500;
+
+/* COMBIEN DE LIEUX LA CARTE PORTE AU TOTAL. Les recherches s'accumulent —
+   c'est ce qui fait que les points restent en place quand on se déplace —
+   mais six cents points suffisent à couvrir une ville, et au-delà la carte
+   ne se lit plus. Les plus anciens s'effacent. */
+export const LIEUX_GARDES = 600;
+
 export class FiltrePoi extends HTMLElement {
   #carte: CarteMapLibre | null = null;
 
@@ -53,15 +90,29 @@ export class FiltrePoi extends HTMLElement {
      a buté dessus avant l'usager. C'est la troisième collision de ce genre
      en deux jours — le préfixe se choisit d'avance, pas après. */
 
-  /** L'emprise de la dernière recherche — pour dire que la vue a bougé. */
-  #vueCherchee: string | null = null;
+  /** Les zones déjà cherchées — la garde qui protège le service. */
+  #zones: Emprise[] = [];
+
+  /** Une recherche est en cours : on n'en lance pas une seconde par-dessus. */
+  #enCours = false;
+
+  /** Le dernier départ de requête, pour l'intervalle minimal. */
+  #dernierAppel = 0;
+
+  #minuteur: ReturnType<typeof setTimeout> | null = null;
+
+  /** Le dernier échec, s'il faut le redire quand la carte s'arrête. */
+  #echec: string | null = null;
 
   connectedCallback(): void {
     this.innerHTML = `
       <button type="button" class="poi-bulle" aria-expanded="false"
         aria-label="Filtrer les lieux affichés sur la carte">
+        <!-- UN ENTONNOIR, demandé le 31/08 : les trois barres se lisaient
+             comme un réglage de son ou un menu. L'entonnoir dit « filtre »
+             sans légende, dans toutes les langues. -->
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M4 6.4h16M7 12h10M10 17.6h4"/>
+          <path d="M3.5 5h17l-6.6 7.6v5.7l-3.8 2.2v-7.9z"/>
         </svg>
       </button>
       <div class="poi-panneau" hidden role="group"
@@ -74,7 +125,10 @@ export class FiltrePoi extends HTMLElement {
               <span class="poi-pastille" aria-hidden="true"></span>${c.libelle}
             </button>`).join('')}
         </div>
-        <button type="button" class="poi-chercher">Chercher dans cette vue</button>
+        <!-- LE BOUTON RESTE, MAIS IL NE COMMANDE PLUS : la recherche suit la
+             carte. Il sert à REDEMANDER une zone déjà couverte — après une
+             panne du service, ou pour rafraîchir un quartier. -->
+        <button type="button" class="poi-chercher">Chercher à nouveau ici</button>
         <p class="poi-filtre-etat" role="status"></p>
       </div>`;
 
@@ -94,14 +148,23 @@ export class FiltrePoi extends HTMLElement {
         else this.#actives.add(cle);
         b.setAttribute('aria-pressed', String(this.#actives.has(cle)));
         void ecrirePreference(PREF_FAMILLES, [...this.#actives]);
-        /* RIEN NE PART AU CLIC D'UNE PASTILLE : on coche ce qu'on veut voir,
-           PUIS on cherche. Interroger à chaque case aurait fait douze
-           requêtes pour une intention. */
+        /* CHANGER LE CHOIX PÉRIME TOUT CE QU'ON A COUVERT : les zones
+           mémorisées l'ont été pour d'AUTRES familles, et les garder ferait
+           croire à une carte complète alors qu'il manquerait la famille
+           qu'on vient de cocher. On repart donc de rien — mais on ne part
+           qu'après la pause, pour que cocher trois familles d'affilée ne
+           fasse qu'une requête. */
+        this.#zones = [];
+        this.#lieux = [];
+        this.#poser(this.#lieux);
         this.#majEtat();
+        this.#programmer();
       });
     }
     this.querySelector('.poi-chercher')?.addEventListener('click', () => {
-      void this.#chercher();
+      /* LE CLIC IGNORE LA MÉMOIRE : c'est tout son intérêt. On redemande une
+         zone déjà couverte, ce que l'automatisme refuse à juste titre. */
+      void this.#chercher(true);
     });
 
     void lirePreference<string[]>(PREF_FAMILLES).then((memo) => {
@@ -113,41 +176,82 @@ export class FiltrePoi extends HTMLElement {
         b.setAttribute('aria-pressed', String(this.#actives.has(b.dataset['cle']!)));
       }
       this.#majEtat();
+      // LES FAMILLES RETROUVÉES CHERCHENT SEULES : le réglage survit au
+      // rechargement, la carte qu'il commande doit survivre avec lui.
+      this.#programmer();
     }).catch(() => { /* sans mémoire, on part de rien : c'est le défaut */ });
   }
 
   set carte(c: CarteMapLibre) {
     this.#carte = c;
-    c.on('moveend', () => { this.#majEtat(); });
+    /* `moveend` ET NON `move` : on agit quand la carte s'ARRÊTE. Suivre le
+       déplacement image par image aurait fait de l'automatisme l'abus que le
+       mandat interdit. */
+    c.on('moveend', () => { this.#majEtat(); this.#programmer(); });
     c.on('style.load', () => { this.#poser(this.#lieux); });
+    this.#programmer();
   }
 
   #lieux: LieuCategorie[] = [];
 
-  /** L'emprise courante, arrondie — deux vues identiques donnent la même clé. */
-  #cleVue(): string {
+  /** L'emprise courante de la carte. */
+  #vue(): Emprise | null {
     const b = this.#carte?.getBounds();
-    if (!b) return '';
-    return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]
-      .map((v) => v.toFixed(3)).join(',');
+    return b ? {
+      ouest: b.getWest(), sud: b.getSouth(), est: b.getEast(), nord: b.getNorth(),
+    } : null;
+  }
+
+  /** Vrai si les conditions d'une recherche sont réunies. */
+  #possible(): boolean {
+    return (this.#carte?.getZoom() ?? 0) >= ZOOM_MIN_POI && this.#actives.size > 0;
   }
 
   /**
-   * Dit ce qu'on peut faire, et ce qui manque — en permanence.
+   * Programme une recherche — LE CŒUR DE LA GARDE.
    *
-   * TROIS ÉTATS, TROIS PHRASES : trop loin (le zoom), rien de coché, ou la
-   * vue a bougé depuis la dernière recherche. Un bouton qui ne dit pas
-   * pourquoi il ne rend rien se prend pour une panne.
+   * Appelé à chaque arrêt de la carte, à chaque changement de choix. Il ne
+   * lance une requête QUE si les quatre gardes le permettent, et jamais deux
+   * fois pour la même zone.
+   */
+  #programmer(): void {
+    if (this.#minuteur !== null) { clearTimeout(this.#minuteur); this.#minuteur = null; }
+    const vue = this.#vue();
+    if (!vue || !this.#possible() || this.#enCours) return;
+    // DÉJÀ COUVERTE : rien ne part, et c'est tout l'intérêt du dispositif.
+    if (estCouverte(vue, this.#zones)) return;
+    this.#minuteur = setTimeout(() => {
+      this.#minuteur = null;
+      const attente = Math.max(0, INTERVALLE_MIN_MS - (Date.now() - this.#dernierAppel));
+      if (attente > 0) {
+        // TROP TÔT : on ne renonce pas, on repousse. Renoncer laisserait la
+        // carte vide après un déplacement rapide.
+        this.#minuteur = setTimeout(() => { this.#minuteur = null; void this.#chercher(); }, attente);
+        return;
+      }
+      void this.#chercher();
+    }, REPOS_MS);
+  }
+
+  /**
+   * Dit ce qui se passe — EN PERMANENCE, et jamais rien.
+   *
+   * LE DÉFAUT CORRIGÉ (31/08) : la ligne disait le zoom manquant, puis le
+   * choix manquant, puis SE TAISAIT une fois le choix fait — au seul moment
+   * où l'usager attend qu'on lui dise ce qui se passe. Un panneau qui se tait
+   * ressemble à un panneau en panne.
+   *
+   * ELLE NE DIT PLUS « la vue a bougé » : ce n'est plus vrai, la recherche
+   * suit la carte. Elle dit ce que la carte porte, et d'où ça vient.
    */
   #majEtat(): void {
     const etat = this.querySelector<HTMLElement>('.poi-filtre-etat');
     const chercher = this.querySelector<HTMLButtonElement>('.poi-chercher');
     if (!etat || !chercher) return;
-    const zoom = this.#carte?.getZoom() ?? 0;
-    const tropLoin = zoom < ZOOM_MIN_POI;
-    chercher.disabled = tropLoin || this.#actives.size === 0;
+    const tropLoin = (this.#carte?.getZoom() ?? 0) < ZOOM_MIN_POI;
+    chercher.disabled = tropLoin || this.#actives.size === 0 || this.#enCours;
     if (tropLoin) {
-      etat.textContent = 'Rapprochez-vous pour chercher autour de vous'
+      etat.textContent = 'Rapprochez-vous pour voir les lieux autour de vous'
         + ` (zoom ${ZOOM_MIN_POI} au moins).`;
       return;
     }
@@ -155,26 +259,51 @@ export class FiltrePoi extends HTMLElement {
       etat.textContent = 'Choisissez ce que vous voulez voir.';
       return;
     }
-    if (this.#vueCherchee !== null && this.#vueCherchee !== this.#cleVue()) {
-      etat.textContent = 'La vue a bougé — relancez la recherche.';
+    if (this.#enCours) { etat.replaceChildren(this.#attente()); return; }
+    /* UN ÉCHEC SE REDIT TANT QU'IL N'EST PAS LEVÉ : l'effacer au premier
+       déplacement laisserait une carte vide sans explication. */
+    if (this.#echec !== null) { etat.textContent = this.#echec; return; }
+    const n = this.#lieux.length;
+    if (n === 0) {
+      etat.textContent = estCouverte(this.#vue() ?? { ouest: 0, sud: 0, est: 0, nord: 0 }, this.#zones)
+        ? 'Rien de recensé ici pour ce choix (source OpenStreetMap).'
+        : 'Recherche automatique dès que la carte s’arrête.';
       return;
     }
-    etat.textContent = this.#lieux.length > 0
-      ? `${this.#lieux.length} lieu${this.#lieux.length > 1 ? 'x' : ''} affiché`
-        + `${this.#lieux.length > 1 ? 's' : ''}.`
-      : '';
+    etat.textContent = `${n} lieu${n > 1 ? 'x' : ''} — la recherche suit la carte.`;
   }
 
-  async #chercher(): Promise<void> {
+  /** Le témoin d'attente : il bat, donc il prouve que quelque chose se passe. */
+  #attente(): HTMLElement {
+    const s = document.createElement('span');
+    s.className = 'poi-filtre-attente';
+    s.textContent = 'Recherche des lieux…';
+    return s;
+  }
+
+  /**
+   * Cherche les familles cochées dans la vue — et retient ce qu'elle couvre.
+   *
+   * ON CHERCHE PLUS LARGE QU'ON NE REGARDE (`elargir`) : la marge absorbe les
+   * petits déplacements, qui ne relancent alors rien. C'est ce qui fait la
+   * différence entre un automatisme et un martèlement.
+   *
+   * @param force Ignorer la mémoire des zones — c'est le bouton.
+   */
+  async #chercher(force = false): Promise<void> {
     const carte = this.#carte;
-    const etat = this.querySelector<HTMLElement>('.poi-filtre-etat');
-    if (!carte || !etat || this.#actives.size === 0) return;
-    const b = carte.getBounds();
-    etat.textContent = 'Recherche…';
+    if (!carte || this.#actives.size === 0 || this.#enCours) return;
+    const vue = this.#vue();
+    if (!vue) return;
+    if (!force && estCouverte(vue, this.#zones)) return;
+    const zone = elargir(vue);
+    const familles = [...this.#actives];
+    this.#enCours = true;
+    this.#echec = null;
+    this.#dernierAppel = Date.now();
+    this.#majEtat();
     try {
-      const r = await fetch(urlFamilles([...this.#actives], {
-        ouest: b.getWest(), sud: b.getSouth(), est: b.getEast(), nord: b.getNorth(),
-      }));
+      const r = await fetch(urlFamilles(familles, zone));
       if (!r.ok) throw new ErreurCategories('La recherche de lieux est indisponible.');
       const texte = await r.text();
       let lus: LieuCategorie[];
@@ -183,18 +312,41 @@ export class FiltrePoi extends HTMLElement {
       } catch {
         throw new ErreurCategories('Le service OpenStreetMap est saturé.');
       }
-      this.#lieux = lus.filter((l) => l.famille && this.#actives.has(l.famille));
-      this.#vueCherchee = this.#cleVue();
+      /* LE CHOIX A PU CHANGER PENDANT L'ATTENTE : sans cette vérification, une
+         réponse tardive repeuplerait la carte de familles qu'on vient de
+         décocher. */
+      const voulues = new Set(this.#actives);
+      const gardes = lus.filter((l) => l.famille && voulues.has(l.famille));
+      /* LA ZONE N'EST RETENUE QUE SI LE PLAFOND N'A PAS TRANCHÉ : au-delà, la
+         réponse est tronquée, et la déclarer « couverte » ferait croire à un
+         quartier vide qu'on n'a jamais fini de lire. */
+      if (lus.length < PLAFOND_LIEUX) this.#zones = memoriser(this.#zones, zone);
+      this.#accumuler(gardes);
       this.#poser(this.#lieux);
-      etat.textContent = this.#lieux.length === 0
-        ? 'Rien de recensé ici pour ce choix (source OpenStreetMap).'
-        : `${this.#lieux.length} lieu${this.#lieux.length > 1 ? 'x' : ''}`
-          + (lus.length >= PLAFOND_LIEUX ? ` (les ${PLAFOND_LIEUX} premiers)` : '')
-          + ' — la liste ne suit pas la carte.';
     } catch (e) {
-      etat.textContent = e instanceof ErreurCategories
+      this.#echec = e instanceof ErreurCategories
         ? e.message : 'La recherche de lieux est indisponible.';
+    } finally {
+      this.#enCours = false;
+      this.#majEtat();
     }
+  }
+
+  /**
+   * Ajoute les lieux trouvés à ceux déjà posés — SANS DOUBLON.
+   *
+   * L'ACCUMULATION EST CE QUI REND LE DÉPLACEMENT NATUREL : effacer à chaque
+   * recherche ferait clignoter la carte et disparaître le restaurant qu'on
+   * vient de repérer, au premier glissement du doigt.
+   */
+  #accumuler(trouves: readonly LieuCategorie[]): void {
+    const cle = (l: LieuCategorie): string =>
+      `${l.lon.toFixed(6)},${l.lat.toFixed(6)},${l.famille ?? ''}`;
+    const vus = new Set(this.#lieux.map(cle));
+    const ajouts = trouves.filter((l) => !vus.has(cle(l)));
+    // LES PLUS ANCIENS S'EFFACENT : six cents points couvrent une ville, et
+    // au-delà la carte ne se lit plus.
+    this.#lieux = [...this.#lieux, ...ajouts].slice(-LIEUX_GARDES);
   }
 
   /** Pose les lieux — un point par lieu, la couleur de sa famille. */

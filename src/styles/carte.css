@@ -362,21 +362,28 @@ etapes-itineraire { display: grid; gap: 7px; }
 .poi label { display: flex; align-items: center; gap: 9px;
   font: 400 14px var(--police); color: var(--texte-1); cursor: pointer; }
 .poi input:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
-.poi-filtre-etat {
+/* LA LIGNE D'ÉTAT DU PANNEAU DES SERVICES — `.poi-etat`, son nom d'origine.
+   ELLE L'AVAIT PERDU LE 30/08 : renommant ma propre classe pour lever une
+   collision, j'ai passé le remplacement sur TOUT le fichier CSS, et ces
+   règles-ci ont suivi alors qu'elles ne me concernaient pas. Le panneau des
+   services est donc resté sans style pendant deux versions, et ma ligne à
+   moi héritait d'un positionnement absolu qui n'était pas le sien.
+   UN RENOMMAGE SE FAIT PAR SÉLECTEUR, PAS PAR FICHIER. */
+.poi-etat {
   position: absolute; top: calc(100% + 8px); left: 0; margin: 0;
   max-width: 240px;
   /* Pur affichage : SANS ceci, la bandelette flottante interceptait les
      clics du sélecteur de fonds en dessous (attrapé par Playwright). */
   pointer-events: none;
 }
-.poi[open] .poi-filtre-etat { position: static; margin-top: 6px; }
-.poi-filtre-etat:empty { display: none; }
-.poi-filtre-etat {
+.poi[open] .poi-etat { position: static; margin-top: 6px; }
+.poi-etat:empty { display: none; }
+.poi-etat {
   font: 600 12px var(--police); color: var(--texte-2);
   background: color-mix(in srgb, var(--fond) 92%, transparent);
   border-radius: 8px; padding: 4px 8px;
 }
-.poi[open] .poi-filtre-etat { background: none; padding: 0; }
+.poi[open] .poi-etat { background: none; padding: 0; }
 .poi-popup strong { font: 650 13.5px var(--police); color: var(--texte-1); }
 .poi-popup dl { margin: 7px 0 0; display: grid; grid-template-columns: auto auto;
   gap: 3px 14px; font: 400 13px var(--police); }
@@ -3119,12 +3126,16 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
    POI-2 — LE FILTRE DES LIEUX, SUR LA CARTE (Armelin, 30/08 : « une icône
    pour afficher les POI comme un filtre […] configurer rapidement »)
    ========================================================================== */
+/* PLUS AUCUNE POSITION EN DUR (31/08). Le `top`/`left` calculé visait la
+   place du planificateur, qui est lui aussi un contrôle « top-left » : les
+   deux se chevauchaient dès que la fenêtre changeait de taille. MapLibre
+   empile ses contrôles ; on le laisse faire. */
 filtre-poi {
-  position: absolute; z-index: var(--z-cartouche);
-  /* SOUS L'EN-TÊTE, À GAUCHE : la droite porte déjà le zoom, la boussole et
-     la géolocalisation ; la barre de suivi occupe le bas. */
-  top: calc(var(--hauteur-entete, 45px) + 12px); left: 12px;
   display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+}
+/* La boîte du contrôle ne peint rien : c'est la bulle qui porte le fond. */
+.maplibregl-ctrl-top-left .maplibregl-ctrl:has(filtre-poi) {
+  background: none; box-shadow: none; border: 0;
 }
 .poi-bulle {
   width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
@@ -3174,6 +3185,19 @@ filtre-poi {
   font: 600 13px var(--police); cursor: pointer;
 }
 .poi-chercher:disabled { opacity: .5; cursor: not-allowed; }
-.poi-filtre-etat { margin: 6px 0 0; font: 400 11.5px/1.5 var(--police); color: var(--texte-3); }
+.poi-filtre-etat {
+  margin: 6px 0 0; font: 400 11.5px/1.5 var(--police); color: var(--texte-3);
+}
+/* LE TÉMOIN BAT PENDANT LA RECHERCHE : sans lui, l'attente ressemble à une
+   panne — le même retour de terrain que pour les lieux d'exception. */
+.poi-filtre-attente::after {
+  content: ''; display: inline-block; width: 6px; height: 6px;
+  margin-left: 5px; border-radius: 50%; background: var(--accent);
+  animation: poi-filtre-battre 1s ease-in-out infinite;
+}
+@keyframes poi-filtre-battre { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .poi-filtre-attente::after { animation: none; opacity: .7; }
+}
 .poi-bulle-nom { margin: 0; font: 650 13px var(--police); color: var(--texte-1); }
 .poi-bulle-type { margin: 2px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); }
