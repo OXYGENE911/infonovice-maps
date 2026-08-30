@@ -166,9 +166,18 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      rapidement un filtre pour choisir les POI qu'il souhaite voir autour de
      lui ». Ce qu'on cherche autour de soi se décide EN REGARDANT la carte :
      il vit donc sur la carte, pas au fond d'un menu. */
+  /* IL VIT DANS L'EMPILEMENT « top-left » DE MAPLIBRE, et non posé en absolu
+     par-dessus (défaut du 31/08 : « en mode desktop, le bouton de filtre est
+     superposé sur le bouton itinéraire »). Le planificateur EST un contrôle
+     top-left ; mon `top`/`left` en dur visait donc exactement sa place, et
+     tombait dessus dès que la fenêtre changeait de taille. Confié au même
+     empilement, il se range dessous tout seul, sur tous les écrans. */
   const filtrePoi = new FiltrePoi();
+  const portePoi = document.createElement('div');
+  portePoi.className = 'maplibregl-ctrl';
+  portePoi.appendChild(filtrePoi);
+  carte.addControl({ onAdd: () => portePoi, onRemove: () => portePoi.remove() }, 'top-left');
   filtrePoi.carte = carte;
-  conteneur.appendChild(filtrePoi);
 
 
   /* LA VISIONNEUSE DE PHOTOS — une seule pour l'application, posée au body :
