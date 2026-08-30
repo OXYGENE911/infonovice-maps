@@ -194,6 +194,69 @@ export function phraseTrafic(libelle: string, distanceM: number): string {
   return `${quoi.charAt(0).toUpperCase()}${quoi.slice(1)} signalé ${distance}`;
 }
 
+/* ==========================================================================
+   LES ARRÊTS DE RECHARGE PARLÉS (VOIX-2, demande d'Armelin du 30/08)
+   ========================================================================== */
+
+/* DEUX PALIERS, ET PAS TROIS. Dix kilomètres : le moment où l'on décide
+   encore de s'arrêter avant, ou de pousser. Un kilomètre : le moment de
+   mettre le clignotant. Entre les deux, il n'y a rien à décider — et une
+   voix qui répète est une voix qu'on coupe. */
+export const PALIERS_RECHARGE_M = [10_000, 1_000] as const;
+
+/** Un arrêt de recharge à annoncer. */
+export interface RechargeADire {
+  avancementM: number;
+  palier: number;
+  distanceM: number;
+  nom: string;
+  reseau: string | null;
+  dureeMin: number;
+}
+
+/**
+ * L'arrêt de recharge à annoncer maintenant, s'il y en a un — PURE.
+ *
+ * MÊME GARDE QUE LE TRAFIC : la manœuvre passe d'abord. Un arrêt à dix
+ * kilomètres attendra la fin du virage ; l'inverse serait absurde.
+ */
+export function rechargeADire(
+  arrets: readonly { avancementM: number; nom: string; reseau: string | null; dureeMin: number }[],
+  avancementM: number, distanceManoeuvreM: number,
+): RechargeADire | null {
+  if (distanceManoeuvreM < GARDE_MANOEUVRE_M) return null;
+  for (const a of arrets) {
+    const devant = a.avancementM - avancementM;
+    if (devant <= 0) continue;
+    /* LE PALIER FRANCHI, du plus proche au plus lointain — même logique que
+       les manœuvres : c'est le dernier franchi qui vaut. */
+    const palier = [...PALIERS_RECHARGE_M].reverse().find((p) => devant <= p);
+    if (palier === undefined) continue;
+    return {
+      avancementM: a.avancementM, palier, distanceM: devant,
+      nom: a.nom, reseau: a.reseau, dureeMin: a.dureeMin,
+    };
+  }
+  return null;
+}
+
+/**
+ * La phrase d'un arrêt de recharge — PURE.
+ *
+ * TROIS CHOSES, ET DANS CET ORDRE : quand, où, combien de temps. C'est
+ * l'ordre dans lequel la question se pose au volant — « c'est loin ? »,
+ * « c'est où ? », « ça dure ? ». Le réseau vient avec le nom quand il
+ * existe : « Ionity » dit plus long que « aire de Beaune ».
+ */
+export function phraseRecharge(r: RechargeADire): string {
+  const morceaux = [`Arrêt recharge ${distanceDite('loin', r.distanceM)}`];
+  const ou = r.reseau && !r.nom.toLowerCase().includes(r.reseau.toLowerCase())
+    ? `${r.reseau} ${r.nom}` : r.nom;
+  if (ou.trim() !== '') morceaux.push(ou.trim());
+  if (r.dureeMin > 0) morceaux.push(`${Math.round(r.dureeMin)} minutes de charge`);
+  return morceaux.join(', ');
+}
+
 /**
  * La mémoire de ce qui a déjà été dit.
  *
@@ -209,11 +272,11 @@ export class MemoireAnnonces {
      auraient deux fois les mêmes défauts à corriger. */
 
   /** Vrai si ce motif n'a pas encore été dit pour ce point du trajet. */
-  aDire(reference: number, motif: Palier | 'trafic'): boolean {
+  aDire(reference: number, motif: Palier | 'trafic' | `recharge-${number}`): boolean {
     return !this.#dites.has(`${Math.round(reference)}-${motif}`);
   }
 
-  noter(reference: number, motif: Palier | 'trafic'): void {
+  noter(reference: number, motif: Palier | 'trafic' | `recharge-${number}`): void {
     this.#dites.add(`${Math.round(reference)}-${motif}`);
   }
 

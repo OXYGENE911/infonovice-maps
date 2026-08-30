@@ -56,7 +56,7 @@ import { pictoMenu } from './icone-menu';
 import { Voix } from './voix';
 import {
   palierA, phraseAnnonce, traficADire, phraseTrafic,
-  MemoireAnnonces, type ContexteAnnonce,
+  rechargeADire, phraseRecharge, MemoireAnnonces, type ContexteAnnonce,
 } from '../lib/annonces';
 import { CurseurVehicule, capEntre, formeValide, PREF_CURSEUR } from './curseur-vehicule';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
@@ -1222,13 +1222,31 @@ export class BandeauGuidage extends HTMLElement {
    * la voix : ils ne peuvent donc pas se contredire.
    */
   #annoncer(e: EtatGuidage): void {
-    if (!this.#parle || e.horsRoute || !e.manoeuvre) return;
+    if (!this.#parle || e.horsRoute) return;
+    /* SANS FEUILLE DE ROUTE, IL RESTE DES CHOSES À DIRE. Le premier jet
+       sortait ici dès qu'aucune manœuvre n'était connue — et le trafic comme
+       les arrêts de recharge se taisaient avec elle, alors qu'ils n'en
+       dépendent pas. Or la feuille manque plus souvent qu'on ne croit : un
+       service d'instructions en panne, un itinéraire rejoué depuis un lien.
+       Trouvé par le parcours de VOIX-2, pas au volant. */
+    if (!e.manoeuvre) {
+      if (!this.#annoncerRecharge(e, Infinity)) this.#annoncerTrafic(e, Infinity);
+      return;
+    }
     const palier = palierA(e.jusquALaManoeuvreM, e.manoeuvre.distance);
     /* LE TRAFIC PARLE DANS LES BLANCS (TRAFIC-1, 30/08) : quand aucune
        manœuvre n'est à annoncer, et seulement si la prochaine est assez
        loin. La règle vit dans lib/annonces.ts — on n'interrompt pas, on
        attend. */
-    if (palier === null) { this.#annoncerTrafic(e); return; }
+    /* DANS LES BLANCS DE LA NAVIGATION, DEUX CHOSES À DIRE, DANS CET ORDRE :
+       l'arrêt de recharge d'abord — il demande une DÉCISION, et c'est ce qui
+       manque le plus en électrique — puis le trafic, qui informe. */
+    if (palier === null) {
+      if (!this.#annoncerRecharge(e, e.jusquALaManoeuvreM)) {
+        this.#annoncerTrafic(e, e.jusquALaManoeuvreM);
+      }
+      return;
+    }
     const point = e.avancementM + e.jusquALaManoeuvreM;
     if (!this.#annonces.aDire(point, palier)) return;
 
@@ -1252,9 +1270,21 @@ export class BandeauGuidage extends HTMLElement {
     this.#aParle = true;
   }
 
+  /** L'arrêt de recharge à venir, dit une fois par palier. Vrai s'il a parlé. */
+  #annoncerRecharge(e: EtatGuidage, jusquALaManoeuvreM: number): boolean {
+    const r = rechargeADire(this.#options?.arrets ?? [], e.avancementM, jusquALaManoeuvreM);
+    if (!r) return false;
+    const motif = `recharge-${r.palier}` as const;
+    if (!this.#annonces.aDire(r.avancementM, motif)) return false;
+    this.#annonces.noter(r.avancementM, motif);
+    this.#voix.dire(phraseRecharge(r));
+    this.#aParle = true;
+    return true;
+  }
+
   /** L'événement de trafic, dit une fois, dans un blanc de la navigation. */
-  #annoncerTrafic(e: EtatGuidage): void {
-    const evt = traficADire(this.#evenements, e.avancementM, e.jusquALaManoeuvreM);
+  #annoncerTrafic(e: EtatGuidage, jusquALaManoeuvreM: number): void {
+    const evt = traficADire(this.#evenements, e.avancementM, jusquALaManoeuvreM);
     if (!evt || !this.#annonces.aDire(evt.avancementM, 'trafic')) return;
     this.#annonces.noter(evt.avancementM, 'trafic');
     const phrase = phraseTrafic(evt.libelle, evt.distanceM);

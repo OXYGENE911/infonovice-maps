@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #130 — VOIX-2, les arrêts de recharge annoncés (demande du 30/08) :
+      deux paliers (10 km, 1 km), la manœuvre d'abord, l'arrêt avant le
+      trafic. Un défaut corrigé au passage : sans feuille de route, plus
+      aucune annonce ne sortait.
 - [x] PR #129 — ERGO-2, cinq retours du volant (30/08) : voiture basse dans
       l'écran, boussole qui bascule vraiment (deux défauts de la livraison du
       matin), points cardinaux, bouton 2D/3D en toutes lettres, pastille

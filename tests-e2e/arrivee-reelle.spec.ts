@@ -156,3 +156,93 @@ test('en SUIVI, l’heure d’arrivée compte les charges restantes — et le di
   const attendu = attenduA.getHours() * 60 + attenduA.getMinutes();
   expect(Math.abs(arriveeAffichee - attendu)).toBeLessThan(5);
 });
+
+test('VOIX-2 : l’arrêt de recharge s’annonce à voix haute', async ({ page, context }) => {
+  /* Armelin, le 30/08 : « fais les annonces vocales de recharge ». C'est ce
+     qui manque le plus en électrique — savoir SANS REGARDER L'ÉCRAN quand on
+     s'arrête, où, et pour combien de temps. */
+  await page.addInitScript(() => {
+    const dites: string[] = [];
+    (window as unknown as { ditesVoix: string[] }).ditesVoix = dites;
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: {
+        getVoices: () => [{ lang: 'fr-FR', name: 'Locale', localService: true }],
+        speak: (m: { text: string }) => { dites.push(m.text); },
+        cancel: () => {}, addEventListener: () => {},
+      },
+    });
+    Object.defineProperty(window, 'SpeechSynthesisUtterance', {
+      configurable: true,
+      value: class { text: string; lang = ''; rate = 1; voice: unknown = null;
+
+        constructor(t: string) { this.text = t; } },
+    });
+  });
+  await context.grantPermissions(['geolocation']);
+  /* LA POSITION SE PILOTE DEPUIS LE PARCOURS, dès le premier chargement :
+     remplacer `navigator.geolocation` APRÈS le démarrage laisserait le suivi
+     abonné à l'ancien objet. */
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __avancer: (f: number) => void }).__avancer = (f) => {
+      rappel?.({ coords: {
+        longitude: 2.3522 + (4.8357 - 2.3522) * f,
+        latitude: 48.8566 + (45.764 - 48.8566) * f,
+        accuracy: 5, speed: 30, heading: 150, altitude: null, altitudeAccuracy: null,
+      } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json', body: JSON.stringify({ elements: [] }),
+  }));
+  await page.route('**/www.bison-fute.gouv.fr/**', (route) => route.fulfill({
+    contentType: 'application/json', body: '[]',
+  }));
+  await page.goto(PARIS_LYON);
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  await saisirVehicule(page);
+  await expect(page.locator('.iti-resultat')).toContainText('au total', { timeout: 20_000 });
+
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
+  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
+
+  /* AU DÉPART, L'ARRÊT EST À DES CENTAINES DE KILOMÈTRES : rien à dire. La
+     voix se présente, et c'est tout — la preuve qu'elle ne bavarde pas. */
+  await page.waitForTimeout(1_200);
+  const phrases = await page.evaluate(() =>
+    (window as unknown as { ditesVoix: string[] }).ditesVoix);
+  expect(phrases.some((p) => p.startsWith('Arrêt recharge')),
+    `annonce prématurée : ${JSON.stringify(phrases)}`).toBe(false);
+  expect(phrases).toContain('Guidage vocal activé');
+
+  /* PUIS ON AVANCE LE LONG DU TRAJET, par pas d'un pour cent : quelque part
+     entre la moitié et les trois quarts, l'arrêt entre dans les dix
+     kilomètres et la voix le dit. On ne CALCULE pas où il tombe — c'est le
+     planificateur qui décide, et ce parcours mesure ce qu'il en sort. */
+  for (let f = 0.50; f <= 0.80; f += 0.01) {
+    await page.evaluate((x) => (window as unknown as { __avancer: (n: number) => void })
+      .__avancer(x), f);
+    await page.waitForTimeout(60);
+  }
+  const dites = await page.evaluate(() =>
+    (window as unknown as { ditesVoix: string[] }).ditesVoix);
+  const recharges = dites.filter((p) => p.startsWith('Arrêt recharge'));
+  expect(recharges.length, `aucune annonce de recharge : ${JSON.stringify(dites)}`)
+    .toBeGreaterThan(0);
+  /* ET PAS DEUX FOIS LE MÊME PALIER : trente et un fixes traversent la
+     fenêtre des dix kilomètres, et l'on ne doit l'entendre qu'une fois. */
+  const dixKm = recharges.filter((p) => p.includes('kilomètres'));
+  expect(new Set(dixKm).size, JSON.stringify(dixKm)).toBe(dixKm.length);
+});
