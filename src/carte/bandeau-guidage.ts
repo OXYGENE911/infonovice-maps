@@ -37,6 +37,9 @@ import {
   sortieA, destinationA, type Sortie, type DestinationBretelle,
 } from '../lib/sorties';
 import {
+  giratoireA, libelleRang, libelleRangCourt, type Giratoire,
+} from '../lib/giratoire';
+import {
   voiesA, cotePlacement, voieConseillee, libellePlacement, europeA,
   type ReleveVoies, type ReleveEurope,
 } from '../lib/voies';
@@ -96,6 +99,47 @@ const ANNONCE_M = 10_000;
    le trait continu. */
 const SEUIL_VOIES_M = 900;
 
+/**
+ * Le dessin d'un giratoire, en SVG — PURE.
+ *
+ * LE REPÈRE : l'entrée en bas (angle 0 du modèle = 180° à l'écran), et les
+ * angles croissent dans le sens où l'on tourne. On ne cherche PAS à
+ * reproduire le sens horaire ou antihoraire réel à l'écran : le schéma dit
+ * « la deuxième à partir de maintenant », ce qui se lit de la même façon
+ * dans les deux cas, et c'est ce que fait toute la signalisation.
+ */
+function schemaGiratoire(g: Giratoire): string {
+  const R = 13;
+  const pointe = (angle: number, longueur: number): string => {
+    /* L'entrée est en bas : l'angle 0 du modèle pointe vers le bas de
+       l'écran, et l'on tourne dans le sens des angles croissants. */
+    const a = ((angle + 180) * Math.PI) / 180;
+    /* LE X EST INVERSÉ, ET CE N'EST PAS UN DÉTAIL : la première sortie doit
+       partir à DROITE quand on entre par le bas — c'est ce que fait tout
+       conducteur en France, et ce que montre tout schéma de navigation. Le
+       premier jet l'envoyait à gauche : vu sur capture avant livraison. */
+    const x = 24 - Math.sin(a) * longueur;
+    const y = 24 - Math.cos(a) * longueur;
+    return `${x.toFixed(1)} ${y.toFixed(1)}`;
+  };
+  const branches = g.branches
+    .filter((b) => Math.abs(b - g.sortie) > 8)
+    .map((b) => `<path class="bg-gir-branche" d="M${pointe(b, R)}L${pointe(b, 21)}"/>`)
+    .join('');
+  return '<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">'
+    + `<circle class="bg-gir-anneau" cx="24" cy="24" r="${R}"/>`
+    /* L'ENTRÉE EST UN TRAIT, PAS UNE FLÈCHE : la flèche est réservée à ce
+       qu'il faut faire, et il n'y a rien à faire pour entrer. */
+    + `<path class="bg-gir-entree" d="M${pointe(0, R)}L${pointe(0, 23)}"/>`
+    + branches
+    + `<path class="bg-gir-sortie" d="M${pointe(g.sortie, R)}L${pointe(g.sortie, 22)}"/>`
+    + `<path class="bg-gir-fleche" d="M${pointe(g.sortie - 7, 17)}`
+    + `L${pointe(g.sortie, 23)}L${pointe(g.sortie + 7, 17)}"/>`
+    + (g.rang === null ? ''
+      : `<text class="bg-gir-rang" x="24" y="27" text-anchor="middle">${g.rang}</text>`)
+    + '</svg>';
+}
+
 /* LA CAMÉRA REVIENT TOUTE SEULE APRÈS VINGT SECONDES sans nouveau geste.
    Armelin, le 27/08/2026 : « je ne peux plus dézoomer sur la carte car le
    zoom sur ma position se force automatiquement. Ce serait bien de pouvoir
@@ -121,6 +165,15 @@ export class BandeauGuidage extends HTMLElement {
      Paris-Lyon (mesuré le 30/08). Tant qu'elle n'est pas là, ou si elle
      échoue, la chaussée ne se dessine pas — le suivi vaut sans elle. */
   #voies: readonly ReleveVoies[] = [];
+
+  /* LES GIRATOIRES — relevés par le MÊME appel Overpass, et rejoués de la
+     même façon quand ils arrivent. */
+  #giratoires: readonly Giratoire[] = [];
+
+  set giratoires(g: readonly Giratoire[]) {
+    this.#giratoires = g;
+    if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+  }
 
   /* LES SORTIES ET LEURS DESTINATIONS — relevées par le MÊME appel Overpass
      que les limites de vitesse (lib/corridor.ts). */
@@ -374,6 +427,13 @@ export class BandeauGuidage extends HTMLElement {
              le reste. Un numéro absent n'est pas un numéro faux. -->
         <span class="bg-sortie" hidden></span>
         <p class="bg-destination" hidden></p>
+        <!-- LE SCHÉMA DE ROND-POINT (ROND-1, 30/08). Armelin : « pourquoi
+             pas afficher des schémas complexes pour indiquer un rond-point ».
+             Le moteur n'émet JAMAIS de manœuvre « rond-point » — mesuré sur
+             les DEUX moteurs — donc tout est dessiné d'après la géométrie :
+             l'anneau vient d'OpenStreetMap, l'entrée, le sens et la sortie
+             viennent de notre propre tracé. -->
+        <div class="bg-giratoire" hidden role="img"></div>
         <!-- LA CHAUSSÉE ET LE CÔTÉ OÙ SE PLACER (VOIE-1, 30/08). Armelin :
              « des flèches pour préciser où se placer sur la chaussée pour
              tourner à une intersection ou pour sortir d'une autoroute ».
@@ -874,6 +934,51 @@ export class BandeauGuidage extends HTMLElement {
     ligne.setAttribute('aria-label', `vers ${villes.join(', ')}`);
   }
 
+  /**
+   * Le schéma de rond-point (ROND-1, 30/08).
+   *
+   * IL EST DESSINÉ, PAS CHOISI DANS UNE BIBLIOTHÈQUE D'IMAGES : chaque
+   * branche est tracée à SON angle, celui qu'OpenStreetMap donne, et notre
+   * sortie au sien. Un schéma générique « troisième sortie » mentirait sur
+   * la forme du carrefour, qui est justement ce qu'on cherche à reconnaître
+   * en arrivant dessus.
+   *
+   * L'ENTRÉE EST EN BAS, toujours : c'est la convention de tous les schémas
+   * de navigation, et elle correspond à ce qu'on voit par le pare-brise.
+   */
+  #majGiratoire(e: EtatGuidage): void {
+    const boite = this.querySelector('.bg-giratoire') as HTMLElement | null;
+    if (!boite) return;
+    const g = e.horsRoute ? null : giratoireA(this.#giratoires, e.avancementM);
+    if (!g) {
+      boite.hidden = true;
+      boite.replaceChildren();
+      delete boite.dataset['etat'];
+      return;
+    }
+    /* CE QUI SUIT SE REFAIT À CHAQUE FIXE, ET C'EST NÉCESSAIRE : l'affichage
+       de la manœuvre est réécrit une seconde sur deux par le code qui
+       précède, avec ce que dit le moteur. Le mémo plus bas n'épargne que le
+       DESSIN — le mettre ici laisserait « tournez à droite » revenir
+       par-dessus le schéma au fixe suivant. Vu à l'écran, pas déduit. */
+    const instruction = this.querySelector('.bg-cartouche .bg-instruction') as HTMLElement | null;
+    /* « Tournez à droite » au milieu d'un giratoire n'est pas faux, c'est
+       inutilisable : on dit le rang. */
+    if (instruction) instruction.textContent = libelleRangCourt(g.rang);
+    /* LA FLÈCHE DE MANŒUVRE CÈDE LA PLACE : le moteur, qui ignore le
+       rond-point, y annonce une flèche de virage — elle contredirait le
+       schéma sous les yeux de l'usager. Un seul dessin par manœuvre. */
+    const fleche = this.querySelector('.bg-cartouche .bg-fleche') as HTMLElement | null;
+    if (fleche) fleche.hidden = true;
+
+    const signature = `${Math.round(g.entreeM)}-${g.rang ?? '?'}`;
+    if (boite.dataset['etat'] === signature) return;
+    boite.dataset['etat'] = signature;
+    boite.hidden = false;
+    boite.setAttribute('aria-label', libelleRang(g.rang));
+    boite.innerHTML = schemaGiratoire(g);
+  }
+
   #alerte(message: string): void {
     const p = this.querySelector('.bg-alerte') as HTMLElement;
     p.textContent = message;
@@ -1100,6 +1205,12 @@ export class BandeauGuidage extends HTMLElement {
       instruction.textContent = e.manoeuvre ? e.manoeuvre.texte : 'Suivez l’itinéraire';
       distance.textContent = e.manoeuvre ? distanceEnMots(e.jusquALaManoeuvreM) : '';
     }
+
+    /* LE ROND-POINT PARLE EN DERNIER, ET C'EST L'ORDRE QUI COMPTE : il
+       REMPLACE l'instruction du moteur, qui ignore les giratoires et y dit
+       « tournez à droite ». Appelé plus haut, il était réécrit une seconde
+       plus tard par la ligne ci-dessus — vu à l'écran, pas déduit. */
+    this.#majGiratoire(e);
 
     /* L'ARRIVÉE RÉELLE (décision d'Armelin du 29/08) : l'heure affichée
        comptait la ROUTE seule — avec deux arrêts de trente minutes devant,

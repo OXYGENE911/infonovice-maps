@@ -22,11 +22,13 @@ import {
   fragmentSorties, versSorties, versDestinations,
   type Sortie, type DestinationBretelle,
 } from './sorties';
+import { versGiratoires, type Giratoire } from './giratoire';
 
 export interface Corridor {
   limites: LimiteTrajet[];
   sorties: Sortie[];
   destinations: DestinationBretelle[];
+  giratoires: Giratoire[];
 }
 
 /** Le corps de la requête unique — PURE. */
@@ -42,7 +44,14 @@ export function requeteCorridor(trace: readonly [number, number][]): string {
     + '|residential|motorway_link|trunk_link|primary_link)$"]["maxspeed"]'
     + `(around:${RAYON_LIMITE_M},${points});`
     + fragmentSorties(points)
-    + ');out geom tags;';
+    /* L'ANNEAU DES GIRATOIRES entre dans la même union, et ses BRANCHES
+       suivent par un second `out` — Overpass en accepte plusieurs dans une
+       requête, ce qui garde un seul aller-retour (mesuré le 30/08 : 0,45 s,
+       18 Ko). Sans les branches, on saurait dessiner l'anneau mais pas
+       compter les sorties. */
+    + `way(around:40,${points})[junction=roundabout]->.anneaux;`
+    + ');out geom tags;'
+    + 'node(w.anneaux)->.bords;way(bn.bords)[highway];out geom tags;';
 }
 
 /**
@@ -60,11 +69,14 @@ export function versCorridor(brut: unknown, trace: readonly [number, number][]):
     limites: versLimites(brut, trace as [number, number][]),
     sorties: versSorties(liste, trace),
     destinations: versDestinations(liste, trace),
+    giratoires: versGiratoires(liste, trace),
   };
 }
 
 /** Vide — ce que rend un corridor dont on n'a rien pu relever. */
-export const CORRIDOR_VIDE: Corridor = { limites: [], sorties: [], destinations: [] };
+export const CORRIDOR_VIDE: Corridor = {
+  limites: [], sorties: [], destinations: [], giratoires: [],
+};
 
 /**
  * Relève le corridor — UN appel POST, au démarrage du suivi.

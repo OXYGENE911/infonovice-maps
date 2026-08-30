@@ -2,6 +2,46 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.93.0] — 2026-08-30 — ROND-1 : le schéma de rond-point (PR #121)
+
+Armelin, le 29/08 : « pourquoi pas afficher des schémas complexes pour
+indiquer un rond-point » ; le 30/08 : « fais le schéma de rond-point ».
+
+- **UN SCHÉMA DESSINÉ AUX VRAIS ANGLES**, pas choisi dans une bibliothèque
+  d'images : l'anneau, l'entrée en bas, les branches à leur position réelle,
+  notre sortie fléchée et son rang au centre. Un dessin générique mentirait
+  sur la forme du carrefour — qui est justement ce qu'on cherche à
+  reconnaître en arrivant dessus.
+- **IL REMPLACE CE QUE DIT LE MOTEUR, il ne s'y ajoute pas.** L'instruction
+  devient « Prenez la 2e sortie » et la flèche de manœuvre s'efface : laisser
+  « tournez à droite » à côté du schéma serait se contredire à l'écran.
+- **LE MOTEUR NE SAIT TOUJOURS RIEN DES GIRATOIRES, revérifié sur les DEUX.**
+  osrm et valhalla traversant le même giratoire de Chartres : neuf étapes
+  d'un côté, sept de l'autre, aucune ne le nomme. Tout vient donc de l'anneau
+  `junction=roundabout` d'OpenStreetMap et de NOTRE TRACÉ — l'entrée, la
+  sortie, le sens de rotation (mesuré, pas présumé : un anneau mal numérisé
+  compte quand même juste) et le rang.
+- **DEUX CHAUSSÉES D'UNE MÊME ROUTE COMPTENT POUR UNE SORTIE.** Les compter
+  deux fois décalerait tous les rangs suivants — l'usager sortirait une
+  sortie trop tôt.
+- **QUAND LA GÉOMÉTRIE NE TRANCHE PAS, ON NE COMPTE PAS.** Sans branche
+  correspondante, le schéma se dessine quand même (l'anneau et notre sortie
+  restent vrais) mais n'annonce aucun rang.
+- **AUCUN APPEL DE PLUS** : les branches voyagent dans la même requête
+  Overpass que les limites, les sorties et les destinations — le service
+  accepte plusieurs `out` dans une requête (0,45 s, 18 Ko mesurés).
+- **DEUX DÉFAUTS VUS SUR CAPTURE, PAS DÉDUITS** : la première sortie partait
+  à GAUCHE (repère en miroir), et le schéma tombait à la ligne au lieu de
+  prendre la place de la flèche.
+- **CE QUI SE LIT EST PLUS COURT QUE CE QUI SE DIT** : « Prenez la 1re
+  sortie » à l'écran (la version longue faisait passer le cartouche de route
+  à la ligne), la phrase entière pour le lecteur d'écran.
+
+Tests : 18 unitaires sur la géométrie — l'ordre des sorties en conduite à
+droite (à droite = 1re, tout droit = 2e, à gauche = 3e), la mesure du sens,
+la fusion des chaussées, le refus de compter — et 6 E2E dont un qui vérifie
+que la sortie part bien vers la droite. 755 unitaires, 239 E2E.
+
 ## [0.92.0] — 2026-08-30 — SORTIE-1 : le numéro de sortie et la destination (PR #120)
 
 Armelin, le 30/08, après avoir lu le tableau de ce qui manquait : « fais le
