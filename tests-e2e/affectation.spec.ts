@@ -111,27 +111,29 @@ test('une voie NON PEINTE vaut « tout droit », et seulement pour tout droit', 
   await expect(page.locator('.bg-file-fleches[data-conseillee="oui"]')).toHaveCount(3);
 });
 
-test('SANS affectation, on retombe sur le conseil de placement — sans les mélanger', async ({ page }) => {
+test('SANS affectation, RIEN NE SE DESSINE — mais le conseil se dit', async ({ page }) => {
   /* Vingt-neuf pour cent des manœuvres seulement portent une affectation
      (mesuré le 30/08) : le repli est le cas le plus fréquent, pas
-     l'exception. Il déduit un côté, et n'éclaire qu'une voie. */
+     l'exception. Depuis TERRAIN-1, ce repli ne se DESSINE plus — les
+     rectangles muets n'étaient pas compris au volant — mais il reste DIT,
+     pour la voix et le lecteur d'écran. */
   await suivre(page, { voies: '3', manoeuvre: 'right' });
-  await expect(page.locator('.bg-chaussee')).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('.bg-file')).toHaveCount(3);
+  await expect(page.locator('.bg-chaussee'))
+    .toHaveAttribute('aria-label', '3 voies, placez-vous sur la voie de droite',
+      { timeout: 15_000 });
   await expect(page.locator('.bg-file-fleches'), 'aucune flèche : rien n’est relevé')
     .toHaveCount(0);
-  await expect(page.locator('.bg-chaussee'))
-    .toHaveAttribute('aria-label', '3 voies, placez-vous sur la voie de droite');
+  await expect(page.locator('.bg-chaussee'), 'et rien de muet à l’écran').toBeHidden();
 });
 
-test('une affectation qui ne sert PAS la manœuvre laisse la place au repli', async ({ page }) => {
+test('une affectation qui ne sert PAS la manœuvre ne montre rien', async ({ page }) => {
   /* Le marquage ne dit que « gauche ou tout droit » et l'on tourne à
      droite : montrer ces flèches ferait croire qu'aucune voie ne convient.
-     On repasse au conseil de placement, qui au moins dit un côté. */
+     On repasse au conseil de placement — qui se dit, et ne se dessine pas. */
   await suivre(page, { lanes: 'left|through', voies: '2', manoeuvre: 'right' });
-  await expect(page.locator('.bg-chaussee')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.bg-cartouche')).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.bg-file-fleches')).toHaveCount(0);
-  await expect(page.locator('.bg-file')).toHaveCount(2);
+  await expect(page.locator('.bg-chaussee')).toBeHidden();
 });
 
 test('LA REQUÊTE UNIQUE demande aussi l’affectation', async ({ page }) => {

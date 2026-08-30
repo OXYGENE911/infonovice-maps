@@ -2,6 +2,51 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.97.0] — 2026-08-30 — TERRAIN-1 : six retours du volant (PR #125)
+
+Armelin a roulé avec l'application et envoyé ses retours, captures à l'appui.
+Six corrections, dont deux qui retirent de l'écran ce qui ne servait pas.
+
+- **LE PANNEAU DE LIMITATION NE COUPE PLUS LA VITESSE EN DEUX.** « Il
+  apparaît par-dessus l'indicateur de vitesse GPS. » Mesuré sur sa capture :
+  seize pixels de recouvrement, pile sur les chiffres. Les deux pastilles
+  partagent désormais un repère nommé une seule fois.
+- **LA VOITURE SE POSE AUX DEUX TIERS DE L'ÉCRAN**, plus au milieu. « Tous
+  les GPS du marché la positionnent vers le bas, afin d'afficher plus
+  d'éléments au loin. » C'est juste : au volant, ce qu'on regarde est DEVANT.
+  La réserve de cadrage tient compte de la barre du bas — la voiture ne la
+  touche pas, ce qui était la seconde moitié de la demande.
+- **LE PANNEAU VA JUSQU'AU BORD DROIT ET GROSSIT** de trois points et demi.
+  « Le téléphone est posé loin des yeux du conducteur. » Un panneau de 300 px
+  sur un écran de 400 laissait un tiers d'écran vide à côté de l'information
+  la plus vitale.
+- **IL PORTE LE NOM DE LA RUE OÙ L'ON TOURNE.** Il était là depuis le début —
+  le service le rend — mais ne servait qu'à nommer la rue COURANTE, en bas.
+  L'ÉLISION SE RECOLLE au passage : le service livre « R DU CHATEAU D EAU »,
+  qui se lisait « Rue du Chateau D Eau ». Un « d » ou un « l » seul est une
+  élision.
+- **LES BARRES MUETTES DISPARAISSENT.** « J'ai eu des panneaux blancs avec
+  des petits rectangles gris et noirs. Je n'ai pas du tout compris à quoi ils
+  servaient. Si l'information n'est pas compréhensible du premier coup, elle
+  devient inutile. » Il a raison : un rectangle un peu plus clair ne dit pas
+  « mettez-vous à droite ». Le conseil de placement reste DIT — voix et
+  lecteur d'écran — mais il ne se DESSINE plus. Seule reste la chaussée
+  fléchée d'AFFECT-1, qui se lit sans mode d'emploi.
+- **UN SEUL BOUTON D'ORIENTATION, celui de la carte.** « Le bouton en forme
+  de boussole doit orienter vers le nord quand on appuie, et remettre dans le
+  sens de la voiture quand on appuie à nouveau. » C'est fait ; le bouton de
+  la barre est supprimé, et la « vue libre » avec lui — elle n'existait que
+  pour ce cycle à trois états.
+- **DEUX DÉFAUTS TROUVÉS EN CHEMIN, par des parcours.** Le clic sur la
+  boussole suspendait le suivi (MapLibre passe le clic d'origine à sa remise
+  au nord, et l'émet à la frame SUIVANTE) ; et le recentrage figeait la carte
+  de travers en interrompant cette rotation — `easeTo` tient ce qu'il ne
+  nomme pas. Le lissage du cap repart aussi de zéro au retour du mode nord :
+  sans cela, un cap réel de 200° donnait 148° au premier fixe.
+
+Tests : 808 unitaires, 255 E2E — trois parcours réécrits pour dire ce que
+l'écran montre DÉSORMAIS, et non ce qu'il montrait.
+
 ## [0.96.0] — 2026-08-30 — TRAFIC-1 : les annonces de trafic parlées (PR #124)
 
 Armelin, le 30/08 : « fais les annonces de trafic parlées ».

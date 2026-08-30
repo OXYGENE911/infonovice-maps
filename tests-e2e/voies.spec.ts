@@ -96,28 +96,27 @@ test.beforeEach(async ({ page, context }) => {
   }));
 });
 
-test('la chaussée se dessine, et la voie de DROITE s’éclaire pour une sortie à droite', async ({ page }) => {
+/* CE QUE VOIE-1 EST DEVENU (TERRAIN-1, 30/08). Armelin, au volant : « j'ai
+   eu des panneaux blancs avec des petits rectangles gris et noirs. Je n'ai
+   pas du tout compris à quoi ils servaient. » Le conseil de placement ne se
+   DESSINE donc plus — un rectangle un peu plus clair ne dit pas « mettez-vous
+   à droite ». Il reste DIT : la voix et le lecteur d'écran le portent, là où
+   une phrase se comprend sans mode d'emploi. */
+
+test('le conseil de placement ne se dessine plus, mais il se DIT', async ({ page }) => {
   await suivre(page, { voies: '3', manoeuvre: 'right' });
-
-  const voies = page.locator('.bg-chaussee');
-  await expect(voies).toBeVisible({ timeout: 15_000 });
-  await expect(voies.locator('.bg-file')).toHaveCount(3);
-  // La dernière, et elle seule : en éclairer deux laisserait croire à une
-  // affectation par voie que la donnée ne porte pas.
-  await expect(voies.locator('.bg-file[data-conseillee="oui"]')).toHaveCount(1);
-  await expect(voies.locator('.bg-file').nth(2)).toHaveAttribute('data-conseillee', 'oui');
-
-  /* LE CONSEIL SE DIT EN TOUTES LETTRES : cinq rectangles ne s'entendent
-     pas, et c'est la phrase qui porte l'information pour qui écoute. */
-  await expect(voies).toHaveAttribute('aria-label', '3 voies, placez-vous sur la voie de droite');
+  await expect(page.locator('.bg-chaussee'))
+    .toHaveAttribute('aria-label', '3 voies, placez-vous sur la voie de droite',
+      { timeout: 15_000 });
+  await expect(page.locator('.bg-chaussee'), 'plus de rectangles muets').toBeHidden();
+  await expect(page.locator('.bg-file')).toHaveCount(0);
 });
 
-test('à gauche, c’est la PREMIÈRE voie qui s’éclaire', async ({ page }) => {
+test('à gauche, la phrase change de côté', async ({ page }) => {
   await suivre(page, { voies: '4', manoeuvre: 'left' });
-  const voies = page.locator('.bg-chaussee');
-  await expect(voies.locator('.bg-file')).toHaveCount(4);
-  await expect(voies.locator('.bg-file').first()).toHaveAttribute('data-conseillee', 'oui');
-  await expect(voies).toHaveAttribute('aria-label', '4 voies, placez-vous sur la voie de gauche');
+  await expect(page.locator('.bg-chaussee'))
+    .toHaveAttribute('aria-label', '4 voies, placez-vous sur la voie de gauche',
+      { timeout: 15_000 });
 });
 
 test('TOUT DROIT : aucune chaussée — une consigne inutile use la confiance', async ({ page }) => {
@@ -147,7 +146,7 @@ test('LES DEUX RESSOURCES SONT BIEN INTERROGÉES, chacune pour ce qu’elle sait
     if (r.url().includes('/navigation/itineraire')) urls.push(r.url());
   });
   await suivre(page, { voies: '3', manoeuvre: 'right' });
-  await expect(page.locator('.bg-chaussee')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.bg-cartouche')).toBeVisible({ timeout: 15_000 });
 
   const pgr = urls.filter((u) => u.includes('resource=bdtopo-pgr'));
   const osrm = urls.filter((u) => u.includes('resource=bdtopo-osrm'));
@@ -180,7 +179,7 @@ test('« E15/E50 » donne DEUX cartouches verts, à côté du rouge', async ({ p
 
 test('SANS numéro européen, aucun cartouche vert — la plupart des routes n’en ont pas', async ({ page }) => {
   await suivre(page, { europe: '' });
-  await expect(page.locator('.bg-chaussee')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.bg-cartouche')).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.bg-europe')).toBeHidden();
 });
 

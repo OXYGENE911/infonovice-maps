@@ -121,10 +121,29 @@ export function libelleVoie(nom: unknown): string {
   if (typeof nom !== 'string' || !nom.trim()) return '';
   const mots = nom.trim().toLowerCase().split(/\s+/);
   const premier = TYPES_DE_VOIE[mots[0]!.toUpperCase()];
-  const reste = (premier ? mots.slice(1) : mots).map((m, idx) => {
+  /* L'ÉLISION SE RECOLLE (TERRAIN-1, 30/08). Le service livre les noms sans
+     apostrophe : « R DU CHATEAU D EAU », « R DE L EGLISE ». Rendus mot à
+     mot, ils donnaient « Rue du Chateau D Eau » — vu sur capture, une fois
+     le nom de rue passé au premier plan du panneau. Un « d » ou un « l »
+     seul est une élision : il se recolle au mot suivant. */
+  const bruts = premier ? mots.slice(1) : mots;
+  const recolles: string[] = [];
+  for (let i = 0; i < bruts.length; i += 1) {
+    const m = bruts[i]!;
+    const suivant = bruts[i + 1];
+    if ((m === 'd' || m === 'l') && suivant !== undefined && recolles.length > 0) {
+      recolles.push(`${m}’${suivant}`);
+      i += 1;
+    } else recolles.push(m);
+  }
+  const reste = recolles.map((m, idx) => {
     // Une particule reste en minuscules — sauf si elle OUVRE le libellé rendu
     // (pas de type de voie devant elle) : « Du Guesclin » reste Du Guesclin.
     if ((premier || idx > 0) && PARTICULES.has(m)) return m;
+    /* Une élision recollée garde sa minuscule et capitalise ce qui suit :
+       « d’eau » devient « d’Eau », jamais « D’eau ». */
+    const elision = /^([dl])’(.+)$/.exec(m);
+    if (elision) return `${elision[1]}’${capitaliser(elision[2]!)}`;
     // Chaque segment composé garde sa majuscule : saint-martin → Saint-Martin.
     return m.split('-').map(capitaliser).join('-');
   });

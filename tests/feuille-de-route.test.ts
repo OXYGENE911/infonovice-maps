@@ -49,6 +49,11 @@ describe('traduireInstruction', () => {
 describe('libelleVoie', () => {
   test('déplie les abréviations BD TOPO et remet la casse', () => {
     expect(libelleVoie('R DE RIVOLI')).toBe('Rue de Rivoli');
+    /* L'ÉLISION SE RECOLLE (TERRAIN-1, 30/08) : le service livre les noms
+       sans apostrophe, et « Rue du Chateau D Eau » se lisait tel quel au
+       premier plan du panneau — vu sur capture. */
+    expect(libelleVoie('R DU CHATEAU D EAU')).toBe('Rue du Chateau d’Eau');
+    expect(libelleVoie('R DE L EGLISE')).toBe('Rue de l’Eglise');
     expect(libelleVoie('AV VICTORIA')).toBe('Avenue Victoria');
     expect(libelleVoie('BD DU MONTPARNASSE')).toBe('Boulevard du Montparnasse');
     expect(libelleVoie('R SAINT-MARTIN')).toBe('Rue Saint-Martin');
