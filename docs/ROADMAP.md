@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #123 — VOIX-1, le guidage vocal (demande du 30/08) : la synthèse
+      du NAVIGATEUR, aucun service, rien qui quitte l'appareil ; voix locale
+      préférée et réserve écrite sur la page « Vie privée ». Trois paliers,
+      jamais deux fois le même, et silence sur ce qui ne se joue pas.
 - [x] PR #122 — AFFECT-1, l'affectation par voie (demande du 30/08) :
       `turn:lanes` d'OpenStreetMap — la note qui la disait inexistante
       décrivait le service d'itinéraire, pas OSM. Chaque file porte ses

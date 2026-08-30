@@ -26,7 +26,9 @@ export type NomPicto =
      bouton Vue à plat et Cap en haut par un unique bouton en forme d'icône
      de boussole en mode pressoir ». */
   | 'orient-cap' | 'orient-nord' | 'orient-libre' | 'vue-3d' | 'vue-plat'
-  | 'copilote' | 'croix';
+  | 'copilote' | 'croix'
+  /* VOIX-1 (30/08) — le guidage vocal se coupe d'une icône. */
+  | 'voix' | 'voix-muette';
 
 /* Chaque tracé vit dans un carré de 24 × 24. Le trait est porté par la
    classe CSS .picto-menu (fill none, stroke currentColor) ; l'éclair des
@@ -97,6 +99,13 @@ const TRACES: Record<NomPicto, string> = {
   copilote: '<circle cx="12" cy="7" r="3"/>'
     + '<path d="M5.6 20a6.4 6.4 0 0 1 12.8 0"/>',
   croix: '<path d="M6.6 6.6 17.4 17.4M17.4 6.6 6.6 17.4"/>',
+
+  /* LE HAUT-PARLEUR : le pavillon plein, deux ondes. Barré, c'est le même
+     dessin — reconnaître l'objet compte plus que dessiner le silence. */
+  voix: '<polygon class="picto-menu-plein" points="4,9.4 7.4,9.4 11.6,5.6 11.6,18.4 7.4,14.6 4,14.6"/>'
+    + '<path d="M14.6 9.2a4 4 0 0 1 0 5.6"/><path d="M17.2 6.6a7.6 7.6 0 0 1 0 10.8"/>',
+  'voix-muette': '<polygon class="picto-menu-plein" points="4,9.4 7.4,9.4 11.6,5.6 11.6,18.4 7.4,14.6 4,14.6"/>'
+    + '<path d="M14.8 9.6 20 14.4M20 9.6l-5.2 4.8"/>',
 
   /* L'ITINÉRAIRE BIS : on QUITTE cette route pour une autre. La route
      actuelle continue, une branche s'en détache vers la droite et porte la
