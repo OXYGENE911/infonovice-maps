@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [0.105.0] — 2026-08-30 — POI-2 : le filtre des lieux, sur la carte (PR #133)
+## [0.105.0] — 2026-08-30 — POI-2 : le filtre des lieux, sur la carte (PR #135)
 
 - **LE FILTRE S'ATTEINT EN UN GESTE, DEPUIS LA CARTE.** Armelin : « ce serait
   bien d'afficher quelque part sur la carte une icône pour afficher les POI
