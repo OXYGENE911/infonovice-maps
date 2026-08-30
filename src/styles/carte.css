@@ -949,6 +949,10 @@ etat-connexion { display: contents; }
 .comparer-marque {
   margin: 0; font: 600 11px var(--police); color: var(--vert);
 }
+/* FEUX-1 — les carrefours à feux du tracé. Une ligne à part : ce n'est pas
+   un temps, c'est un confort, et la ligne des durées se compare déjà chiffre
+   à chiffre. */
+.comparer-feux { margin: 1px 0 0; font: 400 11.5px var(--police); color: var(--texte-2); }
 .comparer-erreur { margin: 0; font: 400 11.5px var(--police); color: var(--texte-3); }
 .comparer-note { margin: 2px 0 0; font: 400 11px/1.5 var(--police); color: var(--texte-3); }
 .comparer-titre { margin: 0; font: 650 12.5px var(--police); color: var(--texte-1); }

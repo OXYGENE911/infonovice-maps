@@ -46,6 +46,7 @@ import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import { palierDe } from '../lib/puissance';
 import { chargerPeages, ErreurPeages } from '../lib/peages';
 import { chargerCorridor } from '../lib/corridor';
+import { chargerFeux, compterFeux, type Feu } from '../lib/feux';
 import { chargerTrafic, evenementsDuTrajet } from '../lib/trafic';
 import {
   chargerMonuments, monumentsDuTrajet, ErreurMonuments, KM_PAR_MINUTE,
@@ -1806,10 +1807,25 @@ export class PanneauItineraire extends HTMLElement {
         });
       };
 
-    this.#afficherVariantes(resultats.map((r) => ({
+    /* LES FEUX DES TROIS TRACÉS (FEUX-1, 30/08) — UN seul appel Overpass
+       pour les trois corridors, qui se recouvrent largement. Armelin
+       demandait « les trajets les plus courts avec le moins de feux » : on
+       ne sait pas OPTIMISER là-dessus (le service ne prend aucun coût
+       personnalisé), mais on sait COMPTER, et un chiffre compté sur le tracé
+       réel rend le choix éclairé.
+       SON ÉCHEC EST BÉNIN : la comparaison garde ses durées, ses distances
+       et ses arrêts — on ne perd pas trois calculs pour un chiffre
+       d'appoint. */
+    const traces = resultats.map((r) => (r.iti
+      ? r.iti.geometrie.coordinates as [number, number][] : []));
+    let feux: Feu[] = [];
+    try { feux = await chargerFeux(traces); } catch { feux = []; }
+
+    this.#afficherVariantes(resultats.map((r, i) => ({
       cle: r.v.cle, libelle: r.v.libelle, iti: r.iti, erreur: r.erreur,
       plan: r.iti ? planPour(r.iti) : null,
       optimisation: r.v.optimisation, sansAutoroute: r.v.sansAutoroute,
+      feux: r.iti && feux.length > 0 ? compterFeux(feux, traces[i]!) : null,
     })), Boolean(profil));
     this.#poserVariantes(resultats.map((r) => r.iti));
     bouton.disabled = false;
@@ -1827,6 +1843,7 @@ export class PanneauItineraire extends HTMLElement {
     variantes: {
       cle: string; libelle: string; iti: Itineraire | null; erreur: string | null;
       plan: PlanRecharge | null; optimisation: Optimisation; sansAutoroute: boolean;
+      feux: number | null;
     }[],
     avecVehicule: boolean,
   ): void {
@@ -1842,6 +1859,16 @@ export class PanneauItineraire extends HTMLElement {
       (m, v) => (m && m.iti!.duree <= v.iti!.duree ? m : v), null);
     const plusCourte = abouties.reduce<typeof abouties[0] | null>(
       (m, v) => (m && m.iti!.distance <= v.iti!.distance ? m : v), null);
+    const comptees = abouties.filter((v) => v.feux !== null);
+    const meilleur = comptees.reduce<typeof abouties[0] | null>(
+      (m, v) => (m && m.feux! <= v.feux! ? m : v), null);
+    /* PAS DE VAINQUEUR SANS ÉCART, ET PAS DE VAINQUEUR À ÉGALITÉ. Si toutes
+       en ont autant, personne n'est « la moins arrêtée » ; et si DEUX sont
+       à égalité au plus bas, en couronner une serait un tirage au sort
+       présenté comme un conseil. Il faut donc un minimum UNIQUE. */
+    const auMinimum = comptees.filter((v) => v.feux === meilleur?.feux);
+    const moinsDeFeux = comptees.length >= 2 && auMinimum.length === 1
+      && comptees.some((v) => v.feux! > meilleur!.feux!) ? meilleur : null;
 
     for (const v of variantes) {
       const bloc = document.createElement('div');
@@ -1875,12 +1902,29 @@ export class PanneauItineraire extends HTMLElement {
             + ` · ${formaterDuree(Math.round(v.iti.duree + v.plan.dureeRechargeMin * 60))} au total`
           : 'hors de portée avec ce véhicule');
       }
+      /* LES FEUX SUR LEUR PROPRE LIGNE, et jamais dans la ligne des durées :
+         ce n'est pas un temps, c'est un CONFORT — et la ligne du dessus se
+         compare déjà chiffre à chiffre. Zéro feu se dit aussi : c'est
+         justement ce qu'on cherche à savoir. */
+      if (v.feux !== null) {
+        const ligne = document.createElement('p');
+        ligne.className = 'comparer-feux';
+        ligne.textContent = v.feux === 0 ? 'aucun feu tricolore'
+          : `${v.feux} feu${v.feux > 1 ? 'x' : ''} tricolore${v.feux > 1 ? 's' : ''}`;
+        ligne.title = 'Carrefours à feux relevés sur le tracé (OpenStreetMap)';
+        bloc.append(ligne);
+      }
       chiffres.textContent = bouts.join(' · ');
       bloc.append(chiffres);
 
       const marques: string[] = [];
       if (plusRapide?.cle === v.cle) marques.push('la plus rapide');
       if (plusCourte?.cle === v.cle) marques.push('la plus courte');
+      /* LA MOINS ARRÊTÉE se désigne comme les deux autres — c'est la question
+         posée : « le moins de feux rouges ». On ne la nomme QUE si elle se
+         distingue vraiment : trois itinéraires à douze feux chacun n'ont pas
+         de vainqueur, et en couronner un serait un faux conseil. */
+      if (moinsDeFeux?.cle === v.cle) marques.push('la moins arrêtée');
       if (marques.length > 0) {
         const note = document.createElement('p');
         note.className = 'comparer-marque';

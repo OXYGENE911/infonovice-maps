@@ -2,6 +2,39 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.99.0] — 2026-08-30 — FEUX-1 : les feux comptés sur les trois variantes (PR #127)
+
+Armelin : « existe-t-il un moyen d'afficher les feux rouges sur la carte, afin
+de pouvoir optimiser les trajets les plus courts avec le moins de feux ? »
+Puis, après mesure : « fais le comptage des feux sur les trois variantes ».
+
+- **ON NE SAIT PAS OPTIMISER, ON SAIT COMPTER — ET C'EST DIT.** Le service
+  d'itinéraire ne prend aucun coût personnalisé et ne rend pas
+  d'alternatives : on ne peut pas lui demander « le trajet avec le moins de
+  feux ». La comparaison A/B/C affiche donc le nombre de carrefours à feux de
+  chaque tracé, compté sur la géométrie réelle.
+- **« LA MOINS ARRÊTÉE » SE DÉSIGNE**, comme la plus rapide et la plus
+  courte — mais seulement si le minimum est UNIQUE et qu'il y a un écart :
+  trois itinéraires à douze feux n'ont pas de vainqueur, et deux à égalité au
+  plus bas non plus. Couronner l'une serait un tirage au sort présenté comme
+  un conseil.
+- **UN CARREFOUR, PAS SES QUATRE TÊTES DE FEUX.** C'est le piège du module :
+  un croisement porte un nœud par branche d'accès. Les compter un par un
+  donnerait un chiffre faux d'un facteur trois — et ce chiffre sert à choisir
+  entre deux itinéraires. On regroupe donc LE LONG DU TRAJET, à quarante
+  mètres.
+- **UN SEUL APPEL OVERPASS POUR LES TROIS**, dont la réponse est attribuée
+  par la géométrie : les corridors se recouvrent largement.
+- **SON ÉCHEC EST BÉNIN** : la comparaison garde ses durées, ses distances et
+  ses arrêts de recharge — on ne perd pas trois calculs d'itinéraire pour un
+  chiffre d'appoint.
+- **UNE LIMITE ASSUMÉE ET ÉCRITE** : un feu traversé deux fois ne compte
+  qu'une fois. Le dire vaut mieux que le laisser croire.
+
+Tests : 12 unitaires (le carrefour contre ses têtes de feux, le feu de la rue
+parallèle, le regroupement le long du trajet et non à vol d'oiseau, la requête
+unique), 1 E2E où les trois tracés diffèrent vraiment. 822 unitaires, 257 E2E.
+
 ## [0.98.0] — 2026-08-30 — ROND-2 : une sortie interdite n'est pas une sortie (PR #126)
 
 Armelin, au volant : « je suis entré dans un rond-point et le GPS m'a indiqué

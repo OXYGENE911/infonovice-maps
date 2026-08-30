@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #127 — FEUX-1, les feux comptés sur les trois variantes (question
+      du 30/08) : on ne sait pas optimiser dessus — le moteur ne prend aucun
+      coût personnalisé — mais on compte les carrefours à feux de chaque
+      tracé, et « la moins arrêtée » se désigne quand le minimum est unique.
 - [x] PR #126 — ROND-2, une sortie interdite n'est pas une sortie (retour du
       volant du 30/08) : les branches à sens unique dont la circulation
       arrive sur l'anneau ne comptent plus dans le rang.
