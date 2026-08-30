@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #119 — EURO-1, le cartouche vert européen (type E41) : porté par la
+      MÊME requête que les voies, recousu de la même façon ; « E15/E50 »
+      donne deux cartouches, deux au plus s'affichent. Il s'ajoute au
+      cartouche national au lieu de le remplacer.
 - [x] PR #118 — VOIE-1, la chaussée et où s'y placer (demandes des 29 et
       30/08) : deux itinéraires — les manœuvres sur osrm, `nombre_de_voies`
       sur pgr — recousus par projection, ce que la mesure autorise (même

@@ -17,7 +17,7 @@ const GEOMETRIE = {
 };
 
 /** La réponse de la ressource riche : des tronçons, aucune instruction. */
-function reponseVoies(voies: string) {
+function reponseVoies(voies: string, europe = '') {
   return {
     geometry: GEOMETRIE, distance: 390_000, duration: 13_000,
     portions: [{ steps: [
@@ -25,9 +25,11 @@ function reponseVoies(voies: string) {
          que la mesure du 30/08 constate (écart médian nul entre les deux
          moteurs), et c'est ce que la couture exige. */
       { geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566]] },
-        attributes: { nombre_de_voies: voies }, distance: 100, instruction: {} },
+        attributes: { nombre_de_voies: voies, cpx_numero_route_europeenne: europe },
+        distance: 100, instruction: {} },
       { geometry: { type: 'LineString', coordinates: [[2.36, 48.84]] },
-        attributes: { nombre_de_voies: voies }, distance: 100, instruction: {} },
+        attributes: { nombre_de_voies: voies, cpx_numero_route_europeenne: europe },
+        distance: 100, instruction: {} },
     ] }],
   };
 }
@@ -38,7 +40,7 @@ function reponseVoies(voies: string) {
  */
 async function suivre(
   page: Page,
-  o: { voies?: string; manoeuvre?: string; voiesEnPanne?: boolean } = {},
+  o: { voies?: string; manoeuvre?: string; voiesEnPanne?: boolean; europe?: string } = {},
 ): Promise<void> {
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
     const url = route.request().url();
@@ -49,7 +51,7 @@ async function suivre(
       if (o.voiesEnPanne) return route.fulfill({ status: 503, body: '{}' });
       return route.fulfill({
         contentType: 'application/json',
-        body: JSON.stringify(reponseVoies(o.voies ?? '3')),
+        body: JSON.stringify(reponseVoies(o.voies ?? '3', o.europe ?? '')),
       });
     }
     if (/getSteps=true/i.test(url)) {
@@ -155,4 +157,35 @@ test('LES DEUX RESSOURCES SONT BIEN INTERROGÉES, chacune pour ce qu’elle sait
      commun. Elle part au démarrage du suivi, pas à chaque fixe GPS. */
   expect(pgr).toHaveLength(1);
   expect(pgr[0]).toContain('waysAttributes=nombre_de_voies');
+});
+
+/* LE CARTOUCHE VERT EUROPÉEN (EURO-1, 30/08) — type E41 de l'IISR. La donnée
+ * vient de la MÊME requête que les voies. */
+
+test('« E15/E50 » donne DEUX cartouches verts, à côté du rouge', async ({ page }) => {
+  await suivre(page, { europe: 'E15/E50' });
+  const europe = page.locator('.bg-europe');
+  await expect(europe).toBeVisible({ timeout: 15_000 });
+  await expect(europe.locator('.bg-ecusson-europe')).toHaveCount(2);
+  await expect(europe.locator('.bg-ecusson-europe').first()).toHaveText('E15');
+  await expect(europe.locator('.bg-ecusson-europe').nth(1)).toHaveText('E50');
+
+  /* IL S'AJOUTE, IL NE REMPLACE PAS : sur l'A6 on lit « A6 » en rouge ET
+     « E15 » en vert, comme sur la route. */
+  await expect(page.locator('.bg-ecusson')).toHaveText('A7');
+  const vert = await page.evaluate(() =>
+    getComputedStyle(document.querySelector('.bg-ecusson-europe')!).backgroundColor);
+  expect(vert, 'le cartouche européen est vert, type E41').toBe('rgb(20, 107, 58)');
+});
+
+test('SANS numéro européen, aucun cartouche vert — la plupart des routes n’en ont pas', async ({ page }) => {
+  await suivre(page, { europe: '' });
+  await expect(page.locator('.bg-chaussee')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.bg-europe')).toBeHidden();
+});
+
+test('il se DIT en toutes lettres : « E15 » lu caractère par caractère ne s’entend pas', async ({ page }) => {
+  await suivre(page, { europe: 'E15' });
+  await expect(page.locator('.bg-ecusson-europe'))
+    .toHaveAttribute('aria-label', 'route européenne E15');
 });

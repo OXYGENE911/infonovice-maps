@@ -2,6 +2,33 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.91.0] — 2026-08-30 — EURO-1 : le cartouche vert européen (PR #119)
+
+Le dernier cartouche de l'IISR que la donnée permettait, et qui attendait
+depuis PAN-1 : le type E41, vert à chiffres blancs.
+
+- **IL S'AJOUTE AU CARTOUCHE NATIONAL, il ne le remplace pas.** Sur l'A6 on
+  lit « A6 » en rouge ET « E15 » en vert, comme sur la route.
+- **UN TRONÇON PEUT EN PORTER DEUX.** Le service rend « E15/E50 » (valeur
+  réelle, relevée le 30/08) : ce sont deux cartouches, pas un. Deux au plus
+  s'affichent — le panneau fait trois cents pixels et porte déjà
+  l'instruction, qui est vitale.
+- **AUCUN APPEL DE PLUS.** Le numéro voyage dans la MÊME requête que le
+  nombre de voies : le service accepte dix attributs, et chaque requête
+  coûte seize secondes au service public. Deux coutures, un seul appel.
+- **IL SE LIT LÀ OÙ L'ON VA**, comme l'écusson national qu'il accompagne :
+  les relevés sont consultés cinquante mètres après la manœuvre — de quoi
+  être sur le tronçon suivant sans dépasser le premier.
+- **UN TRONÇON SANS NOMBRE DE VOIES N'EST PLUS JETÉ.** Il peut porter le
+  numéro européen, et le refuser pour un champ absent perdait l'autre. Zéro
+  veut dire « je ne sais pas » : la couture des voies le refuse, celle des
+  numéros n'en a pas besoin.
+
+Tests : 12 unitaires de plus (couture européenne, lecture, URL de la seconde
+requête, relecture défensive de la réponse), 3 E2E (deux cartouches verts
+mesurés à la couleur calculée, absence sans donnée, libellé lu). 718
+unitaires, 227 E2E.
+
 ## [0.90.0] — 2026-08-30 — VOIE-1 : la chaussée, et où s'y placer (PR #118)
 
 Armelin, le 29/08 : « des flèches pour préciser où se placer sur la chaussée

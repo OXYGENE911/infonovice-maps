@@ -26,7 +26,7 @@ import { apprendreTrajet, lireHabitudes, suggerer } from '../lib/routines';
 import { profilItineraire, denivele } from '../lib/altimetrie';
 import { chargerGrille, estimerPeages } from '../lib/peages-tarifs';
 import { pointLateral, choisirBis, traceDevant } from '../lib/bis';
-import { chargerVoies, recoudreVoies } from '../lib/voies';
+import { chargerVoies, recoudreVoies, recoudreEurope } from '../lib/voies';
 import { capEntre } from './curseur-vehicule';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 import { stationsDuTrajet, distanceM, situerSurLeTrace, type SurLeTrajet } from '../lib/le-long-du-trajet';
@@ -2564,9 +2564,11 @@ export class PanneauItineraire extends HTMLElement {
       chargerVoies(cliche.depart, cliche.arrivee, cliche.etapes)
         .then((troncons) => {
           if (!bandeau.actif || this.#dernier !== iti) return;
-          bandeau.voies = recoudreVoies(
-            troncons, iti.geometrie.coordinates as [number, number][],
-          );
+          const traceIti = iti.geometrie.coordinates as [number, number][];
+          bandeau.voies = recoudreVoies(troncons, traceIti);
+          /* LE MÊME APPEL PORTE LES DEUX : les voies et les numéros
+             européens sortent d'une seule requête, recousus séparément. */
+          bandeau.routesEurope = recoudreEurope(troncons, traceIti);
         })
         .catch(() => { /* bénin : sans voies, le conseil ne paraît pas */ });
     }

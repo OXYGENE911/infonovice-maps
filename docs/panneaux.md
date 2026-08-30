@@ -24,7 +24,7 @@ L'Instruction interministérielle sur la signalisation routière (arrêté du
 | Encre et listel | blancs sur bleu et vert ; noirs sur blanc et jaune | `encreSur()` dans `src/lib/panneau.ts` |
 | Cartouche **E42** | rouge, chiffres blancs — nationales **et** autoroutes | `A6`, `N7` |
 | Cartouche **E43** | jaune, chiffres noirs — réseau départemental | `D606` |
-| Cartouche **E41** | vert, chiffres blancs — routes européennes | prêt, non alimenté (§3) |
+| Cartouche **E41** | vert, chiffres blancs — routes européennes | `E15`, `E50` — livré (EURO-1) |
 | Cartouche **E44 / E47** | blanc (communal), bleu (métropolitain) | non traités : la donnée ne les distingue pas |
 
 **La réserve sur le vert.** Le vert réglementaire suppose la liste
@@ -71,13 +71,29 @@ Trois raisons de préférer le CSS à des images :
 
 | Ce qu'il faudrait | État | Raison |
 |---|---|---|
-| Cartouche **vert européen** (E41) | code prêt (`routesEuropeennes`), non alimenté | le champ `cpx_numero_route_europeenne` existe sur la ressource `bdtopo-pgr`, qui ne rend **aucune** instruction de manœuvre (mesuré le 30/08 : 203 tronçons, zéro instruction) |
+| Cartouche **vert européen** (E41) | **LIVRÉ** (EURO-1) | `cpx_numero_route_europeenne` relevé par la même seconde requête que les voies, recousu de la même façon |
 | **Numéro de sortie** (« Sortie 14 ») | absent | le moteur n'émet pas d'`exit` sur les bretelles d'autoroute |
 | **Destination** (« Lyon, Dijon ») | absent | aucun champ de destination dans la réponse |
 | **Flèches de voies** (où se placer) | **LIVRÉ** (VOIE-1) — voir ci-dessous | `nombre_de_voies` relevé sur `bdtopo-pgr`, recousu sur le tracé suivi |
 | **Schéma de rond-point** | écarté | le moteur n'émet jamais `roundabout` (mesuré sur quatre giratoires, 63 étapes) |
 
 Le détail de chaque mesure est dans [`apis.md`](apis.md).
+
+### Le cartouche vert européen (EURO-1, livré le 30/08)
+
+Il **s'ajoute** au cartouche national, il ne le remplace pas : sur l'A6 on lit
+« A6 » en rouge **et** « E15 » en vert, comme sur la route. Deux détails qui
+viennent de la donnée réelle :
+
+- un tronçon peut porter **deux** routes (`E15/E50`, relevé le 30/08) : ce
+  sont deux cartouches, pas un ;
+- on en affiche **deux au plus**. Le panneau fait 300 px et porte déjà une
+  instruction, une distance et un cartouche national — au-delà, c'est
+  l'instruction qui rétrécirait, et elle est vitale.
+
+Il se lit **là où l'on va**, comme l'écusson national qu'il accompagne : les
+relevés sont consultés cinquante mètres après la manœuvre, de quoi être sur
+le tronçon suivant sans dépasser le premier.
 
 ### La chaussée et le côté où se placer (VOIE-1, livré le 30/08)
 

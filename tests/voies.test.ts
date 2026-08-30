@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   recoudreVoies, voiesA, cotePlacement, voieConseillee, libellePlacement,
+  recoudreEurope, europeA, urlVoies, versTroncons,
   PORTEE_RELEVE_M, type TronconVoies,
 } from '../src/lib/voies';
 
@@ -127,5 +128,120 @@ describe('libellePlacement', () => {
     expect(libellePlacement(3, 3)).toBe('3 voies, placez-vous sur la voie de droite');
     expect(libellePlacement(3, 1)).toBe('3 voies, placez-vous sur la voie de gauche');
     expect(libellePlacement(2, null)).toBe('2 voies');
+  });
+});
+
+/* LE CARTOUCHE VERT EUROPÉEN (EURO-1, 30/08). La donnée vient de la MÊME
+ * requête que les voies — une seconde requête pour un seul champ coûterait
+ * deux fois seize secondes au service public. */
+
+describe('recoudreEurope', () => {
+  const trace = versLEst(200);
+
+  it('recoud les numéros, et « E15/E50 » en porte DEUX', () => {
+    // Valeur RÉELLE, relevée le 30/08 sur bdtopo-pgr.
+    const rendu = recoudreEurope([
+      { point: trace[0]!, voies: 3, europe: 'E15/E50' },
+      { point: trace[100]!, voies: 3, europe: 'E54' },
+    ], trace);
+    expect(rendu).toHaveLength(2);
+    expect(rendu[0]!.routes).toEqual(['E15', 'E50']);
+    expect(rendu[1]!.routes).toEqual(['E54']);
+  });
+
+  it('IGNORE les tronçons sans numéro européen — la plupart n’en ont pas', () => {
+    expect(recoudreEurope([
+      { point: trace[0]!, voies: 3 },
+      { point: trace[10]!, voies: 3, europe: '' },
+    ], trace)).toEqual([]);
+  });
+
+  it('ÉCARTE ce qui n’est pas sur la chaussée suivie, comme pour les voies', () => {
+    const loin: [number, number] = [trace[50]![0], 48.855];
+    expect(recoudreEurope([{ point: loin, voies: 3, europe: 'E15' }], trace)).toEqual([]);
+  });
+
+  it('ne garde qu’un relevé par CHANGEMENT : l’E15 court sur des centaines de tronçons', () => {
+    const rendu = recoudreEurope([
+      { point: trace[0]!, voies: 3, europe: 'E15' },
+      { point: trace[10]!, voies: 3, europe: 'E15' },
+      { point: trace[20]!, voies: 3, europe: 'E15/E50' },
+    ], trace);
+    expect(rendu.map((r) => r.routes.join('/'))).toEqual(['E15', 'E15/E50']);
+  });
+});
+
+describe('europeA', () => {
+  const releves = [
+    { avancementM: 0, routes: ['E15'] },
+    { avancementM: 800, routes: ['E15', 'E50'] },
+  ];
+
+  it('rend le dernier relevé au plus tard ici', () => {
+    expect(europeA(releves, 100)).toEqual(['E15']);
+    expect(europeA(releves, 900)).toEqual(['E15', 'E50']);
+  });
+
+  it('SE TAIT hors portée, et sur une liste vide', () => {
+    expect(europeA(releves, 800 + PORTEE_RELEVE_M + 1)).toEqual([]);
+    expect(europeA([], 0)).toEqual([]);
+  });
+});
+
+describe('urlVoies', () => {
+  const paris = { lon: 2.3522, lat: 48.8566 };
+  const lyon = { lon: 4.8357, lat: 45.764 };
+
+  it('interroge la ressource des ATTRIBUTS, pas celle des manœuvres', () => {
+    /* Tout tient dans ce paramètre : `bdtopo-osrm` rend les manœuvres et
+       refuse ces attributs (« value should be one of name », mesuré le
+       30/08) ; `bdtopo-pgr` fait l'inverse. */
+    const url = urlVoies(paris, lyon);
+    expect(url).toContain('resource=bdtopo-pgr');
+    expect(url).toContain('getSteps=true');
+  });
+
+  it('demande les DEUX attributs en un seul appel', () => {
+    const url = urlVoies(paris, lyon);
+    expect(url).toContain('nombre_de_voies');
+    expect(url).toContain('cpx_numero_route_europeenne');
+    // Le séparateur du service est la barre verticale, encodée.
+    expect(url).toContain('%7C');
+  });
+
+  it('emporte les étapes du trajet : le bis en pose une', () => {
+    const url = urlVoies(paris, lyon, [{ lon: 3.1, lat: 47.2 }]);
+    expect(url).toContain('intermediates=3.1,47.2');
+  });
+});
+
+describe('versTroncons', () => {
+  const reponse = {
+    portions: [{ steps: [
+      { geometry: { type: 'LineString', coordinates: [[2.35, 48.85]] },
+        attributes: { nombre_de_voies: '3', cpx_numero_route_europeenne: 'E15/E50' } },
+      // Un tronçon SANS nombre de voies, mais AVEC un numéro européen.
+      { geometry: { type: 'LineString', coordinates: [[2.36, 48.85]] },
+        attributes: { cpx_numero_route_europeenne: 'E54' } },
+    ] }],
+  };
+
+  it('relit les deux champs — le service rend les nombres en TEXTE', () => {
+    const rendu = versTroncons(reponse);
+    expect(rendu).toHaveLength(2);
+    expect(rendu[0]).toEqual({ point: [2.35, 48.85], voies: 3, europe: 'E15/E50' });
+  });
+
+  it('GARDE un tronçon sans nombre de voies : il porte l’autre champ', () => {
+    /* Le jeter pour un champ absent perdrait le numéro européen. Zéro veut
+       dire « je ne sais pas » : la couture des voies le refusera, celle des
+       numéros n'en a pas besoin. */
+    expect(versTroncons(reponse)[1]).toEqual({ point: [2.36, 48.85], voies: 0, europe: 'E54' });
+  });
+
+  it('REFUSE ce qui n’est pas une réponse — elle vient d’un service', () => {
+    expect(versTroncons(null)).toEqual([]);
+    expect(versTroncons({ portions: 'non' })).toEqual([]);
+    expect(versTroncons({ portions: [{ steps: [{ geometry: {} }] }] })).toEqual([]);
   });
 });
