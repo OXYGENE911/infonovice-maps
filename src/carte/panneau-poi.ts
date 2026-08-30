@@ -262,11 +262,6 @@ export class PanneauPoi extends HTMLElement {
                restaurant portent le nom dans nom_station, en graphies
                inconstantes — d'où une recherche par sous-chaîne, envoyée AU
                SERVICE au-delà du zoom 12 et appliquée à l'index en deçà. -->
-          <label class="poi-filtre-ligne">Nom de station contient
-            <input type="search" class="poi-nom-station"
-              placeholder="McDonald, Aire de Beaune…"
-              aria-label="Nom de station contient">
-          </label>
           <p class="poi-filtre-titre">Connecteurs acceptés</p>
           ${PRISES.map((p) => `
             <label><input type="checkbox" class="poi-prise" value="${p.cle}"> ${p.libelle}</label>`).join('')}
@@ -278,9 +273,21 @@ export class PanneauPoi extends HTMLElement {
                pas ». IZIVIA FAST était treizième, Atlante dix-huitième, ALLEGO
                vingt-deuxième. Cent quarante entrées dépliées seraient
                illisibles ; cherchables, elles sont complètes. -->
+          <!-- UN SEUL CHAMP POUR DEUX RECHERCHES (30/08). Armelin : « le
+               filtre "Nom de station contient" ne fonctionne pas […] je
+               pense que ce filtre fait doublon avec la section rechercher
+               un réseau. Il faudrait fusionner les deux et donner la
+               possibilité de sélectionner le réseau IZIVIA mais uniquement
+               celui nommé McDonald. » Les deux champs cherchaient bien deux
+               choses différentes — l'un le RÉSEAU (l'exploitant), l'autre le
+               NOM DE LA STATION (le site) — mais rien ne le disait, et l'un
+               des deux paraissait mort. Fondus, ils font ce qu'on attend :
+               on tape « McDonald », la liste des réseaux se réduit à ceux
+               qui en ont, et la carte ne montre plus que ces stations-là.
+               Cocher IZIVIA par-dessus donne « IZIVIA, chez McDonald ». -->
           <input type="search" class="poi-reseau-recherche"
-            placeholder="Chercher un réseau (Fastned, Izivia…)"
-            aria-label="Chercher un réseau de recharge">
+            placeholder="Réseau ou nom de station (Fastned, McDonald…)"
+            aria-label="Chercher un réseau ou un nom de station">
           <div class="poi-reseaux" role="group" aria-label="Filtrer par réseau"></div>
           <p class="poi-filtre-note">Le compte est national : un réseau coché
             peut n’avoir aucune borne dans la vue courante. Les réseaux sont
@@ -349,24 +356,22 @@ export class PanneauPoi extends HTMLElement {
       this.#filtres = { ...this.#filtres, puissanceMin: Number.isFinite(v) && v > 0 ? v : undefined };
       surFiltre();
     });
-    /* LE NOM SE TAPE, DONC IL SE DÉBOUNCE — 400 ms, comme l'autocomplétion :
-       chaque frappe au-delà du zoom 12 partirait sinon en requête au portail,
-       et les quotas publics sont un bien commun. */
+    /* LA RECHERCHE FAIT DEUX CHOSES, ET C'EST LA FUSION DEMANDÉE : elle
+       réduit la liste des réseaux montrés, ET filtre les stations par leur
+       nom sur la carte. Un réseau DÉJÀ COCHÉ reste affiché même s'il ne
+       correspond pas — sinon un filtre actif deviendrait invisible, donc
+       impossible à retirer. Le filtre de nom est DÉBOUNCÉ (400 ms, comme
+       l'autocomplétion) : chaque frappe partirait sinon en requête au
+       portail, et les quotas publics sont un bien commun. */
     let minuteurNom: ReturnType<typeof setTimeout> | undefined;
-    this.querySelector<HTMLInputElement>('.poi-nom-station')?.addEventListener('input', (e) => {
+    this.querySelector('.poi-reseau-recherche')?.addEventListener('input', (e) => {
+      this.#rendreReseaux(this.#reseaux);
       const brut = (e.target as HTMLInputElement).value.trim();
       clearTimeout(minuteurNom);
       minuteurNom = setTimeout(() => {
         this.#filtres = { ...this.#filtres, nom: brut === '' ? undefined : brut };
         surFiltre();
       }, 400);
-    });
-    /* LA RECHERCHE NE TOUCHE NI AUX FILTRES NI À LA CARTE : elle ne fait que
-       réduire ce que la liste montre. Un réseau DÉJÀ COCHÉ reste affiché même
-       s'il ne correspond pas à la recherche — sinon un filtre actif
-       deviendrait invisible, donc impossible à retirer. */
-    this.querySelector('.poi-reseau-recherche')?.addEventListener('input', () => {
-      this.#rendreReseaux(this.#reseaux);
     });
 
     this.querySelector<HTMLSelectElement>('.poi-etendue')?.addEventListener('change', (e) => {
@@ -443,7 +448,8 @@ export class PanneauPoi extends HTMLElement {
       };
       const select = this.querySelector<HTMLSelectElement>('.poi-puissance');
       if (select) select.value = String(this.#filtres.puissanceMin ?? 0);
-      const champNom = this.querySelector<HTMLInputElement>('.poi-nom-station');
+      // Le nom gardé se rend au champ FUSIONNÉ (30/08) : il n'y en a plus qu'un.
+      const champNom = this.querySelector<HTMLInputElement>('.poi-reseau-recherche');
       if (champNom && nomLu) champNom.value = nomLu;
       for (const cle of prises) {
         const c = this.querySelector<HTMLInputElement>(`.poi-prise[value="${cle}"]`);
@@ -1034,11 +1040,16 @@ export class PanneauPoi extends HTMLElement {
     }
     const note = this.querySelector<HTMLElement>('.poi-seuil-vue');
     if (note) { note.textContent = trop ? raison : ''; note.hidden = !trop; }
-    const champNom = this.querySelector<HTMLInputElement>('.poi-nom-station');
+    /* LE CHAMP FUSIONNÉ NE SE DÉSACTIVE PLUS (30/08) : il sert AUSSI à
+       chercher un réseau dans la liste nationale, ce qui n'a rien à voir
+       avec la vue. Seul son effet « nom de station », qui interroge le
+       portail sur l'emprise visible, dépend du zoom — la note ci-dessus le
+       dit, et c'est elle qui porte l'avertissement. */
+    const champNom = this.querySelector<HTMLInputElement>('.poi-reseau-recherche');
     if (champNom) {
-      champNom.disabled = trop;
       champNom.placeholder = trop
-        ? 'Rapprochez-vous pour filtrer par nom' : 'McDonald, Aire de Beaune…';
+        ? 'Réseau (le nom de station demande le zoom 12)'
+        : 'Réseau ou nom de station (Fastned, McDonald…)';
     }
   }
 

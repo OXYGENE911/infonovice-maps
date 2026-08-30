@@ -1127,3 +1127,40 @@ test('MÉMOIRE : les réglages d’arrêt survivent au rechargement', async ({ p
   await expect(page.locator('.recharge-reserve'),
     'la réserve minimale a été oubliée').toHaveValue('20');
 });
+
+test('PLAN-1 : un arrêt ajouté ne fait PAS sauter les suivants', async ({ page }) => {
+  /* Armelin, le 30/08 : « à chaque fois que j'ajoute une borne entre deux
+     bornes, la borne suivante saute pour être recalculée ailleurs. Je ne veux
+     pas de recalcul automatique […] il suffit de garder la planification
+     initiale et de considérer l'arrêt comme un arrêt de courtoisie, café ou
+     WC ou déjeuner. » Ajouter est une commodité, pas une consigne de calcul. */
+  await ouvrirRecharge(page);
+  /* ON ATTEND LE PLAN COMPLET, pas seulement son premier arrêt : capturer la
+     liste pendant qu'elle se remplit ferait comparer deux instants. */
+  const arrets = page.locator('.recharge-liste li');
+  await expect(arrets.first()).toContainText('min de charge', { timeout: 20_000 });
+  await expect.poll(() => arrets.count(), { timeout: 10_000 }).toBeGreaterThan(0);
+  const avant = await arrets.allTextContents();
+
+  /* On ajoute une borne CANDIDATE (pas retenue) du corridor. La liste
+     complète les propose toutes avec un « + ». */
+  await page.locator('.recharge-toutes > summary').click();
+  /* UNE BORNE QUI N'EST PAS DÉJÀ RETENUE : ajouter celle qui est au plan ne
+     changerait rien, et le parcours mesurerait le vide. */
+  const plus = page.locator('.recharge-toutes-liste li:not(.est-retenue) .recharge-plus').first();
+  await plus.click();
+
+  // LES ARRÊTS D'AVANT SONT TOUS ENCORE LÀ, à l'identique.
+  await expect.poll(() => arrets.count(), { timeout: 10_000 })
+    .toBe(avant.length + 1);
+  const apres = await arrets.allTextContents();
+  for (const ligne of avant) {
+    expect(apres.some((x) => x === ligne),
+      `un arrêt planifié a disparu après l’ajout : ${ligne}`).toBe(true);
+  }
+  expect(apres.length, 'l’arrêt ajouté doit s’ajouter, pas remplacer')
+    .toBe(avant.length + 1);
+
+  // ET LE RECALCUL RESTE POSSIBLE, à la demande — c'est le choix demandé.
+  await expect(page.getByRole('button', { name: /Recalculer les arrêts/ })).toBeVisible();
+});

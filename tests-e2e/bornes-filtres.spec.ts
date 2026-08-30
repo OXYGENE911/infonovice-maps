@@ -99,7 +99,7 @@ test('le nom de station tapé PART DANS LA REQUÊTE, en suggest()', async ({ pag
   const vues = await espionnerIrve(page);
   await ouvrirBornes(page);
 
-  await page.getByLabel('Nom de station contient').fill('Mc Donald');
+  await page.getByLabel('Chercher un réseau ou un nom de station').fill('Mc Donald');
   await expect.poll(() => vues.some((u) => u.includes('suggest(nom_station,"Mc Donald")')),
     { message: 'le nom n’est pas parti au service' }).toBe(true);
 });

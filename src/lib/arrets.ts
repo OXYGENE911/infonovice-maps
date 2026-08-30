@@ -231,7 +231,45 @@ const echec = (motif: string): PlanRecharge =>
   ({ faisable: false, arrets: [], socArrivee: 0, dureeRechargeMin: 0, motif });
 
 /** Planifie les arrêts. Aucun appel réseau : tout se calcule ici. */
+/* EN DESSOUS, UN ARRÊT N'EN EST PAS UN. Armelin, le 30/08 : « j'ai parfois
+   le dernier arrêt de recharge qui est indiqué pour 1 min d'arrêt, ce qui n'a
+   pas de sens. Soit on charge plus longtemps à l'arrêt d'avant, soit on
+   recharge plus d'une minute pour que l'arrêt soit utile. » Cinq minutes :
+   sortir de l'autoroute, se brancher, repartir en coûte déjà autant. */
+const DUREE_UTILE_MIN = 5;
+
+/**
+ * Le plan de recharge — et, s'il finit par un arrêt dérisoire, celui qu'on
+ * obtient en s'en passant.
+ *
+ * POURQUOI UN SECOND PASSAGE PLUTÔT QU'UNE RETOUCHE. Le calcul est glouton :
+ * à chaque borne il charge JUSTE ce qu'il faut pour atteindre le point de
+ * passage suivant. Quand la dernière jambe est courte, cela donne un arrêt
+ * d'une minute — exact, et absurde. Plutôt que de rafistoler la durée après
+ * coup, on ÉCARTE cette borne et l'on refait le plan : privé d'elle, le
+ * calcul charge davantage à l'arrêt d'avant, puisqu'il vise alors la
+ * destination. Si ce second plan échoue (le plafond de charge, la batterie),
+ * on garde le premier : un arrêt d'une minute vaut mieux qu'un refus.
+ */
 export function planifierArrets(o: OptionsPlan): PlanRecharge {
+  const plan = planifierGlouton(o);
+  if (!plan.faisable || plan.arrets.length < 2) return plan;
+  const dernier = plan.arrets[plan.arrets.length - 1]!;
+  const cleDernier = cleBorne(dernier.borne);
+  const impose = new Set(o.imposees ?? []).has(cleDernier);
+  // Un arrêt VOULU par l'usager n'est jamais retiré, même s'il ne charge rien.
+  if (impose || dernier.dureeMin >= DUREE_UTILE_MIN) return plan;
+
+  const sans = planifierGlouton({
+    ...o, ecartees: [...(o.ecartees ?? []), cleDernier],
+  });
+  /* ON NE PREND LE SECOND QUE S'IL EST MEILLEUR : faisable, et pas plus
+     d'arrêts. Sans cette garde, écarter une borne pourrait en imposer deux
+     autres — on aurait échangé une minute contre un quart d'heure. */
+  return sans.faisable && sans.arrets.length <= plan.arrets.length ? sans : plan;
+}
+
+function planifierGlouton(o: OptionsPlan): PlanRecharge {
   const { vehicule: v } = o;
 
   /* CE QUE L'USAGER ÉCARTE N'EXISTE PLUS POUR LE PLANIFICATEUR. On le retire
