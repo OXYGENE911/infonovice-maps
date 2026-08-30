@@ -37,6 +37,7 @@ import type { EvenementTrajet } from '../lib/trafic';
 import { flecheManoeuvre } from './icone-manoeuvre';
 import { refermerPanneaux } from './panneaux';
 import { classeRoute, numeroRoute, libelleClasse } from '../lib/classe-route';
+import { fondPanneau, encreSur, cartoucheNumero } from '../lib/panneau';
 import { pictoMenu } from './icone-menu';
 import { CurseurVehicule, capEntre, formeValide, PREF_CURSEUR } from './curseur-vehicule';
 import { lirePreference } from '../lib/stockage';
@@ -295,9 +296,9 @@ export class BandeauGuidage extends HTMLElement {
            bleu autoroute, vert nationale, orange départementale (convention
            énoncée par Armelin). L'écusson porte le numéro quand la donnée en
            donne un — mesuré le 29/08 : le champ cpx_numero rend « D39 », « D415 »,
-           « D606 ». Aucun champ de VOIES n'existe dans la réponse du service
-           (cherché sur deux itinéraires) : le placement sur la chaussée
-           n'est pas promis. -->
+           « D606 ». Le placement sur la chaussée n'est toujours pas promis :
+           le champ des voies EXISTE (mesuré le 30/08) mais sur une ressource
+           qui ne rend aucune instruction de manœuvre — voir docs/apis.md. -->
       <div class="bg-cartouche" role="status" aria-live="polite" hidden>
         <span class="bg-fleche" aria-hidden="true"></span>
         <div class="bg-cartouche-texte">
@@ -804,9 +805,22 @@ export class BandeauGuidage extends HTMLElement {
     const classe = classeRoute(voieVisee);
     cartouche.hidden = !e.manoeuvre && !e.horsRoute;
     cartouche.dataset['classe'] = classe;
+    /* LE PANNEAU SUIT LA RÈGLE, PAS UN GOÛT (PAN-1, 30/08). Le fond et
+       l'encre viennent de lib/panneau.ts, qui code l'IISR : fond bleu ou
+       vert, inscriptions et listels blancs ; fond blanc, tout en noir. La
+       feuille de style ne fait que peindre ce que la règle a décidé. */
+    const fond = fondPanneau(classe);
+    cartouche.dataset['fond'] = fond;
+    cartouche.dataset['encre'] = encreSur(fond);
     const numero = numeroRoute(voieVisee);
     ecusson.textContent = numero;
     ecusson.hidden = numero === '';
+    /* LE CARTOUCHE DE NUMÉROTATION A SA PROPRE COULEUR, et ce n'est pas
+       celle du panneau : rouge sur autoroute ET nationale (type E42), jaune
+       sur départementale (E43). C'est ce qu'on lit sur la route. */
+    const numeroteur = cartoucheNumero(classe);
+    if (numeroteur) ecusson.dataset['cartouche'] = numeroteur;
+    else delete ecusson.dataset['cartouche'];
     /* L'écusson est un signe : il se DIT en toutes lettres à qui écoute la
        page, sans quoi « D606 » resterait une suite de caractères. */
     if (numero !== '') ecusson.setAttribute('aria-label', `${libelleClasse(classe)} ${numero}`);

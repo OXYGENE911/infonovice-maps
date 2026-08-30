@@ -534,6 +534,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #117 — PAN-1, de vrais panneaux de direction (demande du 30/08) :
+      l'IISR relevée puis appliquée — fonds bleu/vert/blanc, inscriptions et
+      listels selon la règle, cartouches de numérotation E42 rouge et E43
+      jaune, listel en retrait, couleurs insensibles au thème sombre. La
+      note « aucun champ de voies » a été CORRIGÉE : le champ existe, sur
+      une ressource sans instructions de manœuvre (docs/apis.md).
+      docs/panneaux.md porte la règle et le prompt GPT-6.
 - [x] PR #116 — BIS-1, l'itinéraire bis (demande du 30/08) : une icône dans
       la barre de suivi, quatre calculs réels par un point latéral (2,5 et
       5 km, gauche et droite), et une MESURE de divergence pour garder celui

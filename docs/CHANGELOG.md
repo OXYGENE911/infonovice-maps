@@ -2,6 +2,46 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.89.0] — 2026-08-30 — PAN-1 : de vrais panneaux de direction (PR #117)
+
+Armelin, le 30/08 : « dans les rectangles annonçant les directions, ce serait
+bien que les cartouches s'affichent sous forme de vrais panneaux
+d'autoroute. »
+
+- **LA RÈGLE OFFICIELLE, PAS UN GOÛT.** L'IISR (arrêté du 24 novembre 1967,
+  cinquième partie) a été relevée avant d'écrire une ligne : fond BLEU sur
+  autoroute, VERT sur les grandes liaisons, BLANC ailleurs — le JAUNE étant
+  réservé au temporaire, on ne s'en sert pas. Et la règle d'encre, qui se
+  code : fond bleu ou vert, inscriptions ET listels blancs ; fond blanc,
+  tout en noir. La flèche et la distance sont des inscriptions : elles la
+  suivent aussi.
+- **LE CARTOUCHE DE NUMÉROTATION A SA PROPRE COULEUR**, et ce n'est pas
+  celle du panneau : ROUGE sur autoroute et nationale (type E42), JAUNE
+  chiffres noirs sur départementale (E43). C'est ce qu'on lit sur la route.
+- **LE LISTEL EST UN FILET EN RETRAIT, pas une bordure.** Dessiné en ombre
+  intérieure : collé à l'arête, il ne ressemblait à rien.
+- **CE QUE ÇA CHANGE POUR LES DÉPARTEMENTALES.** L'orange demandé le 29/08
+  n'existe pas dans la signalisation française : une départementale se
+  signale sur fond BLANC, et c'est son cartouche qui est jaune. Le jaune
+  reste donc à l'écran, là où il est réglementaire. Revenir à l'orange est
+  une ligne de CSS — mais ce ne serait plus un vrai panneau.
+- **LES COULEURS NE SUIVENT PAS LE THÈME SOMBRE**, seules de toute
+  l'application : sur la route, un panneau est rétroréfléchissant — la nuit
+  il est plus lumineux, pas moins. Un parcours le vérifie.
+- **UNE MESURE EN CORRIGE UNE AUTRE.** Il était écrit que « aucun champ de
+  voies n'existe » : c'était vrai de la réponse, faux du service. Le
+  catalogue liste `nombre_de_voies`, `cpx_classement_administratif` et
+  `cpx_numero_route_europeenne` — mais sur la ressource `bdtopo-pgr`, qui ne
+  rend AUCUNE instruction de manœuvre (mesuré : 203 tronçons, zéro
+  instruction). On ne bascule donc pas ; le cartouche vert européen et le
+  découpage « E15/E50 » attendent, prêts. Tout est dans docs/apis.md.
+- **DOCUMENT NOUVEAU : docs/panneaux.md** — la règle, ce qui manque et
+  pourquoi, et le prompt à donner à GPT-6 pour des planches d'illustration.
+
+Tests : 9 unitaires sur la règle (fond, encre, cartouche, découpage
+européen), 6 E2E qui mesurent la couleur CALCULÉE des quatre classes, de la
+flèche, de la distance et du thème sombre. 693 unitaires, 218 E2E.
+
 ## [0.88.0] — 2026-08-30 — BIS-1 : l'itinéraire bis (PR #116)
 
 Armelin, le 30/08 : « quand on est en mode navigation et qu'on a un obstacle
