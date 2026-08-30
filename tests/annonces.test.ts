@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   palierA, phraseAnnonce, distanceDite, MemoireAnnonces, PALIERS,
   traficADire, phraseTrafic, PORTEE_TRAFIC_M, GARDE_MANOEUVRE_M,
+  rechargeADire, phraseRecharge, PALIERS_RECHARGE_M,
 } from '../src/lib/annonces';
 
 /* LE GUIDAGE VOCAL (VOIX-1, demande d'Armelin du 30/08).
@@ -204,5 +205,59 @@ describe('MemoireAnnonces, motif trafic', () => {
     m.noter(2_000, 'trafic');
     expect(m.aDire(2_000, 'trafic')).toBe(false);
     expect(m.aDire(2_000, 'proche'), 'la manœuvre au même point reste à dire').toBe(true);
+  });
+});
+
+/* LES ARRÊTS DE RECHARGE PARLÉS (VOIX-2, 30/08). Ce qui manque le plus en
+ * électrique, et qu'aucune application généraliste ne porte : savoir sans
+ * regarder l'écran quand on s'arrête, où, et pour combien de temps. */
+
+describe('rechargeADire', () => {
+  const arrets = [
+    { avancementM: 120_000, nom: 'Aire de Beaune-Tailly', reseau: 'Ionity', dureeMin: 24 },
+    { avancementM: 260_000, nom: 'Ionity Montélimar', reseau: 'Ionity', dureeMin: 18 },
+  ];
+
+  it('annonce à dix kilomètres, puis à un kilomètre — et pas entre les deux', () => {
+    // Neuf kilomètres avant : le palier des dix est franchi.
+    expect(rechargeADire(arrets, 111_000, 5_000)?.palier).toBe(10_000);
+    // Cinq cents mètres avant : celui du kilomètre.
+    expect(rechargeADire(arrets, 119_500, 5_000)?.palier).toBe(1_000);
+    // À vingt kilomètres, il n'y a encore rien à décider.
+    expect(rechargeADire(arrets, 100_000, 5_000)).toBeNull();
+  });
+
+  it('SE TAIT quand une manœuvre approche — elle passe d’abord', () => {
+    expect(rechargeADire(arrets, 109_000, GARDE_MANOEUVRE_M - 1)).toBeNull();
+  });
+
+  it('passe à l’arrêt SUIVANT une fois le premier dépassé', () => {
+    expect(rechargeADire(arrets, 252_000, 5_000)?.nom).toBe('Ionity Montélimar');
+    expect(rechargeADire([], 0, 5_000)).toBeNull();
+  });
+
+  it('expose ses deux paliers, du plus loin au plus proche', () => {
+    expect([...PALIERS_RECHARGE_M]).toEqual([10_000, 1_000]);
+  });
+});
+
+describe('phraseRecharge', () => {
+  const base = { avancementM: 120_000, palier: 10_000, distanceM: 9_600 };
+
+  it('dit quand, où, et combien de temps — dans l’ordre des questions', () => {
+    expect(phraseRecharge({
+      ...base, nom: 'Aire de Beaune-Tailly', reseau: 'Ionity', dureeMin: 24,
+    })).toBe('Arrêt recharge dans 10 kilomètres, Ionity Aire de Beaune-Tailly, 24 minutes de charge');
+  });
+
+  it('ne répète pas le réseau quand le nom le porte déjà', () => {
+    expect(phraseRecharge({
+      ...base, nom: 'Ionity Montélimar', reseau: 'Ionity', dureeMin: 18,
+    })).toBe('Arrêt recharge dans 10 kilomètres, Ionity Montélimar, 18 minutes de charge');
+  });
+
+  it('se passe du réseau et de la durée quand ils manquent', () => {
+    expect(phraseRecharge({ ...base, distanceM: 900, palier: 1_000, nom: 'Borne du bourg', reseau: null, dureeMin: 0 }))
+      .toBe('Arrêt recharge dans 900 mètres, Borne du bourg');
   });
 });
