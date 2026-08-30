@@ -310,6 +310,14 @@ export class BandeauGuidage extends HTMLElement {
      clic sur la boussole. */
   #gesteBoussoleJusqua = 0;
 
+  /* LE DERNIER CAP CONNU, gardé même quand le lissage repart de zéro. Sans
+     lui, revenir au « sens de la voiture » ne faisait RIEN tant qu'aucun
+     nouveau cap n'arrivait — et il n'en arrive pas à l'arrêt : le récepteur
+     ne donne de cap qu'au-delà de 7 km/h. C'est le défaut qu'Armelin a
+     rencontré au volant (« ça ne fonctionne pas »), et il venait de la
+     remise à zéro ajoutée le matin même. */
+  #dernierCapConnu: number | null = null;
+
   /** Le cap affiché, LISSÉ : les à-coups du récepteur ne secouent pas la carte. */
   #capLisse: number | null = null;
 
@@ -365,8 +373,13 @@ export class BandeauGuidage extends HTMLElement {
        qu'elle fait déjà : MapLibre remet le nord au clic, ce qui est
        exactement l'un des deux états. On note l'autre, et le prochain fixe
        remet la carte dans le sens de la voiture. */
-    c.getContainer().querySelector('.maplibregl-ctrl-compass')
-      ?.addEventListener('click', () => {
+    /* PAR DÉLÉGATION, ET NON SUR LE BOUTON : la boussole de MapLibre est
+       créée par un contrôle dont on n'ordonne pas la pose, et elle est
+       REFAITE à chaque changement de fond de carte. Un écouteur posé sur le
+       bouton lui-même disparaît avec lui — sans une erreur pour le dire. */
+    c.getContainer().addEventListener('click', (evt) => {
+      if (!(evt.target as HTMLElement | null)?.closest?.('.maplibregl-ctrl-compass')) return;
+      {
         if (!this.actif) return;
         this.#modeOrientation = this.#modeOrientation === 'nord' ? 'cap' : 'nord';
         /* LE LISSAGE REPART DE ZÉRO DANS LES DEUX SENS. Il sert à absorber
@@ -376,8 +389,19 @@ export class BandeauGuidage extends HTMLElement {
            pas en trois virages. Mesuré : sans cela, un cap réel de 200°
            donnait 148° au premier fixe. */
         this.#capLisse = null;
-        if (this.#modeOrientation === 'cap') void this.#ouvrirBoussole();
-        else this.#fermerBoussole();
+        if (this.#modeOrientation === 'cap') {
+          void this.#ouvrirBoussole();
+          /* ON REND LE CAP TOUT DE SUITE, sans attendre un fixe : à l'arrêt
+             ou à faible allure, le récepteur ne donne aucun cap, et la carte
+             serait restée au nord — exactement ce qu'Armelin a constaté. Le
+             dernier cap connu vaut mieux que rien : c'est celui dans lequel
+             la voiture est orientée. */
+          const cap = this.#dernierCapConnu;
+          if (cap !== null) {
+            this.#capLisse = cap;
+            this.#carte?.easeTo({ bearing: cap, duration: 400 });
+          }
+        } else this.#fermerBoussole();
         /* APPUYER SUR LA BOUSSOLE N'EST PAS EXPLORER LA CARTE : c'est régler
            le suivi. Or MapLibre passe le clic d'origine à sa propre remise au
            nord, ce qui déclenche notre détection de geste d'usager — le suivi
@@ -388,7 +412,8 @@ export class BandeauGuidage extends HTMLElement {
            par un parcours, pas au volant. */
         this.#gesteBoussoleJusqua = Date.now() + 500;
         this.#recentrer();
-      });
+      }
+    });
     /* UN GESTE DE L'USAGER SUSPEND LA CAMÉRA — pas un mouvement du code. Les
        événements MapLibre issus d'un vrai geste portent `originalEvent` ;
        nos propres `easeTo` n'en portent pas : c'est LE discriminant. */
@@ -476,8 +501,14 @@ export class BandeauGuidage extends HTMLElement {
              forme de boussole en mode pressoir », dont le dessin change
              avec l'état. -->
         <div class="bg-boutons" hidden>
+          <!-- LE BOUTON DIT SA VUE, PAS SON GESTE (ERGO-2, 30/08). Armelin :
+               « ce serait mieux d'afficher simplement 2D ou 3D sur le bouton
+               en fonction de la vue affichée, pour que l'utilisateur
+               comprenne qu'il faut appuyer de nouveau pour changer ». Deux
+               caractères se lisent d'un coup d'œil au volant, là où un
+               parallélogramme demande à être interprété. -->
           <button type="button" class="bg-3d" aria-pressed="true"
-            aria-label="Passer la carte à plat">${pictoMenu('vue-3d')}</button>
+            aria-label="Vue en relief. Appuyer pour passer à plat">3D</button>
           <!-- LE BOUTON D'ORIENTATION A ÉTÉ RETIRÉ (TERRAIN-1, 30/08).
                Armelin : « j'ai du mal à comprendre les boutons d'orientation,
                boussole et sens de la carte. Il y a un bouton dans la fenêtre
@@ -675,9 +706,10 @@ export class BandeauGuidage extends HTMLElement {
       /* L'ICÔNE DIT CE QU'ON OBTIENDRA EN CLIQUANT — la perspective quand on
          est à plat, le plan quand on est incliné. C'est la convention d'un
          bouton « pressoir » : il montre la sortie, pas l'état. */
-      bouton.innerHTML = pictoMenu(this.#en3D ? 'vue-plat' : 'vue-3d');
-      bouton.setAttribute('aria-label',
-        this.#en3D ? 'Passer la carte à plat' : 'Incliner la carte');
+      bouton.textContent = this.#en3D ? '3D' : '2D';
+      bouton.setAttribute('aria-label', this.#en3D
+        ? 'Vue en relief. Appuyer pour passer à plat'
+        : 'Vue à plat. Appuyer pour passer en relief');
       this.#carte?.easeTo({ pitch: this.#en3D ? PITCH_SUIVI : 0, duration: 400 });
     });
 
@@ -906,12 +938,15 @@ export class BandeauGuidage extends HTMLElement {
       this.#carte.easeTo({
         center: p,
         zoom: Math.max(this.#carte.getZoom(), ZOOM_SUIVI),
-        /* LE CAP FAIT PARTIE DU CADRAGE, et l'oublier avait une conséquence
-           mesurée : en mode nord, ce recentrage INTERROMPAIT la rotation que
-           MapLibre venait de lancer et figeait la carte de travers — easeTo
-           tient ce qu'il ne nomme pas. En mode cap, on ne nomme rien : le
-           prochain fixe s'en charge. */
-        ...(this.#modeOrientation === 'nord' ? { bearing: 0 } : {}),
+        /* LE CAP FAIT PARTIE DU CADRAGE, ET IL SE NOMME DANS LES DEUX
+           MODES. `easeTo` tient ce qu'il ne nomme pas : ne rien dire du cap
+           revenait à FIGER la rotation en cours. En mode nord, cela laissait
+           la carte de travers ; en mode cap, cela annulait le retour au sens
+           de la voiture qu'on venait de demander — le second défaut du
+           « ça ne fonctionne pas » d'Armelin, trouvé en mesurant le cap
+           après deux clics sans nouveau fixe GPS. */
+        bearing: this.#modeOrientation === 'nord'
+          ? 0 : (this.#capLisse ?? this.#dernierCapConnu ?? this.#carte?.getBearing() ?? 0),
         duration: 600,
       });
     }
@@ -1242,11 +1277,18 @@ export class BandeauGuidage extends HTMLElement {
     const hauteur = carte.getContainer().clientHeight;
     const barre = Math.min(this.offsetHeight, hauteur * 0.4);
     const visible = Math.max(hauteur - barre, 1);
-    /* DEUX TIERS, ET PAS PLUS BAS : au-delà, la voiture colle à la barre et
-       l'on perd le sentiment d'avancer. Bornée à la moitié de la carte pour
-       qu'un écran très court ne renverse pas le cadrage. */
-    const haut = Math.min(visible * (2 / 3) - visible / 2, hauteur / 2) * 2;
-    return { top: Math.max(0, haut), bottom: barre, left: 0, right: 0 };
+    /* SOIXANTE-DIX-HUIT POUR CENT, ET NON DEUX TIERS. Premier jet : deux
+       tiers de la carte VISIBLE — ce qui, avec une barre de deux cents
+       pixels, retombe pile au milieu de l'ÉCRAN. Armelin l'a vu tout de
+       suite : « la vue du véhicule est toujours centrée au milieu de
+       l'écran ». Le calcul était juste, la cible était mauvaise.
+       À 78 %, la voiture se pose à environ cent quarante pixels au-dessus de
+       la barre sur un téléphone : basse, sans la toucher. */
+    const cible = 0.78;
+    const haut = (2 * cible - 1) * visible;
+    /* JAMAIS AU-DELÀ DE LA MOITIÉ DE L'ÉCRAN de réserve : sur un écran très
+       court, la caméra se renverserait. */
+    return { top: Math.max(0, Math.min(haut, hauteur / 2)), bottom: barre, left: 0, right: 0 };
   }
 
   #alerte(message: string): void {
@@ -1326,7 +1368,10 @@ export class BandeauGuidage extends HTMLElement {
          (NAV-1). En mouvement, le cap GPS garde la main : il mesure la
          route, la boussole mesure le téléphone. */
       const brut = capGps ?? (this.#modeOrientation === 'cap' ? this.#capBoussole : null);
-      if (brut !== null) this.#capLisse = lisserCap(this.#capLisse, brut);
+      if (brut !== null) {
+        this.#capLisse = lisserCap(this.#capLisse, brut);
+        this.#dernierCapConnu = this.#capLisse;
+      }
       const cap = this.#modeOrientation === 'cap' ? this.#capLisse : null;
       if (cap !== null) this.#veilleAvaitTourne = true;
       /* L'INCLINAISON VOYAGE AVEC CHAQUE FIXE : un easeTo interrompt le

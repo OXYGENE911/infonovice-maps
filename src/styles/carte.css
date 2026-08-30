@@ -1481,7 +1481,18 @@ bandeau-guidage.bg-compact .bg-3d { padding: 5px 10px; font-size: 12px; }
 }
 .bg-vitesse[hidden] { display: none; }
 /* Les deux pastilles partagent leur repère : une seule valeur à corriger. */
-bandeau-guidage { --vitesse-bas: calc(100% + 10px + var(--echelle-hauteur, 26px)); }
+/* DIX-HUIT PIXELS, PAS DIX (ERGO-2, 30/08). Armelin : « la barre d'échelle
+   est littéralement collée au cercle de la vitesse GPS ; pour harmoniser, il
+   faudrait que le cercle noir et le rectangle blanc soient légèrement
+   décollés ». Le blanc entre deux objets est ce qui les rend lisibles
+   séparément. */
+bandeau-guidage { --vitesse-bas: calc(100% + 18px + var(--echelle-hauteur, 26px)); }
+
+/* ET QUAND L'ATTRIBUTION S'OUVRE, LA PASTILLE MONTE. Armelin : « quand
+   j'appuie sur le bouton d'information, le rond de la vitesse s'affiche en
+   superposition au-dessus du rectangle blanc des liens ». Le rectangle
+   s'ouvre en bas de la carte : la pastille lui cède la place, et la rend en
+   se refermant. */
 .bg-vitesse-nombre { font: 700 19px var(--police); color: var(--texte-1); line-height: 1; }
 .bg-vitesse-unite { font: 600 9px var(--police); color: var(--texte-3); }
 
@@ -2727,7 +2738,10 @@ body.en-guidage #carte .maplibregl-ctrl-bottom-left {
 .bg-3d, .bg-orientation, .bg-copilote-bouton {
   width: 44px; height: 44px; padding: 0; display: grid; place-items: center;
 }
-.bg-3d .picto-menu, .bg-orientation .picto-menu, .bg-copilote-bouton .picto-menu,
+/* LE BOUTON DE VUE PORTE DEUX CARACTÈRES : il doit les porter GROS, sinon
+   « 2D » se perd à côté des icônes voisines. */
+.bg-3d { font: 700 14px var(--police) !important; min-width: 44px; }
+.bg-orientation .picto-menu, .bg-copilote-bouton .picto-menu,
 .bg-bis .picto-menu, .bg-voix .picto-menu {
   width: 22px; height: 22px; color: var(--texte-1);
 }
@@ -3022,4 +3036,26 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
 }
 @media (prefers-color-scheme: dark) {
   .bg-voix[aria-pressed="true"] { background: #14263A; }
+}
+
+/* ==========================================================================
+   ERGO-2 — LA BOUSSOLE PORTE SES POINTS CARDINAUX (Armelin, 30/08 : « ce
+   serait bien de modifier l'icône de la boussole pour indiquer N, E, O, S »)
+   ========================================================================== */
+/* ON REMPLACE LE DESSIN DE MAPLIBRE, PAS SON MÉCANISME : la rotation est
+   appliquée par MapLibre à cette même travée (`transform: rotate(...)`), et
+   c'est elle qui fait tourner la rose avec la carte. Changer le fond suffit ;
+   toucher au reste casserait la rotation. */
+/* DEUX PIÈGES PAYÉS ICI, ET AUCUN DES DEUX NE SE PLAINT.
+   1. LA CLASSE EST `maplibregl-ctrl-icon`, pas `compass-arrow` : cette
+      version de MapLibre ne pose pas la seconde. Vérifié dans le DOM.
+   2. LA SPÉCIFICITÉ : MapLibre écrit
+      `.maplibregl-ctrl button.maplibregl-ctrl-compass .maplibregl-ctrl-icon`,
+      soit 0-3-1. Un sélecteur à 0-2-0 perd contre elle quelle que soit sa
+      place dans la feuille — c'est exactement le piège du bouton
+      « Démarrer », payé le 26/08. On reprend donc SON sélecteur. */
+.maplibregl-ctrl button.maplibregl-ctrl-compass .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 29 29%27%3E%3Ccircle cx=%2714.5%27 cy=%2714.5%27 r=%278.4%27 fill=%27none%27 stroke=%27%23B9B8B1%27 stroke-width=%271%27/%3E%3Cpolygon points=%2714.5,7.6 17.1,15.4 14.5,13.9 11.9,15.4%27 fill=%27%23D93025%27/%3E%3Cpolygon points=%2714.5,21.4 11.9,13.6 14.5,15.1 17.1,13.6%27 fill=%27%239A9993%27/%3E%3Ctext x=%2714.5%27 y=%275.2%27 text-anchor=%27middle%27 font-size=%276.4%27 font-weight=%27700%27 fill=%27%23D93025%27 font-family=%27system-ui,sans-serif%27%3EN%3C/text%3E%3Ctext x=%2714.5%27 y=%2728%27 text-anchor=%27middle%27 font-size=%276%27 font-weight=%27600%27 fill=%27%235F5E5A%27 font-family=%27system-ui,sans-serif%27%3ES%3C/text%3E%3Ctext x=%2726.6%27 y=%2716.9%27 text-anchor=%27middle%27 font-size=%276%27 font-weight=%27600%27 fill=%27%235F5E5A%27 font-family=%27system-ui,sans-serif%27%3EE%3C/text%3E%3Ctext x=%272.4%27 y=%2716.9%27 text-anchor=%27middle%27 font-size=%276%27 font-weight=%27600%27 fill=%27%235F5E5A%27 font-family=%27system-ui,sans-serif%27%3EO%3C/text%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
 }

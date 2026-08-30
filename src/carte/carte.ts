@@ -499,6 +499,13 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      mobiles. SUR GRAND ÉCRAN ON N'Y TOUCHE PAS : la place ne manque pas, et
      l'attribution de la Géoplateforme est la contrepartie de la licence,
      pas un ornement qu'on range parce qu'il gêne. */
+  /* CE QUE FAIT VRAIMENT MAPLIBRE, LU DANS SON CODE le 30/08 — parce que le
+     DOM seul induit en erreur. L'attribution compacte est un `<details>`,
+     mais son état OUVERT n'est PAS l'attribut `open` : c'est la classe
+     `maplibregl-compact-show`, et l'attribut `open` est RETIRÉ à
+     l'ouverture. Les deux sont donc inversés par rapport à ce qu'un
+     `<details>` laisse attendre. Retirer la classe replie : c'est juste, et
+     c'était déjà juste. */
   if (window.matchMedia('(max-width: 640px)').matches) {
     const replier = (): void => {
       conteneur.querySelector('.maplibregl-ctrl-attrib.maplibregl-compact')
@@ -507,6 +514,7 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     replier();
     carte.once('load', replier);
   }
+
 
   /* LE PIED DE PAGE AUTONOME S'EFFACE DÈS QUE LA CARTE EST LÀ : ses liens
      vivent désormais dans l'attribution, derrière le « i ». Il reste dans le
