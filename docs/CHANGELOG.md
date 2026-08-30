@@ -2,6 +2,30 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.98.0] — 2026-08-30 — ROND-2 : une sortie interdite n'est pas une sortie (PR #126)
+
+Armelin, au volant : « je suis entré dans un rond-point et le GPS m'a indiqué
+la deuxième sortie. Le schéma était bon, sauf que la PREMIÈRE sortie était un
+sens interdit. Techniquement, le GPS aurait dû m'indiquer la première sortie
+AUTORISÉE. »
+
+- **IL A RAISON, ET C'ÉTAIT UN DÉFAUT DE COMPTAGE** : on comptait toutes les
+  branches de l'anneau, y compris celles où l'on ne peut pas s'engager. Un
+  rang faux dans un rond-point envoie dans la mauvaise rue.
+- **LE RAISONNEMENT EST CELUI DU CONDUCTEUR.** Une branche à double sens est
+  toujours une sortie. Une branche à sens unique ne l'est que si la
+  circulation s'en ÉLOIGNE de l'anneau : si elle y arrive, s'y engager serait
+  un sens interdit. On regarde donc par quel bout elle touche l'anneau, et
+  dans quel sens OpenStreetMap l'a numérisée — `oneway=yes` va du premier
+  point au dernier, `-1` l'inverse.
+- **DANS LE DOUTE, ON COMPTE.** Si les deux bouts touchent l'anneau, on ne
+  tranche pas : mieux vaut une sortie de trop qu'une sortie réelle effacée.
+- **LA BRANCHE INTERDITE NE SE DESSINE PLUS** non plus : le schéma montre ce
+  qu'on peut prendre.
+
+Tests : 2 unitaires (la sortie interdite décale les rangs, la sortie à sens
+unique compte), 1 E2E. 810 unitaires, 256 E2E.
+
 ## [0.97.0] — 2026-08-30 — TERRAIN-1 : six retours du volant (PR #125)
 
 Armelin a roulé avec l'application et envoyé ses retours, captures à l'appui.

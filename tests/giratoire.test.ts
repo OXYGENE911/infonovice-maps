@@ -34,12 +34,19 @@ const ANNEAU = {
   }),
 };
 
-/** Une branche partant de l'anneau vers l'extérieur, à ce cap. */
-function branche(capDeg: number, id: number) {
+/**
+ * Une branche partant de l'anneau vers l'extérieur, à ce cap.
+ *
+ * `sens` reprend l'étiquette d'OpenStreetMap : absente, la branche est à
+ * double sens ; `yes` va du premier point au dernier — donc de l'anneau vers
+ * l'extérieur, une SORTIE ; `-1` l'inverse, donc une entrée seule.
+ */
+function branche(capDeg: number, id: number, sens?: string) {
   const a = auCap(capDeg, 20);
   const b = auCap(capDeg, 60);
   return {
-    type: 'way', id, tags: { highway: 'secondary' },
+    type: 'way', id,
+    tags: { highway: 'secondary', ...(sens === undefined ? {} : { oneway: sens }) },
     geometry: [{ lon: a[0], lat: a[1] }, { lon: b[0], lat: b[1] }],
   };
 }
@@ -164,6 +171,30 @@ describe('versGiratoires', () => {
 
   it('ne lève pas sur un tracé trop court', () => {
     expect(versGiratoires(elements, [[2.35, 48.85]])).toEqual([]);
+  });
+
+  /* ROND-2 (30/08). Armelin, au volant : « le schéma de sortie était bon,
+     sauf que la première sortie était un sens interdit. Techniquement, le GPS
+     aurait dû m'indiquer de sortir à la première sortie AUTORISÉE. » */
+
+  it('NE COMPTE PAS une sortie en sens interdit', () => {
+    /* La branche est de l'anneau vers l'extérieur, mais numérisée à
+       l'envers avec `oneway=-1` : la circulation y ARRIVE. S'y engager
+       serait un sens interdit — ce n'est donc pas une sortie, et tout ce
+       qui suit se décale d'un rang. */
+    const avecInterdit = [
+      ANNEAU, branche(180, 2), branche(90, 3, '-1'), branche(0, 4), branche(270, 5),
+    ];
+    const g = versGiratoires(avecInterdit, traverser(0))[0]!;
+    expect(g.branches, 'l’est ne compte plus').toHaveLength(2);
+    expect(g.rang, 'le nord devient la PREMIÈRE sortie autorisée').toBe(1);
+  });
+
+  it('compte une branche à sens unique qui SORT de l’anneau', () => {
+    const avecSortie = [
+      ANNEAU, branche(180, 2), branche(90, 3, 'yes'), branche(0, 4), branche(270, 5),
+    ];
+    expect(versGiratoires(avecSortie, traverser(0))[0]!.rang).toBe(2);
   });
 
   it('FUSIONNE deux chaussées d’une même route : c’est UNE sortie', () => {

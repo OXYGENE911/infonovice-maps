@@ -84,7 +84,7 @@ const FUSION_BRANCHES_DEG = 18;
    cap de notre tracé et celui d'une branche. */
 const TOLERANCE_SORTIE_DEG = 25;
 
-interface Anneau {
+export interface Anneau {
   points: [number, number][];
   centre: [number, number];
   rayonM: number;
@@ -116,12 +116,21 @@ function barycentre(points: readonly [number, number][]): [number, number] {
   ];
 }
 
+/** Une branche de giratoire, avec ce qui dit si l'on peut y entrer. */
+export interface Branche {
+  points: [number, number][];
+  /* LE SENS UNIQUE, TEL QU'OSM L'ÉCRIT : `yes` va du premier au dernier
+     point, `-1` l'inverse. Une branche à sens unique qui ARRIVE sur l'anneau
+     n'est pas une sortie — c'est un sens interdit. */
+  sensUnique: 0 | 1 | -1;
+}
+
 /** Extrait d'une réponse Overpass les anneaux et les branches — PURE. */
 export function lireAnneaux(elements: readonly unknown[]): {
-  anneaux: [number, number][][]; branches: [number, number][][];
+  anneaux: [number, number][][]; branches: Branche[];
 } {
   const anneaux: [number, number][][] = [];
-  const branches: [number, number][][] = [];
+  const branches: Branche[] = [];
   const vus = new Set<unknown>();
   for (const brut of elements) {
     if (typeof brut !== 'object' || brut === null) continue;
@@ -137,9 +146,19 @@ export function lireAnneaux(elements: readonly unknown[]): {
     vus.add(e.id);
     const points = e.geometry.map((p) => [p.lon, p.lat] as [number, number]);
     if (e.tags?.['junction'] === 'roundabout') anneaux.push(points);
-    else if (e.tags?.['highway']) branches.push(points);
+    else if (e.tags?.['highway']) branches.push({ points, sensUnique: lireSensUnique(e.tags) });
   }
   return { anneaux, branches };
+}
+
+/** Le sens unique d'un chemin — PURE. */
+export function lireSensUnique(tags: Record<string, string>): 0 | 1 | -1 {
+  const v = (tags['oneway'] ?? '').trim().toLowerCase();
+  if (v === 'yes' || v === 'true' || v === '1') return 1;
+  if (v === '-1' || v === 'reverse') return -1;
+  /* `junction=roundabout` implique le sens unique — mais l'anneau n'est pas
+     une branche, et ce cas ne passe donc pas par ici. */
+  return 0;
 }
 
 /**
@@ -194,8 +213,15 @@ export function versGiratoires(
 
     const angles: number[] = [];
     for (const branche of branches) {
-      const attache = attacheSurAnneau(branche, anneau);
+      const attache = attacheSurAnneau(branche.points, anneau);
       if (attache === null) continue;
+      /* UNE SORTIE INTERDITE N'EST PAS UNE SORTIE (ROND-2, 30/08). Armelin,
+         au volant : « le schéma de sortie était bon, sauf que la première
+         sortie était un sens interdit. Techniquement, le GPS aurait dû
+         m'indiquer de sortir à la première sortie AUTORISÉE ». Il a raison,
+         et c'est un défaut de comptage : on comptait toutes les branches, y
+         compris celles où l'on ne peut pas s'engager. */
+      if (!estSortiePraticable(branche, anneau)) continue;
       const a = depuisEntree(capVers(anneau.centre, attache));
       /* LA BRANCHE D'OÙ L'ON VIENT N'EST PAS UNE SORTIE : elle est à zéro
          degré, c'est-à-dire là où l'on entre. */
@@ -222,6 +248,34 @@ export function versGiratoires(
     });
   }
   return rendu.sort((a, b) => a.entreeM - b.entreeM);
+}
+
+/**
+ * Peut-on SORTIR par cette branche — PURE.
+ *
+ * LE RAISONNEMENT EST CELUI DU CONDUCTEUR. Une branche à double sens est
+ * toujours une sortie. Une branche à sens unique ne l'est que si la
+ * circulation s'en éloigne de l'anneau : si elle y ARRIVE, c'est une entrée,
+ * et s'y engager serait un sens interdit.
+ *
+ * On regarde donc PAR QUEL BOUT la branche touche l'anneau. Le sens `yes` va
+ * du premier point au dernier : si c'est le DERNIER qui touche, la
+ * circulation va vers l'anneau — interdit. Et `-1` renverse tout.
+ */
+export function estSortiePraticable(branche: Branche, anneau: Anneau): boolean {
+  if (branche.sensUnique === 0) return true;
+  const debutTouche = anneau.points.some(
+    (q) => distanceM(branche.points[0]!, q) < ATTACHE_M,
+  );
+  const finTouche = anneau.points.some(
+    (q) => distanceM(branche.points[branche.points.length - 1]!, q) < ATTACHE_M,
+  );
+  /* LES DEUX BOUTS TOUCHENT : la branche fait le tour et revient. On ne
+     tranche pas — et l'on préfère la compter, pour ne pas faire disparaître
+     une sortie réelle. */
+  if (debutTouche && finTouche) return true;
+  const sortDuDebut = branche.sensUnique === 1;
+  return debutTouche ? sortDuDebut : !sortDuDebut;
 }
 
 /** Le point d'une branche qui touche l'anneau, ou `null` — PURE. */
