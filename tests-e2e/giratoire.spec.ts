@@ -28,11 +28,12 @@ const ANNEAU = {
   }),
 };
 
-function branche(capDeg: number, id: number) {
+function branche(capDeg: number, id: number, sens?: string) {
   const a = auCap(capDeg, 20);
   const b = auCap(capDeg, 60);
   return {
-    type: 'way', id, tags: { highway: 'secondary' },
+    type: 'way', id,
+    tags: { highway: 'secondary', ...(sens === undefined ? {} : { oneway: sens }) },
     geometry: [{ lon: a[0], lat: a[1] }, { lon: b[0], lat: b[1] }],
   };
 }
@@ -48,13 +49,17 @@ function traverser(capSortie: number): [number, number][] {
 }
 
 async function suivre(
-  page: Page, capSortie: number, o: { sansBranches?: boolean } = {},
+  page: Page, capSortie: number,
+  o: { sansBranches?: boolean; interditALEst?: boolean } = {},
 ): Promise<[number, number][]> {
   const coords = traverser(capSortie);
   const geometrie = { type: 'LineString', coordinates: coords };
   const elements = o.sansBranches
     ? [ANNEAU]
-    : [ANNEAU, branche(180, 2), branche(270, 3), branche(0, 4), branche(90, 5)];
+    : [ANNEAU, branche(180, 2), branche(270, 3), branche(0, 4),
+      /* `oneway=-1` : la branche est numérisée de l'anneau vers l'extérieur
+         mais la circulation y ARRIVE — c'est un sens interdit. */
+      branche(90, 5, o.interditALEst ? '-1' : undefined)];
 
   await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
     headers: { 'Access-Control-Allow-Origin': '*' },
@@ -165,4 +170,18 @@ test('le rang se DIT en toutes lettres, plus long que ce qui s’écrit', async 
   await suivre(page, 270);
   await expect(page.locator('.bg-giratoire'))
     .toHaveAttribute('aria-label', 'Au rond-point, prenez la 3e sortie', { timeout: 15_000 });
+});
+
+test('UNE SORTIE EN SENS INTERDIT NE COMPTE PAS', async ({ page }) => {
+  /* ROND-2 (30/08). Armelin, au volant : « je suis entré dans un rond-point
+     et le GPS m'a indiqué la deuxième sortie. Le schéma était bon, sauf que
+     la première sortie était un sens interdit. Techniquement, le GPS aurait
+     dû m'indiquer la première sortie AUTORISÉE. »
+     Ici l'est est interdit : en sortant au nord, on prend donc la PREMIÈRE
+     sortie praticable, et non la deuxième. */
+  await suivre(page, 0, { interditALEst: true });
+  await expect(page.locator('.bg-instruction'))
+    .toHaveText('Prenez la 1re sortie', { timeout: 15_000 });
+  // Et la branche interdite ne se dessine plus non plus.
+  await expect(page.locator('.bg-gir-branche')).toHaveCount(1);
 });

@@ -534,6 +534,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #126 — ROND-2, une sortie interdite n'est pas une sortie (retour du
+      volant du 30/08) : les branches à sens unique dont la circulation
+      arrive sur l'anneau ne comptent plus dans le rang.
 - [x] PR #125 — TERRAIN-1, six retours du volant (30/08) : panneau ISA
       au-dessus de la vitesse, voiture aux deux tiers de l'écran, panneau
       élargi et grossi avec le nom de la rue visée, barres muettes retirées,

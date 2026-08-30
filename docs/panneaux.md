@@ -138,6 +138,12 @@ d'OpenStreetMap, et **notre propre tracé** :
   même route (à moins de 18°) comptent pour **une** sortie : les compter deux
   fois décalerait tous les rangs et ferait sortir une sortie trop tôt.
 
+**Une sortie interdite n'est pas une sortie** (corrigé le 30/08 au soir, sur
+un retour du volant : « la première sortie était un sens interdit, le GPS
+aurait dû m'indiquer la première sortie AUTORISÉE »). Une branche à sens
+unique dont la circulation ARRIVE sur l'anneau n'est pas comptée : on regarde
+par quel bout elle touche l'anneau, et dans quel sens elle est numérisée.
+
 **Et quand la géométrie ne tranche pas, on ne compte pas.** Si aucune branche
 ne correspond à notre sortie, le schéma se dessine quand même — l'anneau et
 notre sortie restent vrais — mais sans annoncer un rang qu'on ignore.
