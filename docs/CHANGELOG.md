@@ -2,6 +2,32 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.103.0] — 2026-08-30 — ERGO-3 : des dessins au lieu d'un formulaire (PR #131)
+
+Armelin : « les textes Ma position, domicile, travail, favoris sont affichés
+sous forme de texte. L'ergonomie fait trop formulaire. »
+
+- **DOMICILE PORTE UNE MAISON OCRE, TRAVAIL UN IMMEUBLE GRIS, FAVORIS UNE
+  ÉTOILE JAUNE.** « Ma position » reste en toutes lettres, comme demandé.
+- **LE MOT RESTE À CÔTÉ DU DESSIN.** Deux icônes seules se confondent — une
+  maison et un immeuble, à vingt pixels, ne se distinguent qu'à la couleur —
+  et le nom accessible ne remplace pas ce que l'œil cherche. C'est ce que
+  font les cartes du commerce.
+- **LES AUTONOMIES PRENNENT LA COULEUR DE LEUR ANNEAU.** « Ce serait bien
+  d'ajouter un peu plus de couleur pour l'autonomie constatée […] ce qui
+  permettra aux gens de mieux comprendre le cercle du rayon d'action, qui
+  n'est pas accompagné d'une légende. » C'est exactement cela : la couleur
+  n'est pas un ornement, c'est LA LÉGENDE qui manquait. Vert en ville, ambre
+  sur route, rouge sur autoroute — les teintes EXACTES des cercles, prises
+  dans lib/vehicule.ts et non redéfinies : deux jeux de couleurs se seraient
+  désaccordés au premier changement.
+- **ET LA COULEUR NE PORTE PAS L'INFORMATION SEULE** : le libellé la dit, et
+  le titre nomme l'anneau correspondant. Un daltonien lit la même chose.
+
+Tests : 2 unitaires sur les couleurs de la légende (unicité, format), 1 E2E
+qui vérifie le dessin ET sa teinte calculée sur le bouton Domicile. Trois
+parcours mis à jour (« Favoris… » devient « Favoris »). 831 unitaires, 265 E2E.
+
 ## [0.102.0] — 2026-08-30 — VOIX-2 : les arrêts de recharge annoncés (PR #130)
 
 Armelin : « fais les annonces vocales de recharge ».

@@ -3059,3 +3059,41 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
   background-size: 100% 100%;
   background-repeat: no-repeat;
 }
+
+/* ==========================================================================
+   ERGO-3 — LES RACCOURCIS D'ITINÉRAIRE PASSENT AU DESSIN (Armelin, 30/08 :
+   « l'ergonomie fait trop formulaire »)
+   ========================================================================== */
+.iti-raccourci { display: inline-flex; align-items: center; gap: 6px; }
+.iti-raccourci .picto-menu { width: 20px; height: 20px; flex: 0 0 auto; }
+/* CHAQUE REPÈRE A SA COULEUR, et c'est ce qui les distingue d'un coup d'œil :
+   une maison ocre, un immeuble gris, une étoile jaune. Ce sont des repères
+   personnels, pas des commandes — on les reconnaît, on ne les lit pas. */
+.iti-raccourci-domicile .picto-toit,
+.iti-raccourci-domicile .picto-porte { stroke: #C4741A; }
+.iti-raccourci-domicile .picto-mur { stroke: #C4741A; fill: #FBE9D5; }
+.iti-raccourci-travail .picto-mur { fill: #E6E5E0; }
+.iti-raccourci-travail .picto-fenetres { stroke-width: 2.2; }
+.iti-raccourci-favoris .picto-menu-plein { fill: #F5B301; stroke: #D99900; }
+@media (prefers-color-scheme: dark) {
+  .iti-raccourci-domicile .picto-mur { fill: #3A2A18; }
+  .iti-raccourci-travail .picto-mur { fill: #2E2E2B; }
+}
+
+/* ERGO-3 — LES AUTONOMIES PRENNENT LA COULEUR DE LEUR ANNEAU. C'est la
+   légende qui manquait au rayon d'action : vert en ville, ambre sur route,
+   rouge sur autoroute — les teintes exactes des cercles posés sur la carte. */
+.veh-bilan-lignes { display: flex; flex-wrap: wrap; gap: 6px; }
+.veh-bilan-ligne {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px 3px 7px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--teinte) 45%, transparent);
+  background: color-mix(in srgb, var(--teinte) 12%, transparent);
+  font: 600 12px var(--police); color: var(--texte-1);
+}
+/* LA PASTILLE REPREND LE TRAIT DE L'ANNEAU : c'est elle qui fait le lien
+   avec le cercle, pas le fond du cartouche. */
+.veh-bilan-ligne::before {
+  content: ''; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--teinte); flex: 0 0 auto;
+}

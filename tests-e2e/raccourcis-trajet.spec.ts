@@ -83,7 +83,20 @@ test('domicile se propose en un geste, au départ comme à l’arrivée', async 
   await page.locator('.iti > summary').click();
   await page.locator('.iti > summary').click();
 
-  await page.getByRole('button', { name: 'Partir de Domicile' }).click();
+  /* IL PORTE SON DESSIN (ERGO-3, 30/08). Armelin : « les textes Ma position,
+     domicile, travail, favoris sont affichés sous forme de texte.
+     L'ergonomie fait trop formulaire. » Le mot reste À CÔTÉ du dessin : deux
+     icônes seules se confondent, et le nom accessible ne remplace pas ce que
+     l'œil cherche. */
+  const domicile = page.getByRole('button', { name: 'Partir de Domicile' });
+  await expect(domicile.locator('svg.picto-domicile')).toBeVisible();
+  await expect(domicile).toContainText('Domicile');
+  const toit = await page.evaluate(() => getComputedStyle(
+    document.querySelector('.iti-raccourci-domicile .picto-toit')!,
+  ).stroke);
+  expect(toit, 'la maison est ocre, pas grise').toBe('rgb(196, 116, 26)');
+
+  await domicile.click();
   await expect(page.locator('[data-role="depart"] input'))
     .toHaveValue(/avenue Anatole France/);
   // Et le MÊME lieu se propose en arrivée : on rentre aussi chez soi.
@@ -113,7 +126,7 @@ test('un favori se propose aussi, sans qu’on retape son nom', async ({ page })
 
   /* DEPUIS LE MANDAT UX DU 28/08, les favoris ne s'étalent plus sous chaque
      champ — la capture d'Armelin montrait le mur qu'ils formaient. Un bouton
-     « Favoris… » ouvre une boîte dédiée ; deux gestes au lieu d'un, mais un
+     « Favoris » ouvre une boîte dédiée ; deux gestes au lieu d'un, mais un
      volet qui respire. */
   await page.locator('[data-pour="arrivee"]')
     .getByRole('button', { name: 'Choisir un favori comme arrivée' }).click();

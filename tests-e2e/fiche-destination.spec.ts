@@ -65,5 +65,5 @@ test('« Ajouter aux favoris » garde le lieu sous son nom BAN, sans attente', a
   await page.locator('.iti > summary').click();
   await expect(page.locator('[data-pour="arrivee"]')
     .getByRole('button', { name: 'Choisir un favori comme arrivée' }))
-    .toContainText('Favoris… (1)');
+    .toContainText('Favoris (1)');
 });
