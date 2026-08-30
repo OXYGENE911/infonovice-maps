@@ -2,6 +2,31 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.102.0] — 2026-08-30 — VOIX-2 : les arrêts de recharge annoncés (PR #130)
+
+Armelin : « fais les annonces vocales de recharge ».
+
+- **DEUX PALIERS, ET PAS TROIS.** Dix kilomètres — le moment où l'on décide
+  encore de s'arrêter avant, ou de pousser — puis un kilomètre, celui du
+  clignotant. Entre les deux, il n'y a rien à décider, et une voix qui répète
+  est une voix qu'on coupe.
+- **QUAND, OÙ, COMBIEN DE TEMPS**, dans l'ordre où la question se pose au
+  volant : « Arrêt recharge dans 10 kilomètres, Ionity Beaune-Tailly,
+  24 minutes de charge ». Le réseau ne se répète pas quand le nom le porte
+  déjà.
+- **LA MANŒUVRE PASSE D'ABORD**, comme pour le trafic : un arrêt à dix
+  kilomètres attendra la fin du virage.
+- **ET L'ARRÊT PASSE AVANT LE TRAFIC** dans les blancs : il demande une
+  DÉCISION, quand le trafic informe.
+- **UN DÉFAUT TROUVÉ PAR LE PARCOURS** : sans feuille de route, AUCUNE
+  annonce ne sortait — pas même le trafic ni la recharge, qui n'en dépendent
+  pas. Or la feuille manque plus souvent qu'on ne croit : service
+  d'instructions en panne, itinéraire rejoué depuis un lien.
+
+Tests : 7 unitaires (paliers, garde de manœuvre, formulation, arrêt suivant),
+1 E2E qui parcourt un tiers du trajet fixe par fixe et vérifie que l'annonce
+tombe UNE fois, ni avant ni deux. 829 unitaires, 265 E2E.
+
 ## [0.101.0] — 2026-08-30 — ERGO-2 : cinq retours du volant, dont deux de mes défauts (PR #129)
 
 - **LA VOITURE EST ENFIN BASSE DANS L'ÉCRAN.** « Elle est toujours centrée au
