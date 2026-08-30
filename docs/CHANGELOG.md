@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.85.0] — 2026-08-30 — PEAGE-1 : le coût des péages, là où la donnée existe (PR #113)
+
+« Est-ce possible d'afficher une estimation du coût en péage sur chaque
+tronçon avant de choisir d'éviter les autoroutes ? » (Armelin, 30/08). Oui —
+sur un seul réseau, et c'est dit.
+
+- **Le relevé des gares porte maintenant un PRIX** : total, tronçon par
+  tronçon, classe 1 (voiture particulière).
+- **Grille AREA seulement**, engendrée en index de 16 Ko et chargée à la
+  demande : A41, A43, A48, A49, A51 nord.
+- **CE QU'ON NE SAIT PAS CHIFFRER EST NOMMÉ, gare par gare.** Un total
+  partiel présenté comme un total serait pire que pas d'estimation : c'est
+  sur lui qu'on déciderait d'éviter l'autoroute.
+- **APRR ÉCARTÉ, MESURE À L'APPUI** : son fichier est corrompu à la source —
+  6 911 « gares de sortie » distinctes pour environ 200 gares réelles. Une
+  reconstruction a été tentée ET REJETÉE : la structure du fichier permettait
+  de la vérifier, et elle ne rend que 10 738 paires distinctes sur 18 915
+  attendues. Vinci, Sanef, SAPN et ATMB ne publient rien. Tout est consigné
+  dans docs/apis.md.
+
+661 tests unitaires (+11), 204 parcours E2E (+1).
 ## [0.84.0] — 2026-08-30 — ITI-3 : trois itinéraires A, B, C (PR #112)
 
 « Quand je planifie un itinéraire, je souhaite avoir un itinéraire A, B et

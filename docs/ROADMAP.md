@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #113 — PEAGE-1, le coût des péages (demande du 30/08) : prix par
+      tronçon et total, grille AREA engendrée (16 Ko) ; ce qui n'est pas
+      chiffrable est NOMMÉ. APRR écarté sur mesure — fichier corrompu à la
+      source, reconstruction tentée et rejetée faute de preuve (docs/apis.md).
 - [x] PR #112 — ITI-3, trois itinéraires A/B/C (demande du 30/08) : trois
       calculs RÉELS en parallèle (rapide, court, sans autoroute) — le
       service n'ayant pas d'« alternatives » —, tracés sur la carte et

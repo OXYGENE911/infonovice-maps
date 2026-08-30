@@ -2736,3 +2736,18 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
 @media (prefers-reduced-motion: reduce) {
   .bg-deplier::after { transition: none; }
 }
+
+/* PEAGE-1 (30/08) — le coût estimé des péages. Le total d'abord, le détail
+   ensuite, et EN DERNIER ce qu'on n'a pas su chiffrer : c'est la seule
+   façon de savoir que le total n'est pas le total. */
+.iti-peages-gares { margin: 0; font: 400 11.5px/1.5 var(--police); color: var(--texte-3); }
+.iti-peages-total {
+  margin: 8px 0 0; font: 700 13px var(--police); color: var(--texte-1);
+  font-variant-numeric: tabular-nums;
+}
+.iti-peages-troncons {
+  margin: 4px 0 0; padding-left: 18px; display: grid; gap: 2px;
+  font: 400 12px var(--police); color: var(--texte-2);
+  font-variant-numeric: tabular-nums;
+}
+.iti-peages-note { margin: 6px 0 0; font: 400 11px/1.5 var(--police); color: var(--texte-3); }

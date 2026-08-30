@@ -24,6 +24,7 @@ import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
 import { apprendreTrajet, lireHabitudes, suggerer } from '../lib/routines';
 import { profilItineraire, denivele } from '../lib/altimetrie';
+import { chargerGrille, estimerPeages } from '../lib/peages-tarifs';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
 import { stationsDuTrajet, distanceM, situerSurLeTrace, type SurLeTrajet } from '../lib/le-long-du-trajet';
 import {
@@ -1536,10 +1537,18 @@ export class PanneauItineraire extends HTMLElement {
       const liste = gares
         .map((g) => `${g.nom ?? 'gare de péage'} (km ${Math.round(g.avancementM / 1000)})`)
         .join(' · ');
-      corps.textContent =
+      corps.replaceChildren();
+      const nomsLigne = document.createElement('p');
+      nomsLigne.className = 'iti-peages-gares';
+      nomsLigne.textContent =
         `${gares.length} gare${gares.length > 1 ? 's' : ''} de péage sur ce tracé : `
-        + `${liste}. Source OpenStreetMap — le tarif n’y figure pas, et une gare`
-        + ' absente de la carte n’est pas relevée.';
+        + `${liste}. Source OpenStreetMap — une gare absente de la carte n’est`
+        + ' pas relevée.';
+      corps.append(nomsLigne);
+      /* LE PRIX VIENT APRÈS LES NOMS, et par un second chemin : la grille
+         tarifaire est un autre jeu de données, d'une autre source, qui ne
+         couvre pas tout. La liste des gares reste utile même sans elle. */
+      void this.#chiffrerPeages(gares, corps, iti);
     } catch (e) {
       // Overpass tombe souvent : le bouton reste réessayable.
       bouton.disabled = false;
@@ -1563,6 +1572,77 @@ export class PanneauItineraire extends HTMLElement {
    * appliquer condamnerait la comparaison d'avance, et c'est écrit sous le
    * résultat.
    */
+  /**
+   * Le PRIX des péages relevés — quand la grille publique le connaît.
+   *
+   * CE QU'ELLE COUVRE, ET CE QU'ELLE NE COUVRE PAS (mesuré le 30/08) : seul
+   * le réseau AREA publie une grille exploitable — celle d'APRR est
+   * corrompue à la source, Vinci et Sanef n'en publient aucune. On chiffre
+   * donc ce qu'on peut et l'on NOMME les
+   * tronçons qu'on ne sait pas chiffrer — une estimation partielle
+   * présentée comme un total serait pire que pas d'estimation : c'est sur
+   * elle qu'on déciderait d'éviter l'autoroute.
+   */
+  async #chiffrerPeages(
+    gares: readonly { nom: string | null }[], corps: HTMLElement, iti: Itineraire,
+  ): Promise<void> {
+    const attente = this.#attente('Lecture de la grille tarifaire…');
+    corps.append(attente);
+    let grille: Record<string, number>;
+    try {
+      grille = await chargerGrille();
+    } catch {
+      attente.remove();
+      const echec = document.createElement('p');
+      echec.className = 'iti-peages-note';
+      echec.textContent = 'La grille tarifaire n’a pas pu être lue :'
+        + ' les gares restent listées, sans prix.';
+      corps.append(echec);
+      return;
+    }
+    if (this.#dernier !== iti) return; // le trajet a changé sous l'appel
+    attente.remove();
+
+    const e = estimerPeages(gares, grille);
+    const total = document.createElement('p');
+    total.className = 'iti-peages-total';
+    if (e.troncons.length === 0) {
+      total.textContent = 'Aucun tronçon chiffrable : la seule grille publique'
+        + ' exploitable est celle du réseau AREA (A41, A43, A48, A49, A51).';
+      corps.append(total);
+      return;
+    }
+    const euros = (v: number): string => v.toFixed(2).replace('.', ',');
+    total.textContent = `Péages estimés : ${euros(e.totalEuros)} €`
+      + ` (voiture, classe 1) sur ${e.troncons.length} tronçon`
+      + `${e.troncons.length > 1 ? 's' : ''}.`;
+    corps.append(total);
+
+    const detail = document.createElement('ul');
+    detail.className = 'iti-peages-troncons';
+    for (const t of e.troncons) {
+      const li = document.createElement('li');
+      li.textContent = `${t.entree} → ${t.sortie} : ${euros(t.prixEuros)} €`;
+      detail.append(li);
+    }
+    corps.append(detail);
+
+    /* CE QU'ON N'A PAS SU CHIFFRER SE DIT, gare par gare : c'est la seule
+       façon de savoir que le total n'est pas le total. */
+    if (e.inconnus.length > 0) {
+      const manque = document.createElement('p');
+      manque.className = 'iti-peages-note';
+      manque.textContent = `${e.inconnus.length} tronçon`
+        + `${e.inconnus.length > 1 ? 's' : ''} non chiffré`
+        + `${e.inconnus.length > 1 ? 's' : ''} : `
+        + e.inconnus.map((i) => `${i.entree} → ${i.sortie}`).join(' · ')
+        + '. Seul le réseau AREA publie une grille exploitable ;'
+        + ' celle d’APRR est corrompue à la source, et Vinci comme Sanef'
+        + ' n’en publient aucune.';
+      corps.append(manque);
+    }
+  }
+
   /**
    * TROIS ITINÉRAIRES RÉELS, calculés séparément — voir `VARIANTES`.
    *

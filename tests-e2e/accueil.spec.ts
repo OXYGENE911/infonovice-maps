@@ -1022,7 +1022,12 @@ test('PÉAGES : relevés à la demande, cabines FONDUES en gares, limites dites'
   await expect(corps, 'le kilométrage situe chaque gare').toContainText(/km \d+/);
   // Les limites en toutes lettres : la source, et ce qu'elle n'a pas.
   await expect(corps).toContainText('OpenStreetMap');
-  await expect(corps).toContainText('tarif');
+  /* LE TARIF N'EST PLUS « ABSENT » DEPUIS PEAGE-1 (30/08) : il se cherche
+     dans la grille AREA. Sur ces gares-là — inconnues de la seule grille
+     publique exploitable — l'application dit ce qu'elle ne sait pas, ce qui
+     est justement le contrat. */
+  await expect(corps).toContainText('Aucun tronçon chiffrable');
+  await expect(corps).toContainText('AREA');
   expect(appels, 'un clic, un appel').toBe(1);
 
   /* ET LA PANNE PARLE FRANÇAIS : en surcharge, Overpass rend une page HTML —
@@ -1809,4 +1814,52 @@ test('POI : sous le zoom 12, les recherches se DISENT inertes — avant le clic'
   await expect(page.locator('.poi-categorie').first()).toBeEnabled();
   await expect(page.locator('.poi-seuil-vue')).toBeHidden();
   await expect(page.locator('.poi-nom-station')).toBeEnabled();
+});
+
+test('PEAGE-1 : le coût estimé des péages — et ce qu’on ne sait PAS chiffrer', async ({ page }) => {
+  /* Armelin, le 30/08 : « est-ce possible d'afficher une estimation du coût
+     en péage sur chaque tronçon avant de choisir d'éviter les autoroutes ? »
+     Oui, sur le RÉSEAU AREA — la seule grille publique exploitable (celle
+     d'APRR est corrompue à la source, Vinci et Sanef n'en publient aucune).
+     CE QUI COMPTE ICI : que le total ne se fasse jamais passer pour le
+     total. C'est sur lui qu'on déciderait d'éviter l'autoroute. */
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[5.92, 45.56], [6.13, 45.90]] },
+      distance: 45_000, duration: 2_400,
+    }),
+  }));
+  // Deux gares AREA RÉELLES (la grille engendrée les connaît) et une inconnue.
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json',
+    body: JSON.stringify({ elements: [
+      { type: 'node', id: 1, lat: 45.62, lon: 5.957,
+        tags: { barrier: 'toll_booth', name: 'Péage de Chambéry Nord' } },
+      { type: 'node', id: 2, lat: 45.86, lon: 6.106,
+        tags: { barrier: 'toll_booth', name: 'Annecy Nord' } },
+      { type: 'node', id: 3, lat: 45.89, lon: 6.124,
+        tags: { barrier: 'toll_booth', name: 'Gare inconnue de Vinci' } },
+    ] }),
+  }));
+  await page.goto('/#iti=5.92000,45.56000;6.13000,45.90000;car');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('45 km', { timeout: 15_000 });
+  await allerA(page, 'options');
+  await page.getByRole('button', { name: /Relever les péages/ }).click();
+
+  // LE PRIX, POUR LE TRONÇON QUE LA GRILLE CONNAÎT.
+  const total = page.locator('.iti-peages-total');
+  await expect(total).toContainText('Péages estimés', { timeout: 25_000 });
+  await expect(total).toContainText('€');
+  await expect(page.locator('.iti-peages-troncons li'))
+    .toContainText('Péage de Chambéry Nord → Annecy Nord');
+
+  /* ET CE QU'ON NE SAIT PAS : nommé, gare par gare. Un total partiel présenté
+     comme un total serait pire que pas d'estimation du tout. */
+  const note = page.locator('.iti-peages-note');
+  await expect(note).toContainText('non chiffré');
+  await expect(note).toContainText('Gare inconnue de Vinci');
+  await expect(note, 'la couverture réelle doit être dite').toContainText('AREA');
 });

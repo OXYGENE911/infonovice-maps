@@ -673,6 +673,45 @@ de la notice seulement, jamais en lot.
 RIEN N'EST LIVRÉ : la voie à 96 % demande la dérogation. C'est une
 DÉCISION d'Armelin, pas un choix technique.
 
+## Tarifs de peage : une grille sur cinq est exploitable (mesure du 30/08/2026)
+
+Armelin, le 30/08 : « est-ce possible d'afficher une estimation du cout en
+peage sur chaque troncon ? » Sept recherches sur data.gouv.fr, et une
+inspection ligne a ligne des fichiers trouves :
+
+| Reseau | Ce qui est publie | Verdict |
+|---|---|---|
+| **AREA** | grille complete avec IDENTIFIANTS de gare — 955 lignes, 52 gares, 480 paires, classes 1 a 5, Licence Ouverte | **UTILISE** : index engendre (16 Ko), couvre A41, A43, A48, A49, A51 nord |
+| **APRR** | grille de 21 505 lignes… **corrompue a la source** | ecartee, voir ci-dessous |
+| Vinci (ASF, Cofiroute, Escota) | rien | impossible |
+| Sanef, SAPN, ATMB | rien | impossible |
+
+**LE DEFAUT D'APRR, ET POURQUOI ON NE LE REPARE PAS.** Sa colonne
+`gare_sortie` porte **6 911 valeurs distinctes** la ou le reseau compte
+environ deux cents gares. La cause se lit sur une ligne : le separateur
+entre les deux gares est devenu une espace, et une espace INTERNE au nom de
+la gare d'entree est devenue la virgule.
+
+    attendu : MACON CENTRE,AMBERIEU,69.84,6.7,…
+    publie  : MACON,CENTRE AMBERIEU,69.84,6.7,…
+
+Les quatre millesimes publies (2023-02, 2024-09, 2025-01, 2026-02) portent le
+meme defaut.
+
+**UNE RECONSTRUCTION A ETE TENTEE, PUIS REJETEE — et c'est le point
+important.** Le fichier a une structure forte (21 505 lignes = toutes les
+paires de ~208 gares) qui donne un moyen de VERIFIER un decodage : chaque
+paire doit apparaitre une fois et une seule. Un decodage par frequence des
+suffixes rend 195 noms de gares plausibles, mais seulement **10 738 paires
+distinctes sur 18 915 attendues** : la moitie des lignes se replient sur une
+paire deja vue. Le decodage n'est donc pas prouve. Un tarif attribue a la
+mauvaise paire serait pire que pas de tarif — c'est sur lui qu'on deciderait
+d'eviter l'autoroute. Le script `scripts/generer-tarifs-peage.mjs` porte
+cette mesure en commentaire, pour qu'on ne recommence pas.
+
+A signaler au producteur : le fichier APRR redeviendrait exploitable d'un
+simple export correct.
+
 ## Schémas de manœuvre : ce que le moteur ne dit pas (mesuré le 29/08/2026)
 
 Armelin, le 29/08 : « pourquoi pas afficher des schémas complexes pour
