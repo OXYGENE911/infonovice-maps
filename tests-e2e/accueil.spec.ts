@@ -801,22 +801,26 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
   expect(appelsCarbu, 'appel parti sous le zoom minimal').toBe(appelsAvant);
 });
 
-test('COMPARER : les deux variantes d’autoroute, chiffrées, et la variante se prend', async ({ page }) => {
-  /* Le verdict « alternatives » du 27/08 : pas de moteur, pas de faux A/B/C —
-     LA variante qui a un sens, l'autre choix d'autoroute, nommée par ce
-     qu'elle est. Le moteur simulé répond plus long et plus lent quand la
-     contrainte autoroute est dans l'URL. */
+test('ITI-3 : TROIS itinéraires A, B, C — chiffrés, tracés, et adoptables', async ({ page }) => {
+  /* Armelin, le 30/08 : « quand je planifie un itinéraire, je souhaite avoir
+     un itinéraire A, B et C pour voir les routes alternatives empruntées ».
+     CE NE SONT PAS trois sorties d'un même optimiseur — le service public
+     n'expose aucun paramètre « alternatives » (mesuré en PR #6, reconfirmé
+     le 29/08). Ce sont TROIS ITINÉRAIRES RÉELS, calculés avec trois
+     consignes : le plus rapide, le plus court, sans autoroute. Le moteur
+     simulé répond différemment à chacune. */
   const urls: string[] = [];
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
     const url = decodeURIComponent(route.request().url());
     urls.push(url);
     const sansAutoroute = url.includes('"value":"autoroute"');
+    const court = url.includes('optimization=shortest');
     return route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
         geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
-        distance: sansAutoroute ? 455_000 : 390_000,
-        duration: sansAutoroute ? 19_000 : 13_000,
+        distance: sansAutoroute ? 455_000 : court ? 360_000 : 390_000,
+        duration: sansAutoroute ? 19_000 : court ? 15_500 : 13_000,
       }),
     });
   });
@@ -828,22 +832,37 @@ test('COMPARER : les deux variantes d’autoroute, chiffrées, et la variante se
   await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
   await allerA(page, 'options');
 
-  await page.getByRole('button', { name: 'Comparer avec et sans autoroute' }).click();
+  await page.getByRole('button', { name: /Comparer trois itinéraires/ }).click();
   const corps = page.locator('.iti-comparer-corps');
-  // Les deux variantes, nommées et chiffrées — l'actuelle est marquée.
-  await expect(corps.locator('.comparer-actuelle')).toContainText('Par l’autoroute — le trajet actuel');
-  await expect(corps.locator('.comparer-actuelle')).toContainText('390 km');
-  const autre = corps.locator('.comparer-variante:not(.comparer-actuelle)');
-  await expect(autre).toContainText('Sans autoroute');
-  await expect(autre).toContainText('455 km');
+  await expect(corps.locator('.comparer-variante')).toHaveCount(3);
+
+  // TROIS BLOCS NOMMÉS ET CHIFFRÉS.
+  const a = corps.locator('[data-variante="A"]');
+  const b = corps.locator('[data-variante="B"]');
+  const c = corps.locator('[data-variante="C"]');
+  await expect(a).toContainText('Le plus rapide');
+  await expect(a).toContainText('390 km');
+  await expect(b).toContainText('360 km');
+  await expect(c).toContainText('455 km');
+
+  /* LE CLASSEMENT SE LIT PLUS VITE QUE TROIS NOMBRES : la plus rapide et la
+     plus courte sont désignées — et ce ne sont pas les mêmes. */
+  await expect(a.locator('.comparer-marque')).toContainText('la plus rapide');
+  await expect(b.locator('.comparer-marque')).toContainText('la plus courte');
+
   // Sans véhicule renseigné, la note le dit au lieu d'inventer une recharge.
   await expect(corps.locator('.comparer-note')).toContainText('Renseignez votre véhicule');
 
-  /* « PRENDRE CETTE VARIANTE » : la case bascule, le trajet recalcule. */
-  await autre.getByRole('button', { name: 'Prendre cette variante' }).click();
+  // LES ROUTES SE VOIENT sur la carte — c'était la demande.
+  expect(await page.evaluate(() => Boolean(
+    (window as unknown as { __carte: { getLayer(id: string): unknown } })
+      .__carte.getLayer('variantes-trait'))), 'les variantes ne sont pas tracées').toBe(true);
+
+  /* ET L'ON EN PREND UNE : voir ne suffit pas. La consigne s'applique, le
+     trajet se refait. */
+  await c.getByRole('button', { name: /Prendre l’itinéraire C/ }).click();
   await expect(page.locator('.iti-resultat')).toContainText('455 km', { timeout: 10_000 });
   await expect(page.locator('.iti-eviter input[value="autoroute"]')).toBeChecked();
-  // La dernière requête porte bien la contrainte.
   expect(urls[urls.length - 1]).toContain('"value":"autoroute"');
 });
 

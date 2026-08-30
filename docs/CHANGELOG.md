@@ -2,6 +2,30 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.84.0] — 2026-08-30 — ITI-3 : trois itinéraires A, B, C (PR #112)
+
+« Quand je planifie un itinéraire, je souhaite avoir un itinéraire A, B et
+C pour voir les routes alternatives empruntées » (Armelin, 30/08).
+
+- **TROIS ITINÉRAIRES RÉELS**, pas trois sorties d'un même optimiseur : le
+  service public n'expose aucun paramètre « alternatives » (mesuré en
+  PR #6, reconfirmé le 29/08). On lui pose donc TROIS QUESTIONS
+  différentes — le plus rapide (A), le plus court (B), sans autoroute (C) —
+  ce qui est plus honnête qu'un classement inventé, et souvent plus utile :
+  on voit ce que chaque consigne coûte.
+- **Trois appels EN PARALLÈLE** : l'attente est celle de la plus lente, pas
+  leur somme. Un échec isolé ne perd pas les autres — la variante qui ne se
+  calcule pas est NOMMÉE, les deux autres restent.
+- **On les VOIT** : les trois tracés se posent sur la carte en trait fin
+  pointillé, sous le tracé principal.
+- **On en PREND une** : chaque bloc porte son bouton, qui applique la
+  consigne et relance le calcul — plan de recharge compris.
+- Le classement se lit d'un coup : « la plus rapide » et « la plus courte »
+  sont désignées, et ce ne sont pas toujours les mêmes. Avec un véhicule
+  renseigné, le total compté est ROUTE + CHARGES : le plus rapide sur la
+  route peut perdre en tout s'il oblige à un arrêt de plus.
+
+645 tests unitaires, 200 parcours E2E.
 ## [0.83.0] — 2026-08-30 — ZOOM-1 : la carte se rapproche à l'intersection (PR #111)
 
 « Est-ce que l'algorithme peut effectuer automatiquement un zoom lors de

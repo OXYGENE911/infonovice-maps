@@ -54,6 +54,26 @@ import type { FicheLieu } from './fiche-lieu';
 import type { BandeauGuidage } from './bandeau-guidage';
 
 const SOURCE = 'itineraire';
+/* LES VARIANTES A/B/C — une seule source pour les trois : elles se
+   distinguent par une propriété, pas par un calque de plus. */
+const SOURCE_VARIANTES = 'itineraire-variantes';
+
+/* LES TROIS VARIANTES, ET CE QU'ELLES SONT VRAIMENT (ITI-3, demande
+   d'Armelin du 30/08 : « je souhaite avoir un itinéraire A, B et C pour
+   voir les routes alternatives empruntées »).
+   CE NE SONT PAS TROIS SORTIES D'UN MÊME OPTIMISEUR : le service public ne
+   publie aucun paramètre « alternatives » (mesuré en PR #6, reconfirmé le
+   29/08). Ce sont TROIS ITINÉRAIRES RÉELS, calculés séparément avec trois
+   consignes différentes — ce qui est plus honnête qu'un classement inventé,
+   et souvent plus utile : on voit ce que chaque consigne coûte. */
+export const VARIANTES = [
+  { cle: 'A', libelle: 'Le plus rapide', optimisation: 'fastest' as Optimisation,
+    sansAutoroute: false },
+  { cle: 'B', libelle: 'Le plus court', optimisation: 'shortest' as Optimisation,
+    sansAutoroute: false },
+  { cle: 'C', libelle: 'Sans autoroute', optimisation: 'fastest' as Optimisation,
+    sansAutoroute: true },
+] as const;
 /* LES BORNES DU MODE TRAJET — deux sources : le corridor (toutes les bornes à
    portée du tracé, cliquables) et les arrêts du plan (pastilles numérotées).
    Elles remplacent l'affichage national pendant qu'un plan est à l'écran :
@@ -511,8 +531,8 @@ export class PanneauItineraire extends HTMLElement {
                  ce qu'elles sont, avec le plan de recharge de chacune. Un
                  appel au moteur par comparaison, à la demande. -->
             <div class="iti-comparer">
-              <button type="button" class="iti-comparer-lancer">Comparer avec
-                et sans autoroute</button>
+              <button type="button" class="iti-comparer-lancer">Comparer trois
+                itinéraires (A, B, C)</button>
               <div class="iti-comparer-corps" role="status"></div>
             </div>
             <!-- LES PÉAGES SE RELÈVENT, ILS NE S'ÉVITENT PAS — le moteur
@@ -826,7 +846,7 @@ export class PanneauItineraire extends HTMLElement {
       void this.#releverPeages();
     });
     this.querySelector('.iti-comparer-lancer')?.addEventListener('click', () => {
-      void this.#comparerAutoroute();
+      void this.#comparerVariantes();
     });
 
     /* CHANGER LA MARGE REFAIT LE PLAN — mais seulement si la section est
@@ -1543,7 +1563,16 @@ export class PanneauItineraire extends HTMLElement {
    * appliquer condamnerait la comparaison d'avance, et c'est écrit sous le
    * résultat.
    */
-  async #comparerAutoroute(): Promise<void> {
+  /**
+   * TROIS ITINÉRAIRES RÉELS, calculés séparément — voir `VARIANTES`.
+   *
+   * TROIS APPELS, ET C'EST LE PRIX HONNÊTE. Le service ne rend pas
+   * d'alternatives ; on lui pose donc trois questions différentes. Elles
+   * partent EN PARALLÈLE (l'attente est celle de la plus lente, pas leur
+   * somme) et un échec isolé ne perd pas les autres : une variante qui ne
+   * se calcule pas est dite, les deux autres restent.
+   */
+  async #comparerVariantes(): Promise<void> {
     const bouton = this.querySelector<HTMLButtonElement>('.iti-comparer-lancer');
     const corps = this.querySelector<HTMLElement>('.iti-comparer-corps');
     if (!bouton || !corps) return;
@@ -1555,28 +1584,40 @@ export class PanneauItineraire extends HTMLElement {
       return;
     }
     bouton.disabled = true;
-    corps.textContent = 'Calcul de la variante…';
+    corps.replaceChildren(this.#attente('Calcul des trois itinéraires…'));
 
-    const evitaitAutoroute = cliche.eviter.includes('autoroute');
-    const eviterVariante = evitaitAutoroute
-      ? cliche.eviter.filter((v) => v !== 'autoroute')
-      : [...cliche.eviter, 'autoroute' as Eviter];
-    try {
-      const variante = await calculerItineraire(
-        cliche.depart, cliche.arrivee, cliche.profil,
-        { etapes: cliche.etapes, eviter: eviterVariante, optimisation: cliche.optimisation },
-      );
-      if (this.#dernier !== courant) return; // le trajet a changé sous l'appel
-
-      /* LA RECHARGE ENTRE DANS LA COMPARAISON quand un véhicule est
-         renseigné : l'index est en cache, le calcul est local. */
-      const profil = await this.#lireVehicule();
-      let stations: StationRapide[] | null = null;
-      if (profil) {
-        try {
-          stations = (await indexNational()).stations;
-        } catch { stations = null; /* la route se compare quand même */ }
+    const sansAutorouteDeBase = cliche.eviter.filter((v) => v !== 'autoroute');
+    const resultats = await Promise.all(VARIANTES.map(async (v) => {
+      try {
+        const iti = await calculerItineraire(
+          cliche.depart, cliche.arrivee, cliche.profil,
+          {
+            etapes: cliche.etapes,
+            eviter: v.sansAutoroute
+              ? [...sansAutorouteDeBase, 'autoroute' as Eviter]
+              : sansAutorouteDeBase,
+            optimisation: v.optimisation,
+          },
+        );
+        return { v, iti, erreur: null as string | null };
+      } catch (e) {
+        return {
+          v, iti: null,
+          erreur: e instanceof ErreurItineraire ? e.message : 'calcul indisponible',
+        };
       }
+    }));
+    if (this.#dernier !== courant) return; // le trajet a changé sous les appels
+
+    /* LA RECHARGE ENTRE DANS LA COMPARAISON quand un véhicule est
+       renseigné : l'index est en cache, le calcul est local. */
+    const profil = await this.#lireVehicule();
+    let stations: StationRapide[] | null = null;
+    if (profil) {
+      try {
+        stations = (await indexNational()).stations;
+      } catch { stations = null; /* les routes se comparent quand même */ }
+    }
       const planPour = (iti: Itineraire): PlanRecharge | null => {
         if (!profil || !stations) return null;
         return planifierArrets({
@@ -1606,99 +1647,163 @@ export class PanneauItineraire extends HTMLElement {
           profilConditions: profil.profilConditions,
         });
       };
-      this.#afficherComparaison(
-        { iti: courant, plan: planPour(courant), sansAutoroute: evitaitAutoroute, actuel: true },
-        { iti: variante, plan: planPour(variante), sansAutoroute: !evitaitAutoroute, actuel: false },
-        Boolean(profil),
-      );
-      bouton.disabled = false;
-    } catch (e) {
-      bouton.disabled = false;
-      corps.textContent = e instanceof ErreurItineraire
-        ? e.message : 'La variante n’a pas pu être calculée pour le moment.';
-    }
+
+    this.#afficherVariantes(resultats.map((r) => ({
+      cle: r.v.cle, libelle: r.v.libelle, iti: r.iti, erreur: r.erreur,
+      plan: r.iti ? planPour(r.iti) : null,
+      optimisation: r.v.optimisation, sansAutoroute: r.v.sansAutoroute,
+    })), Boolean(profil));
+    this.#poserVariantes(resultats.map((r) => r.iti));
+    bouton.disabled = false;
   }
 
-  #afficherComparaison(
-    ...variantes: [
-      { iti: Itineraire; plan: PlanRecharge | null; sansAutoroute: boolean; actuel: boolean },
-      { iti: Itineraire; plan: PlanRecharge | null; sansAutoroute: boolean; actuel: boolean },
-      boolean,
-    ]
+  /**
+   * Les trois variantes, côte à côte — et ADOPTABLES.
+   *
+   * VOIR NE SUFFIT PAS : « pour voir les routes alternatives empruntées »
+   * suppose de pouvoir en prendre une. Chaque bloc porte donc son bouton,
+   * qui applique la consigne (optimisation, autoroute) et relance le
+   * calcul — le trajet devient celui-là, plan de recharge compris.
+   */
+  #afficherVariantes(
+    variantes: {
+      cle: string; libelle: string; iti: Itineraire | null; erreur: string | null;
+      plan: PlanRecharge | null; optimisation: Optimisation; sansAutoroute: boolean;
+    }[],
+    avecVehicule: boolean,
   ): void {
-    const [a, b, avecVehicule] = variantes;
     const corps = this.querySelector<HTMLElement>('.iti-comparer-corps');
     if (!corps) return;
     corps.replaceChildren();
 
-    for (const v of [a, b]) {
+    /* LA PLUS RAPIDE ET LA PLUS COURTE SE DÉSIGNENT — parmi celles qui ont
+       abouti. Un classement se lit plus vite que trois nombres à comparer
+       de tête, et il ne dit rien de plus que ce qu'ils portent. */
+    const abouties = variantes.filter((v) => v.iti !== null);
+    const plusRapide = abouties.reduce<typeof abouties[0] | null>(
+      (m, v) => (m && m.iti!.duree <= v.iti!.duree ? m : v), null);
+    const plusCourte = abouties.reduce<typeof abouties[0] | null>(
+      (m, v) => (m && m.iti!.distance <= v.iti!.distance ? m : v), null);
+
+    for (const v of variantes) {
       const bloc = document.createElement('div');
-      bloc.className = `comparer-variante${v.actuel ? ' comparer-actuelle' : ''}`;
+      bloc.className = 'comparer-variante';
+      bloc.dataset['variante'] = v.cle;
 
       const titre = document.createElement('p');
       titre.className = 'comparer-titre';
-      titre.textContent = (v.sansAutoroute ? 'Sans autoroute' : 'Par l’autoroute')
-        + (v.actuel ? ' — le trajet actuel' : '');
+      titre.textContent = `${v.cle} — ${v.libelle}`;
+      bloc.append(titre);
+
+      if (!v.iti) {
+        const raison = document.createElement('p');
+        raison.className = 'comparer-erreur';
+        // ON DIT LAQUELLE MANQUE, ET POURQUOI : une case vide ne se comprend pas.
+        raison.textContent = v.erreur ?? 'Itinéraire indisponible.';
+        bloc.append(raison);
+        corps.append(bloc);
+        continue;
+      }
 
       const chiffres = document.createElement('p');
       chiffres.className = 'comparer-chiffres';
-      const bouts = [`${formaterDistance(v.iti.distance)}`,
-        `${formaterDuree(v.iti.duree)} de route`];
+      const bouts = [formaterDistance(v.iti.distance), `${formaterDuree(v.iti.duree)} de route`];
       if (v.plan) {
-        if (!v.plan.faisable) {
-          bouts.push('recharge : trajet non faisable avec ce véhicule');
-        } else if (v.plan.arrets.length === 0) {
-          bouts.push('aucun arrêt de recharge');
-        } else {
-          const charge = Math.round(v.plan.dureeRechargeMin);
-          bouts.push(`${v.plan.arrets.length} arrêt${v.plan.arrets.length > 1 ? 's' : ''}`
-            + `, ${charge} min de charge`);
-          bouts.push(`total ${formaterDuree(v.iti.duree + charge * 60)}`);
-        }
+        bouts.push(v.plan.faisable
+          /* LE TOTAL, C'EST LA ROUTE PLUS LES CHARGES — le seul chiffre qui
+             se compare vraiment entre deux itinéraires : le plus rapide sur
+             la route peut perdre en tout s'il oblige à un arrêt de plus. */
+          ? `${v.plan.arrets.length} arrêt${v.plan.arrets.length > 1 ? 's' : ''}`
+            + ` · ${formaterDuree(Math.round(v.iti.duree + v.plan.dureeRechargeMin * 60))} au total`
+          : 'hors de portée avec ce véhicule');
       }
       chiffres.textContent = bouts.join(' · ');
-      bloc.append(titre, chiffres);
+      bloc.append(chiffres);
 
-      if (!v.actuel) {
-        const prendre = document.createElement('button');
-        prendre.type = 'button';
-        prendre.className = 'comparer-prendre';
-        prendre.textContent = 'Prendre cette variante';
-        prendre.addEventListener('click', () => {
-          /* LA VARIANTE DEVIENT LE TRAJET : la case « autoroutes » bascule —
-             état interne ET case cochée, les deux — et le calcul repart. Le
-             résultat de la comparaison sera balayé par la remise à zéro des
-             sections : c'est juste, il décrivait l'ancien couple. */
-          const case_ = this.querySelector<HTMLInputElement>(
-            '.iti-eviter input[value="autoroute"]');
-          if (v.sansAutoroute) this.#eviter.add('autoroute');
-          else this.#eviter.delete('autoroute');
-          if (case_) case_.checked = v.sansAutoroute;
-          void this.#calculer();
-        });
-        bloc.append(prendre);
+      const marques: string[] = [];
+      if (plusRapide?.cle === v.cle) marques.push('la plus rapide');
+      if (plusCourte?.cle === v.cle) marques.push('la plus courte');
+      if (marques.length > 0) {
+        const note = document.createElement('p');
+        note.className = 'comparer-marque';
+        note.textContent = marques.join(' · ');
+        bloc.append(note);
       }
+
+      const prendre = document.createElement('button');
+      prendre.type = 'button';
+      prendre.className = 'comparer-prendre';
+      prendre.textContent = 'Prendre cet itinéraire';
+      prendre.setAttribute('aria-label', `Prendre l’itinéraire ${v.cle} — ${v.libelle}`);
+      prendre.addEventListener('click', () => { this.#adopterVariante(v); });
+      bloc.append(prendre);
       corps.append(bloc);
     }
 
-    const note = document.createElement('p');
-    note.className = 'comparer-note';
-    note.textContent = (avecVehicule
-      ? 'Plans de recharge calculés à neuf, sans vos arrêts imposés ni vos'
-        + ' réseaux préférés — les consignes du trajet actuel ne valent pas'
-        + ' pour l’autre tracé. '
-      : 'Renseignez votre véhicule pour comparer aussi la recharge. ')
-      + 'Les péages ne sont pas comptés : le tarif n’est dans aucune source'
-      + ' publique.';
-    corps.append(note);
+    if (!avecVehicule) {
+      const note = document.createElement('p');
+      note.className = 'comparer-note';
+      note.textContent = 'Renseignez votre véhicule pour comparer aussi les'
+        + ' arrêts de recharge de chaque itinéraire.';
+      corps.append(note);
+    }
   }
 
-  /* ---- les lieux d'exception près du trajet ---- */
+  /** Applique la consigne d'une variante : le trajet devient celui-là. */
+  #adopterVariante(v: { optimisation: Optimisation; sansAutoroute: boolean }): void {
+    this.#optimisation = v.optimisation;
+    const bouton = this.querySelector<HTMLInputElement>(
+      `.iti-optimisations input[value="${v.optimisation}"]`);
+    if (bouton) bouton.checked = true;
+    if (v.sansAutoroute) this.#eviter.add('autoroute');
+    else this.#eviter.delete('autoroute');
+    const caseAuto = this.querySelector<HTMLInputElement>('.iti-eviter input[value="autoroute"]');
+    if (caseAuto) caseAuto.checked = v.sansAutoroute;
+    this.#effacerVariantes();
+    void this.#calculer();
+  }
 
   /**
-   * Charge l'index des monuments classés (une fois par session) et calcule
-   * localement ceux à portée de détour du tracé.
+   * Pose les variantes sur la carte, en trait fin — « pour VOIR les routes
+   * alternatives empruntées ». Sous le tracé principal : c'est lui qu'on
+   * suit, elles ne sont là que pour être comparées d'un regard.
    */
+  #poserVariantes(itineraires: (Itineraire | null)[]): void {
+    const carte = this.#carte;
+    if (!carte) return;
+    const donnees = {
+      type: 'FeatureCollection' as const,
+      features: itineraires.filter((i): i is Itineraire => i !== null).map((i, n) => ({
+        type: 'Feature' as const,
+        properties: { variante: VARIANTES[n]?.cle ?? '?' },
+        geometry: i.geometrie,
+      })),
+    };
+    try {
+      const existante = carte.getSource(SOURCE_VARIANTES) as GeoJSONSource | undefined;
+      if (existante) { existante.setData(donnees); return; }
+      carte.addSource(SOURCE_VARIANTES, { type: 'geojson', data: donnees });
+      carte.addLayer({
+        id: 'variantes-trait', type: 'line', source: SOURCE_VARIANTES,
+        paint: {
+          'line-color': '#7A8794', 'line-width': 3, 'line-opacity': 0.85,
+          'line-dasharray': [2, 1.6],
+        },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+      }, 'itineraire-bord');
+    } catch (e) {
+      // Même garde que le tracé principal : le style peut n'être pas prêt.
+      if (e instanceof Error && /style is not done loading/i.test(e.message)) return;
+      throw e;
+    }
+  }
+
+  /** Retire les variantes de la carte — trajet adopté, ou page quittée. */
+  #effacerVariantes(): void {
+    const source = this.#carte?.getSource(SOURCE_VARIANTES) as GeoJSONSource | undefined;
+    source?.setData({ type: 'FeatureCollection', features: [] });
+  }
+
   async #chargerLieux(): Promise<void> {
     const corps = this.querySelector('.iti-monuments-corps') as HTMLElement;
     const iti = this.#dernier;
@@ -2040,6 +2145,10 @@ export class PanneauItineraire extends HTMLElement {
     (this.querySelector('.iti-corps') as HTMLElement).scrollTop = 0;
 
     // Chaque page charge ce qu'elle montre — jamais avant qu'on la demande.
+    /* LES VARIANTES NE SURVIVENT PAS À LA PAGE : elles décrivent une
+       comparaison qu'on vient de quitter, et trois traits fantômes sur la
+       carte se liraient comme des routes proposées. */
+    if (vue !== 'options') this.#effacerVariantes();
     if (vue === 'recharge') void this.#planifierRecharge();
     if (vue === 'feuille') void this.#chargerFeuille();
     if (vue === 'monuments') void this.#chargerLieux();
