@@ -2539,51 +2539,69 @@ summary .picto-menu {
   top: calc(var(--hauteur-entete, 45px) + 58px); left: 12px;
   width: min(300px, calc(100vw - 24px));
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border-radius: 14px;
-  background: var(--fond); border: 1px solid var(--bord-2);
-  border-left: 6px solid var(--gris-400);
-  box-shadow: var(--ombre-flottante);
+  /* UN VRAI PANNEAU (PAN-1, 30/08). Le listel n'est PAS une bordure : sur
+     la route, c'est un filet BLANC posé en retrait du bord, et le bord lui
+     -même est la tôle. On le dessine donc en ombre portée intérieure — une
+     bordure l'aurait collé à l'arête, ce qui ne ressemble à rien. */
+  padding: 11px 13px; border-radius: 10px; border: 0;
+  background: var(--panneau-fond); color: var(--panneau-encre);
+  box-shadow: inset 0 0 0 3px var(--panneau-fond),
+    inset 0 0 0 4.5px var(--panneau-encre), var(--ombre-flottante);
   pointer-events: auto;
 }
 .bg-cartouche[hidden] { display: none; }
-.bg-cartouche .bg-fleche { color: var(--gris-400); }
+/* L'ENCRE EST UNE, ET LA RÈGLE LE DIT : « les panneaux à fond bleu ou vert
+   comportent des inscriptions ET DES LISTELS blancs ». La flèche, le texte
+   et la distance sont des inscriptions : ils prennent la même encre, sans
+   exception — une distance grise sur fond bleu serait une faute de lecture
+   autant que de règlement. */
+.bg-cartouche .bg-fleche { color: var(--panneau-encre); }
 .bg-cartouche .bg-fleche svg { width: 38px; height: 38px; }
 .bg-cartouche-texte { flex: 1 1 auto; min-width: 0; }
 .bg-cartouche .bg-instruction {
-  margin: 0; font: 700 15.5px/1.25 var(--police); color: var(--texte-1);
+  margin: 0; font: 700 15.5px/1.25 var(--police); color: var(--panneau-encre);
 }
 .bg-cartouche .bg-distance {
-  margin: 2px 0 0; font: 700 14px var(--police); color: var(--texte-2);
+  margin: 2px 0 0; font: 700 14px var(--police); color: var(--panneau-encre);
   font-variant-numeric: tabular-nums;
+  /* La distance est une donnée SECONDE sur un panneau : elle s'efface un peu
+     sans changer d'encre — l'opacité garde le rapport de contraste au fond. */
+  opacity: .82;
 }
 
-/* L'ÉCUSSON DE ROUTE — le « panneau » demandé, avec ce que la donnée porte :
-   le numéro de `cpx_numero` (mesuré : D39, D415, D606). Rien n'est dessiné
-   quand la voie n'en a pas : un écusson vide serait un faux panneau. */
+/* LE CARTOUCHE DE NUMÉROTATION — celui qu'on lit sur la route, avec ce que
+   la donnée porte : le numéro de `cpx_numero` (mesuré : D39, D415, D606).
+   Rien n'est dessiné quand la voie n'en a pas : un cartouche vide serait un
+   faux panneau. Sa couleur est la SIENNE, pas celle du panneau qui le
+   porte — c'est un panneau dans le panneau. */
 .bg-ecusson {
   flex: 0 0 auto; align-self: flex-start;
-  padding: 3px 7px; border-radius: 6px;
-  border: 1.5px solid var(--blanc);
+  padding: 3px 7px; border-radius: 4px;
   background: var(--gris-400); color: var(--blanc);
   font: 700 12.5px var(--police); letter-spacing: .02em;
-  box-shadow: var(--ombre-s);
 }
 .bg-ecusson[hidden] { display: none; }
+/* TYPE E42 — nationales ET autoroutes : fond rouge, chiffres blancs. */
+.bg-ecusson[data-cartouche="rouge"] { background: var(--panneau-rouge); color: #FFF; }
+/* TYPE E43 — réseau départemental : fond jaune, chiffres noirs. */
+.bg-ecusson[data-cartouche="jaune"] { background: var(--panneau-jaune); color: #1A1A1A; }
+/* TYPE E41 — routes européennes. Prêt : la donnée qui le porterait vit sur
+   une ressource sans instructions de manœuvre (docs/apis.md, 30/08). */
+.bg-ecusson[data-cartouche="vert"] { background: var(--panneau-vert); color: #FFF; }
 
-/* LES TROIS COULEURS D'ARMELIN. Le bord épais porte la couleur : le fond
-   reste clair, parce qu'un cartouche plein bleu de nuit éblouit — et que le
-   texte doit rester lisible dans les deux thèmes. */
-.bg-cartouche[data-classe="autoroute"] { border-left-color: #1E63B4; }
-.bg-cartouche[data-classe="autoroute"] .bg-fleche { color: #1E63B4; }
-.bg-cartouche[data-classe="autoroute"] .bg-ecusson { background: #1E63B4; }
-.bg-cartouche[data-classe="nationale"] { border-left-color: #1E7A4B; }
-.bg-cartouche[data-classe="nationale"] .bg-fleche { color: #1E7A4B; }
-.bg-cartouche[data-classe="nationale"] .bg-ecusson { background: #1E7A4B; }
-.bg-cartouche[data-classe="departementale"] { border-left-color: #C4741A; }
-.bg-cartouche[data-classe="departementale"] .bg-fleche { color: #C4741A; }
-.bg-cartouche[data-classe="departementale"] .bg-ecusson { background: #C4741A; }
-.bg-cartouche[data-classe="locale"] { border-left-color: var(--accent); }
-.bg-cartouche[data-classe="locale"] .bg-fleche { color: var(--accent); }
+/* LES FONDS DE LA RÈGLE. Ils ne changent PAS avec le thème sombre, et c'est
+   voulu : un panneau de direction a une couleur, une seule, de jour comme de
+   nuit — sur la route il est rétroréfléchissant, donc plus lumineux la nuit,
+   pas moins. Un bleu qui vire au gris à 21 h ne serait plus un panneau. */
+.bg-cartouche[data-fond="bleu"] { --panneau-fond: var(--panneau-bleu); }
+.bg-cartouche[data-fond="vert"] { --panneau-fond: var(--panneau-vert); }
+.bg-cartouche[data-fond="blanc"] { --panneau-fond: #FFF; }
+.bg-cartouche[data-encre="blanche"] { --panneau-encre: #FFF; }
+.bg-cartouche[data-encre="noire"] { --panneau-encre: #1A1A1A; }
+/* LE REPLI, quand le bandeau n'a pas encore posé ses attributs : gris de
+   tôle, encre noire. Sans lui, le premier rendu serait un panneau
+   TRANSPARENT — les variables n'existeraient pas encore. */
+.bg-cartouche { --panneau-fond: #FFF; --panneau-encre: #1A1A1A; }
 
 /* LES COMMANDES DE VUE ET L'ATTRIBUTION SE DÉGAGENT DU BANDEAU. Il est
    désormais collé en bas : sans cette réserve, il recouvrirait le zoom, la

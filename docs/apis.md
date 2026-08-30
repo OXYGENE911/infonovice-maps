@@ -730,5 +730,38 @@ Ce qui reste possible sans nouvelle donnée : la flèche de manœuvre (livrée),
 l'écusson (livré), et la couleur de classe (livrée). Le reste attend un
 moteur qui le publie — pas une invention de notre part.
 
+### CORRECTION DU 30/08 : la ligne « aucun champ de voies » était fausse
+
+Elle a été mesurée sur la RÉPONSE, pas sur le CATALOGUE — l'erreur de
+méthode vaut d'être écrite. Le `getcapabilities` du service liste, ressource
+par ressource, les `waysAttributes` qu'elle accepte :
+
+| Ressource | `waysAttributes` acceptés | Instructions de manœuvre |
+|---|---|---|
+| `bdtopo-osrm` (celle du guidage) | **`name` seul** | oui — `depart`, `turn`, `fork`, `continue`… |
+| `bdtopo-valhalla` | `name` seul | oui |
+| `bdtopo-pgr`, `graphe_routier_*` (11 ressources) | 30 attributs, dont **`nombre_de_voies`**, `cpx_classement_administratif`, `cpx_numero_route_europeenne`, `cpx_gestionnaire`, `vitesse_moyenne_vl`, `importance` | **AUCUNE** |
+
+Mesure du 30/08 sur `bdtopo-pgr`, Melun → Provins (59 km, réponse en 1,0 s,
+203 tronçons) :
+
+- `cpx_classement_administratif` : `Autoroute`, `Nationale/Route nommée`,
+  `Départementale`, ou vide — la classe ADMINISTRATIVE, meilleure que celle
+  qu'on déduit du numéro ;
+- `cpx_numero_route_europeenne` : `E15/E50`, `E54` — de quoi dessiner le
+  cartouche vert européen (type E41) ;
+- `nombre_de_voies` : `1` à `4` — de quoi répondre un jour au « où se placer
+  sur la chaussée » ;
+- **`instruction` : vide sur les 203 tronçons.** Aucune manœuvre, aucun
+  « tournez à droite ». Cette ressource décrit une route, elle ne guide pas.
+
+CE QU'ON EN FAIT, ET CE QU'ON N'EN FAIT PAS. Rien aujourd'hui : basculer le
+guidage sur `bdtopo-pgr` échangerait les instructions — le cœur du suivi —
+contre des attributs. Les faire coexister demande DEUX itinéraires par
+trajet et un appariement de géométries qui n'ont aucune raison d'être
+identiques : c'est une PR à part entière, à mesurer avant de la promettre.
+Le découpage des numéros européens (`routesEuropeennes`) et le cartouche
+vert existent déjà, prêts, dans `src/lib/panneau.ts`.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.

@@ -12,10 +12,17 @@
  * CE QUE LA DONNÉE DONNE, MESURÉ LE 29/08 sur le service Géoplateforme :
  * chaque étape porte `attributes.name.cpx_numero` — relevé « D39 », « D415 »,
  * « D606 » sur un Melun-Fontainebleau. C'est ce champ, et lui seul, qui dit
- * la classe. Aucun champ de VOIES (lanes) n'existe dans la réponse (cherché
- * sur deux itinéraires : aucune occurrence) : les schémas de placement sur
- * la chaussée ne sont donc pas promis — on ne dessine pas ce qu'on ne sait
- * pas.
+ * la classe SUR LA RESSOURCE QU'ON INTERROGE.
+ *
+ * CORRECTION DU 30/08 — une mesure qui en corrigeait une autre. Il était
+ * écrit ici qu'« aucun champ de voies n'existe dans la réponse ». C'était
+ * vrai de la réponse, faux du service : les capacités listent
+ * `nombre_de_voies`, `cpx_classement_administratif` et
+ * `cpx_numero_route_europeenne` — mais sur la ressource `bdtopo-pgr`, pas
+ * sur `bdtopo-osrm` que le guidage utilise, et il faut les DEMANDER. La
+ * mesure de mai avait cherché dans la réponse au lieu de chercher dans le
+ * catalogue. Le détail, et pourquoi on ne bascule pas pour autant, est dans
+ * docs/apis.md — la ressource riche ne rend AUCUNE instruction de manœuvre.
  */
 
 /** Les classes que le numéro permet d'affirmer. */

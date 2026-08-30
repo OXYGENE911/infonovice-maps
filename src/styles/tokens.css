@@ -12,6 +12,15 @@
   --gris-400: #888780; --gris-600: #5F5E5A; --gris-800: #2C2C2A; --gris-900: #1A1A19;
   --ambre: #FAC775;    --ambre-fonce: #E89C2C; --vert: #3FA877; --blanc: #FFFFFF;
 
+  /* LES COULEURS DE LA SIGNALISATION FRANÇAISE (PAN-1, 30/08). Elles ne
+     sont PAS de la palette Infonovice et ne doivent pas s'y accorder : ce
+     sont celles de la route, approchées des teintes normalisées — bleu et
+     vert de signalisation, rouge et jaune des cartouches de numérotation
+     (types E42 et E43 de l'IISR). Elles ne bougent pas avec le thème : un
+     panneau a une couleur, de jour comme de nuit. */
+  --panneau-bleu: #0B4EA2;  --panneau-vert: #146B3A;
+  --panneau-rouge: #C8102E; --panneau-jaune: #F2C200;
+
   /* Rôles */
   --fond: var(--blanc);
   --fond-doux: #FAFBFC;
