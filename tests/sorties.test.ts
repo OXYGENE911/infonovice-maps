@@ -160,8 +160,15 @@ describe('requeteCorridor', () => {
     expect(q, 'les limites').toContain('maxspeed');
     expect(q, 'les sorties').toContain('motorway_junction');
     expect(q, 'les destinations').toContain('[destination]');
-    // Une seule union, une seule sortie de résultats.
-    expect(q.match(/out geom tags;/g)).toHaveLength(1);
+    expect(q, 'les giratoires').toContain('junction=roundabout');
+    /* DEUX `out` DANS UNE SEULE REQUÊTE, et c'est voulu : les branches d'un
+       giratoire se cherchent à partir de ses nœuds, ce qui demande un second
+       jeu de résultats. Overpass l'accepte dans la même requête — donc un
+       seul aller-retour, ce qui est toute la question pour un service tenu
+       par des bénévoles. */
+    expect(q.match(/out geom tags;/g)).toHaveLength(2);
+    expect(q, 'les branches se cherchent par les nœuds de l’anneau')
+      .toContain('way(bn.bords)[highway]');
     expect(q.startsWith('[out:json]')).toBe(true);
   });
 

@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #121 — ROND-1, le schéma de rond-point (demandes des 29 et 30/08) :
+      le moteur ne nomme jamais les giratoires (revérifié sur les DEUX
+      moteurs), donc le schéma est dessiné d'après l'anneau OSM et notre
+      tracé — entrée, sens de rotation MESURÉ, rang de la sortie. Il
+      remplace l'instruction du moteur au lieu de s'y ajouter.
 - [x] PR #120 — SORTIE-1, le numéro de sortie et la destination (demande du
       30/08) : relevés dans OpenStreetMap, où ils existent — la note qui les
       disait absents avait cherché dans le service d'itinéraire. Un SEUL

@@ -2920,3 +2920,31 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .bg-destination[hidden] { display: none; }
+
+/* ==========================================================================
+   ROND-1 — LE SCHÉMA DE ROND-POINT (Armelin, 29/08 : « pourquoi pas afficher
+   des schémas complexes pour indiquer un rond-point »)
+   ========================================================================== */
+/* IL PREND LA PLACE DE LA FLÈCHE, il ne s'y ajoute pas : dans un giratoire,
+   « tournez à droite » ne veut rien dire — c'est le schéma qui informe. */
+.bg-giratoire {
+  /* IL PREND LA PLACE DE LA FLÈCHE, DONC SON RANG : sans `order`, il tombait
+     à la ligne suivante — il est écrit après elle dans le gabarit, et le
+     cartouche passe à la ligne depuis VOIE-1. Vu sur capture. */
+  flex: 0 0 auto; order: -1; width: 42px; height: 42px;
+}
+.bg-giratoire[hidden] { display: none; }
+.bg-giratoire svg { width: 100%; height: 100%; }
+.bg-giratoire path, .bg-giratoire circle {
+  fill: none; stroke: var(--panneau-encre);
+  stroke-linecap: round; stroke-linejoin: round;
+}
+/* L'ANNEAU ET LES BRANCHES QU'ON NE PREND PAS s'effacent : ce qui compte est
+   la sortie. Elles restent visibles — sans elles, on ne reconnaîtrait pas le
+   carrefour en arrivant dessus, ce qui est tout l'objet du schéma. */
+.bg-gir-anneau, .bg-gir-branche, .bg-gir-entree { stroke-width: 1.6; opacity: .45; }
+.bg-gir-sortie, .bg-gir-fleche { stroke-width: 2.6; }
+.bg-gir-rang {
+  fill: var(--panneau-encre); stroke: none;
+  font: 700 12px var(--police);
+}

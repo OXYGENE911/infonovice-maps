@@ -723,7 +723,7 @@ avant d'écrire la moindre ligne :
 | Ce qu'il faudrait | Ce que le service donne | Verdict |
 |---|---|---|
 | Les VOIES d'une intersection (où se placer) | **aucun champ de voies** dans la réponse — cherché sur deux itinéraires complets, zéro occurrence de `lane`/`nb_voies` | impossible : on ne dessine pas ce qu'on ne sait pas |
-| Le ROND-POINT et son numéro de sortie | le décodeur du projet sait lire `instruction.exit`… mais **le moteur n'émet jamais `roundabout` ni `rotary`** : quatre itinéraires traversant des giratoires (rocade de Rennes, Niort, Chartres, Vannes — 63 étapes) rendent `turn`, `fork`, `continue`, `end of road`, jamais un rond-point | écarté : le schéma serait du code mort |
+| Le ROND-POINT et son numéro de sortie | le décodeur du projet sait lire `instruction.exit`… mais **le moteur n'émet jamais `roundabout` ni `rotary`** : quatre itinéraires traversant des giratoires (rocade de Rennes, Niort, Chartres, Vannes — 63 étapes) rendent `turn`, `fork`, `continue`, `end of road`, jamais un rond-point. **Revérifié le 30/08 sur les DEUX moteurs** (`bdtopo-osrm` et `bdtopo-valhalla`, même giratoire de Chartres, 9 et 7 étapes) : aucun ne le nomme | **LIVRÉ AUTREMENT** (ROND-1) : le schéma est dessiné d'après l'anneau OSM et notre tracé — voir docs/panneaux.md |
 | Le NUMÉRO de la route (l'écusson des panneaux) | `attributes.name.cpx_numero` — relevé « D39 », « D415 », « D606 » | **LIVRÉ** (GUID-2) : cartouche coloré par classe de route |
 | Le NUMÉRO DE SORTIE et la DESTINATION | rien dans le service d'itinéraire — mais **tout dans OpenStreetMap** (voir la correction ci-dessous) | **LIVRÉ** (SORTIE-1) |
 

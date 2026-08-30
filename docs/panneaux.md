@@ -75,9 +75,42 @@ Trois raisons de préférer le CSS à des images :
 | **Numéro de sortie** (« Sortie 14 ») | **LIVRÉ** (SORTIE-1) | pas dans le service d'itinéraire, mais dans OpenStreetMap : `ref` du nœud `motorway_junction` |
 | **Destination** (« Lyon, Évry ») | **LIVRÉ** (SORTIE-1) | étiquette `destination` des bretelles, « Lyon;Évry » |
 | **Flèches de voies** (où se placer) | **LIVRÉ** (VOIE-1) — voir ci-dessous | `nombre_de_voies` relevé sur `bdtopo-pgr`, recousu sur le tracé suivi |
-| **Schéma de rond-point** | écarté | le moteur n'émet jamais `roundabout` (mesuré sur quatre giratoires, 63 étapes) |
+| **Schéma de rond-point** | **LIVRÉ** (ROND-1) — voir ci-dessous | le moteur n'émet toujours pas `roundabout` (revérifié sur les DEUX moteurs) : le schéma est dessiné d'après la géométrie |
 
 Le détail de chaque mesure est dans [`apis.md`](apis.md).
+
+### Le schéma de rond-point (ROND-1, livré le 30/08)
+
+Le panneau remplace la flèche par un **schéma dessiné aux vrais angles** :
+l'anneau, l'entrée en bas, les branches à leur position réelle, notre sortie
+fléchée, et son rang au centre. L'instruction devient « Prenez la 2e sortie ».
+
+**Rien de tout cela ne vient du moteur, et c'est mesuré deux fois.** Le
+service n'émet jamais `roundabout` ni `rotary` : vérifié le 29/08 sur quatre
+giratoires (63 étapes), puis le 30/08 sur les **deux** moteurs — `bdtopo-osrm`
+et `bdtopo-valhalla` — traversant le même giratoire de Chartres. Neuf étapes
+d'un côté, sept de l'autre, aucune ne nomme le rond-point : on lit « tournez
+à droite » quatre fois de suite.
+
+Tout est donc déduit de deux choses — l'anneau `junction=roundabout`
+d'OpenStreetMap, et **notre propre tracé** :
+
+- **par où l'on entre et par où l'on sort** : le tracé le dit ;
+- **dans quel sens on tourne** : la somme des virages du tracé dans l'anneau.
+  On ne présume pas le sens français, on le **mesure** — ce qui vaut aussi
+  pour un anneau mal numérisé ;
+- **le rang de la sortie** : les branches sont ordonnées autour du centre
+  depuis notre entrée, dans notre sens, et l'on compte. Deux chaussées d'une
+  même route (à moins de 18°) comptent pour **une** sortie : les compter deux
+  fois décalerait tous les rangs et ferait sortir une sortie trop tôt.
+
+**Et quand la géométrie ne tranche pas, on ne compte pas.** Si aucune branche
+ne correspond à notre sortie, le schéma se dessine quand même — l'anneau et
+notre sortie restent vrais — mais sans annoncer un rang qu'on ignore.
+
+Les branches voyagent dans la **même** requête Overpass que le reste du
+corridor : Overpass accepte plusieurs `out` dans une requête, donc un seul
+aller-retour (0,45 s, 18 Ko mesurés).
 
 ### Le numéro de sortie et les villes desservies (SORTIE-1, livré le 30/08)
 
