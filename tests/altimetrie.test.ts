@@ -2,7 +2,9 @@
 // fixtures : au format RÉEL du service, champ `acc` compris, tel que vérifié
 // par appels réels le 20/08/2026 — voir docs/apis.md).
 import { describe, expect, test } from 'vitest';
-import { simplifier, versProfil, denivele, versTraceSVG, ErreurAltimetrie } from '../src/lib/altimetrie';
+import {
+  simplifier, versProfil, denivele, versTraceSVG, pointSurTrace, ErreurAltimetrie,
+} from '../src/lib/altimetrie';
 
 const point = (lon: number, lat: number, z: number) => ({
   lon, lat, z, acc: 'Variable suivant la source de mesure',
@@ -93,5 +95,47 @@ describe('versTraceSVG', () => {
   test('l’aire referme le polygone par le bas du repère', () => {
     const t = versTraceSVG([{ distance: 0, z: 0 }, { distance: 100, z: 10 }], 280, 72);
     expect(t.aire.endsWith('280,72 0,72')).toBe(true);
+  });
+});
+
+/* LE VÉHICULE SUR LE PROFIL (COPILOTE-1, 30/08). Armelin : « dans le profil
+ * altimétrique, est-ce possible de faire un petit rond de couleur pour
+ * indiquer où en est le véhicule sur le tracé ? » Le repère doit être celui
+ * du DESSIN — mêmes marges, même échelle que versTraceSVG — sinon le rond
+ * flotte à côté de la courbe. */
+describe('pointSurTrace', () => {
+  const points = [
+    { distance: 0, z: 100 },
+    { distance: 1_000, z: 200 },
+    { distance: 2_000, z: 100 },
+  ];
+
+  test('place le rond à l’abscisse du parcours', () => {
+    expect(pointSurTrace(points, 0, 280, 64)?.x).toBeCloseTo(0, 1);
+    expect(pointSurTrace(points, 1_000, 280, 64)?.x).toBeCloseTo(140, 1);
+    expect(pointSurTrace(points, 2_000, 280, 64)?.x).toBeCloseTo(280, 1);
+  });
+
+  test('suit la MÊME échelle verticale que le tracé — marges comprises', () => {
+    // Au sommet (z = 200 = zMax), le rond touche la marge haute.
+    expect(pointSurTrace(points, 1_000, 280, 64)?.y).toBeCloseTo(4, 1);
+    // Au plus bas (z = 100 = zMin), il touche la marge basse.
+    expect(pointSurTrace(points, 0, 280, 64)?.y).toBeCloseTo(60, 1);
+  });
+
+  test('INTERPOLE entre deux échantillons au lieu de sauter de l’un à l’autre', () => {
+    // À mi-chemin de la montée : 150 m, soit le milieu de l'échelle.
+    expect(pointSurTrace(points, 500, 280, 64)?.y).toBeCloseTo(32, 1);
+  });
+
+  test('borne aux extrémités, et refuse un profil trop court', () => {
+    expect(pointSurTrace(points, -500, 280, 64)?.x).toBe(0);
+    expect(pointSurTrace(points, 99_000, 280, 64)?.x).toBe(280);
+    expect(pointSurTrace([{ distance: 0, z: 10 }], 0, 280, 64)).toBeNull();
+  });
+
+  test('ne divise pas par zéro sur un profil plat', () => {
+    const plat = [{ distance: 0, z: 50 }, { distance: 1_000, z: 50 }];
+    expect(pointSurTrace(plat, 500, 280, 64)?.y).toBe(32);
   });
 });

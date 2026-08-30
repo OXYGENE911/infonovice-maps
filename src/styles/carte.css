@@ -3097,3 +3097,20 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
   content: ''; width: 9px; height: 9px; border-radius: 50%;
   background: var(--teinte); flex: 0 0 auto;
 }
+
+/* COPILOTE-1 — LE VÉHICULE SUR LE PROFIL (Armelin, 30/08 : « un petit rond de
+   couleur pour indiquer où en est le véhicule sur le tracé »). Il prend
+   l'accent, cerclé de blanc : sur une courbe grise, un rond de la même
+   famille se perdrait. */
+.alti-vehicule {
+  fill: var(--accent); stroke: #FFFFFF; stroke-width: 1.6;
+}
+/* Le profil et la météo ne sont plus des boutons : ce sont des lignes
+   d'attente, puis leur contenu. */
+.bg-copilote-alti, .bg-copilote-meteo {
+  margin: 2px 0 0; font: 400 12px var(--police); color: var(--texte-3);
+}
+/* La liste des commodités, dans le copilote, garde la mise en page de la
+   fiche de borne — même fonction, même dessin. */
+.bg-copilote-sortie .fb-liste-commodites { margin: 4px 0 0; }
+.fb-commodite-nom-fixe { text-align: left; }

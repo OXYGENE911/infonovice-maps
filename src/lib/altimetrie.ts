@@ -107,6 +107,43 @@ export function versTraceSVG(points: PointProfil[], largeur: number, hauteur: nu
   return { ligne, aire: `${ligne} ${largeur},${hauteur} 0,${hauteur}`, zMin, zMax };
 }
 
+/**
+ * Où se trouve le véhicule SUR le profil — PURE.
+ *
+ * LA DEMANDE. Armelin, le 30/08 : « dans le profil altimétrique, est-ce
+ * possible de faire un petit rond de couleur pour indiquer où en est le
+ * véhicule sur le tracé ? »
+ *
+ * LE REPÈRE EST CELUI DU DESSIN, pas celui de la route : mêmes marges, même
+ * échelle que `versTraceSVG`, sinon le rond flotterait à côté de la courbe.
+ * L'altitude est INTERPOLÉE entre les deux points qui encadrent l'avancement
+ * — le profil est échantillonné, et coller le rond au point le plus proche
+ * le ferait sauter d'un échantillon à l'autre.
+ */
+export function pointSurTrace(
+  points: readonly PointProfil[], avancementM: number,
+  largeur: number, hauteur: number,
+): { x: number; y: number } | null {
+  if (points.length < 2) return null;
+  const total = points[points.length - 1]!.distance || 1;
+  const d = Math.min(Math.max(avancementM, 0), total);
+  let i = 1;
+  while (i < points.length - 1 && points[i]!.distance < d) i += 1;
+  const a = points[i - 1]!;
+  const b = points[i]!;
+  const plageD = b.distance - a.distance;
+  const part = plageD > 0 ? (d - a.distance) / plageD : 0;
+  const z = a.z + (b.z - a.z) * part;
+  const MARGE = 4;
+  const zMin = Math.min(...points.map((p) => p.z));
+  const zMax = Math.max(...points.map((p) => p.z));
+  const plage = zMax - zMin;
+  return {
+    x: (d / total) * largeur,
+    y: plage === 0 ? hauteur / 2 : MARGE + ((zMax - z) / plage) * (hauteur - 2 * MARGE),
+  };
+}
+
 export async function profilItineraire(geometrie: LineString): Promise<PointProfil[]> {
   const sommets = simplifier(geometrie.coordinates as [number, number][], MAX_SOMMETS);
   const lons = sommets.map((c) => c[0].toFixed(5)).join('|');
