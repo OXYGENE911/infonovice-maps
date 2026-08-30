@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   etapeAlAvancement, etatGuidage, distanceEnMots, heureArriveeEstimee,
-  ECART_HORS_ROUTE_M, partiAContresens, type OptionsGuidage,
+  ECART_HORS_ROUTE_M, partiAContresens, approcheManoeuvre, type OptionsGuidage,
 } from '../src/lib/guidage';
 import type { EtapeRoute } from '../src/lib/feuille-de-route';
 
@@ -272,5 +272,48 @@ describe('ECART_HORS_ROUTE_M', () => {
     /* 30 à 50 m en ville dense : en dessous, on annoncerait « vous avez
        quitté l'itinéraire » à des gens qui roulent droit. */
     expect(ECART_HORS_ROUTE_M).toBeGreaterThan(50);
+  });
+});
+
+/* LE ZOOM D'APPROCHE (ZOOM-1, demande d'Armelin du 30/08) : « un zoom lors
+ * de l'arrivée à une intersection […] pour revenir ensuite à la vue initiale
+ * quand l'obstacle est passé ». Ce qui se teste à sec, c'est la DÉCISION —
+ * et surtout sa stabilité : un seuil unique ferait battre la carte au rythme
+ * du bruit du récepteur. */
+describe('approcheManoeuvre', () => {
+  it('se rapproche d’un virage, pas d’une ligne droite', () => {
+    expect(approcheManoeuvre(200, 'right', false)).toBe(true);
+    expect(approcheManoeuvre(200, 'left', false)).toBe(true);
+    expect(approcheManoeuvre(200, 'rond-point', false)).toBe(true);
+    expect(approcheManoeuvre(200, 'arrivee', false)).toBe(true);
+    expect(approcheManoeuvre(200, 'straight', false)).toBe(false);
+    expect(approcheManoeuvre(200, null, false)).toBe(false);
+  });
+
+  it('N’ENTRE qu’en dessous de 260 m', () => {
+    expect(approcheManoeuvre(259, 'right', false)).toBe(true);
+    expect(approcheManoeuvre(261, 'right', false)).toBe(false);
+  });
+
+  it('NE SORT qu’au-delà de 420 m : c’est l’écart qui empêche le battement', () => {
+    // Déjà dedans : on y reste bien au-delà du seuil d'entrée.
+    expect(approcheManoeuvre(300, 'right', true)).toBe(true);
+    expect(approcheManoeuvre(419, 'right', true)).toBe(true);
+    expect(approcheManoeuvre(421, 'right', true)).toBe(false);
+  });
+
+  it('un récepteur qui tremble autour du seuil ne fait plus battre la carte', () => {
+    /* Sans hystérésis, cette suite alternerait vrai/faux à chaque fixe.
+       Avec, elle entre une fois et n'en ressort pas. */
+    let dedans = false;
+    for (const d of [262, 258, 265, 255, 270, 240, 280, 250]) {
+      dedans = approcheManoeuvre(d, 'right', dedans);
+    }
+    expect(dedans).toBe(true);
+  });
+
+  it('refuse une distance absurde plutôt que de zoomer au hasard', () => {
+    expect(approcheManoeuvre(Number.NaN, 'right', false)).toBe(false);
+    expect(approcheManoeuvre(-10, 'right', false)).toBe(false);
   });
 });
