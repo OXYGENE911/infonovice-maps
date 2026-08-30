@@ -2,6 +2,33 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.104.0] — 2026-08-30 — COPILOTE-1 : le copilote montre au lieu de faire cliquer (PR #132)
+
+- **LES COMMODITÉS SONT STRUCTURÉES, comme dans la fiche de borne.** Armelin :
+  « dans Copilote, les informations sont affichées sous forme de texte alors
+  que sur une borne elles sont structurées, ligne par ligne, avec la distance
+  et un logo. Ce serait bien de faire le même principe. » La fiche avait ce
+  rendu depuis le 27/08 : on l'EXTRAIT (`carte/liste-commodites.ts`) plutôt
+  que de le recopier — deux écritures du même affichage se seraient séparées
+  à la première retouche.
+- **LE PROFIL ET LA MÉTÉO PARAISSENT SANS UN CLIC DE PLUS.** « Ce serait bien
+  de les afficher directement dans Copilote, sans avoir à cliquer sur un
+  bouton. » Ouvrir le copilote EST le geste ; un second clic par section
+  était un péage. L'appel reste UNIQUE par trajet — la réponse survit aux
+  fixes suivants, et deux parcours le vérifient en comptant les appels.
+- **LE VÉHICULE SE VOIT SUR LE PROFIL.** « Un petit rond de couleur pour
+  indiquer où en est le véhicule sur le tracé. » Il s'y trouve, et il se
+  DÉPLACE d'un fixe à l'autre sans redemander le profil. Le calcul vit dans
+  lib/altimetrie.ts, avec les MÊMES marges que la courbe : un rond calculé
+  autrement flotterait à côté d'elle.
+- **ET LE NOM NE SE CLIQUE PAS DANS LE COPILOTE** : la carte y est occupée
+  par la route. Un bouton qui ne ferait rien serait pire qu'un texte.
+
+Tests : 5 unitaires sur le placement du rond (échelle, marges, interpolation,
+bornes, profil plat), 2 E2E réécrits — l'un mesure que la liste porte logo et
+distance et qu'elle est triée par distance, l'autre que rien n'attend un
+clic. 836 unitaires, 265 E2E.
+
 ## [0.103.0] — 2026-08-30 — ERGO-3 : des dessins au lieu d'un formulaire (PR #131)
 
 Armelin : « les textes Ma position, domicile, travail, favoris sont affichés

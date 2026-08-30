@@ -702,7 +702,7 @@ test('à l’ARRÊT, la boussole oriente la carte — ouverte par le geste, jama
   { timeout: 10_000 }).toBe(90);
 });
 
-test('le COPILOTE : les événements de la route listés, la météo sur DEMANDE seulement', async ({ page }) => {
+test('le COPILOTE : les événements listés, la météo et le relief SANS un clic de plus', async ({ page }) => {
   /* Décision d'Armelin du 28/08 — le mode copilote : un panneau pour le
      PASSAGER pendant le suivi. Trois contrats : tout ce qui s'affiche est
      déjà en mémoire (les événements listés avec leur distance), rien ne part
@@ -781,26 +781,32 @@ test('le COPILOTE : les événements de la route listés, la météo sur DEMANDE
   await expect(copilote).toContainText(/Travaux — dans .+ km/);
   await expect(copilote).toContainText('restants');
 
-  // La météo ne part QUE sur demande — et la réponse SURVIT au fixe suivant.
-  expect(appelsMeteo).toBe(0);
-  await copilote.getByRole('button', { name: 'Météo à l’arrivée' }).click();
-  await expect(copilote).toContainText('(Open-Meteo)');
+  /* LA MÉTÉO ET LE RELIEF PARAISSENT SANS QU'ON LES DEMANDE (COPILOTE-1,
+     30/08). Armelin : « ce serait bien d'afficher le profil altimétrique et
+     la météo à l'arrivée directement dans Copilote, sans avoir à cliquer sur
+     un bouton ». Ouvrir le copilote EST le geste ; un second clic par
+     section était un péage. L'appel reste unique — la réponse survit aux
+     fixes suivants. */
+  await expect(copilote).toContainText('(Open-Meteo)', { timeout: 15_000 });
+  await expect(copilote).toContainText('D+ 285 m', { timeout: 15_000 });
+  await expect(copilote.locator('svg.alti-ligne, svg').first()).toBeVisible();
   expect(appelsMeteo).toBe(1);
+  expect(appelsAlti).toBe(1);
+
+  /* ET LE VÉHICULE SE VOIT SUR LE PROFIL : « un petit rond de couleur pour
+     indiquer où en est le véhicule sur le tracé ». Il se DÉPLACE d'un fixe à
+     l'autre sans redemander le profil. */
+  const rond = copilote.locator('.alti-vehicule');
+  await expect(rond).toBeAttached();
+  const avant = await rond.getAttribute('cx');
   await page.evaluate(() => {
     (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
-      longitude: 2.36, latitude: 48.85 });
+      longitude: 3.6, latitude: 47.3 });
   });
-  await expect(copilote).toContainText('(Open-Meteo)');
+  await expect.poll(async () => rond.getAttribute('cx'), { timeout: 10_000 })
+    .not.toBe(avant);
   expect(appelsMeteo, 'un fixe a relancé la météo').toBe(1);
-
-  /* LE RELIEF AUSSI VIT ICI depuis le 29/08 (l'ancienne page « Profil
-     altimétrique » du planificateur) : un bouton, un appel, le dessin et
-     les dénivelés — et la réponse survit comme les autres. */
-  expect(appelsAlti).toBe(0);
-  await copilote.getByRole('button', { name: 'Voir le profil altimétrique' }).click();
-  await expect(copilote).toContainText('D+ 285 m');
-  await expect(copilote.locator('svg')).toBeVisible();
-  expect(appelsAlti).toBe(1);
+  expect(appelsAlti, 'un fixe a relancé le profil').toBe(1);
 
   // La croix referme, le bouton dit son état.
   await copilote.getByRole('button', { name: 'Fermer le panneau du copilote' }).click();

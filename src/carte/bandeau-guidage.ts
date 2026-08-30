@@ -29,9 +29,11 @@ import {
   partiAContresens, approcheManoeuvre, type EtatGuidage,
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
-import { chargerCommodites, ErreurCommodites, TYPES_COMMODITE, type Commodite } from '../lib/commodites';
+import { chargerCommodites, ErreurCommodites } from '../lib/commodites';
 import { meteoA, phraseMeteo, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
-import { profilItineraire, versTraceSVG, denivele, ErreurAltimetrie } from '../lib/altimetrie';
+import {
+  profilItineraire, versTraceSVG, denivele, pointSurTrace, ErreurAltimetrie,
+} from '../lib/altimetrie';
 import { limiteA, type LimiteTrajet } from '../lib/limites';
 import {
   sortieA, destinationA, type Sortie, type DestinationBretelle,
@@ -53,6 +55,7 @@ import { refermerPanneaux } from './panneaux';
 import { classeRoute, numeroRoute, libelleClasse } from '../lib/classe-route';
 import { fondPanneau, encreSur, cartoucheNumero } from '../lib/panneau';
 import { pictoMenu } from './icone-menu';
+import { listeCommodites } from './liste-commodites';
 import { Voix } from './voix';
 import {
   palierA, phraseAnnonce, traficADire, phraseTrafic,
@@ -332,6 +335,10 @@ export class BandeauGuidage extends HTMLElement {
      arrivée. Le conducteur garde le bandeau épuré ; le copilote a les mains
      libres. Reconstruit à chaque fixe tant qu'il est ouvert. */
   #copiloteOuvert = false;
+
+  /* LE PROFIL RELEVÉ, gardé pour y replacer le rond du véhicule à chaque
+     fixe sans redemander quoi que ce soit au service. */
+  #profil: readonly { distance: number; z: number }[] = [];
 
   /** Le dernier état du guidage — le copilote se rafraîchit dessus. */
   #etat: { avancementM: number; restantM: number; restantS: number } | null = null;
@@ -1726,12 +1733,22 @@ export class BandeauGuidage extends HTMLElement {
             voir.textContent = 'Recherche…';
             chargerCommodites(a.lon, a.lat).then(
               (trouvees) => {
-                const sortie = document.createElement('p');
+                /* STRUCTURÉ, COMME DANS LA FICHE DE BORNE (COPILOTE-1,
+                   30/08). Armelin : « les informations sont affichées sous
+                   forme de texte, alors que sur une borne elles sont
+                   structurées, ligne par ligne, avec la distance et un logo.
+                   Ce serait bien de faire le même principe dans Copilote. »
+                   On appelle la MÊME fonction que la fiche : deux écritures
+                   du même affichage se seraient séparées à la première
+                   retouche. */
+                const sortie = document.createElement('div');
                 sortie.className = 'bg-copilote-sortie';
                 sortie.dataset['memoire'] = cle;
-                sortie.textContent = trouvees.length === 0
-                  ? 'Rien de recensé à moins de 400 m.'
-                  : this.#phraseCommodites(trouvees);
+                if (trouvees.length === 0) {
+                  sortie.textContent = 'Rien de recensé à moins de 400 m.';
+                } else {
+                  sortie.append(listeCommodites(trouvees, { lon: a.lon, lat: a.lat }));
+                }
                 voir.replaceWith(sortie);
               },
               (err: unknown) => {
@@ -1769,14 +1786,21 @@ export class BandeauGuidage extends HTMLElement {
     const dejaAlti = memoire.get(cleAlti);
     if (dejaAlti) {
       corps.append(dejaAlti);
+      /* LE ROND SUIT LA VOITURE À CHAQUE FIXE : le bloc est mémorisé, donc
+         reposé tel quel — il faut le déplacer explicitement, sinon il resterait
+         là où il a été dessiné. */
+      this.#majPointProfil(dejaAlti, e.avancementM);
     } else {
-      const alti = document.createElement('button');
-      alti.type = 'button';
+      /* IL SE CHARGE SEUL (COPILOTE-1, 30/08). Armelin : « ce serait bien
+         d'afficher le profil altimétrique et la météo à l'arrivée directement
+         dans Copilote, sans avoir à cliquer sur un bouton ». Le panneau est
+         DÉJÀ un geste : ouvrir le copilote, c'est demander ce qu'il porte.
+         Un second clic pour chaque section était un péage. L'appel reste
+         unique par trajet — la réponse survit aux fixes suivants. */
+      const alti = document.createElement('p');
       alti.className = 'bg-copilote-alti';
-      alti.textContent = 'Voir le profil altimétrique';
-      alti.addEventListener('click', () => {
-        alti.disabled = true;
-        alti.textContent = 'Calcul du profil…';
+      alti.textContent = 'Calcul du profil…';
+      {
         profilItineraire({ type: 'LineString', coordinates: o.trace }).then(
           (points) => {
             const t = versTraceSVG(points, 280, 64);
@@ -1792,18 +1816,22 @@ export class BandeauGuidage extends HTMLElement {
                 aria-label="Profil altimétrique, de ${Math.round(t.zMin)} à ${Math.round(t.zMax)} mètres d’altitude">
                 <polygon class="alti-aire" points="${t.aire}"></polygon>
                 <polyline class="alti-ligne" points="${t.ligne}"></polyline>
+                <circle class="alti-vehicule" r="4.5" cx="-10" cy="-10"></circle>
               </svg>
               <p class="alti-bilan">D+ ${Math.round(d.montee)} m · D− ${Math.round(d.descente)} m ·
                 de ${Math.round(t.zMin)} à ${Math.round(t.zMax)} m</p>`;
+            /* LES POINTS SONT GARDÉS : le rond du véhicule s'y replace à
+               chaque fixe, sans redemander le profil au service. */
+            this.#profil = points;
             alti.replaceWith(sortie);
+            this.#majPointProfil(sortie, this.#etat?.avancementM ?? 0);
           },
           (err: unknown) => {
-            alti.disabled = false;
             alti.textContent = err instanceof ErreurAltimetrie
-              ? err.message : 'Profil indisponible — réessayer';
+              ? err.message : 'Profil indisponible.';
           },
         );
-      });
+      }
       corps.append(alti);
     }
 
@@ -1826,15 +1854,12 @@ export class BandeauGuidage extends HTMLElement {
     if (dejaMeteo) {
       corps.append(dejaMeteo);
     } else {
-      const meteo = document.createElement('button');
-      meteo.type = 'button';
+      const meteo = document.createElement('p');
       meteo.className = 'bg-copilote-meteo';
-      meteo.textContent = 'Météo à l’arrivée';
-      meteo.addEventListener('click', () => {
+      meteo.textContent = 'Prévision…';
+      {
         const destination = o.trace[o.trace.length - 1];
-        if (!destination) return;
-        meteo.disabled = true;
-        meteo.textContent = 'Prévision…';
+        if (destination) {
         const vise = new Date(Date.now() + (this.#etat?.restantS ?? 0) * 1000);
         meteoA(destination[0], destination[1], vise).then(
           (m) => {
@@ -1849,30 +1874,37 @@ export class BandeauGuidage extends HTMLElement {
             meteo.replaceWith(sortie);
           },
           (err: unknown) => {
-            meteo.disabled = false;
             meteo.textContent = err instanceof ErreurMeteo
-              ? err.message : 'Météo indisponible — réessayer';
+              ? err.message : 'Météo indisponible.';
           },
         );
-      });
+        }
+      }
       corps.append(meteo);
     }
   }
 
-  /** « restauration (McDonald’s), WC, café » — du texte, pas des icônes :
-      le copilote lit, il ne décode pas. */
-  #phraseCommodites(trouvees: readonly Commodite[]): string {
-    const parType = new Map<string, string[]>();
-    for (const c of trouvees) {
-      const libelle = TYPES_COMMODITE.find((t) => t.cle === c.type)?.libelle ?? c.type;
-      const noms = parType.get(libelle) ?? [];
-      if (c.nom && !noms.includes(c.nom) && noms.length < 3) noms.push(c.nom);
-      parType.set(libelle, noms);
-    }
-    return [...parType.entries()]
-      .map(([libelle, noms]) => (noms.length > 0 ? `${libelle} (${noms.join(', ')})` : libelle))
-      .join(' · ');
+  /**
+   * Replace le rond du véhicule sur le profil (COPILOTE-1, 30/08).
+   *
+   * IL SE DÉPLACE, IL NE SE REDESSINE PAS : le bloc du profil est mémorisé
+   * d'un fixe à l'autre — seules deux coordonnées changent. Le calcul vit
+   * dans lib/altimetrie.ts, avec les mêmes marges que la courbe : un rond
+   * calculé autrement flotterait à côté d'elle.
+   */
+  #majPointProfil(bloc: HTMLElement, avancementM: number): void {
+    const rond = bloc.querySelector<SVGCircleElement>('.alti-vehicule');
+    if (!rond || this.#profil.length < 2) return;
+    const p = pointSurTrace(this.#profil, avancementM, 280, 64);
+    if (!p) return;
+    rond.setAttribute('cx', p.x.toFixed(1));
+    rond.setAttribute('cy', p.y.toFixed(1));
   }
+
+  /* LA PHRASE DES COMMODITÉS A ÉTÉ RETIRÉE (COPILOTE-1, 30/08) : « les
+     informations sont affichées sous forme de texte alors que sur une borne
+     elles sont structurées ». Le copilote appelle désormais `listeCommodites`,
+     la même fonction que la fiche de borne. */
 
   /**
    * La frise verticale du trajet : départ en bas, arrivée en haut, et entre

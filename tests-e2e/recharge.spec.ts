@@ -511,9 +511,25 @@ test('le COPILOTE connaît le plan : l’arrêt, ses SOC prévus, ses commodité
   // Ouvrir le panneau n'a RIEN appelé de plus : tout était en mémoire.
   expect(appelsOverpass).toBe(overpassApresDemarrage);
 
+  /* STRUCTURÉ, COMME DANS LA FICHE DE BORNE (COPILOTE-1, 30/08). Armelin :
+     « dans Copilote, les informations sont affichées sous forme de texte
+     alors que sur une borne elles sont structurées, ligne par ligne, avec la
+     distance et un logo. Ce serait bien de faire le même principe. » Les
+     deux appellent désormais la MÊME fonction. */
   await copilote.getByRole('button', { name: 'Commodités sur place' }).click();
-  await expect(copilote).toContainText('Restauration (Aire Gourmande)');
+  const lignes = copilote.locator('.fb-liste-commodites li');
+  await expect(lignes.first()).toBeVisible({ timeout: 10_000 });
+  await expect(copilote).toContainText('Aire Gourmande');
   await expect(copilote).toContainText('Toilettes');
+  // CHAQUE LIGNE PORTE SON LOGO ET SA DISTANCE — c'est tout l'écart avec la
+  // phrase d'avant, qui disait les types sans dire à quelle distance.
+  await expect(lignes.first().locator('.com-picto svg')).toBeVisible();
+  await expect(lignes.first().locator('.fb-commodite-distance')).toContainText('m');
+  /* ET LE PLUS PROCHE EN TÊTE : la liste se lit de haut en bas quand on
+     décide où aller pendant la charge. */
+  const distances = await lignes.locator('.fb-commodite-distance').allTextContents();
+  const metres = distances.map((d) => Number(d.replace(/\D/g, '')));
+  expect([...metres].sort((x, y) => x - y)).toEqual(metres);
   expect(appelsOverpass).toBe(overpassApresDemarrage + 1);
 });
 
