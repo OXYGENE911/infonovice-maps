@@ -2,6 +2,34 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.100.0] — 2026-08-30 — FEUX-2 : les feux du trajet sur la carte (PR #128)
+
+<!-- 0.100.0 ET NON 1.0.0 : passer en 1.0 dit « le produit est stable et
+     complet », et c'est une décision d'Armelin, pas une conséquence
+     mécanique du compteur. 0.100.0 est un numéro semver valide ; le 1.0
+     attendra qu'il le prononce. -->
+
+Armelin : « fais l'affichage des feux sur la carte ».
+
+- **UNE CASE À COCHER, À CÔTÉ DU COMPTAGE** : même donnée, même question. Les
+  feux se posent sur la carte, un point rouge cerclé de sombre par carrefour.
+- **À LA DEMANDE, ET UNE SEULE FOIS PAR TRAJET.** Overpass est un commun
+  bénévole : rien n'est relevé tant que personne ne demande, et décocher puis
+  recocher ne redemande rien. Un parcours le vérifie en comptant les appels.
+- **UN POINT PAR CARREFOUR, PAS UN PAR TÊTE DE FEU** — la même règle que le
+  comptage. La carte et le chiffre doivent dire la même chose : deux nombres
+  qui se contredisent valent moins qu'un seul.
+- **SEULEMENT LES FEUX DU TRAJET.** Afficher ceux de toute la vue serait une
+  autre fonctionnalité, plus lourde, et qui ne répond pas à la question
+  posée — « optimiser mon trajet ».
+- **PAS AVANT LE ZOOM 11** : un trajet urbain porte cent carrefours, et cent
+  points à l'échelle d'une région font une tache, pas une information.
+- **SOUS LES ARRÊTS DE RECHARGE ET LES LIEUX**, dans l'ordre de pose : ce qui
+  est planifié passe devant ce qui est seulement rencontré.
+
+Tests : 1 E2E — rien sans demande, trois carrefours pour quatre nœuds, la
+couche posée, l'effacement, et un seul appel Overpass. 822 unitaires, 258 E2E.
+
 ## [0.99.0] — 2026-08-30 — FEUX-1 : les feux comptés sur les trois variantes (PR #127)
 
 Armelin : « existe-t-il un moyen d'afficher les feux rouges sur la carte, afin

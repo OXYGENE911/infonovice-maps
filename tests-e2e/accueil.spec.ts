@@ -870,6 +870,66 @@ test('FEUX-1 : les feux comptés par variante — et « la moins arrêtée » d�
     .not.toContainText('la moins arrêtée');
 });
 
+test('FEUX-2 : les feux du trajet se posent sur la carte, à la demande', async ({ page }) => {
+  /* Armelin, le 30/08 : « fais l'affichage des feux sur la carte ». À LA
+     DEMANDE — Overpass est un commun bénévole, et personne ne veut de points
+     rouges qu'il n'a pas demandés. */
+  const PARIS: [number, number] = [2.3522, 48.8566];
+  const FIN: [number, number] = [2.4, 48.83];
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [PARIS, FIN] },
+      distance: 6_000, duration: 900,
+    }),
+  }));
+  let appelsOverpass = 0;
+  await page.route('**overpass.openstreetmap.fr**', (route) => {
+    appelsOverpass += 1;
+    return route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      contentType: 'application/json',
+      body: JSON.stringify({ elements: [
+        // DEUX TÊTES DU MÊME CARREFOUR : elles ne doivent faire qu'un point.
+        { type: 'node', id: 1, lon: PARIS[0], lat: PARIS[1] },
+        { type: 'node', id: 2, lon: PARIS[0] + 0.00002, lat: PARIS[1] - 0.00002 },
+        // Deux autres carrefours, plus loin sur le tracé.
+        { type: 'node', id: 3, lon: (PARIS[0] + FIN[0]) / 2, lat: (PARIS[1] + FIN[1]) / 2 },
+        { type: 'node', id: 4,
+          lon: PARIS[0] + 0.25 * (FIN[0] - PARIS[0]),
+          lat: PARIS[1] + 0.25 * (FIN[1] - PARIS[1]) },
+      ] }),
+    });
+  });
+  await page.route('**/public.opendatasoft.com/**', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify({ total_count: 0, results: [] }),
+  }));
+  await page.goto('/#iti=2.35220,48.85660;2.40000,48.83000;car');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('km', { timeout: 15_000 });
+  await allerA(page, 'options');
+
+  // RIEN TANT QU'ON NE DEMANDE RIEN : aucun appel, aucune couche.
+  expect(appelsOverpass, 'Overpass n’est pas interrogé sans demande').toBe(0);
+
+  await page.locator('.iti-feux-carte').check();
+  /* TROIS CARREFOURS POUR QUATRE NŒUDS : la carte dit la même chose que le
+     comptage des variantes, ce qui est la moitié de l'intérêt. */
+  await expect(page.locator('.iti-feux-corps'))
+    .toContainText('3 carrefours à feux', { timeout: 15_000 });
+  expect(await page.evaluate(() => Boolean(
+    (window as unknown as { __carte: { getLayer(id: string): unknown } })
+      .__carte.getLayer('iti-feux'))), 'la couche des feux n’est pas posée').toBe(true);
+
+  // DÉCOCHER EFFACE, et ne rappelle rien.
+  await page.locator('.iti-feux-carte').uncheck();
+  await expect(page.locator('.iti-feux-corps')).toHaveText('');
+  await page.locator('.iti-feux-carte').check();
+  await expect(page.locator('.iti-feux-corps'))
+    .toContainText('3 carrefours à feux', { timeout: 15_000 });
+  expect(appelsOverpass, 'un seul relevé par trajet : le commun n’est pas martelé').toBe(1);
+});
+
 test('ITI-3 : TROIS itinéraires A, B, C — chiffrés, tracés, et adoptables', async ({ page }) => {
   /* Armelin, le 30/08 : « quand je planifie un itinéraire, je souhaite avoir
      un itinéraire A, B et C pour voir les routes alternatives empruntées ».
