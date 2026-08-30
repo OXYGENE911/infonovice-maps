@@ -1450,16 +1450,24 @@ bandeau-guidage.bg-compact .bg-3d { padding: 5px 10px; font-size: 12px; }
    la vitesse GPS ». Les deux vivent en bas à gauche : le rond monte d'une
    hauteur d'échelle. La barre d'échelle n'est pas décorative — c'est elle
    qui donne le sens des distances qu'on lit. */
+/* LA HAUTEUR DE LA PASTILLE DE VITESSE, nommée une fois : le panneau de
+   limite se pose DESSUS, et les deux ne doivent jamais se recouvrir.
+   Armelin, au volant le 30/08 : « le panneau de limitation apparaît par
+   dessus l'indicateur de vitesse GPS, venant couper en deux l'affichage ».
+   Mesuré sur sa capture : la pastille montait à 92 px, le panneau était posé
+   à 76 px — seize pixels de recouvrement, pile sur les chiffres. */
 .bg-vitesse {
   pointer-events: none; margin: 0;
   position: absolute; left: 0;
-  bottom: calc(100% + 10px + var(--echelle-hauteur, 26px));
+  bottom: var(--vitesse-bas);
   width: 56px; height: 56px; border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: var(--fond); border: 2px solid var(--bord-2); box-shadow: var(--ombre-m);
   font-variant-numeric: tabular-nums;
 }
 .bg-vitesse[hidden] { display: none; }
+/* Les deux pastilles partagent leur repère : une seule valeur à corriger. */
+bandeau-guidage { --vitesse-bas: calc(100% + 10px + var(--echelle-hauteur, 26px)); }
 .bg-vitesse-nombre { font: 700 19px var(--police); color: var(--texte-1); line-height: 1; }
 .bg-vitesse-unite { font: 600 9px var(--police); color: var(--texte-3); }
 
@@ -1469,7 +1477,9 @@ bandeau-guidage.bg-compact .bg-3d { padding: 5px 10px; font-size: 12px; }
    nuit, et son code visuel est précisément ce qui le rend lisible. */
 .bg-limite-vitesse {
   pointer-events: none; margin: 0;
-  position: absolute; left: 0; bottom: calc(100% + 76px);
+  /* LA PASTILLE FAIT 56 px : on se pose douze pixels AU-DESSUS, ce qui laisse
+     un blanc franc entre les deux disques. */
+  position: absolute; left: 0; bottom: calc(var(--vitesse-bas) + 68px);
   width: 56px; height: 56px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: #FFFFFF; border: 7px solid #C4001E; box-shadow: var(--ombre-m);
@@ -2539,7 +2549,13 @@ summary .picto-menu {
   /* EN HAUT À GAUCHE, SOUS LA PASTILLE DU RAIL : elle reste atteignable —
      on peut vouloir rouvrir le planificateur en roulant. */
   top: calc(var(--hauteur-entete, 45px) + 58px); left: 12px;
-  width: min(300px, calc(100vw - 24px));
+  /* IL VA JUSQU'AU BORD DROIT (TERRAIN-1, 30/08). Armelin, au volant : « le
+     téléphone est posé loin des yeux du conducteur, il faut que les
+     informations soient visibles ». Un panneau de 300 px sur un écran de 400
+     laissait un tiers d'écran vide à côté de l'information la plus vitale.
+     Plafonné à 560 px : sur un ordinateur, un panneau large comme la fenêtre
+     ne se lit plus d'un coup d'œil. */
+  right: 12px; width: auto; max-width: 560px;
   display: flex; align-items: center; gap: 10px;
   /* UN VRAI PANNEAU (PAN-1, 30/08). Le listel n'est PAS une bordure : sur
      la route, c'est un filet BLANC posé en retrait du bord, et le bord lui
@@ -2558,13 +2574,15 @@ summary .picto-menu {
    exception — une distance grise sur fond bleu serait une faute de lecture
    autant que de règlement. */
 .bg-cartouche .bg-fleche { color: var(--panneau-encre); }
-.bg-cartouche .bg-fleche svg { width: 38px; height: 38px; }
+.bg-cartouche .bg-fleche svg { width: 44px; height: 44px; }
 .bg-cartouche-texte { flex: 1 1 auto; min-width: 0; }
 .bg-cartouche .bg-instruction {
-  margin: 0; font: 700 15.5px/1.25 var(--police); color: var(--panneau-encre);
+  /* PLUS GROS DE TROIS POINTS ET DEMI : mesuré sur la capture d'Armelin, à
+     bout de bras sur un support de pare-brise. */
+  margin: 0; font: 700 19px/1.2 var(--police); color: var(--panneau-encre);
 }
 .bg-cartouche .bg-distance {
-  margin: 2px 0 0; font: 700 14px var(--police); color: var(--panneau-encre);
+  margin: 3px 0 0; font: 700 16px var(--police); color: var(--panneau-encre);
   font-variant-numeric: tabular-nums;
   /* La distance est une donnée SECONDE sur un panneau : elle s'efface un peu
      sans changer d'encre — l'opacité garde le rapport de contraste au fond. */
@@ -2871,6 +2889,13 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
   display: flex; gap: 3px; align-items: flex-end; height: 18px;
 }
 .bg-chaussee[hidden] { display: none; }
+/* LES BARRES SANS FLÈCHES ONT ÉTÉ RETIRÉES (TERRAIN-1, 30/08). Armelin, au
+   volant : « j'ai eu des panneaux blancs avec des petits rectangles gris et
+   noirs plus ou moins gros. Je n'ai pas du tout compris à quoi ils
+   servaient. Si l'information n'est pas compréhensible du premier coup, elle
+   devient inutile à afficher. » Il a raison : un rectangle plus clair que
+   les autres ne dit pas « mettez-vous à droite », il ne dit rien. Ne reste
+   que la chaussée FLÉCHÉE d'AFFECT-1, qui se lit sans mode d'emploi. */
 .bg-file {
   flex: 1 1 0; height: 9px; border-radius: 2px;
   background: var(--panneau-encre); opacity: .3;
@@ -2941,8 +2966,8 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
 /* LES VILLES SUR LEUR PROPRE LIGNE : c'est le contenu principal d'un vrai
    panneau de direction, et le point médian les sépare comme sur la tôle. */
 .bg-destination {
-  flex-basis: 100%; order: 8; margin: 3px 0 0 48px;
-  font: 600 13px/1.25 var(--police); color: var(--panneau-encre);
+  flex-basis: 100%; order: 8; margin: 4px 0 0 48px;
+  font: 600 15px/1.25 var(--police); color: var(--panneau-encre);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .bg-destination[hidden] { display: none; }

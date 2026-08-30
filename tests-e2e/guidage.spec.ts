@@ -579,11 +579,18 @@ test('le cap GPS oriente la carte, la vitesse s’affiche — et tout se rend à
   { timeout: 10_000 }).toBe(0);
 });
 
-test('l’orientation à TROIS ÉTATS — cap, nord, vue libre — et le cap se LISSE', async ({ page }) => {
-  /* Mandat UX du 28/08 (NAV-1). Cap en haut est le défaut ; « Nord en haut »
-     redresse et TIENT le nord sous les fixes ; « Vue libre » suit la voiture
-     sans toucher à la rotation. Et le cap ne saute pas d'un fixe à l'autre :
-     il se lisse — 35 % de l'écart par mesure, arc le plus court. */
+test('l’orientation à DEUX ÉTATS, par la boussole de la carte — et le cap se LISSE', async ({ page }) => {
+  /* TERRAIN-1 (30/08). Armelin, au volant : « j'ai du mal à comprendre les
+     boutons d'orientation, boussole et sens de la carte. Il y a un bouton
+     dans la fenêtre de navigation au-dessus de Centrer, et deux à gauche
+     dans la barre. Le bouton en forme de boussole doit orienter la carte
+     vers le nord quand on appuie dessus, et la remettre dans le sens de la
+     voiture quand on appuie à nouveau. » Le bouton de la barre a donc
+     DISPARU, et la « vue libre » avec lui : elle n'existait que pour ce
+     cycle à trois états. Un geste sur la carte suspend déjà la caméra, avec
+     « Recentrer » pour la rendre.
+     Le lissage, lui, ne bouge pas : 35 % de l'écart par mesure, arc le plus
+     court — un récepteur qui tremble ne secoue pas la carte. */
   await page.addInitScript(() => {
     let rappel: ((p: unknown) => void) | null = null;
     (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
@@ -616,14 +623,12 @@ test('l’orientation à TROIS ÉTATS — cap, nord, vue libre — et le cap se 
     Math.round((window as unknown as { __carte: { getBearing(): number } }).__carte.getBearing()));
 
   // CAP (défaut) : le premier cap est pris ENTIER — la carte ne part pas de travers.
-  /* Depuis NAV-3, le bouton est « en mode pressoir » : une icône de
-     boussole dont le DESSIN change avec l'état — et dont le nom accessible
-     porte cet état en toutes lettres, pour qui écoute la page. Il vit dans
-     la barre dépliée. */
+  /* UN SEUL BOUTON DÉSORMAIS, et c'est celui de la carte : la boussole que
+     MapLibre pose au-dessus du zoom. Celui de la barre n'existe plus. */
   await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
-  const bouton = page.locator('.bg-orientation');
-  await expect(bouton).toHaveAttribute('aria-label', /cap en haut/);
-  await expect(bouton.locator('svg')).toHaveClass(/picto-orient-cap/);
+  await expect(page.locator('.bg-orientation'),
+    'le bouton d’orientation de la barre a été retiré').toHaveCount(0);
+  const bouton = page.locator('.maplibregl-ctrl-compass');
   await cap(90);
   await expect.poll(bearing, { timeout: 10_000 }).toBe(90);
   /* LE LISSAGE : le fixe suivant à 100° ne tourne que de 35 % de l'écart —
@@ -633,27 +638,20 @@ test('l’orientation à TROIS ÉTATS — cap, nord, vue libre — et le cap se 
 
   // NORD : redressée AU CLIC, et le nord TIENT sous les fixes suivants.
   await bouton.click();
-  await expect(bouton).toHaveAttribute('aria-label', /nord en haut/);
-  await expect(bouton.locator('svg')).toHaveClass(/picto-orient-nord/);
   await expect.poll(bearing, { timeout: 10_000 }).toBe(0);
   await cap(120);
   await page.waitForTimeout(1000);
-  expect(await bearing()).toBe(0);
+  expect(await bearing(), 'le nord tient sous les fixes').toBe(0);
 
-  // LIBRE : la carte suit la voiture sans toucher à la rotation posée.
+  /* ET UN SECOND APPUI REMET LA CARTE DANS LE SENS DE LA VOITURE — c'est
+     mot pour mot ce qui était demandé.
+     ON NORMALISE L'ANGLE : MapLibre range les caps dans (-180, 180], donc
+     200° s'y lit -160. Comparer les nombres bruts ferait échouer un test sur
+     une carte parfaitement orientée. */
   await bouton.click();
-  await expect(bouton).toHaveAttribute('aria-label', /vue libre/);
-  await expect(bouton.locator('svg')).toHaveClass(/picto-orient-libre/);
-  await page.evaluate(() => {
-    (window as unknown as { __carte: { setBearing(b: number): void } }).__carte.setBearing(45);
-  });
   await cap(200);
-  await page.waitForTimeout(1000);
-  expect(await bearing(), 'la vue libre a été tournée par un fixe').toBe(45);
-
-  // Et le cycle revient au cap.
-  await bouton.click();
-  await expect(bouton).toHaveAttribute('aria-label', /cap en haut/);
+  const capCarte = async () => (((await bearing()) % 360) + 360) % 360;
+  await expect.poll(capCarte, { timeout: 10_000 }).toBe(200);
 });
 
 test('à l’ARRÊT, la boussole oriente la carte — ouverte par le geste, jamais d’office', async ({ page }) => {

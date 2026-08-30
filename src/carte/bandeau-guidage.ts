@@ -22,7 +22,7 @@
  */
 import type { Map as CarteMapLibre } from 'maplibre-gl';
 import {
-  lisserCap, capDeBoussole, modeSuivant, libelleMode, type ModeOrientation,
+  lisserCap, capDeBoussole, type ModeOrientation,
 } from '../lib/orientation';
 import {
   etatGuidage, distanceEnMots, heureArriveeEstimee, type OptionsGuidage,
@@ -306,6 +306,10 @@ export class BandeauGuidage extends HTMLElement {
      tourner autour. Le choix tient la session, comme la 3D. */
   #modeOrientation: ModeOrientation = 'cap';
 
+  /* Jusqu'à quand un geste sur la carte ne suspend PAS le suivi — voir le
+     clic sur la boussole. */
+  #gesteBoussoleJusqua = 0;
+
   /** Le cap affiché, LISSÉ : les à-coups du récepteur ne secouent pas la carte. */
   #capLisse: number | null = null;
 
@@ -356,13 +360,44 @@ export class BandeauGuidage extends HTMLElement {
 
   set carte(c: CarteMapLibre) {
     this.#carte = c;
+    /* LA BOUSSOLE DE LA CARTE BASCULE L'ORIENTATION (TERRAIN-1, 30/08) —
+       cap en haut, nord en haut, et retour. On ne l'empêche PAS de faire ce
+       qu'elle fait déjà : MapLibre remet le nord au clic, ce qui est
+       exactement l'un des deux états. On note l'autre, et le prochain fixe
+       remet la carte dans le sens de la voiture. */
+    c.getContainer().querySelector('.maplibregl-ctrl-compass')
+      ?.addEventListener('click', () => {
+        if (!this.actif) return;
+        this.#modeOrientation = this.#modeOrientation === 'nord' ? 'cap' : 'nord';
+        /* LE LISSAGE REPART DE ZÉRO DANS LES DEUX SENS. Il sert à absorber
+           le tremblement du récepteur d'un fixe à l'autre, pas à glisser
+           depuis un cap vieux de plusieurs minutes : au retour du mode nord,
+           la carte doit se mettre dans le sens de la voiture TOUT DE SUITE,
+           pas en trois virages. Mesuré : sans cela, un cap réel de 200°
+           donnait 148° au premier fixe. */
+        this.#capLisse = null;
+        if (this.#modeOrientation === 'cap') void this.#ouvrirBoussole();
+        else this.#fermerBoussole();
+        /* APPUYER SUR LA BOUSSOLE N'EST PAS EXPLORER LA CARTE : c'est régler
+           le suivi. Or MapLibre passe le clic d'origine à sa propre remise au
+           nord, ce qui déclenche notre détection de geste d'usager — le suivi
+           se suspendait, « Recentrer » apparaissait, et les fixes suivants ne
+           bougeaient plus rien. Recentrer sur-le-champ ne suffisait pas : la
+           rotation de MapLibre émet son événement à la frame SUIVANTE, donc
+           APRÈS. D'où cette fenêtre d'indulgence d'une demi-seconde. Trouvé
+           par un parcours, pas au volant. */
+        this.#gesteBoussoleJusqua = Date.now() + 500;
+        this.#recentrer();
+      });
     /* UN GESTE DE L'USAGER SUSPEND LA CAMÉRA — pas un mouvement du code. Les
        événements MapLibre issus d'un vrai geste portent `originalEvent` ;
        nos propres `easeTo` n'en portent pas : c'est LE discriminant. */
     for (const geste of ['movestart', 'zoomstart', 'rotatestart', 'pitchstart'] as const) {
       c.on(geste, (e) => {
         const gesteUsager = (e as { originalEvent?: Event }).originalEvent;
-        if (this.actif && gesteUsager) this.#suspendreCamera();
+        if (this.actif && gesteUsager && Date.now() > this.#gesteBoussoleJusqua) {
+          this.#suspendreCamera();
+        }
       });
     }
     /* `dragstart` ET `wheel` EN PLUS : ils ne naissent QUE d'un geste — et la
@@ -443,9 +478,17 @@ export class BandeauGuidage extends HTMLElement {
         <div class="bg-boutons" hidden>
           <button type="button" class="bg-3d" aria-pressed="true"
             aria-label="Passer la carte à plat">${pictoMenu('vue-3d')}</button>
-          <button type="button" class="bg-orientation"
-            aria-label="Changer l’orientation de la carte : cap en haut">
-            ${pictoMenu('orient-cap')}</button>
+          <!-- LE BOUTON D'ORIENTATION A ÉTÉ RETIRÉ (TERRAIN-1, 30/08).
+               Armelin : « j'ai du mal à comprendre les boutons d'orientation,
+               boussole et sens de la carte. Il y a un bouton dans la fenêtre
+               de navigation au-dessus de Centrer, et deux à gauche dans la
+               barre. Le bouton en forme de boussole doit orienter la carte
+               vers le nord quand on appuie dessus, et la remettre dans le
+               sens de la voiture quand on appuie à nouveau. » C'est fait :
+               la boussole de la carte bascule les DEUX états, et le
+               troisième — la « vue libre » — n'existait que pour le bouton
+               qu'on vient de supprimer. Un geste sur la carte suspend déjà
+               la caméra, avec « Recentrer » pour la rendre. -->
           <button type="button" class="bg-copilote-bouton" aria-pressed="false"
             aria-label="Ouvrir le panneau du copilote">${pictoMenu('copilote')}</button>
           <!-- LE GUIDAGE VOCAL (VOIX-1, 30/08). La voix est celle du
@@ -637,23 +680,7 @@ export class BandeauGuidage extends HTMLElement {
         this.#en3D ? 'Passer la carte à plat' : 'Incliner la carte');
       this.#carte?.easeTo({ pitch: this.#en3D ? PITCH_SUIVI : 0, duration: 400 });
     });
-    this.querySelector('.bg-orientation')?.addEventListener('click', () => {
-      this.#modeOrientation = modeSuivant(this.#modeOrientation);
-      const bouton = this.querySelector('.bg-orientation') as HTMLButtonElement;
-      const picto = this.#modeOrientation === 'cap' ? 'orient-cap'
-        : this.#modeOrientation === 'nord' ? 'orient-nord' : 'orient-libre';
-      bouton.innerHTML = pictoMenu(picto);
-      /* LE LIBELLÉ VIT DANS L'ARIA : l'icône dit l'état à l'œil, la phrase
-         le dit à qui écoute la page. Aucun des deux ne suffit seul. */
-      bouton.setAttribute('aria-label',
-        `Changer l’orientation de la carte : ${libelleMode(this.#modeOrientation).toLowerCase()}`);
-      if (this.#modeOrientation === 'cap') void this.#ouvrirBoussole();
-      else this.#fermerBoussole();
-      if (this.#modeOrientation === 'nord') {
-        this.#capLisse = null;
-        this.#carte?.easeTo({ bearing: 0, duration: 400 });
-      }
-    });
+
     this.querySelector('.bg-copilote-bouton')?.addEventListener('click', () => {
       this.#copiloteOuvert = !this.#copiloteOuvert;
       const panneau = this.querySelector<HTMLElement>('.bg-copilote');
@@ -876,7 +903,17 @@ export class BandeauGuidage extends HTMLElement {
     (this.querySelector('.bg-recentrer') as HTMLElement).hidden = true;
     const p = this.#dernierePosition;
     if (p && this.#carte) {
-      this.#carte.easeTo({ center: p, zoom: Math.max(this.#carte.getZoom(), ZOOM_SUIVI), duration: 600 });
+      this.#carte.easeTo({
+        center: p,
+        zoom: Math.max(this.#carte.getZoom(), ZOOM_SUIVI),
+        /* LE CAP FAIT PARTIE DU CADRAGE, et l'oublier avait une conséquence
+           mesurée : en mode nord, ce recentrage INTERROMPAIT la rotation que
+           MapLibre venait de lancer et figeait la carte de travers — easeTo
+           tient ce qu'il ne nomme pas. En mode cap, on ne nomme rien : le
+           prochain fixe s'en charge. */
+        ...(this.#modeOrientation === 'nord' ? { bearing: 0 } : {}),
+        duration: 600,
+      });
     }
   }
 
@@ -937,35 +974,26 @@ export class BandeauGuidage extends HTMLElement {
       return;
     }
 
+    /* PLUS DE REPLI EN BARRES MUETTES (TERRAIN-1, 30/08). Armelin, au
+       volant : « j'ai eu des panneaux blancs avec des petits rectangles gris
+       et noirs. Je n'ai pas du tout compris à quoi ils servaient. Si
+       l'information n'est pas compréhensible du premier coup, elle devient
+       inutile à afficher. » Il a raison, et c'est la conclusion honnête : un
+       rectangle un peu plus clair que ses voisins ne dit pas « mettez-vous à
+       droite ». Le CONSEIL de placement reste — il se dit à voix haute et se
+       lit dans l'arbre d'accessibilité — mais il ne se DESSINE plus. On ne
+       montre que la chaussée fléchée, qui se lit sans mode d'emploi. */
     const cote = trop ? null : cotePlacement(manoeuvre);
     const voies = trop ? null : voiesA(this.#voies, e.avancementM);
     const conseillee = voies === null ? null : voieConseillee(voies, cote);
-    if (voies === null || conseillee === null) {
-      boite.hidden = true;
-      boite.replaceChildren();
-      delete boite.dataset['etat'];
-      return;
+    boite.hidden = true;
+    boite.replaceChildren();
+    delete boite.dataset['etat'];
+    if (voies !== null && conseillee !== null) {
+      /* Il reste DIT, pour qui écoute la page : la voix et le lecteur
+         d'écran gardent l'information que l'œil ne savait pas lire. */
+      boite.setAttribute('aria-label', libellePlacement(voies, conseillee));
     }
-    /* ON NE REDESSINE QUE SI QUELQUE CHOSE A CHANGÉ : le GPS bat toutes les
-       secondes, et remplacer les mêmes cinq éléments à chaque fixe ferait
-       clignoter la chaussée sous les yeux. */
-    const signature = `deduit-${voies}-${conseillee}`;
-    if (boite.dataset['etat'] === signature) return;
-    boite.dataset['etat'] = signature;
-    boite.hidden = false;
-    /* LE LIBELLÉ EST LU, LES BARRES SONT VUES. Un lecteur d'écran n'a que
-       faire de cinq rectangles : il reçoit la phrase, qui dit aussi que le
-       conseil est déduit — voir lib/voies.ts. */
-    boite.setAttribute('aria-label', libellePlacement(voies, conseillee));
-    const barres: HTMLElement[] = [];
-    for (let i = 1; i <= voies; i += 1) {
-      const barre = document.createElement('span');
-      barre.className = 'bg-file';
-      barre.setAttribute('aria-hidden', 'true');
-      if (i === conseillee) barre.dataset['conseillee'] = 'oui';
-      barres.push(barre);
-    }
-    boite.replaceChildren(...barres);
   }
 
   /**
@@ -1070,7 +1098,16 @@ export class BandeauGuidage extends HTMLElement {
        fait l'affaire — « Châtillon-la-Borde » dit où l'on va, même sans
        liste de villes. Mieux vaut le nom que le vide. */
     const bretelle = proche ? destinationA(this.#destinations, point) : null;
-    const villes = bretelle?.villes ?? (sortie?.nom ? [sortie.nom] : []);
+    /* LE NOM DE LA RUE OÙ L'ON TOURNE (TERRAIN-1, 30/08). Armelin : « dans
+       les panneaux d'indication de rue, ce serait bien d'indiquer également
+       le nom de la rue dans laquelle il faut tourner ». Il est là depuis le
+       début — le service le rend dans `nom_1_gauche` — mais il ne servait
+       qu'à nommer la rue COURANTE, en bas. Il manquait là où il compte.
+       ON NE LE MET PAS QUAND C'EST UN NUMÉRO : « A6 » est déjà dans son
+       cartouche rouge, le répéter en toutes lettres serait du bruit. */
+    const rueVisee = !e.horsRoute && e.manoeuvre?.voie && numeroRoute(e.manoeuvre.voie) === ''
+      ? [e.manoeuvre.voie] : [];
+    const villes = bretelle?.villes ?? (sortie?.nom ? [sortie.nom] : rueVisee);
     const texte = villes.join(' · ');
     if (texte === '') {
       ligne.hidden = true;
@@ -1191,6 +1228,27 @@ export class BandeauGuidage extends HTMLElement {
     this.#aParle = true;
   }
 
+  /**
+   * La réserve de cadrage — où poser la voiture dans l'écran (TERRAIN-1).
+   *
+   * ELLE TIENT COMPTE DE LA BARRE DU BAS, et c'est la seconde moitié de la
+   * demande : « la voiture ne doit pas toucher non plus la barre de
+   * navigation en bas de l'écran ». Sans cette réserve, la caler aux deux
+   * tiers la poserait DERRIÈRE la barre quand celle-ci est dépliée.
+   */
+  #reserveCamera(carte: CarteMapLibre): {
+    top: number; bottom: number; left: number; right: number;
+  } {
+    const hauteur = carte.getContainer().clientHeight;
+    const barre = Math.min(this.offsetHeight, hauteur * 0.4);
+    const visible = Math.max(hauteur - barre, 1);
+    /* DEUX TIERS, ET PAS PLUS BAS : au-delà, la voiture colle à la barre et
+       l'on perd le sentiment d'avancer. Bornée à la moitié de la carte pour
+       qu'un écran très court ne renverse pas le cadrage. */
+    const haut = Math.min(visible * (2 / 3) - visible / 2, hauteur / 2) * 2;
+    return { top: Math.max(0, haut), bottom: barre, left: 0, right: 0 };
+  }
+
   #alerte(message: string): void {
     const p = this.querySelector('.bg-alerte') as HTMLElement;
     p.textContent = message;
@@ -1294,6 +1352,17 @@ export class BandeauGuidage extends HTMLElement {
 
       carte?.easeTo({
         center: [lon, lat],
+        /* LA VOITURE SE POSE AUX DEUX TIERS DE L'ÉCRAN, pas au milieu
+           (TERRAIN-1, 30/08). Armelin, au volant : « la voiture est
+           représentée au milieu de l'écran quand tous les GPS du marché la
+           positionnent vers le bas, afin d'afficher plus d'éléments au loin
+           jusqu'en haut de l'écran ». C'est juste : au volant, ce qu'on
+           regarde est DEVANT.
+           Le calcul n'est pas un réglage à l'œil : avec une réserve `top`,
+           MapLibre place le centre à (H + top - bas) / 2. On veut ce centre
+           aux deux tiers de la carte VISIBLE — celle qui n'est pas couverte
+           par la barre du bas —, d'où top = (4/3) × (H - barre) / 2. */
+        padding: this.#reserveCamera(carte),
         zoom: approche
           ? Math.max(carte?.getZoom() ?? 0, ZOOM_APPROCHE)
           : (zoomRendu ?? Math.max(carte?.getZoom() ?? 0, ZOOM_SUIVI)),
