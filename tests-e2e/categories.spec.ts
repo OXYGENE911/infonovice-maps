@@ -104,7 +104,12 @@ test('Overpass saturé : un message français, et l’état repart propre', asyn
   });
   await ouvrirVolet(page, '.poi');
 
-  const bouton = page.getByRole('button', { name: 'Boulangeries' });
+  /* « BOULANGERIES » N'EST PLUS UNE CASE À PART depuis POI-2 : la liste
+     commune est passée à douze familles, et les boulangeries sont entrées
+     dans « Commerces » avec les supermarchés et les magasins. Le parcours
+     n'y perd rien — ce qu'il défend, c'est la phrase d'erreur, pas le nom du
+     bouton. */
+  const bouton = page.getByRole('button', { name: 'Pharmacies' });
   await bouton.click();
   await expect(page.locator('.poi-categorie-etat')).toContainText('saturé');
   // Le bouton n'est plus « actif » sur du vide : on peut réessayer d'un clic.
