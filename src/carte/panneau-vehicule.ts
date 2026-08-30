@@ -489,18 +489,34 @@ export class PanneauVehicule extends HTMLElement {
        dit rien à personne. */
     const perdus = this.#vehicule.capaciteNominale - capacite;
     const a = autonomies(this.#vehicule);
-    const lignes: string[] = [];
-    for (const c of CONTEXTES) {
-      if (a[c.cle] > 0) lignes.push(`${c.libelle} : ${Math.round(a[c.cle])} km`);
-    }
-    if (lignes.length === 0) {
+    const utiles = CONTEXTES.filter((c) => a[c.cle] > 0);
+    if (utiles.length === 0) {
       boite.textContent = 'Renseignez au moins une autonomie constatée.';
       return;
     }
 
+    /* CHAQUE LIGNE PREND LA COULEUR DE SON ANNEAU (ERGO-3, 30/08). Armelin :
+       « ce serait bien d'ajouter un peu plus de couleur pour l'autonomie
+       constatée à pleine charge […] ce qui permettra aux gens de mieux
+       comprendre le cercle du rayon d'action, qui n'est pas accompagné d'une
+       légende ».
+       C'EST EXACTEMENT ÇA : la couleur n'est pas un ornement, c'est LA
+       LÉGENDE qui manquait. Les teintes sont celles des anneaux
+       (lib/vehicule.ts), pas des teintes choisies ici — deux jeux de
+       couleurs se seraient désaccordés au premier changement. */
     const p = document.createElement('p');
     p.className = 'veh-bilan-lignes';
-    p.textContent = lignes.join(' · ');
+    for (const c of utiles) {
+      const ligne = document.createElement('span');
+      ligne.className = 'veh-bilan-ligne';
+      ligne.style.setProperty('--teinte', c.couleur);
+      ligne.textContent = `${c.libelle} : ${Math.round(a[c.cle])} km`;
+      /* LA COULEUR NE PORTE PAS L'INFORMATION SEULE : le libellé la dit, et
+         le titre nomme l'anneau correspondant sur la carte. Un daltonien lit
+         la même chose que les autres. */
+      ligne.title = `${c.libelle} — anneau ${c.couleur} sur la carte`;
+      p.appendChild(ligne);
+    }
     boite.appendChild(p);
 
     if (perdus > 0.05 && a.autoroute > 0) {

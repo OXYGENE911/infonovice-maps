@@ -115,3 +115,20 @@ describe('le catalogue des contextes', () => {
     for (const c of CONTEXTES) expect(c.libelle.length).toBeGreaterThan(3);
   });
 });
+
+/* ERGO-3 (30/08). Armelin : « ce serait bien d'ajouter un peu plus de couleur
+ * pour l'autonomie constatée à pleine charge […] ce qui permettra aux gens de
+ * mieux comprendre le cercle du rayon d'action, qui n'est pas accompagné
+ * d'une légende ». La couleur n'est donc pas un ornement : c'est la LÉGENDE.
+ * Elle doit rester celle des anneaux, sous peine de désaccord. */
+describe('les couleurs des contextes', () => {
+  test('sont uniques, et vont du vert au rouge comme l’effort demandé', () => {
+    const couleurs = CONTEXTES.map((c) => c.couleur);
+    expect(new Set(couleurs).size, 'deux contextes de même couleur').toBe(couleurs.length);
+    expect(CONTEXTES.map((c) => c.cle)).toEqual(['ville', 'route', 'autoroute']);
+  });
+
+  test('sont des teintes lisibles, pas des noms de couleurs', () => {
+    for (const c of CONTEXTES) expect(c.couleur).toMatch(/^#[0-9A-F]{6}$/i);
+  });
+});

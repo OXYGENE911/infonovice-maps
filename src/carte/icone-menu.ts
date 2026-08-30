@@ -22,6 +22,9 @@ export type NomPicto =
   | 'pieton' | 'rapide' | 'court' | 'autoroute' | 'tunnel' | 'pont'
   /* BIS-1 (30/08) — l'itinéraire bis se demande d'une icône dans la barre. */
   | 'bis'
+  /* ERGO-3 (30/08) — les raccourcis d'itinéraire passent au dessin :
+     « l'ergonomie fait trop formulaire ». */
+  | 'domicile' | 'travail' | 'etoile'
   /* NAV-3 (29/08) — la barre de suivi passe aux icônes : « remplacer le
      bouton Vue à plat et Cap en haut par un unique bouton en forme d'icône
      de boussole en mode pressoir ». */
@@ -99,6 +102,25 @@ const TRACES: Record<NomPicto, string> = {
   copilote: '<circle cx="12" cy="7" r="3"/>'
     + '<path d="M5.6 20a6.4 6.4 0 0 1 12.8 0"/>',
   croix: '<path d="M6.6 6.6 17.4 17.4M17.4 6.6 6.6 17.4"/>',
+
+  /* LES RACCOURCIS D'ITINÉRAIRE (ERGO-3, 30/08). Armelin : « les textes Ma
+     position, domicile, travail, favoris sont affichés sous forme de texte.
+     L'ergonomie fait trop formulaire. » Ces trois-là portent leur COULEUR :
+     ce sont des repères personnels, pas des commandes — on les reconnaît
+     d'un coup d'œil, comme on reconnaît sa maison dans une rue. */
+  // Une maison : le toit, le corps, la porte.
+  domicile: '<path class="picto-toit" d="M3.4 11.4 12 4.4l8.6 7"/>'
+    + '<path class="picto-mur" d="M5.6 10.4v9.2h12.8v-9.2"/>'
+    + '<path class="picto-porte" d="M10 19.6v-5.2h4v5.2"/>',
+  // Un immeuble : deux corps de bâtiment, des fenêtres.
+  travail: '<path class="picto-mur" d="M4.4 19.6V8.2h7.2v11.4"/>'
+    + '<path class="picto-mur" d="M11.6 19.6V11.8h8v7.8"/>'
+    + '<path class="picto-fenetres" d="M6.8 11v.1M9.2 11v.1M6.8 14.4v.1M9.2 14.4v.1'
+    + 'M14.2 14.6v.1M17 14.6v.1"/>'
+    + '<path d="M2.8 19.6h18.4"/>',
+  // Une étoile pleine : celle des favoris, partout la même.
+  etoile: '<polygon class="picto-menu-plein" points="12,3.6 14.7,9.6 21.2,10.4 '
+    + '16.4,14.8 17.7,21.2 12,18 6.3,21.2 7.6,14.8 2.8,10.4 9.3,9.6"/>',
 
   /* LE HAUT-PARLEUR : le pavillon plein, deux ondes. Barré, c'est le même
      dessin — reconnaître l'objet compte plus que dessiner le silence. */

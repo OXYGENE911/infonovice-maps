@@ -2840,15 +2840,16 @@ export class PanneauItineraire extends HTMLElement {
     /* SEULS LES REPÈRES RESTENT EN LIGNE — Domicile et Travail sont DEUX
        boutons, les favoris étaient jusqu'à SIX sous CHAQUE champ : la
        capture d'Armelin du 28/08 montre le mur qu'ils formaient. Ils passent
-       derrière un bouton « Favoris… » qui ouvre une boîte dédiée, avec
+       derrière un bouton « Favoris » — une étoile jaune depuis ERGO-3 — qui
+       ouvre une boîte dédiée, avec
        recherche — le mandat UX le demande en toutes lettres. */
-    const entrees: { libelle: string; point: PointGeo; titre: string }[] = [];
+    const entrees: { libelle: string; point: PointGeo; titre: string; cle: string }[] = [];
     const reperesLus: { domicile?: PointGeo & { libelle: string };
       travail?: PointGeo & { libelle: string } } = {};
     for (const { cle, libelle } of REPERES) {
       const r = await lireRepere(cle as CleRepere);
       if (r) {
-        entrees.push({ libelle, point: r, titre: r.libelle });
+        entrees.push({ libelle, point: r, titre: r.libelle, cle });
         if (cle === 'domicile') reperesLus.domicile = { lon: r.lon, lat: r.lat, libelle: r.libelle };
         if (cle === 'travail') reperesLus.travail = { lon: r.lon, lat: r.lat, libelle: r.libelle };
       }
@@ -2897,8 +2898,15 @@ export class PanneauItineraire extends HTMLElement {
       for (const e of entrees) {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = 'iti-raccourci';
-        b.textContent = e.libelle;
+        /* CHAQUE REPÈRE PORTE SON DESSIN (ERGO-3, 30/08). Armelin : « les
+           textes Ma position, domicile, travail, favoris sont affichés sous
+           forme de texte. L'ergonomie fait trop formulaire. » Le mot RESTE à
+           côté du dessin : une icône seule se devine, deux icônes seules se
+           confondent — et le nom accessible ne remplace pas ce que l'œil
+           cherche. C'est ce que font les cartes du commerce. */
+        b.className = `iti-raccourci iti-raccourci-${e.cle}`;
+        b.innerHTML = `${pictoMenu(e.cle === 'domicile' ? 'domicile' : 'travail')}`
+          + `<span>${e.libelle}</span>`;
         b.title = e.titre;
         b.setAttribute('aria-label',
           role === 'depart' ? `Partir de ${e.libelle}` : `Aller à ${e.libelle}`);
@@ -2911,7 +2919,7 @@ export class PanneauItineraire extends HTMLElement {
         const favoris = document.createElement('button');
         favoris.type = 'button';
         favoris.className = 'iti-raccourci iti-raccourci-favoris';
-        favoris.textContent = `Favoris… (${nbFavoris})`;
+        favoris.innerHTML = `${pictoMenu('etoile')}<span>Favoris (${nbFavoris})</span>`;
         favoris.setAttribute('aria-label', role === 'depart'
           ? 'Choisir un favori comme départ' : 'Choisir un favori comme arrivée');
         favoris.addEventListener('click', () => { void this.#ouvrirChoixFavori(role); });

@@ -125,7 +125,7 @@ test('les favoris ne s’étalent plus sous les champs : une boîte dédiée, av
     .filter({ hasText: 'Chez ma sœur' })).toHaveCount(0);
   const entree = page.locator('[data-pour="depart"]')
     .getByRole('button', { name: 'Choisir un favori comme départ' });
-  await expect(entree).toContainText('Favoris… (2)');
+  await expect(entree).toContainText('Favoris (2)');
 
   await entree.click();
   const boite = page.locator('dialog.choix-favori');
