@@ -534,6 +534,14 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #161 — BORNES-5 (01/09) : le filtre qui retranche se voit SUR la
+      carte, avec « Tout afficher » sur place. BORNES-4 l'avait mis dans des
+      volets repliés : personne ne l'a lu.
+- [ ] À TRANCHER — la couche du TRAJET ignore le filtre par réseau
+      (`filtresAffichage()` ne porte que puissance et prises) quand la carte
+      l'applique. Les deux devraient dire la même chose ; aligner sans
+      prévenir retirerait des bornes du trajet, d'où la question posée plutôt
+      que tranchée.
 - [x] PR #160 — GUIDE-2 (01/09) : la boussole reprend la main sur le cap du
       tracé pour ORIENTER la carte — régression de GUIDE-1, invisible aux
       parcours parce qu'ils testaient la boussole HORS route.

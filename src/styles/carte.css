@@ -3262,6 +3262,29 @@ filtre-poi {
 .poi-famille:focus-visible,
 .poi-famille-bornes:focus-visible { outline: none; box-shadow: var(--focus); }
 
+/* BORNES-5 — LE RAPPEL POSÉ SUR LA CARTE. Ambre : un réglage qui retranche,
+   pas une panne. Il vit hors du panneau repliable, sinon il ne préviendrait
+   que ceux qui ont déjà trouvé le réglage. */
+.poi-rappel-bornes {
+  display: flex; align-items: center; gap: 8px;
+  max-width: 15rem; margin-top: 6px;
+  padding: 6px 8px 6px 10px; border-radius: 10px;
+  background: var(--fond); border: 1px solid #B45309;
+  box-shadow: var(--ombre-s);
+  font: 500 11.5px var(--police); color: var(--texte-1); line-height: 1.3;
+}
+.poi-rappel-bornes[hidden] { display: none; }
+.poi-rappel-texte { flex: 1 1 auto; }
+.poi-rappel-tout {
+  flex: 0 0 auto;
+  padding: 4px 8px; border-radius: 7px;
+  border: 1px solid #B45309; background: transparent;
+  color: inherit; font: 600 11px var(--police); cursor: pointer;
+  white-space: nowrap;
+}
+.poi-rappel-tout:hover { background: rgb(180 83 9 / 12%); }
+.poi-rappel-tout:focus-visible { outline: none; box-shadow: var(--focus); }
+
 /* BORNES-4 — le badge « filtres actifs » de la puce des bornes, et le
    retrait en un geste. */
 .poi-famille-filtres {

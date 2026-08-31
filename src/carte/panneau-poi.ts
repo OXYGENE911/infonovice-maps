@@ -119,6 +119,14 @@ export class PanneauPoi extends HTMLElement {
 
   get bornesActives(): boolean { return this.#actives.has('bornes'); }
 
+  /* LE MÊME GESTE, DEUX BOUTONS (BORNES-5) : celui du volet et celui posé
+     sur la carte. Une seule implémentation — deux copies auraient divergé au
+     premier réglage ajouté. */
+  #toutAfficher: () => void = () => { /* posé à l'assemblage */ };
+
+  /** Retire TOUS les filtres de bornes, et l'écrit en mémoire. */
+  toutAfficher(): void { this.#toutAfficher(); }
+
   /** Le résumé des filtres qui restreignent — `null` si rien n'agit. */
   get resumeFiltres(): string | null {
     return this.#actives.has('bornes')
@@ -407,18 +415,19 @@ export class PanneauPoi extends HTMLElement {
        champ de nom, puissance — et l'ÉCRIT en mémoire, sinon le réglage
        retiré ressusciterait à la prochaine visite, exactement le mystère
        qu'on soigne (BORNES-4). */
+    this.#toutAfficher = (): void => {
+      this.#filtres = {};
+      const select = this.querySelector<HTMLSelectElement>('.poi-puissance');
+      if (select) select.value = '0';
+      const champ = this.querySelector<HTMLInputElement>('.poi-reseau-recherche');
+      if (champ) champ.value = '';
+      this.querySelectorAll<HTMLInputElement>('.poi-prise:checked, .poi-reseau:checked')
+        .forEach((case_) => { case_.checked = false; });
+      this.#rendreReseaux(this.#reseaux);
+      surFiltre();
+    };
     this.querySelector<HTMLButtonElement>('.poi-filtres-effacer')
-      ?.addEventListener('click', () => {
-        this.#filtres = {};
-        const select = this.querySelector<HTMLSelectElement>('.poi-puissance');
-        if (select) select.value = '0';
-        const champ = this.querySelector<HTMLInputElement>('.poi-reseau-recherche');
-        if (champ) champ.value = '';
-        this.querySelectorAll<HTMLInputElement>('.poi-prise:checked, .poi-reseau:checked')
-          .forEach((case_) => { case_.checked = false; });
-        this.#rendreReseaux(this.#reseaux);
-        surFiltre();
-      });
+      ?.addEventListener('click', () => { this.#toutAfficher(); });
     this.querySelector<HTMLSelectElement>('.poi-puissance')?.addEventListener('change', (e) => {
       const v = Number((e.target as HTMLSelectElement).value);
       this.#filtres = { ...this.#filtres, puissanceMin: Number.isFinite(v) && v > 0 ? v : undefined };

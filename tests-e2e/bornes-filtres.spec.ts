@@ -371,10 +371,15 @@ test('un filtre RESTAURÉ se dit — badge sur le volet, phrase d’état, retra
   await page.reload();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
 
-  /* LE BADGE VIT SUR LA PUCE DU FILTRE POI : le volet des services est
-     rendu comme une PAGE du planificateur, son résumé n'apparaît jamais —
-     la puce, elle, se voit depuis la carte, là où Armelin a conclu à la
-     panne. */
+  /* LE RAPPEL SE VOIT SANS RIEN DÉPLIER (BORNES-5, 01/09). BORNES-4 l'avait
+     posé dans le volet et sur la puce du panneau : deux surfaces REPLIÉES.
+     Armelin a donc revu le même défaut le lendemain — « je n'ai toujours que
+     les bornes ZUNDER » — sans jamais croiser l'avertissement. Ce parcours
+     mesure donc le rappel AVANT d'ouvrir quoi que ce soit. */
+  const rappel = page.locator('.poi-rappel-bornes');
+  await expect(rappel, 'le rappel doit se voir sans déplier').toBeVisible({ timeout: 10_000 });
+  await expect(rappel).toContainText('réseau ZUNDER');
+
   await page.getByRole('button', { name: 'Filtrer les lieux affichés sur la carte' }).click();
   const badge = page.locator('.poi-famille-filtres');
   await expect(badge).toBeVisible();
@@ -391,6 +396,7 @@ test('un filtre RESTAURÉ se dit — badge sur le volet, phrase d’état, retra
   await expect(effacer).toContainText('réseau ZUNDER');
   await effacer.click();
   await expect(badge).toBeHidden();
+  await expect(rappel, 'le rappel doit disparaître avec le filtre').toBeHidden();
   /* L'ÉCRITURE EST ASYNCHRONE : recharger sans l'attendre coupe la
      transaction IndexedDB en vol, et le parcours mesurerait un hasard. On
      attend que la mémoire dise VRAIMENT « plus de réseau écarté » —
@@ -417,4 +423,55 @@ test('un filtre RESTAURÉ se dit — badge sur le volet, phrase d’état, retra
   await expect(page.getByRole('checkbox', { name: 'Bornes électriques' })).toBeChecked();
   await page.getByRole('button', { name: 'Filtrer les lieux affichés sur la carte' }).click();
   await expect(page.locator('.poi-famille-filtres')).toBeHidden();
+});
+
+test('LE RETRAIT SE FAIT DEPUIS LA CARTE, sans déplier un seul volet', async ({ page }) => {
+  /* BORNES-5 (01/09). Dire à quelqu'un que sa carte est filtrée en le
+     renvoyant chercher le réglage dans un volet, c'est lui désigner la porte
+     sans lui donner la clé. Le bouton du rappel retire tout, sur place. */
+  await taireIndexNational(page);
+  await espionnerIrve(page);
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await page.evaluate(async () => {
+    await new Promise<void>((resoudre, rejeter) => {
+      const d = indexedDB.open('infonovice-maps', 2);
+      d.onupgradeneeded = () => {
+        for (const m of ['preferences', 'favoris']) {
+          if (!d.result.objectStoreNames.contains(m)) d.result.createObjectStore(m);
+        }
+      };
+      d.onsuccess = () => {
+        const tx = d.result.transaction('preferences', 'readwrite');
+        tx.objectStore('preferences').put(['bornes'], 'poi');
+        tx.objectStore('preferences').put({ reseaux: ['ZUNDER'] }, 'poi-filtres-bornes');
+        tx.oncomplete = () => resoudre();
+        tx.onerror = () => rejeter(tx.error);
+      };
+      d.onerror = () => rejeter(d.error);
+    });
+  });
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  const rappel = page.locator('.poi-rappel-bornes');
+  await expect(rappel).toBeVisible({ timeout: 10_000 });
+  await rappel.getByRole('button', { name: 'Tout afficher' }).click();
+  await expect(rappel).toBeHidden();
+
+  /* ET LA MÉMOIRE EST CORRIGÉE : sans cela, le filtre ressusciterait à la
+     prochaine visite — le mécanisme même du mystère. */
+  await expect.poll(async () => page.evaluate(async () =>
+    new Promise((res) => {
+      const d = indexedDB.open('infonovice-maps', 2);
+      d.onsuccess = () => {
+        const g = d.result.transaction('preferences').objectStore('preferences')
+          .get('poi-filtres-bornes');
+        g.onsuccess = () => { res(JSON.stringify(g.result ?? null)); };
+        g.onerror = () => { res('erreur'); };
+      };
+      d.onerror = () => { res('erreur'); };
+    })),
+  { message: 'la mémoire garde encore le filtre retiré' })
+    .not.toContain('ZUNDER');
 });
