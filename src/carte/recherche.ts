@@ -4,6 +4,7 @@
 // quota BAN est un bien commun (règle du projet).
 import { chercherAdresses, type ResultatAdresse } from '../lib/adresse';
 import { chercherParNom, LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
+import { chercherEtablissements } from '../lib/annuaire-education';
 import { analyser, decoder, departementDe } from '../lib/adresse-mots';
 import { communesParNom } from '../lib/commune';
 
@@ -201,15 +202,50 @@ export class RechercheAdresse extends HTMLElement {
           note.hidden = false;
         } else {
           try {
-            const lieux = await chercherParNom(texte, centre, this.#annulation.signal);
-            const nommes = lieux
-              .filter((l) => l.nom !== null)
-              .map((l) => ({
-                lon: l.lon, lat: l.lat,
-                libelle: l.nom as string,
-                type: 'lieu',
-                contexte: 'Lieu de la carte',
-              }));
+            /* DEUX SOURCES, UN SEUL TEMPS D'ATTENTE (ECOLES-1, 01/09).
+               OpenStreetMap n'indexe que l'ÉGALITÉ : il faut lui donner le nom
+               entier. L'annuaire de l'Éducation nationale accepte un nom
+               PARTIEL — « Albert Camus » y trouve « Collège Albert Camus »,
+               qu'OSM ne connaît pas (mesuré : soixante écoles autour du
+               Plessis-Trévise, aucune de ce nom). Les deux se complètent, on
+               les interroge donc EN MÊME TEMPS.
+               `allSettled` ET NON `all` : l'échec d'une source ne doit pas
+               emporter l'autre — Overpass tombe régulièrement, et une école
+               trouvée vaut mieux qu'une page vide. */
+            const [cotePlaces, coteEcoles] = await Promise.allSettled([
+              chercherParNom(texte, centre, this.#annulation.signal),
+              chercherEtablissements(texte, centre, this.#annulation.signal),
+            ]);
+            const lieux = cotePlaces.status === 'fulfilled' ? cotePlaces.value : [];
+            const ecoles = coteEcoles.status === 'fulfilled' ? coteEcoles.value : [];
+            const nommes = [
+              ...ecoles.map((e) => ({
+                lon: e.lon, lat: e.lat,
+                libelle: e.nom,
+                type: 'etablissement',
+                /* LA SOURCE SE DIT : savoir d'où vient une réponse, c'est
+                   pouvoir la contester. */
+                contexte: [e.type, e.commune].filter(Boolean).join(' · ')
+                  || 'Éducation nationale',
+              })),
+              ...lieux
+                .filter((l) => l.nom !== null)
+                .map((l) => ({
+                  lon: l.lon, lat: l.lat,
+                  libelle: l.nom as string,
+                  type: 'lieu',
+                  contexte: 'Lieu de la carte',
+                })),
+            ];
+            /* UNE PANNE N'EST PAS UNE ABSENCE, et il suffit d'UNE source en
+               défaut pour qu'on ne puisse plus rien affirmer. Si l'une a
+               échoué et que personne n'a rien trouvé, on dit la panne — dire
+               « aucun résultat » ferait porter à l'usager le doute d'un
+               service, et lui ferait croire que son lieu n'existe pas. */
+            const enPanne = cotePlaces.status === 'rejected'
+              ? cotePlaces.reason as Error
+              : (coteEcoles.status === 'rejected' ? coteEcoles.reason as Error : null);
+            if (enPanne !== null && nommes.length === 0) throw enPanne;
             /* LES LIEUX PASSENT DEVANT : la BAN a déjà dit ce qu'elle savait,
                et un lieu nommé EXACTEMENT comme la saisie répond mieux qu'une
                rue approchante. Les adresses restent dessous, jamais perdues. */

@@ -537,6 +537,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #162 — RECHERCHE-3 (01/09) : la recherche par nom part enfin (la
       BAN rend toujours quelque chose) et interroge l'ÉGALITÉ indexée, la
       regex expirant (mesuré : 57 s). Expiration lue comme telle.
+- [x] PR #163 — ECOLES-1 (01/09) : l'annuaire de l'Éducation nationale,
+      première brique de la consolidation. Il porte le collège qu'OSM ignore,
+      et accepte un nom PARTIEL.
 - [ ] CHANTIER OUVERT — consolider les bases publiques FRANÇAISES, autorisé
       par Armelin le 01/09 (Wikidata exclu, chercher un équivalent français
       pour les logos) : Éducation nationale (mesuré : le collège introuvable

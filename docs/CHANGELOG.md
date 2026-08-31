@@ -2,6 +2,39 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.16.0] — 2026-09-01 — ECOLES-1 : l'annuaire de l'Éducation nationale (PR #163)
+
+Première brique du chantier ouvert par Armelin le 01/09 : « la consolidation
+des bases publiques sont issues des sites mis à disposition du gouvernement
+français, donc 100 % gratuite et française ».
+
+- **LE COLLÈGE DE SA FILLE SE TROUVE ENFIN.** « Le collège de ma fille ne
+  donne rien en tapant "Collège Albert Camus Plessis-Trévise" ». MESURÉ le
+  jour même : **OpenStreetMap ne le connaît pas** — soixante écoles autour de
+  chez lui, aucune de ce nom. L'annuaire de l'Éducation nationale, lui, le
+  porte : « Collège Albert Camus, Avenue Albert Camus, Le Plessis-Trévise ».
+  Source : data.education.gouv.fr, Licence Ouverte, **sans clé**.
+- **IL ACCEPTE UN NOM PARTIEL**, là où Overpass n'indexe que l'égalité et
+  exige le nom entier : « Albert Camus » y trouve « Collège Albert Camus ».
+  Les deux sources se COMPLÈTENT donc au lieu de se doubler, et partent
+  ENSEMBLE — un seul temps d'attente.
+- **L'ÉCHEC D'UNE SOURCE N'EMPORTE PAS L'AUTRE** (`allSettled`, pas `all`) :
+  Overpass tombe régulièrement, et une école trouvée vaut mieux qu'une page
+  vide. Si les DEUX échouent, on le dit — se taire ferait passer une panne
+  pour une absence.
+- **LA SOURCE SE DIT** dans la liste : « Collège · Le Plessis-Trévise ».
+  Savoir d'où vient une réponse, c'est pouvoir la contester.
+- **UNE FICHE SANS POSITION EST ÉCARTÉE**, pas posée à l'équateur — le défaut
+  a déjà été payé une fois sur les bornes (`Number(null)` vaut zéro).
+- **L'APPEL EST BORNÉ** : vingt-cinq kilomètres autour du point le plus
+  probable, trié par distance (sans le tri, l'annuaire rend son propre ordre
+  et le collège du bout du département passait devant celui d'à côté), huit
+  résultats au plus.
+
+Tests : 9 unitaires (le nom partiel, le rayon, le tri, le guillemet doublé de
+l'ODSQL, la fiche sans position écartée). 2 E2E : le cas exact d'Armelin de
+bout en bout, et l'échec d'Overpass qui n'emporte pas l'annuaire.
+
 ## [1.15.0] — 2026-09-01 — RECHERCHE-3 : la recherche par nom trouve enfin (PR #162)
 
 - **CE QUE J'AVAIS LIVRÉ LA VEILLE NE POUVAIT PAS MARCHER**, et deux mesures
