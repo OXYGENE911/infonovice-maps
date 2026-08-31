@@ -34,7 +34,7 @@ test('un clic, un appel — et la carte qui bouge n’en refait PAS', async ({ p
   });
   await ouvrirVolet(page, '.poi');
 
-  const bouton = page.getByRole('button', { name: 'Pharmacies' });
+  const bouton = page.getByRole('button', { name: 'Santé' });
   await bouton.click();
   const etat = page.locator('.poi-categorie-etat');
   await expect(etat).toContainText('2 dans la vue');
@@ -43,7 +43,11 @@ test('un clic, un appel — et la carte qui bouge n’en refait PAS', async ({ p
   await expect(bouton).toHaveAttribute('aria-pressed', 'true');
   // L'appel est parti UNE fois, avec le bon filtre et l'emprise Overpass.
   expect(requetes).toHaveLength(1);
-  expect(requetes[0]).toContain('"amenity"="pharmacy"');
+  expect(requetes[0]).toContain('pharmacy');
+  // LA FAMILLE S'EST ÉLARGIE le 31/08 : le dentiste et le vétérinaire
+  // doivent partir dans la MÊME requête, pas dans une de plus.
+  expect(requetes[0]).toContain('dentist');
+  expect(requetes[0]).toContain('veterinary');
 
   // Les deux lieux sont posés — le chemin (center) compte comme le nœud.
   const nombre = await page.evaluate(() => {
@@ -104,12 +108,12 @@ test('Overpass saturé : un message français, et l’état repart propre', asyn
   });
   await ouvrirVolet(page, '.poi');
 
-  /* « BOULANGERIES » N'EST PLUS UNE CASE À PART depuis POI-2 : la liste
-     commune est passée à douze familles, et les boulangeries sont entrées
-     dans « Commerces » avec les supermarchés et les magasins. Le parcours
-     n'y perd rien — ce qu'il défend, c'est la phrase d'erreur, pas le nom du
-     bouton. */
-  const bouton = page.getByRole('button', { name: 'Pharmacies' });
+  /* LE NOM DE CETTE CASE A CHANGÉ DEUX FOIS, et le parcours n'y perd rien :
+     ce qu'il défend est la phrase d'erreur, pas l'étiquette du bouton.
+     « Boulangeries » est entrée dans « Commerces » le 30/08 ; « Pharmacies »
+     est devenue « Santé » le 31/08, pour que le dentiste et le vétérinaire
+     soient cherchables. */
+  const bouton = page.getByRole('button', { name: 'Santé' });
   await bouton.click();
   await expect(page.locator('.poi-categorie-etat')).toContainText('saturé');
   // Le bouton n'est plus « actif » sur du vide : on peut réessayer d'un clic.

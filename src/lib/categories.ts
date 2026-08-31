@@ -1,4 +1,5 @@
-/* RECHERCHE PAR CATÉGORIES — pharmacies, restaurants… dans la VUE COURANTE
+
+import { motifDe, type CleMotif } from './pictos-lieux';/* RECHERCHE PAR CATÉGORIES — pharmacies, restaurants… dans la VUE COURANTE
  * (mandat UX du 28/08, PR POI-1).
  *
  * FRUGALITÉ STRICTE, et elle se lit dans la forme même de ce module : la
@@ -17,6 +18,8 @@ export interface LieuCategorie {
   lat: number;
   /** La famille à laquelle il appartient — voir `familleDe`. */
   famille?: string;
+  /** Le motif de sa pastille — plus fin que la famille. */
+  motif?: CleMotif;
 }
 
 /** L'emprise de la vue : ouest, sud, est, nord (l'ordre de MapLibre). */
@@ -26,8 +29,14 @@ export interface Categorie {
   cle: string;
   /** Le libellé du bouton — pluriel : on cherche « les pharmacies ». */
   libelle: string;
-  /** Le filtre Overpass, clé et valeurs OSM standard. */
-  filtre: string;
+  /**
+   * Le filtre Overpass — une clause, ou PLUSIEURS.
+   *
+   * PLUSIEURS QUAND LA FAMILLE TRAVERSE DEUX CLÉS OSM : une gare porte
+   * `railway`, un aéroport porte `aeroway`, et aucune expression régulière ne
+   * réunit deux clés différentes. Chaque clause devient une ligne de l'union.
+   */
+  filtre: string | readonly string[];
   /** La couleur du point sur la carte — une famille, une teinte. */
   couleur: string;
 }
@@ -55,11 +64,15 @@ export const CATEGORIES: readonly Categorie[] = [
   { cle: 'hotel', libelle: 'Hôtels', couleur: '#6C4FA1',
     filtre: '["tourism"~"^(hotel|motel|guest_house)$"]' },
   { cle: 'culture', libelle: 'Culture et visites', couleur: '#B8860B',
-    filtre: '["tourism"~"^(museum|attraction|viewpoint)$"]' },
+    filtre: '["tourism"~"^(museum|attraction|viewpoint|gallery|theme_park)$"]' },
   { cle: 'cinema', libelle: 'Cinémas et théâtres', couleur: '#C2185B',
     filtre: '["amenity"~"^(cinema|theatre)$"]' },
-  { cle: 'pharmacie', libelle: 'Pharmacies', couleur: '#1E9E5A',
-    filtre: '["amenity"="pharmacy"]' },
+  /* « PHARMACIES » DEVIENT « SANTÉ » (31/08). Armelin voulait « une dent pour
+     un dentiste, une patte de chat pour un vétérinaire » : encore fallait-il
+     pouvoir les CHERCHER. Ils rejoignent la pharmacie, parce qu'on cherche
+     un soin, pas un métier — et chacun garde son propre motif sur la carte. */
+  { cle: 'sante', libelle: 'Santé', couleur: '#1E9E5A',
+    filtre: '["amenity"~"^(pharmacy|doctors|dentist|veterinary|clinic)$"]' },
   { cle: 'argent', libelle: 'Banques et DAB', couleur: '#00796B',
     filtre: '["amenity"~"^(atm|bank|bureau_de_change)$"]' },
   { cle: 'parking', libelle: 'Parkings', couleur: '#455A64',
@@ -68,6 +81,15 @@ export const CATEGORIES: readonly Categorie[] = [
     filtre: '["shop"~"^(car_repair|car_parts)$"]' },
   { cle: 'services', libelle: 'Services', couleur: '#546E7A',
     filtre: '["shop"~"^(laundry|dry_cleaning|hairdresser)$"]' },
+  /* DEUX FAMILLES DE PLUS, NOMMÉES DANS SA LISTE et absentes jusqu'ici : « des
+     haltères pour les salles de sport », « un avion pour les aéroports, un
+     train pour les gares ». Quatorze pastilles tiennent encore sur un
+     téléphone — et depuis qu'elles portent un dessin, elles se reconnaissent
+     plus vite que douze étiquettes ne se lisaient. */
+  { cle: 'sport', libelle: 'Sport', couleur: '#E8620C',
+    filtre: '["leisure"~"^(fitness_centre|sports_centre)$"]' },
+  { cle: 'transport', libelle: 'Gares et aéroports', couleur: '#3F51B5',
+    filtre: ['["railway"~"^(station|halt)$"]', '["aeroway"="aerodrome"]'] },
   { cle: 'wc', libelle: 'Toilettes', couleur: '#0097A7',
     filtre: '["amenity"="toilets"]' },
 ];
@@ -78,7 +100,8 @@ export const CATEGORIES: readonly Categorie[] = [
    DANS L'ORDRE. Le premier qui correspond gagne, et l'ordre compte : une
    pharmacie qui vend des cosmétiques reste une pharmacie. */
 const RANGEMENT: readonly { cle: string; test: (t: Record<string, string>) => boolean }[] = [
-  { cle: 'pharmacie', test: (t) => t['amenity'] === 'pharmacy' },
+  { cle: 'sante', test: (t) => ['pharmacy', 'doctors', 'dentist', 'veterinary', 'clinic']
+    .includes(t['amenity'] ?? '') },
   { cle: 'restaurant', test: (t) => ['restaurant', 'fast_food'].includes(t['amenity'] ?? '') },
   { cle: 'cafe', test: (t) => ['cafe', 'bar', 'pub'].includes(t['amenity'] ?? '') },
   { cle: 'cinema', test: (t) => ['cinema', 'theatre'].includes(t['amenity'] ?? '') },
@@ -86,11 +109,24 @@ const RANGEMENT: readonly { cle: string; test: (t: Record<string, string>) => bo
   { cle: 'parking', test: (t) => t['amenity'] === 'parking' },
   { cle: 'wc', test: (t) => t['amenity'] === 'toilets' },
   { cle: 'hotel', test: (t) => ['hotel', 'motel', 'guest_house'].includes(t['tourism'] ?? '') },
-  { cle: 'culture', test: (t) => ['museum', 'attraction', 'viewpoint'].includes(t['tourism'] ?? '') },
+  { cle: 'culture', test: (t) => ['museum', 'attraction', 'viewpoint', 'gallery', 'theme_park']
+    .includes(t['tourism'] ?? '') },
+  { cle: 'sport', test: (t) => ['fitness_centre', 'sports_centre'].includes(t['leisure'] ?? '') },
+  { cle: 'transport', test: (t) => ['station', 'halt'].includes(t['railway'] ?? '')
+    || t['aeroway'] === 'aerodrome' },
   { cle: 'auto', test: (t) => ['car_repair', 'car_parts'].includes(t['shop'] ?? '') },
   { cle: 'services', test: (t) => ['laundry', 'dry_cleaning', 'hairdresser'].includes(t['shop'] ?? '') },
-  { cle: 'commerce', test: (t) => t['shop'] !== undefined },
+  /* LE FOURRE-TOUT EXIGE UNE VALEUR NON VIDE : `!== undefined` est vrai pour
+     une chaîne vide, et une étiquette vide n'est pas un commerce. Même
+     défaut, même correction que pour les motifs (31/08). */
+  { cle: 'commerce', test: (t) => (t['shop'] ?? '') !== '' },
 ];
+
+/** Les clauses Overpass d'une famille, dans une emprise — PURE. */
+function clauses(c: Categorie, emprise: string): string {
+  const filtres = typeof c.filtre === 'string' ? [c.filtre] : c.filtre;
+  return filtres.map((f) => `nwr${f}(${emprise});`).join('');
+}
 
 /** La famille d'un lieu d'après ses étiquettes — PURE. `null` si aucune. */
 export function familleDe(tags: Record<string, string>): string | null {
@@ -108,7 +144,7 @@ export function urlCategorie(categorie: Categorie, vue: EmpriseVue): string {
   const emprise = [vue.sud, vue.ouest, vue.nord, vue.est]
     .map((v) => v.toFixed(5)).join(',');
   const requete = '[out:json][timeout:25];'
-    + `nwr${categorie.filtre}(${emprise});`
+    + clauses(categorie, emprise)
     + `out center tags ${PLAFOND_LIEUX};`;
   return `https://overpass.openstreetmap.fr/api/interpreter?data=${encodeURIComponent(requete)}`;
 }
@@ -126,7 +162,7 @@ export function urlFamilles(cles: readonly string[], vue: EmpriseVue): string {
     .map((v) => v.toFixed(5)).join(',');
   const choisies = CATEGORIES.filter((c) => cles.includes(c.cle));
   const requete = '[out:json][timeout:25];('
-    + choisies.map((c) => `nwr${c.filtre}(${emprise});`).join('')
+    + choisies.map((c) => clauses(c, emprise)).join('')
     + `);out center tags ${PLAFOND_LIEUX};`;
   return `https://overpass.openstreetmap.fr/api/interpreter?data=${encodeURIComponent(requete)}`;
 }
@@ -161,8 +197,11 @@ export function versLieux(brut: unknown): LieuCategorie[] {
     const propres: Record<string, string> = {};
     for (const [k, v] of Object.entries(tags)) if (typeof v === 'string') propres[k] = v;
     const famille = familleDe(propres);
+    /* LE MOTIF EST PLUS FIN QUE LA FAMILLE (POI-4, 31/08) : la couleur dit la
+       famille, le dessin dit le type. Un café et un bar partagent la teinte
+       et portent deux dessins — c'est exactement ce qu'Armelin décrit. */
     rendu.push({
-      nom: identite?.trim() ?? null, lon, lat,
+      nom: identite?.trim() ?? null, lon, lat, motif: motifDe(propres),
       ...(famille ? { famille } : {}),
     });
   }

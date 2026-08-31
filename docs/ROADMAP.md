@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #139 — POI-4, un motif au lieu d'un rond (31/08) : le motif dit le
+      type, la couleur dit la famille — ce qui permet d'honorer une liste de
+      vingt-quatre dessins sans faire vingt pastilles à cocher. Sport, gares
+      et aéroports deviennent cherchables ; « Pharmacies » devient « Santé ».
 - [x] PR #138 — VÉHICULE-2, le rayon d'action dit à quelle charge il répond
       (31/08) : 480 saisis, 384 affichés — le calcul était juste (80 % de
       charge), mais rien ne le disait. La charge est nommée avant les

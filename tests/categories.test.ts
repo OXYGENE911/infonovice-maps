@@ -11,17 +11,24 @@ import {
 /* PAR SA CLÉ, ET NON PAR SON RANG : l'ordre des familles est celui des
    boutons, et il changera. Un test qui s'accroche à `CATEGORIES[0]` casse au
    premier réarrangement, sans que rien ne soit cassé. */
-const pharmacie = CATEGORIES.find((c) => c.cle === 'pharmacie')!;
+/* « PHARMACIES » EST DEVENU « SANTÉ » le 31/08 : Armelin voulait une dent
+   pour un dentiste et une patte pour un vétérinaire, encore fallait-il
+   pouvoir les CHERCHER. Ils rejoignent la pharmacie parce qu'on cherche un
+   soin, pas un métier — et chacun garde son motif sur la carte. */
+const sante = CATEGORIES.find((c) => c.cle === 'sante')!;
 const VUE = { ouest: 2.3, sud: 48.8, est: 2.4, nord: 48.9 };
 
 describe('urlCategorie', () => {
   it('ordonne l’emprise à la façon Overpass : sud, ouest, nord, est', () => {
-    const url = decodeURIComponent(urlCategorie(pharmacie, VUE));
+    const url = decodeURIComponent(urlCategorie(sante, VUE));
     expect(url).toContain('(48.80000,2.30000,48.90000,2.40000)');
   });
   it('porte le filtre de la catégorie et le PLAFOND — la frugalité s’écrit', () => {
-    const url = decodeURIComponent(urlCategorie(pharmacie, VUE));
-    expect(url).toContain('["amenity"="pharmacy"]');
+    const url = decodeURIComponent(urlCategorie(sante, VUE));
+    expect(url).toContain('pharmacy');
+    expect(url, 'le dentiste et le vétérinaire doivent être cherchables')
+      .toContain('dentist');
+    expect(url).toContain('veterinary');
     expect(url).toContain(`out center tags ${PLAFOND_LIEUX};`);
     expect(url).toContain('overpass.openstreetmap.fr');
   });
@@ -77,7 +84,7 @@ describe('familleDe', () => {
   it('L’ORDRE TRANCHE quand un lieu porte deux étiquettes', () => {
     /* Une pharmacie qui vend des cosmétiques reste une pharmacie : sans
        ordre, elle basculerait en « commerce » selon l'humeur du service. */
-    expect(familleDe({ amenity: 'pharmacy', shop: 'chemist' })).toBe('pharmacie');
+    expect(familleDe({ amenity: 'pharmacy', shop: 'chemist' })).toBe('sante');
     expect(familleDe({ amenity: 'cafe', shop: 'bakery' })).toBe('cafe');
   });
 
@@ -91,8 +98,8 @@ describe('urlFamilles', () => {
   const vue = { ouest: 2.3, sud: 48.8, est: 2.4, nord: 48.9 };
 
   it('met TOUTES les familles cochées dans UNE requête', () => {
-    const url = decodeURIComponent(urlFamilles(['restaurant', 'pharmacie'], vue));
-    expect(url).toContain('amenity"="pharmacy');
+    const url = decodeURIComponent(urlFamilles(['restaurant', 'sante'], vue));
+    expect(url).toContain('pharmacy');
     expect(url).toContain('restaurant|fast_food');
     // Une seule union, un seul `out` : un seul aller-retour.
     expect(url.match(/out center tags/g)).toHaveLength(1);
