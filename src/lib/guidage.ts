@@ -19,7 +19,7 @@
  * la géolocalisation : il reçoit une position et rend des nombres.
  */
 import type { EtapeRoute } from './feuille-de-route';
-import { situerSurLeTrace } from './le-long-du-trajet';
+import { situerSurLeTrace, distanceM } from './le-long-du-trajet';
 
 /** Au-delà de cet écart au tracé, on ne prétend plus suivre l'itinéraire. */
 /* CENT-CINQUANTE MÈTRES ÉTAIENT TROP INDULGENTS. Armelin, le 29/08, capture
@@ -216,4 +216,74 @@ export function distanceEnMots(metres: number): string {
 export function heureArriveeEstimee(restantS: number, maintenant: Date): Date | null {
   if (!Number.isFinite(restantS) || restantS < 0) return null;
   return new Date(maintenant.getTime() + restantS * 1000);
+}
+
+/* ==========================================================================
+   L'AIMANT AU TRACÉ (GUIDE-1, 01/09).
+
+   LES DEUX DÉFAUTS DU TERRAIN. Armelin : « le curseur bouge à gauche ou à
+   droite de la ligne bleue […] parfois le véhicule est situé à une dizaine
+   de mètres à gauche ou à droite de la route alors que je suis bien sur
+   cette ligne » ; et « la flèche représentant ma voiture est à l'envers du
+   sens de la circulation ». Les deux ont la même cause : on DESSINAIT la
+   mesure brute. Le récepteur a une dizaine de mètres d'incertitude, et son
+   `heading` est du bruit à basse vitesse — à 4 km/h, la flèche pointait
+   n'importe où, jusqu'à reculer.
+
+   LA RÈGLE : tant qu'on est SUR la route (écart sous le seuil), on DESSINE
+   la route — le point projeté sur le tracé, orienté dans le sens du tracé.
+   La mesure brute continue de nourrir la logique (avancement, hors-route,
+   recalcul) : on ne ment pas au calcul, on cesse de faire trembler le
+   dessin. C'est aussi la parade aux « changements de voie impossibles » :
+   une rue parallèle à dix mètres ne capture plus le curseur, puisque seul
+   un écart franc et durable (le seuil hors-route existant) fait quitter le
+   tracé.
+
+   SUR LE MATÉRIEL : le Web n'expose AUCUN choix de constellation — pas de
+   « préférer Galileo » possible dans un navigateur. C'est un chantier de
+   l'application Android (phase 2), pas un réglage qu'on aurait oublié.
+   ========================================================================== */
+
+/* LE SEUIL DE L'AIMANT. Trente mètres : l'incertitude du récepteur (une
+   dizaine de mètres) plus la largeur d'une chaussée. Au-delà, on montre la
+   mesure brute — l'usager est peut-être vraiment ailleurs, et un curseur
+   collé de force mentirait. */
+export const SEUIL_AIMANT_M = 30;
+
+/**
+ * Le point du tracé à un avancement donné, et le cap du tracé là — PURE.
+ *
+ * `null` si le tracé est trop court : l'appelant retombe sur la mesure
+ * brute, jamais sur un point inventé.
+ */
+export function pointDuTrace(
+  trace: readonly [number, number][], avancementM: number,
+): { point: [number, number]; cap: number } | null {
+  if (trace.length < 2) return null;
+  let cumul = 0;
+  for (let i = 1; i < trace.length; i += 1) {
+    const d = distanceM(trace[i - 1]!, trace[i]!);
+    if (cumul + d >= avancementM && d > 0) {
+      const t = Math.min(1, Math.max(0, (avancementM - cumul) / d));
+      const a = trace[i - 1]!;
+      const b = trace[i]!;
+      return {
+        point: [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t],
+        cap: capSegment(a, b),
+      };
+    }
+    cumul += d;
+  }
+  // Au-delà du bout : la fin du tracé, orientée par son dernier segment.
+  const a = trace[trace.length - 2]!;
+  const b = trace[trace.length - 1]!;
+  return { point: [b[0], b[1]], cap: capSegment(a, b) };
+}
+
+/** Le cap d'un segment, en degrés (0 = nord) — PURE. */
+function capSegment(a: readonly [number, number], b: readonly [number, number]): number {
+  const mLon = 111_320 * Math.cos((a[1] * Math.PI) / 180);
+  const dx = (b[0] - a[0]) * mLon;
+  const dy = (b[1] - a[1]) * 111_320;
+  return ((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
 }

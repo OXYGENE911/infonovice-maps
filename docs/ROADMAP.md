@@ -537,6 +537,14 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #156 — POI-6 (01/09) : la famille « Écoles et universités »
       (toque de diplômé) et les stades dans « Sport et stades » — sans les
       terrains de quartier, qui noieraient la carte.
+- [x] PR #155 — BORNES-4 (01/09) : le mystère ZUNDER élucidé (un filtre
+      de réseau restauré en silence) — badge « filtres actifs », phrase
+      d'état, « Tout afficher » qui corrige aussi la mémoire ; et la puce
+      « Bornes de recharge » du filtre POI, second interrupteur de la
+      couche du volet.
+- [x] PR #154 — GUIDE-1 (01/09) : le curseur aimanté au tracé (30 m), le
+      cap du tracé quand le heading GPS bruite, la mesure brute gardée pour
+      la logique ; Galileo consigné comme chantier Android (phase 2).
 - [x] PR #153 — FICHE-3 (01/09) : la fiche recadrée à l'écran, l'état
       d'ouverture par un évaluateur partiel honnête (qui se tait sur ce
       qu'il ne sait pas), le « Partage facile » par fragment #lieu=, et les

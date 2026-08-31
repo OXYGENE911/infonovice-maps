@@ -26,7 +26,8 @@ import {
 } from '../lib/orientation';
 import {
   etatGuidage, distanceEnMots, heureArriveeEstimee, type OptionsGuidage,
-  partiAContresens, approcheManoeuvre, type EtatGuidage,
+  partiAContresens, approcheManoeuvre, pointDuTrace, SEUIL_AIMANT_M,
+  type EtatGuidage,
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
 import { chargerParkings, ErreurParkings, type Parking } from '../lib/parkings';
@@ -1672,7 +1673,27 @@ export class BandeauGuidage extends HTMLElement {
       && typeof coords.speed === 'number' && (coords.speed ?? 0) > 2
       ? coords.heading
       : (this.#dernierePosition ? capEntre(this.#dernierePosition, [lon, lat]) : null);
-    if (this.#carte) this.#curseur.poser(this.#carte, lon, lat, capMesure);
+    /* L'AIMANT AU TRACÉ (GUIDE-1, 01/09) : sur la route, on DESSINE la
+       route — point projeté, cap du tracé. La flèche ne recule plus (le
+       heading est du bruit à basse vitesse), et le curseur ne roule plus
+       « sur les toits des bâtiments parisiens ». La mesure BRUTE continue de
+       nourrir la logique : avancement, hors-route et recalcul n'en perdent
+       rien. Voir lib/guidage.ts pour la règle et le seuil. */
+    const aimant = !e.horsRoute && e.ecartM <= SEUIL_AIMANT_M
+      ? pointDuTrace(o.trace, e.avancementM) : null;
+    const dessine: [number, number] = aimant ? aimant.point : [lon, lat];
+    /* LE CAP DU TRACÉ NE REMPLACE LE CAP GPS QUE QUAND CELUI-CI EST DU
+       BRUIT : sous 2 m/s ou absent — le cas exact de la flèche à reculons,
+       vue à 4 km/h. En roulant, le heading GPS est fiable et déjà lissé ;
+       l'écraser ferait tourner la carte au cap du tracé pendant qu'on en
+       DÉVIE volontairement (un dépassement, une présélection). Deux parcours
+       du lissage l'ont rappelé avant l'usager. */
+    const capFiable = typeof coords.heading === 'number' && Number.isFinite(coords.heading)
+      && typeof coords.speed === 'number' && (coords.speed ?? 0) > 2;
+    const capDessine = capFiable ? capMesure : (aimant ? aimant.cap : capMesure);
+    if (this.#carte) {
+      this.#curseur.poser(this.#carte, dessine[0], dessine[1], capDessine);
+    }
 
     this.#dernierePosition = [lon, lat];
 
@@ -1721,7 +1742,12 @@ export class BandeauGuidage extends HTMLElement {
       /* À L'ARRÊT, LA BOUSSOLE PREND LE RELAIS — si le geste l'a ouverte
          (NAV-1). En mouvement, le cap GPS garde la main : il mesure la
          route, la boussole mesure le téléphone. */
-      const brut = capGps ?? (this.#modeOrientation === 'cap' ? this.#capBoussole : null);
+      /* AIMANTÉ, LE CAP DE LA CARTE EST CELUI DU TRACÉ : à basse vitesse le
+         heading GPS tournoie, et c'est lui qui faisait « avancer la voiture
+         à reculons ». La route, elle, ne tremble pas. */
+      const brut = capGps
+        ?? (aimant ? aimant.cap : null)
+        ?? (this.#modeOrientation === 'cap' ? this.#capBoussole : null);
       if (brut !== null) {
         this.#capLisse = lisserCap(this.#capLisse, brut);
         this.#dernierCapConnu = this.#capLisse;
@@ -1750,7 +1776,7 @@ export class BandeauGuidage extends HTMLElement {
       if (!approche && dedans) this.#zoomAvantApproche = null;
 
       carte?.easeTo({
-        center: [lon, lat],
+        center: dessine,
         /* LA VOITURE SE POSE AUX DEUX TIERS DE L'ÉCRAN, pas au milieu
            (TERRAIN-1, 30/08). Armelin, au volant : « la voiture est
            représentée au milieu de l'écran quand tous les GPS du marché la
