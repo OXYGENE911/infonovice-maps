@@ -3,8 +3,8 @@
 // referme. Débounce de 300 ms et annulation de la requête précédente : le
 // quota BAN est un bien commun (règle du projet).
 import { chercherAdresses, type ResultatAdresse } from '../lib/adresse';
-import { chercherParNom, ZOOM_MIN_NOM, LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
-import type { EmpriseVue } from '../lib/categories';
+import { chercherParNom, LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
+import { chercherEtablissements } from '../lib/annuaire-education';
 import { analyser, decoder, departementDe } from '../lib/adresse-mots';
 import { communesParNom } from '../lib/commune';
 
@@ -21,12 +21,28 @@ let instances = 0;
    leur recherche par nom serait restée muette sans rien dire. Toutes les
    barres partagent la même carte : un point d'entrée suffit, et il vaut
    pour celles à naître. Un parcours l'a attrapé avant l'usager. */
-let vueCourante: (() => { vue: EmpriseVue; zoom: number } | null) | null = null;
+let centreCarte: (() => { lon: number; lat: number } | null) | null = null;
 
 /** Dit aux barres de recherche où la carte regarde. Posé une fois. */
 export function poserEmpriseCourante(
-  f: () => { vue: EmpriseVue; zoom: number } | null,
-): void { vueCourante = f; }
+  f: () => { lon: number; lat: number } | null,
+): void { centreCarte = f; }
+
+/* CE QUI RESSEMBLE À UNE ADRESSE NE VA PAS CHERCHER UN NOM. Un numéro en
+   tête, c'est la Base Adresse Nationale qui répond — et Overpass n'a pas à
+   être dérangé pour « 25 avenue du prophète ». */
+function ressembleAUnNom(texte: string): boolean {
+  return !/^\s*\d/.test(texte);
+}
+
+/* SOUS CE SCORE, LA BAN A RÉPONDU À CÔTÉ (RECHERCHE-3). Mesuré sur le service :
+   une vraie adresse vaut 0,965 ; « Tour Eiffel Paris » vaut 0,378 (elle rend
+   l'avenue Gustave Eiffel faute de mieux), « Collège Albert Camus… » 0,636,
+   « Pincevent » 0,838 pour un lieu-dit à deux cents kilomètres. Au-dessus du
+   seuil, on ne dérange personne : l'adresse est trouvée.
+   SANS SCORE, ON SUPPOSE LA CONFIANCE : une source qui ne dit pas son doute
+   ne doit pas déclencher deux appels de plus à chaque frappe. */
+const SEUIL_CONFIANCE_BAN = 0.9;
 
 export class RechercheAdresse extends HTMLElement {
   #resultats: ResultatAdresse[] = [];
@@ -151,32 +167,99 @@ export class RechercheAdresse extends HTMLElement {
 
     try {
       this.#resultats = await chercherAdresses(texte, this.#annulation.signal);
-      /* LE DERNIER RECOURS (RECHERCHE-2, 01/09). Armelin veut chercher « une
-         école, une entreprise » par son nom : la BAN ne connaît que des
-         ADRESSES et reste muette. OpenStreetMap porte les noms — mais il est
-         bénévole : on ne l'interroge QUE si la BAN n'a rien rendu, jamais
-         sous le zoom 13, et toujours derrière le débounce de 300 ms. */
-      if (this.#resultats.length === 0 && texte.trim().length >= LONGUEUR_MIN_NOM) {
-        const ou = vueCourante?.() ?? null;
-        if (ou && ou.zoom < ZOOM_MIN_NOM) {
-          /* ON REFUSE, ET ON DIT POURQUOI. Une regex sur le nom à l'échelle
-             d'une région ferait payer à un service bénévole le prix d'une
-             base d'entreprises qu'il n'est pas. */
-          note.textContent = 'Aucune adresse. Pour chercher un lieu par son nom,'
-            + ' rapprochez-vous de la zone sur la carte.';
+      /* LA RECHERCHE PAR NOM PART DÈS QUE LA SAISIE EST UN NOM (RECHERCHE-3,
+         01/09), et non plus seulement quand la BAN s'est tue.
+         POURQUOI CE CHANGEMENT : la BAN rend presque TOUJOURS quelque chose
+         — une rue floue, un lieu-dit. « Tour Eiffel Paris » y rend « Avenue
+         Gustave Eiffel » (score 0,378), « Collège Albert Camus… » rend
+         « avenue albert camus » (0,636). La porte d'hier, ouverte sur le
+         seul silence de la BAN, ne s'ouvrait donc jamais — et Armelin l'a vu
+         le lendemain : « je ne parviens pas à trouver une adresse ».
+         LE CENTRE EST LE POINT LE PLUS PROBABLE, pas la vue : le meilleur
+         résultat de la BAN quand il existe — c'est lui qui porte la commune
+         que l'usager vient d'écrire — sinon le centre de la carte. */
+      /* LES ADRESSES S'AFFICHENT SANS ATTENDRE (RECHERCHE-3). Les chercher
+         plus loin prend des SECONDES — trois à cinq mesurées sur Overpass —
+         et faire patienter quelqu'un qui a déjà sa réponse sous les yeux
+         serait lui faire payer une recherche qu'il n'a pas demandée. */
+      this.#actif = -1;
+      this.#afficher();
+      /* UNE ABSENCE DE RÉPONSE N'EST PAS UNE RÉPONSE SÛRE. « Castorama » ne
+         rend RIEN à la BAN : la confiance y est nulle, pas totale. Le
+         raccourci `score ?? 1` déclarait le vide confiant, et refermait la
+         porte sur le cas même qu'Armelin a signalé. */
+      const confiance = this.#resultats.length === 0
+        ? 0 : (this.#resultats[0]?.score ?? 1);
+      if (ressembleAUnNom(texte) && texte.trim().length >= LONGUEUR_MIN_NOM
+        && confiance < SEUIL_CONFIANCE_BAN) {
+        const meilleur = this.#resultats[0];
+        const centre = meilleur
+          ? { lon: meilleur.lon, lat: meilleur.lat }
+          : centreCarte?.() ?? null;
+        if (centre === null) {
+          note.textContent = 'Impossible de situer la recherche : déplacez la carte'
+            + ' vers la zone qui vous intéresse.';
           note.hidden = false;
-        } else if (ou) {
-          const lieux = await chercherParNom(texte, ou.vue, this.#annulation.signal);
-          this.#resultats = lieux
-            .filter((l) => l.nom !== null)
-            .map((l) => ({
-              lon: l.lon, lat: l.lat,
-              libelle: l.nom as string,
-              type: 'lieu',
-              contexte: 'Lieu de la carte',
-            }));
-          if (this.#resultats.length === 0) {
-            note.textContent = `Aucune adresse ni lieu nommé « ${texte.trim()} » dans cette vue.`;
+        } else {
+          try {
+            /* DEUX SOURCES, UN SEUL TEMPS D'ATTENTE (ECOLES-1, 01/09).
+               OpenStreetMap n'indexe que l'ÉGALITÉ : il faut lui donner le nom
+               entier. L'annuaire de l'Éducation nationale accepte un nom
+               PARTIEL — « Albert Camus » y trouve « Collège Albert Camus »,
+               qu'OSM ne connaît pas (mesuré : soixante écoles autour du
+               Plessis-Trévise, aucune de ce nom). Les deux se complètent, on
+               les interroge donc EN MÊME TEMPS.
+               `allSettled` ET NON `all` : l'échec d'une source ne doit pas
+               emporter l'autre — Overpass tombe régulièrement, et une école
+               trouvée vaut mieux qu'une page vide. */
+            const [cotePlaces, coteEcoles] = await Promise.allSettled([
+              chercherParNom(texte, centre, this.#annulation.signal),
+              chercherEtablissements(texte, centre, this.#annulation.signal),
+            ]);
+            const lieux = cotePlaces.status === 'fulfilled' ? cotePlaces.value : [];
+            const ecoles = coteEcoles.status === 'fulfilled' ? coteEcoles.value : [];
+            const nommes = [
+              ...ecoles.map((e) => ({
+                lon: e.lon, lat: e.lat,
+                libelle: e.nom,
+                type: 'etablissement',
+                /* LA SOURCE SE DIT : savoir d'où vient une réponse, c'est
+                   pouvoir la contester. */
+                contexte: [e.type, e.commune].filter(Boolean).join(' · ')
+                  || 'Éducation nationale',
+              })),
+              ...lieux
+                .filter((l) => l.nom !== null)
+                .map((l) => ({
+                  lon: l.lon, lat: l.lat,
+                  libelle: l.nom as string,
+                  type: 'lieu',
+                  contexte: 'Lieu de la carte',
+                })),
+            ];
+            /* UNE PANNE N'EST PAS UNE ABSENCE, et il suffit d'UNE source en
+               défaut pour qu'on ne puisse plus rien affirmer. Si l'une a
+               échoué et que personne n'a rien trouvé, on dit la panne — dire
+               « aucun résultat » ferait porter à l'usager le doute d'un
+               service, et lui ferait croire que son lieu n'existe pas. */
+            const enPanne = cotePlaces.status === 'rejected'
+              ? cotePlaces.reason as Error
+              : (coteEcoles.status === 'rejected' ? coteEcoles.reason as Error : null);
+            if (enPanne !== null && nommes.length === 0) throw enPanne;
+            /* LES LIEUX PASSENT DEVANT : la BAN a déjà dit ce qu'elle savait,
+               et un lieu nommé EXACTEMENT comme la saisie répond mieux qu'une
+               rue approchante. Les adresses restent dessous, jamais perdues. */
+            if (nommes.length > 0) this.#resultats = [...nommes, ...this.#resultats];
+            if (this.#resultats.length === 0) {
+              note.textContent = `Aucune adresse ni lieu nommé « ${texte.trim()} »`
+                + ' à moins de 25 km. Le nom doit être écrit en entier.';
+              note.hidden = false;
+            }
+          } catch (e) {
+            /* UN SERVICE QUI EXPIRE NE DIT PAS « CE LIEU N'EXISTE PAS ».
+               Les adresses trouvées, elles, restent affichées. */
+            note.textContent = e instanceof Error ? e.message
+              : 'La recherche de lieux est indisponible pour le moment.';
             note.hidden = false;
           }
         }
