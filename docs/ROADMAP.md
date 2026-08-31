@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #153 — FICHE-3 (01/09) : la fiche recadrée à l'écran, l'état
+      d'ouverture par un évaluateur partiel honnête (qui se tait sur ce
+      qu'il ne sait pas), le « Partage facile » par fragment #lieu=, et les
+      cuisines en français.
 - [x] PR #151 — ARRIVEE-2, l'arrivée attend d'être vraie (31/08) : le
       constat à 20 m au lieu de 50, le côté de la chaussée dit mot pour mot
       quand l'angle le permet, et l'anneau qui pulse sur la destination.

@@ -81,3 +81,29 @@ export function sansDejaConnus(
   const connus = new Set(existants.map((x) => `${f(x.lon)},${f(x.lat)}`));
   return lieux.filter((l) => !connus.has(`${f(l.lon)},${f(l.lat)}`));
 }
+
+/* LE PARTAGE D'UN LIEU SEUL (FICHE-3, 01/09) — « Partage facile ».
+ * Forme : #lieu=lon,lat,nom — le nom en encodeURIComponent. Tout vit dans le
+ * fragment, jamais envoyé au serveur, comme les favoris. Des coordonnées
+ * WGS84, PAS un code maison : elles s'ouvrent partout, un code propriétaire
+ * ne s'ouvrirait que chez nous. */
+
+/** Un lieu reçu par lien, prêt à être montré. */
+export interface LieuPartageSimple {
+  lon: number;
+  lat: number;
+  nom: string;
+}
+
+/** Lit un fragment #lieu= — PURE, défensive, `null` si ce n'en est pas un. */
+export function depuisFragmentLieu(fragment: string): LieuPartageSimple | null {
+  const m = /^#lieu=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?),(.*)$/.exec(fragment);
+  if (!m) return null;
+  const lon = Number(m[1]);
+  const lat = Number(m[2]);
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)
+    || Math.abs(lon) > 180 || Math.abs(lat) > 90) return null;
+  let nom = '';
+  try { nom = decodeURIComponent(m[3] ?? '').trim(); } catch { nom = ''; }
+  return { lon, lat, nom: nom === '' ? 'Lieu partagé' : nom.slice(0, 120) };
+}

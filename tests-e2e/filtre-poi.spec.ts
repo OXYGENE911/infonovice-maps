@@ -402,3 +402,111 @@ test('LES PASTILLES DU FILTRE PORTENT LE DESSIN DE LA CARTE', async ({ page }) =
   const croix = page.locator('.poi-famille[data-cle="sante"] .poi-pastille svg path');
   await expect(croix.first()).toBeAttached();
 });
+
+
+test('LA FICHE RESTE À L’ÉCRAN quand la carte bougeait sous elle', async ({ page }) => {
+  /* FICHE-3 (01/09). Armelin, sur mobile : « si le POI est situé à droite de
+     l'écran, il arrive que la fenêtre s'affiche hors champ et le bouton
+     fermer est alors inaccessible ». La bulle s'ancre bien à l'OUVERTURE —
+     c'est le déplacement qui l'emmenait dehors, puisqu'elle suit son point.
+     Le clic recadre désormais le lieu sous le centre : on MESURE que la
+     fiche et sa croix tiennent dans l'écran, même pour un point collé au
+     bord droit. */
+  await page.setViewportSize({ width: 375, height: 812 });
+  await ouvrirCarte(page);
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json',
+    body: JSON.stringify({ elements: [{
+      type: 'node', id: 1, lat: 48.8566, lon: 2.3620,
+      tags: { amenity: 'restaurant', name: 'Le Bord Droit',
+        opening_hours: 'Mo-Su 09:00-19:00', cuisine: 'italian' },
+    }] }),
+  }));
+  await ouvrir(page);
+  await page.locator('.poi-famille[data-cle="restaurant"]').click();
+  await poser(page, 2.3600, 48.8566);
+  await expect(page.locator('.poi-filtre-etat')).toContainText('1 lieu', { timeout: 15_000 });
+  await page.locator('.poi-bulle').click();
+  const p = await page.evaluate(() => {
+    const c = (window as unknown as { __carte: {
+      project(l: [number, number]): { x: number; y: number };
+    } }).__carte;
+    const q = c.project([2.3620, 48.8566]);
+    return { x: Math.min(374, Math.round(q.x)), y: Math.round(q.y) };
+  });
+  await page.locator('#carte canvas.maplibregl-canvas').click({ position: p });
+  await expect(page.locator('.poi-fiche')).toBeVisible({ timeout: 10_000 });
+  // Le recadrage prend 350 ms : on mesure APRÈS, pas pendant.
+  await page.waitForTimeout(700);
+  const g = await page.evaluate(() => {
+    const bulle = document.querySelector('.maplibregl-popup-content')!.getBoundingClientRect();
+    const croix = document.querySelector('.maplibregl-popup-close-button')!.getBoundingClientRect();
+    return {
+      dedans: bulle.left >= 0 && bulle.right <= window.innerWidth
+        && bulle.top >= 0 && bulle.bottom <= window.innerHeight,
+      croixDedans: croix.right <= window.innerWidth && croix.top >= 0,
+    };
+  });
+  expect(g.dedans, 'la fiche sort de l’écran').toBe(true);
+  expect(g.croixDedans, 'la croix de fermeture est inaccessible').toBe(true);
+
+  /* ET LES DEUX NOUVEAUTÉS DE LA FICHE, au passage : l'état d'ouverture (sur
+     une expression simple, donc évaluable) et la cuisine en français. */
+  await expect(page.locator('.poi-fiche-ouvert')).toContainText(/Ouvert|Ferme bientôt|Fermé/);
+  await expect(page.locator('.poi-fiche')).toContainText('italienne');
+  await expect(page.locator('.poi-fiche')).not.toContainText('italian');
+});
+
+test('LE « PARTAGE FACILE » fait un lien qui rouvre la fiche', async ({ page, context }) => {
+  /* « Inclure un lien permettant de partager l'adresse à quelqu'un
+     d'autre. » Les coordonnées vivent dans le FRAGMENT #, jamais envoyé au
+     serveur — et ce sont des coordonnées WGS84, pas un code maison : elles
+     s'ouvrent partout. */
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  /* SANS feuille de partage système : Chromium de bureau en a une, et elle
+     avalerait le geste. On mesure le REPLI presse-papiers, qui est le chemin
+     vérifiable — la feuille système, elle, appartient au système. */
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'share', { value: undefined });
+  });
+  await ouvrirCarte(page);
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json',
+    body: JSON.stringify({ elements: [{
+      type: 'node', id: 1, lat: 48.8566, lon: 2.3522,
+      tags: { amenity: 'restaurant', name: 'Chez Paul' },
+    }] }),
+  }));
+  await ouvrir(page);
+  await page.locator('.poi-famille[data-cle="restaurant"]').click();
+  await poser(page, 2.3522, 48.8566);
+  await expect(page.locator('.poi-filtre-etat')).toContainText('1 lieu', { timeout: 15_000 });
+  await page.locator('.poi-bulle').click();
+  await page.locator('#carte canvas.maplibregl-canvas').click({
+    position: await page.evaluate(() => {
+      const c = (window as unknown as { __carte: {
+        project(l: [number, number]): { x: number; y: number };
+      } }).__carte;
+      const q = c.project([2.3522, 48.8566]);
+      return { x: Math.round(q.x), y: Math.round(q.y) };
+    }),
+  });
+  await expect(page.locator('.poi-fiche')).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: /Partager Chez Paul/ }).click();
+  /* Par la CLASSE, pas par le rôle : l'aria-label du bouton reste « Partager
+     Chez Paul » pendant que son texte visible dit « Lien copié ! » — c'est
+     voulu, le lecteur d'écran garde l'intention du bouton. */
+  await expect(page.locator('.poi-fiche-partager')).toHaveText('Lien copié !');
+  const lien = await page.evaluate(() => navigator.clipboard.readText());
+  expect(lien).toContain('#lieu=2.352200,48.856600,Chez%20Paul');
+
+  /* ET LE LIEN S'OUVRE : la carte se centre, la fiche est là — celui qui
+     reçoit n'a rien à chercher. */
+  await page.goto(lien);
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.poi-fiche')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.poi-fiche')).toContainText('Chez Paul');
+});
