@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #149 — BORNES-3, chercher « McDonald » trouve les bornes du parking
+      (31/08) : la recherche compare nom, enseigne ET exploitant — mesuré,
+      « Carrefour » ne vivait que dans l'enseigne et 4 931 stations étaient
+      invisibles au nom seul.
 - [x] PR #148 — TRAFIC-2, des dessins au lieu de ronds (31/08) : chaque
       événement Bison Futé porte son pictogramme — voiture et éclat,
       dépanneuse, triangle de chantier jaune et rouge — en plus grand.
