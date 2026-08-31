@@ -810,6 +810,8 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - DÉCISIONS D'ARMELIN : bottom sheets généralisées ; profils de pauses ;
   copilote / routines / arrivée réelle (§4 du triage).
 
+- [x] PR #140 — CORRIDOR-1, le couloir suivait la corde et non la route.
+
 ## Itérations suivantes (backlog ouvert)
 - PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),
   zones de danger…
