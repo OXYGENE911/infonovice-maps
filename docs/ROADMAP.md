@@ -538,6 +538,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       (31/08) : la recherche compare nom, enseigne ET exploitant — mesuré,
       « Carrefour » ne vivait que dans l'enseigne et 4 931 stations étaient
       invisibles au nom seul.
+- [x] PR #148 — TRAFIC-2, des dessins au lieu de ronds (31/08) : chaque
+      événement Bison Futé porte son pictogramme — voiture et éclat,
+      dépanneuse, triangle de chantier jaune et rouge — en plus grand.
 - [x] PR #147 — BORNES-2, les bornes du trajet suivent le filtre (31/08) :
       la couche du corridor ne filtrait que par réseau — une 50 kW passait le
       filtre « 150 kW et plus ». Et la durée d'arrêt quitte son halo pour une
