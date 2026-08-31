@@ -2,6 +2,33 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.3.0] — 2026-08-31 — TRAFIC-2 : des dessins au lieu de ronds de couleur (PR #148)
+
+- **UNE COULEUR SE DÉCODE, UN DESSIN SE RECONNAÎT.** Armelin : « les accidents
+  Bison Futé sont représentés sous forme de rond rouge, ce qui n'est pas
+  visuellement parlant […] Il faut que ça parle de suite visuellement, avec
+  des logos un peu plus grands. » Chaque type d'événement porte désormais son
+  pictogramme : la voiture et l'éclat de collision pour l'accident, la
+  dépanneuse à flèche levée avec son point d'exclamation pour le véhicule
+  arrêté, la file entre ses bords de voie pour le bouchon, la barrière pour la
+  coupure, le nuage de pluie, l'anneau barré, le camion dans l'anneau, le feu
+  tricolore, le « i ».
+- **LE CHANTIER EST UN TRIANGLE JAUNE BORDÉ DE ROUGE**, comme demandé — la
+  silhouette du panneau AK5 que tout conducteur français reconnaît, avec son
+  ouvrier à la pelle. Un code de formes s'apprend ; une silhouette de la route
+  est déjà apprise. (Ce sont des évocations lisibles à 36 pixels, pas les
+  pictogrammes réglementaires, qui ne survivraient pas à cette taille.)
+- **PLUS GRANDS** : trente-six pixels au zoom serré, contre dix-huit pour
+  l'ancien rond. Même grammaire de dessin que les lieux et les commodités —
+  toute l'application parle d'un seul trait.
+- Un défaut de dessin attrapé sur capture : la file du bouchon, trois
+  rectangles empilés, se lisait comme un point d'exclamation. Les bords de
+  voie la font lire comme une file.
+
+Tests : 1 E2E qui vérifie la couche au symbole, les dix types chacun avec SON
+image, et que chaque clé d'image est réellement dessinée — une clé sans image
+ferait un trou. 1000 unitaires, 300 E2E.
+
 ## [1.0.0] — 2026-08-31 — Passage en version 1.0 (PR #145)
 
 **LA DÉCISION EST CELLE D'ARMELIN**, le 31/08 : « Passe en v1.0.0 ». Je
