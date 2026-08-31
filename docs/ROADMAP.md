@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #155 — BORNES-4 (01/09) : le mystère ZUNDER élucidé (un filtre
+      de réseau restauré en silence) — badge « filtres actifs », phrase
+      d'état, « Tout afficher » qui corrige aussi la mémoire ; et la puce
+      « Bornes de recharge » du filtre POI, second interrupteur de la
+      couche du volet.
 - [x] PR #154 — GUIDE-1 (01/09) : le curseur aimanté au tracé (30 m), le
       cap du tracé quand le heading GPS bruite, la mesure brute gardée pour
       la logique ; Galileo consigné comme chantier Android (phase 2).

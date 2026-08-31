@@ -3189,7 +3189,8 @@ filtre-poi {
    doigt, et leur couleur est celle des points posés sur la carte — c'est la
    légende, comme pour le rayon d'action. */
 .poi-familles { display: flex; flex-wrap: wrap; gap: 6px; }
-.poi-famille {
+.poi-famille,
+.poi-famille-bornes {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 5px 10px 5px 8px; border-radius: 999px; cursor: pointer;
   border: 1px solid var(--bord-2); background: var(--fond-doux);
@@ -3197,14 +3198,46 @@ filtre-poi {
 }
 /* LA PASTILLE EST LE DESSIN DE LA CARTE (POI-5, 31/08), plus un simple rond :
    même motif, même disque — le panneau est la légende. */
-.poi-famille .poi-pastille {
+.poi-famille .poi-pastille,
+.poi-famille-bornes .poi-pastille {
   display: inline-flex; flex: 0 0 auto; line-height: 0;
 }
-.poi-famille[aria-pressed="true"] {
+.poi-famille[aria-pressed="true"],
+.poi-famille-bornes[aria-pressed="true"] {
   border-color: var(--teinte); color: var(--texte-1); font-weight: 650;
   background: color-mix(in srgb, var(--teinte) 14%, transparent);
 }
-.poi-famille:focus-visible { outline: none; box-shadow: var(--focus); }
+.poi-famille:focus-visible,
+.poi-famille-bornes:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* BORNES-4 — le badge « filtres actifs » de la puce des bornes, et le
+   retrait en un geste. */
+.poi-famille-filtres {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #fff;
+  background: #B45309; /* ambre foncé : un réglage qui agit, pas une panne */
+}
+
+.poi-filtres-effacer {
+  display: block;
+  margin: 0.25rem 0 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #B45309;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.poi-filtres-effacer:hover { background: rgb(180 83 9 / 12%); }
+.poi-filtres-effacer:focus-visible { outline: none; box-shadow: var(--focus); }
 .poi-chercher {
   width: 100%; margin-top: 10px; padding: 8px 12px; border-radius: 9px;
   border: 1px solid var(--accent); background: var(--accent); color: #FFF;

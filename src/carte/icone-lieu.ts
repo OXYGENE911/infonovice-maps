@@ -153,6 +153,9 @@ const DESSINS: Record<CleMotif, Dessin> = {
     ],
   },
   wc: { lettre: 'WC' },
+  /* L'éclair des bornes de recharge (BORNES-4) : le même trait que les
+     éclairs de puissance du planificateur, dans la grammaire des pastilles. */
+  eclair: { pleins: ['M13.2 2.5 5.8 13.6h4.3l-1.7 7.9 8.8-11.9h-4.6l0.6-7.1Z'] },
   point: { pleins: ['M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z'] },
 };
 

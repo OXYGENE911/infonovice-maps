@@ -184,6 +184,16 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   // « Y ALLER » DEPUIS LA FICHE D'UN LIEU (LIEUX-1, 31/08) : la même porte
   // que la fiche de borne, pas un second chemin à maintenir.
   filtrePoi.porteItineraire = panneau;
+  /* LA PUCE « BORNES DE RECHARGE » (BORNES-4) : le volet des services garde
+     la couche, la puce n'est qu'un second interrupteur — et chacun tient
+     l'autre au courant. */
+  filtrePoi.porteBornes = {
+    basculer: (actif) => { poi.basculerBornes(actif); },
+    active: () => poi.bornesActives,
+  };
+  poi.surCouchesChangees = (actives) => { filtrePoi.majBornes(actives.has('bornes')); };
+  poi.surFiltresBornes = (resume) => { filtrePoi.majFiltresBornes(resume); };
+  filtrePoi.majFiltresBornes(poi.resumeFiltres);
   /* UN LIEN « PARTAGE FACILE » REÇU (FICHE-3, 01/09) : la carte s'ouvre sur
      le lieu, fiche dépliée — celui qui reçoit n'a rien à chercher. */
   const lieuRecu = depuisFragmentLieu(location.hash);

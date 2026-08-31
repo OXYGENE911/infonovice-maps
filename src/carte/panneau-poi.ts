@@ -17,6 +17,7 @@ import { palierDe, libellePalier, PALIERS } from '../lib/puissance';
 import { poserIconesPuissance, nomIcone, eclairsSVG } from './icone-puissance';
 import {
   chargerCarburants, chargerBornes, chargerParkings, vueAChange,
+  resumerFiltresBornes,
   PRISES, type ClePrise, type FiltresBornes,
   type Bbox,
 } from '../lib/poi';
@@ -110,6 +111,31 @@ export class PanneauPoi extends HTMLElement {
   #fiche: FicheBorne | null = null;
 
   set fiche(f: FicheBorne) { this.#fiche = f; }
+
+  /* LA PUCE « BORNES DE RECHARGE » DU FILTRE POI (BORNES-4) passe par ici :
+     le panneau reste la SOURCE UNIQUE de la couche — la puce n'est qu'un
+     second interrupteur sur le même circuit, jamais une seconde couche. */
+  surCouchesChangees: ((actives: ReadonlySet<string>) => void) | null = null;
+
+  get bornesActives(): boolean { return this.#actives.has('bornes'); }
+
+  /** Le résumé des filtres qui restreignent — `null` si rien n'agit. */
+  get resumeFiltres(): string | null {
+    return this.#actives.has('bornes')
+      ? resumerFiltresBornes(this.#filtres) : null;
+  }
+
+  /** Prévenu à chaque changement de filtre — la puce du filtre POI écoute. */
+  surFiltresBornes: ((resume: string | null) => void) | null = null;
+
+  /** Coche ou décoche la couche des bornes COMME LE FERAIT L'USAGER : la
+      case du panneau change et son circuit existant fait tout le reste. */
+  basculerBornes(actif: boolean): void {
+    const case_ = this.querySelector<HTMLInputElement>('input[value="bornes"]');
+    if (!case_ || case_.checked === actif) return;
+    case_.checked = actif;
+    case_.dispatchEvent(new Event('change'));
+  }
 
   /* LE MODE TRAJET DU PLANIFICATEUR EFFACE LES BORNES NATIONALES : quand un
      plan de recharge est à l'écran, seules comptent les bornes du corridor —
@@ -263,6 +289,10 @@ export class PanneauPoi extends HTMLElement {
              réglages qui ne s'appliquent à rien encombre sans informer. -->
         <fieldset class="poi-filtres" hidden>
           <legend>Filtrer les bornes</legend>
+          <!-- LE RETRAIT EN UN GESTE : dire qu'un filtre agit sans offrir de
+               le retirer d'un coup obligerait à retrouver chaque case une à
+               une — et un réseau coché peut ne plus être affiché. -->
+          <button type="button" class="poi-filtres-effacer" hidden></button>
           <label class="poi-filtre-ligne">Puissance minimale
             <select class="poi-puissance" aria-label="Puissance minimale des bornes">
               <option value="0">toutes</option>
@@ -370,7 +400,25 @@ export class PanneauPoi extends HTMLElement {
       /* ET LE TRAJET AUSSI (BORNES-2) : ses bornes de corridor doivent suivre
          le même filtre, sinon l'usager voit ce qu'il vient d'exclure. */
       this.surFiltresChanges?.();
+      this.#majRappelFiltres();
     };
+
+    /* « TOUT AFFICHER » : retire TOUS les filtres d'un geste — cases,
+       champ de nom, puissance — et l'ÉCRIT en mémoire, sinon le réglage
+       retiré ressusciterait à la prochaine visite, exactement le mystère
+       qu'on soigne (BORNES-4). */
+    this.querySelector<HTMLButtonElement>('.poi-filtres-effacer')
+      ?.addEventListener('click', () => {
+        this.#filtres = {};
+        const select = this.querySelector<HTMLSelectElement>('.poi-puissance');
+        if (select) select.value = '0';
+        const champ = this.querySelector<HTMLInputElement>('.poi-reseau-recherche');
+        if (champ) champ.value = '';
+        this.querySelectorAll<HTMLInputElement>('.poi-prise:checked, .poi-reseau:checked')
+          .forEach((case_) => { case_.checked = false; });
+        this.#rendreReseaux(this.#reseaux);
+        surFiltre();
+      });
     this.querySelector<HTMLSelectElement>('.poi-puissance')?.addEventListener('change', (e) => {
       const v = Number((e.target as HTMLSelectElement).value);
       this.#filtres = { ...this.#filtres, puissanceMin: Number.isFinite(v) && v > 0 ? v : undefined };
@@ -431,6 +479,8 @@ export class PanneauPoi extends HTMLElement {
         this.#majVisibiliteFiltres();
         if (coche) void this.#charger(couche);
         else { this.#vider(couche); this.#etat(); }
+        this.surCouchesChangees?.(this.#actives);
+        if (couche === 'bornes') this.#majRappelFiltres();
       });
     });
     void lirePreference<unknown>(PREF_POI).then((memo) => {
@@ -445,6 +495,7 @@ export class PanneauPoi extends HTMLElement {
         void this.#charger(couche as Couche);
       }
       this.#majVisibiliteFiltres();
+      this.surCouchesChangees?.(this.#actives);
     });
 
     /* LES FILTRES SE RÉTABLISSENT AUSSI. Un réglage oublié entre deux visites
@@ -475,6 +526,9 @@ export class PanneauPoi extends HTMLElement {
         const c = this.querySelector<HTMLInputElement>(`.poi-prise[value="${cle}"]`);
         if (c) c.checked = true;
       }
+      /* LE RÉGLAGE RÉTABLI S'ANNONCE : c'est le cœur de BORNES-4. */
+      this.#majRappelFiltres();
+      this.#etat();
     });
   }
 
@@ -544,6 +598,7 @@ export class PanneauPoi extends HTMLElement {
         this.#filtresTouches = true;
         void ecrirePreference(PREF_FILTRES, this.#filtres);
         void this.#charger('bornes', true);
+        this.#majRappelFiltres();
       });
       etiquette.append(case_, texte);
       boite.appendChild(etiquette);
@@ -585,6 +640,26 @@ export class PanneauPoi extends HTMLElement {
   #majVisibiliteFiltres(): void {
     const bloc = this.querySelector<HTMLElement>('.poi-filtres');
     if (bloc) bloc.hidden = !this.#actives.has('bornes');
+    this.#majRappelFiltres();
+  }
+
+  /* LE RAPPEL DES FILTRES QUI AGISSENT (BORNES-4). Trois endroits, un même
+     résumé : le badge du volet replié, le bouton de retrait, la ligne
+     d'état. Le résumé vient de `resumerFiltresBornes` (lib, pure) —
+     `null` quand rien ne restreint, et tout se tait. */
+  #majRappelFiltres(): void {
+    const resume = this.resumeFiltres;
+    const effacer = this.querySelector<HTMLButtonElement>('.poi-filtres-effacer');
+    if (effacer) {
+      effacer.hidden = resume === null;
+      effacer.textContent = resume === null ? ''
+        : `Tout afficher — retirer : ${resume}`;
+    }
+    /* LE BADGE, LUI, VIT SUR LA PUCE DU FILTRE POI — la seule surface
+       visible depuis la CARTE : ce volet est rendu comme une page du
+       planificateur, son résumé n'apparaît jamais. Mesuré par le parcours
+       du badge, qui a trouvé le span rendu mais invisible. */
+    this.surFiltresBornes?.(resume);
   }
 
   #rechargerActives(): void {
@@ -840,6 +915,12 @@ export class PanneauPoi extends HTMLElement {
     if (message) { p.textContent = message; return; }
     const fr = (n: number): string => n.toLocaleString('fr-FR');
     const bouts: string[] = [];
+    /* LES FILTRES QUI AGISSENT SE DISENT D'ABORD : une carte filtrée qui ne
+       le dit pas se lit comme une carte en panne (BORNES-4). */
+    if (this.#actives.has('bornes')) {
+      const resume = resumerFiltresBornes(this.#filtres);
+      if (resume !== null) bouts.push(`Filtres bornes : ${resume}`);
+    }
     /* PENDANT LE MODE TRAJET, LE DIRE : une couche cochée mais invisible sans
        explication se lit comme une panne. */
     if (this.#bornesMasquees && this.#actives.has('bornes')) {
