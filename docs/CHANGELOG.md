@@ -2,6 +2,31 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.6.0] — 2026-08-31 — ARRIVEE-2 : l'arrivée attend d'être vraie (PR #151)
+
+- **LE CONSTAT NE MENT PLUS DE QUARANTE MÈTRES.** Armelin : « ne pas indiquer
+  l'arrivée trop tôt, car hier ça m'indiquait que j'étais arrivé 40 m
+  avant. » Le palier vocal « maintenant » se déclenche à cinquante mètres —
+  juste pour un virage, mensonger pour un constat. Les paliers disent
+  désormais « vous arrivez à destination » (un futur proche, qui prépare) ;
+  le « vous êtes arrivé » attend VINGT mètres — l'incertitude du récepteur
+  plus une longueur de voiture.
+- **LE CÔTÉ DE LA CHAUSSÉE, MOT POUR MOT** : « Vous êtes arrivé à
+  destination. Votre destination se situe sur la gauche (ou la droite) de la
+  chaussée. » Le tracé s'arrête SUR la route, l'adresse est à côté : l'angle
+  entre la direction d'arrivée et la direction vers l'adresse dit le côté.
+  QUAND L'ANGLE NE TRANCHE PAS, ON NE DIT PAS DE CÔTÉ — un côté deviné
+  enverrait traverser pour rien une fois sur deux. Le cartouche l'écrit
+  aussi : tout le monde ne roule pas avec le son.
+- **L'ANIMATION D'ARRIVÉE** : un anneau vert qui pulse sur la destination —
+  sobre, une célébration et pas une alarme, immobile pour qui préfère
+  l'immobile (prefers-reduced-motion).
+
+Tests : 9 unitaires (le côté gauche/droite/devant, l'adresse confondue avec
+le tracé, les points collés qui ne brouillent pas le cap, le seuil borné),
+1 E2E qui MESURE ce qui est dit — rien à 45 m, le constat et son côté à
+15 m — et voit l'animation. 1016 unitaires, 302 E2E.
+
 ## [1.5.0] — 2026-08-31 — PARK-1 : se garer près de l'arrivée, et finir à pied (PR #150)
 
 - **LE PANNEAU P À L'APPROCHE.** Armelin : « un petit panneau rond P lorsqu'on
