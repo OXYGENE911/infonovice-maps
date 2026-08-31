@@ -158,12 +158,21 @@ export class PanneauPoi extends HTMLElement {
      « 150 kW et plus » — elle ne filtrait que par réseau. Le panneau reste la
      source unique des filtres ; le planificateur les LIT, il ne les copie
      pas. */
-  filtresAffichage(): { puissanceMin?: number; prises?: string[] } {
+  filtresAffichage(): FiltresBornes {
+    /* TOUT LE FILTRE, RÉSEAUX COMPRIS (BORNES-6, 01/09). Il n'en rendait que
+       la puissance et les prises : le filtre par réseau ne valait donc que
+       pour la carte, et le trajet montrait des bornes que la carte cachait.
+       Armelin a tranché — « le filtre réseau de charge + puissance de charge
+       doit être valide aussi bien en mode carte qu'en mode itinéraire ». */
     return {
       ...(this.#filtres.puissanceMin !== undefined
         ? { puissanceMin: this.#filtres.puissanceMin } : {}),
       ...(this.#filtres.prises !== undefined && this.#filtres.prises.length > 0
         ? { prises: [...this.#filtres.prises] } : {}),
+      ...(this.#filtres.reseaux !== undefined && this.#filtres.reseaux.length > 0
+        ? { reseaux: [...this.#filtres.reseaux] } : {}),
+      ...(this.#filtres.nom !== undefined && this.#filtres.nom !== ''
+        ? { nom: this.#filtres.nom } : {}),
     };
   }
 
