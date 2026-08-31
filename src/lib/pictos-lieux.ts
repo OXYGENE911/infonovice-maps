@@ -39,6 +39,7 @@ export type CleMotif =
   | 'lit' | 'colonnes' | 'roue' | 'bobine' | 'masques'
   | 'croix' | 'dent' | 'patte' | 'billet' | 'parking'
   | 'cle' | 'cintre' | 'ciseaux' | 'train' | 'avion' | 'haltere' | 'wc'
+  | 'toque'
   | 'point';
 
 /* CE QUI CHOISIT LE MOTIF, DANS L'ORDRE. Le premier qui correspond gagne : une
@@ -77,6 +78,9 @@ const MOTIFS: readonly { motif: CleMotif; test: (t: Record<string, string>) => b
   { motif: 'avion', test: (t) => t['aeroway'] === 'aerodrome' || t['aeroway'] === 'terminal' },
   // — Bouger son corps —
   { motif: 'haltere', test: (t) => ['fitness_centre', 'sports_centre'].includes(t['leisure'] ?? '') },
+  // — Apprendre —
+  { motif: 'toque', test: (t) => ['school', 'kindergarten', 'college', 'university']
+    .includes(t['amenity'] ?? '') },
   // — Le reste —
   { motif: 'wc', test: (t) => t['amenity'] === 'toilets' },
   /* LE FOURRE-TOUT VIENT EN DERNIER, ET C'EST TOUT L'ORDRE. Placé plus haut,
@@ -117,5 +121,6 @@ export const MOTIF_DE_FAMILLE: Readonly<Record<string, CleMotif>> = {
   services: 'cintre',
   sport: 'haltere',
   transport: 'train',
+  ecole: 'toque',
   wc: 'wc',
 };

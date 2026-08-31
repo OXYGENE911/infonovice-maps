@@ -534,6 +534,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #156 — POI-6 (01/09) : la famille « Écoles et universités »
+      (toque de diplômé) et les stades dans « Sport et stades » — sans les
+      terrains de quartier, qui noieraient la carte.
 - [x] PR #153 — FICHE-3 (01/09) : la fiche recadrée à l'écran, l'état
       d'ouverture par un évaluateur partiel honnête (qui se tait sur ce
       qu'il ne sait pas), le « Partage facile » par fragment #lieu=, et les

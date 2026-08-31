@@ -64,11 +64,12 @@ test('le filtre s’ouvre depuis la CARTE, en un geste', async ({ page }) => {
   await expect(page.locator('.poi-panneau')).toBeHidden();
   await bulle.click();
   await expect(page.locator('.poi-panneau')).toBeVisible();
-  /* QUATORZE FAMILLES depuis POI-4 : sport, gares et aéroports manquaient à
-     la liste d'Armelin. Elles tiennent encore sur un téléphone — et depuis
-     qu'elles portent un dessin, elles se reconnaissent plus vite que douze
-     étiquettes ne se lisaient. */
-  await expect(page.locator('.poi-famille')).toHaveCount(14);
+  /* QUINZE FAMILLES depuis POI-6 : les écoles ont rejoint la liste (« les
+     écoles et les stades ne sont pas affichés en tant que POI »). Elles
+     tiennent encore sur un téléphone — et depuis qu'elles portent un
+     dessin, elles se reconnaissent plus vite que douze étiquettes ne se
+     lisaient. */
+  await expect(page.locator('.poi-famille')).toHaveCount(15);
 });
 
 test('IL NE CHEVAUCHE PLUS le planificateur, sur un écran large', async ({ page }) => {
@@ -260,14 +261,17 @@ test('LE MOTIF DIT LE TYPE, LA COULEUR DIT LA FAMILLE', async ({ page }) => {
   }
 });
 
-test('QUATORZE FAMILLES — sport, gares et aéroports compris', async ({ page }) => {
+test('QUINZE FAMILLES — sport et stades, écoles, gares et aéroports compris', async ({ page }) => {
   /* Trois catégories de sa liste n'existaient nulle part : « des haltères
      pour les salles de sport », « un avion pour les aéroports, un train pour
-     les gares ». Encore fallait-il pouvoir les CHERCHER. */
+     les gares ». Puis POI-6 (01/09) : « les écoles et les stades ne sont
+     pas affichés en tant que POI » — la famille Écoles est née, les stades
+     ont rejoint le sport. Encore fallait-il pouvoir les CHERCHER. */
   await ouvrirCarte(page);
   await ouvrir(page);
-  await expect(page.locator('.poi-famille')).toHaveCount(14);
+  await expect(page.locator('.poi-famille')).toHaveCount(15);
   await expect(page.locator('.poi-famille[data-cle="sport"]')).toBeVisible();
+  await expect(page.locator('.poi-famille[data-cle="ecole"]')).toBeVisible();
   await expect(page.locator('.poi-famille[data-cle="transport"]')).toBeVisible();
   await expect(page.locator('.poi-famille[data-cle="sante"]')).toBeVisible();
 });
@@ -397,7 +401,7 @@ test('LES PASTILLES DU FILTRE PORTENT LE DESSIN DE LA CARTE', async ({ page }) =
   await ouvrirCarte(page);
   await ouvrir(page);
   // Chaque pastille porte un SVG — plus un simple rond peint en CSS.
-  await expect(page.locator('.poi-famille .poi-pastille svg')).toHaveCount(14);
+  await expect(page.locator('.poi-famille .poi-pastille svg')).toHaveCount(15);
   // Et le motif est distinctif : la santé porte sa croix (un path plein).
   const croix = page.locator('.poi-famille[data-cle="sante"] .poi-pastille svg path');
   await expect(croix.first()).toBeAttached();

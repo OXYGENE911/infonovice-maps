@@ -153,6 +153,12 @@ const DESSINS: Record<CleMotif, Dessin> = {
     ],
   },
   wc: { lettre: 'WC' },
+  /* La toque de diplômé des écoles (POI-6) : le plateau en losange, la
+     calotte en dessous, le gland qui pend à droite. */
+  toque: {
+    pleins: ['M12 4 2.5 8.6 12 13.2l9.5-4.6L12 4Z'],
+    traits: ['M6.5 11.4v3.4c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5v-3.4', 'M20.2 9.6v4.6'],
+  },
   point: { pleins: ['M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z'] },
 };
 

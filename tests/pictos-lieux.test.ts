@@ -35,6 +35,15 @@ describe('motifDe — la liste d’Armelin, dessin par dessin', () => {
   });
 });
 
+describe('les écoles (POI-6)', () => {
+  it('la toque de diplômé, de la maternelle à l’université', () => {
+    expect(motifDe({ amenity: 'school' })).toBe('toque');
+    expect(motifDe({ amenity: 'kindergarten' })).toBe('toque');
+    expect(motifDe({ amenity: 'college' })).toBe('toque');
+    expect(motifDe({ amenity: 'university' })).toBe('toque');
+  });
+});
+
 describe('la séparation des rôles', () => {
   /* C'EST LE CŒUR DE POI-4 : sans elle, honorer sa liste aurait demandé une
      famille par dessin — vingt pastilles à cocher, ce que POI-2 refusait à
