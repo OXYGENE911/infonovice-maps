@@ -51,7 +51,9 @@ const dites = (page: Page): Promise<string[]> =>
  * Un suivi dont la manœuvre est à `distance` mètres — c'est elle qui décide
  * du palier atteint, donc de ce qui se dit.
  */
-async function suivre(page: Page, distance: number, trafic = false): Promise<void> {
+async function suivre(
+  page: Page, distance: number, trafic = false, voie?: string,
+): Promise<void> {
   await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
     headers: { 'Access-Control-Allow-Origin': '*' },
     contentType: 'application/json', body: '{"elements":[]}',
@@ -87,7 +89,11 @@ async function suivre(page: Page, distance: number, trafic = false): Promise<voi
             { instruction: { type: 'depart' }, distance,
               attributes: { name: { cpx_numero: 'D606' } } },
             { instruction: { type: 'turn', modifier: 'right' }, distance: 1_600,
-              attributes: { name: { cpx_numero: 'A7' } } },
+              attributes: {
+                name: voie === undefined
+                  ? { cpx_numero: 'A7' }
+                  : { nom_1_gauche: voie },
+              } },
           ] }],
         }),
       });
@@ -212,4 +218,22 @@ test('IL SE TAIT quand une manœuvre approche', async ({ page }) => {
   await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
   await page.waitForTimeout(1_500);
   expect((await dites(page)).some((p) => p.includes('signalé'))).toBe(false);
+});
+
+test('LA VOIX PRONONCE LES ACCENTS que la source a perdus', async ({ page }) => {
+  /* Armelin, 31/08 : « mon adresse "Avenue du prophète" est écrite "Avenue du
+     Prophete" sans accent. Du coup, la lecture vocale prononce le nom tel
+     quel et phonétiquement, ça fait tache d'entendre "Avenue du
+     Proph[eu]te". »
+     ON MESURE CE QUI EST RÉELLEMENT DIT, pas ce qui est affiché : c'est la
+     prononciation qui était en cause, et la synthèse ne sait lire que ce
+     qu'on lui donne. La source rend « AV DU PROPHETE » ; ce qui part à la
+     voix doit porter l'accent. */
+  await suivre(page, 400, false, 'AV DU PROPHETE');
+  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
+  await page.waitForTimeout(1_200);
+  const phrases = (await dites(page)).join(' | ');
+  expect(phrases, 'la voix doit prononcer l’accent').toContain('Prophète');
+  expect(phrases, 'plus aucune forme sans accent ne part à la voix')
+    .not.toContain('Prophete');
 });
