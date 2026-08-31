@@ -32,6 +32,9 @@ import {
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
 import { chargerParkings, ErreurParkings, type Parking } from '../lib/parkings';
 import { coteDestination, phraseArrivee, SEUIL_ARRIVE_M } from '../lib/arrivee';
+import {
+  nouveauBilan, ajouterFixe, resumerBilan, dureeEnMots, type EtatBilan,
+} from '../lib/bilan-trajet';
 import type { PointGeo } from '../lib/coordonnees';
 import { Marker, type GeoJSONSource } from 'maplibre-gl';
 import { imagePastille, cleImage, RAPPORT_PASTILLE } from './icone-lieu';
@@ -554,6 +557,15 @@ export class BandeauGuidage extends HTMLElement {
         <!-- FINIR À PIED (point 9) : une fois garé, la fin du trajet se fait
              logiquement à pied — on le PROPOSE, on ne l'impose pas. -->
         <button type="button" class="bg-a-pied" hidden></button>
+        <!-- LE BILAN D'ARRIVÉE (STATS-1, 01/09) : « une fenêtre de
+             statistiques à l'arrivée ». Il ne coûte AUCUNE requête — tout
+             sort des fixes que le suivi recevait déjà, et rien ne quitte le
+             navigateur. -->
+        <section class="bg-bilan" hidden aria-label="Bilan du trajet">
+          <h2 class="bg-bilan-titre">Trajet terminé</h2>
+          <dl class="bg-bilan-liste"></dl>
+          <button type="button" class="bg-bilan-fermer">Fermer</button>
+        </section>
         <!-- CE QUI SE DÉPLIE. « Soit l'utilisateur scrolle la barre vers le
              haut pour afficher les options cachées, soit il appuie une fois
              sur la barre pour la déployer » — les deux gestes marchent.
@@ -753,6 +765,11 @@ export class BandeauGuidage extends HTMLElement {
     this.querySelector('.bg-parking-p')?.addEventListener('click', () => {
       void this.#ouvrirParkings();
     });
+    this.querySelector('.bg-bilan-fermer')?.addEventListener('click', () => {
+      const boite = this.querySelector<HTMLElement>('.bg-bilan');
+      if (boite) boite.hidden = true;
+      this.#publierHauteur?.();
+    });
     this.querySelector('.bg-a-pied')?.addEventListener('click', () => {
       const c = this.#derniersCoords;
       /* `=== null`, PAS un test de vérité : un libellé VIDE — trajet venu de
@@ -890,6 +907,8 @@ export class BandeauGuidage extends HTMLElement {
    */
   demarrer(o: DemarrageGuidage): boolean {
     this.arreter();
+    const bilan = this.querySelector<HTMLElement>('.bg-bilan');
+    if (bilan) bilan.hidden = true;
     /* Le cap lissé repart de zéro : celui du trajet précédent orienterait le
        premier fixe du nouveau. Le MODE, lui, tient la session — comme la 3D. */
     this.#capLisse = null;
@@ -929,7 +948,22 @@ export class BandeauGuidage extends HTMLElement {
     (this.querySelector('.bg-distance') as HTMLElement).textContent = '';
 
     this.#veille = navigator.geolocation.watchPosition(
-      (p) => { this.#majPosition(p.coords); },
+      (p) => {
+        /* LE BILAN SE NOURRIT ICI, ET NULLE PART AILLEURS (STATS-1).
+           `#majPosition` est rappelée par SIX chemins d'interface — bascule
+           de boussole, recentrage, changement de mode — qui REJOUENT le
+           dernier fixe. Y accumuler aurait compté un geste d'interface comme
+           un instant de trajet, et gonflé la durée de qui tripote ses
+           boutons à l'arrêt. Ici, un appel = un fixe du récepteur.
+           LA MESURE BRUTE, pas le point aimanté qu'on DESSINE : une
+           statistique se fait de ce qu'on a mesuré. */
+        this.#bilan = ajouterFixe(this.#bilan, {
+          instant: Date.now(),
+          vitesse: typeof p.coords.speed === 'number' && Number.isFinite(p.coords.speed)
+            ? p.coords.speed : null,
+        });
+        this.#majPosition(p.coords);
+      },
       (e) => {
         /* UN REFUS N'EST PAS UNE PANNE, et les deux se disent différemment :
            l'un se répare en changeant un réglage, l'autre en attendant. */
@@ -968,6 +1002,10 @@ export class BandeauGuidage extends HTMLElement {
 
   /** Vrai une fois le constat prononcé : il ne se répète pas. */
   #arriveDit = false;
+
+  /* LE BILAN S'ACCUMULE PENDANT LE TRAJET (STATS-1) : chaque fixe y entre,
+     aucun ne repart ailleurs. */
+  #bilan: EtatBilan = nouveauBilan();
 
   #marqueurArrivee: HTMLElement | null = null;
 
@@ -1017,6 +1055,46 @@ export class BandeauGuidage extends HTMLElement {
       new Marker({ element: boite }).setLngLat([point.lon, point.lat]).addTo(carte);
       this.#marqueurArrivee = boite;
     }
+
+    this.#montrerBilan();
+  }
+
+  /* LE BILAN, À L'ARRIVÉE (STATS-1, 01/09).
+
+     CE QU'ON MESURE, ON LE DIT ; CE QU'ON NE MESURE PAS, ON SE TAIT. La
+     moyenne manque quand le récepteur n'a jamais donné de vitesse : écrire
+     zéro serait un chiffre faux là où l'absence est vraie. Le TEMPS DE
+     CHARGE demandé n'y figure pas encore : il ne se mesure pas aux fixes, il
+     vient du plan de recharge — le déduire d'un arrêt prendrait une pause
+     déjeuner pour une borne. */
+  #montrerBilan(): void {
+    const boite = this.querySelector<HTMLElement>('.bg-bilan');
+    const liste = this.querySelector<HTMLElement>('.bg-bilan-liste');
+    if (!boite || !liste) return;
+    const r = resumerBilan(this.#bilan);
+    if (r === null) return;
+
+    const lignes: [string, string][] = [
+      ['Durée du trajet', dureeEnMots(r.dureeMs)],
+      ['Vitesse maximale', `${r.vitesseMaxKmh} km/h`],
+    ];
+    if (r.vitesseMoyenneKmh !== null) {
+      lignes.push(['Vitesse moyenne', `${r.vitesseMoyenneKmh} km/h`]);
+    }
+    lignes.push(['Arrêts', r.arrets === 0
+      ? 'aucun'
+      : `${r.arrets} (${dureeEnMots(r.arretMs)} à l'arrêt)`]);
+
+    liste.replaceChildren();
+    for (const [titre, valeur] of lignes) {
+      const dt = document.createElement('dt');
+      dt.textContent = titre;
+      const dd = document.createElement('dd');
+      dd.textContent = valeur;
+      liste.append(dt, dd);
+    }
+    boite.hidden = false;
+    this.#publierHauteur?.();
   }
 
   #retirerMarqueurArrivee(): void {
@@ -1201,6 +1279,10 @@ export class BandeauGuidage extends HTMLElement {
 
   arreter(): void {
     this.#arriveDit = false;
+    /* LE BILAN NE SURVIT PAS AU SUIVI : gardé, il mêlerait le trajet suivant
+       au précédent. Il reste À L'ÉCRAN si l'arrivée vient de l'afficher —
+       c'est `demarrer` qui le referme, pas `arreter`. */
+    this.#bilan = nouveauBilan();
     this.#retirerMarqueurArrivee();
     this.#parkings = null;
     this.#parkingRegle = false;

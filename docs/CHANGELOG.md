@@ -2,6 +2,40 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.13.0] — 2026-09-01 — STATS-1 : le bilan du trajet, à l'arrivée (PR #159)
+
+- **UNE FENÊTRE DE STATISTIQUES À L'ARRIVÉE**, comme demandé : durée du
+  trajet, vitesse maximale, vitesse moyenne, nombre d'arrêts et temps passé
+  à l'arrêt. Elle ne coûte **aucune requête** : tout sort des fixes que le
+  suivi recevait déjà, et **rien ne quitte le navigateur**.
+- **LA MOYENNE EST PONDÉRÉE PAR LE TEMPS**, et c'est la seule honnête : dix
+  fixes à l'arrêt et un seul à 130 ne font pas une moyenne de 65.
+- **UN FEU ROUGE N'EST PAS UNE PAUSE.** Un arrêt ne se compte qu'au-delà
+  d'UNE MINUTE d'immobilité, et une seule fois. Le seuil de vitesse (0,5 m/s)
+  est celui du bruit d'un récepteur à l'arrêt — un GPS immobile ne rend
+  jamais exactement zéro.
+- **UN TUNNEL NE ROULE PAS À LA DERNIÈRE VITESSE CONNUE.** Au-delà de deux
+  minutes sans fixe — tunnel, veille de l'écran, perte du signal —
+  l'intervalle ne pèse PAS dans la moyenne : compter dix minutes de tunnel à
+  110 km/h gonflerait un trajet qu'on n'a pas mesuré. Le temps total, lui,
+  reste vrai : il se lit aux horloges.
+- **CE QU'ON NE MESURE PAS, ON SE TAIT** : la vitesse moyenne manque quand le
+  récepteur n'a jamais donné de vitesse — écrire zéro serait un chiffre faux
+  là où l'absence est vraie.
+
+**CE QUI N'EST PAS FAIT, ET POURQUOI.** Le **temps de charge** demandé ne
+figure pas au bilan : il ne se mesure pas aux fixes, il vient du plan de
+recharge — et le déduire d'un arrêt prendrait une pause déjeuner pour une
+borne. L'**historique** et le **partage/rejeu d'un trajet avec un ami** sont
+un chantier à part : ils demandent de garder des traces de déplacement, donc
+une décision sur ce qu'on garde, combien de temps, et ce qu'un lien partagé
+révèle d'un parcours. Cette PR ne la prend pas à la place d'Armelin.
+
+Tests : 12 unitaires sur l'accumulateur — la moyenne pondérée, le feu rouge
+qui ne compte pas, deux arrêts séparés par de la route, le tunnel qui
+n'étend pas la dernière vitesse, le fixe qui recule. 2 E2E : le bilan qui
+paraît à l'arrivée avec la pointe à 108 km/h, et qui ne survit pas au trajet
+suivant.
 ## [1.12.0] — 2026-09-01 — RECHERCHE-2 : chercher un lieu par son NOM (PR #158)
 
 - **UN NOM QUE LA BAN IGNORE SE TROUVE MAINTENANT.** Armelin veut chercher

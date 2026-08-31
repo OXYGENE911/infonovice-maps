@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #159 — STATS-1 (01/09) : le bilan du trajet à l'arrivée (durée,
+      vitesses max et moyenne pondérée, arrêts durables), sans une requête
+      de plus. Temps de charge, historique et partage de trajet : chantiers
+      à part, décision à prendre.
 - [x] PR #158 — RECHERCHE-2 (01/09) : la recherche par NOM en dernier
       recours (Overpass, bornée à la vue, refus honnête sous le zoom 13).
       La consolidation BNCO/Culture/Éducation/DATAtourisme et les logos
