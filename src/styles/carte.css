@@ -3347,3 +3347,62 @@ filtre-poi {
   font: 600 12.5px var(--police);
 }
 .favoris-liste-creer:focus-visible { outline: none; box-shadow: var(--focus); }
+
+
+/* ==========================================================================
+   PARK-1 — SE GARER PRÈS DE L'ARRIVÉE (31/08). Armelin : « un petit panneau
+   rond P lorsqu'on arrive presque à destination ».
+   ========================================================================== */
+/* LE BOUTON P — un panneau rond, bleu comme la signalisation du
+   stationnement, posé au-dessus du bandeau à droite. */
+.bg-parking-p {
+  position: absolute; right: 14px; bottom: calc(100% + 12px);
+  width: 46px; height: 46px; border-radius: 50%;
+  border: 3px solid #FFFFFF; background: #2272C4; color: #FFFFFF;
+  font: 800 22px var(--police); cursor: pointer;
+  box-shadow: 0 4px 14px rgba(10, 30, 60, .35);
+  pointer-events: auto;
+}
+.bg-parking-p:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-parkings {
+  position: absolute; right: 8px; left: 8px; bottom: calc(100% + 68px);
+  max-width: 420px; margin-left: auto;
+  background: var(--fond); border: 1px solid var(--bord-2);
+  border-radius: 14px; box-shadow: var(--ombre-flottante);
+  padding: 12px; pointer-events: auto;
+  max-height: 46vh; overflow-y: auto; overscroll-behavior: contain;
+}
+.bg-parkings[hidden] { display: none; }
+.bg-parkings-titre { margin: 0 0 8px; font: 650 14px var(--police); color: var(--texte-1); }
+.bg-parkings-liste { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+.bg-parkings-liste li {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border: 1px solid var(--bord-2); border-radius: 10px;
+  background: var(--fond-doux);
+}
+.bg-parking-infos { flex: 1 1 auto; min-width: 0; display: grid; gap: 1px; }
+.bg-parking-infos strong {
+  font: 650 13px var(--police); color: var(--texte-1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bg-parking-infos span { font: 400 11.5px var(--police); color: var(--texte-3); }
+.bg-parking-garer {
+  flex: 0 0 auto; padding: 7px 12px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent); color: #FFF;
+  font: 600 12.5px var(--police);
+}
+.bg-parking-garer:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-parkings-etat {
+  margin: 8px 0 0; font: 400 11.5px/1.5 var(--police); color: var(--texte-3);
+}
+/* FINIR À PIED — il paraît à l'arrivée au parking, au-dessus du bandeau,
+   à gauche du P. Vert : c'est une continuation, pas une alerte. */
+.bg-a-pied {
+  position: absolute; left: 14px; right: 74px; bottom: calc(100% + 12px);
+  padding: 11px 14px; border-radius: 12px; cursor: pointer;
+  border: 1px solid #1E9E5A; background: #1E9E5A; color: #FFF;
+  font: 650 13.5px var(--police); pointer-events: auto;
+  box-shadow: 0 4px 14px rgba(10, 30, 60, .3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bg-a-pied:focus-visible { outline: none; box-shadow: var(--focus); }

@@ -29,6 +29,10 @@ import {
   partiAContresens, approcheManoeuvre, type EtatGuidage,
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
+import { chargerParkings, ErreurParkings, type Parking } from '../lib/parkings';
+import type { PointGeo } from '../lib/coordonnees';
+import type { GeoJSONSource } from 'maplibre-gl';
+import { imagePastille, cleImage, RAPPORT_PASTILLE } from './icone-lieu';
 import { chargerCommodites, ErreurCommodites } from '../lib/commodites';
 import { meteoA, phraseMeteo, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
 import {
@@ -81,6 +85,10 @@ export interface ArretAAnnoncer {
 
 export interface DemarrageGuidage extends OptionsGuidage {
   arrets: readonly ArretAAnnoncer[];
+  /* LA DESTINATION DEMANDÉE (PARK-1, 31/08) — pas la fin du tracé : le tracé
+     s'arrête SUR la route, la destination est l'adresse. C'est autour d'ELLE
+     qu'on cherche les parkings, et son libellé nomme la fin à pied. */
+  destination?: PointGeo & { libelle?: string };
 }
 
 /** Le zoom du suivi : assez près pour lire la rue, assez loin pour anticiper. */
@@ -528,6 +536,22 @@ export class BandeauGuidage extends HTMLElement {
              contresens), ce qui effacerait la réponse au bout d'une
              seconde. -->
         <p class="bg-bis-mot" role="status" hidden></p>
+        <!-- LE PANNEAU P (PARK-1, 31/08). Armelin : « un petit panneau rond P
+             lorsqu'on arrive presque à destination, afin de proposer une
+             liste de parkings publics à proximité ». Il ne paraît qu'à
+             l'approche, et ne demande RIEN tant qu'on ne le presse pas —
+             Overpass est un commun bénévole. -->
+        <button type="button" class="bg-parking-p" hidden
+          aria-label="Suggérer des parkings près de la destination">P</button>
+        <div class="bg-parkings" hidden role="region"
+          aria-label="Parkings près de la destination">
+          <p class="bg-parkings-titre">Se garer près de l’arrivée</p>
+          <ul class="bg-parkings-liste"></ul>
+          <p class="bg-parkings-etat" role="status"></p>
+        </div>
+        <!-- FINIR À PIED (point 9) : une fois garé, la fin du trajet se fait
+             logiquement à pied — on le PROPOSE, on ne l'impose pas. -->
+        <button type="button" class="bg-a-pied" hidden></button>
         <!-- CE QUI SE DÉPLIE. « Soit l'utilisateur scrolle la barre vers le
              haut pour afficher les options cachées, soit il appuie une fois
              sur la barre pour la déployer » — les deux gestes marchent.
@@ -724,6 +748,22 @@ export class BandeauGuidage extends HTMLElement {
        l'on est et où l'on va, le planificateur sait calculer. Elle passe
        donc la position et le cap, et attend la réponse — même partage des
        rôles que le recalcul hors-route juste au-dessus. */
+    this.querySelector('.bg-parking-p')?.addEventListener('click', () => {
+      void this.#ouvrirParkings();
+    });
+    this.querySelector('.bg-a-pied')?.addEventListener('click', () => {
+      const c = this.#derniersCoords;
+      /* `=== null`, PAS un test de vérité : un libellé VIDE — trajet venu de
+         l'URL, adresse sans nom — passait l'affichage (`!== null`) mais
+         tombait ici (`!''`). Le bouton se montrait et ne faisait rien : le
+         pire des deux mondes, attrapé par un parcours. */
+      if (!c || this.#finApied === null) return;
+      document.dispatchEvent(new CustomEvent('finir-a-pied', {
+        detail: { lon: c.longitude, lat: c.latitude },
+      }));
+      const b = this.querySelector<HTMLElement>('.bg-a-pied');
+      if (b) b.hidden = true;
+    });
     this.querySelector('.bg-bis')?.addEventListener('click', () => {
       const c = this.#derniersCoords;
       if (!c) { this.#direBis('Position inconnue : le bis attend un point GPS.'); return; }
@@ -922,7 +962,188 @@ export class BandeauGuidage extends HTMLElement {
     return true;
   }
 
+  /* ---- la suggestion de parking (PARK-1, 31/08) ---- */
+
+  /** Vrai une fois « Se garer » pressé : la suggestion ne revient pas. */
+  #parkingRegle = false;
+
+  #parkings: Parking[] | null = null;
+
+  /** Le libellé de la destination d'origine, pour « Finir à pied ». */
+  #finApied: string | null = null;
+
+  /** La proposition « Finir à pied » s'arme quand le planificateur le dit. */
+  set finApied(libelle: string | null) { this.#finApied = libelle; }
+
+  /**
+   * Montre ou cache le bouton P — à l'approche, avec hystérésis.
+   *
+   * MILLE DEUX CENTS MÈTRES : assez tôt pour choisir un parking avant d'être
+   * dessus, assez tard pour ne pas encombrer tout le trajet. L'hystérésis
+   * évite le clignotement quand on serpente autour du seuil.
+   */
+  #majParking(e: EtatGuidage): void {
+    const bouton = this.querySelector<HTMLElement>('.bg-parking-p');
+    if (!bouton) return;
+    if (this.#parkingRegle || e.horsRoute) { bouton.hidden = true; }
+    else if (e.restantM < 1_200) bouton.hidden = false;
+    else if (e.restantM > 1_500) { bouton.hidden = true; this.#fermerParkings(); }
+
+    /* FINIR À PIED (point 9) : le trajet vers le parking touche à sa fin —
+       on PROPOSE de basculer piéton vers la destination d'origine. On
+       propose seulement : certains repartent, d'autres attendent. */
+    const aPied = this.querySelector<HTMLElement>('.bg-a-pied');
+    if (aPied && this.#finApied !== null
+      && e.restantM < 90 && aPied.hidden && !e.horsRoute) {
+      aPied.textContent = this.#finApied === ''
+        ? 'Finir à pied vers votre destination'
+        : `Finir à pied vers ${this.#finApied}`;
+      aPied.hidden = false;
+    }
+  }
+
+  /** Ouvre la feuille des parkings — UNE requête Overpass, au clic. */
+  async #ouvrirParkings(): Promise<void> {
+    const feuille = this.querySelector<HTMLElement>('.bg-parkings');
+    const liste = this.querySelector<HTMLElement>('.bg-parkings-liste');
+    const etat = this.querySelector<HTMLElement>('.bg-parkings-etat');
+    if (!feuille || !liste || !etat) return;
+    if (!feuille.hidden) { this.#fermerParkings(); return; }
+    feuille.hidden = false;
+
+    /* AUTOUR DE LA DESTINATION DEMANDÉE, pas de la fin du tracé : le tracé
+       s'arrête sur la route, la destination est l'adresse. Sans destination
+       transmise, la fin du tracé reste un pis-aller honnête. */
+    const options = this.#options;
+    const fin = options?.trace[options.trace.length - 1];
+    const dest = options?.destination
+      ?? (fin ? { lon: fin[0], lat: fin[1] } : null);
+    if (!dest) { etat.textContent = 'Destination inconnue.'; return; }
+
+    if (this.#parkings === null) {
+      etat.textContent = 'Recherche des parkings publics…';
+      try {
+        this.#parkings = await chargerParkings(dest);
+      } catch (err) {
+        etat.textContent = err instanceof ErreurParkings
+          ? err.message : 'La recherche de parkings est indisponible.';
+        return;
+      }
+    }
+    const parkings = this.#parkings;
+    liste.replaceChildren();
+    if (parkings.length === 0) {
+      etat.textContent = 'Aucun parking public cartographié à moins de 600 m'
+        + ' de la destination (source OpenStreetMap).';
+      return;
+    }
+    /* « PLACES », JAMAIS « PLACES LIBRES » : la capacité est cartographiée,
+       la disponibilité ne l'est pas — aucune source nationale gratuite et
+       sans clé ne l'expose. Un mot juste vaut mieux qu'une promesse
+       fausse. */
+    etat.textContent = 'Du plus près au plus loin de votre destination — la'
+      + ' fin se fera à pied. Capacité OpenStreetMap, pas les places libres.';
+    for (const p of parkings) {
+      const item = document.createElement('li');
+      const infos = document.createElement('span');
+      infos.className = 'bg-parking-infos';
+      const nom = document.createElement('strong');
+      nom.textContent = p.nom ?? 'Parking';
+      const detail = document.createElement('span');
+      const morceaux = [`à ${formaterDistance(p.distanceM)}`];
+      if (p.places !== null) morceaux.push(`${p.places} places`);
+      if (p.payant === true) morceaux.push('payant');
+      if (p.payant === false) morceaux.push('gratuit');
+      detail.textContent = morceaux.join(' · ');
+      infos.append(nom, detail);
+      const garer = document.createElement('button');
+      garer.type = 'button';
+      garer.className = 'bg-parking-garer';
+      garer.textContent = 'Se garer';
+      garer.setAttribute('aria-label', `Se garer à ${p.nom ?? 'ce parking'}`);
+      garer.addEventListener('click', () => {
+        this.#parkingRegle = true;
+        this.#fermerParkings();
+        const b = this.querySelector<HTMLElement>('.bg-parking-p');
+        if (b) b.hidden = true;
+        /* LA POSITION VOYAGE AVEC LA DEMANDE, comme pour le bis : le
+           planificateur recalcule DEPUIS ICI, pas depuis le départ
+           d'origine. */
+        const ici = this.#derniersCoords;
+        document.dispatchEvent(new CustomEvent('se-garer', {
+          detail: {
+            lon: p.lon, lat: p.lat, nom: p.nom ?? 'Parking',
+            position: ici ? { lon: ici.longitude, lat: ici.latitude } : null,
+          },
+        }));
+      });
+      item.append(infos, garer);
+      liste.append(item);
+    }
+    this.#poserParkingsSurCarte(parkings);
+  }
+
+  #fermerParkings(): void {
+    const feuille = this.querySelector<HTMLElement>('.bg-parkings');
+    if (feuille) feuille.hidden = true;
+    this.#retirerParkingsDeCarte();
+  }
+
+  /**
+   * Les grands P sur la carte — « un logo P assez grand à proximité de la
+   * destination pour visualiser les parkings disponibles aux alentours ».
+   * La pastille est CELLE des lieux : un seul langage de dessin.
+   */
+  #poserParkingsSurCarte(parkings: readonly Parking[]): void {
+    const carte = this.#carte;
+    if (!carte) return;
+    try {
+      const cle = cleImage('parking', '#2272C4');
+      if (!carte.hasImage(cle)) {
+        const image = imagePastille('parking', '#2272C4');
+        if (image) carte.addImage(cle, image, { pixelRatio: RAPPORT_PASTILLE });
+      }
+      const donnees = {
+        type: 'FeatureCollection' as const,
+        features: parkings.map((p) => ({
+          type: 'Feature' as const,
+          properties: { nom: p.nom ?? 'Parking' },
+          geometry: { type: 'Point' as const, coordinates: [p.lon, p.lat] },
+        })),
+      };
+      const source = carte.getSource('bg-parkings') as GeoJSONSource | undefined;
+      if (source) { source.setData(donnees); return; }
+      carte.addSource('bg-parkings', { type: 'geojson', data: donnees });
+      carte.addLayer({
+        id: 'bg-parkings', type: 'symbol', source: 'bg-parkings',
+        layout: {
+          'icon-image': cle,
+          /* « Assez grand » : plus gros que les pastilles de lieux — une
+             suggestion active, pas un point d'inventaire. */
+          'icon-size': 1.05,
+          'icon-allow-overlap': true,
+        },
+      });
+    } catch { /* style en chargement : la liste reste, la carte suivra */ }
+  }
+
+  #retirerParkingsDeCarte(): void {
+    const carte = this.#carte;
+    if (!carte) return;
+    try {
+      if (carte.getLayer('bg-parkings')) carte.removeLayer('bg-parkings');
+      if (carte.getSource('bg-parkings')) carte.removeSource('bg-parkings');
+    } catch { /* déjà retirés */ }
+  }
+
   arreter(): void {
+    this.#parkings = null;
+    this.#parkingRegle = false;
+    this.#fermerParkings();
+    const boutonP = this.querySelector<HTMLElement>('.bg-parking-p');
+    if (boutonP) boutonP.hidden = true;
+    const aPied = this.querySelector<HTMLElement>('.bg-a-pied');
+    if (aPied) aPied.hidden = true;
     this.#fermerBoussole();
     /* ON SE TAIT AVANT TOUT LE RESTE : une phrase qui continue après l'arrêt
        du suivi annoncerait un virage qu'on ne prend plus. */
@@ -1608,6 +1829,7 @@ export class BandeauGuidage extends HTMLElement {
        « tournez à droite ». Appelé plus haut, il était réécrit une seconde
        plus tard par la ligne ci-dessus — vu à l'écran, pas déduit. */
     this.#majGiratoire(e);
+    this.#majParking(e);
 
     /* L'ARRIVÉE RÉELLE (décision d'Armelin du 29/08) : l'heure affichée
        comptait la ROUTE seule — avec deux arrêts de trente minutes devant,
