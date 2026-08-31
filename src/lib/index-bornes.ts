@@ -421,9 +421,20 @@ export function chercherReseaux(
 }
 
 /** Applique les filtres de l'usager. Local : aucun plafond de 100 ne mord. */
-export function filtrerStations(
-  stations: StationRapide[], filtres: FiltresBornes = {},
-): StationRapide[] {
+/**
+ * Une station passe-t-elle les filtres ? — PURE.
+ *
+ * SORTIE DE `filtrerStations` LE 01/09 (BORNES-6), parce qu'Armelin a
+ * tranché : « le filtre réseau de charge + puissance de charge doit être
+ * valide aussi bien en mode carte qu'en mode itinéraire ». La couche du
+ * TRAJET avait sa propre règle, plus courte — elle ignorait les réseaux, et
+ * c'est ce qui faisait apparaître des bornes sur un itinéraire quand la
+ * carte, elle, n'en montrait aucune. Deux règles pour une même question
+ * finissent toujours par diverger : il n'y en a plus qu'une.
+ */
+export function stationPasseFiltres(
+  s: StationRapide, filtres: FiltresBornes = {},
+): boolean {
   const puissanceMin = filtres.puissanceMin ?? 0;
   const prises = filtres.prises ?? [];
   /* LA COMPARAISON SE FAIT SUR LA CLÉ, pas sur la chaîne : cocher « LIDL »
@@ -431,27 +442,32 @@ export function filtrerStations(
      et la mesure qui l'a motivée. */
   const reseaux = new Set((filtres.reseaux ?? []).map(cleReseau));
   const nom = normaliserNom(filtres.nom ?? '');
-  return stations.filter((s) => {
-    if (puissanceMin > 0 && s.puissance < puissanceMin) return false;
-    // OU entre les prises : un véhicule accepte l'une OU l'autre.
-    if (prises.length > 0 && !prises.some((p) => s.prises.includes(p))) return false;
-    if (reseaux.size > 0) {
-      // Même ordre de préférence qu'à la construction de la liste.
-      const brut = s.operateur ?? s.reseau;
-      if (!brut || !reseaux.has(cleReseau(brut))) return false;
-    }
-    /* LE NOM, L'ENSEIGNE ET L'EXPLOITANT (BORNES-3, 31/08) : « Carrefour »
-       ne vit que dans l'enseigne, « McDonald » surtout dans le nom de
-       station. Chercher un seul champ ratait l'un ou l'autre — mesuré sur le
-       jeu réel, pas supposé. */
-    if (nom !== ''
-      && !normaliserNom(s.nom).includes(nom)
-      && !(s.reseau !== null && normaliserNom(s.reseau).includes(nom))
-      && !(s.operateur !== null && normaliserNom(s.operateur).includes(nom))) {
-      return false;
-    }
-    return true;
-  });
+
+  if (puissanceMin > 0 && s.puissance < puissanceMin) return false;
+  // OU entre les prises : un véhicule accepte l'une OU l'autre.
+  if (prises.length > 0 && !prises.some((p) => s.prises.includes(p))) return false;
+  if (reseaux.size > 0) {
+    // Même ordre de préférence qu'à la construction de la liste.
+    const brut = s.operateur ?? s.reseau;
+    if (!brut || !reseaux.has(cleReseau(brut))) return false;
+  }
+  /* LE NOM, L'ENSEIGNE ET L'EXPLOITANT (BORNES-3, 31/08) : « Carrefour »
+     ne vit que dans l'enseigne, « McDonald » surtout dans le nom de
+     station. Chercher un seul champ ratait l'un ou l'autre — mesuré sur le
+     jeu réel, pas supposé. */
+  if (nom !== ''
+    && !normaliserNom(s.nom).includes(nom)
+    && !(s.reseau !== null && normaliserNom(s.reseau).includes(nom))
+    && !(s.operateur !== null && normaliserNom(s.operateur).includes(nom))) {
+    return false;
+  }
+  return true;
+}
+
+export function filtrerStations(
+  stations: StationRapide[], filtres: FiltresBornes = {},
+): StationRapide[] {
+  return stations.filter((s) => stationPasseFiltres(s, filtres));
 }
 
 /**
