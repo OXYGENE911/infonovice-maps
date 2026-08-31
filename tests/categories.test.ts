@@ -81,6 +81,15 @@ describe('familleDe', () => {
     expect(familleDe({ tourism: 'hotel' })).toBe('hotel');
   });
 
+  /* POI-6 (01/09). Armelin : « les écoles et les stades ne sont pas
+     affichés en tant que POI ». */
+  it('range écoles et universités dans leur famille, et le stade dans le sport', () => {
+    expect(familleDe({ amenity: 'school' })).toBe('ecole');
+    expect(familleDe({ amenity: 'kindergarten' })).toBe('ecole');
+    expect(familleDe({ amenity: 'university' })).toBe('ecole');
+    expect(familleDe({ leisure: 'stadium' })).toBe('sport');
+  });
+
   it('L’ORDRE TRANCHE quand un lieu porte deux étiquettes', () => {
     /* Une pharmacie qui vend des cosmétiques reste une pharmacie : sans
        ordre, elle basculerait en « commerce » selon l'humeur du service. */

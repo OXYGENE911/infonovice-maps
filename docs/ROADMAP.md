@@ -538,6 +538,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       vitesses max et moyenne pondérée, arrêts durables), sans une requête
       de plus. Temps de charge, historique et partage de trajet : chantiers
       à part, décision à prendre.
+- [x] PR #157 — ADRESSE-2 (01/09) : la graphie collée des numéros
+      suffixés (15 points de score, mesurés) et le repli AVOUÉ quand le
+      numéro n'est pas dans la BAN — le 23 bis d'Armelin n'y est pas.
+- [x] PR #156 — POI-6 (01/09) : la famille « Écoles et universités »
+      (toque de diplômé) et les stades dans « Sport et stades » — sans les
+      terrains de quartier, qui noieraient la carte.
 - [x] PR #155 — BORNES-4 (01/09) : le mystère ZUNDER élucidé (un filtre
       de réseau restauré en silence) — badge « filtres actifs », phrase
       d'état, « Tout afficher » qui corrige aussi la mémoire ; et la puce
