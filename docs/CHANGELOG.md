@@ -31,6 +31,32 @@ Tests : 8 unitaires sur la décomposition et la normalisation — dont ce que
 le dictionnaire REFUSE. 3 E2E qui lisent les requêtes RÉELLEMENT émises :
 le repli avoué du 23 bis, le 12 bis qui existe et ne déclenche AUCUN second
 appel, et l'adresse sans suffixe partie telle quelle.
+## [1.9.0] — 2026-09-01 — BORNES-4 : le mystère ZUNDER élucidé, et la puce des bornes (PR #155)
+
+- **LE MYSTÈRE « ZUNDER » ÉLUCIDÉ.** Armelin : « aucune borne n'est visible
+  [...] à l'exception du réseau ZUNDER. Peux-tu comprendre pourquoi ? »
+  Compris, et mesuré dans le code : ce n'était ni une panne ni le portail —
+  un réseau coché lors d'une visite PRÉCÉDENTE, rétabli en silence par la
+  mémoire des filtres. Un filtre restauré que rien n'annonce ne se distingue
+  pas d'une carte incomplète. La parade n'est pas d'oublier le réglage
+  (le rétablir reste juste), c'est de le DIRE partout où il agit :
+  un badge « filtres actifs » sur la puce des bornes, la phrase d'état du
+  volet (« Filtres bornes : réseau ZUNDER »), et un bouton « Tout
+  afficher — retirer : … » qui nomme ce qu'il retire, l'enlève d'un geste
+  ET le retire de la mémoire — sans quoi il ressusciterait à la
+  prochaine visite, exactement le mécanisme du mystère.
+- **LA PUCE « BORNES DE RECHARGE » DANS LE FILTRE POI**, comme suggéré :
+  une pastille éclair dans le panneau « Autour de moi », à côté des
+  restaurants et des pharmacies. Elle n'invente PAS une seconde source :
+  elle actionne LA couche IRVE du volet « Recharge et services » — cocher
+  ici coche là-bas, et inversement, le volet restant seul maître de la
+  couche.
+
+Tests : 6 unitaires sur le résumé des filtres — dont son SILENCE quand rien
+ne restreint, et la clé de prise inconnue montrée plutôt que tue. 2 E2E : la
+puce qui actionne LA couche du volet dans les deux sens, et le mystère
+ZUNDER rejoué de bout en bout — mémoire semée, badge dit, retrait en un
+geste, mémoire corrigée mesurée APRÈS la transaction IndexedDB commise.
 
 ## [1.8.0] — 2026-09-01 — GUIDE-1 : le curseur colle à la route et regarde devant (PR #154)
 

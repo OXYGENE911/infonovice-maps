@@ -39,6 +39,7 @@ export type CleMotif =
   | 'lit' | 'colonnes' | 'roue' | 'bobine' | 'masques'
   | 'croix' | 'dent' | 'patte' | 'billet' | 'parking'
   | 'cle' | 'cintre' | 'ciseaux' | 'train' | 'avion' | 'haltere' | 'wc'
+  | 'eclair'
   | 'point';
 
 /* CE QUI CHOISIT LE MOTIF, DANS L'ORDRE. Le premier qui correspond gagne : une

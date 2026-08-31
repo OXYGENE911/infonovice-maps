@@ -537,6 +537,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #157 — ADRESSE-2 (01/09) : la graphie collée des numéros
       suffixés (15 points de score, mesurés) et le repli AVOUÉ quand le
       numéro n'est pas dans la BAN — le 23 bis d'Armelin n'y est pas.
+- [x] PR #155 — BORNES-4 (01/09) : le mystère ZUNDER élucidé (un filtre
+      de réseau restauré en silence) — badge « filtres actifs », phrase
+      d'état, « Tout afficher » qui corrige aussi la mémoire ; et la puce
+      « Bornes de recharge » du filtre POI, second interrupteur de la
+      couche du volet.
 - [x] PR #154 — GUIDE-1 (01/09) : le curseur aimanté au tracé (30 m), le
       cap du tracé quand le heading GPS bruite, la mesure brute gardée pour
       la logique ; Galileo consigné comme chantier Android (phase 2).
