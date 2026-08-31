@@ -18,6 +18,7 @@ import {
   chargerTrafic, chargerDetail, libelleType, couleurType, ErreurTrafic,
   type EvenementRoute,
 } from '../lib/trafic';
+import { poserImagesTrafic, cleImageTrafic } from './icone-trafic';
 
 export const PREF_TRAFIC = 'trafic';
 const SOURCE = 'trafic';
@@ -149,6 +150,7 @@ export class PanneauTrafic extends HTMLElement {
         type: 'Feature',
         properties: {
           type: e.type, libelle: libelleType(e.type), couleur: couleurType(e.type),
+          image: cleImageTrafic(e.type),
           detail: e.detail ?? '', cree: e.cree ?? '', etat: e.etat,
         },
         geometry: { type: 'Point', coordinates: [e.lon, e.lat] },
@@ -157,16 +159,22 @@ export class PanneauTrafic extends HTMLElement {
     try {
       const source = carte.getSource(SOURCE) as GeoJSONSource | undefined;
       if (source) { source.setData(donnees); return; }
+      /* DES PICTOGRAMMES, PLUS DES RONDS (TRAFIC-2, 31/08). Armelin : « les
+         accidents sont représentés sous forme de rond rouge, ce qui n'est pas
+         visuellement parlant ». Une couleur se DÉCODE, un dessin se
+         RECONNAÎT — voiture et éclat pour l'accident, dépanneuse pour le
+         véhicule arrêté, triangle de chantier pour les travaux. */
+      poserImagesTrafic(carte);
       carte.addSource(SOURCE, { type: 'geojson', data: donnees });
       carte.addLayer({
-        id: 'trafic-points', type: 'circle', source: SOURCE,
-        paint: {
-          // Plus la carte est large, plus les pastilles sont discrètes.
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 4, 10, 7, 14, 9],
-          'circle-color': ['get', 'couleur'],
-          'circle-stroke-width': 1.5,
-          'circle-stroke-color': '#FFFFFF',
-          'circle-opacity': 0.92,
+        id: 'trafic-points', type: 'symbol', source: SOURCE,
+        layout: {
+          'icon-image': ['get', 'image'],
+          // Plus la carte est large, plus les pictos sont discrets — mais
+          // jamais au point de redevenir des points : le dessin doit se lire.
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 5, 0.55, 10, 0.8, 14, 1],
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
         },
       });
     } catch (e) {
