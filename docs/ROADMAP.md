@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #147 — BORNES-2, les bornes du trajet suivent le filtre (31/08) :
+      la couche du corridor ne filtrait que par réseau — une 50 kW passait le
+      filtre « 150 kW et plus ». Et la durée d'arrêt quitte son halo pour une
+      pilule étirable, lisible sur tout fond.
 - [x] PR #146 — FICHE-2, la fiche se lit en sombre (31/08) : la bulle
       MapLibre gardait son blanc en dur sous nos textes clairs — ton sur ton
       sur téléphone. Horaires en tableau, pastilles du filtre au dessin de

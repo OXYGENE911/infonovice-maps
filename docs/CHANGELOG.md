@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.2.0] — 2026-08-31 — BORNES-2 : les bornes du trajet suivent le filtre, et la durée d'arrêt se lit (PR #147)
+
+- **LE FILTRE DE PUISSANCE VAUT AUSSI POUR LES BORNES DU TRAJET.** Armelin :
+  « j'ai fait un filtre pour n'afficher que les stations avec des bornes de
+  plus de 150 kW, et on voit une station avec des bornes de 50 kW et moins
+  apparaître, avec son logo gris et une éclair. » La couche du corridor ne
+  filtrait que par réseau — le gris qu'il a vu est le palier 1 (jusqu'à
+  50 kW). L'AFFICHAGE SEUL est filtré : les candidates du PLAN restent
+  entières, parce qu'un arrêt de 50 kW peut sauver un trajet, et les
+  pastilles numérotées des arrêts RETENUS s'affichent toujours — cacher une
+  étape du plan serait cacher le plan. Le panneau reste la source unique des
+  filtres ; le planificateur les LIT, il ne les copie pas.
+- **LA DURÉE D'ARRÊT SUR UNE PILULE, PLUS SUR UN HALO** (ARRET-1) :
+  « c'est affiché en petit en bleu avec un halo blanc, ce qui nuit à la
+  lisibilité ». Le halo laissait le fond de carte traverser entre les
+  lettres — illisible sur du satellite. L'image s'ÉTIRE autour du texte
+  (stretchX/stretchY MapLibre) : « 18 min » et « 1 h 05 » ont chacun leur
+  panneau blanc bordé du bleu des arrêts, lisible sur tout fond.
+
+Tests : 1 E2E qui pose la 50 kW dans le corridor, active le filtre 150, et
+vérifie qu'elle disparaît de l'affichage PENDANT que les pastilles du plan
+restent. 1002 unitaires, 299 E2E.
 ## [1.1.0] — 2026-08-31 — FICHE-2 : la fiche se lit, en sombre comme en clair (PR #146)
 
 - **LE TON SUR TON EST MESURÉ, ET CORRIGÉ.** Armelin, sur téléphone : « il est
