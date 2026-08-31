@@ -2,6 +2,45 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.19.0] — 2026-09-01 — BORNES-7 : la recherche de réseaux dit enfin la vérité (PR #166)
+
+**Armelin l'a signalé QUATRE FOIS** : « si je tape McDonald la recherche
+n'affiche aucun résultat […] ça fait plusieurs fois que je fais la remarque et
+ça n'est jamais corrigé. Par contre Claude Code m'affirme avoir corrigé le
+filtre. » **Il avait raison.** Voici ce que la mesure du 01/09 a montré, et
+ce qui est corrigé.
+
+- **LA CARTE, ELLE, TROUVAIT.** Le texte saisi part au portail comme filtre de
+  NOM sur trois champs, et le service répond : **4 177** stations
+  « McDonald » en France (« IZIVIA FAST - McDonald's - Thoiry »…),
+  **8 429** « Carrefour », **561** « Burger King » ; autour de chez lui,
+  **91** et **113**. Ce filtre-là n'était pas cassé.
+- **MAIS LA LISTE RÉPONDAIT « AUCUN RÉSEAU NE CORRESPOND »**, et c'est ce
+  qu'il lisait. Elle ne groupe que les **EXPLOITANTS** : « McDonald's »,
+  « Carrefour » et « Burger King » sont des **ENSEIGNES**, exploitées par
+  Izivia, Driveco ou Allego. Un message qui dit « aucun » quand le filtre
+  agit fait passer un fonctionnement pour une panne.
+- **POURQUOI ON NE « CORRIGE » PAS LA LISTE**, et c'est une mesure aussi :
+  il n'existe pas d'enseigne « McDonald's » à cocher. Le producteur écrit le
+  SITE — « McDonald's - Thoiry », « Electra Pleurtuit - McDonald's »,
+  « DRIVECO - McDonald's - Bagnols-sur-Cèze » : **443 écritures distinctes**.
+  Une liste bâtie là-dessus serait un annuaire de sites, pas de réseaux —
+  exactement le travers que la conception d'origine avait mesuré et écarté
+  (1 799 groupes d'enseignes dont 1 314 d'UNE station). J'ai commencé par
+  l'écrire, un test l'a arrêté, et la donnée lui a donné raison.
+- **CE QUI CHANGE** : le message dit désormais « « McDonald » n'est pas un
+  exploitant, mais la carte est filtrée sur ce nom : station, enseigne ou
+  exploitant ». Et surtout, il dit **CE QUI RESTREINT EN PLUS** : son écran
+  portait « 5 réseaux cochés · 150 kW et plus · prises CCS Combo », le nom
+  s'AJOUTE à tout cela, et l'intersection était vide. « Ce nom s'ajoute à 5
+  réseaux cochés, 150 kW et plus : une station doit satisfaire TOUT à la
+  fois. Videz les autres filtres si la carte reste vide. »
+- **STOREDOT N'EXISTE PAS DANS LE JEU IRVE** : zéro ligne, mesuré. Aucun
+  réglage ne le fera apparaître — il faut le dire plutôt que le chercher.
+
+Tests : 2 E2E — le message qui ne dit plus « aucun réseau », et celui qui
+nomme les filtres cumulés.
+
 ## [1.17.0] — 2026-09-01 — BORNES-6 : un seul filtre pour la carte ET le trajet (PR #164)
 
 - **ARMELIN A TRANCHÉ**, après la question posée par BORNES-5 : « le filtre
