@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #150 — PARK-1, se garer près de l'arrivée (31/08) : le panneau P à
+      l'approche, la liste des parkings publics du plus près au plus loin de
+      la destination, « Se garer » qui replanifie, « Finir à pied » qui
+      propose la bascule piéton. « Places », jamais « places libres » — la
+      disponibilité n'a aucune source nationale gratuite.
 - [x] PR #148 — TRAFIC-2, des dessins au lieu de ronds (31/08) : chaque
       événement Bison Futé porte son pictogramme — voiture et éclat,
       dépanneuse, triangle de chantier jaune et rouge — en plus grand.
