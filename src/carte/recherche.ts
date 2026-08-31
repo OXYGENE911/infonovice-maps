@@ -198,6 +198,7 @@ export class RechercheAdresse extends HTMLElement {
     liste.innerHTML = this.#resultats.map((r, i) => `
       <li role="option" id="${this.#idListe}-option-${i}" aria-selected="${i === this.#actif}">
         <span class="libelle"></span><span class="contexte"></span>
+        <span class="approche"${r.approche ? '' : ' hidden'}></span>
       </li>`).join('');
     // textContent, jamais innerHTML : le libellé vient d'un service externe.
     this.#resultats.forEach((r, i) => {
@@ -205,6 +206,9 @@ export class RechercheAdresse extends HTMLElement {
       if (!li) return;
       (li.querySelector('.libelle') as HTMLElement).textContent = r.libelle;
       (li.querySelector('.contexte') as HTMLElement).textContent = r.type === 'municipality' ? 'Commune' : r.contexte;
+      /* L'AVEU SE LIT DANS LA LISTE (ADRESSE-2) : un repli muet poserait
+         l'usager au 23 en lui laissant croire qu'il est au 23 bis. */
+      (li.querySelector('.approche') as HTMLElement).textContent = r.approche ?? '';
       li.addEventListener('pointerdown', (e) => { e.preventDefault(); this.#choisir(i); });
     });
     liste.hidden = this.#resultats.length === 0;

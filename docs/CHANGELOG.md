@@ -41,6 +41,35 @@ emprise à la façon Overpass, plafond et délai. 3 E2E qui lisent les appels
 RÉELLEMENT émis : le nom trouvé, le refus SANS appel sous le zoom 13, et
 l'adresse trouvée qui ne dérange pas Overpass.
 
+## [1.11.0] — 2026-09-01 — ADRESSE-2 : les adresses BIS, TER, QUATER (PR #157)
+
+- **LA GRAPHIE DE LA BASE.** Armelin : « j'habite au 23 BIS Avenue du
+  prophète et je suis obligé de taper 25 pour trouver mon adresse. »
+  MESURÉ sur la BAN le 31/08 : la base écrit ses numéros COLLÉS. Demander
+  « 12 bis avenue du prophète » rend le bon point à 0,818 de score ;
+  « 12bis » le rend à 0,965. Sous autocomplétion et cinq résultats, ces
+  quinze points suffisent à faire sortir la bonne adresse de la liste. La
+  saisie est donc normalisée avant d'être envoyée — et seulement si le
+  suffixe est RECONNU.
+- **LE 23 BIS D'ARMELIN N'EXISTE PAS DANS LA BASE, ET C'EST DIT.** Relevé sur
+  sa voie (lookup 94059_0650) : la BAN connaît 12bis, 14bis, 20bis et
+  33bis — pas de 23bis. Aucune tournure de requête ne le trouvera. On
+  replie donc sur le numéro de base en l'AVOUANT, ambre sous le libellé :
+  « Le 23 bis n'est pas dans la Base Adresse Nationale — voici le 23 ».
+  Un repli MUET poserait l'usager au 23 en lui laissant croire qu'il est au
+  23 bis : un mensonge pire que le silence d'aujourd'hui.
+- **LE DICTIONNAIRE DES SUFFIXES EST FERMÉ** (bis, ter, quater, quinquies) :
+  les lettres seules (« 2 B ») en sont exclues — elles désignent aussi bien
+  un bâtiment qu'un suffixe de voirie, et un repli déclenché à tort
+  déplacerait silencieusement une adresse juste.
+- **DEUX APPELS AU PLUS**, et le second ne part que sur un suffixe reconnu
+  dont aucun résultat ne porte le numéro. Frapper « 23 b » ou « 23 bi » ne
+  déclenche rien. Les quotas publics sont un bien commun.
+
+Tests : 8 unitaires sur la décomposition et la normalisation — dont ce que
+le dictionnaire REFUSE. 3 E2E qui lisent les requêtes RÉELLEMENT émises :
+le repli avoué du 23 bis, le 12 bis qui existe et ne déclenche AUCUN second
+appel, et l'adresse sans suffixe partie telle quelle.
 ## [1.10.0] — 2026-09-01 — POI-6 : les écoles et les stades trouvent leur place (PR #156)
 
 - **LA FAMILLE « ÉCOLES ET UNIVERSITÉS »** dans le filtre POI — « les

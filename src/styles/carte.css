@@ -51,7 +51,10 @@ body { font-family: var(--police); background: var(--fond); }
   border-radius: var(--rayon); box-shadow: var(--ombre-m);
 }
 .recherche [role="option"] {
+  /* `wrap` : l'aveu d'approximation (ADRESSE-2) prend sa propre ligne sous
+     le libellé — sur la même, il écraserait le nom de la voie. */
   display: flex; justify-content: space-between; gap: 10px; align-items: baseline;
+  flex-wrap: wrap;
   padding: 9px 10px; border-radius: 9px; cursor: pointer;
   font: 400 13.5px var(--police); color: var(--texte-1);
 }
@@ -72,6 +75,20 @@ body { font-family: var(--police); background: var(--fond); }
 }
 .recherche-note[hidden] { display: none; }
 
+/* L'AVEU D'APPROXIMATION (ADRESSE-2) : ambre, pas rouge — ce n'est pas une
+   erreur, c'est une adresse que la base nationale ne connaît pas.
+   LA TEINTE N'EST PAS `--ambre-fonce` (#E89C2C) : sur le fond clair, elle
+   plafonne à 2,2:1 et échouerait le critère AA que le projet s'impose. Un
+   ambre BRULÉ tient 6,1:1 sur blanc (mesuré), et le thème sombre reprend l'ambre
+   clair, qui y contraste à son tour. */
+.recherche .approche {
+  flex: 1 0 100%;
+  font-size: 11.5px; line-height: 1.35; color: #96500A;
+}
+@media (prefers-color-scheme: dark) {
+  .recherche .approche { color: var(--ambre); }
+}
+.recherche .approche[hidden] { display: none; }
 .recherche-erreur {
   position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: var(--z-suggestions);
   padding: 10px 12px; border-radius: 10px;
