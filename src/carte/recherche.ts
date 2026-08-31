@@ -3,6 +3,8 @@
 // referme. Débounce de 300 ms et annulation de la requête précédente : le
 // quota BAN est un bien commun (règle du projet).
 import { chercherAdresses, type ResultatAdresse } from '../lib/adresse';
+import { chercherParNom, ZOOM_MIN_NOM, LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
+import type { EmpriseVue } from '../lib/categories';
 import { analyser, decoder, departementDe } from '../lib/adresse-mots';
 import { communesParNom } from '../lib/commune';
 
@@ -12,6 +14,20 @@ import { communesParNom } from '../lib/commune';
    occurrence du document (revue du 21/08). */
 let instances = 0;
 
+/* LA VUE COURANTE EST DE PORTÉE MODULE, ET C'EST LA CORRECTION DU PREMIER
+   JET (RECHERCHE-2, 01/09). Brancher chaque barre depuis carte.ts à
+   l'assemblage ne touchait QUE celles qui existaient alors : les barres
+   d'étapes naîtront plus tard, et n'auraient jamais su où l'on regarde —
+   leur recherche par nom serait restée muette sans rien dire. Toutes les
+   barres partagent la même carte : un point d'entrée suffit, et il vaut
+   pour celles à naître. Un parcours l'a attrapé avant l'usager. */
+let vueCourante: (() => { vue: EmpriseVue; zoom: number } | null) | null = null;
+
+/** Dit aux barres de recherche où la carte regarde. Posé une fois. */
+export function poserEmpriseCourante(
+  f: () => { vue: EmpriseVue; zoom: number } | null,
+): void { vueCourante = f; }
+
 export class RechercheAdresse extends HTMLElement {
   #resultats: ResultatAdresse[] = [];
   #actif = -1;
@@ -19,6 +35,8 @@ export class RechercheAdresse extends HTMLElement {
   #annulation: AbortController | null = null;
   #surSelection: ((r: ResultatAdresse) => void) | null = null;
   #docEcoute: AbortController | null = null;
+
+
   readonly #idListe = `recherche-liste-${(instances += 1)}`;
 
   set surSelection(f: (r: ResultatAdresse) => void) { this.#surSelection = f; }
@@ -49,6 +67,11 @@ export class RechercheAdresse extends HTMLElement {
             placeholder="Rechercher une adresse…" autocomplete="off" spellcheck="false">
           <ul id="${this.#idListe}" role="listbox" aria-label="Suggestions d’adresses" hidden></ul>
           <p class="recherche-erreur" role="alert" hidden></p>
+          <!-- UNE NOTE N'EST PAS UNE ERREUR (RECHERCHE-2) : « zoomez pour
+               chercher par nom » informe, il n'échoue pas. La peindre en
+               rouge d'alerte ferait passer une règle de frugalité pour une
+               panne. -->
+          <p class="recherche-note" role="status" hidden></p>
         </div>`;
       const champ = this.querySelector('input');
       champ?.addEventListener('input', () => this.#planifier(champ.value));
@@ -123,8 +146,41 @@ export class RechercheAdresse extends HTMLElement {
       }
     }
 
+    const note = this.querySelector('.recherche-note') as HTMLElement;
+    note.hidden = true;
+
     try {
       this.#resultats = await chercherAdresses(texte, this.#annulation.signal);
+      /* LE DERNIER RECOURS (RECHERCHE-2, 01/09). Armelin veut chercher « une
+         école, une entreprise » par son nom : la BAN ne connaît que des
+         ADRESSES et reste muette. OpenStreetMap porte les noms — mais il est
+         bénévole : on ne l'interroge QUE si la BAN n'a rien rendu, jamais
+         sous le zoom 13, et toujours derrière le débounce de 300 ms. */
+      if (this.#resultats.length === 0 && texte.trim().length >= LONGUEUR_MIN_NOM) {
+        const ou = vueCourante?.() ?? null;
+        if (ou && ou.zoom < ZOOM_MIN_NOM) {
+          /* ON REFUSE, ET ON DIT POURQUOI. Une regex sur le nom à l'échelle
+             d'une région ferait payer à un service bénévole le prix d'une
+             base d'entreprises qu'il n'est pas. */
+          note.textContent = 'Aucune adresse. Pour chercher un lieu par son nom,'
+            + ' rapprochez-vous de la zone sur la carte.';
+          note.hidden = false;
+        } else if (ou) {
+          const lieux = await chercherParNom(texte, ou.vue, this.#annulation.signal);
+          this.#resultats = lieux
+            .filter((l) => l.nom !== null)
+            .map((l) => ({
+              lon: l.lon, lat: l.lat,
+              libelle: l.nom as string,
+              type: 'lieu',
+              contexte: 'Lieu de la carte',
+            }));
+          if (this.#resultats.length === 0) {
+            note.textContent = `Aucune adresse ni lieu nommé « ${texte.trim()} » dans cette vue.`;
+            note.hidden = false;
+          }
+        }
+      }
       this.#actif = -1;
       this.#afficher();
     } catch (e) {

@@ -18,7 +18,7 @@ setWorkerUrl(lienWorkerMaplibre);
 import { styleCarte, LOCALE_FR, type OptionsStyle } from './style-ign';
 import { SelecteurFonds } from './selecteur-fonds';
 import { installerPanneaux } from './panneaux';
-import { RechercheAdresse } from './recherche';
+import { RechercheAdresse, poserEmpriseCourante } from './recherche';
 import { PanneauItineraire } from './panneau-itineraire';
 import { PanneauPoi } from './panneau-poi';
 import { FiltrePoi } from './filtre-poi';
@@ -184,6 +184,17 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   // « Y ALLER » DEPUIS LA FICHE D'UN LIEU (LIEUX-1, 31/08) : la même porte
   // que la fiche de borne, pas un second chemin à maintenir.
   filtrePoi.porteItineraire = panneau;
+  /* LES BARRES DE RECHERCHE APPRENNENT OÙ L'ON REGARDE (RECHERCHE-2) : c'est
+     ce qui borne la recherche par nom à la vue, et ce qui lui permet de
+     REFUSER poliment quand elle est trop large. POSÉ UNE FOIS POUR TOUTES,
+     y compris pour les barres d'étapes qui naîtront plus tard. */
+  poserEmpriseCourante(() => {
+    const b = carte.getBounds();
+    return {
+      vue: { ouest: b.getWest(), sud: b.getSouth(), est: b.getEast(), nord: b.getNorth() },
+      zoom: carte.getZoom(),
+    };
+  });
   /* LA PUCE « BORNES DE RECHARGE » (BORNES-4) : le volet des services garde
      la couche, la puce n'est qu'un second interrupteur — et chacun tient
      l'autre au courant. */

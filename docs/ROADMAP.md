@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #158 — RECHERCHE-2 (01/09) : la recherche par NOM en dernier
+      recours (Overpass, bornée à la vue, refus honnête sous le zoom 13).
+      La consolidation BNCO/Culture/Éducation/DATAtourisme et les logos
+      Wikidata restent un chantier à part — dérogation à décider.
 - [x] PR #157 — ADRESSE-2 (01/09) : la graphie collée des numéros
       suffixés (15 points de score, mesurés) et le repli AVOUÉ quand le
       numéro n'est pas dans la BAN — le 23 bis d'Armelin n'y est pas.
