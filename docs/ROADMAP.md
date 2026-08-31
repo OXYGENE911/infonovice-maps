@@ -534,6 +534,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #160 — GUIDE-2 (01/09) : la boussole reprend la main sur le cap du
+      tracé pour ORIENTER la carte — régression de GUIDE-1, invisible aux
+      parcours parce qu'ils testaient la boussole HORS route.
 - [x] PR #159 — STATS-1 (01/09) : le bilan du trajet à l'arrivée (durée,
       vitesses max et moyenne pondérée, arrêts durables), sans une requête
       de plus. Temps de charge, historique et partage de trajet : chantiers

@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.13.1] — 2026-09-01 — GUIDE-2 : la boussole tourne de nouveau (PR #160)
+
+- **RÉGRESSION CORRIGÉE, ET ELLE ÉTAIT DE MOI.** Armelin : « quand je lance un
+  itinéraire, la boussole ne tourne plus. Du coup le téléphone ne sait pas
+  dans quel sens je suis. » GUIDE-1 (v1.8.0) avait glissé le cap du TRACÉ
+  devant la boussole dans l'orientation de la carte : sur la route, la vue se
+  verrouillait au cap de la route et ne suivait plus le téléphone.
+- **LA BOUSSOLE MESURE LE TÉLÉPHONE, LE TRACÉ MESURE LA ROUTE.** À l'arrêt,
+  c'est le téléphone qu'on tourne dans les mains : c'est donc lui qui oriente
+  la carte. L'ordre redevient : cap GPS fiable, puis boussole, puis — en
+  DERNIER recours, pour un appareil sans boussole — le cap du tracé. Le
+  CURSEUR, lui, garde le cap du tracé : c'est ce que GUIDE-1 corrigeait
+  vraiment, et la flèche ne recule toujours pas.
+- **POURQUOI AUCUN PARCOURS NE L'AVAIT VU** : celui qui défend le relais de la
+  boussole pousse son fixe à 166 m du tracé — HORS ROUTE, donc sans aimant.
+  Le défaut ne vivait que SUR la route. Un nouveau parcours y roule.
+
+Tests : 1 E2E qui rejoue le cas exact — sur le tracé, à l'arrêt, une mesure
+boussole à 270° doit tourner la carte à 270° et non la laisser au cap 90° de
+la route.
+
 ## [1.13.0] — 2026-09-01 — STATS-1 : le bilan du trajet, à l'arrivée (PR #159)
 
 - **UNE FENÊTRE DE STATISTIQUES À L'ARRIVÉE**, comme demandé : durée du

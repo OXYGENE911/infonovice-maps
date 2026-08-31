@@ -126,3 +126,30 @@ test('LOIN DU TRACÉ, L’AIMANT LÂCHE — on ne ment pas à qui est vraiment a
   expect(mesure.ecartAuBrut, 'hors du seuil, le curseur doit dire la vérité')
     .toBeLessThan(6);
 });
+
+test('SUR LE TRACÉ, LA BOUSSOLE ORIENTE ENCORE LA CARTE', async ({ page }) => {
+  /* GUIDE-2 (01/09) — la régression qu'a vue Armelin : « quand je lance un
+     itinéraire, la boussole ne tourne plus. Du coup le téléphone ne sait pas
+     dans quel sens je suis. » GUIDE-1 avait glissé le cap du TRACÉ devant la
+     boussole : sur la route, la carte se verrouillait au cap de la route.
+     POURQUOI AUCUN PARCOURS NE L'A VU : celui qui défendait le relais de la
+     boussole pousse un fixe à 166 m du tracé — HORS ROUTE, donc sans aimant.
+     Celui-ci roule SUR la route, aimant actif, et c'est là que le défaut
+     vivait. La boussole mesure le TÉLÉPHONE, le tracé mesure la ROUTE : à
+     l'arrêt, c'est le téléphone qu'on tourne dans les mains. */
+  await suivre(page);
+  // Sur la ligne (plein est, cap du tracé = 90°), à l'arrêt : le GPS se tait.
+  await page.evaluate(() => {
+    window.dispatchEvent(new DeviceOrientationEvent('deviceorientationabsolute',
+      { alpha: 90, absolute: true }));
+    (window as unknown as { __pousserFixe: (c: object) => void })
+      .__pousserFixe({ longitude: 2.3500, latitude: 48.8500, speed: 0, heading: null });
+  });
+  /* alpha 90 → cap 270. Si la carte suivait le tracé, elle resterait à 90 :
+     c'est exactement ce qu'il a vu. */
+  /* NORMALISÉ : MapLibre rend son cap dans ]-180, 180] — 270° s'y écrit -90,
+     et comparer sans ramener l'angle ferait échouer un test qui a raison. */
+  await expect.poll(async () => (((await page.evaluate(() =>
+    Math.round((window as unknown as { __carte: { getBearing(): number } }).__carte.getBearing()),
+  )) % 360) + 360) % 360, { timeout: 10_000 }).toBe(270);
+});
