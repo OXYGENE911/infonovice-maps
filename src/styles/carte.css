@@ -3204,5 +3204,33 @@ filtre-poi {
 @media (prefers-reduced-motion: reduce) {
   .poi-filtre-attente::after { animation: none; opacity: .7; }
 }
-.poi-bulle-nom { margin: 0; font: 650 13px var(--police); color: var(--texte-1); }
-.poi-bulle-type { margin: 2px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); }
+/* LA FICHE D'UN LIEU (LIEUX-1, 31/08) — même langage visuel que les autres
+   cartouches : ce qu'on sait, puis ce qu'on peut en faire. */
+.poi-fiche-nom { margin: 0; font: 650 15px var(--police); color: var(--texte-1); }
+.poi-fiche-type {
+  margin: 3px 0 0; font: 600 11.5px var(--police); color: var(--teinte);
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.poi-fiche-type::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--teinte); flex: 0 0 auto;
+}
+.poi-fiche-details {
+  margin: 9px 0 0; display: grid; grid-template-columns: auto 1fr;
+  gap: 3px 12px; font: 400 12.5px/1.45 var(--police);
+}
+.poi-fiche-details dt { color: var(--texte-3); }
+.poi-fiche-details dd { margin: 0; color: var(--texte-1); overflow-wrap: anywhere; }
+.poi-fiche-details a { color: var(--accent); }
+.poi-fiche-boutons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 11px; }
+.poi-fiche-boutons button {
+  flex: 1 1 auto; padding: 8px 12px; border-radius: 9px; cursor: pointer;
+  font: 600 12.5px var(--police);
+}
+.poi-fiche-aller { border: 1px solid var(--accent); background: var(--accent); color: #FFF; }
+.poi-fiche-favori { border: 1px solid var(--bord-2); background: var(--fond); color: var(--texte-1); }
+.poi-fiche-boutons button:disabled { opacity: .6; cursor: default; }
+.poi-fiche-boutons button:focus-visible { outline: none; box-shadow: var(--focus); }
+.poi-fiche-source {
+  margin: 9px 0 0; font: 400 11px var(--police); color: var(--texte-3);
+}
