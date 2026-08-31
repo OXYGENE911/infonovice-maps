@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.8.0] — 2026-09-01 — GUIDE-1 : le curseur colle à la route et regarde devant (PR à venir)
+## [1.8.0] — 2026-09-01 — GUIDE-1 : le curseur colle à la route et regarde devant (PR #154)
 
 - **LE CURSEUR EST AIMANTÉ AU TRACÉ.** Armelin, au volant : « parfois le
   véhicule est situé à une dizaine de mètres à gauche ou à droite de la route
