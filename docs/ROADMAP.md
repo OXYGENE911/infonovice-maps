@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #158 — RECHERCHE-2 (01/09) : la recherche par NOM en dernier
+      recours (Overpass, bornée à la vue, refus honnête sous le zoom 13).
+      La consolidation BNCO/Culture/Éducation/DATAtourisme et les logos
+      Wikidata restent un chantier à part — dérogation à décider.
 - [x] PR #155 — BORNES-4 (01/09) : le mystère ZUNDER élucidé (un filtre
       de réseau restauré en silence) — badge « filtres actifs », phrase
       d'état, « Tout afficher » qui corrige aussi la mémoire ; et la puce

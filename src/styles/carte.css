@@ -62,6 +62,16 @@ body { font-family: var(--police); background: var(--fond); }
   .recherche [role="option"][aria-selected="true"] { background: #1A2634; }
 }
 .recherche .contexte { font-size: 11.5px; color: var(--texte-3); white-space: nowrap; }
+/* LA NOTE (RECHERCHE-2) : le ton d'une explication, pas d'une alerte. */
+.recherche-note {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: var(--z-suggestions);
+  margin: 0; padding: 10px 12px; border-radius: 10px;
+  background: var(--fond); border: 1px solid var(--bord);
+  box-shadow: var(--ombre-m);
+  font: 400 12.5px var(--police); color: var(--texte-2); line-height: 1.4;
+}
+.recherche-note[hidden] { display: none; }
+
 .recherche-erreur {
   position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: var(--z-suggestions);
   padding: 10px 12px; border-radius: 10px;
