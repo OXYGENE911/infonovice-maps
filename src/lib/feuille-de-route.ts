@@ -8,6 +8,7 @@
 // une reprise, erreurs en français (règles du projet).
 import type { PointGeo } from './coordonnees';
 import { urlItineraire, type Profil, type OptionsItineraire } from './itineraire';
+import { accentuerLibelle } from './accents-voies';
 
 const DELAI_MS = 8000;
 
@@ -136,7 +137,16 @@ export function libelleVoie(nom: unknown): string {
       i += 1;
     } else recolles.push(m);
   }
-  const reste = recolles.map((m, idx) => {
+  /* LES ACCENTS SONT RENDUS AVANT LA CAPITALISATION (ACCENTS-1, 31/08).
+     Armelin : « mon adresse "Avenue du prophète" est écrite "Avenue du
+     Prophete" sans accent […] phonétiquement, ça fait tache d'entendre
+     "Avenue du Proph[eu]te" ». La source les a perdus — MESURÉ : la BD TOPO
+     rend « IMP DU PROPHETE », et la BAN elle-même a perdu l'accent sur
+     certaines voies. Le dictionnaire est FERMÉ : ce qu'il ne connaît pas
+     passe intact, parce qu'une faute inventée serait pire qu'une lettre
+     manquante. La même correction sert l'écran ET la voix. */
+  const reste = recolles.map((brut, idx) => {
+    const m = accentuerLibelle(brut);
     // Une particule reste en minuscules — sauf si elle OUVRE le libellé rendu
     // (pas de type de voie devant elle) : « Du Guesclin » reste Du Guesclin.
     if ((premier || idx > 0) && PARTICULES.has(m)) return m;

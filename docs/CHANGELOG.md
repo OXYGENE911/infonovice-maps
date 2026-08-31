@@ -33,6 +33,34 @@ Tests : 19 unitaires (l'adresse recomposée, le téléphone appelable, les
 schémas d'URL refusés, l'accès fauteuil qui se tait quand il est inconnu, et
 les horaires en français), 1 E2E qui ouvre la fiche et presse les deux
 boutons. 934 unitaires, 284 E2E.
+## [0.111.0] — 2026-08-31 — ACCENTS-1 : rendre leurs accents aux noms de voies (PR #141)
+
+- **LA VOIX PRONONÇAIT « Proph-eu-te ».** Armelin : « mon adresse "Avenue du
+  prophète" est écrite "Avenue du Prophete" sans accent. Du coup, la lecture
+  vocale prononce le nom tel quel et phonétiquement, ça fait tache […] Si les
+  vrais accents étaient présents, la lecture vocale serait de meilleure
+  qualité. »
+- **LA SOURCE LES A PERDUS, PAS NOUS** — mesuré le 31/08 sur l'API : la
+  BD TOPO rend « IMP DU PROPHETE », « R DOCTEUR LEON PERRIN », « AV DE LA
+  MARECHALE », en majuscules et abrégé. La BAN elle-même a perdu l'accent sur
+  certaines de ces voies.
+- **UN DICTIONNAIRE FERMÉ DE 139 ENTRÉES**, et c'est un choix, pas une
+  facilité. Deviner les accents du français en général est impossible sans se
+  tromper : « cote » et « côte », « mure » et « mûre » sont des mots
+  différents. Une règle automatique ferait des fautes AILLEURS pour en
+  corriger ici — et une faute inventée est pire qu'une lettre manquante. Seuls
+  les mots listés reçoivent leurs accents ; tout le reste passe intact.
+- **LES MOTS AMBIGUS SONT ÉCARTÉS EXPRÈS**, et la liste des écartés est écrite
+  dans le code : « marche » n'y est pas (« place du Marché » est fréquent, mais
+  la Marche est une région), « cote » non plus. Des parcours vérifient
+  précisément qu'on ne les accentue PAS.
+- **LA MÊME CORRECTION SERT L'ÉCRAN ET LA VOIX** : le nom passe par le même
+  chemin. Un parcours mesure ce qui part RÉELLEMENT à la synthèse — « Prophète »,
+  et plus aucune forme sans accent.
+
+Tests : 23 unitaires — la liste d'Armelin, ce que le dictionnaire refuse de
+deviner, la casse d'origine rendue, et les voies inconnues qui ressortent
+comme avant. 1 E2E qui écoute la voix. 919 unitaires, 283 E2E.
 
 ## [0.110.0] — 2026-08-31 — CORRIDOR-1 : le couloir suivait la corde, pas la route (PR #140)
 
