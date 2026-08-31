@@ -21,6 +21,10 @@
  */
 import type { LineString } from 'geojson';
 import { distanceM, situerSurLeTrace } from './le-long-du-trajet';
+import {
+  decouperParLongueur, emprise, aRenonce, delaiClientMs, respirer,
+  MAX_TRONCONS, type Boite,
+} from './troncons';
 
 export interface Peage {
   /** « Gare de péage de Fleury »… `null` quand OSM ne déclare rien. */
@@ -71,16 +75,27 @@ export function decimer(trace: [number, number][], pasM = 1000): [number, number
   return garde;
 }
 
-/** L'URL Overpass des cabines de péage le long d'un tracé — PURE. */
-export function urlPeages(trace: [number, number][]): string {
-  const points = decimer(trace)
-    .map(([lon, lat]) => `${lat.toFixed(5)},${lon.toFixed(5)}`)
-    .join(',');
+/* LE BUDGET LAISSÉ AU SERVEUR, en secondes. Cinquante : mesuré le 31/08, une
+   emprise de tronçon répond en 0,5 à 2 s ; la marge couvre les heures
+   chargées sans laisser une requête traîner indéfiniment. */
+export const BUDGET_PEAGES_S = 50;
+
+/**
+ * L'URL Overpass des cabines dans une EMPRISE — PURE.
+ *
+ * UNE EMPRISE, ET NON UN COULOIR. Le couloir `around` sur tout un trajet
+ * épuisait le budget d'Overpass : 26 secondes et une expiration sur 775 km,
+ * mesuré le 31/08. Les mêmes péages, demandés par emprises de tronçon,
+ * arrivent en 7,7 secondes au total. Le filtrage exact au tracé se fait
+ * localement, dans `versPeages` — il ne coûte rien à personne.
+ */
+export function urlPeagesEmprise(e: Boite): string {
+  const boite = [e.sud, e.ouest, e.nord, e.est].map((v) => v.toFixed(5)).join(',');
   /* `nwr` : les barrières sont presque toujours des nœuds, mais quelques
      gares sont dessinées en chemin — `out center tags` rend leur position
      sans leur géométrie. */
-  const requete = '[out:json][timeout:25];'
-    + `nwr["barrier"="toll_booth"](around:${RAYON_PEAGE_M},${points});`
+  const requete = `[out:json][timeout:${BUDGET_PEAGES_S}];`
+    + `nwr["barrier"="toll_booth"](${boite});`
     + 'out center tags;';
   return `https://overpass.openstreetmap.fr/api/interpreter?data=${encodeURIComponent(requete)}`;
 }
@@ -135,32 +150,86 @@ export function versPeages(brut: unknown, trace: [number, number][]): Peage[] {
 
 export class ErreurPeages extends Error {}
 
-/** Cherche les gares de péage d'un itinéraire. UN appel, au clic seulement. */
+/** Ce qu'un relevé rapporte : les gares, et s'il est COMPLET. */
+export interface ReleveP {
+  gares: Peage[];
+  /** Faux si au moins un tronçon a échoué : le total est alors un minimum. */
+  complet: boolean;
+}
+
+/**
+ * Cherche les gares de péage d'un itinéraire — PAR TRONÇONS, au clic.
+ *
+ * SÉQUENTIEL, JAMAIS EN PARALLÈLE : lancer sept requêtes d'un coup sur un
+ * service bénévole serait exactement l'abus que le mandat interdit. Sept
+ * requêtes à la file coûtent 7,7 secondes (mesuré) et restent polies.
+ *
+ * UN TRONÇON QUI ÉCHOUE NE FAIT PAS ÉCHOUER LE RELEVÉ : il le rend INCOMPLET,
+ * ce que l'appelant doit dire. C'est le contraire de ce qui se passait — une
+ * expiration se lisait « zéro péage », et l'usager voyait un trajet gratuit
+ * là où il en traverserait huit.
+ *
+ * @param progres Appelé à chaque tronçon fini, pour que l'attente se voie.
+ */
 export async function chargerPeages(
   geometrie: LineString, signal?: AbortSignal,
-): Promise<Peage[]> {
+  progres?: (faits: number, total: number) => void,
+): Promise<ReleveP> {
   const trace = geometrie.coordinates as [number, number][];
-  if (trace.length < 2) return [];
-  const horloge = new AbortController();
-  const minuteur = setTimeout(() => { horloge.abort(); }, 15_000);
-  const relais = (): void => { horloge.abort(); };
-  signal?.addEventListener('abort', relais);
-  try {
-    const r = await fetch(urlPeages(trace), { signal: horloge.signal });
-    if (!r.ok) throw new ErreurPeages('Les péages ne sont pas disponibles pour le moment.');
-    // En surcharge, Overpass rend une page HTML : on la traduit en français.
-    const texte = await r.text();
+  if (trace.length < 2) return { gares: [], complet: true };
+  const tous = decouperParLongueur(trace);
+  const troncons = tous.slice(0, MAX_TRONCONS);
+  // CE QUI DÉPASSE N'EST PAS RELEVÉ, et se dit : un compte tronqué qui se
+  // présente comme complet vaut moins qu'un minimum annoncé.
+  let complet = tous.length === troncons.length;
+  const elements: unknown[] = [];
+  let unSucces = false;
+  /* LA SATURATION SE DISTINGUE DE L'INDISPONIBILITÉ : en surcharge, Overpass
+     rend une page HTML au lieu du JSON. « Réessayez dans un instant » est
+     alors un conseil utile, là où « indisponible » n'en est pas un. */
+  let sature = false;
+
+  for (let i = 0; i < troncons.length; i += 1) {
+    /* ON RESPIRE ENTRE DEUX TRONÇONS. Six requêtes lourdes enchaînées sans
+       pause se font limiter par le service — mesuré le 31/08. */
+    if (i > 0) await respirer();
+    if (signal?.aborted) throw new ErreurPeages('Relevé interrompu.');
+    const horloge = new AbortController();
+    const minuteur = setTimeout(
+      () => { horloge.abort(); }, delaiClientMs(BUDGET_PEAGES_S),
+    );
+    const relais = (): void => { horloge.abort(); };
+    signal?.addEventListener('abort', relais);
     try {
-      return versPeages(JSON.parse(texte), trace);
+      const r = await fetch(
+        urlPeagesEmprise(emprise(troncons[i]!)), { signal: horloge.signal },
+      );
+      if (!r.ok) { complet = false; continue; }
+      // En surcharge, Overpass rend une page HTML : elle ne se décode pas.
+      const texte = await r.text();
+      let brut: unknown;
+      try { brut = JSON.parse(texte); } catch { sature = true; complet = false; continue; }
+      /* L'AVEU DU SERVICE SE LIT : sans cette lecture, une expiration passait
+         pour un tronçon sans péage. */
+      if (aRenonce(brut)) { complet = false; continue; }
+      const lus = (brut as { elements?: unknown }).elements;
+      if (Array.isArray(lus)) elements.push(...lus);
+      unSucces = true;
     } catch {
-      throw new ErreurPeages('Le service des péages est saturé. Réessayez dans un instant.');
+      complet = false;
+    } finally {
+      clearTimeout(minuteur);
+      signal?.removeEventListener('abort', relais);
+      progres?.(i + 1, troncons.length);
     }
-  } catch (e) {
-    if (e instanceof ErreurPeages) throw e;
-    if (signal?.aborted) throw e;
-    throw new ErreurPeages('Les péages ne sont pas disponibles pour le moment.');
-  } finally {
-    clearTimeout(minuteur);
-    signal?.removeEventListener('abort', relais);
   }
+
+  /* TOUT A ÉCHOUÉ : c'est une panne, et l'on ne rend pas une liste vide qui
+     se lirait « pas de péage sur ce trajet ». */
+  if (!unSucces) {
+    throw new ErreurPeages(sature
+      ? 'Le service des péages est saturé. Réessayez dans un instant.'
+      : 'Les péages ne sont pas disponibles pour le moment.');
+  }
+  return { gares: versPeages({ elements }, trace), complet };
 }

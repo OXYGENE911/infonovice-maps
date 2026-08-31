@@ -2,6 +2,55 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.107.0] — 2026-08-31 — RELEVÉS-1 : les feux et les péages tiennent enfin leur promesse (PR #137)
+
+Armelin, le 31/08 : « quand je clique sur afficher les feux tricolores d'un
+trajet, ça me met un message m'indiquant que les feux n'ont pas pu être relevés
+et ça m'invite à réessayer plus tard. Idem pour les péages. » Deux
+fonctionnalités livrées qui ne fonctionnaient pas. **TROIS CAUSES, TOUTES
+MESURÉES** le 31/08 sur Paris–Marseille (775 km) :
+
+1. **UNE SEULE REQUÊTE POUR TOUT LE TRAJET.** Le couloir `around` de 775 km
+   épuise le budget d'Overpass : expiration serveur à **26 s** pour les péages,
+   **45,7 s** pour les feux. Ce n'était pas une panne du service, c'était une
+   demande déraisonnable de ma part.
+2. **LE CLIENT ABANDONNAIT AVANT LE SERVEUR.** Péages : coupure à 15 s pour un
+   budget serveur de 25 s — on renonçait à une réponse qui arrivait. Feux :
+   coupure à 45 s pour un budget de 45 s, une course perdue d'avance.
+3. **UNE EXPIRATION SE LISAIT « ZÉRO ».** Overpass qui renonce rend
+   `elements: []` **avec** un champ `remark` que personne n'inspectait. Le pire
+   des trois défauts : silencieux. Un trajet s'affichait sans péage là où il en
+   traverse quarante-huit.
+
+**LE REMÈDE, MESURÉ AUSSI** (`lib/troncons.ts`) : le trajet est découpé en
+tronçons de 130 km interrogés **à la file**, jamais en parallèle. Les péages
+passent d'une emprise par tronçon plutôt que d'un couloir — et l'on filtre au
+tracé exact **localement**, ce qui ne coûte rien à personne.
+
+- **PÉAGES : 48 gares en 17 s**, avec leurs noms et leurs kilomètres, là où
+  l'on lisait « Les péages ne sont pas disponibles pour le moment ».
+- **FEUX : 55 carrefours en 122 s**, annoncés comme un **minimum** parce qu'un
+  tronçon sur six n'a pas répondu. C'est long, et c'est dit : l'attente se
+  compte en tronçons à l'écran.
+- **UN RELEVÉ PARTIEL S'ANNONCE PARTIEL.** Un compte tronqué qui se présente
+  comme complet vaut moins qu'un minimum avoué.
+- **ON RESPIRE ENTRE DEUX TRONÇONS** (600 ms). Mesuré : six requêtes lourdes
+  enchaînées sans pause se font limiter par le service — le relevé des feux
+  échouait ENTIÈREMENT quand il suivait celui des péages, alors qu'isolé il
+  aboutissait. Et un garde-fou plafonne le nombre de tronçons : un tracé
+  aberrant ne lancera pas une rafale sur un service bénévole.
+
+UN FAUX SOUPÇON ÉCARTÉ, ET C'EST POURQUOI ON MESURE : je croyais
+l'échantillonnage du couloir trop lâche (un point tous les 300 m pour un rayon
+de 20 m). Faux — `around` traite une liste de coordonnées comme un COULOIR, pas
+comme des disques isolés : 11 points rendent les mêmes 43 feux que 55. J'ai
+failli « corriger » ce qui marchait.
+
+Tests : 12 unitaires sur le découpage, l'emprise, la lecture de l'aveu du
+service et le délai client ; 5 E2E sur l'honnêteté — l'expiration qui ne se lit
+pas « zéro », le relevé partiel annoncé comme minimum, le découpage effectif,
+l'attente qui se compte. 855 unitaires, 276 E2E.
+
 ## [0.106.0] — 2026-08-31 — POI-3 : le filtre se passe de son bouton (PR #136)
 
 - **LA RECHERCHE SUIT LA CARTE.** Armelin : « ce serait bien que les POI
