@@ -4,8 +4,9 @@
 // exact est local.
 import { describe, expect, test } from 'vitest';
 import {
-  decimer, urlPeages, versPeages, RAYON_PEAGE_M,
+  decimer, urlPeagesEmprise, versPeages, RAYON_PEAGE_M, BUDGET_PEAGES_S,
 } from '../src/lib/peages';
+import { emprise } from '../src/lib/troncons';
 
 /** Un tracé ouest→est le long du 47e parallèle : 1° ≈ 76 km en longitude. */
 const trace = (points: number, pasDeg = 0.01): [number, number][] =>
@@ -38,20 +39,33 @@ describe('decimer', () => {
   });
 });
 
-describe('urlPeages', () => {
-  test('interroge barrier=toll_booth autour de la polyligne, bornée en temps', () => {
-    const u = decodeURIComponent(urlPeages(trace(50)));
+describe('urlPeagesEmprise', () => {
+  /* LE COULOIR A CÉDÉ LA PLACE À L'EMPRISE (31/08). Mesuré sur 775 km :
+     `around` sur toute la polyligne épuisait le budget d'Overpass — 26 s et
+     une expiration. Les mêmes péages, par emprises de tronçon, arrivent en
+     7,7 s. Le filtrage exact au tracé reste local, dans `versPeages`. */
+  test('interroge barrier=toll_booth dans une EMPRISE, bornée en temps', () => {
+    const u = decodeURIComponent(urlPeagesEmprise(emprise(trace(50))));
     expect(u).toContain('"barrier"="toll_booth"');
-    expect(u).toContain(`around:${RAYON_PEAGE_M}`);
-    expect(u).toContain('[timeout:25]');
+    expect(u).toContain(`[timeout:${BUDGET_PEAGES_S}]`);
+    // PLUS DE COULOIR : c'est lui qui expirait.
+    expect(u).not.toContain('around:');
     // Le miroir français, comme les commodités : cohérence de souveraineté.
     expect(u).toContain('overpass.openstreetmap.fr');
   });
 
-  test('les coordonnées partent en lat,lon — l’ordre d’Overpass, pas le nôtre', () => {
-    const u = decodeURIComponent(urlPeages([[3, 47], [4, 47.5]]));
-    expect(u).toContain('47.00000,3.00000');
-    expect(u).toContain('47.50000,4.00000');
+  test('la boîte part en sud,ouest,nord,est — l’ordre d’Overpass, pas le nôtre', () => {
+    const u = decodeURIComponent(urlPeagesEmprise(
+      { ouest: 3, sud: 47, est: 4, nord: 47.5 },
+    ));
+    expect(u).toContain('(47.00000,3.00000,47.50000,4.00000)');
+  });
+
+  /* LE RAYON N'A PAS DISPARU : il ne sert plus à la requête, mais au filtrage
+     local — et c'est lui qui garantit qu'on ne ramasse pas la départementale
+     voisine simplement parce qu'elle est dans la boîte. */
+  test('le rayon de filtrage local reste déclaré', () => {
+    expect(RAYON_PEAGE_M).toBeGreaterThan(0);
   });
 });
 

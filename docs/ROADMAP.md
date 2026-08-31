@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #137 — RELEVÉS-1, les feux et les péages tiennent leur promesse
+      (31/08) : trois causes mesurées — une requête unique qui épuisait le
+      budget d'Overpass, un client qui abandonnait avant le serveur, et une
+      expiration qui se lisait « zéro ». Par tronçons : 48 gares en 17 s,
+      55 carrefours en 122 s, et un relevé partiel qui s'annonce partiel.
 - [x] PR #136 — POI-3, le filtre se passe de son bouton (31/08) : la
       recherche suit la carte, gardée par la mémoire des zones déjà
       couvertes ; la ligne d'état ne se tait plus ; le filtre ne chevauche

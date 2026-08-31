@@ -165,6 +165,9 @@ export class PanneauItineraire extends HTMLElement {
   #feuillePour: Itineraire | null = null;
   #rechargePour: Itineraire | null = null;
   #annulationRecharge: AbortController | null = null;
+  /** Le dernier relevé de feux était-il complet ? Sinon, on le dit. */
+  #feuxComplet = true;
+
   /** Itinéraire dont les lieux d'exception sont calculés (ou en cours). */
   #monumentsPour: Itineraire | null = null;
 
@@ -1633,12 +1636,29 @@ export class PanneauItineraire extends HTMLElement {
     bouton.disabled = true;
     corps.textContent = 'Relevé des péages sur le tracé…';
     try {
-      const gares = await chargerPeages(iti.geometrie);
+      /* L'ATTENTE SE VOIT, TRONÇON PAR TRONÇON : un long trajet demande
+         plusieurs requêtes, et un écran figé pendant dix secondes passe pour
+         une panne — c'est le retour du 29/08 sur les lieux d'exception. */
+      const releve = await chargerPeages(iti.geometrie, undefined, (faits, total) => {
+        if (this.#dernier === iti && total > 1) {
+          corps.textContent = `Relevé des péages… (${faits} tronçon`
+            + `${faits > 1 ? 's' : ''} sur ${total})`;
+        }
+      });
       if (this.#dernier !== iti) return; // le trajet a changé sous l'appel
       bouton.disabled = false;
+      const { gares } = releve;
+      /* UN RELEVÉ INCOMPLET NE DIT PAS « AUCUN PÉAGE ». C'est le défaut du
+         31/08 : une expiration d'Overpass se lisait « zéro », et le trajet
+         paraissait gratuit là où il traversait huit gares. */
+      const reserve = releve.complet ? ''
+        : ' Une partie du trajet n’a pas pu être relevée : ce compte est un'
+          + ' minimum. Réessayez dans un instant pour le compléter.';
       if (gares.length === 0) {
-        corps.textContent = 'Aucune gare de péage relevée sur ce tracé.'
-          + ' Source OpenStreetMap : une gare absente de la carte n’est pas relevée.';
+        corps.textContent = releve.complet
+          ? 'Aucune gare de péage relevée sur ce tracé.'
+            + ' Source OpenStreetMap : une gare absente de la carte n’est pas relevée.'
+          : `Le relevé des péages n’a pas abouti.${reserve}`;
         return;
       }
       const liste = gares
@@ -1650,7 +1670,7 @@ export class PanneauItineraire extends HTMLElement {
       nomsLigne.textContent =
         `${gares.length} gare${gares.length > 1 ? 's' : ''} de péage sur ce tracé : `
         + `${liste}. Source OpenStreetMap — une gare absente de la carte n’est`
-        + ' pas relevée.';
+        + ` pas relevée.${reserve}`;
       corps.append(nomsLigne);
       /* LE PRIX VIENT APRÈS LES NOMS, et par un second chemin : la grille
          tarifaire est un autre jeu de données, d'une autre source, qui ne
@@ -1847,7 +1867,13 @@ export class PanneauItineraire extends HTMLElement {
     const traces = resultats.map((r) => (r.iti
       ? r.iti.geometrie.coordinates as [number, number][] : []));
     let feux: Feu[] = [];
-    try { feux = await chargerFeux(traces); } catch { feux = []; }
+    /* UN RELEVÉ PARTIEL NE SERT PAS À COMPARER : si un tronçon manque, les
+       trois variantes seraient comptées sur des couvertures différentes, et
+       le classement mentirait. On préfère ne rien annoncer. */
+    try {
+      const releve = await chargerFeux(traces);
+      feux = releve.complet ? releve.feux : [];
+    } catch { feux = []; }
 
     this.#afficherVariantes(resultats.map((r, i) => ({
       cle: r.v.cle, libelle: r.v.libelle, iti: r.iti, erreur: r.erreur,
@@ -2184,13 +2210,23 @@ export class PanneauItineraire extends HTMLElement {
     if (this.#feuxPour !== iti) {
       if (note) note.replaceChildren(this.#attente('Relevé des feux du trajet…'));
       try {
-        const bruts = await chargerFeux([trace]);
+        /* L'ATTENTE SE COMPTE EN TRONÇONS : un long trajet en demande
+           plusieurs, et un témoin qui bat sans rien dire pendant vingt
+           secondes passe pour une panne. */
+        const releve = await chargerFeux([trace], undefined, (faits, total) => {
+          if (note && total > 1) {
+            note.replaceChildren(this.#attente(
+              `Relevé des feux… (${faits} tronçon${faits > 1 ? 's' : ''} sur ${total})`,
+            ));
+          }
+        });
         /* ON NE GARDE QU'UN POINT PAR CARREFOUR, et c'est indispensable :
            sinon la carte montrerait quatre points là où le comptage annonce
            un feu. Deux chiffres qui se contredisent valent moins qu'un
            seul. */
-        this.#feux = carrefoursDistincts(bruts.filter((f) =>
+        this.#feux = carrefoursDistincts(releve.feux.filter((f) =>
           situerSurLeTrace(f, trace).ecart <= RAYON_FEU_M));
+        this.#feuxComplet = releve.complet;
         this.#feuxPour = iti;
       } catch {
         if (note) note.textContent = 'Les feux n’ont pas pu être relevés. Réessayez plus tard.';
@@ -2205,9 +2241,17 @@ export class PanneauItineraire extends HTMLElement {
     this.#poserFeuxSurCarte();
     const n = this.#feux.length;
     if (note) {
+      /* UN COMPTAGE INCOMPLET SE DIT INCOMPLET. C'est le défaut du 31/08 :
+         une expiration d'Overpass se lisait « 0 feu », et un boulevard
+         paraissait dégagé. Un minimum annoncé vaut mieux qu'un total faux. */
+      const reserve = this.#feuxComplet ? ''
+        : ' Une partie du trajet n’a pas pu être relevée : c’est un minimum.';
       note.textContent = n === 0
-        ? 'Aucun feu tricolore relevé sur ce trajet.'
-        : `${n} carrefour${n > 1 ? 's' : ''} à feux sur le trajet (OpenStreetMap).`;
+        ? (this.#feuxComplet
+          ? 'Aucun feu tricolore relevé sur ce trajet.'
+          : `Le relevé des feux n’a pas abouti.${reserve}`)
+        : `${n} carrefour${n > 1 ? 's' : ''} à feux sur le trajet`
+          + ` (OpenStreetMap).${reserve}`;
     }
   }
 
