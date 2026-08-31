@@ -534,6 +534,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #162 — RECHERCHE-3 (01/09) : la recherche par nom part enfin (la
+      BAN rend toujours quelque chose) et interroge l'ÉGALITÉ indexée, la
+      regex expirant (mesuré : 57 s). Expiration lue comme telle.
+- [ ] CHANTIER OUVERT — consolider les bases publiques FRANÇAISES, autorisé
+      par Armelin le 01/09 (Wikidata exclu, chercher un équivalent français
+      pour les logos) : Éducation nationale (mesuré : le collège introuvable
+      dans OSM y est), entreprises, Culture, DATAtourisme.
 - [x] PR #159 — STATS-1 (01/09) : le bilan du trajet à l'arrivée (durée,
       vitesses max et moyenne pondérée, arrêts durables), sans une requête
       de plus. Temps de charge, historique et partage de trajet : chantiers

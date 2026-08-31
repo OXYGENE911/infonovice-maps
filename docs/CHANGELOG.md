@@ -2,6 +2,55 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.15.0] — 2026-09-01 — RECHERCHE-3 : la recherche par nom trouve enfin (PR #162)
+
+- **CE QUE J'AVAIS LIVRÉ LA VEILLE NE POUVAIT PAS MARCHER**, et deux mesures
+  sur les services réels le disent :
+  1. **LA PORTE NE S'OUVRAIT JAMAIS.** RECHERCHE-2 ne cherchait un nom que si
+     la BAN n'avait RIEN rendu. Or la BAN rend presque toujours quelque
+     chose : « Tour Eiffel Paris » y rend « Avenue Gustave Eiffel » (score
+     0,378), « Collège Albert Camus Plessis-Trévise » rend « avenue albert
+     camus » (0,636). Armelin l'a vu le lendemain : « je ne parviens pas à
+     trouver une adresse ».
+  2. **ELLE AURAIT EXPIRÉ DE TOUTE FAÇON.** Une expression régulière sur
+     `name` sans clé indexée force un balayage : « Tour Eiffel » dans 5 km
+     rend une réponse VIDE avec `remark: "Query timed out after 57 seconds"`.
+     Bornée par clés (amenity, shop, tourism, leisure, office), elle expire
+     encore à 10 km (36 à 71 s). Un préfixe ancré expire aussi, à 41 s.
+- **CE QUI MARCHE, MESURÉ** : l'égalité exacte est INDEXÉE.
+  `["name"="Castorama"](around:25000,…)` rend douze résultats en 5 s ;
+  « Tour Eiffel » en rend quinze en 1 s. Une union de trois graphies
+  (saisie, Capitales, MAJUSCULES) rend les mêmes douze en 3 s — elle absorbe
+  la casse sans quitter l'index, puisque `["name"="x",i]` n'est pas une
+  syntaxe qu'Overpass accepte.
+- **LA RECHERCHE PART DÈS QUE LA SAISIE EST UN NOM** (pas de numéro en tête)
+  et cherche **autour du meilleur résultat de la BAN** — c'est lui qui porte
+  la commune qu'on vient d'écrire — sinon autour du centre de la carte. Les
+  lieux nommés passent DEVANT, les adresses restent dessous.
+- **UNE ADRESSE NUMÉROTÉE NE DÉRANGE PAS OVERPASS** : « 25 avenue du
+  prophète », c'est la BAN qui répond, et le service bénévole n'a rien à
+  faire là.
+- **UNE EXPIRATION NE DIT PAS « CE LIEU N'EXISTE PAS »** : une réponse vide
+  accompagnée d'un `remark` est lue comme telle et se dit « le service n'a
+  pas eu le temps de répondre ». Le même piège que les feux et les péages,
+  payé deux fois, écrit deux fois.
+- **LE PRIX EST DIT À L'USAGER** : on cherche le nom TEL QU'IL EST ÉCRIT.
+  « Castorama » trouve, « Casto » ne trouve pas — et la barre l'écrit :
+  « le nom doit être écrit en entier ». Mieux vaut une règle claire qu'une
+  promesse qui expire.
+
+**LE COLLÈGE DE SA FILLE RESTE INTROUVABLE ICI, ET C'EST MESURÉ** :
+OpenStreetMap ne le connaît pas (60 écoles autour de chez lui, aucune
+« Albert Camus »). Il vit dans l'annuaire de l'ÉDUCATION NATIONALE, où je
+l'ai trouvé — « Collège Albert Camus, Avenue Albert Camus, Le
+Plessis-Trévise ». C'est le chantier suivant : consolider les bases
+publiques françaises, qu'Armelin vient d'autoriser explicitement.
+
+Tests : 16 unitaires (les graphies, l'échappement, ce que porte l'URL, et la
+lecture d'une expiration). 4 E2E : le nom qui passe devant une BAN
+approximative, l'adresse numérotée qui ne coûte rien, l'expiration qui ne
+nie rien, et le nom incomplet qui s'explique.
+
 ## [1.13.0] — 2026-09-01 — STATS-1 : le bilan du trajet, à l'arrivée (PR #159)
 
 - **UNE FENÊTRE DE STATISTIQUES À L'ARRIVÉE**, comme demandé : durée du
