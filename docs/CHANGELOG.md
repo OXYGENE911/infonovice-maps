@@ -23,6 +23,25 @@ que le bord BAS : sans collage, le bouton part par le HAUT quand on défile
 désormais les DEUX bords, vérifie d'abord que le volet déborde vraiment
 (867 px de contenu pour 485 de cadre), et une contre-épreuve confirme qu'il
 ÉCHOUE quand on retire la règle.
+## [1.17.0] — 2026-09-01 — BORNES-6 : un seul filtre pour la carte ET le trajet (PR #164)
+
+- **ARMELIN A TRANCHÉ**, après la question posée par BORNES-5 : « le filtre
+  réseau de charge + puissance de charge doit être valide aussi bien en mode
+  carte qu'en mode itinéraire ». En mode carte, toutes les bornes de France,
+  que le filtre restreint ; en mode itinéraire, toutes les bornes du corridor,
+  que le MÊME filtre restreint.
+- **DEUX RÈGLES FINISSENT TOUJOURS PAR DIVERGER.** La couche du trajet avait
+  la sienne, plus courte : elle ignorait les réseaux. C'est ce qui faisait
+  apparaître des bornes sur un itinéraire quand la carte n'en montrait
+  aucune — le symptôme qu'Armelin a signalé deux jours de suite. Le prédicat
+  sort désormais de `filtrerStations` et sert LES DEUX côtés : il n'y a plus
+  qu'une règle, et un test vérifie qu'elle dit la même chose que la liste.
+- Le filtre par NOM suit le même chemin : chercher « McDonald » vaut
+  désormais sur le trajet comme sur la carte.
+
+Tests : 5 unitaires sur le prédicat — dont celui qui vérifie qu'il rend
+exactement ce que rend `filtrerStations`, faute de quoi on aurait recréé les
+deux règles qu'on vient de fondre.
 
 ## [1.16.0] — 2026-09-01 — ECOLES-1 : l'annuaire de l'Éducation nationale (PR #163)
 

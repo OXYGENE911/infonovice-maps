@@ -37,11 +37,12 @@ import {
   indexNational, reseauxNationaux, chercherReseaux, cleReseau,
   ErreurIndex, SEUIL_RAPIDE, POIDS_ANNONCE,
   type StationRapide, type ReseauNational,
+  stationPasseFiltres,
 } from '../lib/index-bornes';
 import { chargerCommodites, TYPES_COMMODITE, ErreurCommodites } from '../lib/commodites';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import { PREF_VEHICULE } from './panneau-vehicule';
-import { ErreurPoi } from '../lib/poi';
+import { ErreurPoi, type FiltresBornes } from '../lib/poi';
 import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import { palierDe } from '../lib/puissance';
 import { chargerPeages, ErreurPeages } from '../lib/peages';
@@ -104,7 +105,7 @@ const COULEUR_ARRET = '#0C447C';
 export interface PorteCouchesBornes {
   masquerBornesNationales(masquees: boolean): void;
   /** Les filtres d'AFFICHAGE du panneau — la puissance et les prises. */
-  filtresAffichage?(): { puissanceMin?: number; prises?: string[] };
+  filtresAffichage?(): FiltresBornes;
 }
 
 /** Les pages du planificateur, et leur titre. */
@@ -1471,13 +1472,12 @@ export class PanneauItineraire extends HTMLElement {
        numérotées des arrêts RETENUS s'affichent toujours, filtre ou pas :
        cacher une étape du plan serait cacher le plan. */
     const affichage = this.#couchesBornes?.filtresAffichage?.() ?? {};
-    const passeAffichage = (t: SurLeTrajet<StationRapide>): boolean => {
-      if (affichage.puissanceMin !== undefined
-        && t.poi.puissance < affichage.puissanceMin) return false;
-      if (affichage.prises !== undefined
-        && !t.poi.prises.some((p) => affichage.prises!.includes(p))) return false;
-      return true;
-    };
+    /* LA MÊME RÈGLE QUE LA CARTE, ET C'EST TOUT L'OBJET DE BORNES-6 : ce
+       prédicat vivait ici en double, plus court — il ignorait les réseaux, et
+       le trajet montrait donc des bornes que la carte cachait. Deux règles
+       pour une même question finissent toujours par diverger. */
+    const passeAffichage = (t: SurLeTrajet<StationRapide>): boolean =>
+      stationPasseFiltres(t.poi, affichage);
     const corridor: GeoJSON.FeatureCollection = {
       type: 'FeatureCollection',
       features: this.#bornesTrajet
