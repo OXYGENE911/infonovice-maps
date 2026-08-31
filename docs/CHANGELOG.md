@@ -2,6 +2,33 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.18.0] — 2026-09-01 — GUIDE-3 : la ligne verte se déplie, et du code mort tombe (PR #165)
+
+- **LA PROCHAINE BORNE NE S'AFFICHE PLUS EN CONTINU.** Armelin : « j'aimerais
+  afficher cette information mais pas en continu, et qu'elle ne s'affiche que
+  lorsqu'on déploie la barre de navigation en appuyant dessus ». Une barre de
+  conduite dit ce qu'il faut faire MAINTENANT ; la prochaine borne, on va la
+  CHERCHER quand on se demande où elle est. Elle porte toujours les deux
+  chiffres demandés le 30/08 : les kilomètres ET le temps.
+- **SIX RÈGLES CSS ÉTAIENT MORTES, ET C'EST CE QUI FAISAIT L'ILLUSION.** Elles
+  visaient `bandeau-guidage.bg-compact` — une classe que **rien ne pose** dans
+  le code : l'état réel s'appelle `bg-deploye`. Trois d'entre elles prétendaient
+  déjà ranger la ligne verte, la limite de vitesse et les voies quand la barre
+  est replieée ; aucune n'a jamais peint un pixel. La règle est refaite sur la
+  classe qui existe, et **seulement pour la ligne qu'Armelin désigne** : la
+  limite de vitesse et les voies restent visibles au volant — les ranger
+  aurait été une régression que personne n'a demandée.
+- **LA LIGNE ORANGE DU TRAFIC NE CHANGE PAS** : elle paraît automatiquement à
+  dix kilomètres, comme Armelin l'avait demandé le 30/08 — des travaux qu'on
+  découvre en arrivant dessus ne se contournent plus. Sa règle `bg-compact`
+  était morte aussi ; elle est retirée plutôt que « réparée » vers un
+  comportement qu'il n'a pas demandé. **À lui de dire** s'il la voulait, elle
+  aussi, réservée au dépliage.
+
+Tests : 1 E2E qui lit le style CALCULÉ de la ligne, repliée puis dépliée —
+l'écriture et la lecture tiennent dans le même geste, parce que déplier la
+barre rejoue le dernier fixe et réécrit la ligne.
+
 ## [1.17.0] — 2026-09-01 — BORNES-6 : un seul filtre pour la carte ET le trajet (PR #164)
 
 - **ARMELIN A TRANCHÉ**, après la question posée par BORNES-5 : « le filtre
