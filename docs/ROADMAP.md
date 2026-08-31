@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #141 — ACCENTS-1, rendre leurs accents aux noms de voies (31/08) :
+      la source les a perdus (BD TOPO rend « IMP DU PROPHETE »), et la voix
+      prononçait « Proph-eu-te ». Dictionnaire FERMÉ de 139 entrées ; ce qu'il
+      ne connaît pas passe intact, et les mots ambigus sont écartés expres.
 - [x] PR #139 — POI-4, un motif au lieu d'un rond (31/08) : le motif dit le
       type, la couleur dit la famille — ce qui permet d'honorer une liste de
       vingt-quatre dessins sans faire vingt pastilles à cocher. Sport, gares
