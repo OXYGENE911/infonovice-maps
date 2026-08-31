@@ -20,6 +20,10 @@ const AVENUE_EIFFEL = {
   properties: {
     label: 'Avenue Gustave Eiffel 75007 Paris', type: 'street',
     postcode: '75007', city: 'Paris',
+    /* LE SCORE MESURÉ SUR LA BAN pour « Tour Eiffel Paris » : elle rend
+       l'avenue faute de mieux, et le dit par un 0,378. C'est ce doute qui
+       autorise à chercher plus loin. */
+    score: 0.378,
   },
 };
 
@@ -92,7 +96,10 @@ test('UN NOM SE TROUVE MÊME QUAND LA BAN A RÉPONDU À CÔTÉ', async ({ page }
 test('UNE ADRESSE AVEC UN NUMÉRO NE DÉRANGE PAS OVERPASS', async ({ page }) => {
   /* LA FRUGALITÉ RESTE UNE RÈGLE : un numéro en tête, c'est la BAN qui
      répond, et le service bénévole n'a rien à faire là. */
-  const { ban, overpass } = await decor(page, { adresses: [AVENUE_EIFFEL] });
+  const { ban, overpass } = await decor(page, { adresses: [{
+    ...AVENUE_EIFFEL,
+    properties: { ...AVENUE_EIFFEL.properties, score: 0.965 },
+  }] });
   await ouvrir(page);
   await barre(page).getByRole('combobox').fill('25 avenue du prophète');
   await expect(barre(page).locator('[role="option"]').first()).toBeVisible({ timeout: 10_000 });

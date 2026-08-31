@@ -34,6 +34,15 @@ function ressembleAUnNom(texte: string): boolean {
   return !/^\s*\d/.test(texte);
 }
 
+/* SOUS CE SCORE, LA BAN A RÉPONDU À CÔTÉ (RECHERCHE-3). Mesuré sur le service :
+   une vraie adresse vaut 0,965 ; « Tour Eiffel Paris » vaut 0,378 (elle rend
+   l'avenue Gustave Eiffel faute de mieux), « Collège Albert Camus… » 0,636,
+   « Pincevent » 0,838 pour un lieu-dit à deux cents kilomètres. Au-dessus du
+   seuil, on ne dérange personne : l'adresse est trouvée.
+   SANS SCORE, ON SUPPOSE LA CONFIANCE : une source qui ne dit pas son doute
+   ne doit pas déclencher deux appels de plus à chaque frappe. */
+const SEUIL_CONFIANCE_BAN = 0.9;
+
 export class RechercheAdresse extends HTMLElement {
   #resultats: ResultatAdresse[] = [];
   #actif = -1;
@@ -168,7 +177,20 @@ export class RechercheAdresse extends HTMLElement {
          LE CENTRE EST LE POINT LE PLUS PROBABLE, pas la vue : le meilleur
          résultat de la BAN quand il existe — c'est lui qui porte la commune
          que l'usager vient d'écrire — sinon le centre de la carte. */
-      if (ressembleAUnNom(texte) && texte.trim().length >= LONGUEUR_MIN_NOM) {
+      /* LES ADRESSES S'AFFICHENT SANS ATTENDRE (RECHERCHE-3). Les chercher
+         plus loin prend des SECONDES — trois à cinq mesurées sur Overpass —
+         et faire patienter quelqu'un qui a déjà sa réponse sous les yeux
+         serait lui faire payer une recherche qu'il n'a pas demandée. */
+      this.#actif = -1;
+      this.#afficher();
+      /* UNE ABSENCE DE RÉPONSE N'EST PAS UNE RÉPONSE SÛRE. « Castorama » ne
+         rend RIEN à la BAN : la confiance y est nulle, pas totale. Le
+         raccourci `score ?? 1` déclarait le vide confiant, et refermait la
+         porte sur le cas même qu'Armelin a signalé. */
+      const confiance = this.#resultats.length === 0
+        ? 0 : (this.#resultats[0]?.score ?? 1);
+      if (ressembleAUnNom(texte) && texte.trim().length >= LONGUEUR_MIN_NOM
+        && confiance < SEUIL_CONFIANCE_BAN) {
         const meilleur = this.#resultats[0];
         const centre = meilleur
           ? { lon: meilleur.lon, lat: meilleur.lat }

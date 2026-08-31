@@ -15,6 +15,11 @@ export interface ResultatAdresse extends PointGeo {
   contexte: string;
   /** Le numéro tel que la BAN l'écrit (« 12bis ») — absent hors housenumber. */
   numero?: string | undefined;
+  /* LA CONFIANCE DE LA BAN, de 0 à 1 (RECHERCHE-3). Elle décide s'il faut
+     chercher plus loin : 0,965 pour une vraie adresse, 0,378 pour
+     « Tour Eiffel Paris » où elle rend l'avenue Gustave Eiffel faute de
+     mieux. Absente quand le service ne la donne pas. */
+  score?: number | undefined;
   /* L'AVEU D'APPROXIMATION (ADRESSE-2). Renseigné quand le numéro demandé
      n'existe PAS dans la base et qu'on montre le numéro de base à sa place :
      la phrase dit lequel manque et ce qu'on propose. Jamais un repli muet —
@@ -119,7 +124,7 @@ async function appelResilient(url: string, signal?: AbortSignal): Promise<unknow
 
 interface ProprietesBAN {
   label?: string; type?: string; context?: string; postcode?: string; city?: string;
-  housenumber?: string;
+  housenumber?: string; score?: number;
 }
 interface EntiteBAN {
   geometry?: { coordinates?: [number, number] };
@@ -143,6 +148,7 @@ export function versResultats(brut: unknown): ResultatAdresse[] {
       type: p.type ?? 'inconnu',
       contexte: [p.postcode, p.city].filter(Boolean).join(' ') || (p.context ?? ''),
       ...(typeof p.housenumber === 'string' ? { numero: p.housenumber } : {}),
+      ...(typeof p.score === 'number' && Number.isFinite(p.score) ? { score: p.score } : {}),
     });
   }
   return resultats;
