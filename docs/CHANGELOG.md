@@ -2,6 +2,29 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.4.0] — 2026-08-31 — BORNES-3 : chercher « McDonald » trouve les bornes du parking McDonald's (PR #149)
+
+- **LA RECHERCHE VOIT LE NOM, L'ENSEIGNE ET L'EXPLOITANT.** Armelin : « je ne
+  peux toujours pas taper McDonald pour n'afficher que les bornes du réseau
+  Izivia McDonald, Burger King […] Carrefour […] certains réseaux ont leurs
+  bornes dans des parkings d'enseignes, qu'il faut pouvoir distinguer
+  séparément. »
+- **MESURÉ SUR LE JEU RÉEL, ET C'EST POURQUOI ÇA RATAIT** : « Carrefour » ne
+  vit QUE dans l'enseigne (« Carrefour Energies ») pendant que le nom de
+  station porte la VILLE (« SETE ») — chercher le nom seul ratait les 4 931
+  stations Carrefour. Izivia écrit inversement le site dans le nom de station
+  (« IZIVIA FAST - McDonald's - Fronton »). Les trois champs sont désormais
+  cherchés, en OU, côté index local COMME côté service.
+- Taper « McDonald » n'affiche que les bornes des parkings McDonald's ;
+  « Burger King » distingue le sous-réseau Allego Burger King des autres
+  bornes Allego. C'est la distinction demandée, sans changer le groupement
+  des réseaux cochables — qui reste par exploitant, pour les raisons mesurées
+  le 26/08.
+
+Tests : 5 unitaires sur l'index (les trois cas qu'il cite, l'exploitant, et
+la station sans enseigne qui ne fait pas tomber la recherche), 1 unitaire sur
+la clause service en OU. 1006 unitaires, 300 E2E.
+
 ## [1.0.0] — 2026-08-31 — Passage en version 1.0 (PR #145)
 
 **LA DÉCISION EST CELLE D'ARMELIN**, le 31/08 : « Passe en v1.0.0 ». Je

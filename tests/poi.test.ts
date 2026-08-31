@@ -210,12 +210,19 @@ describe('les filtres de bornes voyagent dans l’URL', () => {
     expect(u).toContain('OR');
   });
 
-  test('le nom de station part en suggest(), pas en égalité', () => {
+  test('le nom cherche la station, l’enseigne ET l’exploitant', () => {
     /* Vérifié par appel réel le 27/08/2026 : `suggest(nom_station,"Donald")`
        rend 36 lignes, `like "Donald"` aucune — le portail compare des mots
-       entiers. Et le guillemet reste neutralisé contre l'injection. */
+       entiers. Et le guillemet reste neutralisé contre l'injection.
+       DEPUIS BORNES-3 (31/08), les trois champs sont cherchés : mesuré sur le
+       jeu réel, « Carrefour » ne vit QUE dans l'enseigne pendant que
+       nom_station porte la ville — un seul champ ratait 4 931 stations. */
     const u = decodeURIComponent(urlBornes(B, { nom: 'Mc Donald' }));
     expect(u).toContain('suggest(nom_station,"Mc Donald")');
+    expect(u).toContain('suggest(nom_enseigne,"Mc Donald")');
+    expect(u).toContain('suggest(nom_operateur,"Mc Donald")');
+    // En OU : un champ qui répond suffit.
+    expect(u).toMatch(/suggest\(nom_station,[^)]+\) OR suggest\(nom_enseigne/);
     const injecte = decodeURIComponent(urlBornes(B, { nom: 'a"b' }));
     expect(injecte).not.toContain('"a"b"');
   });

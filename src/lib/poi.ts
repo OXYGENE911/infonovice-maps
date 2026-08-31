@@ -141,7 +141,17 @@ export function urlBornes(b: Bbox, filtres: FiltresBornes = {}): string {
      enregistrements rendrait mensonger un tri local. */
   const nom = (filtres.nom ?? '').trim();
   if (nom !== '') {
-    clauses.push(`suggest(nom_station,${citer(nom)})`);
+    /* LE NOM, L'ENSEIGNE **ET** L'EXPLOITANT (BORNES-3, 31/08). Armelin : « je
+       ne peux toujours pas taper McDonald […] Burger King […] Carrefour ».
+       MESURÉ sur le jeu réel : « Carrefour » ne vit QUE dans l'enseigne
+       (« Carrefour Energies ») pendant que nom_station porte la VILLE
+       (« SETE ») — chercher le nom seul ratait les 4 931 stations Carrefour.
+       Izivia écrit inversement le site dans nom_station. On cherche donc les
+       trois champs : c'est ce qui permet de distinguer « Izivia McDonald »
+       des autres bornes Izivia. */
+    clauses.push(`(suggest(nom_station,${citer(nom)})`
+      + ` OR suggest(nom_enseigne,${citer(nom)})`
+      + ` OR suggest(nom_operateur,${citer(nom)}))`);
   }
 
   return 'https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/'
