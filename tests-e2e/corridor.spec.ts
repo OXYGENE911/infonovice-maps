@@ -153,6 +153,21 @@ test('LE SUIVI VAUT TOUJOURS SANS LES REPÈRES', async ({ page }) => {
   await expect(page.locator('.bg-reperes')).toBeVisible({ timeout: 20_000 });
 });
 
+test('QUAND LE SERVICE EST MORT, ON RENONCE VITE', async ({ page }) => {
+  /* LE DÉCOUPAGE A UN REVERS qu'il fallait couvrir : un trajet en dix paquets
+     face à un service muet passerait DIX fois le délai d'attente à échouer —
+     dix minutes pour apprendre ce qu'on savait au bout de deux. On s'arrête
+     après deux échecs de suite.
+     ON NE RENONCE PAS AU PREMIER : une requête peut échouer seule, et
+     abandonner sur un seul échec priverait le trajet du reste de ses
+     repères. */
+  const requetes = await suivre(page, { statut: 504, corps: {} });
+  await expect(page.locator('.bg-reperes')).toBeVisible({ timeout: 20_000 });
+  await page.waitForTimeout(1_500);
+  expect(requetes.length, 'on s’acharne sur un service qui ne répond pas')
+    .toBeLessThanOrEqual(2);
+});
+
 test('LA LIGNE DU BAS NE TOUCHE PLUS LE BORD DE L’ÉCRAN', async ({ page }) => {
   /* Armelin, 31/08 : « les indications de navigation sont écrites trop bas
      dans la fenêtre de la barre d'état […] les textes sont tellement bas que

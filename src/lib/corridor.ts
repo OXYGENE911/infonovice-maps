@@ -23,7 +23,9 @@ import {
 } from './sorties';
 import { versGiratoires, type Giratoire } from './giratoire';
 import { simplifier, paqueter } from './simplifier';
-import { aRenonce, delaiClientMs, respirer } from './troncons';
+import {
+  aRenonce, delaiClientMs, respirer, ECHECS_AVANT_ABANDON,
+} from './troncons';
 import { versAffectations, type AffectationTrajet } from './affectation';
 
 export interface Corridor {
@@ -132,8 +134,14 @@ export async function chargerCorridor(
   const paquets = paqueter(simplifier(trace, ECART_TRACE_M), POINTS_PAR_PAQUET);
   const elements: unknown[] = [];
   let unSucces = false;
+  let dAffilee = 0;
 
   for (let i = 0; i < paquets.length; i += 1) {
+    /* ON RENONCE APRÈS DEUX ÉCHECS DE SUITE. Quand le service ne répond pas,
+       le paquet suivant ne répondra pas davantage : sans ce garde-fou, un
+       long trajet passait dix fois le délai d'attente à échouer — dix
+       minutes pour apprendre ce qu'on savait au bout de deux. */
+    if (dAffilee >= ECHECS_AVANT_ABANDON) break;
     /* ON RESPIRE ENTRE DEUX PAQUETS : des requêtes lourdes enchaînées sans
        pause se font limiter par le service — mesuré le 31/08. */
     if (i > 0) await respirer();
@@ -152,18 +160,22 @@ export async function chargerCorridor(
         body: `data=${encodeURIComponent(requeteCorridor(paquets[i]!))}`,
         signal: horloge.signal,
       });
-      if (!r.ok) continue;
+      if (!r.ok) { dAffilee += 1; continue; }
       /* Overpass rend du HTML quand il est saturé : le décodage échoue, et
          c'est ce paquet-là qui manque, pas tout le relevé. */
       const brut: unknown = JSON.parse(await r.text());
       /* L'AVEU DU SERVICE SE LIT. Une expiration rend un tableau VIDE avec un
          `remark` : sans cette lecture, « le service a renoncé » se lisait
          « il n'y a rien le long de cette route ». */
-      if (aRenonce(brut)) continue;
+      if (aRenonce(brut)) { dAffilee += 1; continue; }
       const lus = (brut as { elements?: unknown }).elements;
       if (Array.isArray(lus)) elements.push(...lus);
       unSucces = true;
-    } catch { /* ce paquet manque ; les autres valent toujours */ } finally {
+      dAffilee = 0;
+    } catch {
+      /* ce paquet manque ; les autres valent toujours — jusqu'à deux */
+      dAffilee += 1;
+    } finally {
       clearTimeout(minuteur);
       signal?.removeEventListener('abort', relais);
     }

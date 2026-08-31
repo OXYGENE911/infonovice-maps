@@ -49,6 +49,11 @@ exacts que la fonction pure calculait.
   qui en ont une. Mesuré : les chiffres s'arrêtaient à 12 px du bas quand le
   bouton d'arrêt voisin en gardait 24. Ils en gardent 24 à leur tour.
 
+- **ET L'ON RENONCE VITE QUAND LE SERVICE EST MORT.** Le découpage a un
+  revers : un trajet en dix paquets face à un service muet passerait dix fois
+  le délai d'attente à échouer. On s'arrête après deux échecs de suite — pas
+  au premier, parce qu'une requête peut échouer seule.
+
 Tests : 19 unitaires sur la simplification — dont la garantie d'écart MESURÉE
 à quatre tolérances, la droite qui retombe à deux points, et un tracé de trente
 mille points qui ne fait pas déborder la pile. 5 E2E : le couloir qui ne quitte

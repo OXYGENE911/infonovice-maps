@@ -134,6 +134,14 @@ export const PAUSE_TRONCON_MS = 600;
    service bénévole. Ce qui dépasse n'est PAS relevé, et l'appelant le dit. */
 export const MAX_TRONCONS = 10;
 
+/* COMBIEN D'ÉCHECS DE SUITE AVANT DE RENONCER. Deux : quand un service ne
+   répond pas, le paquet suivant ne répondra pas davantage. Sans ce garde-fou,
+   un trajet découpé en dix paquets passait dix fois le délai d'attente à
+   échouer — dix minutes pour apprendre ce qu'on savait au bout de deux.
+   ON NE RENONCE PAS AU PREMIER : une requête peut échouer seule, et abandonner
+   sur un seul échec priverait le trajet du reste de ses repères. */
+export const ECHECS_AVANT_ABANDON = 2;
+
 /** Attend, entre deux tronçons — pour ne pas se faire fermer la porte. */
 export function respirer(ms = PAUSE_TRONCON_MS): Promise<void> {
   return new Promise((resoudre) => { setTimeout(resoudre, ms); });
