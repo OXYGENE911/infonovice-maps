@@ -3,7 +3,9 @@ import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
 import { ouvrirVolet } from './volets';
 
 test('LES ÉVÉNEMENTS PORTENT UN DESSIN, plus un rond de couleur', async ({ page }) => {
-  await page.setViewportSize({ width: 760, height: 560 });
+  /* PAS DE PETIT VIEWPORT : à 760 px, l'en-tête replié recouvrait le bouton
+     Menu sur la machine de CI (polices plus larges), et le clic tombait sur
+     le champ de recherche. La mesure ne dépend pas de la taille d'écran. */
   await simulerTuiles(page); await simulerCommunes(page);
   await page.route('**/www.bison-fute.gouv.fr/data/iteration/date.json',
     (r) => r.fulfill({ contentType: 'application/json', body: '[1787353503716]' }));
