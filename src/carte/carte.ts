@@ -201,6 +201,7 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   filtrePoi.porteBornes = {
     basculer: (actif) => { poi.basculerBornes(actif); },
     active: () => poi.bornesActives,
+    toutAfficher: () => { poi.toutAfficher(); },
   };
   poi.surCouchesChangees = (actives) => { filtrePoi.majBornes(actives.has('bornes')); };
   poi.surFiltresBornes = (resume) => { filtrePoi.majFiltresBornes(resume); };

@@ -2,6 +2,33 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.14.0] — 2026-09-01 — BORNES-5 : le filtre qui retranche se voit SUR la carte (PR #161)
+
+- **LE MÊME DÉFAUT, REVU LE LENDEMAIN.** Armelin : « j'ai activé le filtre
+  pour afficher les bornes de recharge et je n'ai toujours que les bornes
+  ZUNDER à l'écran ». BORNES-4 avait pourtant posé l'avertissement — mais
+  dans le volet « Recharge et services » et sur la puce du panneau de
+  filtres : **deux surfaces REPLIÉES**. Il ne l'a jamais croisé. Un message
+  qu'il faut déplier pour lire ne prévient personne.
+- **LE RAPPEL VIT DÉSORMAIS SUR LA CARTE**, sous l'entonnoir, tant qu'un
+  filtre retranche : « Bornes filtrées : réseau ZUNDER · 150 kW et plus »,
+  avec un bouton **« Tout afficher »** qui retire tout sur place — et
+  corrige la mémoire, sans quoi le réglage ressusciterait à la visite
+  suivante. Désigner la porte sans donner la clé n'aurait pas suffi.
+- **POURQUOI LES BORNES APPARAISSAIENT SUR UN ITINÉRAIRE ET PAS SUR LA
+  CARTE** : la couche du trajet lit `filtresAffichage()`, qui ne porte que la
+  puissance et les prises — pas les réseaux. Le filtre ZUNDER ne s'appliquait
+  donc qu'à la carte. C'est mesuré, pas supposé ; l'incohérence est notée à
+  la ROADMAP plutôt que corrigée ici : aligner les deux retirerait AUSSI les
+  bornes du trajet, ce qui aggraverait le symptôme le temps d'une visite.
+
+Vérifié sur la production avec un profil vierge : au zoom 15 près du
+Plessis-Trévise, la couche charge bien 22 stations et les dessine — le
+défaut n'était pas dans l'affichage, il était dans un réglage invisible.
+
+Tests : 2 E2E — le rappel mesuré AVANT d'ouvrir quoi que ce soit, et le
+retrait fait depuis la carte avec la mémoire relue après coup.
+
 ## [1.13.0] — 2026-09-01 — STATS-1 : le bilan du trajet, à l'arrivée (PR #159)
 
 - **UNE FENÊTRE DE STATISTIQUES À L'ARRIVÉE**, comme demandé : durée du
