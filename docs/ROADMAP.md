@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #150 — PARK-1, se garer près de l'arrivée (31/08) : le panneau P à
+      l'approche, la liste des parkings publics du plus près au plus loin de
+      la destination, « Se garer » qui replanifie, « Finir à pied » qui
+      propose la bascule piéton. « Places », jamais « places libres » — la
+      disponibilité n'a aucune source nationale gratuite.
 - [x] PR #149 — BORNES-3, chercher « McDonald » trouve les bornes du parking
       (31/08) : la recherche compare nom, enseigne ET exploitant — mesuré,
       « Carrefour » ne vivait que dans l'enseigne et 4 931 stations étaient

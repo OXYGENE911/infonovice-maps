@@ -2,6 +2,41 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.5.0] — 2026-08-31 — PARK-1 : se garer près de l'arrivée, et finir à pied (PR #150)
+
+- **LE PANNEAU P À L'APPROCHE.** Armelin : « un petit panneau rond P lorsqu'on
+  arrive presque à destination, afin de proposer une liste de parkings publics
+  à proximité ». Il paraît sous 1 200 m de l'arrivée (hystérésis contre le
+  clignotement) et NE DEMANDE RIEN tant qu'on ne le presse pas — Overpass est
+  un commun bénévole, un parcours compte les requêtes pour le garantir.
+- **LA LISTE VA DU PLUS PRÈS AU PLUS LOIN DE LA DESTINATION** — sa demande le
+  justifie lui-même : « la fin du trajet entre le parking et la destination se
+  fera logiquement à pied ». Les parkings viennent d'OpenStreetMap, autour de
+  la destination DEMANDÉE (l'adresse), pas de la fin du tracé (la route). Les
+  privés et réservés sont écartés : un parking privé n'est pas une suggestion,
+  c'est une contravention. Les grands P bleus se posent sur la carte.
+- **« PLACES », JAMAIS « PLACES LIBRES ».** La capacité est cartographiée — on
+  l'affiche quand elle l'est. La disponibilité en temps réel n'a AUCUNE source
+  nationale gratuite et sans clé : chaque exploitant expose la sienne, ville
+  par ville, quand il en expose une. En brancher une poignée ferait un service
+  qui marche à Paris et ment partout ailleurs — et toute dérogation demande
+  une décision d'Armelin. Le panneau DIT cette limite.
+- **« SE GARER » REPLANIFIE** depuis la position courante vers le parking, par
+  le chemin ordinaire du calcul — et garde la destination D'ORIGINE.
+- **« FINIR À PIED » (point 9)** : à l'arrivée au parking, un bouton vert
+  propose — il ne bascule rien tout seul — de continuer en piéton vers la
+  destination d'origine, nommée sur le bouton.
+
+Tests : 7 unitaires (le tri par distance, la capacité qui n'est un nombre ou
+rien, payant/gratuit/inconnu, le privé écarté, le plafond), 3 E2E — le P qui
+paraît sans rien demander, la liste triée et le recalcul mesuré sur l'URL, et
+la bascule piéton vers la destination d'origine. 1007 unitaires, 301 E2E.
+
+DÉFAUT ATTRAPÉ PAR UN PARCOURS AVANT LA LIVRAISON : un libellé d'arrivée VIDE
+(trajet venu de l'URL) passait le test d'affichage (`!== null`) mais tombait
+au test de vérité du clic (`!''`) — le bouton se montrait et ne faisait rien,
+le pire des deux mondes. Les deux gardes disent désormais la même chose.
+
 ## [1.4.0] — 2026-08-31 — BORNES-3 : chercher « McDonald » trouve les bornes du parking McDonald's (PR #149)
 
 - **LA RECHERCHE VOIT LE NOM, L'ENSEIGNE ET L'EXPLOITANT.** Armelin : « je ne

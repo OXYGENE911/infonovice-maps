@@ -163,6 +163,10 @@ export class PanneauItineraire extends HTMLElement {
     depart: PointGeo; arrivee: PointGeo; profil: Profil;
     etapes: PointGeo[]; eviter: Eviter[]; optimisation: Optimisation;
   } | null = null;
+  /* LA DESTINATION D'ORIGINE, gardée quand on se gare (PARK-1) : c'est vers
+     ELLE que la fin à pied ramène. */
+  #finPietonne: { point: PointGeo; libelle: string } | null = null;
+
   /** Itinéraire dont la feuille de route est chargée (ou en cours). */
   #feuillePour: Itineraire | null = null;
   #rechargePour: Itineraire | null = null;
@@ -830,6 +834,51 @@ export class PanneauItineraire extends HTMLElement {
       const d = (e as CustomEvent<{ lon: number; lat: number; cap: number | null }>).detail;
       void this.#itineraireBis({ lon: d.lon, lat: d.lat }, d.cap);
     });
+    /* SE GARER (PARK-1, 31/08) : la destination devient le parking choisi,
+       et la destination D'ORIGINE est gardée pour la fin à pied. Le recalcul
+       part de la POSITION, comme le bis — tout ce qui suit (plan, feuille,
+       reprise du suivi) se refait par le chemin ordinaire. */
+    document.addEventListener('se-garer', (e) => {
+      const d = (e as CustomEvent<{
+        lon: number; lat: number; nom: string;
+        position: { lon: number; lat: number } | null;
+      }>).detail;
+      const cliche = this.#calculPour;
+      if (!cliche) return;
+      this.#finPietonne = { point: cliche.arrivee, libelle: this.#libelleArrivee };
+      if (this.#guidage) this.#guidage.finApied = this.#libelleArrivee;
+      /* LES ÉTAPES RESTANTES TOMBENT : à un kilomètre de l'arrivée, elles
+         sont derrière nous — les garder ferait faire demi-tour. */
+      const etapes = this.querySelector('etapes-itineraire') as EtapesItineraire;
+      etapes.points = [];
+      this.#reprendreSuivi = true;
+      if (d.position) {
+        this.#depart = d.position;
+        this.#libelleDepart = 'Ma position';
+      }
+      this.#poser('arrivee', { lon: d.lon, lat: d.lat }, d.nom);
+    });
+
+    /* FINIR À PIED (point 9) : une fois garé, le profil bascule piéton et la
+       destination d'origine reprend sa place. */
+    document.addEventListener('finir-a-pied', (e) => {
+      const d = (e as CustomEvent<{ lon: number; lat: number }>).detail;
+      const fin = this.#finPietonne;
+      if (!fin) return;
+      this.#finPietonne = null;
+      if (this.#guidage) this.#guidage.finApied = null;
+      this.#profil = 'pedestrian';
+      const radio = this.querySelector<HTMLInputElement>(
+        'input[name="profil"][value="pedestrian"]',
+      );
+      if (radio) radio.checked = true;
+      this.#reprendreSuivi = true;
+      this.#depart = d;
+      this.#libelleDepart = 'Parking';
+      this.#poser('arrivee', fin.point,
+        fin.libelle === '' ? 'Destination' : fin.libelle);
+    });
+
     document.addEventListener('vehicule-change', () => {
       if (!this.#dernier) return;
       this.#rechargePour = null;
@@ -2807,6 +2856,12 @@ export class PanneauItineraire extends HTMLElement {
       trace: iti.geometrie.coordinates as [number, number][],
       distanceTotaleM: iti.distance,
       dureeTotaleS: iti.duree,
+      /* LA DESTINATION DEMANDÉE (PARK-1) : le tracé s'arrête sur la route,
+         l'adresse est à côté — c'est autour d'ELLE qu'on cherche à se
+         garer. */
+      ...(cliche ? {
+        destination: { ...cliche.arrivee, libelle: this.#libelleArrivee },
+      } : {}),
       etapes,
       arrets: plan?.faisable
         ? plan.arrets.map((a) => ({
