@@ -7,6 +7,9 @@
 // glyphes ni sprites à héberger. Les tuiles vectorielles IGN viendront quand
 // le mode sombre l'exigera vraiment (PR #3 en décidera).
 import type { StyleSpecification } from 'maplibre-gl';
+import {
+  TUILES_ETIQUETTES, GLYPHES_IGN, CALQUES_NUMEROS_ROUTE, CALQUES_TOPONYMES,
+} from './etiquettes-ign';
 
 const WMTS = 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0'
   + '&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}';
@@ -38,6 +41,11 @@ export interface OptionsStyle {
 export function styleCarte({ fond, cadastre = false }: OptionsStyle): StyleSpecification {
   const sources: StyleSpecification['sources'] = {};
   const layers: StyleSpecification['layers'] = [];
+  /* LE FOND EST RASTER : ses étiquettes sont PEINTES DANS L'IMAGE. Le
+     satellite n'en a donc aucune, et les numéros de route s'arrêtent au zoom
+     où la planche cesse de les dessiner. On les rétablit par une surcouche
+     vectorielle — voir etiquettes-ign.ts pour la mesure et la provenance. */
+  const etiquettes: StyleSpecification['layers'] = [];
 
   if (fond === 'plan') {
     sources['plan-ign'] = {
@@ -48,6 +56,10 @@ export function styleCarte({ fond, cadastre = false }: OptionsStyle): StyleSpeci
       attribution: ATTRIBUTION_IGN,
     };
     layers.push({ id: 'fond-plan-ign', type: 'raster', source: 'plan-ign' });
+    /* SUR LE PLAN, SEULEMENT LES NUMÉROS DE ROUTE. Les noms de communes, la
+       planche raster les dessine déjà : les redoubler donnerait deux textes
+       superposés, décalés d'un pixel. */
+    etiquettes.push(...CALQUES_NUMEROS_ROUTE);
   } else {
     sources['ortho'] = {
       type: 'raster',
@@ -57,6 +69,8 @@ export function styleCarte({ fond, cadastre = false }: OptionsStyle): StyleSpeci
       attribution: ATTRIBUTION_IGN,
     };
     layers.push({ id: 'fond-ortho', type: 'raster', source: 'ortho' });
+    /* SUR LE SATELLITE, LES DEUX : la photographie ne porte aucun texte. */
+    etiquettes.push(...CALQUES_TOPONYMES, ...CALQUES_NUMEROS_ROUTE);
     if (fond === 'ortho-routes') {
       sources['routes'] = {
         type: 'raster',
@@ -83,7 +97,25 @@ export function styleCarte({ fond, cadastre = false }: OptionsStyle): StyleSpeci
     });
   }
 
-  return { version: 8, name: `Fond ${fond}${cadastre ? ' + cadastre' : ''}`, sources, layers };
+  /* LES ÉTIQUETTES PASSENT EN DERNIER, cadastre compris : un texte lu sous
+     une surcouche opaque ne se lit pas. */
+  if (etiquettes.length > 0) {
+    sources['etiquettes-ign'] = {
+      type: 'vector', tiles: [TUILES_ETIQUETTES], maxzoom: 18,
+      attribution: ATTRIBUTION_IGN,
+    };
+    layers.push(...etiquettes);
+  }
+
+  return {
+    version: 8,
+    name: `Fond ${fond}${cadastre ? ' + cadastre' : ''}`,
+    /* LES GLYPHES NE SE DÉCLARENT QUE S'IL Y A DU TEXTE : un style sans
+       symbole n'a pas à annoncer une police qu'il n'ira jamais chercher. */
+    ...(etiquettes.length > 0 ? { glyphs: GLYPHES_IGN } : {}),
+    sources,
+    layers,
+  };
 }
 
 /** Le style historique de la PR #2, conservé comme raccourci. */

@@ -2,6 +2,46 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.22.0] — 2026-09-01 — FOND-1 : les numéros de route et les noms de communes (PR #169)
+
+Deux défauts signélés ensemble, et ils avaient la même cause.
+
+- « **Gros défaut pour une application de cartographie** : quand on zoome, il
+  n'y a pas les numéros de nationale, départementale et autoroute qui
+  s'affichent sur la carte. »
+- « Quand je configure la carte avec un fond **Carte Satellite**, les noms de
+  ville et village ne s'affichent pas. »
+
+**LE FOND EST RASTER, ET C'EST TOUTE L'EXPLICATION.** Les tuiles Plan IGN
+portent leurs étiquettes DANS L'IMAGE : la photographie aérienne n'en a donc
+aucune, et les numéros de route disparaissent au-delà du zoom où la planche
+raster les dessine. On ne peut pas rallumer ce qui est peint dans un JPEG.
+
+**CE QUI EST FAIT** : une **surcouche vectorielle** posée par-dessus le
+raster. Mesuré le 01/09, **sans clé** : les tuiles
+`data.geopf.fr/tms/1.0.0/PLAN.IGN` répondent 200 (58 Ko à z12), le style
+officiel aussi (288 Ko), et les glyphes « Source Sans Pro » également (67 Ko).
+
+- **LES CALQUES SONT CEUX D'IGN, PAS LES MIENS** : extraits du style officiel
+  PLAN.IGN et retargetés. Écrire nos propres règles aurait produit un rendu
+  qui RESSEMBLE à l'IGN sans en être — mêmes seuils de zoom (autoroute et
+  nationale dès le 7, départementale au 11), mêmes tailles, même hiérarchie de
+  communes, gratuitement.
+- **SUR LE PLAN, SEULEMENT LES NUMÉROS** : la planche dessine déjà les noms,
+  et deux textes superposés décalés d'un pixel se lisent plus mal qu'un.
+  **Sur le satellite, les deux.**
+- **C'EST UN INSTANTANÉ, PAS UN APPEL** : le style ne se retélécharge pas à
+  chaque démarrage — 288 Ko à chaque ouverture pour quarante calques serait
+  payer cher une donnée qui bouge une fois l'an.
+
+Vérifié à l'écran : 66 numéros dessinés sur le Plan (A4, A86, D130, D203…),
+30 numéros et les noms de communes sur le satellite.
+
+Tests : 6 unitaires sur le style — ce que reçoit chaque fond, l'ordre des
+calques (les étiquettes passent APRÈS le cadastre, un texte sous une
+surcouche opaque ne se lit pas), la déclaration des glyphes sans laquelle
+MapLibre ne dessine aucun texte, et les trois seuils de zoom.
+
 ## [1.16.0] — 2026-09-01 — ECOLES-1 : l'annuaire de l'Éducation nationale (PR #163)
 
 Première brique du chantier ouvert par Armelin le 01/09 : « la consolidation
