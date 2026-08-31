@@ -14,7 +14,7 @@
 import type { Map as CarteMapLibre, GeoJSONSource } from 'maplibre-gl';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import {
-  autonomies, consommationsDepuisEssais, capaciteReelle,
+  autonomies, consommationsDepuisEssais, capaciteReelle, facteursDAffichage,
   CONTEXTES, type Vehicule, type CleContexte,
 } from '../lib/vehicule';
 import { collectionAnneaux } from '../lib/cercle';
@@ -504,6 +504,23 @@ export class PanneauVehicule extends HTMLElement {
        LÉGENDE qui manquait. Les teintes sont celles des anneaux
        (lib/vehicule.ts), pas des teintes choisies ici — deux jeux de
        couleurs se seraient désaccordés au premier changement. */
+    /* À QUELLE CHARGE RÉPOND CE RAYON ? (défaut du 31/08). Armelin lisait
+       384 km sous un champ où il avait saisi 480, et concluait à une panne.
+       Le calcul était juste — 480 × 80 % de charge — mais RIEN ne le disait,
+       et un chiffre juste qu'on ne peut pas expliquer ne se distingue pas
+       d'un chiffre faux. Il fait même douter du reste.
+       LA PHRASE VIENT AVANT LES CHIFFRES, parce qu'elle les qualifie. */
+    const { soc, sante } = facteursDAffichage(this.#vehicule);
+    const titre = document.createElement('p');
+    titre.className = 'veh-bilan-charge';
+    const morceaux: string[] = [];
+    if (soc < 100) morceaux.push(`${Math.round(soc)} % de charge`);
+    if (sante < 100) morceaux.push(`${Math.round(sante)} % de santé batterie`);
+    titre.textContent = morceaux.length === 0
+      ? 'Rayon d’action à pleine charge :'
+      : `Rayon d’action à ${morceaux.join(' et ')} — pas à pleine charge :`;
+    boite.appendChild(titre);
+
     const p = document.createElement('p');
     p.className = 'veh-bilan-lignes';
     for (const c of utiles) {
@@ -514,7 +531,12 @@ export class PanneauVehicule extends HTMLElement {
       /* LA COULEUR NE PORTE PAS L'INFORMATION SEULE : le libellé la dit, et
          le titre nomme l'anneau correspondant sur la carte. Un daltonien lit
          la même chose que les autres. */
-      ligne.title = `${c.libelle} — anneau ${c.couleur} sur la carte`;
+      /* L'INFOBULLE PORTE LE RAPPROCHEMENT AVEC LA SAISIE : « 384 km, contre
+         480 saisis à pleine charge ». C'est la question exacte qu'Armelin
+         s'est posée, et la réponse tient sur une ligne. */
+      const aPleine = soc > 0 ? a[c.cle] * (100 / soc) : 0;
+      ligne.title = `${c.libelle} — anneau ${c.couleur} sur la carte`
+        + (soc < 100 ? `, soit ${Math.round(aPleine)} km à pleine charge` : '');
       p.appendChild(ligne);
     }
     boite.appendChild(p);

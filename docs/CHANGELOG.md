@@ -2,6 +2,29 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.108.0] — 2026-08-31 — VÉHICULE-2 : le rayon d'action dit à quelle charge il répond (PR #138)
+
+- **UN CHIFFRE JUSTE ET INEXPLICABLE VAUT UN CHIFFRE FAUX.** Armelin : « dans
+  le menu de la voiture, l'autonomie du rayon d'action affiché ne correspond
+  pas à l'autonomie configurée dans les paramètres du véhicule. » Il saisissait
+  480 km en ville et lisait 384. **Le calcul était juste** — 480 × 80 % de
+  charge — mais il s'affichait sous un titre « autonomie constatée à PLEINE
+  CHARGE » sans que rien ne dise qu'on répondait à la charge COURANTE. Un
+  chiffre qu'on ne peut pas expliquer ne se distingue pas d'une panne, et il
+  fait douter de tout le reste.
+- **LA PHRASE VIENT AVANT LES CHIFFRES**, parce qu'elle les qualifie :
+  « Rayon d'action à 80 % de charge — pas à pleine charge ». La santé de la
+  batterie s'y ajoute quand elle joue aussi.
+- **ET LE RAPPROCHEMENT AVEC LA SAISIE EST À PORTÉE DE SURVOL** : « soit
+  480 km à pleine charge ». C'est exactement la question qu'il s'est posée, et
+  la réponse tient sur une ligne.
+- **À PLEINE CHARGE, IL NE S'EXCUSE DE RIEN** : à 100 %, il n'y a rien à
+  expliquer, et une phrase de plus serait du bruit.
+
+Tests : 3 unitaires (les facteurs, leur bornage, et le retour de l'affichage à
+la saisie), 2 E2E — la phrase qui manquait, et son absence quand elle serait
+inutile. 858 unitaires, 275 E2E.
+
 ## [0.107.0] — 2026-08-31 — RELEVÉS-1 : les feux et les péages tiennent enfin leur promesse (PR #137)
 
 Armelin, le 31/08 : « quand je clique sur afficher les feux tricolores d'un

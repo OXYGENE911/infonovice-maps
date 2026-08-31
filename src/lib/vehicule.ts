@@ -63,6 +63,25 @@ export function capaciteReelle(v: Vehicule): number {
   return nominale * (borner(v.soce, 100) / 100);
 }
 
+/**
+ * Ce qui SÉPARE l'autonomie affichée de l'autonomie saisie — PURE.
+ *
+ * LE DÉFAUT DU 31/08. Armelin : « dans le menu de la voiture, l'autonomie du
+ * rayon d'action affiché ne correspond pas à l'autonomie configurée dans les
+ * paramètres du véhicule. » Il avait saisi 480 km en ville et lisait 384.
+ *
+ * LE CHIFFRE ÉTAIT JUSTE : 480 × 80 % de charge = 384. Mais il s'affichait
+ * sous un titre « autonomie constatée à PLEINE CHARGE », sans que rien ne
+ * dise qu'on répondait à la charge COURANTE. Un chiffre juste et inexplicable
+ * ne se distingue pas d'un chiffre faux — c'est même pire, parce qu'il fait
+ * douter de tout le reste.
+ *
+ * Cette fonction rend les deux facteurs pour que l'interface les NOMME.
+ */
+export function facteursDAffichage(v: Vehicule): { soc: number; sante: number } {
+  return { soc: borner(v.soc, 100), sante: borner(v.soce, 100) };
+}
+
 /** L'énergie effectivement embarquée à l'instant, en kWh. */
 export function energieDisponible(v: Vehicule): number {
   return capaciteReelle(v) * (borner(v.soc, 100) / 100);

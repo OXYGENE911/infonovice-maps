@@ -3091,6 +3091,11 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
    légende qui manquait au rayon d'action : vert en ville, ambre sur route,
    rouge sur autoroute — les teintes exactes des cercles posés sur la carte. */
 .veh-bilan-lignes { display: flex; flex-wrap: wrap; gap: 6px; }
+/* LA CHARGE QUI QUALIFIE LES CHIFFRES : elle vient avant eux, et se lit sans
+   être criarde — c'est une précision, pas une alerte. */
+.veh-bilan-charge {
+  margin: 0 0 6px; font: 600 12px var(--police); color: var(--texte-2);
+}
 .veh-bilan-ligne {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 3px 9px 3px 7px; border-radius: 999px;
