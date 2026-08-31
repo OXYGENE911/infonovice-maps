@@ -534,6 +534,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #157 — ADRESSE-2 (01/09) : la graphie collée des numéros
+      suffixés (15 points de score, mesurés) et le repli AVOUÉ quand le
+      numéro n'est pas dans la BAN — le 23 bis d'Armelin n'y est pas.
 - [x] PR #156 — POI-6 (01/09) : la famille « Écoles et universités »
       (toque de diplômé) et les stades dans « Sport et stades » — sans les
       terrains de quartier, qui noieraient la carte.
