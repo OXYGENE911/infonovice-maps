@@ -543,3 +543,40 @@ describe('chercherReseaux', () => {
     expect(chercherReseaux(jeu, 'licorne')).toEqual([]);
   });
 });
+
+describe('la recherche voit le nom, l’enseigne ET l’exploitant (BORNES-3)', () => {
+  /* MESURÉ SUR LE JEU RÉEL le 31/08 : « Carrefour » ne vit QUE dans
+     l'enseigne (« Carrefour Energies ») pendant que nom_station porte la
+     VILLE (« SETE ») ; Izivia écrit inversement le site dans nom_station.
+     Chercher un seul champ ratait l'un ou l'autre — 4 931 stations Carrefour
+     invisibles. */
+  const izivia = st({ nom: 'IZIVIA FAST - McDonald’s - Fronton',
+    reseau: 'McDonald’s - Fronton', operateur: 'IZIVIA' });
+  const carrefour = st({ nom: 'SETE', reseau: 'Carrefour Energies', operateur: 'Allego' });
+  const burger = st({ nom: 'Burger King Cavaillon',
+    reseau: 'Allego - Burger King Cavaillon', operateur: 'Allego' });
+  const autre = st({ nom: 'Aire de Beaune', reseau: 'Ionity', operateur: 'Ionity' });
+  const jeu = [izivia, carrefour, burger, autre];
+
+  it('« carrefour » trouve la station dont seul le RÉSEAU le porte', () => {
+    expect(filtrerStations(jeu, { nom: 'carrefour' })).toEqual([carrefour]);
+  });
+
+  it('« mcdonald » trouve la station Izivia du parking McDonald’s', () => {
+    expect(filtrerStations(jeu, { nom: 'mcdonald' })).toEqual([izivia]);
+  });
+
+  it('« burger king » distingue le sous-réseau Allego', () => {
+    expect(filtrerStations(jeu, { nom: 'burger king' })).toEqual([burger]);
+  });
+
+  it('« allego » par l’exploitant rend ses deux stations, pas les autres', () => {
+    expect(filtrerStations(jeu, { nom: 'allego' })).toEqual([carrefour, burger]);
+  });
+
+  it('l’absence d’enseigne et d’exploitant ne fait pas tomber la recherche', () => {
+    const nue = st({ nom: 'Sans rien', reseau: null, operateur: null });
+    expect(filtrerStations([nue], { nom: 'carrefour' })).toEqual([]);
+    expect(filtrerStations([nue], { nom: 'sans' })).toEqual([nue]);
+  });
+});
