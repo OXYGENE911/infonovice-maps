@@ -34,9 +34,24 @@ const TOUR = {
 
 async function decor(page: import('@playwright/test').Page, options: {
   adresses?: unknown[]; lieux?: unknown[]; expiration?: boolean;
-} = {}): Promise<{ ban: string[]; overpass: string[] }> {
+  etablissements?: unknown[];
+} = {}): Promise<{ ban: string[]; overpass: string[]; annuaire: string[] }> {
   const ban: string[] = [];
   const overpass: string[] = [];
+  const annuaire: string[] = [];
+  /* L'ANNUAIRE DE L'ÉDUCATION NATIONALE (ECOLES-1) : simulé comme les autres
+     services publics — la CI ne doit ni en dépendre, ni le solliciter à
+     chaque poussée. Sa disponibilité réelle est prouvée par mesure. */
+  await page.route('**/data.education.gouv.fr/**', (route) => {
+    annuaire.push(decodeURIComponent(route.request().url()));
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        total_count: (options.etablissements ?? []).length,
+        results: options.etablissements ?? [],
+      }),
+    });
+  });
   await simulerTuiles(page);
   await page.route('**/api-adresse.data.gouv.fr/search/**', (route) => {
     ban.push(new URL(route.request().url()).searchParams.get('q') ?? '');
@@ -58,7 +73,7 @@ async function decor(page: import('@playwright/test').Page, options: {
       contentType: 'application/json', body: JSON.stringify(corps),
     });
   });
-  return { ban, overpass };
+  return { ban, overpass, annuaire };
 }
 
 /* TROIS BARRES VIVENT DANS LA PAGE — l'accueil, le départ, l'arrivée. Un
@@ -132,4 +147,66 @@ test('SANS RIEN TROUVER, ON DIT CE QU’IL FAUT ÉCRIRE', async ({ page }) => {
   const note = barre(page).locator('.recherche-note');
   await expect(note).toBeVisible({ timeout: 10_000 });
   await expect(note).toContainText('écrit en entier');
+});
+
+const AVENUE_CAMUS = {
+  type: 'Feature',
+  geometry: { type: 'Point', coordinates: [2.5760, 48.8051] },
+  properties: {
+    label: 'avenue albert camus 94420 Le Plessis-Trévise', type: 'street',
+    postcode: '94420', city: 'Le Plessis-Trévise',
+    /* LE SCORE MESURÉ SUR LA BAN pour la saisie d'Armelin : 0,636. Elle rend
+       l'avenue faute de connaître le collège — et ce doute autorise à
+       chercher plus loin. */
+    score: 0.636,
+  },
+};
+
+const COLLEGE = {
+  nom_etablissement: 'Collège Albert Camus', type_etablissement: 'Collège',
+  nom_commune: 'Le Plessis-Trévise', latitude: 48.80512, longitude: 2.57597,
+};
+
+test('LE COLLÈGE INTROUVABLE DANS OSM SE TROUVE DANS L’ANNUAIRE', async ({ page }) => {
+  /* ECOLES-1 (01/09) — le cas exact d'Armelin : « le collège de ma fille ne
+     donne rien en tapant "Collège Albert Camus Plessis-Trévise" ».
+     MESURÉ le jour même : OpenStreetMap ne le connaît pas (soixante écoles
+     autour de chez lui, aucune de ce nom), l'annuaire de l'Éducation
+     nationale le porte. Les deux sources sont donc interrogées ENSEMBLE. */
+  const { annuaire, overpass } = await decor(page, {
+    adresses: [AVENUE_CAMUS], lieux: [], etablissements: [COLLEGE],
+  });
+  await ouvrir(page);
+  await barre(page).getByRole('combobox').fill('Collège Albert Camus');
+
+  await expect(barre(page).locator('[role="option"] .libelle').first())
+    .toHaveText('Collège Albert Camus', { timeout: 10_000 });
+  /* LA SOURCE SE DIT : savoir d'où vient une réponse, c'est pouvoir la
+     contester. */
+  await expect(barre(page).locator('[role="option"] .contexte').first())
+    .toHaveText('Collège · Le Plessis-Trévise');
+  // L'avenue de la BAN reste dessous : on n'a rien perdu.
+  await expect(barre(page).locator('[role="option"] .libelle'))
+    .toContainText(['Collège Albert Camus', 'avenue albert camus 94420 Le Plessis-Trévise']);
+
+  /* UN SEUL APPEL À CHAQUE SOURCE, autour du point que la BAN vient de
+     désigner — et les deux partent EN MÊME TEMPS. */
+  expect(annuaire).toHaveLength(1);
+  expect(annuaire[0]).toContain('search(nom_etablissement');
+  expect(annuaire[0]).toContain('48.80510');
+  expect(overpass).toHaveLength(1);
+});
+
+test('L’ÉCHEC D’UNE SOURCE N’EMPORTE PAS L’AUTRE', async ({ page }) => {
+  /* `allSettled` ET NON `all` : Overpass tombe régulièrement, et une école
+     trouvée vaut mieux qu'une page vide. */
+  const { annuaire } = await decor(page, {
+    adresses: [AVENUE_CAMUS], expiration: true, etablissements: [COLLEGE],
+  });
+  await ouvrir(page);
+  await barre(page).getByRole('combobox').fill('Collège Albert Camus');
+
+  await expect(barre(page).locator('[role="option"] .libelle').first())
+    .toHaveText('Collège Albert Camus', { timeout: 10_000 });
+  expect(annuaire).toHaveLength(1);
 });
