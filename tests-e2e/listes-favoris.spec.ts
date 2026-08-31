@@ -147,3 +147,63 @@ test('LES LISTES LIVRÉES NE S’EFFACENT PAS — elles sont le fond du meuble',
   await expect(page.getByRole('button', { name: /Supprimer la liste À visiter/ }))
     .toHaveCount(0);
 });
+
+test('IMPORTER SES FAVORIS GOOGLE MAPS — sans rien envoyer à Google', async ({ page }) => {
+  /* Armelin, 31/08 : « pouvoir exporter et importer ses favoris Google Maps
+     […] recréer une structure similaire sous forme de liste ».
+     RIEN NE PART CHEZ GOOGLE : le fichier vient de Takeout, l'usager le
+     télécharge lui-même, et tout se lit dans le navigateur. Ce parcours
+     COMPTE les requêtes sortantes pour le prouver. */
+  const versGoogle: string[] = [];
+  await page.route('**://*.google.com/**', (route) => {
+    versGoogle.push(route.request().url());
+    return route.abort();
+  });
+  await page.route('**://*.googleapis.com/**', (route) => {
+    versGoogle.push(route.request().url());
+    return route.abort();
+  });
+  await ouvrirFavoris(page);
+
+  await page.locator('.favoris-google-fichier').setInputFiles({
+    name: 'Envie d’y aller.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from([
+      'Titre,Note,URL',
+      '"Chez Paul, Lyon",Le meilleur,'
+        + 'https://www.google.com/maps/place/x/data=!3d45.7640!4d4.8357',
+      'Tour Eiffel,,"https://maps.google.com/?q=48.8584,2.2945"',
+      'Lieu mystère,,https://maps.google.com/?cid=999',
+    ].join('\n'), 'utf8'),
+  });
+
+  const etat = page.locator('.favoris-etat');
+  await expect(etat).toContainText('2 lieux importés', { timeout: 15_000 });
+  // LE NOM DU FICHIER FAIT LA LISTE — aucune saisie demandée.
+  await expect(etat).toContainText('Envie d’y aller');
+  /* CE QU'ON N'A PAS SU SITUER EST DIT, avec sa raison : le taire ferait
+     croire à un import complet. */
+  await expect(etat).toContainText('1 sans position');
+  await expect(etat).toContainText('Lieu mystère');
+  await expect(etat).toContainText('identifiant interne');
+
+  const nouvelle = page.locator('.favoris-entete-liste').filter({ hasText: 'Envie d’y aller' });
+  await expect(nouvelle).toBeVisible();
+  await expect(nouvelle).toContainText('2');
+  await expect(page.getByRole('button', { name: 'Aller à Chez Paul, Lyon' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Aller à Tour Eiffel' })).toBeVisible();
+
+  expect(versGoogle, 'aucune requête ne doit partir chez Google').toEqual([]);
+});
+
+test('UN FICHIER QUI N’EN EST PAS UN le dit, et ne crée rien', async ({ page }) => {
+  await ouvrirFavoris(page);
+  await page.locator('.favoris-google-fichier').setInputFiles({
+    name: 'photo.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('ceci nest pas un export', 'utf8'),
+  });
+  await expect(page.locator('.favoris-etat'))
+    .toContainText('ne ressemble pas à un export Google Maps', { timeout: 15_000 });
+  // AUCUNE LISTE FANTÔME : un fichier illisible ne doit pas laisser de trace.
+  await expect(page.locator('.favoris-entete-liste')).toHaveCount(3);
+});

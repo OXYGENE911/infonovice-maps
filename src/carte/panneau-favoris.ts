@@ -13,6 +13,7 @@ import {
   LISTE_PAR_DEFAUT, COULEURS, type ListeFavoris,
 } from '../lib/listes-favoris';
 import { ErreurFavoris, ErreurStockage, type Favori } from '../lib/favoris';
+import { lireExportGoogle, nomDeListe } from '../lib/import-google';
 import { REPERES, lireRepere, effacerRepere, ecrireRepere } from '../lib/reperes';
 import { adresseInverse } from '../lib/adresse';
 import { pictoMenu } from './icone-menu';
@@ -72,7 +73,21 @@ export class PanneauFavoris extends HTMLElement {
             <button type="button" class="favoris-exporter">Exporter mes données</button>
             <button type="button" class="favoris-importer">Importer</button>
             <button type="button" class="favoris-partager">Partager mes favoris</button>
-            <input type="file" accept="application/json,.json" hidden>
+            <!-- IL PORTE UN NOM (31/08). Il n'en avait pas : un parcours le
+                 désignait par son TYPE, et l'arrivée d'un second champ de
+                 fichier — l'import Google — a cassé le sélecteur. Troisième
+                 collision de ce genre en deux jours : un élément qu'un
+                 parcours doit atteindre se nomme, dès qu'il existe. -->
+            <input type="file" class="favoris-fichier"
+              accept="application/json,.json" hidden>
+            <!-- L'IMPORT GOOGLE MAPS (FAVORIS-3, 31/08). Armelin : « pouvoir
+                 exporter et importer ses favoris Google Maps […] recréer une
+                 structure similaire sous forme de liste ».
+                 RIEN NE PART CHEZ GOOGLE : le fichier vient de Takeout,
+                 l'usager le télécharge lui-même, et tout se lit ici. -->
+            <button type="button" class="favoris-google">Importer depuis Google Maps</button>
+            <input type="file" class="favoris-google-fichier"
+              accept=".csv,.json,text/csv,application/json" hidden>
           </div>
           <!-- DEUX GESTES, DEUX OUTILS — la demande d'Armelin du 28/08 :
                « exporter les favoris si on change de téléphone… et même un
@@ -101,7 +116,10 @@ export class PanneauFavoris extends HTMLElement {
         telecharger(json, 'infonovice-maps-donnees.json', 'application/json');
       });
     });
-    const fichier = this.querySelector('input[type="file"]') as HTMLInputElement;
+    /* PAR SA CLASSE, PAS PAR SON TYPE : depuis l'import Google, le volet en
+       porte deux, et « le premier champ de fichier » n'est plus une
+       désignation qui veut dire quelque chose. */
+    const fichier = this.querySelector('.favoris-fichier') as HTMLInputElement;
     this.querySelector('.favoris-importer')?.addEventListener('click', () => fichier.click());
     fichier.addEventListener('change', () => {
       const f = fichier.files?.[0];
@@ -176,6 +194,16 @@ export class PanneauFavoris extends HTMLElement {
         etat.textContent = e instanceof ErreurFavoris
           ? e.message : 'La liste n’a pas pu être créée.';
       });
+    });
+
+    const fichierGoogle = this.querySelector<HTMLInputElement>('.favoris-google-fichier');
+    this.querySelector('.favoris-google')?.addEventListener('click', () => {
+      fichierGoogle?.click();
+    });
+    fichierGoogle?.addEventListener('change', () => {
+      const f = fichierGoogle.files?.[0];
+      if (!f) return;
+      void this.#importerGoogle(f).finally(() => { fichierGoogle.value = ''; });
     });
 
     void this.rafraichir();
@@ -457,6 +485,60 @@ export class PanneauFavoris extends HTMLElement {
   }
 
   #listes: ListeFavoris[] = [];
+
+  /**
+   * Importe un export Google Maps — TOUT SE LIT ICI, rien ne part.
+   *
+   * LE NOM DU FICHIER FAIT LA LISTE : « Envie d'y aller.csv » devient la liste
+   * « Envie d'y aller ». C'est la « structure similaire » demandée, et elle ne
+   * coûte aucune saisie.
+   *
+   * CE QU'ON NE SAIT PAS SITUER EST DIT, JAMAIS DEVINÉ : certains liens Google
+   * ne portent qu'un identifiant interne, que seul Google sait résoudre. Les
+   * géocoder sur le seul titre placerait « Chez Marcel » sur un homonyme à
+   * trois cents kilomètres — un favori faux est pire qu'un favori manquant,
+   * parce qu'on le croit.
+   */
+  async #importerGoogle(fichier: File): Promise<void> {
+    const etat = this.querySelector('.favoris-etat') as HTMLElement;
+    etat.textContent = 'Lecture du fichier…';
+    try {
+      const lecture = lireExportGoogle(await fichier.text());
+      if (lecture.lieux.length === 0 && lecture.sansPosition.length === 0) {
+        etat.textContent = 'Ce fichier ne ressemble pas à un export Google Maps'
+          + ' (CSV d’une liste, ou « Lieux enregistrés » en JSON).';
+        return;
+      }
+      const liste = await creerListe({
+        nom: nomDeListe(fichier.name), emoji: '📍', couleur: COULEURS[5]!,
+      });
+      for (const lieu of lecture.lieux) {
+        await ajouterFavori(lieu.nom, { lon: lieu.lon, lat: lieu.lat }, liste.id);
+      }
+      await this.rafraichir();
+      /* LE COMPTE-RENDU DIT LES TROIS NOMBRES : ce qui est entré, ce qu'on n'a
+         pas su situer, et ce qu'on n'a pas su lire. Taire les deux derniers
+         ferait croire à un import complet. */
+      const morceaux = [`${lecture.lieux.length} lieu`
+        + `${lecture.lieux.length > 1 ? 'x' : ''} importé`
+        + `${lecture.lieux.length > 1 ? 's' : ''} dans « ${liste.nom} »`];
+      if (lecture.sansPosition.length > 0) {
+        morceaux.push(`${lecture.sansPosition.length} sans position dans le fichier`
+          + ` (${lecture.sansPosition.slice(0, 3).join(', ')}`
+          + `${lecture.sansPosition.length > 3 ? '…' : ''}) :`
+          + ' Google ne donne qu’un identifiant interne, que lui seul sait résoudre.');
+      }
+      if (lecture.illisibles > 0) {
+        morceaux.push(`${lecture.illisibles} ligne`
+          + `${lecture.illisibles > 1 ? 's' : ''} illisible`
+          + `${lecture.illisibles > 1 ? 's' : ''}.`);
+      }
+      etat.textContent = morceaux.join(' · ');
+    } catch (e) {
+      etat.textContent = e instanceof ErreurFavoris
+        ? e.message : 'Ce fichier n’a pas pu être lu.';
+    }
+  }
 
   /** L'en-tête d'une liste : son émoji, son nom, ce qu'elle porte. */
   #enteteListe(l: ListeFavoris, combien: number): HTMLLIElement {

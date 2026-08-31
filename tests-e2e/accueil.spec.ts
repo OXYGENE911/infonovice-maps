@@ -1369,7 +1369,7 @@ test('FAVORIS : appui long → ajout, persistance, export JSON, retrait, import'
   expect(await page.evaluate(() => document.activeElement?.tagName)).toBe('SUMMARY');
 
   // L'IMPORT restaure — et recharge la page pour appliquer les préférences.
-  await page.locator('.favoris input[type="file"]').setInputFiles(chemin!);
+  await page.locator('.favoris .favoris-fichier').setInputFiles(chemin!);
   await expect(page.locator('.favoris-etat')).toContainText('Importé : 1 favori', { timeout: 10_000 });
   await page.waitForLoadState('load');
   await canevas.waitFor({ timeout: 15_000 });
@@ -1380,9 +1380,9 @@ test('FAVORIS : appui long → ajout, persistance, export JSON, retrait, import'
   // se nettoie pour qu'un second essai reparte (le même fichier compris).
   const intrus = test.info().outputPath('intrus.json');
   await (await import('node:fs/promises')).writeFile(intrus, '{"application":"autre-app"}');
-  await page.locator('.favoris input[type="file"]').setInputFiles(intrus);
+  await page.locator('.favoris .favoris-fichier').setInputFiles(intrus);
   await expect(page.locator('.favoris-etat')).toContainText('pas une sauvegarde Infonovice Maps', { timeout: 10_000 });
-  expect(await page.locator('.favoris input[type="file"]').inputValue()).toBe('');
+  expect(await page.locator('.favoris .favoris-fichier').inputValue()).toBe('');
   // L'échec n'a rien détruit : le favori est toujours là.
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
 });
@@ -1555,6 +1555,22 @@ test('HORS LIGNE : l’en-tête ne pousse rien hors de l’écran, ni ne couvre 
     bandeau.replaceChildren(titre, detail);
     (document.querySelector('.installer') as HTMLElement).hidden = false;
   });
+
+  /* ON ATTEND QUE LA HAUTEUR SOIT PUBLIÉE. `--hauteur-entete` est écrite par
+     un `ResizeObserver`, qui se déclenche APRÈS la modification du document :
+     mesurer aussitôt, c'est mesurer l'ancien décalage des volets, et voir
+     l'en-tête les recouvrir alors qu'il ne les recouvrira pas.
+     CE PARCOURS A LÂCHÉ DEUX FOIS SUR QUATRE PASSES COMPLÈTES pour cette
+     seule raison — jamais isolément, parce qu'il fallait une machine chargée
+     pour que l'observateur prenne du retard. Même défaut que le témoin
+     d'attente des lieux d'exception : on ne mesure pas un état qui n'a pas
+     fini de s'établir. */
+  await page.waitForFunction(() => {
+    const entete = document.querySelector('.entete')!;
+    const publiee = getComputedStyle(document.documentElement)
+      .getPropertyValue('--hauteur-entete').trim();
+    return publiee === `${Math.round(entete.getBoundingClientRect().height)}px`;
+  }, undefined, { timeout: 10_000 });
 
   const debords = await page.evaluate(() => {
     const large = document.documentElement.clientWidth;
