@@ -47,7 +47,7 @@ import { palierDe } from '../lib/puissance';
 import { chargerPeages, ErreurPeages } from '../lib/peages';
 import { chargerCorridor } from '../lib/corridor';
 import {
-  chargerFeux, compterFeux, carrefoursDistincts, RAYON_FEU_M, type Feu,
+  chargerFeux, compterFeux, type Feu,
 } from '../lib/feux';
 import { chargerTrafic, evenementsDuTrajet } from '../lib/trafic';
 import {
@@ -68,7 +68,6 @@ const SOURCE_VARIANTES = 'itineraire-variantes';
 const SOURCE_LIEUX = 'itineraire-lieux';
 /* LES FEUX DU TRAJET (FEUX-2, 30/08) — un point par CARREFOUR, jamais un par
    tête de feu : la carte et le comptage doivent dire la même chose. */
-const SOURCE_FEUX = 'itineraire-feux';
 
 /* LES TROIS VARIANTES, ET CE QU'ELLES SONT VRAIMENT (ITI-3, demande
    d'Armelin du 30/08 : « je souhaite avoir un itinéraire A, B et C pour
@@ -171,17 +170,10 @@ export class PanneauItineraire extends HTMLElement {
   #feuillePour: Itineraire | null = null;
   #rechargePour: Itineraire | null = null;
   #annulationRecharge: AbortController | null = null;
-  /** Le dernier relevé de feux était-il complet ? Sinon, on le dit. */
-  #feuxComplet = true;
 
   /** Itinéraire dont les lieux d'exception sont calculés (ou en cours). */
   #monumentsPour: Itineraire | null = null;
 
-  /* Les feux relevés, et le trajet pour lequel ils l'ont été : changer de
-     trajet invalide le relevé, décocher ne le jette pas. */
-  #feux: Feu[] = [];
-
-  #feuxPour: Itineraire | null = null;
   /* LES LIEUX POSÉS SUR LA CARTE, dans l'ordre du calque : le clic rend un
      rang, cette liste rend le lieu. */
   #lieuxPoses: Monument[] = [];
@@ -570,20 +562,15 @@ export class PanneauItineraire extends HTMLElement {
                 itinéraires (A, B, C)</button>
               <div class="iti-comparer-corps" role="status"></div>
             </div>
-            <!-- LES FEUX SUR LA CARTE (FEUX-2, 30/08). Ils vivent ici, à côté
-                 du comptage : c'est la même donnée et la même question. À LA
-                 DEMANDE, comme les péages — Overpass est un commun bénévole,
-                 et personne ne veut de points rouges qu'il n'a pas demandés.
-                 SEULEMENT LES FEUX DU TRAJET : afficher ceux de toute la
-                 vue serait une autre fonctionnalité, plus lourde, et qui ne
-                 répond pas à la question posée (« optimiser mon trajet »). -->
-            <div class="iti-feux">
-              <label class="iti-feux-bascule">
-                <input type="checkbox" class="iti-feux-carte">
-                <span>Afficher les feux tricolores du trajet</span>
-              </label>
-              <p class="iti-feux-corps" role="status"></p>
-            </div>
+            <!-- LES FEUX NE S'AFFICHENT PLUS SUR LA CARTE (FEUX-3, retrait du
+                 01/09 sur retour de terrain d'Armelin : « ils ne s'affichent
+                 pas forcément tous et certains s'affichent en plein milieu
+                 d'autoroute […] mieux vaut ne plus afficher les feux
+                 rouges »). Il avait raison deux fois : la donnée OSM mêle
+                 aux carrefours des feux de péage et de chantier — d'où les
+                 points en pleine autoroute — et un point rouge non cliquable
+                 n'explique rien. LE COMPTAGE RESTE dans la comparaison des
+                 variantes : compter est fiable, situer ne l'était pas. -->
             <!-- LES PÉAGES SE RELÈVENT, ILS NE S'ÉVITENT PAS — le moteur
                  public n'a pas de clause péage (mesuré PR #6), et l'étude du
                  27/08 (docs/etudes-mandat-27-08.md §2) a tranché : nommer les
@@ -953,9 +940,6 @@ export class PanneauItineraire extends HTMLElement {
     });
     this.querySelector('.iti-comparer-lancer')?.addEventListener('click', () => {
       void this.#comparerVariantes();
-    });
-    this.querySelector('.iti-feux-carte')?.addEventListener('change', (e) => {
-      void this.#basculerFeuxCarte((e.target as HTMLInputElement).checked);
     });
 
     /* CHANGER LA MARGE REFAIT LE PLAN — mais seulement si la section est
@@ -2296,124 +2280,6 @@ export class PanneauItineraire extends HTMLElement {
       if (e instanceof Error && /style is not done loading/i.test(e.message)) return;
       throw e;
     }
-  }
-
-  /**
-   * Montre ou cache les feux du trajet (FEUX-2, 30/08).
-   *
-   * UN SEUL APPEL PAR TRAJET : le relevé est gardé tant que le tracé ne
-   * change pas. Décocher puis recocher ne redemande rien à Overpass, qui est
-   * tenu par des bénévoles.
-   */
-  async #basculerFeuxCarte(actif: boolean): Promise<void> {
-    const note = this.querySelector<HTMLElement>('.iti-feux-corps');
-    const iti = this.#dernier;
-    if (!actif) {
-      this.#effacerFeuxCarte();
-      if (note) note.textContent = '';
-      return;
-    }
-    if (!iti) {
-      if (note) note.textContent = 'Calculez d’abord un itinéraire : les feux se relèvent le long de son tracé.';
-      const case_ = this.querySelector<HTMLInputElement>('.iti-feux-carte');
-      if (case_) case_.checked = false;
-      return;
-    }
-    const trace = iti.geometrie.coordinates as [number, number][];
-    if (this.#feuxPour !== iti) {
-      if (note) note.replaceChildren(this.#attente('Relevé des feux du trajet…'));
-      try {
-        /* L'ATTENTE SE COMPTE EN TRONÇONS : un long trajet en demande
-           plusieurs, et un témoin qui bat sans rien dire pendant vingt
-           secondes passe pour une panne. */
-        const releve = await chargerFeux([trace], undefined, (faits, total) => {
-          if (note && total > 1) {
-            note.replaceChildren(this.#attente(
-              `Relevé des feux… (${faits} tronçon${faits > 1 ? 's' : ''} sur ${total})`,
-            ));
-          }
-        });
-        /* ON NE GARDE QU'UN POINT PAR CARREFOUR, et c'est indispensable :
-           sinon la carte montrerait quatre points là où le comptage annonce
-           un feu. Deux chiffres qui se contredisent valent moins qu'un
-           seul. */
-        this.#feux = carrefoursDistincts(releve.feux.filter((f) =>
-          situerSurLeTrace(f, trace).ecart <= RAYON_FEU_M));
-        this.#feuxComplet = releve.complet;
-        this.#feuxPour = iti;
-      } catch {
-        if (note) note.textContent = 'Les feux n’ont pas pu être relevés. Réessayez plus tard.';
-        const case_ = this.querySelector<HTMLInputElement>('.iti-feux-carte');
-        if (case_) case_.checked = false;
-        return;
-      }
-    }
-    /* L'usager a pu décocher pendant le relevé, ou changer de trajet. */
-    const case_ = this.querySelector<HTMLInputElement>('.iti-feux-carte');
-    if (!case_?.checked || this.#dernier !== iti) return;
-    this.#poserFeuxSurCarte();
-    const n = this.#feux.length;
-    if (note) {
-      /* UN COMPTAGE INCOMPLET SE DIT INCOMPLET. C'est le défaut du 31/08 :
-         une expiration d'Overpass se lisait « 0 feu », et un boulevard
-         paraissait dégagé. Un minimum annoncé vaut mieux qu'un total faux. */
-      const reserve = this.#feuxComplet ? ''
-        : ' Une partie du trajet n’a pas pu être relevée : c’est un minimum.';
-      note.textContent = n === 0
-        ? (this.#feuxComplet
-          ? 'Aucun feu tricolore relevé sur ce trajet.'
-          : `Le relevé des feux n’a pas abouti.${reserve}`)
-        : `${n} carrefour${n > 1 ? 's' : ''} à feux sur le trajet`
-          + ` (OpenStreetMap).${reserve}`;
-    }
-  }
-
-  /** Pose les feux — un point par carrefour, SOUS les arrêts de recharge. */
-  #poserFeuxSurCarte(): void {
-    const carte = this.#carte;
-    if (!carte) return;
-    const donnees = {
-      type: 'FeatureCollection' as const,
-      features: this.#feux.map((f) => ({
-        type: 'Feature' as const,
-        properties: {},
-        geometry: { type: 'Point' as const, coordinates: [f.lon, f.lat] },
-      })),
-    };
-    try {
-      const existante = carte.getSource(SOURCE_FEUX) as GeoJSONSource | undefined;
-      if (existante) { existante.setData(donnees); return; }
-      carte.addSource(SOURCE_FEUX, { type: 'geojson', data: donnees });
-      /* SOUS LES ARRÊTS DE RECHARGE, comme les lieux d'exception : ce qui
-         est planifié passe devant ce qui est seulement rencontré. */
-      const dessous = carte.getLayer('iti-lieux') ? 'iti-lieux'
-        : carte.getLayer('iti-arrets-pastille') ? 'iti-arrets-pastille' : undefined;
-      carte.addLayer({
-        id: 'iti-feux', type: 'circle', source: SOURCE_FEUX,
-        /* PAS AVANT LE ZOOM 11 : un trajet urbain porte cent carrefours, et
-           cent points à l'échelle d'une région font une tache, pas une
-           information. */
-        minzoom: 11,
-        paint: {
-          /* PETIT ET ROUGE, CERCLÉ DE SOMBRE : le rouge est la couleur du
-             feu qui arrête — celle qu'on cherche à éviter. Plus petit que
-             les bornes et les lieux : c'est un semis, pas une destination. */
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 3, 16, 6],
-          'circle-color': '#D93025',
-          'circle-stroke-width': 1.5,
-          'circle-stroke-color': '#2C2C2A',
-        },
-      }, dessous);
-    } catch (e) {
-      if (e instanceof Error && /style is not done loading/i.test(e.message)) return;
-      throw e;
-    }
-  }
-
-  /** Efface les feux de la carte. */
-  #effacerFeuxCarte(): void {
-    const source = this.#carte?.getSource(SOURCE_FEUX) as GeoJSONSource | undefined;
-    source?.setData({ type: 'FeatureCollection', features: [] });
   }
 
   /** Efface les lieux de la carte — page quittée, ou trajet effacé. */

@@ -113,18 +113,10 @@ test('LE TRAJET EST DÉCOUPÉ — plus jamais une requête pour tout', async ({ 
   }
 });
 
-test('UNE EXPIRATION DES FEUX NE SE LIT PAS « aucun feu »', async ({ page }) => {
-  await trajet(page);
-  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
-    headers: { 'Access-Control-Allow-Origin': '*' },
-    contentType: 'application/json', body: JSON.stringify(EXPIRATION),
-  }));
-  await page.locator('.iti-feux-carte').check();
-  const note = page.locator('.iti-feux-corps');
-  await expect(note).toContainText(/n’ont pas pu être relevés|n’a pas abouti/, { timeout: 60_000 });
-  await expect(note, 'un boulevard ne doit pas paraître dégagé parce que le service a renoncé')
-    .not.toContainText('Aucun feu tricolore relevé');
-});
+/* Le parcours « expiration des feux sur la carte » est parti avec
+   l'affichage (FEUX-3, 01/09) : le COMPTAGE des variantes, lui, reste gardé
+   par le parcours de la comparaison — un relevé incomplet n'y est pas
+   affiché, ce qui est la même honnêteté par un autre chemin. */
 
 test('L’ATTENTE SE COMPTE EN TRONÇONS', async ({ page }) => {
   /* Un relevé de deux minutes derrière un témoin muet passe pour une panne —
