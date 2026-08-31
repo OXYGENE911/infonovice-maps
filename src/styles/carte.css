@@ -3254,3 +3254,96 @@ filtre-poi {
 .poi-fiche-source {
   margin: 9px 0 0; font: 400 11px var(--police); color: var(--texte-3);
 }
+
+
+/* ==========================================================================
+   FAVORIS-2 — LES LISTES DE FAVORIS (31/08). Armelin : « une catégorie custom
+   de ses POI en indiquant soi-même un nom, un émoji et couleur dédiée […] ou
+   une liste prédéfinie comme sur Google Maps ».
+   ========================================================================== */
+.favoris-entete-liste {
+  display: flex; align-items: center; gap: 8px;
+  margin: 12px 0 2px; padding: 5px 8px;
+  border-left: 3px solid var(--teinte); border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--teinte) 8%, transparent);
+}
+.favoris-entete-liste:first-child { margin-top: 0; }
+.favoris-liste-emoji { font-size: 15px; line-height: 1; }
+.favoris-liste-nom {
+  flex: 1 1 auto; font: 650 13px var(--police); color: var(--texte-1);
+}
+/* LE COMPTE EST DISCRET : c'est un repère, pas une information de premier
+   plan — le nom de la liste l'est. */
+.favoris-liste-compte {
+  font: 500 11.5px var(--police); color: var(--texte-3);
+  font-variant-numeric: tabular-nums;
+}
+.favoris-liste-effacer {
+  border: none; background: none; cursor: pointer; padding: 2px 4px;
+  color: var(--texte-3); font-size: 13px; border-radius: 6px;
+}
+.favoris-liste-effacer:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* RANGER DOIT COÛTER UN GESTE, sinon personne ne range : le choix de liste
+   vit DANS la ligne du favori.
+   LA LIGNE PASSE À DEUX ÉTAGES SUR ÉCRAN ÉTROIT (mesuré à 430 px : le nom, le
+   choix de liste et deux boutons débordaient, et le dernier bouton sortait de
+   l'écran). Le nom garde toute la première ligne ; le rangement descend
+   dessous plutôt que d'écraser tout le monde. */
+.favoris-liste li { flex-wrap: wrap; row-gap: 4px; }
+.favori-aller { flex: 1 1 100%; }
+.favori-liste {
+  flex: 1 1 auto; min-width: 0; max-width: 100%;
+  border: 1px solid var(--bord-2); border-radius: 8px;
+  background: var(--fond); color: var(--texte-2);
+  font: 400 11.5px var(--police); padding: 4px 6px;
+}
+.favori-liste:focus-visible { outline: none; box-shadow: var(--focus); }
+/* LE COMPTE NE SE FAIT PAS ROGNER : c'est lui qui dit « vide », et une liste
+   vide qu'on ne sait pas vide ressemble à une liste cassée. */
+.favoris-liste-compte { flex: 0 0 auto; white-space: nowrap; }
+.favoris-liste-nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* LE FORMULAIRE EST REPLIÉ : trois champs ouverts en permanence donneraient
+   l'impression qu'il faut les remplir avant de se servir. */
+.favoris-nouvelle { margin-top: 12px; }
+.favoris-nouvelle > summary {
+  cursor: pointer; font: 600 12.5px var(--police); color: var(--accent);
+  padding: 4px 2px; list-style: none;
+}
+.favoris-nouvelle > summary::-webkit-details-marker { display: none; }
+.favoris-nouvelle > summary::before { content: '+ '; }
+.favoris-nouvelle > summary:focus-visible { outline: none; box-shadow: var(--focus); }
+.favoris-nouvelle-corps {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end;
+  padding: 8px 2px 2px;
+}
+.favoris-champ {
+  display: flex; flex-direction: column; gap: 3px;
+  font: 500 11px var(--police); color: var(--texte-3);
+}
+.favoris-champ input {
+  border: 1px solid var(--bord-2); border-radius: 8px; padding: 6px 8px;
+  font: 400 13px var(--police); color: var(--texte-1); background: var(--fond);
+  min-width: 0;
+}
+.favoris-champ:first-child { flex: 1 1 150px; }
+.favoris-champ:nth-child(2) input { width: 62px; }
+.favoris-champ input:focus-visible { outline: none; box-shadow: var(--focus); }
+.favoris-couleurs { display: flex; flex-wrap: wrap; gap: 5px; flex: 1 1 100%; }
+.favoris-couleur {
+  width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+  background: var(--teinte); border: 2px solid transparent;
+}
+/* LE CHOIX SE VOIT SANS LA COULEUR SEULE : un anneau, pour qui ne distingue
+   pas les teintes. */
+.favoris-couleur[aria-checked="true"] {
+  border-color: var(--texte-1); box-shadow: 0 0 0 2px var(--fond) inset;
+}
+.favoris-couleur:focus-visible { outline: none; box-shadow: var(--focus); }
+.favoris-liste-creer {
+  flex: 1 1 100%; padding: 8px 12px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent); color: #FFF;
+  font: 600 12.5px var(--police);
+}
+.favoris-liste-creer:focus-visible { outline: none; box-shadow: var(--focus); }

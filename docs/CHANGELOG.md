@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [0.112.0] — 2026-08-31 — LIEUX-1 : une fiche, pas une étiquette (PR #142)
+## [0.114.0] — 2026-08-31 — LIEUX-1 : une fiche, pas une étiquette (PR #142)
 
 - **CE QU'ON SAIT DU LIEU, ET CE QU'ON PEUT EN FAIRE.** Armelin : « quand on
   clique sur un POI à l'écran, il y a juste écrit un texte pour indiquer le nom
@@ -33,6 +33,44 @@ Tests : 19 unitaires (l'adresse recomposée, le téléphone appelable, les
 schémas d'URL refusés, l'accès fauteuil qui se tait quand il est inconnu, et
 les horaires en français), 1 E2E qui ouvre la fiche et presse les deux
 boutons. 934 unitaires, 284 E2E.
+## [0.113.0] — 2026-08-31 — FAVORIS-2 : des listes pour ranger ses lieux (PR #143)
+
+- **UN NOM, UN ÉMOJI, UNE COULEUR.** Armelin : « pouvoir l'enregistrer dans une
+  catégorie custom de ses POI en indiquant soi-même un nom, un émoji et couleur
+  dédiée […] ou en sélectionnant une liste prédéfinie comme sur Google Maps qui
+  possède déjà des listes de favoris prédéfinies pour les restaurants, les
+  lieux favoris et les lieux à visiter (Drapeau vert). »
+- **LES TROIS LISTES QU'IL CITE EXISTENT D'EMBLÉE** : ⭐ Lieux favoris,
+  🚩 À visiter, 🍽️ Restaurants. Une application qui s'ouvre sur « créez votre
+  première liste » demande un travail avant de rendre un service.
+- **RANGER N'EST PAS JETER.** Supprimer une liste rend ses lieux à « Lieux
+  favoris » — perdre ses favoris parce qu'on a supprimé une catégorie serait
+  une trahison du contrat. Et les trois listes livrées ne s'effacent pas :
+  elles sont le fond du meuble.
+- **RANGER COÛTE UN GESTE** : le choix de liste vit DANS la ligne du favori,
+  pas dans un écran de plus. Sur téléphone, la ligne passe à deux étages
+  plutôt que de déborder — mesuré à 430 px, le dernier bouton sortait de
+  l'écran.
+- **CE QUI EST BORNÉ, ET POURQUOI** : un nom vide rendrait une liste invisible
+  dans son propre panneau ; un émoji de dix signes casserait l'alignement (on
+  n'en garde qu'un, mesuré en GRAPPES — « 🇫🇷 » et « 👍🏽 » ne se coupent pas en
+  deux) ; une couleur libre pourrait être illisible sur la carte, donc dix
+  teintes de la palette des familles, et le choix se voit à l'anneau, pas
+  seulement à la couleur.
+- **LES FAVORIS D'AVANT REJOIGNENT « Lieux favoris » à la lecture**, sans
+  migration ni réécriture : une base qu'on réécrit est une base qu'on peut
+  perdre.
+
+Tests : 18 unitaires (les bornes, les émojis composés, les couleurs refusées,
+les listes livrées qu'on ne peut pas usurper), 6 E2E — la création complète, le
+refus d'une liste sans nom, le rangement d'un favori, et la suppression qui
+NE supprime pas les lieux. 951 unitaires, 294 E2E.
+
+DÉFAUT ATTRAPÉ PAR UN PARCOURS : j'avais caché les listes vides pour éviter
+l'encombrement — mais une liste qu'on vient de créer est vide par définition,
+et la création paraissait donc sans effet. Une liste existe parce que
+quelqu'un l'a voulue ; elle se voit.
+
 ## [0.111.0] — 2026-08-31 — ACCENTS-1 : rendre leurs accents aux noms de voies (PR #141)
 
 - **LA VOIX PRONONÇAIT « Proph-eu-te ».** Armelin : « mon adresse "Avenue du

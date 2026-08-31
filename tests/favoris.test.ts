@@ -63,3 +63,36 @@ describe('validerSauvegarde', () => {
     expect(favoris[0]!.cree).toBe(new Date(0).toISOString());
   });
 });
+
+describe('la liste voyage avec la sauvegarde (FAVORIS-2)', () => {
+  /* SANS CELA, une restauration remettait tous les lieux en vrac dans la
+     liste par défaut : une sauvegarde qui perd le rangement n'est pas une
+     sauvegarde. */
+  const fichier = (favori: Record<string, unknown>) => ({
+    application: 'infonovice-maps', version: 1, preferences: {}, favoris: [favori],
+  });
+
+  test('garde la liste d’un favori', () => {
+    const { favoris } = validerSauvegarde(fichier({
+      id: 'a', nom: 'Le Bistrot', lon: 2.35, lat: 48.85, liste: 'restaurants',
+    }));
+    expect(favoris[0]?.liste).toBe('restaurants');
+  });
+
+  /* LES EXPORTS D'AVANT RESTENT LISIBLES : sans liste dans le fichier, le
+     favori n'en porte pas, et la lecture le rangera par défaut. */
+  test('accepte un export d’avant les listes', () => {
+    const { favoris } = validerSauvegarde(fichier({
+      id: 'a', nom: 'Le Bistrot', lon: 2.35, lat: 48.85,
+    }));
+    expect(favoris[0]).toBeDefined();
+    expect(favoris[0]?.liste).toBeUndefined();
+  });
+
+  test('ignore une liste qui n’est pas une chaîne', () => {
+    const { favoris } = validerSauvegarde(fichier({
+      id: 'a', nom: 'X', lon: 2.35, lat: 48.85, liste: 42,
+    }));
+    expect(favoris[0]?.liste).toBeUndefined();
+  });
+});
