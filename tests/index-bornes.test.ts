@@ -4,6 +4,7 @@ import {
   reseauxNationaux, filtrerStations, stationsDans, perime, cleReseau,
   nomCourtReseau, chercherReseaux, etendue, ETENDUES,
   SEUIL_RAPIDE, PEREMPTION_MS, type StationRapide,
+  stationPasseFiltres,
 } from '../src/lib/index-bornes';
 
 /** Une ligne d'export telle que le portail la rend (forme mesurée le 26/08). */
@@ -578,5 +579,49 @@ describe('la recherche voit le nom, l’enseigne ET l’exploitant (BORNES-3)', 
     const nue = st({ nom: 'Sans rien', reseau: null, operateur: null });
     expect(filtrerStations([nue], { nom: 'carrefour' })).toEqual([]);
     expect(filtrerStations([nue], { nom: 'sans' })).toEqual([nue]);
+  });
+});
+
+describe('stationPasseFiltres — UNE règle pour la carte ET le trajet (BORNES-6)', () => {
+  /* Armelin, le 01/09 : « le filtre réseau de charge + puissance de charge
+     doit être valide aussi bien en mode carte qu'en mode itinéraire ». La
+     couche du trajet avait sa propre règle, plus courte : elle ignorait les
+     réseaux — d'où des bornes visibles sur un itinéraire et invisibles sur la
+     carte, exactement le défaut qu'il a signalé deux jours de suite. */
+  const station = (p: Partial<StationRapide> = {}): StationRapide => ({
+    lon: 2.35, lat: 48.85, nom: 'Aire du Test', reseau: 'Ionity',
+    operateur: 'Ionity', puissance: 150, pdc: 4, prises: ['combo_ccs'],
+    acces: true, id: 'FRTEST1', ...p,
+  } as StationRapide);
+
+  it('écarte une station hors du réseau coché — la règle qui manquait au trajet', () => {
+    expect(stationPasseFiltres(station(), { reseaux: ['Ionity'] })).toBe(true);
+    expect(stationPasseFiltres(station(), { reseaux: ['Tesla'] })).toBe(false);
+  });
+
+  /* LA COMPARAISON SE FAIT SUR LA CLÉ : cocher « LIDL » retient « Lidl France ». */
+  it('compare sur la clé, pas sur la chaîne', () => {
+    const lidl = station({ reseau: 'Lidl France', operateur: 'Lidl France' });
+    expect(stationPasseFiltres(lidl, { reseaux: ['LIDL'] })).toBe(true);
+  });
+
+  it('applique aussi la puissance et les prises', () => {
+    expect(stationPasseFiltres(station({ puissance: 50 }), { puissanceMin: 150 })).toBe(false);
+    expect(stationPasseFiltres(station(), { prises: ['chademo'] })).toBe(false);
+    expect(stationPasseFiltres(station(), { prises: ['combo_ccs'] })).toBe(true);
+  });
+
+  it('sans filtre, tout passe — un filtre vide ne retranche rien', () => {
+    expect(stationPasseFiltres(station(), {})).toBe(true);
+    expect(stationPasseFiltres(station(), { reseaux: [], prises: [] })).toBe(true);
+  });
+
+  /* LE PRÉDICAT ET LA LISTE DISENT LA MÊME CHOSE, par construction : sinon on
+     aurait recréé les deux règles qu'on vient de fondre en une. */
+  it('dit exactement ce que dit filtrerStations', () => {
+    const lot = [station(), station({ puissance: 22, id: 'FRTEST2' }),
+      station({ reseau: 'Tesla', operateur: 'Tesla', id: 'FRTEST3' })];
+    const f = { puissanceMin: 100, reseaux: ['Ionity'] };
+    expect(filtrerStations(lot, f)).toEqual(lot.filter((s) => stationPasseFiltres(s, f)));
   });
 });
