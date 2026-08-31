@@ -55,6 +55,42 @@ mille points qui ne fait pas déborder la pile. 5 E2E : le couloir qui ne quitte
 plus la chaussée dans les virages (écart mesuré en mètres), le découpage,
 l'expiration qui ne se lit pas « route sans repères », le suivi qui vaut
 toujours, et la ligne du bas mesurée en pixels. 890 unitaires, 285 E2E.
+## [0.109.0] — 2026-08-31 — POI-4 : un motif au lieu d'un rond (PR #139)
+
+- **LE MOTIF DIT LE TYPE, LA COULEUR DIT LA FAMILLE.** Armelin, le 31/08 :
+  « pour chaque catégorie de POI, au lieu de faire un rond de couleur
+  différente, ce serait bien de faire un rond de couleur un peu plus gros,
+  mais avec un motif clairement identifiable », suivi d'une liste : couverts,
+  lit, croix, tasse, verre à cocktail, P, caddie, haltères, grande roue, clé,
+  cintre, avion, train, dent, patte de chat.
+- **SA LISTE EST PLUS FINE QUE LES FAMILLES**, et c'est ce qui rendait la
+  demande délicate : une tasse pour un café et un verre pour un bar, alors que
+  les deux vivent dans la même famille. Une famille par dessin aurait fait
+  vingt pastilles à cocher — ce que POI-2 refusait à bon droit. **On sépare
+  donc les rôles** : la couleur reste grossière parce qu'elle doit se retenir ;
+  le motif est aussi précis que la donnée le permet, parce qu'il n'a rien à
+  retenir — il se reconnaît. Vingt-quatre motifs pour quatorze familles.
+- **TROIS CATÉGORIES DE SA LISTE N'EXISTAIENT NULLE PART** : salles de sport,
+  gares et aéroports. Elles sont désormais cherchables. Et « Pharmacies »
+  devient « Santé » pour que le dentiste et le vétérinaire le soient aussi —
+  on cherche un soin, pas un métier, et chacun garde son propre motif.
+- **DESSINÉS PAR LE CODE, JAMAIS COMMITTÉS**, comme les pictos de commodités :
+  aucun binaire au dépôt, aucun logo d'enseigne. Une image par couple
+  (motif, couleur), fabriquée une seule fois — une vue de centre-ville porte
+  des centaines de lieux pour une vingtaine de dessins.
+- **ET PLUS GROS**, comme demandé : mesuré à l'écran, sous vingt-cinq pixels
+  le caddie et la clé ne se distinguent plus.
+
+Tests : 25 unitaires — la liste d'Armelin dessin par dessin, la séparation des
+rôles, et le silence permis quand la donnée ne dit rien de précis. 2 E2E : le
+café et le bar qui partagent la couleur sans partager l'image, et les quatorze
+familles. 893 unitaires, 278 E2E.
+
+DEUX DÉFAUTS ATTRAPÉS PAR LES TESTS AVANT L'USAGER : mon fourre-tout
+« boutique » passait avant les règles précises — une pharmacie qui vend des
+cosmétiques recevait une devanture au lieu de sa croix ; et une étiquette VIDE
+comptait comme une valeur (`!== undefined` est vrai pour `''`). Le même défaut
+dormait dans le classement en familles depuis le 30/08.
 
 ## [0.108.0] — 2026-08-31 — VÉHICULE-2 : le rayon d'action dit à quelle charge il répond (PR #138)
 

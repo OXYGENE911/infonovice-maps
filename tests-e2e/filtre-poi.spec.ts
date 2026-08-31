@@ -64,8 +64,11 @@ test('le filtre s’ouvre depuis la CARTE, en un geste', async ({ page }) => {
   await expect(page.locator('.poi-panneau')).toBeHidden();
   await bulle.click();
   await expect(page.locator('.poi-panneau')).toBeVisible();
-  // DOUZE FAMILLES, pas dix-sept étiquettes : elles tiennent sur un téléphone.
-  await expect(page.locator('.poi-famille')).toHaveCount(12);
+  /* QUATORZE FAMILLES depuis POI-4 : sport, gares et aéroports manquaient à
+     la liste d'Armelin. Elles tiennent encore sur un téléphone — et depuis
+     qu'elles portent un dessin, elles se reconnaissent plus vite que douze
+     étiquettes ne se lisaient. */
+  await expect(page.locator('.poi-famille')).toHaveCount(14);
 });
 
 test('IL NE CHEVAUCHE PLUS le planificateur, sur un écran large', async ({ page }) => {
@@ -91,14 +94,14 @@ test('LA RECHERCHE SUIT LA CARTE — sans toucher au bouton', async ({ page }) =
   const urls = await simulerOverpass(page);
   await ouvrir(page);
   await page.locator('.poi-famille[data-cle="restaurant"]').click();
-  await page.locator('.poi-famille[data-cle="pharmacie"]').click();
+  await page.locator('.poi-famille[data-cle="sante"]').click();
   await poser(page, 2.3522, 48.8566);
 
   await expect(page.locator('.poi-filtre-etat')).toContainText('2 lieux', { timeout: 15_000 });
   expect(urls.length, 'la recherche doit être partie seule').toBeGreaterThan(0);
   // UNE SEULE REQUÊTE POUR TOUTES LES FAMILLES : Overpass est bénévole.
   expect(urls).toHaveLength(1);
-  expect(urls[0]).toContain('amenity"="pharmacy');
+  expect(urls[0]).toContain('pharmacy');
   expect(urls[0]).toContain('restaurant|fast_food');
   const pose = await page.evaluate(() => Boolean(
     (window as unknown as { __carte: { getLayer(id: string): unknown } })
@@ -191,4 +194,80 @@ test('le choix des familles SURVIT au rechargement', async ({ page }) => {
   await ouvrir(page);
   await expect(page.locator('.poi-famille[data-cle="hotel"]'))
     .toHaveAttribute('aria-pressed', 'true', { timeout: 10_000 });
+});
+
+test('LE MOTIF DIT LE TYPE, LA COULEUR DIT LA FAMILLE', async ({ page }) => {
+  /* Armelin, 31/08 : « au lieu de faire un rond de couleur différente, ce
+     serait bien de faire un rond de couleur un peu plus gros, mais avec un
+     motif clairement identifiable ».
+     SA LISTE EST PLUS FINE QUE LES FAMILLES : une tasse pour un café, un
+     verre pour un bar — deux dessins pour une seule famille. On sépare donc
+     les rôles, et c'est ce que ce parcours défend : MÊME couleur, DEUX
+     images. Sans cette séparation, l'honorer aurait demandé une famille par
+     dessin, soit vingt pastilles à cocher sur un téléphone. */
+  await ouvrirCarte(page);
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json',
+    body: JSON.stringify({ elements: [
+      { type: 'node', id: 1, lat: 48.8566, lon: 2.3522,
+        tags: { amenity: 'cafe', name: 'LE CAFE' } },
+      { type: 'node', id: 2, lat: 48.8570, lon: 2.3530,
+        tags: { amenity: 'bar', name: 'LE BAR' } },
+      { type: 'node', id: 3, lat: 48.8574, lon: 2.3538,
+        tags: { amenity: 'dentist', name: 'LE DENTISTE' } },
+    ] }),
+  }));
+  await ouvrir(page);
+  await page.locator('.poi-famille[data-cle="cafe"]').click();
+  await page.locator('.poi-famille[data-cle="sante"]').click();
+  await poser(page, 2.3530, 48.8570);
+  await expect(page.locator('.poi-filtre-etat')).toContainText('3 lieux', { timeout: 15_000 });
+
+  /* ON LIT CE QUE LA CARTE A VRAIMENT REÇU, par l'API publique, ET ON RANGE
+     PAR NOM. `querySourceFeatures` ne promet aucun ordre — il rend ce que
+     portent les tuiles chargées, dans l'ordre où elles le portent. Un
+     parcours indexé sur la position aurait mesuré ce hasard, pas le
+     comportement : il a d'abord comparé un café à lui-même, et « réussi »
+     à trouver deux fois la même image. */
+  const vu = await page.evaluate(() => {
+    const c = (window as unknown as { __carte: {
+      querySourceFeatures(id: string): { properties: Record<string, string> }[];
+      hasImage(id: string): boolean;
+    } }).__carte;
+    const par: Record<string, { image: string; famille: string; posee: boolean }> = {};
+    for (const f of c.querySourceFeatures('filtre-poi')) {
+      const image = f.properties['image'] ?? '';
+      par[f.properties['nom'] ?? ''] = {
+        image, famille: f.properties['famille'] ?? '', posee: c.hasImage(image),
+      };
+    }
+    return par;
+  });
+  const cafe = vu['LE CAFE']!; const bar = vu['LE BAR']!; const dentiste = vu['LE DENTISTE']!;
+  // LE CAFÉ ET LE BAR : même famille, donc même couleur…
+  expect(cafe.famille).toBe(bar.famille);
+  // …et deux images différentes, donc deux dessins.
+  expect(cafe.image).not.toBe(bar.image);
+  expect(cafe.image).toContain('tasse');
+  expect(bar.image).toContain('cocktail');
+  // La dent qu'il demandait, dans la famille « Santé ».
+  expect(dentiste.image).toContain('dent');
+  expect(dentiste.famille).toBe('sante');
+  // ET LES IMAGES SONT VRAIMENT POSÉES : une clé sans image ferait un trou.
+  for (const [nom, v] of Object.entries(vu)) {
+    expect(v.posee, `« ${nom} » annonce une pastille qui n’est pas dessinée`).toBe(true);
+  }
+});
+
+test('QUATORZE FAMILLES — sport, gares et aéroports compris', async ({ page }) => {
+  /* Trois catégories de sa liste n'existaient nulle part : « des haltères
+     pour les salles de sport », « un avion pour les aéroports, un train pour
+     les gares ». Encore fallait-il pouvoir les CHERCHER. */
+  await ouvrirCarte(page);
+  await ouvrir(page);
+  await expect(page.locator('.poi-famille')).toHaveCount(14);
+  await expect(page.locator('.poi-famille[data-cle="sport"]')).toBeVisible();
+  await expect(page.locator('.poi-famille[data-cle="transport"]')).toBeVisible();
+  await expect(page.locator('.poi-famille[data-cle="sante"]')).toBeVisible();
 });
