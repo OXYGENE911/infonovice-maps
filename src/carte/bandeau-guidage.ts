@@ -203,6 +203,33 @@ export class BandeauGuidage extends HTMLElement {
 
   set limites(l: readonly LimiteTrajet[]) { this.#limites = l; }
 
+  /* LES REPÈRES CARTOGRAPHIÉS ONT-ILS MANQUÉ ? (CORRIDOR-1, 31/08)
+     Leur absence était TOTALEMENT muette : ni panneau de vitesse, ni numéro
+     de sortie, ni schéma de rond-point, ni affectation par voie — et rien à
+     l'écran pour l'expliquer. Armelin a signalé un giratoire annoncé
+     « tournez à droite » ; c'était cela.
+     LE SUIVI VAUT TOUJOURS SANS EUX, on ne l'interrompt pas. Mais on le dit
+     une fois, discrètement : un GPS qui se tait sur ce qu'il ignore laisse
+     croire qu'il sait. */
+  #reperesManquants = false;
+
+  set reperesManquants(v: boolean) {
+    if (this.#reperesManquants === v) return;
+    this.#reperesManquants = v;
+    this.#majReperes();
+  }
+
+  /** Dit, une fois, que les repères cartographiés n'ont pas pu être relevés. */
+  #majReperes(): void {
+    const boite = this.querySelector('.bg-reperes') as HTMLElement | null;
+    if (!boite) return;
+    boite.hidden = !this.#reperesManquants;
+    boite.textContent = this.#reperesManquants
+      ? 'Repères OpenStreetMap indisponibles : ni limite de vitesse, ni'
+        + ' schéma de rond-point sur ce trajet.'
+      : '';
+  }
+
   /* LE NOMBRE DE VOIES du tracé (lib/voies.ts) — livré APRÈS le démarrage,
      comme les limites : la seconde requête met seize secondes sur un
      Paris-Lyon (mesuré le 30/08). Tant qu'elle n'est pas là, ou si elle
@@ -585,6 +612,11 @@ export class BandeauGuidage extends HTMLElement {
              l'anneau vient d'OpenStreetMap, l'entrée, le sens et la sortie
              viennent de notre propre tracé. -->
         <div class="bg-giratoire" hidden role="img"></div>
+        <!-- L'AVEU, QUAND LES REPÈRES MANQUENT (CORRIDOR-1, 31/08) : sans
+             corridor, ni limite de vitesse, ni rond-point, ni sortie — et
+             c'était totalement muet. Un GPS qui se tait sur ce qu'il ignore
+             laisse croire qu'il sait. -->
+        <p class="bg-reperes" role="status" hidden></p>
         <!-- LA CHAUSSÉE ET LE CÔTÉ OÙ SE PLACER (VOIE-1, 30/08). Armelin :
              « des flèches pour préciser où se placer sur la chaussée pour
              tourner à une intersection ou pour sortir d'une autoroute ».

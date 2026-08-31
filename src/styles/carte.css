@@ -1343,7 +1343,15 @@ bandeau-guidage[hidden] { display: none; }
 .bg {
   pointer-events: auto;
   max-width: 560px; margin: 0 auto;
-  padding: 10px 14px max(10px, var(--sur-barre-basse));
+  /* LA LIGNE NE TOUCHE PLUS LE BORD DE L'ÉCRAN (31/08). Armelin : « les
+     indications de navigation sont écrites trop bas […] les textes sont
+     tellement bas que ça touche presque la bordure de mon écran ».
+     MESURÉ avant correction, dans une barre de 96 px : les trois chiffres
+     s'arrêtaient à 12 px du bas, quand le bouton d'arrêt juste à côté en
+     gardait 24. La marge du bas rejoint celle-ci, et la rangée retrouve son
+     milieu. Sur un téléphone à encoche, l'encoche s'y ajoute — elle ne la
+     remplace pas : `max(22px, safe + 10px)` et non `max(22px, safe)`. */
+  padding: 10px 14px max(22px, calc(var(--sur-barre-basse) + 10px));
   background: var(--fond); border: 1px solid var(--bord-2); border-bottom: none;
   border-radius: 16px 16px 0 0; box-shadow: 0 -8px 28px rgba(10, 30, 60, .18);
 }
@@ -1546,7 +1554,13 @@ bandeau-guidage { --vitesse-bas: calc(100% + 18px + var(--echelle-hauteur, 26px)
 /* Sur téléphone, le bandeau colle aux bords : chaque pixel de carte compte. */
 @media (max-width: 640px) {
   bandeau-guidage { left: 8px; right: 8px; }
-  .bg { padding: 10px 12px; }
+  /* LE RACCOURCI GARDE SA MARGE DU BAS, et c'était tout le défaut (31/08).
+     Cette règle écrivait `padding: 10px 12px` — un raccourci, donc elle
+     REMETTAIT le bas à 10 px et effaçait la marge d'encoche… précisément sur
+     les appareils qui en ont une. Armelin : « les textes sont tellement bas
+     que ça touche presque la bordure de mon écran ». Sur un écran large la
+     règle ne s'appliquait pas : le défaut ne se voyait que sur téléphone. */
+  .bg { padding: 10px 12px max(22px, calc(var(--sur-barre-basse) + 10px)); }
   .bg-instruction { font-size: 16px; }
 }
 
@@ -3013,6 +3027,12 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
    ========================================================================== */
 /* IL PREND LA PLACE DE LA FLÈCHE, il ne s'y ajoute pas : dans un giratoire,
    « tournez à droite » ne veut rien dire — c'est le schéma qui informe. */
+/* L'AVEU DES REPÈRES MANQUANTS : discret, jamais alarmant — c'est une
+   précision sur ce qu'on ne sait pas, pas une alerte de conduite. */
+.bg-reperes {
+  margin: 6px 0 0; font: 400 12px/1.4 var(--police); color: var(--texte-3);
+}
+.bg-reperes[hidden] { display: none; }
 .bg-giratoire {
   /* IL PREND LA PLACE DE LA FLÈCHE, DONC SON RANG : sans `order`, il tombait
      à la ligne suivante — il est écrit après elle dans le gabarit, et le
