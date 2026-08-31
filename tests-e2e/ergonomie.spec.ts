@@ -74,15 +74,20 @@ test('le rail de gauche ne porte QUE le trajet', async ({ page }) => {
 test('le menu range les couches, les lieux et l’affichage', async ({ page }) => {
   await ouvrirLaCarte(page);
 
+  /* `> summary` ET NON ` summary` : ce qu'on défend est l'en-tête DU VOLET,
+     pas n'importe quel `summary` qu'il contiendrait. Depuis FAVORIS-2 le volet
+     des favoris en porte un second — le repli du formulaire « Nouvelle
+     liste » — et un sélecteur descendant les prenait tous les deux. Un
+     parcours doit nommer ce qu'il défend. */
   // Fermé, il ne montre rien : c'est tout l'intérêt.
   for (const volet of RANGES_DANS_LE_MENU) {
-    await expect(page.locator(`${volet} summary`),
+    await expect(page.locator(`${volet} > summary`),
       `« ${volet} » ne doit pas s’afficher menu fermé`).toBeHidden();
   }
 
   await ouvrirMenu(page);
   for (const volet of RANGES_DANS_LE_MENU) {
-    await expect(page.locator(`.reglages-corps ${volet} summary`),
+    await expect(page.locator(`.reglages-corps ${volet} > summary`),
       `« ${volet} » devrait être rangé dans le menu`).toBeVisible();
   }
 });
