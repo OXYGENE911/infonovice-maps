@@ -550,6 +550,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #161 — BORNES-5 (01/09) : le filtre qui retranche se voit SUR la
       carte, avec « Tout afficher » sur place. BORNES-4 l'avait mis dans des
       volets repliés : personne ne l'a lu.
+- [x] PR #166 — BORNES-7 (01/09) : la liste des réseaux ne dit plus « aucun
+      réseau » quand le filtre de NOM agit, et nomme les filtres cumulés.
+      Mesuré : 443 écritures distinctes pour « McDonald's » — il n'y a rien à
+      cocher, c'est le message qui était faux. StoreDot : absent du jeu IRVE.
 - [x] PR #164 — BORNES-6 (01/09) : TRANCHÉ par Armelin — le filtre réseau et
       puissance vaut pour la carte ET le trajet. Le prédicat est unique.
 - [x] PR #160 — GUIDE-2 (01/09) : la boussole reprend la main sur le cap du

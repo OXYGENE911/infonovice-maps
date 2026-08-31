@@ -491,6 +491,7 @@ test('UN POINT SUR L’ENTONNOIR ANNONCE LE FILTRE, ET LE PANNEAU LE RETIRE', as
     .not.toContain('ZUNDER');
 });
 
+<<<<<<< HEAD
 test('LE BOUTON « Tout afficher » SE LIT EN THÈME SOMBRE', async ({ page }) => {
   /* BORNES-8 (01/09). Armelin, sur mobile : « le texte est affiché en noir
      sur fond noir, du coup je ne vois pas ce qui est écrit ». `color:
@@ -530,4 +531,42 @@ test('LE BOUTON « Tout afficher » SE LIT EN THÈME SOMBRE', async ({ page }) =
      1 — c'est ce que mesurait son téléphone. */
   expect(contraste, `contraste insuffisant : ${mesure.texte} sur ${mesure.fond}`)
     .toBeGreaterThan(4.5);
+=======
+test('CHERCHER « McDonald » NE DIT PLUS « aucun réseau »', async ({ page }) => {
+  /* BORNES-7 (01/09). Armelin, pour la QUATRIÈME fois : « si je tape
+     McDonald la recherche n'affiche aucun résultat […] ça fait plusieurs fois
+     que je fais la remarque et ça n'est jamais corrigé ». Il avait raison, et
+     la mesure du 01/09 dit pourquoi : la CARTE trouvait (4 177 stations
+     « McDonald » en France, 91 autour de chez lui), mais la LISTE répondait
+     « Aucun réseau ne correspond » — elle ne groupe que les EXPLOITANTS, et
+     « McDonald's » est une ENSEIGNE écrite par SITE (443 écritures
+     distinctes : « McDonald's - Thoiry »…). Il n'y a donc rien à cocher, et
+     c'est le message qu'on corrige, pas la liste. */
+  await taireIndexNational(page);
+  await espionnerIrve(page);
+  await ouvrirBornes(page);
+
+  await page.getByLabel('Chercher un réseau ou un nom de station').fill('McDonald');
+  const liste = page.locator('.poi-reseaux');
+  await expect(liste).toContainText('n’est pas un exploitant', { timeout: 10_000 });
+  await expect(liste, 'ne plus faire croire à une absence')
+    .not.toContainText('Aucun réseau ne correspond');
+  await expect(liste).toContainText('station, enseigne ou exploitant');
+});
+
+test('ET IL DIT QUE LE NOM S’AJOUTE AUX AUTRES FILTRES', async ({ page }) => {
+  /* SON ÉCRAN PORTAIT « 5 réseaux cochés · 150 kW et plus · prises CCS
+     Combo » : le nom s'ajoute à tout cela, et l'intersection était vide.
+     Sans le dire, la carte paraît en panne. */
+  await taireIndexNational(page);
+  await espionnerIrve(page);
+  await ouvrirBornes(page);
+  await page.getByLabel('Puissance minimale des bornes').selectOption('150');
+
+  await page.getByLabel('Chercher un réseau ou un nom de station').fill('McDonald');
+  const cumul = page.locator('.poi-filtre-cumul');
+  await expect(cumul).toBeVisible({ timeout: 10_000 });
+  await expect(cumul).toContainText('150 kW et plus');
+  await expect(cumul).toContainText('TOUT à la fois');
+>>>>>>> origin/main
 });
