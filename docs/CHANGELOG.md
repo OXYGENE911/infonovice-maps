@@ -2,6 +2,21 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.0.0] — 2026-08-31 — Passage en version 1.0 (PR #145)
+
+**LA DÉCISION EST CELLE D'ARMELIN**, le 31/08 : « Passe en v1.0.0 ». Je
+l'avais laissée ouverte en restant en 0.10x — un passage en 1.0 dit au public
+« ceci est fini et tenu », et ce n'est pas à l'outil d'en décider.
+
+Ce que 1.0 recouvre, au moment du passage : la carte souveraine (IGN, BAN,
+zéro tracking), le planificateur avec recharge et conditions, le suivi avec
+guidage vocal, panneaux, giratoires et affectation par voie, le copilote, les
+lieux avec fiches et pictogrammes, les favoris en listes avec import Google
+Maps, et l'export RGPD. 1000 tests unitaires, 298 parcours de bout en bout.
+
+La suite se numérote en 1.x : une fonctionnalité visible incrémente le
+mineur, une correction seule le correctif — semver, comme le mandat l'exige.
+
 ## [0.115.0] — 2026-08-31 — FAVORIS-3 : importer ses favoris Google Maps (PR #144)
 
 - **RIEN NE PART CHEZ GOOGLE, ET C'EST LE POINT.** Armelin : « cela serait
