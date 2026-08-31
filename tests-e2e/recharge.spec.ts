@@ -1180,3 +1180,51 @@ test('PLAN-1 : un arrêt ajouté ne fait PAS sauter les suivants', async ({ page
   // ET LE RECALCUL RESTE POSSIBLE, à la demande — c'est le choix demandé.
   await expect(page.getByRole('button', { name: /Recalculer les arrêts/ })).toBeVisible();
 });
+
+test('LE FILTRE DE PUISSANCE VAUT AUSSI POUR LES BORNES DU TRAJET', async ({ page }) => {
+  /* BORNES-2 (31/08). Armelin : « j'ai fait un filtre pour n'afficher que les
+     stations avec des bornes de plus de 150 kW. Et on voit une station avec
+     des bornes de 50 kW et moins apparaître, avec son logo gris et une
+     éclair. » La couche du corridor ne filtrait que par réseau : le gris
+     qu'il a vu est le palier 1 — jusqu'à 50 kW.
+     L'AFFICHAGE SEUL EST FILTRÉ : les pastilles numérotées des arrêts RETENUS
+     restent, filtre ou pas — cacher une étape du plan serait cacher le plan. */
+  await simulerIndexBornes(page, TROIS);
+  await page.goto(PARIS_LYON);
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  /* LE FILTRE NE PARAÎT QUE COUCHE ACTIVE — comme pour l'usager : c'est en
+     activant « Bornes électriques » qu'il a vu son filtre ignoré. */
+  await allerA(page, 'couches');
+  await page.getByRole('checkbox', { name: 'Bornes électriques' }).check();
+  await retour(page);
+  await saisirVehicule(page);
+  await allerA(page, 'recharge');
+  await expect(page.locator('.iti-recharge-corps')).toContainText('Aire de', { timeout: 15_000 });
+
+  const nomsCorridor = (): Promise<string[]> => page.evaluate(() => {
+    const c = (window as unknown as { __carte: {
+      querySourceFeatures(id: string): { properties: Record<string, string> }[];
+    } }).__carte;
+    return [...new Set(c.querySourceFeatures('iti-bornes-trajet')
+      .map((f) => f.properties['nom'] ?? ''))];
+  });
+  // AVANT LE FILTRE : la 50 kW est là — c'est le témoin.
+  await expect.poll(nomsCorridor, { timeout: 15_000 }).toContain('Aire des Deux Tiers');
+
+  await retour(page);
+  await allerA(page, 'couches');
+  await page.getByLabel('Puissance minimale des bornes').selectOption('150');
+
+  // APRÈS : elle disparaît de l'affichage, sans nouveau calcul de plan.
+  await expect.poll(nomsCorridor, { timeout: 15_000 }).not.toContain('Aire des Deux Tiers');
+  // ET LES ARRÊTS DU PLAN SONT TOUJOURS LÀ : le plan ne se cache pas.
+  const arrets = await page.evaluate(() => {
+    const c = (window as unknown as { __carte: {
+      querySourceFeatures(id: string): unknown[];
+    } }).__carte;
+    return c.querySourceFeatures('iti-arrets').length;
+  });
+  expect(arrets, 'les pastilles des arrêts du plan ont disparu avec le filtre')
+    .toBeGreaterThan(0);
+});

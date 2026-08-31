@@ -224,6 +224,37 @@ export function imagePastille(motif: CleMotif, couleur: string): ImageData | nul
   return c.getImageData(0, 0, TAILLE_PASTILLE, TAILLE_PASTILLE);
 }
 
+/**
+ * La même pastille, en SVG inline — pour le DOM (chips du filtre, légendes).
+ *
+ * LES CHEMINS `Path2D` SONT DU CHEMIN SVG : un seul jeu de dessins sert la
+ * toile de la carte ET le document. Deux jeux se seraient désaccordés au
+ * premier motif retouché — c'est le même argument que pour les couleurs.
+ */
+export function svgPastille(motif: CleMotif, couleur: string, taille = 22): string {
+  const d = DESSINS[motif];
+  const morceaux: string[] = [
+    `<circle cx="12" cy="12" r="11" fill="${couleur}"/>`,
+  ];
+  const dedans: string[] = [];
+  for (const p of d.pleins ?? []) dedans.push(`<path d="${p}" fill="#FFFFFF"/>`);
+  for (const p of d.traits ?? []) {
+    dedans.push(`<path d="${p}" fill="none" stroke="#FFFFFF" stroke-width="2.1"`
+      + ' stroke-linecap="round" stroke-linejoin="round"/>');
+  }
+  if (d.lettre !== undefined) {
+    dedans.push(`<text x="12" y="12.5" text-anchor="middle" dominant-baseline="central"`
+      + ` font-family="system-ui, sans-serif" font-weight="700"`
+      + ` font-size="${d.lettre.length > 1 ? 11 : 19}" fill="#FFFFFF">${d.lettre}</text>`);
+  }
+  /* LE MOTIF OCCUPE LE MÊME DISQUE INTÉRIEUR que sur la carte : 52 % du
+     carré, centré — les deux rendus doivent être le même dessin. */
+  morceaux.push('<g transform="translate(5.76,5.76) scale(0.52)">'
+    + dedans.join('') + '</g>');
+  return `<svg viewBox="0 0 24 24" width="${taille}" height="${taille}"`
+    + ` aria-hidden="true" focusable="false">${morceaux.join('')}</svg>`;
+}
+
 /** L'identifiant d'image d'un couple motif/couleur — une image par couple. */
 export function cleImage(motif: CleMotif, couleur: string): string {
   return `poi-${motif}-${couleur.replace('#', '')}`;

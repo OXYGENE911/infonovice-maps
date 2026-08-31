@@ -119,6 +119,23 @@ export class PanneauPoi extends HTMLElement {
      interroger pour rien en serait un plus grave. */
   #bornesMasquees = false;
 
+  /* LE PLANIFICATEUR LIT LES FILTRES D'AFFICHAGE (BORNES-2, 31/08) : sa
+     couche « bornes du trajet » montrait une station de 50 kW sous un filtre
+     « 150 kW et plus » — elle ne filtrait que par réseau. Le panneau reste la
+     source unique des filtres ; le planificateur les LIT, il ne les copie
+     pas. */
+  filtresAffichage(): { puissanceMin?: number; prises?: string[] } {
+    return {
+      ...(this.#filtres.puissanceMin !== undefined
+        ? { puissanceMin: this.#filtres.puissanceMin } : {}),
+      ...(this.#filtres.prises !== undefined && this.#filtres.prises.length > 0
+        ? { prises: [...this.#filtres.prises] } : {}),
+    };
+  }
+
+  /** Appelé quand un filtre d'affichage change — le trajet se redessine. */
+  surFiltresChanges: (() => void) | null = null;
+
   masquerBornesNationales(masquees: boolean): void {
     if (this.#bornesMasquees === masquees) return;
     this.#bornesMasquees = masquees;
@@ -350,6 +367,9 @@ export class PanneauPoi extends HTMLElement {
       void ecrirePreference(PREF_FILTRES, this.#filtres);
       // `force` : le seuil de vue ne doit pas avaler un changement de filtre.
       if (this.#actives.has('bornes')) void this.#charger('bornes', true);
+      /* ET LE TRAJET AUSSI (BORNES-2) : ses bornes de corridor doivent suivre
+         le même filtre, sinon l'usager voit ce qu'il vient d'exclure. */
+      this.surFiltresChanges?.();
     };
     this.querySelector<HTMLSelectElement>('.poi-puissance')?.addEventListener('change', (e) => {
       const v = Number((e.target as HTMLSelectElement).value);
