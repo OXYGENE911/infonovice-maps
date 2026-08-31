@@ -44,9 +44,11 @@ import {
   type LieuCategorie,
 } from '../lib/categories';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
-import type { CleMotif } from '../lib/pictos-lieux';
-import { imagePastille, cleImage, RAPPORT_PASTILLE } from './icone-lieu';
-import { rubriquesDe } from '../lib/detail-lieu';
+import { MOTIF_DE_FAMILLE, type CleMotif } from '../lib/pictos-lieux';
+import {
+  imagePastille, cleImage, svgPastille, RAPPORT_PASTILLE,
+} from './icone-lieu';
+import { rubriquesDe, lignesHoraires } from '../lib/detail-lieu';
 import { ajouterFavori } from '../lib/favoris';
 import type { PorteItineraire } from './fiche-borne';
 import {
@@ -125,7 +127,12 @@ export class FiltrePoi extends HTMLElement {
           ${CATEGORIES.map((c) => `
             <button type="button" class="poi-famille" data-cle="${c.cle}"
               aria-pressed="false" style="--teinte:${c.couleur}">
-              <span class="poi-pastille" aria-hidden="true"></span>${c.libelle}
+              <!-- LE DESSIN DE LA CARTE, PAS UN ROND (POI-5, 31/08) : la
+                   pastille du filtre et celle de la carte sont LE MÊME
+                   dessin — c'est ce qui fait du panneau une légende. -->
+              <span class="poi-pastille" aria-hidden="true">${svgPastille(
+    MOTIF_DE_FAMILLE[c.cle] ?? 'point', c.couleur, 20,
+  )}</span>${c.libelle}
             </button>`).join('')}
         </div>
         <!-- LE BOUTON RESTE, MAIS IL NE COMMANDE PLUS : la recherche suit la
@@ -313,7 +320,20 @@ export class FiltrePoi extends HTMLElement {
         const dt = document.createElement('dt');
         dt.textContent = r.libelle;
         const dd = document.createElement('dd');
-        if (r.lien !== undefined) {
+        if (r.cle === 'horaires') {
+          /* UN JOUR PAR LIGNE (FICHE-2, 31/08) : « une sorte de tableau avec
+             un jour par ligne et les horaires associés ». La phrase d'une
+             seule ligne reste ce que la voix dirait ; l'œil, lui, lit des
+             lignes. */
+          const table = document.createElement('span');
+          table.className = 'poi-fiche-horaires';
+          for (const ligne of lignesHoraires(lieu.tags?.['opening_hours'] ?? '')) {
+            const s = document.createElement('span');
+            s.textContent = ligne;
+            table.append(s);
+          }
+          dd.append(table);
+        } else if (r.lien !== undefined) {
           const a = document.createElement('a');
           a.href = r.lien;
           a.textContent = r.valeur;

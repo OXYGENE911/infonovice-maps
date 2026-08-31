@@ -335,3 +335,70 @@ test('LA FICHE D’UN LIEU DIT CE QU’ON EN SAIT, et propose d’y aller', asyn
      porté, et l'on presse deux fois. */
   await expect(fiche.getByRole('button', { name: 'Ajouté aux favoris' })).toBeDisabled();
 });
+
+test.describe('en thème sombre', () => {
+  test.use({ colorScheme: 'dark' });
+
+  test('LA FICHE NE S’ÉCRIT PLUS TON SUR TON', async ({ page }) => {
+    /* FICHE-2 (31/08). Armelin, sur téléphone : « il est affiché dans un
+       encart blanc avec une écriture claire […] c'est écrit ton sur ton. »
+       MESURÉ : fond rgb(255,255,255) — le blanc EN DUR de maplibre-gl.css —
+       sous un texte rgb(240,242,245) venu de nos variables. Le défaut ne se
+       voyait qu'en sombre : sur son téléphone, pas dans mes captures
+       claires. On mesure le CONTRASTE réel, pas la présence d'une règle. */
+    await ouvrirCarte(page);
+    await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      contentType: 'application/json',
+      body: JSON.stringify({ elements: [{
+        type: 'node', id: 1, lat: 48.8566, lon: 2.3522,
+        tags: { amenity: 'restaurant', name: 'Le Bistrot',
+          opening_hours: 'Mo-Fr 12:00-14:00; Su off' },
+      }] }),
+    }));
+    await ouvrir(page);
+    await page.locator('.poi-famille[data-cle="restaurant"]').click();
+    await poser(page, 2.3522, 48.8566);
+    await expect(page.locator('.poi-filtre-etat')).toContainText('1 lieu', { timeout: 15_000 });
+    await page.locator('.poi-bulle').click();
+    await page.locator('#carte canvas.maplibregl-canvas').click({
+      position: await page.evaluate(() => {
+        const c = (window as unknown as { __carte: {
+          project(l: [number, number]): { x: number; y: number };
+        } }).__carte;
+        const q = c.project([2.3522, 48.8566]);
+        return { x: Math.round(q.x), y: Math.round(q.y) };
+      }),
+    });
+    await expect(page.locator('.poi-fiche')).toBeVisible({ timeout: 10_000 });
+    const m = await page.evaluate(() => {
+      const luminance = (rgb: string): number => {
+        const [r, g, b] = rgb.match(/\d+/g)!.map(Number);
+        return (0.2126 * r! + 0.7152 * g! + 0.0722 * b!) / 255;
+      };
+      const fond = getComputedStyle(document.querySelector('.maplibregl-popup-content')!)
+        .backgroundColor;
+      const texte = getComputedStyle(document.querySelector('.poi-fiche-nom')!).color;
+      return { ecart: Math.abs(luminance(fond) - luminance(texte)) };
+    });
+    expect(m.ecart, 'le texte et le fond de la bulle se confondent')
+      .toBeGreaterThan(0.4);
+    /* ET LES HORAIRES SONT EN LIGNES (point 1) : un jour par ligne, pas une
+       phrase d'un seul tenant. */
+    await expect(page.locator('.poi-fiche-horaires > span')).toHaveCount(2);
+  });
+});
+
+test('LES PASTILLES DU FILTRE PORTENT LE DESSIN DE LA CARTE', async ({ page }) => {
+  /* POI-5 (31/08) : « les POI associés sont encore écrits avec un rond de
+     couleur au lieu de leur logo dédié comme c'est le cas sur la carte. »
+     La pastille du filtre et celle de la carte sont LE MÊME dessin — c'est
+     ce qui fait du panneau une légende. */
+  await ouvrirCarte(page);
+  await ouvrir(page);
+  // Chaque pastille porte un SVG — plus un simple rond peint en CSS.
+  await expect(page.locator('.poi-famille .poi-pastille svg')).toHaveCount(14);
+  // Et le motif est distinctif : la santé porte sa croix (un path plein).
+  const croix = page.locator('.poi-famille[data-cle="sante"] .poi-pastille svg path');
+  await expect(croix.first()).toBeAttached();
+});

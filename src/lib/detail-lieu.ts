@@ -46,6 +46,18 @@ const JOURS: Readonly<Record<string, string>> = {
  * sait pas traduire ressort tel quel plutôt que d'être caché.
  */
 export function horairesEnFrancais(brut: string): string {
+  return lignesHoraires(brut).join(' · ');
+}
+
+/**
+ * Les mêmes horaires, une LIGNE PAR BLOC — pour le tableau de la fiche.
+ *
+ * LA DEMANDE (FICHE-2, 31/08) : « ce serait plus joli et facile à lire
+ * d'afficher une sorte de tableau avec un jour par ligne et les horaires
+ * associés ». Un bloc de l'expression OSM est déjà « des jours et leurs
+ * plages » : c'est la ligne naturelle du tableau.
+ */
+export function lignesHoraires(brut: string): string[] {
   return brut
     .split(';')
     .map((bloc) => bloc.trim())
@@ -64,8 +76,7 @@ export function horairesEnFrancais(brut: string): string {
          tiret ne se prononce pas. */
       .replace(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/g,
         'de $1 h $2 à $3 h $4')
-      .trim())
-    .join(' · ');
+      .trim());
 }
 
 /**

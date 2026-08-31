@@ -24,6 +24,43 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 Tests : 1 E2E qui pose la 50 kW dans le corridor, active le filtre 150, et
 vérifie qu'elle disparaît de l'affichage PENDANT que les pastilles du plan
 restent. 1002 unitaires, 299 E2E.
+## [1.1.0] — 2026-08-31 — FICHE-2 : la fiche se lit, en sombre comme en clair (PR #146)
+
+- **LE TON SUR TON EST MESURÉ, ET CORRIGÉ.** Armelin, sur téléphone : « il est
+  affiché dans un encart blanc avec une écriture claire […] c'est écrit ton
+  sur ton. » Mesuré en thème sombre : fond rgb(255,255,255) — le blanc EN DUR
+  de maplibre-gl.css, qu'aucune de nos règles ne peignait — sous un texte
+  rgb(240,242,245) venu de nos variables. Le défaut ne se voyait qu'en
+  sombre : sur son téléphone, pas dans mes captures claires. La bulle prend
+  les couleurs du thème, pointe et croix de fermeture comprises, et un
+  parcours mesure désormais le CONTRASTE réel, pas la présence d'une règle.
+- **LES HORAIRES EN TABLEAU** : « une sorte de tableau avec un jour par ligne
+  et les horaires associés ». Chaque bloc de l'expression OSM est déjà « des
+  jours et leurs plages » — c'est la ligne naturelle. La phrase d'une seule
+  ligne reste ce que la voix dirait.
+- **LES PASTILLES DU FILTRE PORTENT LE DESSIN DE LA CARTE** : « les POI
+  associés sont encore écrits avec un rond de couleur au lieu de leur logo
+  dédié ». Les chemins Path2D sont du chemin SVG : un seul jeu de dessins
+  sert la toile ET le document — deux jeux se seraient désaccordés au premier
+  motif retouché. Le panneau est enfin la légende, trait pour trait.
+
+Tests : 2 unitaires (les lignes d'horaires, et la phrase qui reste leur
+jointure), 2 E2E — le contraste mesuré en luminance, et les quatorze pastilles
+qui portent un SVG. 1002 unitaires, 300 E2E.
+## [1.0.0] — 2026-08-31 — Passage en version 1.0 (PR #145)
+
+**LA DÉCISION EST CELLE D'ARMELIN**, le 31/08 : « Passe en v1.0.0 ». Je
+l'avais laissée ouverte en restant en 0.10x — un passage en 1.0 dit au public
+« ceci est fini et tenu », et ce n'est pas à l'outil d'en décider.
+
+Ce que 1.0 recouvre, au moment du passage : la carte souveraine (IGN, BAN,
+zéro tracking), le planificateur avec recharge et conditions, le suivi avec
+guidage vocal, panneaux, giratoires et affectation par voie, le copilote, les
+lieux avec fiches et pictogrammes, les favoris en listes avec import Google
+Maps, et l'export RGPD. 1000 tests unitaires, 298 parcours de bout en bout.
+
+La suite se numérote en 1.x : une fonctionnalité visible incrémente le
+mineur, une correction seule le correctif — semver, comme le mandat l'exige.
 
 ## [0.115.0] — 2026-08-31 — FAVORIS-3 : importer ses favoris Google Maps (PR #144)
 

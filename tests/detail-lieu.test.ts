@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rubriquesDe, horairesEnFrancais } from '../src/lib/detail-lieu';
+import { rubriquesDe, horairesEnFrancais, lignesHoraires } from '../src/lib/detail-lieu';
 
 /* LA FICHE D'UN LIEU (LIEUX-1, 31/08).
  *
@@ -121,5 +121,23 @@ describe('horairesEnFrancais — on traduit, on ne conclut pas', () => {
   it('ne rend rien pour une chaîne vide', () => {
     expect(horairesEnFrancais('')).toBe('');
     expect(horairesEnFrancais('  ;  ')).toBe('');
+  });
+});
+
+describe('lignesHoraires — une ligne par bloc (FICHE-2)', () => {
+  /* « Une sorte de tableau avec un jour par ligne et les horaires associés »
+     (31/08). Un bloc OSM est déjà « des jours et leurs plages » : c'est la
+     ligne naturelle du tableau. */
+  it('rend chaque bloc sur sa ligne', () => {
+    expect(lignesHoraires('Mo-Fr 08:00-19:00; Sa 09:00-12:00; Su off')).toEqual([
+      'du lundi au vendredi de 08 h 00 à 19 h 00',
+      'samedi de 09 h 00 à 12 h 00',
+      'dimanche fermé',
+    ]);
+  });
+
+  it('la phrase d’une ligne reste la jointure des lignes', () => {
+    const brut = 'Mo-Fr 08:00-19:00; Su off';
+    expect(horairesEnFrancais(brut)).toBe(lignesHoraires(brut).join(' · '));
   });
 });
