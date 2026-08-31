@@ -537,6 +537,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #162 — RECHERCHE-3 (01/09) : la recherche par nom part enfin (la
       BAN rend toujours quelque chose) et interroge l'ÉGALITÉ indexée, la
       regex expirant (mesuré : 57 s). Expiration lue comme telle.
+- [x] PR #163 — ECOLES-1 (01/09) : l'annuaire de l'Éducation nationale,
+      première brique de la consolidation. Il porte le collège qu'OSM ignore,
+      et accepte un nom PARTIEL.
 - [ ] CHANTIER OUVERT — consolider les bases publiques FRANÇAISES, autorisé
       par Armelin le 01/09 (Wikidata exclu, chercher un équivalent français
       pour les logos) : Éducation nationale (mesuré : le collège introuvable
@@ -547,11 +550,8 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #161 — BORNES-5 (01/09) : le filtre qui retranche se voit SUR la
       carte, avec « Tout afficher » sur place. BORNES-4 l'avait mis dans des
       volets repliés : personne ne l'a lu.
-- [ ] À TRANCHER — la couche du TRAJET ignore le filtre par réseau
-      (`filtresAffichage()` ne porte que puissance et prises) quand la carte
-      l'applique. Les deux devraient dire la même chose ; aligner sans
-      prévenir retirerait des bornes du trajet, d'où la question posée plutôt
-      que tranchée.
+- [x] PR #164 — BORNES-6 (01/09) : TRANCHÉ par Armelin — le filtre réseau et
+      puissance vaut pour la carte ET le trajet. Le prédicat est unique.
 - [x] PR #160 — GUIDE-2 (01/09) : la boussole reprend la main sur le cap du
       tracé pour ORIENTER la carte — régression de GUIDE-1, invisible aux
       parcours parce qu'ils testaient la boussole HORS route.

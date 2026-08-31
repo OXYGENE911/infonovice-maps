@@ -25,6 +25,58 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 Tests : le parcours du signal mesure désormais le POINT avant dépliage ; un
 parcours neuf mesure le **contraste calculé** du bouton en thème sombre — pas
 la présence d'une règle, mais la couleur qu'on voit.
+## [1.17.0] — 2026-09-01 — BORNES-6 : un seul filtre pour la carte ET le trajet (PR #164)
+
+- **ARMELIN A TRANCHÉ**, après la question posée par BORNES-5 : « le filtre
+  réseau de charge + puissance de charge doit être valide aussi bien en mode
+  carte qu'en mode itinéraire ». En mode carte, toutes les bornes de France,
+  que le filtre restreint ; en mode itinéraire, toutes les bornes du corridor,
+  que le MÊME filtre restreint.
+- **DEUX RÈGLES FINISSENT TOUJOURS PAR DIVERGER.** La couche du trajet avait
+  la sienne, plus courte : elle ignorait les réseaux. C'est ce qui faisait
+  apparaître des bornes sur un itinéraire quand la carte n'en montrait
+  aucune — le symptôme qu'Armelin a signalé deux jours de suite. Le prédicat
+  sort désormais de `filtrerStations` et sert LES DEUX côtés : il n'y a plus
+  qu'une règle, et un test vérifie qu'elle dit la même chose que la liste.
+- Le filtre par NOM suit le même chemin : chercher « McDonald » vaut
+  désormais sur le trajet comme sur la carte.
+
+Tests : 5 unitaires sur le prédicat — dont celui qui vérifie qu'il rend
+exactement ce que rend `filtrerStations`, faute de quoi on aurait recréé les
+deux règles qu'on vient de fondre.
+
+## [1.16.0] — 2026-09-01 — ECOLES-1 : l'annuaire de l'Éducation nationale (PR #163)
+
+Première brique du chantier ouvert par Armelin le 01/09 : « la consolidation
+des bases publiques sont issues des sites mis à disposition du gouvernement
+français, donc 100 % gratuite et française ».
+
+- **LE COLLÈGE DE SA FILLE SE TROUVE ENFIN.** « Le collège de ma fille ne
+  donne rien en tapant "Collège Albert Camus Plessis-Trévise" ». MESURÉ le
+  jour même : **OpenStreetMap ne le connaît pas** — soixante écoles autour de
+  chez lui, aucune de ce nom. L'annuaire de l'Éducation nationale, lui, le
+  porte : « Collège Albert Camus, Avenue Albert Camus, Le Plessis-Trévise ».
+  Source : data.education.gouv.fr, Licence Ouverte, **sans clé**.
+- **IL ACCEPTE UN NOM PARTIEL**, là où Overpass n'indexe que l'égalité et
+  exige le nom entier : « Albert Camus » y trouve « Collège Albert Camus ».
+  Les deux sources se COMPLÈTENT donc au lieu de se doubler, et partent
+  ENSEMBLE — un seul temps d'attente.
+- **L'ÉCHEC D'UNE SOURCE N'EMPORTE PAS L'AUTRE** (`allSettled`, pas `all`) :
+  Overpass tombe régulièrement, et une école trouvée vaut mieux qu'une page
+  vide. Si les DEUX échouent, on le dit — se taire ferait passer une panne
+  pour une absence.
+- **LA SOURCE SE DIT** dans la liste : « Collège · Le Plessis-Trévise ».
+  Savoir d'où vient une réponse, c'est pouvoir la contester.
+- **UNE FICHE SANS POSITION EST ÉCARTÉE**, pas posée à l'équateur — le défaut
+  a déjà été payé une fois sur les bornes (`Number(null)` vaut zéro).
+- **L'APPEL EST BORNÉ** : vingt-cinq kilomètres autour du point le plus
+  probable, trié par distance (sans le tri, l'annuaire rend son propre ordre
+  et le collège du bout du département passait devant celui d'à côté), huit
+  résultats au plus.
+
+Tests : 9 unitaires (le nom partiel, le rayon, le tri, le guillemet doublé de
+l'ODSQL, la fiche sans position écartée). 2 E2E : le cas exact d'Armelin de
+bout en bout, et l'échec d'Overpass qui n'emporte pas l'annuaire.
 
 ## [1.15.0] — 2026-09-01 — RECHERCHE-3 : la recherche par nom trouve enfin (PR #162)
 
