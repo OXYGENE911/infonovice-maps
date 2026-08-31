@@ -3205,6 +3205,35 @@ filtre-poi {
   background: color-mix(in srgb, var(--teinte) 14%, transparent);
 }
 .poi-famille:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* BORNES-4 — le badge « filtres actifs » de la puce des bornes, et le
+   retrait en un geste. */
+.poi-famille-filtres {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #fff;
+  background: #B45309; /* ambre foncé : un réglage qui agit, pas une panne */
+}
+
+.poi-filtres-effacer {
+  display: block;
+  margin: 0.25rem 0 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #B45309;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.poi-filtres-effacer:hover { background: rgb(180 83 9 / 12%); }
+.poi-filtres-effacer:focus-visible { outline: none; box-shadow: var(--focus); }
 .poi-chercher {
   width: 100%; margin-top: 10px; padding: 8px 12px; border-radius: 9px;
   border: 1px solid var(--accent); background: var(--accent); color: #FFF;

@@ -374,3 +374,40 @@ export async function chargerReseaux(b: Bbox, signal?: AbortSignal): Promise<Res
 export async function chargerParkings(b: Bbox, signal?: AbortSignal): Promise<ChargeParkings> {
   return versParkings(await appel(urlParkings(b), 'parkings', signal));
 }
+
+/* ==========================================================================
+   LE RÉSUMÉ DES FILTRES ACTIFS (BORNES-4, 01/09).
+
+   LE MYSTÈRE « ZUNDER » DU TERRAIN. Armelin : « aucune borne n'est visible
+   [...] à l'exception du réseau ZUNDER ». Ce n'était ni une panne ni le
+   portail : un réseau coché lors d'une visite PRÉCÉDENTE, rétabli en
+   silence par la mémoire des filtres. Un filtre restauré que rien
+   n'annonce ne se distingue pas d'une carte incomplète — l'usager conclut
+   à la panne, jamais au réglage. La parade n'est pas d'oublier le réglage
+   (le rétablir reste juste), c'est de le DIRE, partout où il agit, avec
+   un geste pour le retirer d'un coup.
+   ========================================================================== */
+
+/**
+ * Une phrase française décrivant les filtres de bornes qui RESTREIGNENT —
+ * `null` quand rien ne restreint. PURE.
+ */
+export function resumerFiltresBornes(f: FiltresBornes): string | null {
+  const bouts: string[] = [];
+  const reseaux = f.reseaux ?? [];
+  if (reseaux.length === 1) bouts.push(`réseau ${reseaux[0]}`);
+  else if (reseaux.length > 1) bouts.push(`${reseaux.length} réseaux cochés`);
+  if (typeof f.nom === 'string' && f.nom.trim() !== '') {
+    bouts.push(`nom « ${f.nom.trim()} »`);
+  }
+  if (typeof f.puissanceMin === 'number' && f.puissanceMin > 0) {
+    bouts.push(`${f.puissanceMin} kW et plus`);
+  }
+  const prises = f.prises ?? [];
+  if (prises.length > 0) {
+    const libelles = prises
+      .map((cle) => PRISES.find((p) => p.cle === cle)?.libelle ?? cle);
+    bouts.push(`prises ${libelles.join(', ')}`);
+  }
+  return bouts.length > 0 ? bouts.join(' · ') : null;
+}

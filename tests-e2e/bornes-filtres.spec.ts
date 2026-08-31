@@ -290,3 +290,131 @@ test('un index en panne n’emporte PAS les bornes', async ({ page }) => {
   await expect(page.locator('.poi-reseau')).toHaveCount(0);
   await expect(page.locator('.poi-etat')).toContainText('Bornes électriques', { timeout: 15_000 });
 });
+
+/* ========================================================================
+   BORNES-4 (01/09) — le mystère ZUNDER, et la puce du filtre POI.
+   ======================================================================== */
+
+/** L'export de l'index national répond vide : ces parcours ne dépendent pas
+ *  du portail, et la CI ne le martèle pas. Enregistré AVANT l'espion, dont
+ *  le `fallback()` retombe ici. */
+async function taireIndexNational(page: import('@playwright/test').Page): Promise<void> {
+  await page.route('**/exports/json**', (route) => route.fulfill({
+    contentType: 'application/json',
+    /* UNE station, pas zéro : un index vide déclenche le message « revenu
+       vide » qui remplace TOUTE la ligne d'état — y compris la phrase des
+       filtres que ces parcours mesurent. */
+    body: JSON.stringify([{
+      id_station_itinerance: 'FRZUNE1', nom_station: 'ZUNDER Paris',
+      nom_enseigne: 'ZUNDER', nom_operateur: 'ZUNDER',
+      condition_acces: 'Accès libre', prise_type_combo_ccs: 'true',
+      p: 150, pdc: 4, lon: 2.35, lat: 48.85,
+    }]),
+  }));
+}
+
+test('la puce « Bornes de recharge » du filtre POI actionne LA couche du volet — pas une seconde', async ({ page }) => {
+  /* BORNES-4. Armelin : « une nouvelle suggestion de POI dans les filtres
+     du haut à gauche de la carte, les bornes de recharge ». La puce vit
+     dans le filtre POI mais la couche reste celle du volet « Recharge et
+     services » : cocher ici coche là-bas, et inversement. */
+  await taireIndexNational(page);
+  await espionnerIrve(page);
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  await page.getByRole('button', { name: 'Filtrer les lieux affichés sur la carte' }).click();
+  const puce = page.getByRole('button', { name: 'Bornes de recharge' });
+  await expect(puce).toBeVisible();
+  await puce.click();
+  await expect(puce).toHaveAttribute('aria-pressed', 'true');
+
+  // La MÊME couche : la case du volet des services est cochée.
+  await ouvrirVolet(page, '.poi');
+  const case_ = page.getByRole('checkbox', { name: 'Bornes électriques' });
+  await expect(case_).toBeChecked();
+
+  // Et l'inverse : décocher au volet éteint la puce.
+  await case_.uncheck();
+  await expect(puce).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('un filtre RESTAURÉ se dit — badge sur le volet, phrase d’état, retrait en un geste', async ({ page }) => {
+  /* LE MYSTÈRE ZUNDER REJOUÉ : la mémoire porte un réseau coché lors d'une
+     visite précédente. Sans BORNES-4, la carte se filtrait EN SILENCE —
+     « aucune borne n'est visible [...] à l'exception du réseau ZUNDER »,
+     conclu comme une panne. Désormais : un badge sur le volet, la phrase
+     d'état, et « Tout afficher » qui retire ET réécrit la mémoire. */
+  await taireIndexNational(page);
+  await espionnerIrve(page);
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  await page.evaluate(async () => {
+    await new Promise<void>((resoudre, rejeter) => {
+      const d = indexedDB.open('infonovice-maps', 2);
+      d.onupgradeneeded = () => {
+        for (const m of ['preferences', 'favoris']) {
+          if (!d.result.objectStoreNames.contains(m)) d.result.createObjectStore(m);
+        }
+      };
+      d.onsuccess = () => {
+        const tx = d.result.transaction('preferences', 'readwrite');
+        tx.objectStore('preferences').put(['bornes'], 'poi');
+        tx.objectStore('preferences').put({ reseaux: ['ZUNDER'] }, 'poi-filtres-bornes');
+        tx.oncomplete = () => resoudre();
+        tx.onerror = () => rejeter(tx.error);
+      };
+      d.onerror = () => rejeter(d.error);
+    });
+  });
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  /* LE BADGE VIT SUR LA PUCE DU FILTRE POI : le volet des services est
+     rendu comme une PAGE du planificateur, son résumé n'apparaît jamais —
+     la puce, elle, se voit depuis la carte, là où Armelin a conclu à la
+     panne. */
+  await page.getByRole('button', { name: 'Filtrer les lieux affichés sur la carte' }).click();
+  const badge = page.locator('.poi-famille-filtres');
+  await expect(badge).toBeVisible();
+  await expect(badge).toHaveText('filtres actifs');
+  await expect(page.locator('.poi-famille-bornes'))
+    .toHaveAttribute('title', 'Filtres actifs : réseau ZUNDER');
+
+  // Dans le volet, la phrase d'état le dit en clair…
+  await ouvrirVolet(page, '.poi');
+  await expect(page.locator('.poi-etat')).toContainText('Filtres bornes : réseau ZUNDER');
+
+  // …ET LE RETRAIT TIENT EN UN GESTE — le bouton dit ce qu'il retire.
+  const effacer = page.locator('.poi-filtres-effacer');
+  await expect(effacer).toContainText('réseau ZUNDER');
+  await effacer.click();
+  await expect(badge).toBeHidden();
+  /* L'ÉCRITURE EST ASYNCHRONE : recharger sans l'attendre coupe la
+     transaction IndexedDB en vol, et le parcours mesurerait un hasard. On
+     attend que la mémoire dise VRAIMENT « plus de réseau écarté » —
+     c'est précisément le contrat de « Tout afficher ». */
+  await expect.poll(async () => page.evaluate(async () =>
+    new Promise((res) => {
+      const d = indexedDB.open('infonovice-maps', 2);
+      d.onsuccess = () => {
+        const g = d.result.transaction('preferences').objectStore('preferences')
+          .get('poi-filtres-bornes');
+        g.onsuccess = () => { res(JSON.stringify(g.result ?? null)); };
+        g.onerror = () => { res('erreur'); };
+      };
+      d.onerror = () => { res('erreur'); };
+    })),
+  { message: 'la mémoire garde encore le filtre retiré' })
+    .not.toContain('ZUNDER');
+
+  // ET LA MÉMOIRE EST CORRIGÉE : au rechargement, plus aucun filtre ne
+  // ressuscite — c'était exactement le mécanisme du mystère.
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await ouvrirVolet(page, '.poi');
+  await expect(page.getByRole('checkbox', { name: 'Bornes électriques' })).toBeChecked();
+  await page.getByRole('button', { name: 'Filtrer les lieux affichés sur la carte' }).click();
+  await expect(page.locator('.poi-famille-filtres')).toBeHidden();
+});

@@ -138,6 +138,22 @@ export class FiltrePoi extends HTMLElement {
         <!-- LE BOUTON RESTE, MAIS IL NE COMMANDE PLUS : la recherche suit la
              carte. Il sert à REDEMANDER une zone déjà couverte — après une
              panne du service, ou pour rafraîchir un quartier. -->
+        <!-- LA PUCE DES BORNES (BORNES-4). Armelin : « une nouvelle
+             suggestion de POI [...] les bornes de recharge ». Elle ne
+             cherche PAS dans Overpass : elle actionne la couche IRVE du
+             volet « Recharge et services » — un second interrupteur sur le
+             même circuit, jamais une seconde source. Cachée tant que le
+             volet n'est pas branché : un bouton qui ne fait rien ment. -->
+        <button type="button" class="poi-famille poi-famille-bornes"
+          aria-pressed="false" style="--teinte:#3FA877" hidden>
+          <span class="poi-pastille" aria-hidden="true">${svgPastille('eclair', '#3FA877', 20)}</span>Bornes de recharge
+          <!-- LE BADGE DES FILTRES (BORNES-4) : un réseau coché lors d'une
+               visite passée filtrait la carte EN SILENCE — « aucune borne
+               [...] à l'exception du réseau ZUNDER », conclu comme une
+               panne. Le réglage rétabli se dit ICI, la surface qu'on
+               regarde quand on regarde la carte. -->
+          <span class="poi-famille-filtres" hidden>filtres actifs</span>
+        </button>
         <button type="button" class="poi-chercher">Chercher à nouveau ici</button>
         <p class="poi-filtre-etat" role="status"></p>
       </div>`;
@@ -151,7 +167,7 @@ export class FiltrePoi extends HTMLElement {
       if (this.#ouvert) this.#majEtat();
     });
 
-    for (const b of this.querySelectorAll<HTMLButtonElement>('.poi-famille')) {
+    for (const b of this.querySelectorAll<HTMLButtonElement>('.poi-famille[data-cle]')) {
       b.addEventListener('click', () => {
         const cle = b.dataset['cle']!;
         if (this.#actives.has(cle)) this.#actives.delete(cle);
@@ -182,7 +198,7 @@ export class FiltrePoi extends HTMLElement {
       for (const cle of memo) {
         if (CATEGORIES.some((c) => c.cle === cle)) this.#actives.add(cle);
       }
-      for (const b of this.querySelectorAll<HTMLButtonElement>('.poi-famille')) {
+      for (const b of this.querySelectorAll<HTMLButtonElement>('.poi-famille[data-cle]')) {
         b.setAttribute('aria-pressed', String(this.#actives.has(b.dataset['cle']!)));
       }
       this.#majEtat();
@@ -475,6 +491,37 @@ export class FiltrePoi extends HTMLElement {
   #porte: PorteItineraire | null = null;
 
   set porteItineraire(p: PorteItineraire) { this.#porte = p; }
+
+  /* LE VOLET « RECHARGE ET SERVICES » RESTE LE MAÎTRE de la couche des
+     bornes (BORNES-4) : la puce lui délègue tout, et il la tient au courant
+     par `majBornes` — cocher là-bas allume la puce ici, et inversement. */
+  #porteBornes: { basculer(actif: boolean): void; active(): boolean } | null = null;
+
+  set porteBornes(p: { basculer(actif: boolean): void; active(): boolean }) {
+    this.#porteBornes = p;
+    const puce = this.querySelector<HTMLButtonElement>('.poi-famille-bornes');
+    if (!puce) return;
+    puce.hidden = false;
+    puce.setAttribute('aria-pressed', String(p.active()));
+    puce.addEventListener('click', () => {
+      this.#porteBornes?.basculer(!this.#porteBornes.active());
+    });
+  }
+
+  /** L'état de la couche des bornes, dit par le volet — la puce le reflète. */
+  majBornes(actif: boolean): void {
+    this.querySelector('.poi-famille-bornes')
+      ?.setAttribute('aria-pressed', String(actif));
+  }
+
+  /** Le rappel des filtres de bornes qui agissent, dit par le volet. */
+  majFiltresBornes(resume: string | null): void {
+    const badge = this.querySelector<HTMLElement>('.poi-famille-filtres');
+    const puce = this.querySelector<HTMLButtonElement>('.poi-famille-bornes');
+    if (!badge || !puce) return;
+    badge.hidden = resume === null;
+    puce.title = resume === null ? '' : `Filtres actifs : ${resume}`;
+  }
 
   /** Les images déjà fabriquées : une par couple motif/couleur. */
   #images = new Set<string>();

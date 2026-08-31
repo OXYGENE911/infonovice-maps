@@ -534,6 +534,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #155 — BORNES-4 (01/09) : le mystère ZUNDER élucidé (un filtre
+      de réseau restauré en silence) — badge « filtres actifs », phrase
+      d'état, « Tout afficher » qui corrige aussi la mémoire ; et la puce
+      « Bornes de recharge » du filtre POI, second interrupteur de la
+      couche du volet.
 - [x] PR #152 — FEUX-3, les feux quittent la carte (01/09) : la donnée OSM
       mêle péages et chantiers aux carrefours, et un point rouge muet
       n'explique rien. Le comptage par variante reste.
