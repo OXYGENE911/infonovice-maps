@@ -2,6 +2,38 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.8.0] — 2026-09-01 — GUIDE-1 : le curseur colle à la route et regarde devant (PR #154)
+
+- **LE CURSEUR EST AIMANTÉ AU TRACÉ.** Armelin, au volant : « parfois le
+  véhicule est situé à une dizaine de mètres à gauche ou à droite de la route
+  alors que je suis bien sur cette ligne ». Le récepteur a une dizaine de
+  mètres d'incertitude — c'est physique, pas un réglage oublié. Tant que
+  l'écart reste sous 30 m (l'incertitude plus une chaussée), le curseur se
+  dessine SUR le tracé, au point projeté ; au-delà, il montre la mesure
+  vraie — un curseur collé de force mentirait à qui est vraiment ailleurs.
+  La mesure BRUTE continue de nourrir la logique : avancement, hors-route et
+  recalcul n'en perdent rien.
+- **LA FLÈCHE NE RECULE PLUS.** « La flèche représentant ma voiture est à
+  l'envers du sens de la circulation. » Le heading GPS est du bruit à basse
+  vitesse — à 4 km/h il tournoie, jusqu'à pointer à contresens. Aimanté, le
+  curseur prend le cap du TRACÉ quand le heading n'est pas fiable (sous
+  2 m/s ou absent) ; en roulant, le heading GPS fiable garde la priorité —
+  l'écraser ferait tourner la carte au cap de la route pendant qu'on en
+  dévie volontairement, et deux parcours du lissage l'ont rappelé.
+- **LES « CHANGEMENTS DE VOIE IMPOSSIBLES » EN PROFITENT** : une rue
+  parallèle à dix mètres ne capture plus le curseur — seul l'écart franc du
+  seuil hors-route existant fait quitter le tracé, et le recalcul ne part
+  que là.
+- **GALILEO, DIT HONNÊTEMENT** : le Web n'expose AUCUN choix de
+  constellation au navigateur — « préférer Galileo » y est impossible.
+  C'est un chantier de l'application Android (phase 2), consigné dans le
+  code, pas un réglage qu'on aurait oublié.
+
+Tests : 6 unitaires sur le point projeté et le cap du tracé (interpolation,
+bout de tracé, tracé trop court), et le seuil borné sous le hors-route.
+2 E2E : le fixe à 12 m de la ligne avec un heading aberrant dessiné SUR le
+tracé tourné à l'est, et à 80 m l'aimant qui LÂCHE. 1035 unitaires, 309 E2E.
+
 ## [1.7.0] — 2026-09-01 — FICHE-3 : la fiche tient à l'écran, dit si c'est ouvert, et se partage (PR #153)
 
 - **LA FICHE NE SORT PLUS DE L'ÉCRAN.** Armelin, sur mobile : « si le POI est
