@@ -13,6 +13,83 @@ export interface ResultatAdresse extends PointGeo {
   type: string;
   /** « Code postal, ville (contexte départemental) » pour lever les homonymes. */
   contexte: string;
+  /** Le numéro tel que la BAN l'écrit (« 12bis ») — absent hors housenumber. */
+  numero?: string | undefined;
+  /* L'AVEU D'APPROXIMATION (ADRESSE-2). Renseigné quand le numéro demandé
+     n'existe PAS dans la base et qu'on montre le numéro de base à sa place :
+     la phrase dit lequel manque et ce qu'on propose. Jamais un repli muet —
+     poser quelqu'un au 23 en lui laissant croire qu'il est au 23 bis serait
+     un mensonge de plus que le silence. */
+  approche?: string | undefined;
+}
+
+/* ==========================================================================
+   LES ADRESSES BIS, TER, QUATER (ADRESSE-2, 01/09).
+
+   LE TERRAIN. Armelin : « j'habite au 23 BIS Avenue du prophète et je suis
+   obligé de taper 25 pour trouver mon adresse ». MESURÉ sur la BAN le
+   31/08/2026, et le constat est double :
+
+   1. LA GRAPHIE COMPTE. La base écrit ses numéros COLLÉS (« 12bis »).
+      Demander « 12 bis avenue du prophète » rend bien le bon point, mais
+      avec un score de 0,818 ; « 12bis avenue du prophète » le rend à 0,965.
+      Sous autocomplétion et cinq résultats, ces 15 points de score suffisent
+      à faire sortir la bonne adresse de la liste au profit de rues
+      homonymes — c'est exactement le symptôme décrit.
+
+   2. LE 23 BIS D'ARMELIN N'EXISTE PAS DANS LA BASE. Relevé sur la voie
+      elle-même (lookup 94059_0650) : la BAN connaît 12bis, 14bis, 20bis et
+      33bis — pas de 23bis. Aucune tournure de requête ne le trouvera, et
+      prétendre le contraire serait promettre ce qu'on ne peut pas tenir. On
+      REPLIE donc sur le numéro de base, en le DISANT.
+
+   SUR LES QUOTAS : la seconde requête ne part que dans ce cas précis — un
+   suffixe RECONNU dans la saisie, et aucun numéro trouvé au premier appel.
+   Frapper « 23 b » ou « 23 bi » ne déclenche rien : le dictionnaire est
+   fermé. Deux appels au plus, derrière le débounce de 300 ms de la barre.
+   ========================================================================== */
+
+/* LE DICTIONNAIRE EST FERMÉ, et c'est délibéré. Les lettres seules (« 2 B »)
+   en sont exclues : elles désignent aussi bien un bâtiment ou un appartement
+   qu'un suffixe de voirie, et un repli déclenché à tort déplacerait
+   silencieusement une adresse juste. */
+const SUFFIXES = ['bis', 'ter', 'quater', 'quinquies'] as const;
+
+export interface NumeroDecompose {
+  /** Le numéro seul : « 23 ». */
+  numero: string;
+  /** Le suffixe reconnu, en minuscules : « bis ». */
+  suffixe: string;
+  /** Le reste de la saisie : « avenue du prophète ». */
+  reste: string;
+}
+
+/**
+ * Décompose « 23 bis avenue du prophète » — PURE. `null` si pas de suffixe.
+ *
+ * Accepte la graphie espacée comme la collée (« 23bis »), et n'accepte le
+ * suffixe qu'en TÊTE de saisie, collé à un numéro : « rue du Bis » n'est pas
+ * une adresse suffixée.
+ */
+export function decomposerNumero(texte: string): NumeroDecompose | null {
+  const m = /^\s*(\d{1,4})\s*([a-zA-Zé]+)\b\s*(.*)$/.exec(texte);
+  if (!m) return null;
+  const suffixe = (m[2] ?? '').toLowerCase();
+  if (!SUFFIXES.includes(suffixe as (typeof SUFFIXES)[number])) return null;
+  return { numero: m[1] ?? '', suffixe, reste: (m[3] ?? '').trim() };
+}
+
+/**
+ * La requête à envoyer d'abord — PURE.
+ *
+ * Colle le suffixe au numéro quand il y en a un : c'est l'écriture de la
+ * base, et elle vaut 15 points de score (mesuré). Sinon, la saisie telle
+ * quelle : on ne réécrit pas ce qu'on n'a pas reconnu.
+ */
+export function requeteNormalisee(texte: string): string {
+  const d = decomposerNumero(texte);
+  if (!d) return texte.trim();
+  return `${d.numero}${d.suffixe} ${d.reste}`.trim();
 }
 
 export class ErreurAdresse extends Error {}
@@ -42,6 +119,7 @@ async function appelResilient(url: string, signal?: AbortSignal): Promise<unknow
 
 interface ProprietesBAN {
   label?: string; type?: string; context?: string; postcode?: string; city?: string;
+  housenumber?: string;
 }
 interface EntiteBAN {
   geometry?: { coordinates?: [number, number] };
@@ -64,17 +142,46 @@ export function versResultats(brut: unknown): ResultatAdresse[] {
       libelle: p.label,
       type: p.type ?? 'inconnu',
       contexte: [p.postcode, p.city].filter(Boolean).join(' ') || (p.context ?? ''),
+      ...(typeof p.housenumber === 'string' ? { numero: p.housenumber } : {}),
     });
   }
   return resultats;
 }
 
+const urlRecherche = (q: string): string =>
+  `${BAN}/search/?q=${encodeURIComponent(q)}&limit=5&autocomplete=1`;
+
+/** Un résultat porte-t-il le numéro demandé, suffixe compris ? — PURE. */
+function porteLeNumero(r: ResultatAdresse, d: NumeroDecompose): boolean {
+  if (r.type !== 'housenumber') return false;
+  const attendu = `${d.numero}${d.suffixe}`;
+  return (r.numero ?? '').toLowerCase().replace(/\s+/g, '') === attendu;
+}
+
 export async function chercherAdresses(texte: string, signal?: AbortSignal): Promise<ResultatAdresse[]> {
-  const q = texte.trim();
+  const q = requeteNormalisee(texte);
   // La BAN refuse les requêtes de moins de 3 caractères : on n'envoie rien.
   if (q.length < 3) return [];
-  const url = `${BAN}/search/?q=${encodeURIComponent(q)}&limit=5&autocomplete=1`;
-  return versResultats(await appelResilient(url, signal));
+  const premiers = versResultats(await appelResilient(urlRecherche(q), signal));
+
+  /* LE REPLI AVOUÉ (ADRESSE-2) — voir l'en-tête pour la mesure. Il ne part
+     QUE si la saisie portait un suffixe reconnu ET qu'aucun résultat ne
+     porte ce numéro : le 23 bis d'Armelin n'est pas dans la base, et le
+     taire obligeait à « taper 25 ». */
+  const d = decomposerNumero(texte);
+  if (!d || d.reste === '' || premiers.some((r) => porteLeNumero(r, d))) return premiers;
+
+  const base = `${d.numero} ${d.reste}`;
+  const replis = versResultats(await appelResilient(urlRecherche(base), signal));
+  const mention = `Le ${d.numero} ${d.suffixe} n’est pas dans la Base Adresse`
+    + ` Nationale — voici le ${d.numero}`;
+  const avoues = replis
+    .filter((r) => r.type === 'housenumber')
+    .map((r) => ({ ...r, approche: mention }));
+  /* LES PREMIERS RESTENT, DERRIÈRE : ils portent la rue, qui reste une
+     réponse honnête — et si la base s'enrichit demain, elle passera devant
+     sans qu'on touche à ce code. */
+  return [...avoues, ...premiers];
 }
 
 export async function adresseInverse(p: PointGeo): Promise<ResultatAdresse | null> {
