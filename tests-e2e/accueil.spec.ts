@@ -1556,6 +1556,22 @@ test('HORS LIGNE : l’en-tête ne pousse rien hors de l’écran, ni ne couvre 
     (document.querySelector('.installer') as HTMLElement).hidden = false;
   });
 
+  /* ON ATTEND QUE LA HAUTEUR SOIT PUBLIÉE. `--hauteur-entete` est écrite par
+     un `ResizeObserver`, qui se déclenche APRÈS la modification du document :
+     mesurer aussitôt, c'est mesurer l'ancien décalage des volets, et voir
+     l'en-tête les recouvrir alors qu'il ne les recouvrira pas.
+     CE PARCOURS A LÂCHÉ DEUX FOIS SUR QUATRE PASSES COMPLÈTES pour cette
+     seule raison — jamais isolément, parce qu'il fallait une machine chargée
+     pour que l'observateur prenne du retard. Même défaut que le témoin
+     d'attente des lieux d'exception : on ne mesure pas un état qui n'a pas
+     fini de s'établir. */
+  await page.waitForFunction(() => {
+    const entete = document.querySelector('.entete')!;
+    const publiee = getComputedStyle(document.documentElement)
+      .getPropertyValue('--hauteur-entete').trim();
+    return publiee === `${Math.round(entete.getBoundingClientRect().height)}px`;
+  }, undefined, { timeout: 10_000 });
+
   const debords = await page.evaluate(() => {
     const large = document.documentElement.clientWidth;
     const cibles = ['.entete', '.recherche input', '.installer', '.hors-ligne'];

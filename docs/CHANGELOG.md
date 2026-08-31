@@ -40,6 +40,13 @@ fichier de l'export n'avait pas de nom, et un parcours le désignait par son
 TYPE. L'arrivée d'un second champ a cassé le sélecteur. Un élément qu'un
 parcours doit atteindre se nomme, dès qu'il existe.
 
+UN PARCOURS INSTABLE STABILISÉ, AUSSI : celui de l'en-tête hors ligne mesurait
+le décalage des volets AVANT que le `ResizeObserver` ait publié la nouvelle
+hauteur. Il a lâché deux fois sur quatre passes complètes, jamais isolément —
+il fallait une machine chargée pour que l'observateur prenne du retard. Même
+défaut que le témoin d'attente des lieux d'exception : on ne mesure pas un
+état qui n'a pas fini de s'établir.
+
 ## [0.114.0] — 2026-08-31 — LIEUX-1 : une fiche, pas une étiquette (PR #142)
 
 - **CE QU'ON SAIT DU LIEU, ET CE QU'ON PEUT EN FAIRE.** Armelin : « quand on
