@@ -20,6 +20,8 @@ export interface LieuCategorie {
   famille?: string;
   /** Le motif de sa pastille — plus fin que la famille. */
   motif?: CleMotif;
+  /** Ses étiquettes OSM, telles quelles — ce que la fiche de détail lit. */
+  tags?: Record<string, string>;
 }
 
 /** L'emprise de la vue : ouest, sud, est, nord (l'ordre de MapLibre). */
@@ -202,6 +204,10 @@ export function versLieux(brut: unknown): LieuCategorie[] {
        et portent deux dessins — c'est exactement ce qu'Armelin décrit. */
     rendu.push({
       nom: identite?.trim() ?? null, lon, lat, motif: motifDe(propres),
+      /* LES ÉTIQUETTES SONT GARDÉES (LIEUX-1, 31/08). On les jetait après
+         avoir lu le nom : la fiche de détail n'a besoin d'AUCUNE requête de
+         plus, il suffisait de ne pas jeter. */
+      tags: propres,
       ...(famille ? { famille } : {}),
     });
   }

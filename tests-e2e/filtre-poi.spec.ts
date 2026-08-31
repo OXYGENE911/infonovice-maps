@@ -271,3 +271,67 @@ test('QUATORZE FAMILLES — sport, gares et aéroports compris', async ({ page }
   await expect(page.locator('.poi-famille[data-cle="transport"]')).toBeVisible();
   await expect(page.locator('.poi-famille[data-cle="sante"]')).toBeVisible();
 });
+
+test('LA FICHE D’UN LIEU DIT CE QU’ON EN SAIT, et propose d’y aller', async ({ page }) => {
+  /* Armelin, 31/08 : « il y a juste écrit un texte pour indiquer le nom de
+     l'enseigne ou le type de POI, mais ce serait bien d'afficher une fenêtre
+     avec du détail sur le POI ainsi qu'un bouton permettant de configurer
+     directement un trajet pour y aller ou pour l'ajouter en favoris. »
+     LE DÉTAIL NE COÛTE AUCUNE REQUÊTE : les étiquettes étaient déjà dans la
+     réponse ; on les jetait après avoir lu le nom. */
+  await ouvrirCarte(page);
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json',
+    body: JSON.stringify({ elements: [{
+      type: 'node', id: 1, lat: 48.8566, lon: 2.3522,
+      tags: {
+        amenity: 'restaurant', name: 'Le Bistrot',
+        'addr:housenumber': '12', 'addr:street': 'rue de la Paix',
+        'addr:city': 'Paris', phone: '+33 1 42 60 30 30',
+        opening_hours: 'Mo-Fr 12:00-14:00; Su off',
+        website: 'https://le-bistrot.example', wheelchair: 'yes',
+      },
+    }] }),
+  }));
+  await ouvrir(page);
+  await page.locator('.poi-famille[data-cle="restaurant"]').click();
+  await poser(page, 2.3522, 48.8566);
+  await expect(page.locator('.poi-filtre-etat')).toContainText('1 lieu', { timeout: 15_000 });
+
+  await page.locator('.poi-bulle').click(); // replier le panneau
+  await page.locator('#carte canvas.maplibregl-canvas').click({
+    position: await page.evaluate(() => {
+      const c = (window as unknown as { __carte: {
+        project(l: [number, number]): { x: number; y: number };
+      } }).__carte;
+      const p = c.project([2.3522, 48.8566]);
+      return { x: Math.round(p.x), y: Math.round(p.y) };
+    }),
+  });
+
+  const fiche = page.locator('.poi-fiche');
+  await expect(fiche).toBeVisible({ timeout: 10_000 });
+  await expect(fiche).toContainText('Le Bistrot');
+  await expect(fiche).toContainText('12 rue de la Paix, Paris');
+  // LES HORAIRES SONT EN FRANÇAIS, sans conclure « ouvert » : voir le module.
+  await expect(fiche).toContainText('du lundi au vendredi de 12 h 00 à 14 h 00');
+  await expect(fiche).toContainText('dimanche fermé');
+  // LE NUMÉRO SE COMPOSE D'UN DOIGT — en voiture, on ne recopie pas.
+  await expect(fiche.locator('a[href="tel:+33142603030"]')).toBeVisible();
+  /* UN LIEN EXTERNE NE PARTAGE RIEN : `noreferrer` empêche le site
+     d'apprendre d'où vient la visite. */
+  await expect(fiche.locator('a[href^="https://le-bistrot"]'))
+    .toHaveAttribute('rel', /noreferrer/);
+  await expect(fiche).toContainText('Accès fauteuil');
+  // ET LA SOURCE EST DITE : ce qui manque manque à la carte.
+  await expect(fiche).toContainText('OpenStreetMap');
+
+  // LES DEUX BOUTONS DEMANDÉS.
+  await expect(fiche.getByRole('button', { name: /Itinéraire vers Le Bistrot/ })).toBeVisible();
+  const favori = fiche.getByRole('button', { name: 'Ajouter aux favoris' });
+  await favori.click();
+  /* LE BOUTON DIT CE QU'IL A FAIT : sans cela, on ne sait pas si le clic a
+     porté, et l'on presse deux fois. */
+  await expect(fiche.getByRole('button', { name: 'Ajouté aux favoris' })).toBeDisabled();
+});
