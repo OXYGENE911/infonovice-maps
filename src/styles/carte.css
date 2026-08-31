@@ -3502,3 +3502,14 @@ filtre-poi {
   .bg-arrivee-pulse span { animation: none; opacity: .5; transform: scale(1.4); }
   .bg-arrivee-pulse span:nth-child(2) { display: none; }
 }
+
+
+/* FICHE-3 (01/09) — l'état d'ouverture et le partage. */
+.poi-fiche-ouvert {
+  display: block; margin-top: 2px; font: 650 12px var(--police);
+}
+.poi-fiche-ouvert.est-ouvert { color: #1E9E5A; }
+.poi-fiche-ouvert.est-ferme { color: #C0392B; }
+.poi-fiche-partager {
+  border: 1px solid var(--bord-2); background: var(--fond); color: var(--texte-1);
+}

@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.9.0] — 2026-09-01 — BORNES-4 : le mystère ZUNDER élucidé, et la puce des bornes (PR à venir)
+## [1.9.0] — 2026-09-01 — BORNES-4 : le mystère ZUNDER élucidé, et la puce des bornes (PR #155)
 
 - **LE MYSTÈRE « ZUNDER » ÉLUCIDÉ.** Armelin : « aucune borne n'est visible
   [...] à l'exception du réseau ZUNDER. Peux-tu comprendre pourquoi ? »
@@ -29,6 +29,70 @@ puce qui actionne LA couche du volet dans les deux sens, et le mystère
 ZUNDER rejoué de bout en bout — mémoire semée, badge dit, retrait en un
 geste, mémoire corrigée mesurée APRÈS la transaction IndexedDB commise.
 
+## [1.8.0] — 2026-09-01 — GUIDE-1 : le curseur colle à la route et regarde devant (PR #154)
+
+- **LE CURSEUR EST AIMANTÉ AU TRACÉ.** Armelin, au volant : « parfois le
+  véhicule est situé à une dizaine de mètres à gauche ou à droite de la route
+  alors que je suis bien sur cette ligne ». Le récepteur a une dizaine de
+  mètres d'incertitude — c'est physique, pas un réglage oublié. Tant que
+  l'écart reste sous 30 m (l'incertitude plus une chaussée), le curseur se
+  dessine SUR le tracé, au point projeté ; au-delà, il montre la mesure
+  vraie — un curseur collé de force mentirait à qui est vraiment ailleurs.
+  La mesure BRUTE continue de nourrir la logique : avancement, hors-route et
+  recalcul n'en perdent rien.
+- **LA FLÈCHE NE RECULE PLUS.** « La flèche représentant ma voiture est à
+  l'envers du sens de la circulation. » Le heading GPS est du bruit à basse
+  vitesse — à 4 km/h il tournoie, jusqu'à pointer à contresens. Aimanté, le
+  curseur prend le cap du TRACÉ quand le heading n'est pas fiable (sous
+  2 m/s ou absent) ; en roulant, le heading GPS fiable garde la priorité —
+  l'écraser ferait tourner la carte au cap de la route pendant qu'on en
+  dévie volontairement, et deux parcours du lissage l'ont rappelé.
+- **LES « CHANGEMENTS DE VOIE IMPOSSIBLES » EN PROFITENT** : une rue
+  parallèle à dix mètres ne capture plus le curseur — seul l'écart franc du
+  seuil hors-route existant fait quitter le tracé, et le recalcul ne part
+  que là.
+- **GALILEO, DIT HONNÊTEMENT** : le Web n'expose AUCUN choix de
+  constellation au navigateur — « préférer Galileo » y est impossible.
+  C'est un chantier de l'application Android (phase 2), consigné dans le
+  code, pas un réglage qu'on aurait oublié.
+
+Tests : 6 unitaires sur le point projeté et le cap du tracé (interpolation,
+bout de tracé, tracé trop court), et le seuil borné sous le hors-route.
+2 E2E : le fixe à 12 m de la ligne avec un heading aberrant dessiné SUR le
+tracé tourné à l'est, et à 80 m l'aimant qui LÂCHE. 1035 unitaires, 309 E2E.
+
+## [1.7.0] — 2026-09-01 — FICHE-3 : la fiche tient à l'écran, dit si c'est ouvert, et se partage (PR #153)
+
+- **LA FICHE NE SORT PLUS DE L'ÉCRAN.** Armelin, sur mobile : « si le POI est
+  situé à droite de l'écran, il arrive que la fenêtre s'affiche hors champ et
+  le bouton fermer est alors inaccessible ». Mesuré : la bulle s'ancre BIEN à
+  l'ouverture — c'est le déplacement de la carte qui l'emmenait ensuite hors
+  écran, puisqu'elle suit son point. Le clic recadre désormais le lieu sous le
+  centre, et un parcours mesure que la fiche ET sa croix tiennent dans un
+  écran de 375 px pour un point collé au bord.
+- **OUVERT OU FERMÉ — QUAND ON SAIT.** « Afficher si l'établissement est
+  ouvert ou fermé et dans combien de temps il ferme. » La position d'hier
+  tient, mais elle admettait une voie du milieu : un ÉVALUATEUR PARTIEL
+  HONNÊTE, qui ne rend un verdict que sur les expressions qu'il sait évaluer
+  EXACTEMENT — jours et plages simples, 24/7. « Ouvert — ferme à 19 h 00 »,
+  « Ferme bientôt (45 min) » sous l'heure pile — le seuil qu'il nomme —,
+  « Fermé — ouvre à 14 h 00 ». Le moindre morceau inconnu (jours fériés,
+  semaines paires, dates) et le verdict se TAIT : un « ouvert » faux fait
+  faire un détour pour rien.
+- **« PARTAGE FACILE ».** Un bouton dans la fiche : le lien porte les
+  coordonnées et le nom dans le FRAGMENT #, jamais envoyé au serveur, et
+  celui qui le reçoit voit la carte s'ouvrir sur le lieu, fiche dépliée.
+  DES COORDONNÉES WGS84, PAS UN CODE MAISON : elles s'ouvrent partout, un
+  code propriétaire ne s'ouvrirait que chez nous — le Plus Code de Google est
+  précisément le travers qu'on évite.
+- **LES CUISINES EN FRANÇAIS** : soixante valeurs OSM traduites
+  (italian → italienne…) ; l'inconnue ressort telle quelle, une cuisine rare
+  mal traduite serait pire qu'un mot anglais.
+
+Tests : 15 unitaires sur l'évaluateur — dont CINQ qui vérifient qu'il se TAIT
+sur ce qu'il ne sait pas — et 3 sur la grammaire des jours. 2 E2E : la fiche
+mesurée dans l'écran à 375 px, et le lien de partage qui fait l'aller-retour
+complet. 1038 unitaires, 308 E2E.
 ## [1.6.1] — 2026-09-01 — FEUX-3 : les feux quittent la carte (PR #152)
 
 - **RETRAIT SUR RETOUR DE TERRAIN.** Armelin : « ils ne s'affichent pas

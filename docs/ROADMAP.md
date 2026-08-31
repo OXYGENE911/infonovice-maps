@@ -539,6 +539,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       d'état, « Tout afficher » qui corrige aussi la mémoire ; et la puce
       « Bornes de recharge » du filtre POI, second interrupteur de la
       couche du volet.
+- [x] PR #154 — GUIDE-1 (01/09) : le curseur aimanté au tracé (30 m), le
+      cap du tracé quand le heading GPS bruite, la mesure brute gardée pour
+      la logique ; Galileo consigné comme chantier Android (phase 2).
+- [x] PR #153 — FICHE-3 (01/09) : la fiche recadrée à l'écran, l'état
+      d'ouverture par un évaluateur partiel honnête (qui se tait sur ce
+      qu'il ne sait pas), le « Partage facile » par fragment #lieu=, et les
+      cuisines en français.
 - [x] PR #152 — FEUX-3, les feux quittent la carte (01/09) : la donnée OSM
       mêle péages et chantiers aux carrefours, et un point rouge muet
       n'explique rien. Le comptage par variante reste.
