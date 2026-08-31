@@ -1824,12 +1824,21 @@ export class BandeauGuidage extends HTMLElement {
       /* À L'ARRÊT, LA BOUSSOLE PREND LE RELAIS — si le geste l'a ouverte
          (NAV-1). En mouvement, le cap GPS garde la main : il mesure la
          route, la boussole mesure le téléphone. */
-      /* AIMANTÉ, LE CAP DE LA CARTE EST CELUI DU TRACÉ : à basse vitesse le
-         heading GPS tournoie, et c'est lui qui faisait « avancer la voiture
-         à reculons ». La route, elle, ne tremble pas. */
+      /* L'ORDRE EST UNE RÉGRESSION PAYÉE (GUIDE-2, 01/09). GUIDE-1 avait
+         glissé le cap du TRACÉ devant la boussole : la carte se verrouillait
+         alors au cap de la route, et Armelin l'a vu tout de suite — « quand
+         je lance un itinéraire, la boussole ne tourne plus, le téléphone ne
+         sait pas dans quel sens je suis ». C'était tuer le relais annoncé
+         deux lignes plus haut.
+         LA BOUSSOLE MESURE LE TÉLÉPHONE, LE TRACÉ MESURE LA ROUTE : à
+         l'arrêt, c'est le téléphone qu'on tourne dans les mains, et c'est
+         donc lui qui doit orienter la carte. Le cap du tracé ne sert plus
+         que de DERNIER recours, quand l'appareil n'a pas de boussole —
+         et il continue, lui, d'orienter le CURSEUR, qui est ce que
+         GUIDE-1 corrigeait vraiment. */
       const brut = capGps
-        ?? (aimant ? aimant.cap : null)
-        ?? (this.#modeOrientation === 'cap' ? this.#capBoussole : null);
+        ?? (this.#modeOrientation === 'cap' ? this.#capBoussole : null)
+        ?? (aimant ? aimant.cap : null);
       if (brut !== null) {
         this.#capLisse = lisserCap(this.#capLisse, brut);
         this.#dernierCapConnu = this.#capLisse;

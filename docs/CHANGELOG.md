@@ -83,6 +83,52 @@ Tests : 16 unitaires (les graphies, l'échappement, ce que porte l'URL, et la
 lecture d'une expiration). 4 E2E : le nom qui passe devant une BAN
 approximative, l'adresse numérotée qui ne coûte rien, l'expiration qui ne
 nie rien, et le nom incomplet qui s'explique.
+## [1.14.0] — 2026-09-01 — BORNES-5 : le filtre qui retranche se voit SUR la carte (PR #161)
+
+- **LE MÊME DÉFAUT, REVU LE LENDEMAIN.** Armelin : « j'ai activé le filtre
+  pour afficher les bornes de recharge et je n'ai toujours que les bornes
+  ZUNDER à l'écran ». BORNES-4 avait pourtant posé l'avertissement — mais
+  dans le volet « Recharge et services » et sur la puce du panneau de
+  filtres : **deux surfaces REPLIÉES**. Il ne l'a jamais croisé. Un message
+  qu'il faut déplier pour lire ne prévient personne.
+- **LE RAPPEL VIT DÉSORMAIS SUR LA CARTE**, sous l'entonnoir, tant qu'un
+  filtre retranche : « Bornes filtrées : réseau ZUNDER · 150 kW et plus »,
+  avec un bouton **« Tout afficher »** qui retire tout sur place — et
+  corrige la mémoire, sans quoi le réglage ressusciterait à la visite
+  suivante. Désigner la porte sans donner la clé n'aurait pas suffi.
+- **POURQUOI LES BORNES APPARAISSAIENT SUR UN ITINÉRAIRE ET PAS SUR LA
+  CARTE** : la couche du trajet lit `filtresAffichage()`, qui ne porte que la
+  puissance et les prises — pas les réseaux. Le filtre ZUNDER ne s'appliquait
+  donc qu'à la carte. C'est mesuré, pas supposé ; l'incohérence est notée à
+  la ROADMAP plutôt que corrigée ici : aligner les deux retirerait AUSSI les
+  bornes du trajet, ce qui aggraverait le symptôme le temps d'une visite.
+
+Vérifié sur la production avec un profil vierge : au zoom 15 près du
+Plessis-Trévise, la couche charge bien 22 stations et les dessine — le
+défaut n'était pas dans l'affichage, il était dans un réglage invisible.
+
+Tests : 2 E2E — le rappel mesuré AVANT d'ouvrir quoi que ce soit, et le
+retrait fait depuis la carte avec la mémoire relue après coup.
+## [1.13.1] — 2026-09-01 — GUIDE-2 : la boussole tourne de nouveau (PR #160)
+
+- **RÉGRESSION CORRIGÉE, ET ELLE ÉTAIT DE MOI.** Armelin : « quand je lance un
+  itinéraire, la boussole ne tourne plus. Du coup le téléphone ne sait pas
+  dans quel sens je suis. » GUIDE-1 (v1.8.0) avait glissé le cap du TRACÉ
+  devant la boussole dans l'orientation de la carte : sur la route, la vue se
+  verrouillait au cap de la route et ne suivait plus le téléphone.
+- **LA BOUSSOLE MESURE LE TÉLÉPHONE, LE TRACÉ MESURE LA ROUTE.** À l'arrêt,
+  c'est le téléphone qu'on tourne dans les mains : c'est donc lui qui oriente
+  la carte. L'ordre redevient : cap GPS fiable, puis boussole, puis — en
+  DERNIER recours, pour un appareil sans boussole — le cap du tracé. Le
+  CURSEUR, lui, garde le cap du tracé : c'est ce que GUIDE-1 corrigeait
+  vraiment, et la flèche ne recule toujours pas.
+- **POURQUOI AUCUN PARCOURS NE L'AVAIT VU** : celui qui défend le relais de la
+  boussole pousse son fixe à 166 m du tracé — HORS ROUTE, donc sans aimant.
+  Le défaut ne vivait que SUR la route. Un nouveau parcours y roule.
+
+Tests : 1 E2E qui rejoue le cas exact — sur le tracé, à l'arrêt, une mesure
+boussole à 270° doit tourner la carte à 270° et non la laisser au cap 90° de
+la route.
 
 ## [1.13.0] — 2026-09-01 — STATS-1 : le bilan du trajet, à l'arrivée (PR #159)
 
