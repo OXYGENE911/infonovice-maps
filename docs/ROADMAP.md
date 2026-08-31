@@ -538,6 +538,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       recours (Overpass, bornée à la vue, refus honnête sous le zoom 13).
       La consolidation BNCO/Culture/Éducation/DATAtourisme et les logos
       Wikidata restent un chantier à part — dérogation à décider.
+- [x] PR #156 — POI-6 (01/09) : la famille « Écoles et universités »
+      (toque de diplômé) et les stades dans « Sport et stades » — sans les
+      terrains de quartier, qui noieraient la carte.
 - [x] PR #155 — BORNES-4 (01/09) : le mystère ZUNDER élucidé (un filtre
       de réseau restauré en silence) — badge « filtres actifs », phrase
       d'état, « Tout afficher » qui corrige aussi la mémoire ; et la puce

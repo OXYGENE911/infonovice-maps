@@ -75,6 +75,11 @@ export const CATEGORIES: readonly Categorie[] = [
      un soin, pas un métier — et chacun garde son propre motif sur la carte. */
   { cle: 'sante', libelle: 'Santé', couleur: '#1E9E5A',
     filtre: '["amenity"~"^(pharmacy|doctors|dentist|veterinary|clinic)$"]' },
+  /* LES ÉCOLES (POI-6, 01/09). Armelin : « les écoles et les stades ne sont
+     pas affichés en tant que POI ». Quatre étiquettes bien renseignées, de
+     la maternelle à l'université — on cherche « une école », pas un cycle. */
+  { cle: 'ecole', libelle: 'Écoles et universités', couleur: '#8E24AA',
+    filtre: '["amenity"~"^(school|kindergarten|college|university)$"]' },
   { cle: 'argent', libelle: 'Banques et DAB', couleur: '#00796B',
     filtre: '["amenity"~"^(atm|bank|bureau_de_change)$"]' },
   { cle: 'parking', libelle: 'Parkings', couleur: '#455A64',
@@ -88,8 +93,11 @@ export const CATEGORIES: readonly Categorie[] = [
      train pour les gares ». Quatorze pastilles tiennent encore sur un
      téléphone — et depuis qu'elles portent un dessin, elles se reconnaissent
      plus vite que douze étiquettes ne se lisaient. */
-  { cle: 'sport', libelle: 'Sport', couleur: '#E8620C',
-    filtre: '["leisure"~"^(fitness_centre|sports_centre)$"]' },
+  /* …ET LES STADES REJOIGNENT LE SPORT (POI-6) — `leisure=stadium`, bien
+     renseigné. PAS `pitch` : chaque terrain de quartier en porte un, et six
+     cents points tomberaient sur une seule ville. */
+  { cle: 'sport', libelle: 'Sport et stades', couleur: '#E8620C',
+    filtre: '["leisure"~"^(fitness_centre|sports_centre|stadium)$"]' },
   { cle: 'transport', libelle: 'Gares et aéroports', couleur: '#3F51B5',
     filtre: ['["railway"~"^(station|halt)$"]', '["aeroway"="aerodrome"]'] },
   { cle: 'wc', libelle: 'Toilettes', couleur: '#0097A7',
@@ -113,7 +121,10 @@ const RANGEMENT: readonly { cle: string; test: (t: Record<string, string>) => bo
   { cle: 'hotel', test: (t) => ['hotel', 'motel', 'guest_house'].includes(t['tourism'] ?? '') },
   { cle: 'culture', test: (t) => ['museum', 'attraction', 'viewpoint', 'gallery', 'theme_park']
     .includes(t['tourism'] ?? '') },
-  { cle: 'sport', test: (t) => ['fitness_centre', 'sports_centre'].includes(t['leisure'] ?? '') },
+  { cle: 'sport', test: (t) => ['fitness_centre', 'sports_centre', 'stadium']
+    .includes(t['leisure'] ?? '') },
+  { cle: 'ecole', test: (t) => ['school', 'kindergarten', 'college', 'university']
+    .includes(t['amenity'] ?? '') },
   { cle: 'transport', test: (t) => ['station', 'halt'].includes(t['railway'] ?? '')
     || t['aeroway'] === 'aerodrome' },
   { cle: 'auto', test: (t) => ['car_repair', 'car_parts'].includes(t['shop'] ?? '') },

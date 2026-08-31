@@ -153,6 +153,12 @@ const DESSINS: Record<CleMotif, Dessin> = {
     ],
   },
   wc: { lettre: 'WC' },
+  /* La toque de diplômé des écoles (POI-6) : le plateau en losange, la
+     calotte en dessous, le gland qui pend à droite. */
+  toque: {
+    pleins: ['M12 4 2.5 8.6 12 13.2l9.5-4.6L12 4Z'],
+    traits: ['M6.5 11.4v3.4c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5v-3.4', 'M20.2 9.6v4.6'],
+  },
   /* L'éclair des bornes de recharge (BORNES-4) : le même trait que les
      éclairs de puissance du planificateur, dans la grammaire des pastilles. */
   eclair: { pleins: ['M13.2 2.5 5.8 13.6h4.3l-1.7 7.9 8.8-11.9h-4.6l0.6-7.1Z'] },
