@@ -2,6 +2,44 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.114.0] — 2026-08-31 — FAVORIS-3 : importer ses favoris Google Maps (PR #144)
+
+- **RIEN NE PART CHEZ GOOGLE, ET C'EST LE POINT.** Armelin : « cela serait
+  bien de pouvoir exporter et importer ses favoris Google Maps […] recréer une
+  structure similaire sous forme de liste ». Le fichier vient de Google
+  Takeout, l'usager le télécharge lui-même, et TOUT se lit dans le navigateur.
+  Interroger l'API de Google pour compléter ce qui manque serait exactement ce
+  que le mandat interdit : envoyer les lieux favoris de quelqu'un chez un tiers
+  pour les lui rendre. Un parcours COMPTE les requêtes sortantes pour le
+  prouver.
+- **DEUX FORMATS, parce que Takeout en rend deux** : le GeoJSON « Lieux
+  enregistrés », qui porte les coordonnées, et le CSV d'une liste, qui ne porte
+  que des liens. Le format se devine au CONTENU, pas à l'extension : un fichier
+  renommé doit passer quand même.
+- **LE NOM DU FICHIER FAIT LA LISTE** : « Envie d'y aller.csv » devient la
+  liste « Envie d'y aller ». C'est la « structure similaire » demandée, et elle
+  ne coûte aucune saisie.
+- **CE QU'ON NE SAIT PAS SITUER EST DIT, JAMAIS DEVINÉ.** Certains liens Google
+  ne portent qu'un identifiant interne (`cid`, `ftid`) que seul Google sait
+  résoudre. Ces entrées ne sont pas importées, et leurs titres sont affichés
+  avec la raison. Les géocoder sur le seul titre placerait « Chez Marcel » sur
+  un homonyme à trois cents kilomètres — **un favori faux est pire qu'un favori
+  manquant, parce qu'on le croit**.
+- **ET LES LIGNES QU'ON NE SAIT MÊME PAS LIRE SE COMPTENT** : une ligne décalée
+  dont le titre vient après le lien ne donne pas un nom de confiance. Le
+  compte-rendu dit les trois nombres — importés, sans position, illisibles.
+  Taire les deux derniers ferait croire à un import complet.
+
+Tests : 22 unitaires (les trois formes de lien, le refus des identifiants
+internes, le CSV à guillemets, les en-têtes français ET anglais dans n'importe
+quel ordre, le GeoJSON, et le nom de liste), 2 E2E dont un qui vérifie
+qu'AUCUNE requête ne part chez Google. 981 unitaires, 297 E2E.
+
+DÉFAUT ATTRAPÉ AU PASSAGE, ET C'EST LE TROISIÈME DU GENRE : le champ de
+fichier de l'export n'avait pas de nom, et un parcours le désignait par son
+TYPE. L'arrivée d'un second champ a cassé le sélecteur. Un élément qu'un
+parcours doit atteindre se nomme, dès qu'il existe.
+
 ## [0.113.0] — 2026-08-31 — FAVORIS-2 : des listes pour ranger ses lieux (PR #143)
 
 - **UN NOM, UN ÉMOJI, UNE COULEUR.** Armelin : « pouvoir l'enregistrer dans une

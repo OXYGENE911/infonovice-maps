@@ -1369,7 +1369,7 @@ test('FAVORIS : appui long → ajout, persistance, export JSON, retrait, import'
   expect(await page.evaluate(() => document.activeElement?.tagName)).toBe('SUMMARY');
 
   // L'IMPORT restaure — et recharge la page pour appliquer les préférences.
-  await page.locator('.favoris input[type="file"]').setInputFiles(chemin!);
+  await page.locator('.favoris .favoris-fichier').setInputFiles(chemin!);
   await expect(page.locator('.favoris-etat')).toContainText('Importé : 1 favori', { timeout: 10_000 });
   await page.waitForLoadState('load');
   await canevas.waitFor({ timeout: 15_000 });
@@ -1380,9 +1380,9 @@ test('FAVORIS : appui long → ajout, persistance, export JSON, retrait, import'
   // se nettoie pour qu'un second essai reparte (le même fichier compris).
   const intrus = test.info().outputPath('intrus.json');
   await (await import('node:fs/promises')).writeFile(intrus, '{"application":"autre-app"}');
-  await page.locator('.favoris input[type="file"]').setInputFiles(intrus);
+  await page.locator('.favoris .favoris-fichier').setInputFiles(intrus);
   await expect(page.locator('.favoris-etat')).toContainText('pas une sauvegarde Infonovice Maps', { timeout: 10_000 });
-  expect(await page.locator('.favoris input[type="file"]').inputValue()).toBe('');
+  expect(await page.locator('.favoris .favoris-fichier').inputValue()).toBe('');
   // L'échec n'a rien détruit : le favori est toujours là.
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
 });
