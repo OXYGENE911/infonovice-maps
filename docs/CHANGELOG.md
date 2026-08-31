@@ -36,6 +36,44 @@ qui ne compte pas, deux arrêts séparés par de la route, le tunnel qui
 n'étend pas la dernière vitesse, le fixe qui recule. 2 E2E : le bilan qui
 paraît à l'arrivée avec la pointe à 108 km/h, et qui ne survit pas au trajet
 suivant.
+## [1.12.0] — 2026-09-01 — RECHERCHE-2 : chercher un lieu par son NOM (PR #158)
+
+- **UN NOM QUE LA BAN IGNORE SE TROUVE MAINTENANT.** Armelin veut chercher
+  « un POI, une entreprise, une école » par son nom. La Base Adresse
+  Nationale ne connaît que des ADRESSES : « Lycée Champlain » n'y rend
+  rien, et la barre restait MUETTE. OpenStreetMap porte les noms, et nous
+  l'interrogeons déjà pour les familles de lieux — il devient le DERNIER
+  RECOURS de la barre.
+- **DERNIER RECOURS VEUT DIRE DERNIER.** L'appel ne part que si la BAN n'a
+  RIEN rendu, jamais avant trois caractères, et toujours derrière le
+  débounce de 300 ms. Une adresse trouvée ne dérange pas Overpass — un
+  parcours le mesure au silence sur le réseau.
+- **ET SOUS LE ZOOM 13, ON REFUSE EN LE DISANT** : « Aucune adresse. Pour
+  chercher un lieu par son nom, rapprochez-vous de la zone sur la carte. »
+  Une expression régulière sur le nom à l'échelle d'une région ferait payer
+  à un service BÉNÉVOLE le prix d'une base d'entreprises qu'il n'est pas.
+  Le message est une NOTE, pas une alerte rouge : c'est une règle de
+  frugalité, pas une panne.
+- **CE QUI PART EST ÉCHAPPÉ, DEUX FOIS.** Le nom saisi va dans une chaîne
+  Overpass ET dans une expression régulière : un guillemet fermerait la
+  chaîne, « Carrefour (Paris) » casserait la regex. La contre-oblique est
+  traitée EN PREMIER, sinon on échapperait les échappements qu'on vient de
+  poser.
+
+**CE QUI N'EST PAS FAIT, ET POURQUOI.** Armelin demandait aussi de
+consolider les bases publiques — BNCO/Sirene, ministère de la Culture,
+Éducation nationale, DATAtourisme — et les logos par Wikidata. C'est un
+chantier à part entière : quatre formats, quatre quotas, quatre politiques
+de mise à jour. Et les logos Wikidata/Wikimedia sortiraient des sources
+françaises : la règle 3 du projet demande pour cela une décision EXPLICITE
+d'Armelin et une mention publique sur « À propos ». Cette PR ne la prend
+pas à sa place.
+
+Tests : 9 unitaires sur l'échappement (guillemets, métacaractères, l'ordre de
+la contre-oblique) et sur ce que l'URL porte — sous-chaîne, casse ignorée,
+emprise à la façon Overpass, plafond et délai. 3 E2E qui lisent les appels
+RÉELLEMENT émis : le nom trouvé, le refus SANS appel sous le zoom 13, et
+l'adresse trouvée qui ne dérange pas Overpass.
 
 ## [1.11.0] — 2026-09-01 — ADRESSE-2 : les adresses BIS, TER, QUATER (PR #157)
 
