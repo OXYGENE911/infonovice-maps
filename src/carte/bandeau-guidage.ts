@@ -30,8 +30,9 @@ import {
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
 import { chargerParkings, ErreurParkings, type Parking } from '../lib/parkings';
+import { coteDestination, phraseArrivee, SEUIL_ARRIVE_M } from '../lib/arrivee';
 import type { PointGeo } from '../lib/coordonnees';
-import type { GeoJSONSource } from 'maplibre-gl';
+import { Marker, type GeoJSONSource } from 'maplibre-gl';
 import { imagePastille, cleImage, RAPPORT_PASTILLE } from './icone-lieu';
 import { chargerCommodites, ErreurCommodites } from '../lib/commodites';
 import { meteoA, phraseMeteo, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
@@ -962,6 +963,67 @@ export class BandeauGuidage extends HTMLElement {
     return true;
   }
 
+  /* ---- l'arrivée (ARRIVEE-2, 31/08) ---- */
+
+  /** Vrai une fois le constat prononcé : il ne se répète pas. */
+  #arriveDit = false;
+
+  #marqueurArrivee: HTMLElement | null = null;
+
+  /**
+   * Le constat d'arrivée — au bon moment, du bon côté, avec son animation.
+   *
+   * VINGT MÈTRES, PAS CINQUANTE : « ça m'indiquait que j'étais arrivé 40 m
+   * avant ». Les paliers vocaux PRÉPARENT (« vous arrivez à destination ») ;
+   * le constat attend d'être vrai.
+   */
+  #majArrivee(e: EtatGuidage): void {
+    if (this.#arriveDit || e.horsRoute || e.restantM > SEUIL_ARRIVE_M) return;
+    this.#arriveDit = true;
+
+    const options = this.#options;
+    const dest = options?.destination ?? null;
+    const cote = coteDestination(options?.trace ?? [], dest);
+
+    /* LA VOIX — la phrase demandée mot pour mot, une seule fois. Elle passe
+       par le même robinet que le reste : coupée, elle se tait. */
+    this.#voix.dire(phraseArrivee(cote));
+
+    /* LE CARTOUCHE le dit aussi, côté compris : tout le monde ne roule pas
+       avec le son. */
+    const instruction = this.querySelector('.bg-cartouche .bg-instruction') as HTMLElement | null;
+    if (instruction) {
+      instruction.textContent = cote === null
+        ? 'Vous êtes arrivé'
+        : `Vous êtes arrivé — destination sur votre ${cote}`;
+    }
+    const distance = this.querySelector('.bg-cartouche .bg-distance') as HTMLElement | null;
+    if (distance) distance.textContent = '';
+
+    /* L'ANIMATION (« faire une animation pour illustrer qu'on est arrivé ») :
+       un anneau qui pulse sur la destination — sobre, et immobile pour qui
+       préfère l'immobile (prefers-reduced-motion, en CSS). */
+    const carte = this.#carte;
+    const point = dest ?? (() => {
+      const fin = options?.trace[options.trace.length - 1];
+      return fin ? { lon: fin[0], lat: fin[1] } : null;
+    })();
+    if (carte && point && this.#marqueurArrivee === null) {
+      const boite = document.createElement('div');
+      boite.className = 'bg-arrivee-pulse';
+      boite.setAttribute('aria-hidden', 'true');
+      boite.innerHTML = '<span></span><span></span><b></b>';
+      new Marker({ element: boite }).setLngLat([point.lon, point.lat]).addTo(carte);
+      this.#marqueurArrivee = boite;
+    }
+  }
+
+  #retirerMarqueurArrivee(): void {
+    this.#marqueurArrivee?.parentElement?.remove();
+    this.#marqueurArrivee?.remove();
+    this.#marqueurArrivee = null;
+  }
+
   /* ---- la suggestion de parking (PARK-1, 31/08) ---- */
 
   /** Vrai une fois « Se garer » pressé : la suggestion ne revient pas. */
@@ -1137,6 +1199,8 @@ export class BandeauGuidage extends HTMLElement {
   }
 
   arreter(): void {
+    this.#arriveDit = false;
+    this.#retirerMarqueurArrivee();
     this.#parkings = null;
     this.#parkingRegle = false;
     this.#fermerParkings();
@@ -1830,6 +1894,7 @@ export class BandeauGuidage extends HTMLElement {
        plus tard par la ligne ci-dessus — vu à l'écran, pas déduit. */
     this.#majGiratoire(e);
     this.#majParking(e);
+    this.#majArrivee(e);
 
     /* L'ARRIVÉE RÉELLE (décision d'Armelin du 29/08) : l'heure affichée
        comptait la ROUTE seule — avec deux arrêts de trente minutes devant,

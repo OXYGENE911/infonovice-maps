@@ -112,7 +112,9 @@ describe('phraseAnnonce', () => {
 
   it('annonce l’arrivée', () => {
     expect(phraseAnnonce('maintenant', 10, { manoeuvre: 'arrivee' }))
-      .toBe('Vous êtes arrivé');
+      /* Le palier ne CONSTATE plus (ARRIVEE-2) : à 50 m, « vous êtes
+         arrivé » mentait de 50 m. Le constat vit dans lib/arrivee.ts. */
+      .toBe('Vous arrivez à destination');
   });
 });
 

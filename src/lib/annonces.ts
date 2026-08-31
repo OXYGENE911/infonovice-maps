@@ -80,7 +80,12 @@ const MOTS: Partial<Record<Manoeuvre, string>> = {
   'sharp right': 'tournez franchement à droite',
   'sharp left': 'tournez franchement à gauche',
   uturn: 'faites demi-tour',
-  arrivee: 'vous êtes arrivé',
+  /* « VOUS ARRIVEZ », PAS « VOUS ÊTES ARRIVÉ » (ARRIVEE-2, 31/08). Le palier
+     « maintenant » se déclenche à cinquante mètres — juste pour un virage,
+     mensonger pour un constat : Armelin s'est entendu déclarer arrivé 40 m
+     avant. Les paliers PRÉPARENT ; le constat, lui, vit dans lib/arrivee.ts
+     et attend d'être VRAI (20 m). */
+  arrivee: 'vous arrivez à destination',
 };
 
 /** La distance, dite comme on la dit — PURE. */
