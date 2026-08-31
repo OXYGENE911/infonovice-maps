@@ -155,6 +155,8 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   /* LE MODE TRAJET DU PLANIFICATEUR SAIT EFFACER LES BORNES NATIONALES : quand
      un plan de recharge est à l'écran, seules restent les bornes du corridor. */
   panneau.couchesBornes = poi;
+  // BORNES-2 : un filtre d'affichage changé redessine les bornes du trajet.
+  poi.surFiltresChanges = () => { panneau.reposerBornesTrajet(); };
 
   const trafic = new PanneauTrafic();
   trafic.carte = carte;
