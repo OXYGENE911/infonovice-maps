@@ -440,7 +440,16 @@ export function filtrerStations(
       const brut = s.operateur ?? s.reseau;
       if (!brut || !reseaux.has(cleReseau(brut))) return false;
     }
-    if (nom !== '' && !normaliserNom(s.nom).includes(nom)) return false;
+    /* LE NOM, L'ENSEIGNE ET L'EXPLOITANT (BORNES-3, 31/08) : « Carrefour »
+       ne vit que dans l'enseigne, « McDonald » surtout dans le nom de
+       station. Chercher un seul champ ratait l'un ou l'autre — mesuré sur le
+       jeu réel, pas supposé. */
+    if (nom !== ''
+      && !normaliserNom(s.nom).includes(nom)
+      && !(s.reseau !== null && normaliserNom(s.reseau).includes(nom))
+      && !(s.operateur !== null && normaliserNom(s.operateur).includes(nom))) {
+      return false;
+    }
     return true;
   });
 }

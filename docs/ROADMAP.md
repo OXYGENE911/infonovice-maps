@@ -539,6 +539,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       la destination, « Se garer » qui replanifie, « Finir à pied » qui
       propose la bascule piéton. « Places », jamais « places libres » — la
       disponibilité n'a aucune source nationale gratuite.
+- [x] PR #149 — BORNES-3, chercher « McDonald » trouve les bornes du parking
+      (31/08) : la recherche compare nom, enseigne ET exploitant — mesuré,
+      « Carrefour » ne vivait que dans l'enseigne et 4 931 stations étaient
+      invisibles au nom seul.
 - [x] PR #148 — TRAFIC-2, des dessins au lieu de ronds (31/08) : chaque
       événement Bison Futé porte son pictogramme — voiture et éclat,
       dépanneuse, triangle de chantier jaune et rouge — en plus grand.
