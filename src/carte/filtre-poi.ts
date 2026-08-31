@@ -46,6 +46,9 @@ import {
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import type { CleMotif } from '../lib/pictos-lieux';
 import { imagePastille, cleImage, RAPPORT_PASTILLE } from './icone-lieu';
+import { rubriquesDe } from '../lib/detail-lieu';
+import { ajouterFavori } from '../lib/favoris';
+import type { PorteItineraire } from './fiche-borne';
 import {
   elargir, estCouverte, memoriser, type Emprise,
 } from '../lib/couverture';
@@ -273,6 +276,105 @@ export class FiltrePoi extends HTMLElement {
     etat.textContent = `${n} lieu${n > 1 ? 'x' : ''} — la recherche suit la carte.`;
   }
 
+  /**
+   * La fiche d'un lieu — ce qu'on en sait, et ce qu'on peut en faire.
+   *
+   * MÊME LANGAGE VISUEL QUE LES AUTRES CARTOUCHES : les classes `fb-*` sont
+   * reprises de la fiche de borne, comme l'avait fait la fiche des lieux
+   * d'exception. Un seul dessin pour tous les cartouches de l'application.
+   *
+   * RIEN N'EST INVENTÉ : chaque rubrique n'existe que si la carte la porte.
+   * Une fiche pleine de rubriques vides ferait croire à un lieu mal renseigné
+   * alors que c'est la donnée qui manque — et l'on dit d'où elle vient.
+   */
+  #ficheLieu(lieu: LieuCategorie): HTMLElement {
+    const famille = CATEGORIES.find((c) => c.cle === lieu.famille);
+    const boite = document.createElement('div');
+    boite.className = 'fb-fiche poi-fiche';
+
+    const titre = document.createElement('p');
+    titre.className = 'poi-fiche-nom';
+    titre.textContent = lieu.nom ?? famille?.libelle ?? 'Lieu';
+    boite.append(titre);
+
+    if (lieu.nom && famille) {
+      const type = document.createElement('p');
+      type.className = 'poi-fiche-type';
+      type.style.setProperty('--teinte', famille.couleur);
+      type.textContent = famille.libelle;
+      boite.append(type);
+    }
+
+    const rubriques = rubriquesDe(lieu.tags ?? {});
+    if (rubriques.length > 0) {
+      const dl = document.createElement('dl');
+      dl.className = 'poi-fiche-details';
+      for (const r of rubriques) {
+        const dt = document.createElement('dt');
+        dt.textContent = r.libelle;
+        const dd = document.createElement('dd');
+        if (r.lien !== undefined) {
+          const a = document.createElement('a');
+          a.href = r.lien;
+          a.textContent = r.valeur;
+          /* UN LIEN EXTERNE S'OUVRE À CÔTÉ et ne partage rien : `noreferrer`
+             empêche le site d'apprendre d'où vient la visite — le mandat
+             interdit de laisser fuir quoi que ce soit. */
+          if (/^https?:/i.test(r.lien)) {
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+          }
+          dd.append(a);
+        } else dd.textContent = r.valeur;
+        dl.append(dt, dd);
+      }
+      boite.append(dl);
+    }
+
+    const boutons = document.createElement('div');
+    boutons.className = 'poi-fiche-boutons';
+
+    const aller = document.createElement('button');
+    aller.type = 'button';
+    aller.className = 'poi-fiche-aller';
+    aller.textContent = 'Y aller';
+    const nom = lieu.nom ?? famille?.libelle ?? 'Lieu';
+    aller.setAttribute('aria-label', `Itinéraire vers ${nom}`);
+    /* « Y ALLER » PARLE AU PLANIFICATEUR, comme la fiche de borne : le même
+       chemin, la même porte. Sans planificateur branché, le bouton ne
+       paraît pas — un bouton qui ne fait rien est pire qu'un texte. */
+    aller.addEventListener('click', () => {
+      this.#porte?.allerVers({ lon: lieu.lon, lat: lieu.lat }, nom);
+    });
+
+    const favori = document.createElement('button');
+    favori.type = 'button';
+    favori.className = 'poi-fiche-favori';
+    favori.textContent = 'Ajouter aux favoris';
+    favori.addEventListener('click', () => {
+      void ajouterFavori(nom, { lon: lieu.lon, lat: lieu.lat }).then(() => {
+        /* LE BOUTON DIT CE QU'IL A FAIT, et ne se laisse pas presser deux
+           fois : sans cela, on ne sait pas si le clic a porté. */
+        favori.textContent = 'Ajouté aux favoris';
+        favori.disabled = true;
+      }).catch(() => {
+        favori.textContent = 'Échec de l’ajout';
+      });
+    });
+
+    if (this.#porte) boutons.append(aller);
+    boutons.append(favori);
+    boite.append(boutons);
+
+    /* LA SOURCE EST DITE, comme partout : ce qui manque manque à la carte,
+       pas à l'application. */
+    const source = document.createElement('p');
+    source.className = 'poi-fiche-source';
+    source.textContent = 'Source OpenStreetMap.';
+    boite.append(source);
+    return boite;
+  }
+
   /** Le témoin d'attente : il bat, donc il prouve que quelque chose se passe. */
   #attente(): HTMLElement {
     const s = document.createElement('span');
@@ -349,6 +451,11 @@ export class FiltrePoi extends HTMLElement {
     this.#lieux = [...this.#lieux, ...ajouts].slice(-LIEUX_GARDES);
   }
 
+  /** Le planificateur, quand il est là : « Y aller » lui parle. */
+  #porte: PorteItineraire | null = null;
+
+  set porteItineraire(p: PorteItineraire) { this.#porte = p; }
+
   /** Les images déjà fabriquées : une par couple motif/couleur. */
   #images = new Set<string>();
 
@@ -421,26 +528,21 @@ export class FiltrePoi extends HTMLElement {
       });
       /* LE NOM AU CLIC, ET NON EN PERMANENCE : cent étiquettes sur une vue
          de centre-ville cachent la carte qu'on essaie de lire. */
+      /* UNE FICHE, PAS UNE ÉTIQUETTE (LIEUX-1, 31/08). Armelin : « il y a
+         juste écrit un texte pour indiquer le nom de l'enseigne ou le type de
+         POI, mais ce serait bien d'afficher une fenêtre avec du détail […]
+         ainsi qu'un bouton permettant de configurer directement un trajet
+         pour y aller ou pour l'ajouter en favoris. »
+         LE DÉTAIL NE COÛTE AUCUNE REQUÊTE : les étiquettes étaient déjà dans
+         la réponse, on les jetait après avoir lu le nom. */
       carte.on('click', COUCHE, (e) => {
-        const p = e.features?.[0]?.properties as
-          { nom?: string; libelle?: string } | undefined;
-        if (!p) return;
-        const titre = p.nom && p.nom !== '' ? p.nom : (p.libelle ?? 'Lieu');
-        const sousTitre = p.nom && p.nom !== '' ? (p.libelle ?? '') : '';
-        const bulle = document.createElement('div');
-        bulle.className = 'poi-bulle-lieu';
-        const h = document.createElement('p');
-        h.className = 'poi-bulle-nom';
-        h.textContent = titre;
-        bulle.append(h);
-        if (sousTitre !== '') {
-          const s = document.createElement('p');
-          s.className = 'poi-bulle-type';
-          s.textContent = sousTitre;
-          bulle.append(s);
-        }
-        new Popup({ closeButton: true, closeOnClick: true, maxWidth: '240px' })
-          .setLngLat(e.lngLat).setDOMContent(bulle).addTo(carte);
+        const rang = Number((e.features?.[0]?.properties as { rang?: unknown })?.rang);
+        const lieu = Number.isFinite(rang) ? this.#lieux[rang] : undefined;
+        if (!lieu) return;
+        new Popup({ closeButton: true, closeOnClick: true, maxWidth: '300px' })
+          .setLngLat([lieu.lon, lieu.lat])
+          .setDOMContent(this.#ficheLieu(lieu))
+          .addTo(carte);
       });
       carte.on('mouseenter', COUCHE, () => { carte.getCanvas().style.cursor = 'pointer'; });
       carte.on('mouseleave', COUCHE, () => { carte.getCanvas().style.cursor = ''; });

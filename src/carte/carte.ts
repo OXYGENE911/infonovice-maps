@@ -178,6 +178,9 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   portePoi.appendChild(filtrePoi);
   carte.addControl({ onAdd: () => portePoi, onRemove: () => portePoi.remove() }, 'top-left');
   filtrePoi.carte = carte;
+  // « Y ALLER » DEPUIS LA FICHE D'UN LIEU (LIEUX-1, 31/08) : la même porte
+  // que la fiche de borne, pas un second chemin à maintenir.
+  filtrePoi.porteItineraire = panneau;
 
 
   /* LA VISIONNEUSE DE PHOTOS — une seule pour l'application, posée au body :
