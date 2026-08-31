@@ -52,8 +52,12 @@ describe('libelleVoie', () => {
     /* L'ÉLISION SE RECOLLE (TERRAIN-1, 30/08) : le service livre les noms
        sans apostrophe, et « Rue du Chateau D Eau » se lisait tel quel au
        premier plan du panneau — vu sur capture. */
-    expect(libelleVoie('R DU CHATEAU D EAU')).toBe('Rue du Chateau d’Eau');
-    expect(libelleVoie('R DE L EGLISE')).toBe('Rue de l’Eglise');
+    /* LES ACCENTS SONT RENDUS DEPUIS ACCENTS-1 (31/08) : la source les a
+       perdus, et la synthèse vocale prononçait « Proph-eu-te ». Ces deux
+       libellés attendaient l'ancienne sortie sans accents — la nouvelle est
+       à la fois plus juste à l'écran et mieux dite à voix haute. */
+    expect(libelleVoie('R DU CHATEAU D EAU')).toBe('Rue du Château d’Eau');
+    expect(libelleVoie('R DE L EGLISE')).toBe('Rue de l’Église');
     expect(libelleVoie('AV VICTORIA')).toBe('Avenue Victoria');
     expect(libelleVoie('BD DU MONTPARNASSE')).toBe('Boulevard du Montparnasse');
     expect(libelleVoie('R SAINT-MARTIN')).toBe('Rue Saint-Martin');
@@ -61,9 +65,9 @@ describe('libelleVoie', () => {
   });
 
   test('respecte l’élision : la particule reste basse, le nom reprend sa majuscule', () => {
-    expect(libelleVoie("R DE L'EGLISE")).toBe("Rue de l'Eglise");
+    expect(libelleVoie("R DE L'EGLISE")).toBe("Rue de l'Église");
     expect(libelleVoie("R D'ALSACE")).toBe("Rue d'Alsace");
-    expect(libelleVoie("PL DE L'HOTEL DE VILLE")).toBe("Place de l'Hotel de Ville");
+    expect(libelleVoie("PL DE L'HOTEL DE VILLE")).toBe("Place de l'Hôtel de Ville");
   });
 
   test('reste défensive : vide, null, type inattendu', () => {
