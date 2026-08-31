@@ -2,6 +2,38 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.112.0] — 2026-08-31 — LIEUX-1 : une fiche, pas une étiquette (PR #142)
+
+- **CE QU'ON SAIT DU LIEU, ET CE QU'ON PEUT EN FAIRE.** Armelin : « quand on
+  clique sur un POI à l'écran, il y a juste écrit un texte pour indiquer le nom
+  de l'enseigne ou le type de POI, mais ce serait bien d'afficher une fenêtre
+  avec du détail sur le POI ainsi qu'un bouton permettant de configurer
+  directement un trajet pour y aller ou pour l'ajouter en favoris. »
+- **LE DÉTAIL NE COÛTE AUCUNE REQUÊTE** : adresse, horaires, téléphone, site,
+  accès fauteuil et cuisine étaient DÉJÀ dans la réponse d'Overpass. On les
+  jetait après avoir lu le nom ; il suffisait de ne pas jeter.
+- **RIEN N'EST INVENTÉ.** Chaque rubrique n'existe que si la carte la porte :
+  une fiche pleine de rubriques vides ferait croire à un lieu mal renseigné
+  alors que c'est la donnée qui manque. La source est dite, comme partout.
+- **LES HORAIRES SONT MIS EN FRANÇAIS, MAIS ON NE CONCLUT JAMAIS « ouvert ».**
+  `opening_hours` est un petit langage à lui seul ; répondre juste demanderait
+  les jours fériés, les exceptions de dates et les semaines paires — et une
+  réponse fausse sur ce point fait faire un détour pour rien. « Mo-Fr
+  08:00-12:00,14:00-19:00; Su off » devient « du lundi au vendredi de 08 h 00 à
+  12 h 00 et de 14 h 00 à 19 h 00 · dimanche fermé ». L'usager lit, et décide.
+- **LE NUMÉRO SE COMPOSE D'UN DOIGT** : en voiture, recopier dix chiffres n'est
+  pas une option. Et un lien externe ne partage rien — `noreferrer` empêche le
+  site d'apprendre d'où vient la visite.
+- **« Y ALLER » PASSE PAR LA MÊME PORTE QUE LA FICHE DE BORNE** : un seul
+  chemin vers le planificateur, pas un second à maintenir. Sans planificateur
+  branché, le bouton ne paraît pas — un bouton qui ne fait rien est pire qu'un
+  texte.
+
+Tests : 19 unitaires (l'adresse recomposée, le téléphone appelable, les
+schémas d'URL refusés, l'accès fauteuil qui se tait quand il est inconnu, et
+les horaires en français), 1 E2E qui ouvre la fiche et presse les deux
+boutons. 934 unitaires, 284 E2E.
+
 ## [0.110.0] — 2026-08-31 — CORRIDOR-1 : le couloir suivait la corde, pas la route (PR #140)
 
 **LE DÉFAUT LE PLUS GRAVE TROUVÉ À CE JOUR, et il était totalement muet.**
