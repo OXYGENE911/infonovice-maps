@@ -3189,7 +3189,8 @@ filtre-poi {
    doigt, et leur couleur est celle des points posés sur la carte — c'est la
    légende, comme pour le rayon d'action. */
 .poi-familles { display: flex; flex-wrap: wrap; gap: 6px; }
-.poi-famille {
+.poi-famille,
+.poi-famille-bornes {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 5px 10px 5px 8px; border-radius: 999px; cursor: pointer;
   border: 1px solid var(--bord-2); background: var(--fond-doux);
@@ -3197,14 +3198,17 @@ filtre-poi {
 }
 /* LA PASTILLE EST LE DESSIN DE LA CARTE (POI-5, 31/08), plus un simple rond :
    même motif, même disque — le panneau est la légende. */
-.poi-famille .poi-pastille {
+.poi-famille .poi-pastille,
+.poi-famille-bornes .poi-pastille {
   display: inline-flex; flex: 0 0 auto; line-height: 0;
 }
-.poi-famille[aria-pressed="true"] {
+.poi-famille[aria-pressed="true"],
+.poi-famille-bornes[aria-pressed="true"] {
   border-color: var(--teinte); color: var(--texte-1); font-weight: 650;
   background: color-mix(in srgb, var(--teinte) 14%, transparent);
 }
-.poi-famille:focus-visible { outline: none; box-shadow: var(--focus); }
+.poi-famille:focus-visible,
+.poi-famille-bornes:focus-visible { outline: none; box-shadow: var(--focus); }
 
 /* BORNES-4 — le badge « filtres actifs » de la puce des bornes, et le
    retrait en un geste. */

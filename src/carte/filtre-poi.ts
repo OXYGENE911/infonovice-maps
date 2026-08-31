@@ -144,7 +144,11 @@ export class FiltrePoi extends HTMLElement {
              volet « Recharge et services » — un second interrupteur sur le
              même circuit, jamais une seconde source. Cachée tant que le
              volet n'est pas branché : un bouton qui ne fait rien ment. -->
-        <button type="button" class="poi-famille poi-famille-bornes"
+        <!-- SA CLASSE N'EST PAS .poi-famille, ET C'EST UN CONTRAT : ce
+             compte-là dénombre les familles Overpass dans les parcours
+             (« QUATORZE FAMILLES ») — la puce partage leur habit par le
+             CSS, pas leur classe. Attrapé par le parcours du compte. -->
+        <button type="button" class="poi-famille-bornes"
           aria-pressed="false" style="--teinte:#3FA877" hidden>
           <span class="poi-pastille" aria-hidden="true">${svgPastille('eclair', '#3FA877', 20)}</span>Bornes de recharge
           <!-- LE BADGE DES FILTRES (BORNES-4) : un réseau coché lors d'une
