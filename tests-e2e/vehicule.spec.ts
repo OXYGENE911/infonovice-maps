@@ -337,3 +337,43 @@ test('une recherche sans résultat le DIT, et laisse la saisie à la main', asyn
   // Le formulaire, lui, reste ouvert : le catalogue propose, il ne barre pas.
   await expect(page.getByLabel('Batterie', { exact: true })).toBeEditable();
 });
+
+test('LE RAYON DIT À QUELLE CHARGE IL RÉPOND', async ({ page }) => {
+  /* LE DÉFAUT DU 31/08. Armelin : « l'autonomie du rayon d'action affiché ne
+     correspond pas à l'autonomie configurée dans les paramètres du
+     véhicule. » Il saisissait 480 km en ville et lisait 384.
+     LE CHIFFRE ÉTAIT JUSTE : 480 × 80 % de charge. Mais il paraissait sous
+     un titre « autonomie constatée à PLEINE CHARGE », sans que rien ne dise
+     qu'on répondait à la charge COURANTE. Un chiffre juste qu'on ne peut pas
+     expliquer ne se distingue pas d'un chiffre faux — il fait douter du
+     reste. */
+  await ouvrirVehicule(page);
+  await page.getByLabel('Batterie').fill('87.7');
+  await page.getByLabel('Santé (SOCE)').fill('100');
+  await page.getByLabel('Charge (SOC)').fill('80');
+  await page.getByLabel('En ville').fill('480');
+
+  const lignes = page.locator('.veh-bilan-lignes');
+  await expect(lignes).toContainText('384 km');
+  // LA PHRASE QUI MANQUAIT, et qui vient AVANT les chiffres.
+  await expect(page.locator('.veh-bilan-charge'))
+    .toContainText('80 % de charge');
+  await expect(page.locator('.veh-bilan-charge'))
+    .toContainText('pas à pleine charge');
+  // ET LE RAPPROCHEMENT AVEC LA SAISIE, à portée de survol.
+  await expect(page.locator('.veh-bilan-ligne').first())
+    .toHaveAttribute('title', /480 km à pleine charge/);
+});
+
+test('à pleine charge, il ne s’excuse de rien', async ({ page }) => {
+  /* La précision ne doit pas devenir un bavardage : à 100 %, il n'y a rien à
+     expliquer, et une phrase de plus serait du bruit. */
+  await ouvrirVehicule(page);
+  await page.getByLabel('Batterie').fill('87.7');
+  await page.getByLabel('Santé (SOCE)').fill('100');
+  await page.getByLabel('Charge (SOC)').fill('100');
+  await page.getByLabel('En ville').fill('480');
+  await expect(page.locator('.veh-bilan-lignes')).toContainText('480 km');
+  await expect(page.locator('.veh-bilan-charge')).toContainText('à pleine charge');
+  await expect(page.locator('.veh-bilan-charge')).not.toContainText('pas à pleine');
+});

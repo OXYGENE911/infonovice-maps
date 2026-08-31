@@ -534,6 +534,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #138 — VÉHICULE-2, le rayon d'action dit à quelle charge il répond
+      (31/08) : 480 saisis, 384 affichés — le calcul était juste (80 % de
+      charge), mais rien ne le disait. La charge est nommée avant les
+      chiffres, et le retour à la saisie est à portée de survol.
 - [x] PR #137 — RELEVÉS-1, les feux et les péages tiennent leur promesse
       (31/08) : trois causes mesurées — une requête unique qui épuisait le
       budget d'Overpass, un client qui abandonnait avant le serveur, et une

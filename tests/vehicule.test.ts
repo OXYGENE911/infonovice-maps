@@ -8,7 +8,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   capaciteReelle, energieDisponible, autonomies, consommationsDepuisEssais,
-  CONTEXTES, type Vehicule,
+  facteursDAffichage, CONTEXTES, type Vehicule,
 } from '../src/lib/vehicule';
 
 const VF8: Vehicule = {
@@ -130,5 +130,35 @@ describe('les couleurs des contextes', () => {
 
   test('sont des teintes lisibles, pas des noms de couleurs', () => {
     for (const c of CONTEXTES) expect(c.couleur).toMatch(/^#[0-9A-F]{6}$/i);
+  });
+});
+
+describe('facteursDAffichage', () => {
+  /* LE DÉFAUT DU 31/08 : Armelin saisissait 480 km en ville et lisait 384.
+     Le chiffre était juste — 480 × 80 % de charge — mais RIEN ne le disait,
+     et un chiffre juste qu'on ne peut pas expliquer ne se distingue pas d'un
+     chiffre faux. Ces facteurs existent pour que l'interface les NOMME. */
+  test('rend la charge et la santé', () => {
+    expect(facteursDAffichage({ ...VF8, soc: 80, soce: 100 }))
+      .toEqual({ soc: 80, sante: 100 });
+  });
+
+  test('borne les saisies humaines — une frontière système', () => {
+    expect(facteursDAffichage({ ...VF8, soc: 150, soce: -20 }))
+      .toEqual({ soc: 100, sante: 0 });
+    expect(facteursDAffichage({ ...VF8, soc: NaN, soce: NaN }))
+      .toEqual({ soc: 0, sante: 0 });
+  });
+
+  /* LE RAPPROCHEMENT QUI MANQUAIT, et que l'infobulle porte désormais :
+     l'autonomie affichée, ramenée à pleine charge, retombe sur la saisie. */
+  test('permet de retrouver la saisie depuis l’affichage', () => {
+    const v: Vehicule = {
+      ...VF8, capaciteNominale: 87.7, soce: 100, soc: 80,
+      consommations: consommationsDepuisEssais(87.7, { ville: 480 }),
+    };
+    const affiche = autonomies(v).ville;
+    expect(affiche).toBeCloseTo(384, 0);
+    expect(affiche * (100 / facteursDAffichage(v).soc)).toBeCloseTo(480, 0);
   });
 });
