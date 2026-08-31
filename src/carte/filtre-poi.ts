@@ -120,6 +120,18 @@ export class FiltrePoi extends HTMLElement {
           <path d="M3.5 5h17l-6.6 7.6v5.7l-3.8 2.2v-7.9z"/>
         </svg>
       </button>
+      <!-- LE RAPPEL DES FILTRES VIT SUR LA CARTE (BORNES-5, 01/09), ET C'EST
+           TOUTE LA CORRECTION. BORNES-4 l'avait posé dans le volet
+           « Recharge et services » et sur la puce du panneau : deux surfaces
+           REPLIÉES. Armelin a donc revu le même défaut le lendemain — « je
+           n'ai toujours que les bornes ZUNDER » — sans jamais croiser
+           l'avertissement censé l'expliquer. Un message qu'il faut déplier
+           pour lire ne prévient personne. Celui-ci est à côté de la carte,
+           toujours, tant qu'un filtre retranche quelque chose. -->
+      <div class="poi-rappel-bornes" role="status" hidden>
+        <span class="poi-rappel-texte"></span>
+        <button type="button" class="poi-rappel-tout">Tout afficher</button>
+      </div>
       <div class="poi-panneau" hidden role="group"
         aria-label="Lieux à afficher autour de vous">
         <p class="poi-panneau-titre">Autour de moi</p>
@@ -552,9 +564,13 @@ export class FiltrePoi extends HTMLElement {
   /* LE VOLET « RECHARGE ET SERVICES » RESTE LE MAÎTRE de la couche des
      bornes (BORNES-4) : la puce lui délègue tout, et il la tient au courant
      par `majBornes` — cocher là-bas allume la puce ici, et inversement. */
-  #porteBornes: { basculer(actif: boolean): void; active(): boolean } | null = null;
+  #porteBornes: {
+    basculer(actif: boolean): void; active(): boolean; toutAfficher(): void;
+  } | null = null;
 
-  set porteBornes(p: { basculer(actif: boolean): void; active(): boolean }) {
+  set porteBornes(p: {
+    basculer(actif: boolean): void; active(): boolean; toutAfficher(): void;
+  }) {
     this.#porteBornes = p;
     const puce = this.querySelector<HTMLButtonElement>('.poi-famille-bornes');
     if (!puce) return;
@@ -562,6 +578,12 @@ export class FiltrePoi extends HTMLElement {
     puce.setAttribute('aria-pressed', String(p.active()));
     puce.addEventListener('click', () => {
       this.#porteBornes?.basculer(!this.#porteBornes.active());
+    });
+    /* LE RETRAIT SE FAIT LÀ OÙ LE PROBLÈME SE VOIT : dire à quelqu'un que
+       sa carte est filtrée en le renvoyant chercher le réglage dans un volet
+       serait lui désigner la porte sans lui donner la clé. */
+    this.querySelector('.poi-rappel-tout')?.addEventListener('click', () => {
+      this.#porteBornes?.toutAfficher();
     });
   }
 
@@ -575,9 +597,18 @@ export class FiltrePoi extends HTMLElement {
   majFiltresBornes(resume: string | null): void {
     const badge = this.querySelector<HTMLElement>('.poi-famille-filtres');
     const puce = this.querySelector<HTMLButtonElement>('.poi-famille-bornes');
-    if (!badge || !puce) return;
-    badge.hidden = resume === null;
-    puce.title = resume === null ? '' : `Filtres actifs : ${resume}`;
+    if (badge && puce) {
+      badge.hidden = resume === null;
+      puce.title = resume === null ? '' : `Filtres actifs : ${resume}`;
+    }
+    /* ET SURTOUT, SUR LA CARTE (BORNES-5) : c'est la seule surface qu'on
+       regarde en se demandant où sont passées les bornes. */
+    const rappel = this.querySelector<HTMLElement>('.poi-rappel-bornes');
+    const texte = this.querySelector<HTMLElement>('.poi-rappel-texte');
+    if (!rappel || !texte) return;
+    rappel.hidden = resume === null;
+    texte.textContent = resume === null ? ''
+      : `Bornes filtrées : ${resume}`;
   }
 
   /** Les images déjà fabriquées : une par couple motif/couleur. */
