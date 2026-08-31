@@ -7,8 +7,12 @@
 import type { Map as CarteMapLibre } from 'maplibre-gl';
 import {
   listerFavoris, retirerFavori, renommerFavori, exporterDonnees, importerDonnees, ajouterFavori,
-  ErreurFavoris, ErreurStockage, type Favori,
+  listerListes, creerListe, effacerListe, rangerFavori,
 } from '../lib/favoris';
+import {
+  LISTE_PAR_DEFAUT, COULEURS, type ListeFavoris,
+} from '../lib/listes-favoris';
+import { ErreurFavoris, ErreurStockage, type Favori } from '../lib/favoris';
 import { REPERES, lireRepere, effacerRepere, ecrireRepere } from '../lib/reperes';
 import { adresseInverse } from '../lib/adresse';
 import { pictoMenu } from './icone-menu';
@@ -39,6 +43,26 @@ export class PanneauFavoris extends HTMLElement {
             <div class="fav-reperes-liste"></div>
           </div>
           <ul class="favoris-liste" aria-label="Lieux favoris"></ul>
+          <!-- CRÉER UNE LISTE (FAVORIS-2, 31/08). Armelin : « en indiquant
+               soi-même un nom, un émoji et couleur dédiée ». Le formulaire
+               est REPLIÉ : trois champs ouverts en permanence donneraient
+               l'impression qu'il faut les remplir avant de se servir. -->
+          <details class="favoris-nouvelle">
+            <summary>Nouvelle liste</summary>
+            <div class="favoris-nouvelle-corps">
+              <label class="favoris-champ">Nom
+                <input type="text" class="favoris-liste-nom-champ" maxlength="40"
+                  placeholder="Bars à vin" aria-label="Nom de la liste">
+              </label>
+              <label class="favoris-champ">Émoji
+                <input type="text" class="favoris-liste-emoji-champ" maxlength="8"
+                  placeholder="🍷" aria-label="Émoji de la liste">
+              </label>
+              <div class="favoris-couleurs" role="radiogroup"
+                aria-label="Couleur de la liste"></div>
+              <button type="button" class="favoris-liste-creer">Créer la liste</button>
+            </div>
+          </details>
           <p class="favoris-vide">Aucun favori. Appuyez longuement sur la carte
             pour en ajouter un.</p>
           <p class="favoris-promesse">Vos données ne quittent jamais ce
@@ -110,6 +134,48 @@ export class PanneauFavoris extends HTMLElement {
     });
     this.querySelector('.favoris-partager')?.addEventListener('click', () => {
       void this.#partager();
+    });
+
+    /* LES COULEURS SONT DES BOUTONS, PAS UN SÉLECTEUR SYSTÈME : dix teintes
+       lisibles valent mieux qu'un choix libre dont la moitié serait
+       illisible sur la carte. */
+    const palette = this.querySelector('.favoris-couleurs');
+    if (palette) {
+      COULEURS.forEach((couleur, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'favoris-couleur';
+        b.style.setProperty('--teinte', couleur);
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', String(i === 0));
+        b.setAttribute('aria-label', `Couleur ${i + 1}`);
+        b.dataset['couleur'] = couleur;
+        b.addEventListener('click', () => {
+          for (const autre of palette.querySelectorAll('[role="radio"]')) {
+            autre.setAttribute('aria-checked', String(autre === b));
+          }
+        });
+        palette.append(b);
+      });
+    }
+    this.querySelector('.favoris-liste-creer')?.addEventListener('click', () => {
+      const nom = this.querySelector<HTMLInputElement>('.favoris-liste-nom-champ');
+      const emoji = this.querySelector<HTMLInputElement>('.favoris-liste-emoji-champ');
+      const choisie = this.querySelector<HTMLElement>('.favoris-couleur[aria-checked="true"]');
+      const etat = this.querySelector('.favoris-etat') as HTMLElement;
+      void creerListe({
+        nom: nom?.value ?? '',
+        emoji: emoji?.value ?? '',
+        couleur: choisie?.dataset['couleur'] ?? COULEURS[0]!,
+      }).then((l) => {
+        if (nom) nom.value = '';
+        if (emoji) emoji.value = '';
+        etat.textContent = `Liste ${l.nom} créée.`;
+        return this.rafraichir();
+      }).catch((e: unknown) => {
+        etat.textContent = e instanceof ErreurFavoris
+          ? e.message : 'La liste n’a pas pu être créée.';
+      });
     });
 
     void this.rafraichir();
@@ -365,9 +431,70 @@ export class PanneauFavoris extends HTMLElement {
     const liste = this.querySelector('.favoris-liste') as HTMLUListElement;
     const vide = this.querySelector('.favoris-vide') as HTMLElement;
     const favoris = await listerFavoris();
+    /* LES LIEUX SE RANGENT PAR LISTE (FAVORIS-2, 31/08). Armelin voulait
+       « une catégorie custom […] ou une liste prédéfinie comme sur Google
+       Maps ». Une liste plate de cinquante favoris ne se lit plus ; rangée,
+       elle se parcourt. */
+    this.#listes = await listerListes();
     liste.replaceChildren();
     vide.hidden = favoris.length > 0;
-    for (const favori of favoris) {
+    for (const l of this.#listes) {
+      /* TOUTES LES LISTES S'AFFICHENT, MÊME VIDES. J'avais d'abord caché les
+         listes vides pour éviter l'encombrement — mais une liste qu'on vient
+         de créer est vide par définition : la création paraissait alors sans
+         effet, et un parcours l'a attrapé. Une liste existe parce que
+         quelqu'un l'a voulue ; elle se voit. Son compte dit « vide », ce qui
+         est une information, pas un encombrement. */
+      const dedans = favoris.filter((f) => (f.liste ?? LISTE_PAR_DEFAUT) === l.id);
+      liste.append(this.#enteteListe(l, dedans.length));
+      for (const favori of dedans) liste.append(this.#ligneFavori(favori, favoris));
+    }
+    /* CE QUI POINTE VERS UNE LISTE DISPARUE NE SE PERD PAS : ranger n'est pas
+       jeter, et un favori orphelin reste un favori. */
+    const connues = new Set(this.#listes.map((l) => l.id));
+    const orphelins = favoris.filter((f) => !connues.has(f.liste ?? LISTE_PAR_DEFAUT));
+    for (const favori of orphelins) liste.append(this.#ligneFavori(favori, favoris));
+  }
+
+  #listes: ListeFavoris[] = [];
+
+  /** L'en-tête d'une liste : son émoji, son nom, ce qu'elle porte. */
+  #enteteListe(l: ListeFavoris, combien: number): HTMLLIElement {
+    const item = document.createElement('li');
+    item.className = 'favoris-entete-liste';
+    item.style.setProperty('--teinte', l.couleur);
+    const emoji = document.createElement('span');
+    emoji.className = 'favoris-liste-emoji';
+    emoji.setAttribute('aria-hidden', 'true');
+    emoji.textContent = l.emoji;
+    const nom = document.createElement('span');
+    nom.className = 'favoris-liste-nom';
+    nom.textContent = l.nom;
+    const compte = document.createElement('span');
+    compte.className = 'favoris-liste-compte';
+    compte.textContent = combien === 0 ? 'vide' : String(combien);
+    item.append(emoji, nom, compte);
+    if (l.livree !== true) {
+      const effacer = document.createElement('button');
+      effacer.type = 'button';
+      effacer.className = 'favoris-liste-effacer';
+      effacer.textContent = '✕';
+      effacer.setAttribute('aria-label',
+        `Supprimer la liste ${l.nom} — ses lieux rejoindront « Lieux favoris »`);
+      effacer.addEventListener('click', () => {
+        void effacerListe(l.id).then(() => this.rafraichir()).then(() => {
+          (this.querySelector('.favoris-etat') as HTMLElement).textContent =
+            `Liste ${l.nom} supprimée. Ses lieux sont dans « Lieux favoris ».`;
+        });
+      });
+      item.append(effacer);
+    }
+    return item;
+  }
+
+  /** Une ligne de favori — extraite pour que le rangement par liste la réemploie. */
+  #ligneFavori(favori: Favori, favoris: readonly Favori[]): HTMLLIElement {
+    {
       const item = document.createElement('li');
       const aller = document.createElement('button');
       aller.type = 'button';
@@ -413,8 +540,23 @@ export class PanneauFavoris extends HTMLElement {
             (suivant ?? this.querySelector<HTMLElement>('.favoris summary'))?.focus();
           });
       });
-      item.append(aller, renommer, retirer);
-      liste.append(item);
+      /* CHANGER DE LISTE SANS SORTIR DE LA LIGNE : ranger doit coûter un
+         geste, sinon personne ne range. */
+      const ranger = document.createElement('select');
+      ranger.className = 'favori-liste';
+      ranger.setAttribute('aria-label', `Liste de ${favori.nom}`);
+      for (const l of this.#listes) {
+        const o = document.createElement('option');
+        o.value = l.id;
+        o.textContent = `${l.emoji} ${l.nom}`;
+        o.selected = (favori.liste ?? LISTE_PAR_DEFAUT) === l.id;
+        ranger.append(o);
+      }
+      ranger.addEventListener('change', () => {
+        void rangerFavori(favori.id, ranger.value).then(() => this.rafraichir());
+      });
+      item.append(aller, ranger, renommer, retirer);
+      return item;
     }
   }
 
