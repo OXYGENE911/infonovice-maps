@@ -2,6 +2,24 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.6.1] — 2026-09-01 — FEUX-3 : les feux quittent la carte (PR #152)
+
+- **RETRAIT SUR RETOUR DE TERRAIN.** Armelin : « ils ne s'affichent pas
+  forcément tous et certains s'affichent en plein milieu d'autoroute, ce qui
+  est bizarre. Mieux vaut ne plus afficher les feux rouges à l'écran, surtout
+  qu'ils sont représentés sous forme d'un point rouge non cliquable. » Il a
+  raison deux fois : l'étiquette OSM `highway=traffic_signals` mêle aux
+  carrefours des feux de péage et de chantier — d'où les points en pleine
+  autoroute — et un point rouge muet n'explique rien.
+- **LE COMPTAGE PAR VARIANTE RESTE** (FEUX-1) : compter est fiable — un feu de
+  péage compté en trop ne change pas un classement de dizaines — là où SITUER
+  chaque point ne l'était pas. Retirer l'affichage n'enlève aucune décision à
+  l'usager.
+- Un parcours garde désormais la porte FERMÉE : ni case, ni couche, et
+  toujours aucun appel Overpass non demandé.
+
+Tests : le parcours FEUX-2 devient son contraire. 1023 unitaires, 304 E2E.
+
 ## [1.6.0] — 2026-08-31 — ARRIVEE-2 : l'arrivée attend d'être vraie (PR #151)
 
 - **LE CONSTAT NE MENT PLUS DE QUARANTE MÈTRES.** Armelin : « ne pas indiquer

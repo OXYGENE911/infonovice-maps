@@ -870,7 +870,7 @@ test('FEUX-1 : les feux comptés par variante — et « la moins arrêtée » d�
     .not.toContainText('la moins arrêtée');
 });
 
-test('FEUX-2 : les feux du trajet se posent sur la carte, à la demande', async ({ page }) => {
+test('FEUX-3 : les feux ne s’affichent PLUS sur la carte — et rien ne part tout seul', async ({ page }) => {
   /* Armelin, le 30/08 : « fais l'affichage des feux sur la carte ». À LA
      DEMANDE — Overpass est un commun bénévole, et personne ne veut de points
      rouges qu'il n'a pas demandés. */
@@ -912,22 +912,17 @@ test('FEUX-2 : les feux du trajet se posent sur la carte, à la demande', async 
   // RIEN TANT QU'ON NE DEMANDE RIEN : aucun appel, aucune couche.
   expect(appelsOverpass, 'Overpass n’est pas interrogé sans demande').toBe(0);
 
-  await page.locator('.iti-feux-carte').check();
-  /* TROIS CARREFOURS POUR QUATRE NŒUDS : la carte dit la même chose que le
-     comptage des variantes, ce qui est la moitié de l'intérêt. */
-  await expect(page.locator('.iti-feux-corps'))
-    .toContainText('3 carrefours à feux', { timeout: 15_000 });
+  /* LES FEUX NE S'AFFICHENT PLUS SUR LA CARTE (FEUX-3, 01/09). Armelin :
+     « ils ne s'affichent pas forcément tous et certains s'affichent en plein
+     milieu d'autoroute […] mieux vaut ne plus afficher les feux rouges ». La
+     donnée OSM mêle aux carrefours des feux de péage et de chantier, et un
+     point rouge non cliquable n'explique rien. Ce parcours garde la porte
+     FERMÉE : ni case, ni couche — et toujours aucun appel non demandé. */
+  await expect(page.locator('.iti-feux-carte')).toHaveCount(0);
   expect(await page.evaluate(() => Boolean(
     (window as unknown as { __carte: { getLayer(id: string): unknown } })
-      .__carte.getLayer('iti-feux'))), 'la couche des feux n’est pas posée').toBe(true);
-
-  // DÉCOCHER EFFACE, et ne rappelle rien.
-  await page.locator('.iti-feux-carte').uncheck();
-  await expect(page.locator('.iti-feux-corps')).toHaveText('');
-  await page.locator('.iti-feux-carte').check();
-  await expect(page.locator('.iti-feux-corps'))
-    .toContainText('3 carrefours à feux', { timeout: 15_000 });
-  expect(appelsOverpass, 'un seul relevé par trajet : le commun n’est pas martelé').toBe(1);
+      .__carte.getLayer('iti-feux'))), 'la couche des feux ne doit plus exister').toBe(false);
+  expect(appelsOverpass, 'retirer l’affichage ne doit pas laisser un appel fantôme').toBe(0);
 });
 
 test('ITI-3 : TROIS itinéraires A, B, C — chiffrés, tracés, et adoptables', async ({ page }) => {
