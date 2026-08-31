@@ -375,12 +375,22 @@ test('un filtre RESTAURÉ se dit — badge sur le volet, phrase d’état, retra
      posé dans le volet et sur la puce du panneau : deux surfaces REPLIÉES.
      Armelin a donc revu le même défaut le lendemain — « je n'ai toujours que
      les bornes ZUNDER » — sans jamais croiser l'avertissement. Ce parcours
-     mesure donc le rappel AVANT d'ouvrir quoi que ce soit. */
-  const rappel = page.locator('.poi-rappel-bornes');
-  await expect(rappel, 'le rappel doit se voir sans déplier').toBeVisible({ timeout: 10_000 });
-  await expect(rappel).toContainText('réseau ZUNDER');
+     mesure donc le signal AVANT d'ouvrir quoi que ce soit.
+     CE SIGNAL A CHANGÉ DE FORME (BORNES-8, 01/09) : c'était un rectangle posé
+     à côté de la carte, et il en faisait trop — « il apparaît aussi bien en
+     mode carte qu'en mode navigation et ne part jamais. En mode navigation,
+     le cartouche se fait même écraser par le panneau de direction ». Une
+     alerte qui ne part jamais cesse d'alerter. Reste un POINT sur
+     l'entonnoir : assez pour qu'on ouvre, trop peu pour qu'on subisse. */
+  const entonnoir = page.locator('.poi-bulle');
+  await expect(entonnoir, 'le point doit se voir sans déplier')
+    .toHaveClass(/poi-bulle-filtree/, { timeout: 10_000 });
 
   await page.getByRole('button', { name: 'Filtrer les lieux affichés sur la carte' }).click();
+  const rappel = page.locator('.poi-rappel-bornes');
+  await expect(rappel).toBeVisible();
+  await expect(rappel).toContainText('réseau ZUNDER');
+
   const badge = page.locator('.poi-famille-filtres');
   await expect(badge).toBeVisible();
   await expect(badge).toHaveText('filtres actifs');
@@ -397,6 +407,7 @@ test('un filtre RESTAURÉ se dit — badge sur le volet, phrase d’état, retra
   await effacer.click();
   await expect(badge).toBeHidden();
   await expect(rappel, 'le rappel doit disparaître avec le filtre').toBeHidden();
+  await expect(entonnoir, 'et le point avec lui').not.toHaveClass(/poi-bulle-filtree/);
   /* L'ÉCRITURE EST ASYNCHRONE : recharger sans l'attendre coupe la
      transaction IndexedDB en vol, et le parcours mesurerait un hasard. On
      attend que la mémoire dise VRAIMENT « plus de réseau écarté » —
@@ -425,10 +436,11 @@ test('un filtre RESTAURÉ se dit — badge sur le volet, phrase d’état, retra
   await expect(page.locator('.poi-famille-filtres')).toBeHidden();
 });
 
-test('LE RETRAIT SE FAIT DEPUIS LA CARTE, sans déplier un seul volet', async ({ page }) => {
+test('UN POINT SUR L’ENTONNOIR ANNONCE LE FILTRE, ET LE PANNEAU LE RETIRE', async ({ page }) => {
   /* BORNES-5 (01/09). Dire à quelqu'un que sa carte est filtrée en le
      renvoyant chercher le réglage dans un volet, c'est lui désigner la porte
-     sans lui donner la clé. Le bouton du rappel retire tout, sur place. */
+     sans lui donner la clé. Le bouton du rappel retire tout, sur place —
+     depuis le panneau des filtres, où BORNES-8 l'a rangé. */
   await taireIndexNational(page);
   await espionnerIrve(page);
   await page.goto('/');
@@ -454,8 +466,11 @@ test('LE RETRAIT SE FAIT DEPUIS LA CARTE, sans déplier un seul volet', async ({
   await page.reload();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
 
+  await expect(page.locator('.poi-bulle'), 'le point annonce le filtre')
+    .toHaveClass(/poi-bulle-filtree/, { timeout: 10_000 });
+  await page.getByRole('button', { name: 'Filtrer les lieux affichés sur la carte' }).click();
   const rappel = page.locator('.poi-rappel-bornes');
-  await expect(rappel).toBeVisible({ timeout: 10_000 });
+  await expect(rappel).toBeVisible();
   await rappel.getByRole('button', { name: 'Tout afficher' }).click();
   await expect(rappel).toBeHidden();
 
@@ -474,4 +489,45 @@ test('LE RETRAIT SE FAIT DEPUIS LA CARTE, sans déplier un seul volet', async ({
     })),
   { message: 'la mémoire garde encore le filtre retiré' })
     .not.toContain('ZUNDER');
+});
+
+test('LE BOUTON « Tout afficher » SE LIT EN THÈME SOMBRE', async ({ page }) => {
+  /* BORNES-8 (01/09). Armelin, sur mobile : « le texte est affiché en noir
+     sur fond noir, du coup je ne vois pas ce qui est écrit ». `color:
+     inherit` sur un <button> ne suffit pas : sans `color-scheme`, Chrome
+     peint les contrôles avec SA palette claire pendant que le volet reste
+     sombre. On mesure donc le CONTRASTE réel, pas la présence d'une règle. */
+  await taireIndexNational(page);
+  await espionnerIrve(page);
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await ouvrirBornes(page);
+  await page.getByLabel('Puissance minimale des bornes').selectOption('150');
+
+  const mesure = await page.evaluate(() => {
+    const b = document.querySelector('.poi-filtres-effacer') as HTMLElement;
+    const s = getComputedStyle(b);
+    /* LE FOND EFFECTIF : celui du bouton s'il est peint, sinon celui de son
+       premier ancêtre qui l'est. Un `transparent` comparé à lui-même donnerait
+       un contraste de 1 et ferait passer le défaut. */
+    let fond = s.backgroundColor;
+    let n: HTMLElement | null = b;
+    while (n && (fond === 'rgba(0, 0, 0, 0)' || fond === 'transparent')) {
+      n = n.parentElement;
+      fond = n ? getComputedStyle(n).backgroundColor : 'rgb(255, 255, 255)';
+    }
+    return { texte: s.color, fond };
+  });
+
+  const lum = (couleur: string): number => {
+    const [r, v, b] = (/(\d+),\s*(\d+),\s*(\d+)/.exec(couleur) ?? ['', '0', '0', '0'])
+      .slice(1).map((x) => Number(x) / 255);
+    const c = [r!, v!, b!].map((x) => (x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
+  };
+  const a = lum(mesure.texte); const b = lum(mesure.fond);
+  const contraste = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  /* LE CRITÈRE AA DU PROJET : 4,5:1 pour un texte courant. Noir sur noir vaut
+     1 — c'est ce que mesurait son téléphone. */
+  expect(contraste, `contraste insuffisant : ${mesure.texte} sur ${mesure.fond}`)
+    .toBeGreaterThan(4.5);
 });

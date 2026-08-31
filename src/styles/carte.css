@@ -3267,7 +3267,7 @@ filtre-poi {
    que ceux qui ont déjà trouvé le réglage. */
 .poi-rappel-bornes {
   display: flex; align-items: center; gap: 8px;
-  max-width: 15rem; margin-top: 6px;
+  margin: 4px 0 2px;
   padding: 6px 8px 6px 10px; border-radius: 10px;
   background: var(--fond); border: 1px solid #B45309;
   box-shadow: var(--ombre-s);
@@ -3278,12 +3278,21 @@ filtre-poi {
 .poi-rappel-tout {
   flex: 0 0 auto;
   padding: 4px 8px; border-radius: 7px;
-  border: 1px solid #B45309; background: transparent;
-  color: inherit; font: 600 11px var(--police); cursor: pointer;
+  border: 1px solid #B45309; background: var(--fond);
+  color: #96500A; font: 600 11px var(--police); cursor: pointer;
   white-space: nowrap;
 }
 .poi-rappel-tout:hover { background: rgb(180 83 9 / 12%); }
 .poi-rappel-tout:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* LE POINT SUR L'ENTONNOIR (BORNES-8) : ce qui reste visible depuis la carte
+   quand le rappel, lui, se range dans le panneau. */
+.poi-bulle { position: relative; }
+.poi-bulle-filtree::after {
+  content: ''; position: absolute; top: 5px; right: 5px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #B45309; border: 1.5px solid var(--fond);
+}
 
 /* BORNES-4 — le badge « filtres actifs » de la puce des bornes, et le
    retrait en un geste. */
@@ -3297,18 +3306,30 @@ filtre-poi {
   background: #B45309; /* ambre foncé : un réglage qui agit, pas une panne */
 }
 
+/* LE TEXTE EST NOMMÉ, PAS HÉRITÉ (BORNES-8, 01/09). Armelin, sur mobile :
+   « le texte est affiché en noir sur fond noir, du coup je ne vois pas ce qui
+   est écrit ». `color: inherit` sur un <button> ne suffit pas : sans
+   `color-scheme`, Chrome mobile peint les contrôles avec SA palette claire —
+   le fond du volet reste sombre, le texte devient noir. On nomme donc les
+   deux couleurs, thème par thème, comme pour l'aveu d'approximation de la
+   barre de recherche (même défaut, même correction). */
 .poi-filtres-effacer {
   display: block;
   margin: 0.25rem 0 0.5rem;
   padding: 0.35rem 0.6rem;
   border: 1px solid #B45309;
   border-radius: 6px;
-  background: transparent;
-  color: inherit;
+  background: var(--fond);
+  color: #96500A;
   font: inherit;
   font-size: 0.85rem;
   text-align: left;
   cursor: pointer;
+}
+@media (prefers-color-scheme: dark) {
+  .poi-filtres-effacer { color: var(--ambre); }
+  .poi-rappel-tout { color: var(--ambre); }
+  .poi-rappel-bornes { color: var(--texte-1); }
 }
 
 .poi-filtres-effacer:hover { background: rgb(180 83 9 / 12%); }
