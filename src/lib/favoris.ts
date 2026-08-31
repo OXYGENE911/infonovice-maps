@@ -131,6 +131,12 @@ export function validerSauvegarde(brut: unknown): { preferences: Record<string, 
       // L'adresse d'origine (renommage) voyage avec l'export : la perdre à
       // l'import ferait d'une restauration une dégradation.
       ...(typeof c.adresse === 'string' && c.adresse ? { adresse: c.adresse } : {}),
+      /* LA LISTE VOYAGE AVEC L'EXPORT (FAVORIS-2, 31/08). Sans cette ligne,
+         une restauration remettait tous les lieux en vrac dans la liste par
+         défaut : une sauvegarde qui perd le rangement n'est pas une
+         sauvegarde. Absente du fichier, elle retombe sur la valeur par
+         défaut — les exports d'avant restent lisibles. */
+      ...(typeof c.liste === 'string' && c.liste ? { liste: c.liste } : {}),
       cree: typeof c.cree === 'string' ? c.cree : new Date(0).toISOString(),
     });
   }
