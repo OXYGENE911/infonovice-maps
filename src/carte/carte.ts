@@ -189,11 +189,8 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      REFUSER poliment quand elle est trop large. POSÉ UNE FOIS POUR TOUTES,
      y compris pour les barres d'étapes qui naîtront plus tard. */
   poserEmpriseCourante(() => {
-    const b = carte.getBounds();
-    return {
-      vue: { ouest: b.getWest(), sud: b.getSouth(), est: b.getEast(), nord: b.getNorth() },
-      zoom: carte.getZoom(),
-    };
+    const centre = carte.getCenter();
+    return { lon: centre.lng, lat: centre.lat };
   });
   /* LA PUCE « BORNES DE RECHARGE » (BORNES-4) : le volet des services garde
      la couche, la puce n'est qu'un second interrupteur — et chacun tient
