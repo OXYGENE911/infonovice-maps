@@ -31,6 +31,23 @@ Tests : 8 unitaires sur la décomposition et la normalisation — dont ce que
 le dictionnaire REFUSE. 3 E2E qui lisent les requêtes RÉELLEMENT émises :
 le repli avoué du 23 bis, le 12 bis qui existe et ne déclenche AUCUN second
 appel, et l'adresse sans suffixe partie telle quelle.
+## [1.10.0] — 2026-09-01 — POI-6 : les écoles et les stades trouvent leur place (PR #156)
+
+- **LA FAMILLE « ÉCOLES ET UNIVERSITÉS »** dans le filtre POI — « les
+  écoles et les stades ne sont pas affichés en tant que POI ». Quatre
+  étiquettes OSM bien renseignées (school, kindergarten, college,
+  university) : on cherche « une école », pas un cycle. Leur pastille porte
+  une toque de diplômé, dans la grammaire des dessins existants.
+- **LES STADES REJOIGNENT LE SPORT** (`leisure=stadium`), qui devient
+  « Sport et stades ». PAS les terrains (`pitch`) : chaque city-stade de
+  quartier en porte un, et six cents points tomberaient sur une seule ville
+  — le plafond de la carte avalerait tout le reste.
+- Quinze familles tiennent encore sur un téléphone — mesuré par les
+  parcours existants, dont les comptes passent de quatorze à quinze.
+
+Tests : 2 unitaires (le rangement école/stade, la toque de la maternelle à
+l'université) ; les parcours des familles passent à QUINZE et vérifient la
+puce Écoles.
 ## [1.9.0] — 2026-09-01 — BORNES-4 : le mystère ZUNDER élucidé, et la puce des bornes (PR #155)
 
 - **LE MYSTÈRE « ZUNDER » ÉLUCIDÉ.** Armelin : « aucune borne n'est visible
