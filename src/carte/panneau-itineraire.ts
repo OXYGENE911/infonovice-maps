@@ -2776,8 +2776,20 @@ export class PanneauItineraire extends HTMLElement {
         bandeau.destinations = corridor.destinations;
         bandeau.giratoires = corridor.giratoires;
         bandeau.affectations = corridor.affectations;
+        bandeau.reperesManquants = false;
       })
-      .catch(() => { /* bénin : voir ci-dessus */ });
+      .catch(() => {
+        /* L'ÉCHEC N'EST PLUS SILENCIEUX (CORRIDOR-1, 31/08). Il l'était :
+           `catch(() => {})`. Sans corridor, il n'y a ni panneau de vitesse,
+           ni numéro de sortie, ni schéma de rond-point, ni affectation par
+           voie — et l'usager ne voyait AUCUNE différence avec une route qui
+           n'en aurait pas. Armelin a signalé un giratoire annoncé « tournez
+           à droite » : c'était cela.
+           LE SUIVI VAUT TOUJOURS SANS CES REPÈRES — on ne l'interrompt pas —
+           mais leur absence se dit, une fois, discrètement. */
+        if (!bandeau.actif || this.#dernier !== iti) return;
+        bandeau.reperesManquants = true;
+      });
 
     /* LE NOMBRE DE VOIES arrive de la même façon, et pour la même raison :
        c'est une SECONDE requête d'itinéraire, sur la ressource qui porte les
