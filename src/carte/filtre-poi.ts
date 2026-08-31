@@ -48,7 +48,7 @@ import { MOTIF_DE_FAMILLE, type CleMotif } from '../lib/pictos-lieux';
 import {
   imagePastille, cleImage, svgPastille, RAPPORT_PASTILLE,
 } from './icone-lieu';
-import { rubriquesDe, lignesHoraires } from '../lib/detail-lieu';
+import { rubriquesDe, lignesHoraires, etatOuverture } from '../lib/detail-lieu';
 import { ajouterFavori } from '../lib/favoris';
 import type { PorteItineraire } from './fiche-borne';
 import {
@@ -321,6 +321,20 @@ export class FiltrePoi extends HTMLElement {
         dt.textContent = r.libelle;
         const dd = document.createElement('dd');
         if (r.cle === 'horaires') {
+          /* OUVERT OU FERMÉ, QUAND ON SAIT (FICHE-3, 01/09). Armelin : « ce
+             serait bien d'afficher si l'établissement est ouvert ou fermé et
+             dans combien de temps il ferme ». La règle d'hier tient : on ne
+             CONCLUT que sur les expressions qu'on sait évaluer EXACTEMENT —
+             jours et plages simples, 24/7. Jours fériés, semaines paires,
+             dates : on affiche les horaires sans verdict, parce qu'un
+             « ouvert » faux fait faire un détour pour rien. */
+          const verdict = etatOuverture(lieu.tags?.['opening_hours'] ?? '', new Date());
+          if (verdict !== null) {
+            const v = document.createElement('span');
+            v.className = `poi-fiche-ouvert ${verdict.ouvert ? 'est-ouvert' : 'est-ferme'}`;
+            v.textContent = verdict.texte;
+            dd.append(v);
+          }
           /* UN JOUR PAR LIGNE (FICHE-2, 31/08) : « une sorte de tableau avec
              un jour par ligne et les horaires associés ». La phrase d'une
              seule ligne reste ce que la voix dirait ; l'œil, lui, lit des
@@ -384,6 +398,33 @@ export class FiltrePoi extends HTMLElement {
 
     if (this.#porte) boutons.append(aller);
     boutons.append(favori);
+
+    /* « PARTAGE FACILE » (FICHE-3, 01/09) : « inclure un lien permettant de
+       partager l'adresse à quelqu'un d'autre ». Le lien porte les
+       coordonnées et le nom dans le FRAGMENT # — jamais envoyé au serveur,
+       comme le partage de favoris. Pas d'algorithme maison de carrés d'un
+       mètre : des coordonnées WGS84 s'ouvrent partout, un code propriétaire
+       ne s'ouvre que chez nous — Plus Code est précisément le travers qu'on
+       évite. */
+    const partager = document.createElement('button');
+    partager.type = 'button';
+    partager.className = 'poi-fiche-partager';
+    partager.textContent = 'Partage facile';
+    partager.setAttribute('aria-label', `Partager ${nom} avec quelqu'un`);
+    partager.addEventListener('click', () => {
+      const lien = `${location.origin}${location.pathname}#lieu=`
+        + `${lieu.lon.toFixed(6)},${lieu.lat.toFixed(6)},${encodeURIComponent(nom)}`;
+      if (typeof navigator.share === 'function') {
+        void navigator.share({ title: nom, url: lien })
+          .catch(() => { /* geste annulé : pas une erreur */ });
+        return;
+      }
+      void navigator.clipboard.writeText(lien).then(() => {
+        partager.textContent = 'Lien copié !';
+        setTimeout(() => { partager.textContent = 'Partage facile'; }, 2500);
+      }).catch(() => { partager.textContent = 'Copie impossible'; });
+    });
+    boutons.append(partager);
     boite.append(boutons);
 
     /* LA SOURCE EST DITE, comme partout : ce qui manque manque à la carte,
@@ -393,6 +434,18 @@ export class FiltrePoi extends HTMLElement {
     source.textContent = 'Source OpenStreetMap.';
     boite.append(source);
     return boite;
+  }
+
+  /** Ouvre la fiche d'un lieu reçu par lien — mêmes boutons, sans étiquettes. */
+  montrerLieuPartage(lieu: { lon: number; lat: number; nom: string }): void {
+    const carte = this.#carte;
+    if (!carte) return;
+    new Popup({ closeButton: true, closeOnClick: true, maxWidth: '300px' })
+      .setLngLat([lieu.lon, lieu.lat])
+      .setDOMContent(this.#ficheLieu({
+        nom: lieu.nom, lon: lieu.lon, lat: lieu.lat, motif: 'point', tags: {},
+      }))
+      .addTo(carte);
   }
 
   /** Le témoin d'attente : il bat, donc il prouve que quelque chose se passe. */
@@ -563,6 +616,16 @@ export class FiltrePoi extends HTMLElement {
           .setLngLat([lieu.lon, lieu.lat])
           .setDOMContent(this.#ficheLieu(lieu))
           .addTo(carte);
+        /* LE LIEU EST RECADRÉ AU CLIC (FICHE-3, 01/09). Armelin : « si le
+           POI est situé à droite de l'écran, il arrive que la fenêtre
+           s'affiche hors champ et le bouton fermer est inaccessible ». La
+           bulle s'ancre bien à l'OUVERTURE — c'est le déplacement de carte
+           qui l'emmène ensuite hors écran, puisqu'elle suit son point. En
+           ramenant le point sous le centre, la fiche a la place de s'ouvrir
+           vers le haut et la croix reste sous le doigt. */
+        carte.easeTo({
+          center: [lieu.lon, lieu.lat], offset: [0, 120], duration: 350,
+        });
       });
       carte.on('mouseenter', COUCHE, () => { carte.getCanvas().style.cursor = 'pointer'; });
       carte.on('mouseleave', COUCHE, () => { carte.getCanvas().style.cursor = ''; });

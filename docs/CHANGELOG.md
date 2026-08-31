@@ -2,6 +2,38 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.7.0] — 2026-09-01 — FICHE-3 : la fiche tient à l'écran, dit si c'est ouvert, et se partage (PR #153)
+
+- **LA FICHE NE SORT PLUS DE L'ÉCRAN.** Armelin, sur mobile : « si le POI est
+  situé à droite de l'écran, il arrive que la fenêtre s'affiche hors champ et
+  le bouton fermer est alors inaccessible ». Mesuré : la bulle s'ancre BIEN à
+  l'ouverture — c'est le déplacement de la carte qui l'emmenait ensuite hors
+  écran, puisqu'elle suit son point. Le clic recadre désormais le lieu sous le
+  centre, et un parcours mesure que la fiche ET sa croix tiennent dans un
+  écran de 375 px pour un point collé au bord.
+- **OUVERT OU FERMÉ — QUAND ON SAIT.** « Afficher si l'établissement est
+  ouvert ou fermé et dans combien de temps il ferme. » La position d'hier
+  tient, mais elle admettait une voie du milieu : un ÉVALUATEUR PARTIEL
+  HONNÊTE, qui ne rend un verdict que sur les expressions qu'il sait évaluer
+  EXACTEMENT — jours et plages simples, 24/7. « Ouvert — ferme à 19 h 00 »,
+  « Ferme bientôt (45 min) » sous l'heure pile — le seuil qu'il nomme —,
+  « Fermé — ouvre à 14 h 00 ». Le moindre morceau inconnu (jours fériés,
+  semaines paires, dates) et le verdict se TAIT : un « ouvert » faux fait
+  faire un détour pour rien.
+- **« PARTAGE FACILE ».** Un bouton dans la fiche : le lien porte les
+  coordonnées et le nom dans le FRAGMENT #, jamais envoyé au serveur, et
+  celui qui le reçoit voit la carte s'ouvrir sur le lieu, fiche dépliée.
+  DES COORDONNÉES WGS84, PAS UN CODE MAISON : elles s'ouvrent partout, un
+  code propriétaire ne s'ouvrirait que chez nous — le Plus Code de Google est
+  précisément le travers qu'on évite.
+- **LES CUISINES EN FRANÇAIS** : soixante valeurs OSM traduites
+  (italian → italienne…) ; l'inconnue ressort telle quelle, une cuisine rare
+  mal traduite serait pire qu'un mot anglais.
+
+Tests : 15 unitaires sur l'évaluateur — dont CINQ qui vérifient qu'il se TAIT
+sur ce qu'il ne sait pas — et 3 sur la grammaire des jours. 2 E2E : la fiche
+mesurée dans l'écran à 375 px, et le lien de partage qui fait l'aller-retour
+complet. 1038 unitaires, 308 E2E.
 ## [1.6.1] — 2026-09-01 — FEUX-3 : les feux quittent la carte (PR #152)
 
 - **RETRAIT SUR RETOUR DE TERRAIN.** Armelin : « ils ne s'affichent pas
