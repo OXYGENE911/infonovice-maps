@@ -97,3 +97,25 @@ const MOTIFS: readonly { motif: CleMotif; test: (t: Record<string, string>) => b
 export function motifDe(tags: Record<string, string>): CleMotif {
   return MOTIFS.find((m) => m.test(tags))?.motif ?? 'point';
 }
+
+/* LE MOTIF QUI REPRÉSENTE UNE FAMILLE (POI-5, 31/08). Armelin : « quand je
+   clique sur le bouton de filtre, les POI associés sont encore écrits avec un
+   rond de couleur au lieu de leur logo dédié comme c'est le cas sur la
+   carte. » Une famille regroupe plusieurs motifs ; sa pastille de filtre
+   porte le plus parlant d'entre eux — celui qu'on se figure en la nommant. */
+export const MOTIF_DE_FAMILLE: Readonly<Record<string, CleMotif>> = {
+  restaurant: 'couverts',
+  cafe: 'tasse',
+  commerce: 'caddie',
+  hotel: 'lit',
+  culture: 'colonnes',
+  cinema: 'masques',
+  sante: 'croix',
+  argent: 'billet',
+  parking: 'parking',
+  auto: 'cle',
+  services: 'cintre',
+  sport: 'haltere',
+  transport: 'train',
+  wc: 'wc',
+};

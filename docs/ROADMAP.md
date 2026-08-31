@@ -534,6 +534,34 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       #favs= de la main à la main, réception confirmée, repères exclus,
       doublons écartés par la position ; l'export JSON reste l'outil du
       déménagement complet.
+- [x] PR #148 — TRAFIC-2, des dessins au lieu de ronds (31/08) : chaque
+      événement Bison Futé porte son pictogramme — voiture et éclat,
+      dépanneuse, triangle de chantier jaune et rouge — en plus grand.
+- [x] PR #147 — BORNES-2, les bornes du trajet suivent le filtre (31/08) :
+      la couche du corridor ne filtrait que par réseau — une 50 kW passait le
+      filtre « 150 kW et plus ». Et la durée d'arrêt quitte son halo pour une
+      pilule étirable, lisible sur tout fond.
+- [x] PR #146 — FICHE-2, la fiche se lit en sombre (31/08) : la bulle
+      MapLibre gardait son blanc en dur sous nos textes clairs — ton sur ton
+      sur téléphone. Horaires en tableau, pastilles du filtre au dessin de
+      la carte.
+- [x] PR #145 — passage en VERSION 1.0.0, décision d'Armelin du 31/08.
+- [x] PR #144 — FAVORIS-3, importer ses favoris Google Maps (31/08) : lecture
+      LOCALE d'un export Takeout, le nom du fichier fait la liste, ce qu'on
+      ne sait pas situer est dit plutôt que deviné. Aucune requête ne part
+      chez Google — un parcours les compte.
+- [x] PR #143 — FAVORIS-2, des listes pour ranger ses lieux (31/08) : nom,
+      émoji et couleur, plus les trois listes prédéfinies. Supprimer une
+      liste rend ses lieux à « Lieux favoris » — ranger n'est pas jeter.
+- [x] PR #142 — LIEUX-1, une fiche pour un lieu (31/08) : le détail était
+      déjà dans la réponse d'Overpass, on le jetait. Horaires en français
+      sans jamais conclure « ouvert », téléphone appelable, « Y aller » et
+      favoris.
+- [x] PR #140 — CORRIDOR-1, le couloir suivait la corde et non la route
+      (31/08) : le tracé simplifié à 300 m sortait la route du couloir
+      Overpass, et TOUT le corridor disparaissait en ville — limites,
+      sorties, giratoires, voies — sans un mot. Douglas-Peucker borne
+      l'écart à 8 m, et l'absence des repères se dit.
 - [x] PR #141 — ACCENTS-1, rendre leurs accents aux noms de voies (31/08) :
       la source les a perdus (BD TOPO rend « IMP DU PROPHETE »), et la voix
       prononçait « Proph-eu-te ». Dictionnaire FERMÉ de 139 entrées ; ce qu'il
@@ -809,8 +837,6 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       comprise.
 - DÉCISIONS D'ARMELIN : bottom sheets généralisées ; profils de pauses ;
   copilote / routines / arrivée réelle (§4 du triage).
-
-- [x] PR #140 — CORRIDOR-1, le couloir suivait la corde et non la route.
 
 ## Itérations suivantes (backlog ouvert)
 - PR #28+ — Signalements communautaires (premier backend, hors périmètre 0 €),

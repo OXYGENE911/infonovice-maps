@@ -104,6 +104,8 @@ const COULEUR_ARRET = '#0C447C';
 /** Ce que le planificateur sait demander à la couche des bornes nationales. */
 export interface PorteCouchesBornes {
   masquerBornesNationales(masquees: boolean): void;
+  /** Les filtres d'AFFICHAGE du panneau — la puissance et les prises. */
+  filtresAffichage?(): { puissanceMin?: number; prises?: string[] };
 }
 
 /** Les pages du planificateur, et leur titre. */
@@ -365,6 +367,9 @@ export class PanneauItineraire extends HTMLElement {
   }
 
   set couchesBornes(p: PorteCouchesBornes) { this.#couchesBornes = p; }
+
+  /** Redessine les bornes du trajet — quand un filtre d'affichage change. */
+  reposerBornesTrajet(): void { this.#poserBornesTrajet(); }
 
   set carte(c: CarteMapLibre) {
     this.#carte = c;
@@ -1461,6 +1466,23 @@ export class PanneauItineraire extends HTMLElement {
     const candidates = this.#candidates();
     const montrees = new Set(candidates.map((c) => cleBorne(c)));
 
+    /* LES FILTRES D'AFFICHAGE VALENT AUSSI ICI (BORNES-2, 31/08). Armelin :
+       « j'ai fait un filtre pour n'afficher que les stations avec des bornes
+       de plus de 150 kW, et on voit une station avec des bornes de 50 kW et
+       moins apparaître ». La couche du corridor ne filtrait que par réseau —
+       le gris qu'il a vu est le palier 1 (#5B7A9E, jusqu'à 50 kW).
+       L'AFFICHAGE SEUL EST FILTRÉ : les candidates du PLAN restent entières,
+       parce qu'un arrêt de 50 kW peut sauver un trajet — et les pastilles
+       numérotées des arrêts RETENUS s'affichent toujours, filtre ou pas :
+       cacher une étape du plan serait cacher le plan. */
+    const affichage = this.#couchesBornes?.filtresAffichage?.() ?? {};
+    const passeAffichage = (t: SurLeTrajet<StationRapide>): boolean => {
+      if (affichage.puissanceMin !== undefined
+        && t.poi.puissance < affichage.puissanceMin) return false;
+      if (affichage.prises !== undefined
+        && !t.poi.prises.some((p) => affichage.prises!.includes(p))) return false;
+      return true;
+    };
     const corridor: GeoJSON.FeatureCollection = {
       type: 'FeatureCollection',
       features: this.#bornesTrajet
@@ -1468,7 +1490,8 @@ export class PanneauItineraire extends HTMLElement {
           const cle = this.#cleDe(t);
           // Ni les arrêts (l'autre couche les porte), ni ce que le filtre de
           // réseau vient d'écarter — sauf les refus au « − », qu'on garde.
-          return !rangs.has(cle) && (montrees.has(cle) || this.#ecartees.has(cle));
+          return !rangs.has(cle) && (montrees.has(cle) || this.#ecartees.has(cle))
+            && passeAffichage(t);
         })
         .map((t) => ({
           type: 'Feature',
@@ -1502,6 +1525,7 @@ export class PanneauItineraire extends HTMLElement {
         srcArrets.setData(pastilles);
       } else {
         poserIconesPuissance(carte);
+        this.#poserPiluleDuree(carte);
         carte.addSource(SOURCE_CORRIDOR, { type: 'geojson', data: corridor });
         carte.addSource(SOURCE_ARRETS, { type: 'geojson', data: pastilles });
         /* Le corridor sous les arrêts : une candidate collée à un arrêt ne
@@ -1550,11 +1574,21 @@ export class PanneauItineraire extends HTMLElement {
             'text-offset': [1.7, 0],
             'text-allow-overlap': true,
             'text-ignore-placement': true,
+            /* SUR UNE PILULE, PAS SUR UN HALO (ARRET-1, 31/08). Armelin :
+               « c'est affiché en petit en bleu avec un halo blanc, ce qui
+               nuit à la lisibilité […] peut-être afficher la durée dans un
+               petit panneau clair ». Le halo laissait le fond de carte
+               traverser entre les lettres — illisible sur du satellite.
+               L'image s'ÉTIRE autour du texte : « 18 min » et « 1 h 05 »
+               ont chacun leur panneau à leur taille. */
+            'icon-image': 'iti-pilule-duree',
+            'icon-text-fit': 'both',
+            'icon-text-fit-padding': [3, 8, 3, 8],
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
           },
           paint: {
             'text-color': '#0C447C',
-            'text-halo-color': '#FFFFFF',
-            'text-halo-width': 1.6,
           },
         });
       }
@@ -1580,6 +1614,36 @@ export class PanneauItineraire extends HTMLElement {
     }
     this.#modeTrajetPose = false;
     this.#couchesBornes?.masquerBornesNationales(false);
+  }
+
+  /**
+   * La pilule qui porte la durée d'arrêt — une image étirable, dessinée ici.
+   *
+   * BLANC BORDÉ DU BLEU DES ARRÊTS : un panneau clair reste lisible sur tout
+   * fond — plan, satellite, sombre — là où un halo laissait le décor passer
+   * entre les lettres. `stretchX`/`stretchY` disent à MapLibre quelles zones
+   * s'étirent : les coins restent ronds quelle que soit la longueur du texte.
+   */
+  #poserPiluleDuree(carte: CarteMapLibre): void {
+    if (carte.hasImage('iti-pilule-duree')) return;
+    const l = 48; const h = 30; const r = 9;
+    const toile = document.createElement('canvas');
+    toile.width = l; toile.height = h;
+    const c = toile.getContext('2d');
+    if (!c) return;
+    c.beginPath();
+    c.roundRect(1.5, 1.5, l - 3, h - 3, r);
+    c.fillStyle = '#FFFFFF';
+    c.fill();
+    c.lineWidth = 2;
+    c.strokeStyle = COULEUR_ARRET;
+    c.stroke();
+    carte.addImage('iti-pilule-duree', c.getImageData(0, 0, l, h), {
+      pixelRatio: 2,
+      stretchX: [[r + 3, l - r - 3]],
+      stretchY: [[r + 3, h - r - 3]],
+      content: [r, 5, l - r, h - 5],
+    });
   }
 
   /* ---- ce que la fiche d'une borne sait demander au plan ---- */

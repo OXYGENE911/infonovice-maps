@@ -3195,9 +3195,10 @@ filtre-poi {
   border: 1px solid var(--bord-2); background: var(--fond-doux);
   font: 500 12px var(--police); color: var(--texte-2);
 }
+/* LA PASTILLE EST LE DESSIN DE LA CARTE (POI-5, 31/08), plus un simple rond :
+   même motif, même disque — le panneau est la légende. */
 .poi-famille .poi-pastille {
-  width: 9px; height: 9px; border-radius: 50%; background: var(--teinte);
-  flex: 0 0 auto;
+  display: inline-flex; flex: 0 0 auto; line-height: 0;
 }
 .poi-famille[aria-pressed="true"] {
   border-color: var(--teinte); color: var(--texte-1); font-weight: 650;
@@ -3224,6 +3225,36 @@ filtre-poi {
 @media (prefers-reduced-motion: reduce) {
   .poi-filtre-attente::after { animation: none; opacity: .7; }
 }
+/* LA BULLE MAPLIBRE PREND LES COULEURS DU THÈME (FICHE-2, 31/08). Armelin,
+   sur téléphone : « il est affiché dans un encart blanc avec une écriture
+   claire […] c'est écrit ton sur ton. » MESURÉ en thème sombre : fond
+   rgb(255,255,255) — le blanc EN DUR de maplibre-gl.css — sous un texte
+   rgb(240,242,245) venu de nos variables. Le défaut ne se voyait qu'en
+   sombre, donc sur son téléphone et pas dans mes captures claires.
+   LA POINTE SUIT LE FOND, pour chaque ancrage : une bulle sombre à pointe
+   blanche aurait l'air décousue. */
+.maplibregl-popup-content {
+  background: var(--fond); color: var(--texte-1);
+  border-radius: 12px; box-shadow: var(--ombre-m);
+  padding: 12px 14px;
+}
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--fond);
+}
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--fond);
+}
+.maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: var(--fond); }
+.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--fond); }
+.maplibregl-popup-close-button {
+  color: var(--texte-2); font-size: 18px; padding: 2px 8px;
+}
+.maplibregl-popup-close-button:focus-visible { outline: none; box-shadow: var(--focus); }
+
 /* LA FICHE D'UN LIEU (LIEUX-1, 31/08) — même langage visuel que les autres
    cartouches : ce qu'on sait, puis ce qu'on peut en faire. */
 .poi-fiche-nom { margin: 0; font: 650 15px var(--police); color: var(--texte-1); }
@@ -3240,6 +3271,11 @@ filtre-poi {
   gap: 3px 12px; font: 400 12.5px/1.45 var(--police);
 }
 .poi-fiche-details dt { color: var(--texte-3); }
+/* LES HORAIRES EN TABLEAU (FICHE-2, 31/08) : « ce serait plus joli et facile
+   à lire d'afficher une sorte de tableau avec un jour par ligne et les
+   horaires associés ». Chaque ligne est un bloc de l'expression OSM. */
+.poi-fiche-horaires { margin: 0; display: grid; gap: 2px; }
+.poi-fiche-horaires > span { display: block; }
 .poi-fiche-details dd { margin: 0; color: var(--texte-1); overflow-wrap: anywhere; }
 .poi-fiche-details a { color: var(--accent); }
 .poi-fiche-boutons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 11px; }
