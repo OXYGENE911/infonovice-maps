@@ -2,6 +2,60 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [0.110.0] — 2026-08-31 — CORRIDOR-1 : le couloir suivait la corde, pas la route (PR #140)
+
+**LE DÉFAUT LE PLUS GRAVE TROUVÉ À CE JOUR, et il était totalement muet.**
+Armelin, le 31/08 : « un rond-point où le GPS m'a demandé de tourner à droite
+au lieu de m'indiquer un schéma de rond-point et me demander de tourner à
+gauche à la troisième sortie ».
+
+- **CE N'ÉTAIT PAS LE DÉTECTEUR DE GIRATOIRES.** Sur les données réelles du
+  trajet, il trouve les deux anneaux, rangs 4 et 1. C'était la REQUÊTE qui ne
+  rapportait rien.
+- **LE TRACÉ ÉTAIT SIMPLIFIÉ À UN POINT TOUS LES 300 m**, et `around`
+  d'Overpass mesure la distance à la POLYLIGNE qu'on lui donne. En ville, la
+  corde coupe les virages et s'écarte de la vraie route bien au-delà des 25 m
+  cherchés : la route n'est plus dans le couloir. MESURÉ sur une rue de
+  banlieue de 820 m : **4 points, ZÉRO anneau, ZÉRO limite**. Avec la
+  simplification garantie : **6 points, CINQ anneaux, UNE limite**.
+- **TOUT LE CORRIDOR DISPARAISSAIT AVEC** : limites de vitesse, numéros de
+  sortie, destinations de bretelles, schémas de rond-point, affectation par
+  voie. Sur autoroute la route est droite et la simplification ne coûtait
+  rien — le défaut ne se voyait qu'EN VILLE, là où la conduite est la plus
+  exigeante, et c'est pourquoi le panneau de vitesse marchait parfois.
+- **DOUGLAS-PEUCKER PLUTÔT QU'UN PAS FIXE** (`lib/simplifier.ts`). Un pas
+  assez fin pour les virages produirait des milliers de points sur les lignes
+  droites, et une requête trop grosse expire. La simplification garantie borne
+  l'écart à 8 m : les droites d'autoroute retombent à deux points, les virages
+  en gardent autant qu'il en faut. Mesuré : elle coûte MOINS de points qu'avant
+  en ville (9 contre 11 sur 5 km) et sur route (186 contre 217 sur 75 km).
+- **ET LE SILENCE EST LEVÉ.** L'appelant écrivait `catch(() => {})` : sans
+  corridor, l'usager ne voyait AUCUNE différence avec une route qui n'aurait ni
+  limite ni rond-point. Le suivi vaut toujours sans ces repères — on ne
+  l'interrompt pas — mais leur absence se dit désormais, une fois, discrètement.
+- **LE MÊME TRIPLET QUE LES FEUX ET LES PÉAGES** est appliqué ici : découpage
+  en paquets, lecture du `remark` d'expiration, et délai client SUPÉRIEUR au
+  budget serveur. Le corridor coupait à 45 s pour un budget de 45 s.
+
+**VÉRIFIÉ CONTRE LE SERVICE RÉEL**, sur un vrai giratoire : avant, « Au bout de
+la voie, tournez à droite » sans schéma ; après, **« Prenez la 4e sortie »**
+avec le schéma, puis « Prenez la 1re sortie » au giratoire suivant — les rangs
+exacts que la fonction pure calculait.
+
+- **ET LA LIGNE DU BAS NE TOUCHE PLUS LE BORD DE L'ÉCRAN.** « Les textes sont
+  tellement bas que ça touche presque la bordure de mon écran. » La règle
+  téléphone écrivait `padding: 10px 12px` — un RACCOURCI, qui remettait le bas
+  à dix pixels et effaçait la marge d'encoche, précisément sur les appareils
+  qui en ont une. Mesuré : les chiffres s'arrêtaient à 12 px du bas quand le
+  bouton d'arrêt voisin en gardait 24. Ils en gardent 24 à leur tour.
+
+Tests : 19 unitaires sur la simplification — dont la garantie d'écart MESURÉE
+à quatre tolérances, la droite qui retombe à deux points, et un tracé de trente
+mille points qui ne fait pas déborder la pile. 5 E2E : le couloir qui ne quitte
+plus la chaussée dans les virages (écart mesuré en mètres), le découpage,
+l'expiration qui ne se lit pas « route sans repères », le suivi qui vaut
+toujours, et la ligne du bas mesurée en pixels. 890 unitaires, 285 E2E.
+
 ## [0.108.0] — 2026-08-31 — VÉHICULE-2 : le rayon d'action dit à quelle charge il répond (PR #138)
 
 - **UN CHIFFRE JUSTE ET INEXPLICABLE VAUT UN CHIFFRE FAUX.** Armelin : « dans
