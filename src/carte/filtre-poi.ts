@@ -37,15 +37,15 @@
  * manquant, puis se vidait une fois le choix fait — le seul moment où
  * l'usager attend qu'on lui dise ce qui se passe.
  */
-import type {
-  Map as CarteMapLibre, GeoJSONSource, DataDrivenPropertyValueSpecification,
-} from 'maplibre-gl';
+import type { Map as CarteMapLibre, GeoJSONSource } from 'maplibre-gl';
 import { Popup } from 'maplibre-gl';
 import {
   CATEGORIES, urlFamilles, versLieux, PLAFOND_LIEUX, ErreurCategories,
   type LieuCategorie,
 } from '../lib/categories';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
+import type { CleMotif } from '../lib/pictos-lieux';
+import { imagePastille, cleImage, RAPPORT_PASTILLE } from './icone-lieu';
 import {
   elargir, estCouverte, memoriser, type Emprise,
 } from '../lib/couverture';
@@ -349,7 +349,32 @@ export class FiltrePoi extends HTMLElement {
     this.#lieux = [...this.#lieux, ...ajouts].slice(-LIEUX_GARDES);
   }
 
-  /** Pose les lieux — un point par lieu, la couleur de sa famille. */
+  /** Les images déjà fabriquées : une par couple motif/couleur. */
+  #images = new Set<string>();
+
+  /**
+   * S'assure que la pastille existe dans la carte, et rend sa clé.
+   *
+   * FABRIQUÉE UNE SEULE FOIS : une vue de centre-ville porte des centaines de
+   * lieux pour une vingtaine de dessins. Redessiner à chaque point aurait
+   * coûté cent fois le travail utile.
+   */
+  #assurerImage(motif: CleMotif, famille: string | undefined): string {
+    const couleur = CATEGORIES.find((c) => c.cle === famille)?.couleur ?? '#5F5E5A';
+    const cle = cleImage(motif, couleur);
+    const carte = this.#carte;
+    if (!carte || this.#images.has(cle)) return cle;
+    if (!carte.hasImage(cle)) {
+      const image = imagePastille(motif, couleur);
+      // SANS TOILE, PAS D'IMAGE — et MapLibre dessinerait un trou. On rend
+      // quand même la clé : la couche se pose, simplement sans ce motif.
+      if (image) carte.addImage(cle, image, { pixelRatio: RAPPORT_PASTILLE });
+    }
+    this.#images.add(cle);
+    return cle;
+  }
+
+  /** Pose les lieux — une pastille par lieu, le motif de son type. */
   #poser(lieux: readonly LieuCategorie[]): void {
     const carte = this.#carte;
     if (!carte) return;
@@ -361,6 +386,9 @@ export class FiltrePoi extends HTMLElement {
           rang: i, famille: l.famille ?? '',
           nom: l.nom ?? '',
           libelle: CATEGORIES.find((c) => c.cle === l.famille)?.libelle ?? '',
+          // LE MOTIF DIT LE TYPE, LA COULEUR DIT LA FAMILLE : l'image est
+          // le couple des deux, fabriquée une fois et réutilisée partout.
+          image: this.#assurerImage(l.motif ?? 'point', l.famille),
         },
         geometry: { type: 'Point' as const, coordinates: [l.lon, l.lat] },
       })),
@@ -370,22 +398,25 @@ export class FiltrePoi extends HTMLElement {
       if (existante) { existante.setData(donnees); return; }
       carte.addSource(SOURCE, { type: 'geojson', data: donnees });
       carte.addLayer({
-        id: COUCHE, type: 'circle', source: SOURCE,
-        paint: {
-          /* UNE COULEUR PAR FAMILLE, lue sur la donnée : douze couches
-             auraient douze fois les mêmes réglages à corriger. */
-          /* Le typage de MapLibre exige une expression LITTÉRALE : un
-             `...spread` ne lui prouve pas qu'il y a au moins un cas. On la
-             construit donc, et l'on affirme la forme — la donnée reste celle
-             des familles, source unique des couleurs. */
-          'circle-color': [
-            'match', ['get', 'famille'],
-            ...CATEGORIES.flatMap((c) => [c.cle, c.couleur]),
-            '#5F5E5A',
-          ] as unknown as DataDrivenPropertyValueSpecification<string>,
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 4, 17, 8],
-          'circle-stroke-width': 1.6,
-          'circle-stroke-color': '#FFFFFF',
+        id: COUCHE, type: 'symbol', source: SOURCE,
+        layout: {
+          /* L'IMAGE EST CHOISIE PAR LA DONNÉE, et la donnée porte déjà la
+             clé : une couche pour tous les motifs, au lieu d'une couche par
+             famille avec les mêmes réglages à corriger vingt fois. */
+          'icon-image': ['get', 'image'],
+          /* PLUS GROS QUE LES RONDS D'AVANT, ET C'EST LA DEMANDE : « un rond
+             de couleur un peu plus gros, mais avec un motif clairement
+             identifiable ». Mesuré à l'écran : au-dessous de vingt-cinq
+             pixels, le caddie et la clé ne se distinguent plus. L'image fait
+             soixante-quatre pixels pour un rapport de deux, donc une taille
+             de 1 vaut trente-deux pixels affichés. */
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 13, 0.68, 17, 1],
+          /* ON NE CACHE PAS LES PASTILLES QUI SE CHEVAUCHENT : un
+             restaurant qui disparaît parce qu'un autre est trop près se lit
+             comme une donnée manquante. Elles se serrent, elles ne
+             s'effacent pas. */
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
         },
       });
       /* LE NOM AU CLIC, ET NON EN PERMANENCE : cent étiquettes sur une vue
