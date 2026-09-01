@@ -2,7 +2,10 @@
 // rôles ARIA complets, navigation aux flèches, Entrée sélectionne, Échap
 // referme. Débounce de 300 ms et annulation de la requête précédente : le
 // quota BAN est un bien commun (règle du projet).
-import { chercherAdresses, communeNommee, type ResultatAdresse } from '../lib/adresse';
+import {
+  chercherAdresses, communeNommee, repondALaSaisie, type ResultatAdresse,
+} from '../lib/adresse';
+import { dansEmprise, type Emprise } from '../lib/couverture';
 import { chercherParNom, LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
 import { chercherEtablissements } from '../lib/annuaire-education';
 import { analyser, decoder, departementDe } from '../lib/adresse-mots';
@@ -21,12 +24,24 @@ let instances = 0;
    leur recherche par nom serait restée muette sans rien dire. Toutes les
    barres partagent la même carte : un point d'entrée suffit, et il vaut
    pour celles à naître. Un parcours l'a attrapé avant l'usager. */
-let centreCarte: (() => { lon: number; lat: number } | null) | null = null;
+/* L'EMPRISE ET NON LE SEUL CENTRE (RECHERCHE-5) : savoir où l'on regarde ne
+   suffit pas, il faut savoir JUSQU'OÙ. Le centre d'une vue qui montre la
+   France entière ne désigne aucun lieu ; la même vue, au zoom d'un quartier,
+   en désigne un. C'est l'étendue qui fait la différence, et la demander évite
+   d'inventer un seuil de zoom qui n'aurait de sens sur aucun écran. */
+let vueCourante: (() => VueCarte | null) | null = null;
+
+/** Où la carte regarde, et jusqu'où. */
+export interface VueCarte {
+  lon: number;
+  lat: number;
+  emprise: Emprise;
+}
 
 /** Dit aux barres de recherche où la carte regarde. Posé une fois. */
 export function poserEmpriseCourante(
-  f: () => { lon: number; lat: number } | null,
-): void { centreCarte = f; }
+  f: () => VueCarte | null,
+): void { vueCourante = f; }
 
 /* CE QUI RESSEMBLE À UNE ADRESSE NE VA PAS CHERCHER UN NOM. Un numéro en
    tête, c'est la Base Adresse Nationale qui répond — et Overpass n'a pas à
@@ -35,26 +50,35 @@ function ressembleAUnNom(texte: string): boolean {
   return !/^\s*\d/.test(texte);
 }
 
-/* SOUS CE SCORE, LA BAN A RÉPONDU À CÔTÉ (RECHERCHE-3). Mesuré sur le service :
-   une vraie adresse vaut 0,965 ; « Tour Eiffel Paris » vaut 0,378 (elle rend
-   l'avenue Gustave Eiffel faute de mieux), « Collège Albert Camus… » 0,636,
-   « Pincevent » 0,838 pour un lieu-dit à deux cents kilomètres. Au-dessus du
-   seuil, on ne dérange personne : l'adresse est trouvée.
-   SANS SCORE, ON SUPPOSE LA CONFIANCE : une source qui ne dit pas son doute
-   ne doit pas déclencher deux appels de plus à chaque frappe. */
-const SEUIL_CONFIANCE_BAN = 0.9;
+/* LE SCORE NE DÉCIDE DE RIEN, ET C'EST LUI QUI M'A TROMPÉ (RECHERCHE-5,
+   01/09). RECHERCHE-3 refusait de chercher plus loin quand la BAN se disait
+   sûre — seuil 0,9 — et RECHERCHE-4 refusait de l'ancrer sous 0,6. J'avais
+   calibré ces deux seuils sur des scores mesurés SANS le paramètre
+   `autocomplete`. Or l'application, elle, l'envoie : mesuré sur la production
+   le jour même, « Collège Albert Camus » y vaut **0,945** au lieu de 0,48. La
+   porte ne s'ouvrait donc jamais, et le collège de la fille d'Armelin restait
+   introuvable pour la troisième fois — « Je n'ai toujours pas le collège de
+   ma fille visible ».
+   CE QUI DÉCIDE, C'EST LA DISTANCE. La BAN peut être très sûre d'un résultat
+   qui n'a rien à voir : son lieu-dit « Collège Albert Camus » est dans le
+   Nord, à deux cents kilomètres du Plessis-Trévise. Une saisie qui ressemble
+   à un nom cherche donc TOUJOURS plus loin ; ce qui se choisit, c'est l'ANCRE. */
 
-/* ET SOUS CE SCORE, SON POINT NE VAUT PAS D'ANCRE (RECHERCHE-4, 01/09).
-   MESURÉ sur la production dans le navigateur d'Armelin : taper « Collège
-   Albert Camus » rend, côté BAN, le LIEU-DIT « Collège Albert Camus 59239
-   Thumeries » — dans le Nord, à deux cents kilomètres de chez lui, avec un
-   score de 0,48. L'annuaire était bien interrogé (l'appel part, je l'ai vu),
-   mais AUTOUR DE THUMERIES : il ne pouvait rien trouver.
-   Au-dessus du seuil, la BAN a compris la commune qu'on a écrite et son point
-   vaut mieux que la vue (« … Plessis-Trévise » : 0,636). En dessous, elle a
-   attrapé un homonyme lointain, et c'est LÀ OÙ L'ON REGARDE qui dit le mieux
-   où l'on cherche. */
-const SEUIL_ANCRE_BAN = 0.6;
+/* CE QU'ON REGARDE PASSE D'ABORD : un résultat DANS la vue est celui qu'on
+   vise, et cela se lit sans seuil — une vue large accepte tout, ce qui est
+   juste, car une carte de France entière n'exprime aucune préférence.
+   LE RAYON N'EST QUE LE RATTRAPAGE DU BORD : zoomé sur sa ville, on cherche
+   parfois un lieu qui tient à la ville voisine, hors écran de quelques
+   kilomètres. Cinquante — la distance d'une ville à sa voisine, pas celle
+   d'un département à l'autre. */
+const SEUIL_LOIN_KM = 50;
+
+/** Distance approchée entre deux points, en kilomètres — PURE. */
+function distanceKm(a: { lon: number; lat: number }, b: { lon: number; lat: number }): number {
+  const dLat = (a.lat - b.lat) * 111.32;
+  const dLon = (a.lon - b.lon) * 111.32 * Math.cos((a.lat * Math.PI) / 180);
+  return Math.hypot(dLat, dLon);
+}
 
 export class RechercheAdresse extends HTMLElement {
   #resultats: ResultatAdresse[] = [];
@@ -196,25 +220,31 @@ export class RechercheAdresse extends HTMLElement {
          serait lui faire payer une recherche qu'il n'a pas demandée. */
       this.#actif = -1;
       this.#afficher();
-      /* UNE ABSENCE DE RÉPONSE N'EST PAS UNE RÉPONSE SÛRE. « Castorama » ne
-         rend RIEN à la BAN : la confiance y est nulle, pas totale. Le
-         raccourci `score ?? 1` déclarait le vide confiant, et refermait la
-         porte sur le cas même qu'Armelin a signalé. */
-      const confiance = this.#resultats.length === 0
-        ? 0 : (this.#resultats[0]?.score ?? 1);
+      const meilleur = this.#resultats[0];
+      const vue = vueCourante?.() ?? null;
+        /* L'ANCRE EST LE RÉSULTAT DE LA BAN S'IL EST PLAUSIBLE — c'est-à-dire
+           PRÈS de ce qu'on regarde, ou dans une commune qu'on a nommée
+           soi-même (« Tour Eiffel Paris » : Paris est le bon endroit parce
+           qu'on l'a écrit). Sinon, c'est la vue : on cherche là où l'on
+           regarde, pas à deux cents kilomètres de là. */
+      const plausible = meilleur !== undefined
+        && (vue === null
+          || dansEmprise(vue.emprise, meilleur)
+          || distanceKm(meilleur, vue) <= SEUIL_LOIN_KM
+          || communeNommee(texte, meilleur.contexte));
+      /* LA BAN A RÉPONDU QUAND ELLE REND CE QU'ON A TAPÉ, LÀ OÙ ON REGARDE.
+         Les deux conditions comptent, et le cas d'Armelin est celui qui les
+         sépare : « Collège Albert Camus » lui rend un lieu-dit qui porte bien
+         ces trois mots — mais à deux cents kilomètres de sa vue. Les mots
+         seuls auraient refermé la porte ; la distance seule l'aurait ouverte
+         sur « lyon » et deux appels pour rien. */
+      const repondu = meilleur !== undefined && plausible
+        && repondALaSaisie(texte, meilleur.libelle);
       if (ressembleAUnNom(texte) && texte.trim().length >= LONGUEUR_MIN_NOM
-        && confiance < SEUIL_CONFIANCE_BAN) {
-        const meilleur = this.#resultats[0];
-        /* ON N'ANCRE SUR UN RÉSULTAT APPROXIMATIF QUE SI L'ON RETROUVE SA
-           COMMUNE DANS LA SAISIE — voir `communeNommee` pour les deux cas
-           mesurés qui l'exigent. Au-dessus du seuil, la BAN a compris, on la
-           suit sans discuter. */
-        const ancrable = meilleur !== undefined
-          && ((meilleur.score ?? 0) >= SEUIL_ANCRE_BAN
-            || communeNommee(texte, meilleur.contexte));
-        const centre = ancrable && meilleur
+        && !repondu) {
+        const centre = plausible && meilleur
           ? { lon: meilleur.lon, lat: meilleur.lat }
-          : centreCarte?.() ?? null;
+          : (vue === null ? null : { lon: vue.lon, lat: vue.lat });
         if (centre === null) {
           note.textContent = 'Impossible de situer la recherche : déplacez la carte'
             + ' vers la zone qui vous intéresse.';

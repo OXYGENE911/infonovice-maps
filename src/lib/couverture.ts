@@ -64,6 +64,11 @@ export function contient(grande: Emprise, petite: Emprise): boolean {
     && grande.sud <= petite.sud && grande.nord >= petite.nord;
 }
 
+/** Vrai si le point tombe dans l'emprise — PURE. */
+export function dansEmprise(e: Emprise, p: { lon: number; lat: number }): boolean {
+  return p.lon >= e.ouest && p.lon <= e.est && p.lat >= e.sud && p.lat <= e.nord;
+}
+
 /**
  * Vrai si la vue est déjà couverte par une recherche précédente — PURE.
  *

@@ -217,19 +217,27 @@ const LIEUDIT_LOINTAIN = {
   properties: {
     label: 'Collège Albert Camus 59239 Thumeries', type: 'locality',
     postcode: '59239', city: 'Thumeries',
-    /* LE SCORE MESURÉ SUR LA PRODUCTION : 0,48. La BAN a attrapé un homonyme
-       à deux cents kilomètres, et c'est ce point qui servait d'ancre. */
-    score: 0.48,
+    /* LE SCORE RÉELLEMENT MESURÉ SUR LA PRODUCTION : **0,945** (RECHERCHE-5,
+       01/09), et non 0,48 comme l'affirmait ce fixture hier. L'écart vient du
+       paramètre `autocomplete` que l'application envoie et que ma mesure à la
+       main avait omis. C'est TOUT le sujet : à 0,48 le test passait sur du
+       code qui, en production, ne cherchait jamais — parce que 0,945 franchit
+       le seuil de confiance de 0,9. La valeur mesurée est la seule qui
+       défende quelque chose. */
+    score: 0.945,
   },
 };
 
-test('UN HOMONYME LOINTAIN NE DÉPLACE PAS LA RECHERCHE', async ({ page }) => {
-  /* RECHERCHE-4 (01/09). MESURÉ dans le navigateur d'Armelin, sur la
-     production : taper « Collège Albert Camus » rend le LIEU-DIT
-     « Collège Albert Camus 59239 Thumeries » (Nord, score 0,48). L'annuaire
-     était bien interrogé — l'appel partait — mais AUTOUR DE THUMERIES : il ne
-     pouvait rien trouver près de chez lui. Sous le seuil de confiance, c'est
-     donc LÀ OÙ L'ON REGARDE qui ancre la recherche. */
+test('UN HOMONYME LOINTAIN NE DÉPLACE PAS LA RECHERCHE, SI SÛR SOIT-IL', async ({ page }) => {
+  /* RECHERCHE-4 puis RECHERCHE-5 (01/09). MESURÉ dans le navigateur
+     d'Armelin, sur la production : taper « Collège Albert Camus » rend le
+     LIEU-DIT « Collège Albert Camus 59239 Thumeries » — dans le Nord, à deux
+     cents kilomètres — que la BAN donne pour SÛR à 0,945.
+     CE TEST DÉFEND DEUX CHOSES À LA FOIS, et la seconde est celle que j'avais
+     manquée : que l'annuaire soit interrogé MALGRÉ la confiance affichée, et
+     qu'il le soit autour de la VUE et non de Thumeries. Un score élevé dit
+     que la BAN est sûre de son lieu-dit ; il ne dit pas que c'est celui-là
+     qu'on cherchait. */
   const { annuaire } = await decor(page, {
     adresses: [LIEUDIT_LOINTAIN], etablissements: [COLLEGE],
   });

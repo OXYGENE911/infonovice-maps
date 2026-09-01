@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   decomposerNumero, requeteNormalisee, versResultats, communeNommee,
+  repondALaSaisie,
 } from '../src/lib/adresse';
 
 /* LES ADRESSES BIS, TER, QUATER (ADRESSE-2, 01/09).
@@ -107,5 +108,50 @@ describe('communeNommee — l’ancre d’une recherche approximative (RECHERCHE
 
   it('ne se casse pas sur un contexte vide', () => {
     expect(communeNommee('quoi que ce soit', '')).toBe(false);
+  });
+});
+
+describe('repondALaSaisie', () => {
+  /* CE QUI DÉCIDE D'ALLER CHERCHER AILLEURS (RECHERCHE-5, 01/09), et ce qui
+     protège Overpass au passage : deux appels de plus à chaque frappe sur un
+     service bénévole, la règle du projet l'interdit. Tous les cas ci-dessous
+     ont été mesurés sur la BAN le jour même. */
+
+  it('« lyon » rend « Lyon » : la BAN a répondu, on ne dérange personne', () => {
+    expect(repondALaSaisie('lyon', 'Lyon')).toBe(true);
+  });
+
+  it('« Collège Albert Camus » rend une avenue : « collège » a disparu', () => {
+    expect(repondALaSaisie('Collège Albert Camus',
+      'avenue albert camus 94420 Le Plessis-Trévise')).toBe(false);
+  });
+
+  it('« Tour Eiffel Paris » rend l’avenue Gustave Eiffel : « tour » manque', () => {
+    expect(repondALaSaisie('Tour Eiffel Paris', 'Avenue Gustave Eiffel 75007 Paris'))
+      .toBe(false);
+  });
+
+  it('LE PIÈGE : le lieu-dit du Nord porte bien les trois mots', () => {
+    /* Et c'est pour cela que les mots ne suffisent pas. Ce libellé-là répond
+       mot pour mot à la saisie d'Armelin — il est simplement à deux cents
+       kilomètres de chez lui. C'est la VUE qui tranche ce cas, pas le texte ;
+       ce test existe pour que personne ne croie l'inverse en lisant le nom de
+       la fonction. */
+    expect(repondALaSaisie('Collège Albert Camus',
+      'Collège Albert Camus 59239 Thumeries')).toBe(true);
+  });
+
+  it('les accents et la casse ne décident de rien', () => {
+    expect(repondALaSaisie('college albert camus', 'Collège Albert Camus')).toBe(true);
+  });
+
+  it('un mot n’est pas un morceau de mot', () => {
+    /* « camus » ne doit pas se trouver dans « Camusat » : une correspondance
+       partielle déclarerait répondu ce qui ne l'est pas. */
+    expect(repondALaSaisie('Camus', 'Rue Camusat 10000 Troyes')).toBe(false);
+  });
+
+  it('une saisie sans mot utile ne prétend pas avoir sa réponse', () => {
+    expect(repondALaSaisie('le', 'Le Mans')).toBe(false);
   });
 });

@@ -215,7 +215,14 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      y compris pour les barres d'étapes qui naîtront plus tard. */
   poserEmpriseCourante(() => {
     const centre = carte.getCenter();
-    return { lon: centre.lng, lat: centre.lat };
+    const b = carte.getBounds();
+    return {
+      lon: centre.lng,
+      lat: centre.lat,
+      emprise: {
+        ouest: b.getWest(), sud: b.getSouth(), est: b.getEast(), nord: b.getNorth(),
+      },
+    };
   });
   /* LA PUCE « BORNES DE RECHARGE » (BORNES-4) : le volet des services garde
      la couche, la puce n'est qu'un second interrupteur — et chacun tient
