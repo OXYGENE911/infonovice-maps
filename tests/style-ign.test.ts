@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   styleIGNPlan, styleCarte, urlTuiles, ATTRIBUTION_IGN, LOCALE_FR,
+  calquesEtiquettes, sourceEtiquettes,
 } from '../src/carte/style-ign';
 
 describe('styleIGNPlan', () => {
@@ -44,17 +45,37 @@ describe('LOCALE_FR', () => {
   });
 });
 
-describe('les étiquettes qui manquent au raster (FOND-1, 01/09)', () => {
+describe('les étiquettes qui manquent au raster (FOND-1, puis FOND-2)', () => {
   /* Armelin, deux défauts d'un coup : « quand je configure la carte avec un
      fond Carte Satellite, les noms de ville et village ne s'affichent pas »
      et « quand on zoome, il n'y a pas les numéros de nationale,
      départementale et autoroute qui s'affichent sur la carte ».
      LA CAUSE EST LA MÊME : le fond est RASTER, ses étiquettes sont peintes
-     dans l'image. On les rétablit par une surcouche vectorielle. */
-  const idsDe = (s: ReturnType<typeof styleCarte>): string[] => s.layers.map((c) => c.id);
+     dans l'image. On les rétablit par une surcouche vectorielle.
+     FOND-2 (01/09) A DÉPLACÉ LE MOMENT, PAS LE CONTENU : déclarée dans le
+     style initial, la surcouche restait vide EN PRODUCTION — sans une erreur
+     pour le dire — alors qu'un `setStyle(getStyle())` la faisait paraître
+     d'un coup (66 numéros mesurés : A86, A4, N104…). Elle se pose désormais
+     sur `style.load`, comme le tracé, les bornes et les POI. */
+
+  it('le style ne porte plus les calques — ils se posent après', () => {
+    for (const fond of ['plan', 'ortho'] as const) {
+      const ids = styleCarte({ fond }).layers.map((c2) => c2.id);
+      expect(ids.some((i) => i.startsWith('num-route-') || i.startsWith('toponyme-')),
+        'les calques ne doivent plus naître avec le style').toBe(false);
+    }
+  });
+
+  /* LES GLYPHES, EUX, RESTENT DANS LE STYLE : un calque de symboles ajouté
+     plus tard a besoin d'une police DÉJÀ déclarée, faute de quoi MapLibre le
+     refuse. C'est la seule part de la surcouche qui doit naître avec lui. */
+  it('déclare les polices dès le style, sans quoi rien ne se dessinerait', () => {
+    expect(styleCarte({ fond: 'ortho' }).glyphs).toContain('data.geopf.fr');
+    expect(styleCarte({ fond: 'plan' }).glyphs).toContain('data.geopf.fr');
+  });
 
   it('le satellite reçoit les noms de communes ET les numéros de route', () => {
-    const ids = idsDe(styleCarte({ fond: 'ortho' }));
+    const ids = calquesEtiquettes('ortho').map((c2) => c2.id);
     expect(ids.some((i) => i.startsWith('toponyme-')), 'les noms de communes').toBe(true);
     expect(ids.some((i) => i.startsWith('num-route-')), 'les numéros de route').toBe(true);
   });
@@ -62,41 +83,22 @@ describe('les étiquettes qui manquent au raster (FOND-1, 01/09)', () => {
   /* SUR LE PLAN, PAS DE NOMS EN DOUBLE : la planche raster les dessine déjà,
      et deux textes superposés décalés d'un pixel se lisent plus mal qu'un. */
   it('le Plan IGN ne reçoit QUE les numéros de route', () => {
-    const ids = idsDe(styleCarte({ fond: 'plan' }));
-    expect(ids.some((i) => i.startsWith('num-route-'))).toBe(true);
-    expect(ids.some((i) => i.startsWith('toponyme-')),
-      'les noms sont déjà dans la planche').toBe(false);
+    const ids = calquesEtiquettes('plan').map((c2) => c2.id);
+    expect(ids.every((i) => i.startsWith('num-route-'))).toBe(true);
+    expect(ids).toHaveLength(3);
   });
 
-  it('les étiquettes passent APRÈS le fond et le cadastre', () => {
-    const ids = idsDe(styleCarte({ fond: 'ortho', cadastre: true }));
-    const premiereEtiquette = ids.findIndex((i) => i.startsWith('toponyme-') || i.startsWith('num-route-'));
-    expect(premiereEtiquette).toBeGreaterThan(ids.indexOf('fond-ortho'));
-    expect(premiereEtiquette).toBeGreaterThan(ids.indexOf('surcouche-cadastre'));
-  });
-
-  /* SANS GLYPHES, AUCUN TEXTE NE SE DESSINE — et MapLibre ne le dit pas fort.
-     Le style doit donc les déclarer dès qu'il porte un symbole, et se taire
-     sinon plutôt qu'annoncer une police qu'il n'ira jamais chercher. */
-  it('déclare les polices quand il y a du texte', () => {
-    expect(styleCarte({ fond: 'ortho' }).glyphs).toContain('data.geopf.fr');
-    expect(styleCarte({ fond: 'plan' }).glyphs).toContain('data.geopf.fr');
-  });
-
-  it('la source vectorielle est déclarée une seule fois, avec son attribution', () => {
-    const s = styleCarte({ fond: 'ortho' });
-    const src = s.sources['etiquettes-ign'] as { type: string; tiles: string[]; attribution: string };
-    expect(src.type).toBe('vector');
-    expect(src.tiles[0]).toContain('data.geopf.fr/tms/1.0.0/PLAN.IGN');
-    expect(src.attribution).toContain('IGN');
+  it('la source vectorielle porte son attribution et la bonne adresse', () => {
+    const s = sourceEtiquettes();
+    expect(s.type).toBe('vector');
+    expect(s.tiles[0]).toContain('data.geopf.fr/tms/1.0.0/PLAN.IGN');
+    expect(s.attribution).toContain('IGN');
   });
 
   it('les trois classes de route sont là, aux seuils d’IGN', () => {
-    const routes = styleCarte({ fond: 'plan' }).layers
-      .filter((c) => c.id.startsWith('num-route-'));
-    expect(routes).toHaveLength(3);
+    const zooms = calquesEtiquettes('plan')
+      .map((c2) => (c2 as { minzoom?: number }).minzoom);
     // L'autoroute et la nationale dès le zoom 7, la départementale au 11.
-    const zooms = routes.map((c) => (c as { minzoom?: number }).minzoom);
     expect([...zooms].sort((a, b) => (a ?? 0) - (b ?? 0))).toEqual([7, 7, 11]);
   });
 });

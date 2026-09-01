@@ -44,7 +44,16 @@ export function styleCarte({ fond, cadastre = false }: OptionsStyle): StyleSpeci
   /* LE FOND EST RASTER : ses étiquettes sont PEINTES DANS L'IMAGE. Le
      satellite n'en a donc aucune, et les numéros de route s'arrêtent au zoom
      où la planche cesse de les dessiner. On les rétablit par une surcouche
-     vectorielle — voir etiquettes-ign.ts pour la mesure et la provenance. */
+     vectorielle — voir etiquettes-ign.ts pour la mesure et la provenance.
+     ELLES NE SONT PLUS DANS LE STYLE INITIAL (FOND-2, 01/09), et c'est une
+     mesure qui l'a exigé : déclarées à la construction de la carte, elles ne
+     se dessinaient pas en production — la source restait vide, sans une
+     erreur pour le dire, alors que la même carte les affichait dès qu'on
+     réappliquait le MÊME style (`setStyle(getStyle())` : 66 numéros d'un
+     coup, A86, A4, N104…). Le style était donc juste ; c'est le MOMENT de la
+     création de la source qui ne l'était pas.
+     On suit désormais la convention du reste de l'application : les couches
+     se posent sur `style.load`, comme le tracé, les bornes et les POI. */
   const etiquettes: StyleSpecification['layers'] = [];
 
   if (fond === 'plan') {
@@ -99,23 +108,43 @@ export function styleCarte({ fond, cadastre = false }: OptionsStyle): StyleSpeci
 
   /* LES ÉTIQUETTES PASSENT EN DERNIER, cadastre compris : un texte lu sous
      une surcouche opaque ne se lit pas. */
-  if (etiquettes.length > 0) {
-    sources['etiquettes-ign'] = {
-      type: 'vector', tiles: [TUILES_ETIQUETTES], maxzoom: 18,
-      attribution: ATTRIBUTION_IGN,
-    };
-    layers.push(...etiquettes);
-  }
 
   return {
     version: 8,
     name: `Fond ${fond}${cadastre ? ' + cadastre' : ''}`,
-    /* LES GLYPHES NE SE DÉCLARENT QUE S'IL Y A DU TEXTE : un style sans
-       symbole n'a pas à annoncer une police qu'il n'ira jamais chercher. */
+    /* LES GLYPHES RESTENT DANS LE STYLE, eux : un calque de symboles ajouté
+       plus tard a besoin d'une police DÉJÀ déclarée, faute de quoi MapLibre
+       le refuse. C'est la seule part de la surcouche qui doit naître avec le
+       style. */
     ...(etiquettes.length > 0 ? { glyphs: GLYPHES_IGN } : {}),
     sources,
     layers,
   };
+}
+
+/** La source vectorielle des étiquettes — posée APRÈS le style (FOND-2). */
+export const SOURCE_ETIQUETTES = 'etiquettes-ign';
+
+/** Sa définition, pour que l'appelant n'ait pas à connaître l'URL. */
+export function sourceEtiquettes(): { type: 'vector'; tiles: string[];
+  maxzoom: number; attribution: string } {
+  return {
+    type: 'vector', tiles: [TUILES_ETIQUETTES], maxzoom: 18,
+    attribution: ATTRIBUTION_IGN,
+  };
+}
+
+/**
+ * Ce qu'il faut poser sur la carte une fois le style chargé — PURE.
+ *
+ * Sur le PLAN, seulement les numéros de route : la planche raster dessine
+ * déjà les noms, et deux textes superposés décalés d'un pixel se lisent plus
+ * mal qu'un. Sur le SATELLITE, les deux — la photographie ne porte rien.
+ */
+export function calquesEtiquettes(fond: Fond): StyleSpecification['layers'] {
+  return fond === 'plan'
+    ? [...CALQUES_NUMEROS_ROUTE]
+    : [...CALQUES_TOPONYMES, ...CALQUES_NUMEROS_ROUTE];
 }
 
 /** Le style historique de la PR #2, conservé comme raccourci. */
