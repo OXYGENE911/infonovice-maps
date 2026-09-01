@@ -2,6 +2,47 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.29.0] — 2026-09-01 — IRVE-1 : l'état des points, daté (PR #174)
+
+### Ajouté
+- **La fiche d'une station dit l'état déclaré de ses points.** Combien sont
+  signalés **hors service**, et quelle occupation a été relevée — avec, en
+  toutes lettres, la date du relevé. Un point en panne peut rendre le détour
+  inutile : c'est la seule ligne du cartouche qui arrête l'œil, et elle se lit
+  sans la couleur (elle écrit « HORS SERVICE »).
+- **Quand aucun relevé n'existe, la fiche dit de qui est le silence** : celui
+  du fichier national, pas celui de la carte. Mesuré autour du
+  Plessis-Trévise : 14 points sur 40 seulement en portent un.
+
+### Ce que je n'ai PAS fait, et pourquoi
+Armelin demandait aussi « un reroutage automatique quand une station est trop
+chargée », la base étant interrogée « à intervalles quand on s'en approche ».
+**La mesure l'interdit.** Sur 1 400 points tirés au hasard le 01/09 :
+
+- **aucun relevé n'avait moins de 9,6 heures** ;
+- 45 % dataient de plus de sept jours ;
+- le catalogue le confirme — les producteurs y DÉPOSENT des fichiers, ils n'y
+  publient pas un flux.
+
+Rerouter là-dessus enverrait quelqu'un contourner une file d'attente
+d'avant-hier, et interroger la base en approchant redemanderait la même valeur
+de la veille à un service public. L'application fait donc **un seul appel**, à
+l'ouverture de la fiche, et **date** ce qu'elle montre. Au-delà de sept jours,
+l'occupation n'est plus affichée du tout : la panne, elle, reste.
+
+### Corrigé
+- **Une phrase de la fiche était fausse**, et cette mesure l'a établi : elle
+  affirmait qu'« aucune source publique française ne diffuse l'occupation à
+  l'échelle nationale ». Une source la diffuse bien ; elle n'est pas vivante.
+  Se tromper dans ce sens-là revenait à cacher une donnée qui existe.
+
+### Mesuré en route
+- **Le piège de la jointure** : l'identifiant de STATION n'est pas un préfixe
+  de celui de ses POINTS (`FRALLPGO000669` porte `FRALLEGO6000361`). Une
+  recherche par préfixe rend zéro.
+- **La CSP bloquait l'hôte**, et c'est un parcours qui l'a attrapé avant la
+  production : `tabular-api.data.gouv.fr` a été ajouté à `connect-src`.
+
 ## [1.28.0] — 2026-09-01 — Chercher : la BAN a-t-elle répondu ? (PR #173)
 
 ### Corrigé

@@ -771,7 +771,8 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
   await expect(fiche).toContainText('Ouvert à tous', { timeout: 10_000 });
   await expect(fiche).toContainText('30 kW');
   await expect(fiche, 'l’absence d’occupation en direct doit être DITE')
-    .toContainText('Occupation en direct indisponible');
+    .toContainText('L’occupation en direct n’existe dans'
+    + ' aucune source publique française');
 
   // Et elle se referme, au clavier comme à la souris.
   await page.getByRole('button', { name: 'Fermer le détail' }).click();
