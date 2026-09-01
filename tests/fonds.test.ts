@@ -25,7 +25,19 @@ describe('styleCarte', () => {
       const s = styleCarte({ fond, cadastre: true });
       const c = s.layers.find((l) => l.id === 'surcouche-cadastre');
       expect(c, `cadastre absent sur ${fond}`).toBeDefined();
-      expect(s.layers.at(-1)?.id).toBe('surcouche-cadastre');
+      /* LE CADASTRE PASSE AU-DESSUS DES FONDS, PAS DES ÉTIQUETTES (FOND-1,
+         01/09). Ce parcours exigeait qu'il soit la DERNIÈRE couche ; depuis
+         que les noms de communes et les numéros de route sont posés en
+         surcouche, les laisser dessous les rendrait illisibles sous un
+         calque semi-transparent. Il doit donc couvrir le fond — c'est ce
+         qu'on vérifie — et rien de plus. */
+      const ids = s.layers.map((l) => l.id);
+      expect(ids.indexOf('surcouche-cadastre'))
+        .toBeGreaterThan(ids.findIndex((i) => i.startsWith('fond-')));
+      const premiereEtiquette = ids.findIndex(
+        (i) => i.startsWith('toponyme-') || i.startsWith('num-route-'));
+      expect(premiereEtiquette, 'les étiquettes doivent rester lisibles')
+        .toBeGreaterThan(ids.indexOf('surcouche-cadastre'));
       expect((c as { paint: { 'raster-opacity': number } }).paint['raster-opacity']).toBeLessThan(1);
     }
   });
