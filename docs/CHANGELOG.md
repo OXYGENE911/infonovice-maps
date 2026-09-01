@@ -24,10 +24,18 @@ restent dans le style : un calque de symboles ajouté plus tard exige une
 police déjà déclarée.
 
 **CE QUE JE NE PEUX PAS PROUVER ICI, ET JE PRÉFÈRE LE DIRE** : le défaut ne se
-reproduit pas en local — le parcours neuf, qui mesure les numéros
-RÉELLEMENT DESSINÉS au premier chargement, passe avec ET sans le correctif. Il
-reste utile comme garde-fou, mais c'est la production qui tranchera. Je
-vérifierai après déploiement, et je le dirai quel que soit le résultat.
+reproduit pas en local — le parcours neuf, qui mesure les numéros RÉELLEMENT
+DESSINÉS au premier chargement, passe avec ET sans le correctif. C'est la
+production qui tranchera ; je vérifierai après déploiement et je le dirai quel
+que soit le résultat.
+
+**J'AI REPRIS CETTE MESURE, PARCE QU'ELLE ÉTAIT SUSPECTE.** `npm run preview`
+sert `dist` sans le reconstruire : une comparaison faite sans `npm run build`
+juge deux fois le même code et ne prouve rien. Refaite proprement — source
+ramenée à l'état antérieur, reconstruite, relancée — la conclusion tient.
+Et le garde-fou n'est pas creux : privé de ses calques, il échoue bien
+(« aucun numéro dessiné au premier chargement »). Il mesure donc un rendu
+réel ; il ne sait simplement pas reproduire le décalage de la production.
 
 Tests : les unitaires vérifient désormais que le style ne porte PLUS les
 calques (et qu'il porte toujours les glyphes) ; 1 E2E mesure les numéros
