@@ -2,6 +2,45 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.30.0] — 2026-09-01 — PARTAGE-1 : contribuer sans se livrer (PR #175)
+
+### Ajouté
+- **Un bouton « Contribuer à l'algorithme »** dans l'historique, tel qu'Armelin
+  l'a spécifié : « un bouton dédié […] en indiquant aux gens qu'on floute les
+  adresses de départ et d'arrivée. D'exposer le fichier à l'utilisateur qui
+  pourra vérifier le contenu avant de nous l'envoyer. »
+- **Ce qui part et ce qui NE part pas sont écrits côte à côte**, avant le
+  fichier — puis le fichier lui-même est montré **en entier**, lisible, tel
+  qu'il sera envoyé. Une promesse de floutage qu'on ne peut pas vérifier ne
+  vaut rien ; celle-ci se vérifie en lisant les vingt lignes en dessous.
+
+### Ce que le floutage retire, exactement
+En ouvrant les données, j'ai trouvé mieux que prévu : **un parcours enregistré
+ne contient aucune coordonnée**. Les relevés portent un temps depuis le départ,
+une vitesse et une altitude — jamais un point. Deux champs seulement pouvaient
+désigner quelqu'un, et tous deux disparaissent :
+
+- **le titre**, fabriqué à partir des libellés de départ et d'arrivée
+  (« Le Plessis-Trévise → 12 rue de la Paix ») — retiré ;
+- **l'instant du départ à la milliseconde**, qui recolle plusieurs fichiers
+  d'une même personne mieux qu'une adresse — arrondi à l'heure pleine.
+  La date, elle, reste : sans elle on ne compare plus un trajet d'août à un
+  trajet de décembre, ce à quoi ces relevés servent précisément.
+
+### Rien ne part tout seul
+L'application **n'expédie rien**. Elle écrit un fichier, le montre, et propose
+de le télécharger avec l'adresse `contact@infonovice.fr`. C'est moins lisse
+qu'un envoi en un clic — `mailto:` ne sait pas porter de pièce jointe — et
+c'est le prix de la vérification demandée. Une application qui poste
+d'elle-même n'aurait pas à demander la permission.
+
+### Tests
+- La promesse est jugée, pas l'intention : un parcours sème une adresse
+  reconnaissable, ouvre la boîte, **lit le fichier réellement proposé** et y
+  cherche cette adresse. Contre-épreuve faite — en laissant fuir le titre, le
+  parcours échoue avec « la commune de départ ne doit pas survivre ».
+- Un test constate que les relevés ne portent aucune coordonnée, pour qu'une
+  évolution qui en ajouterait une ne passe pas inaperçue ici.
 ## [1.29.0] — 2026-09-01 — IRVE-1 : l'état des points, daté (PR #174)
 
 ### Ajouté

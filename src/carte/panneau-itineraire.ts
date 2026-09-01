@@ -46,6 +46,9 @@ import { ErreurPoi, type FiltresBornes } from '../lib/poi';
 import {
   lireHistorique, ecrireHistorique, comparerTrajets, type TrajetEnregistre,
 } from '../lib/historique-trajets';
+import {
+  texteDuPartage, nomDuFichier, CONTACT, CE_QUI_PART, CE_QUI_RESTE,
+} from '../lib/partage-trajet';
 import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import { palierDe } from '../lib/puissance';
 import { chargerPeages, ErreurPeages } from '../lib/peages';
@@ -561,9 +564,19 @@ export class PanneauItineraire extends HTMLElement {
             <div class="iti-hist-liste" role="group" aria-label="Parcours enregistrés"></div>
             <div class="iti-hist-actions" hidden>
               <button type="button" class="iti-hist-comparer">Comparer</button>
+              <!-- LE BOUTON EST DÉDIÉ, ET IL DIT CE QU'IL FAIT (PARTAGE-1,
+                   01/09). Armelin : « il faut que ce soit un bouton dédié pour
+                   améliorer l'algorithme en indiquant aux gens qu'on floute
+                   les adresses de départ et d'arrivée. D'exposer le fichier à
+                   l'utilisateur qui pourra vérifier le contenu avant de nous
+                   l'envoyer. » Il n'envoie donc RIEN : il prépare, il montre,
+                   et c'est l'usager qui décide ensuite. -->
+              <button type="button" class="iti-hist-contribuer">Contribuer à
+                l’algorithme</button>
               <button type="button" class="iti-hist-oublier">Oublier</button>
             </div>
             <p class="iti-hist-note">Ces parcours ne quittent pas cet appareil.</p>
+            <div class="iti-hist-partage" hidden></div>
           </section>
 
           <section class="vue vue-hote" data-vue="vehicule" hidden></section>
@@ -818,6 +831,9 @@ export class PanneauItineraire extends HTMLElement {
     this.#allerA('accueil');
     this.querySelector('.iti-hist-comparer')?.addEventListener('click', () => {
       this.#montrerComparaison();
+    });
+    this.querySelector('.iti-hist-contribuer')?.addEventListener('click', () => {
+      this.#montrerLePartage();
     });
     this.querySelector('.iti-hist-oublier')?.addEventListener('click', () => {
       void (async () => {
@@ -2570,6 +2586,10 @@ export class PanneauItineraire extends HTMLElement {
 
   #coches = new Set<string>();
 
+  /* L'URL DE L'OBJET SE RÉVOQUE, sans quoi le fichier reste en mémoire aussi
+     longtemps que la page — et il grossit à chaque clic sur « Contribuer ». */
+  #urlPartage: string | null = null;
+
   async #ouvrirHistorique(): Promise<void> {
     this.#trajets = await lireHistorique();
     this.#coches.clear();
@@ -2665,6 +2685,76 @@ export class PanneauItineraire extends HTMLElement {
     boite.appendChild(table);
   }
 
+  /**
+   * Prépare la contribution, et la MONTRE — elle ne part pas d'ici.
+   *
+   * PARTAGE-1 (01/09). Rien ne quitte l'appareil sans un geste de plus :
+   * l'application écrit un fichier, l'usager le lit en entier, puis il
+   * l'envoie s'il le veut. Une application qui poste d'elle-même n'aurait
+   * pas à demander la permission, et c'est ce qu'on reproche aux autres.
+   *
+   * LE COURRIEL N'EMPORTE PAS DE PIÈCE JOINTE : `mailto:` ne sait pas en
+   * porter. On propose donc le téléchargement et l'adresse ; c'est moins
+   * lisse qu'un envoi en un clic, et c'est le prix de la vérification qu'il
+   * a demandée.
+   */
+  #montrerLePartage(): void {
+    const boite = this.querySelector<HTMLElement>('.iti-hist-partage');
+    if (!boite) return;
+    const choisis = this.#trajets.filter((x) => this.#coches.has(x.id));
+    if (choisis.length === 0) return;
+    boite.replaceChildren();
+    boite.hidden = false;
+
+    const titre = document.createElement('h3');
+    titre.textContent = `Contribuer ${choisis.length} parcours`;
+    boite.appendChild(titre);
+
+    const dit = (intro: string, points: readonly string[], classe: string): void => {
+      const p = document.createElement('p');
+      p.className = classe;
+      p.textContent = intro;
+      const ul = document.createElement('ul');
+      for (const mot of points) {
+        const li = document.createElement('li');
+        li.textContent = mot;
+        ul.appendChild(li);
+      }
+      boite.append(p, ul);
+    };
+    dit('Ce qui part :', CE_QUI_PART, 'iti-hist-part');
+    /* CE QUI RESTE EST DIT AUSSI FORT que ce qui part : une promesse de
+       floutage énoncée en petits caractères ne rassure personne, et celle-ci
+       se VÉRIFIE dans le fichier juste en dessous. */
+    dit('Ce qui NE part pas :', CE_QUI_RESTE, 'iti-hist-reste');
+
+    const texte = texteDuPartage(choisis);
+    const zone = document.createElement('textarea');
+    zone.className = 'iti-hist-fichier';
+    zone.readOnly = true;
+    zone.value = texte;
+    zone.setAttribute('aria-label', 'Contenu exact du fichier qui sera envoyé');
+    boite.appendChild(zone);
+
+    const lien = document.createElement('a');
+    lien.className = 'iti-hist-telecharger';
+    lien.download = nomDuFichier(choisis);
+    if (this.#urlPartage !== null) URL.revokeObjectURL(this.#urlPartage);
+    this.#urlPartage = URL.createObjectURL(
+      new Blob([texte], { type: 'application/json' }),
+    );
+    lien.href = this.#urlPartage;
+    lien.textContent = 'Télécharger le fichier';
+    boite.appendChild(lien);
+
+    const envoi = document.createElement('p');
+    envoi.className = 'iti-hist-note';
+    envoi.textContent = `Envoyez-le en pièce jointe à ${CONTACT}.`
+      + ' Aucun envoi n’est fait par l’application : ce fichier reste sur'
+      + ' votre appareil tant que vous ne l’expédiez pas vous-même.';
+    boite.appendChild(envoi);
+  }
+
   #majActionsHistorique(): void {
     const actions = this.querySelector<HTMLElement>('.iti-hist-actions');
     const comparer = this.querySelector<HTMLButtonElement>('.iti-hist-comparer');
@@ -2676,6 +2766,17 @@ export class PanneauItineraire extends HTMLElement {
     comparer.disabled = this.#coches.size < 2;
     comparer.title = this.#coches.size < 2
       ? 'Cochez au moins deux parcours' : '';
+    /* CONTRIBUER N'EXIGE QU'UN PARCOURS : un seul trajet renseigne déjà sur
+       un itinéraire. Mais la boîte de vérification se referme dès que la
+       sélection change — le fichier qu'elle montrait ne correspondrait plus
+       à ce qui est coché, et montrer un contenu périmé serait pire que ne
+       rien montrer. */
+    const boite = this.querySelector<HTMLElement>('.iti-hist-partage');
+    if (boite) { boite.hidden = true; boite.replaceChildren(); }
+    if (this.#urlPartage !== null) {
+      URL.revokeObjectURL(this.#urlPartage);
+      this.#urlPartage = null;
+    }
   }
 
   #allerA(vue: CleVue): void {

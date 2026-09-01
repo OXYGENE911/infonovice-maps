@@ -688,7 +688,7 @@ etapes-itineraire { display: grid; gap: 7px; }
 .iti-hist-ligne:hover { background: var(--fond-doux); }
 .iti-hist-actions { display: flex; gap: 8px; margin-bottom: 10px; }
 .iti-hist-actions[hidden] { display: none; }
-.iti-hist-comparer, .iti-hist-oublier {
+.iti-hist-comparer, .iti-hist-oublier, .iti-hist-contribuer {
   padding: 6px 12px; border-radius: 9px;
   border: 1px solid var(--bord-2); background: var(--fond);
   color: var(--texte-1); font: 600 12.5px var(--police); cursor: pointer;
@@ -698,6 +698,42 @@ etapes-itineraire { display: grid; gap: 7px; }
   margin: 0; font: 400 11.5px var(--police); color: var(--texte-3);
 }
 .iti-hist-vide[hidden] { display: none; }
+
+/* CONTRIBUER À L'ALGORITHME (PARTAGE-1). La boîte ne s'orne de rien : ce
+   qu'on regarde ici, c'est un fichier qu'on s'apprête à donner, et la sobriété
+   est le ton juste. */
+.iti-hist-partage {
+  margin-top: 12px; padding: 10px; border-radius: 10px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+}
+.iti-hist-partage[hidden] { display: none; }
+.iti-hist-partage h3 {
+  margin: 0 0 8px; font: 700 13px var(--police); color: var(--texte-1);
+}
+.iti-hist-partage p { margin: 8px 0 2px; font: 600 12px var(--police); }
+.iti-hist-partage ul {
+  margin: 0; padding-left: 18px;
+  font: 400 12px var(--police); color: var(--texte-2); line-height: 1.5;
+}
+/* CE QUI NE PART PAS SE LIT AUSSI FORT que ce qui part : une promesse en
+   petits caractères ne rassure personne. La couleur ne porte rien à elle
+   seule — les deux listes sont introduites par leur phrase. */
+.iti-hist-reste { color: var(--vert); }
+.iti-hist-fichier {
+  display: block; width: 100%; box-sizing: border-box; margin-top: 10px;
+  min-height: 160px; resize: vertical;
+  padding: 8px; border-radius: 8px;
+  border: 1px solid var(--bord-2); background: var(--fond);
+  color: var(--texte-1); font: 400 11.5px ui-monospace, monospace;
+  white-space: pre; overflow: auto;
+}
+.iti-hist-telecharger {
+  display: inline-block; margin-top: 10px;
+  padding: 7px 12px; border-radius: 9px;
+  background: var(--accent); color: var(--blanc);
+  font: 600 12.5px var(--police); text-decoration: none;
+}
+.iti-hist-telecharger:focus-visible { outline: none; box-shadow: var(--focus); }
 
 /* LA COMPARAISON CÔTE À CÔTE. Le tableau défile de lui-même quand on compare
    trois parcours sur un téléphone : c'est LUI qui déborde, jamais la page. */

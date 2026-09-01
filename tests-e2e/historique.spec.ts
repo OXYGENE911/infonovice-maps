@@ -14,7 +14,11 @@ import { ouvrirVolet } from './volets';
 async function semer(page: import('@playwright/test').Page): Promise<void> {
   await page.evaluate(async () => {
     const trajets = [
-      { id: 't2', departMs: 1_700_600_000_000, titre: '→ Lyon', releves: [],
+      /* LE TITRE PORTE UNE ADRESSE RECONNAISSABLE (PARTAGE-1) : sans elle,
+         un test de floutage ne prouverait rien — il faut que quelque chose
+         PUISSE fuiter pour qu'on établisse que rien ne fuit. */
+      { id: 't2', departMs: 1_700_600_000_000,
+        titre: 'Le Plessis-Trévise → 12 rue de la Paix, Paris', releves: [],
         resume: { dureeMs: 3_000_000, vitesseMaxKmh: 130,
           vitesseMoyenneKmh: 95, arrets: 0, arretMs: 0 } },
       { id: 't1', departMs: 1_700_000_000_000, titre: '→ Lyon', releves: [],
@@ -109,4 +113,61 @@ test('OUBLIER UN PARCOURS LE RETIRE POUR DE BON', async ({ page }) => {
     };
     d.onerror = () => { res('erreur'); };
   })), { message: 'le parcours oublié est encore en mémoire' }).not.toContain('"t2"');
+});
+
+test('CONTRIBUER MONTRE LE FICHIER, ET AUCUNE ADRESSE N’Y SURVIT', async ({ page }) => {
+  /* PARTAGE-1 (01/09). Armelin : « un bouton dédié pour améliorer
+     l'algorithme en indiquant aux gens qu'on floute les adresses de départ et
+     d'arrivée. D'exposer le fichier à l'utilisateur qui pourra vérifier le
+     contenu avant de nous l'envoyer. »
+     CE PARCOURS JUGE LA PROMESSE, pas l'intention : il lit le fichier
+     RÉELLEMENT proposé et y cherche l'adresse semée plus haut. */
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await semer(page);
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  await ouvrirVolet(page, '.iti');
+  await page.getByRole('button', { name: /Historique/ }).click();
+  const lignes = page.locator('.iti-hist-ligne');
+  await expect(lignes).toHaveCount(2, { timeout: 10_000 });
+
+  /* LA LIGNE, ELLE, MONTRE BIEN L'ADRESSE : c'est l'historique local, il ne
+     quitte pas l'appareil. Le floutage ne concerne QUE ce qu'on donne. */
+  await expect(lignes.first()).toContainText('rue de la Paix');
+
+  await lignes.first().locator('input').check();
+  await page.getByRole('button', { name: /Contribuer/ }).click();
+
+  const boite = page.locator('.iti-hist-partage');
+  await expect(boite).toBeVisible();
+  // CE QUI PART ET CE QUI RESTE SONT DITS AVANT LE FICHIER, pas après.
+  await expect(boite).toContainText('Ce qui part');
+  await expect(boite).toContainText('Ce qui NE part pas');
+  await expect(boite).toContainText('elles sont RETIRÉES du fichier');
+
+  const fichier = await boite.locator('.iti-hist-fichier').inputValue();
+  expect(fichier, 'la commune de départ ne doit pas survivre').not.toContain('Plessis');
+  expect(fichier, 'l’adresse d’arrivée ne doit pas survivre').not.toContain('rue de la Paix');
+  /* L'HEURE EST ARRONDIE : à la minute près, deux fichiers d'une même personne
+     se recollent. */
+  expect(fichier).toMatch(/"departHeure": "\d{4}-\d{2}-\d{2}T\d{2}:00Z"/);
+  // ET CE QUI SERT À L'ALGORITHME EST BIEN LÀ, sinon le don ne servirait à rien.
+  expect(fichier).toContain('"vitesseMoyenneKmh"');
+
+  /* RIEN NE PART D'ICI : l'application propose un téléchargement et une
+     adresse, elle n'expédie pas. Une application qui poste d'elle-même
+     n'aurait pas à demander la permission. */
+  await expect(boite.locator('.iti-hist-telecharger')).toHaveAttribute('download', /\.json$/);
+  await expect(boite).toContainText('contact@infonovice.fr');
+  await expect(boite).toContainText('Aucun envoi n’est fait par l’application');
+
+  /* ET LA BOÎTE SE REFERME QUAND LA SÉLECTION CHANGE : le fichier montré ne
+     correspondrait plus à ce qui est coché, et un contenu périmé serait pire
+     que pas de contenu du tout. */
+  await lignes.nth(1).locator('input').check();
+  await expect(boite).toBeHidden();
 });
