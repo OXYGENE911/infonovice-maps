@@ -537,6 +537,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #162 — RECHERCHE-3 (01/09) : la recherche par nom part enfin (la
       BAN rend toujours quelque chose) et interroge l'ÉGALITÉ indexée, la
       regex expirant (mesuré : 57 s). Expiration lue comme telle.
+- [x] PR #175 — PARTAGE-1 (01/09) : contribuer un parcours à INFONOVICE, sans
+      se livrer. Le titre (qui porte les deux adresses) est retiré, l'instant
+      du départ arrondi à l'heure ; le fichier est MONTRÉ en entier avant tout
+      envoi, et l'application n'expédie rien elle-même.
 - [x] PR #174 — IRVE-1 (01/09) : l'état déclaré des points de charge, DATÉ.
       Pas de reroutage automatique : mesuré, aucun relevé de moins de 9,6 h et
       45 % de plus de sept jours — le fichier national est déposé par lots, ce
