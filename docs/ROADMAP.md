@@ -546,6 +546,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       par Armelin le 01/09 (Wikidata exclu, chercher un équivalent français
       pour les logos) : Éducation nationale (mesuré : le collège introuvable
       dans OSM y est), entreprises, Culture, DATAtourisme.
+- [x] PR #167 — BORNES-8 (01/09) : le rappel des filtres rentre dans le
+      panneau « Autour de moi » (un point sur l'entonnoir le remplace sur la
+      carte) ; le bouton « Tout afficher » devient lisible en thème sombre.
 - [x] PR #161 — BORNES-5 (01/09) : le filtre qui retranche se voit SUR la
       carte, avec « Tout afficher » sur place. BORNES-4 l'avait mis dans des
       volets repliés : personne ne l'a lu.
