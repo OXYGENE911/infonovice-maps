@@ -537,6 +537,8 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #162 — RECHERCHE-3 (01/09) : la recherche par nom part enfin (la
       BAN rend toujours quelque chose) et interroge l'ÉGALITÉ indexée, la
       regex expirant (mesuré : 57 s). Expiration lue comme telle.
+- [x] PR #168 — ITI-1 (01/09) : le pied du volet d'itinéraire colle —
+      « Démarrer le suivi » et le résumé restent sous les yeux quand on défile.
 - [x] PR #163 — ECOLES-1 (01/09) : l'annuaire de l'Éducation nationale,
       première brique de la consolidation. Il porte le collège qu'OSM ignore,
       et accepte un nom PARTIEL.
@@ -551,6 +553,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       téléphone ; recalcul à 40 m quand deux signaux s'accordent.
 - [x] PR #170 — BORNES-9 + RECHERCHE-4 (01/09) : le filtre par nom élargit à
       10 km ; un homonyme lointain n'ancre plus la recherche.
+- [x] PR #166 — BORNES-7 (01/09) : la liste des réseaux ne dit plus « aucun
+      réseau » quand le filtre de NOM agit, et nomme les filtres cumulés.
+      Mesuré : 443 écritures distinctes pour « McDonald's » — il n'y a rien à
+      cocher, c'est le message qui était faux. StoreDot : absent du jeu IRVE.
 - [x] PR #164 — BORNES-6 (01/09) : TRANCHÉ par Armelin — le filtre réseau et
       puissance vaut pour la carte ET le trajet. Le prédicat est unique.
 - [x] PR #160 — GUIDE-2 (01/09) : la boussole reprend la main sur le cap du

@@ -583,9 +583,57 @@ export class PanneauPoi extends HTMLElement {
     if (montres.length === 0) {
       const vide = document.createElement('p');
       vide.className = 'poi-filtre-note';
-      vide.textContent = recherche.trim() === ''
-        ? 'Aucun réseau identifié.'
-        : `Aucun réseau ne correspond à « ${recherche.trim()} ».`;
+      /* CE MESSAGE MENTAIT PAR OMISSION (BORNES-7, 01/09), et Armelin l'a
+         signalé QUATRE FOIS : « si je tape McDonald la recherche n'affiche
+         aucun résultat […] ça fait plusieurs fois que je fais la remarque et
+         ça n'est jamais corrigé ». Il avait raison, et voici ce que la mesure
+         du 01/09 a montré :
+
+         LA CARTE, ELLE, TROUVAIT. Le texte saisi part au portail comme filtre
+         de NOM sur trois champs — 4 177 stations « McDonald » en France,
+         8 429 « Carrefour », 91 et 113 respectivement autour de chez lui.
+
+         MAIS LA LISTE DISAIT « AUCUN RÉSEAU », parce qu'elle ne groupe que
+         les EXPLOITANTS : « McDonald's » et « Carrefour » sont des ENSEIGNES
+         (exploitées par Izivia, Driveco, Allego). Et il n'existe pas
+         d'enseigne « McDonald's » à cocher : le producteur écrit le SITE —
+         « McDonald's - Thoiry », « Electra Pleurtuit - McDonald's » — soit
+         443 écritures distinctes. Une liste bâtie là-dessus serait un
+         annuaire de sites, pas de réseaux : c'est le travers que la
+         conception d'origine avait mesuré et écarté.
+
+         ON NE CORRIGE DONC PAS LA LISTE, ON CORRIGE CE QU'ELLE DIT. */
+      const q = recherche.trim();
+      if (q === '') {
+        vide.textContent = 'Aucun réseau identifié.';
+      } else {
+        vide.textContent = `« ${q} » n’est pas un exploitant, mais la carte`
+          + ' est filtrée sur ce nom : station, enseigne ou exploitant.';
+        /* ET L'ON DIT CE QUI RESTREINT EN PLUS. Son écran portait « 5 réseaux
+           cochés · 150 kW et plus · prises CCS Combo » : le nom s'AJOUTE à
+           tout cela, et l'intersection était vide. Sans le dire, la carte
+           paraît en panne. */
+        const aussi: string[] = [];
+        if ((this.#filtres.reseaux ?? []).length > 0) {
+          aussi.push(`${this.#filtres.reseaux!.length} réseau`
+            + `${this.#filtres.reseaux!.length > 1 ? 'x' : ''} coché`
+            + `${this.#filtres.reseaux!.length > 1 ? 's' : ''}`);
+        }
+        if ((this.#filtres.puissanceMin ?? 0) > 0) {
+          aussi.push(`${this.#filtres.puissanceMin} kW et plus`);
+        }
+        if ((this.#filtres.prises ?? []).length > 0) aussi.push('les prises cochées');
+        if (aussi.length > 0) {
+          const note = document.createElement('p');
+          note.className = 'poi-filtre-note poi-filtre-cumul';
+          note.textContent = `Ce nom s’AJOUTE à ${aussi.join(', ')} :`
+            + ' une station doit satisfaire TOUT à la fois. Videz les autres'
+            + ' filtres si la carte reste vide.';
+          boite.appendChild(vide);
+          boite.appendChild(note);
+          return;
+        }
+      }
       boite.appendChild(vide);
       return;
     }
