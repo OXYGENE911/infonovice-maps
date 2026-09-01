@@ -114,3 +114,38 @@ test('LE BILAN SE FERME, ET S’EN VA AVEC LE SUIVI', async ({ page }) => {
   await expect(page.locator('bandeau-guidage')).toBeHidden();
   await expect(bilan).toBeHidden();
 });
+
+test('« ENREGISTRER CE PARCOURS » GARDE, ET SEULEMENT SI ON LE DEMANDE', async ({ page }) => {
+  /* STATS-2 (01/09). Armelin : « cela ne doit pas être fait automatiquement,
+     mais proposé à l'enregistrement à la fin du parcours au moment du
+     récapitulatif ». Un GPS qui archive tout seul devient un carnet de
+     déplacements ; un bouton qu'on presse est un consentement. */
+  await suivre(page);
+  await rouler(page, 2.3450, 12);
+  await rouler(page, 2.36740, 12);
+  await rouler(page, 2.36781, 0);
+  await expect(page.locator('.bg-bilan')).toBeVisible({ timeout: 10_000 });
+
+  const memoire = async (): Promise<string> => page.evaluate(async () =>
+    new Promise<string>((res) => {
+      const d = indexedDB.open('infonovice-maps', 2);
+      d.onsuccess = () => {
+        const g = d.result.transaction('preferences').objectStore('preferences')
+          .get('historique-trajets');
+        g.onsuccess = () => { res(JSON.stringify(g.result ?? [])); };
+        g.onerror = () => { res('erreur'); };
+      };
+      d.onerror = () => { res('erreur'); };
+    }));
+
+  /* RIEN N'EST GARDÉ TANT QU'ON N'A PAS DEMANDÉ : c'est tout le contrat. */
+  expect(await memoire(), 'rien ne doit être gardé sans un geste').toBe('[]');
+
+  await page.getByRole('button', { name: 'Enregistrer ce parcours' }).click();
+  await expect(page.locator('.bg-bilan-garde')).toContainText('enregistré');
+  /* ET LE BOUTON SE DÉSARME : un double appui ne fait pas deux entrées. */
+  await expect(page.getByRole('button', { name: 'Enregistrer ce parcours' })).toBeDisabled();
+
+  await expect.poll(memoire, { message: 'le parcours n’est pas en mémoire' })
+    .toContain('vitesseMaxKmh');
+});

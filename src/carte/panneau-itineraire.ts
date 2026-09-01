@@ -43,6 +43,9 @@ import { chargerCommodites, TYPES_COMMODITE, ErreurCommodites } from '../lib/com
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import { PREF_VEHICULE } from './panneau-vehicule';
 import { ErreurPoi, type FiltresBornes } from '../lib/poi';
+import {
+  lireHistorique, ecrireHistorique, comparerTrajets, type TrajetEnregistre,
+} from '../lib/historique-trajets';
 import { poserIconesPuissance, nomIcone } from './icone-puissance';
 import { palierDe } from '../lib/puissance';
 import { chargerPeages, ErreurPeages } from '../lib/peages';
@@ -133,6 +136,7 @@ const VUES = {
   alti: 'Profil altimétrique',
   monuments: 'Lieux d’exception',
   partage: 'Partager ou exporter',
+  historique: 'Historique',
 } as const;
 
 type CleVue = keyof typeof VUES;
@@ -469,24 +473,6 @@ export class PanneauItineraire extends HTMLElement {
               <span class="iti-heure-note">vide : maintenant</span>
             </label>
 
-            <!-- LE PIED COLLE AU BAS DU VOLET (ITI-1, 01/09). Armelin :
-                 « si je scrolle tout en bas de la fenêtre itinéraire jusqu'à
-                 afficher la feuille de route, je suis obligé de scroller à
-                 nouveau vers le haut pour retrouver le bouton "Démarrer le
-                 suivi", ce qui n'est pas pratique ».
-                 LE RÉSUMÉ VOYAGE AVEC LE BOUTON, et c'est volontaire : les
-                 kilomètres et l'heure d'arrivée sont ce qu'on relit AVANT de
-                 partir. Les séparer aurait donné un bouton qui s'engage sans
-                 dire à quoi. -->
-            <div class="iti-pied">
-              <p class="iti-resultat" role="status" hidden></p>
-              <p class="iti-erreur" role="alert" hidden></p>
-
-              <div class="iti-actions" hidden>
-                <button type="button" class="iti-demarrer" hidden>Démarrer le suivi</button>
-              </div>
-            </div>
-
             <!-- DEUX MENUS, PARCE QU'IL Y A DEUX SORTES DE PAGES.
                  Le véhicule, les couches et les options ne DÉPENDENT PAS d'un
                  trajet : on règle sa voiture avant de savoir où l'on va, et
@@ -503,6 +489,13 @@ export class PanneauItineraire extends HTMLElement {
                 ${pictoMenu('couches')}<span>Recharge et services</span><span aria-hidden="true">›</span></button>
               <button type="button" class="iti-vers" data-vers="options">
                 ${pictoMenu('options')}<span>Options du trajet</span><span aria-hidden="true">›</span></button>
+              <!-- L'HISTORIQUE VIT AVEC LES RÉGLAGES, pas avec le trajet en
+                   cours : on le consulte SANS avoir planifié quoi que ce soit
+                   — c'est même à cela qu'il sert, comparer d'une semaine à
+                   l'autre. Le mettre dans le menu du trajet l'aurait rendu
+                   inatteignable au moment où l'on en a besoin. -->
+              <button type="button" class="iti-vers" data-vers="historique">
+                ${pictoMenu('feuille')}<span>Historique</span><span aria-hidden="true">›</span></button>
             </nav>
 
             <!-- LE MENU S'EST ALLÉGÉ LE 29/08, sur les retours d'Armelin :
@@ -526,6 +519,25 @@ export class PanneauItineraire extends HTMLElement {
                  le mandat UX du 28/08 : un bouton d'effacement devant des
                  champs vides est une menace sans objet. -->
             <button type="button" class="iti-effacer" hidden>Effacer le trajet</button>
+
+            <!-- LE PIED COLLE AU BAS DU VOLET (ITI-1, 01/09), ET IL EST LE DERNIER
+                 ÉLÉMENT DE LA PAGE (corrigé le 01/09). Armelin :
+                 « si je scrolle tout en bas de la fenêtre itinéraire jusqu'à
+                 afficher la feuille de route, je suis obligé de scroller à
+                 nouveau vers le haut pour retrouver le bouton "Démarrer le
+                 suivi", ce qui n'est pas pratique ».
+                 LE RÉSUMÉ VOYAGE AVEC LE BOUTON, et c'est volontaire : les
+                 kilomètres et l'heure d'arrivée sont ce qu'on relit AVANT de
+                 partir. Les séparer aurait donné un bouton qui s'engage sans
+                 dire à quoi. -->
+            <div class="iti-pied">
+              <p class="iti-resultat" role="status" hidden></p>
+              <p class="iti-erreur" role="alert" hidden></p>
+
+              <div class="iti-actions" hidden>
+                <button type="button" class="iti-demarrer" hidden>Démarrer le suivi</button>
+              </div>
+            </div>
           </section>
 
           <!-- ============= VÉHICULE ET COUCHES, EN PAGES ============= -->
@@ -537,6 +549,23 @@ export class PanneauItineraire extends HTMLElement {
                dans quel menu on peut trouver quelle option. »
                Les deux panneaux existants viennent s'y loger tels quels : leur
                logique ne bouge pas, seule leur enveloppe disparaît. -->
+          <!-- ====================== HISTORIQUE ====================== -->
+          <!-- STATS-2 (01/09). Armelin : « dans le menu de l'application, on
+               retrouverait alors une section "Historique" avec les parcours
+               enregistrés manuellement afin qu'on puisse les comparer en
+               cochant deux ou plusieurs parcours dans la liste et cliquer sur
+               un bouton "Comparer" ». -->
+          <section class="vue" data-vue="historique" hidden>
+            <p class="iti-hist-vide" hidden>Aucun parcours enregistré. À la fin
+              d’un trajet, le bilan propose de le garder.</p>
+            <div class="iti-hist-liste" role="group" aria-label="Parcours enregistrés"></div>
+            <div class="iti-hist-actions" hidden>
+              <button type="button" class="iti-hist-comparer">Comparer</button>
+              <button type="button" class="iti-hist-oublier">Oublier</button>
+            </div>
+            <p class="iti-hist-note">Ces parcours ne quittent pas cet appareil.</p>
+          </section>
+
           <section class="vue vue-hote" data-vue="vehicule" hidden></section>
           <section class="vue vue-hote" data-vue="couches" hidden></section>
 
@@ -787,6 +816,17 @@ export class PanneauItineraire extends HTMLElement {
     });
     void this.#majRaccourcis();
     this.#allerA('accueil');
+    this.querySelector('.iti-hist-comparer')?.addEventListener('click', () => {
+      this.#montrerComparaison();
+    });
+    this.querySelector('.iti-hist-oublier')?.addEventListener('click', () => {
+      void (async () => {
+        this.#trajets = this.#trajets.filter((x) => !this.#coches.has(x.id));
+        await ecrireHistorique(this.#trajets);
+        this.#coches.clear();
+        this.#rendreHistorique();
+      })();
+    });
     this.querySelector('.iti-effacer')?.addEventListener('click', () => this.#effacer());
 
     /* L'HEURE DE DÉPART change l'arrivée affichée ET les relevés météo :
@@ -2523,8 +2563,124 @@ export class PanneauItineraire extends HTMLElement {
    * applications de téléphone, et elle vaut ici pour la même raison : la
    * colonne est étroite.
    */
+  /* L'HISTORIQUE EST RELU À CHAQUE OUVERTURE DE LA PAGE, jamais gardé en
+     mémoire : un trajet peut avoir été enregistré depuis le bandeau de suivi
+     entre-temps, et une liste figée l'aurait ignoré. */
+  #trajets: TrajetEnregistre[] = [];
+
+  #coches = new Set<string>();
+
+  async #ouvrirHistorique(): Promise<void> {
+    this.#trajets = await lireHistorique();
+    this.#coches.clear();
+    this.#rendreHistorique();
+  }
+
+  #rendreHistorique(): void {
+    const liste = this.querySelector<HTMLElement>('.iti-hist-liste');
+    const vide = this.querySelector<HTMLElement>('.iti-hist-vide');
+    const actions = this.querySelector<HTMLElement>('.iti-hist-actions');
+    if (!liste || !vide || !actions) return;
+    vide.hidden = this.#trajets.length > 0;
+    liste.replaceChildren();
+    const quand = (ms: number): string => new Date(ms)
+      .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    for (const trajet of this.#trajets) {
+      const l = document.createElement('label');
+      l.className = 'iti-hist-ligne';
+      const c = document.createElement('input');
+      c.type = 'checkbox';
+      c.className = 'iti-hist-case';
+      c.value = trajet.id;
+      c.checked = this.#coches.has(trajet.id);
+      c.addEventListener('change', () => {
+        if (c.checked) this.#coches.add(trajet.id); else this.#coches.delete(trajet.id);
+        this.#majActionsHistorique();
+      });
+      const texte = document.createElement('span');
+      const min = Math.round(trajet.resume.dureeMs / 60_000);
+      texte.textContent = `${trajet.titre} — ${quand(trajet.departMs)}`
+        + ` · ${min} min`;
+      l.append(c, texte);
+      liste.appendChild(l);
+    }
+    this.#majActionsHistorique();
+  }
+
+  /**
+   * Montre les parcours cochés CÔTE À CÔTE.
+   *
+   * Armelin : « une fenêtre s'ouvrira en plein écran avec les statistiques
+   * côte à côte de chaque parcours […] cela permet de regarder si on a fait
+   * mieux d'une semaine à l'autre ou observer la différence quand on voyage
+   * seul ou en famille sur un même trajet ». Ce ne sont donc pas des chiffres
+   * qu'il faut aligner, mais des ÉCARTS qu'il faut nommer : la colonne la
+   * meilleure est marquée, quand « meilleur » veut dire quelque chose.
+   */
+  #montrerComparaison(): void {
+    const choisis = this.#trajets.filter((x) => this.#coches.has(x.id));
+    if (choisis.length < 2) return;
+    const boite = this.querySelector<HTMLElement>('.iti-hist-comparaison')
+      ?? (() => {
+        const d = document.createElement('div');
+        d.className = 'iti-hist-comparaison';
+        d.setAttribute('role', 'group');
+        d.setAttribute('aria-label', 'Comparaison des parcours');
+        this.querySelector('.vue[data-vue="historique"]')?.appendChild(d);
+        return d;
+      })();
+    boite.replaceChildren();
+
+    const table = document.createElement('table');
+    const entete = document.createElement('tr');
+    entete.appendChild(document.createElement('th'));
+    for (const t2 of choisis) {
+      const th = document.createElement('th');
+      th.textContent = t2.titre;
+      entete.appendChild(th);
+    }
+    table.appendChild(entete);
+    for (const ligne of comparerTrajets(choisis)) {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.scope = 'row';
+      th.textContent = ligne.libelle;
+      tr.appendChild(th);
+      ligne.valeurs.forEach((v, i) => {
+        const td = document.createElement('td');
+        td.textContent = v;
+        /* LE MEILLEUR SE DIT AUSSI EN TOUTES LETTRES : une pastille verte ne
+           s'entend pas dans un lecteur d'écran. */
+        if (ligne.meilleur === i) {
+          td.dataset['meilleur'] = 'oui';
+          const dit = document.createElement('span');
+          dit.className = 'bg-lu-seulement';
+          dit.textContent = ' (le meilleur)';
+          td.appendChild(dit);
+        }
+        tr.appendChild(td);
+      });
+      table.appendChild(tr);
+    }
+    boite.appendChild(table);
+  }
+
+  #majActionsHistorique(): void {
+    const actions = this.querySelector<HTMLElement>('.iti-hist-actions');
+    const comparer = this.querySelector<HTMLButtonElement>('.iti-hist-comparer');
+    if (!actions || !comparer) return;
+    actions.hidden = this.#coches.size === 0;
+    /* COMPARER EXIGE DEUX PARCOURS, et le bouton le dit en restant éteint :
+       proposer une comparaison à un seul serait promettre un écart qui
+       n'existe pas. */
+    comparer.disabled = this.#coches.size < 2;
+    comparer.title = this.#coches.size < 2
+      ? 'Cochez au moins deux parcours' : '';
+  }
+
   #allerA(vue: CleVue): void {
     this.#vue = vue;
+    if (vue === 'historique') void this.#ouvrirHistorique();
     for (const section of this.querySelectorAll<HTMLElement>('.vue')) {
       section.hidden = section.dataset['vue'] !== vue;
     }

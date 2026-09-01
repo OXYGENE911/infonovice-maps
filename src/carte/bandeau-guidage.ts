@@ -36,6 +36,10 @@ import { coteDestination, phraseArrivee, SEUIL_ARRIVE_M } from '../lib/arrivee';
 import {
   nouveauBilan, ajouterFixe, resumerBilan, dureeEnMots, type EtatBilan,
 } from '../lib/bilan-trajet';
+import {
+  lireHistorique, ecrireHistorique, ajouterTrajet, titreParDefaut,
+  estLHeureDunReleve, type ReleveTrajet,
+} from '../lib/historique-trajets';
 import type { PointGeo } from '../lib/coordonnees';
 import { Marker, type GeoJSONSource } from 'maplibre-gl';
 import { imagePastille, cleImage, RAPPORT_PASTILLE } from './icone-lieu';
@@ -580,7 +584,18 @@ export class BandeauGuidage extends HTMLElement {
         <section class="bg-bilan" hidden aria-label="Bilan du trajet">
           <h2 class="bg-bilan-titre">Trajet terminé</h2>
           <dl class="bg-bilan-liste"></dl>
-          <button type="button" class="bg-bilan-fermer">Fermer</button>
+          <!-- ENREGISTRER EST UN GESTE, PAS UN RÉFLEXE DE L'APPLICATION
+               (STATS-2, 01/09). Armelin : « pour l'historique des trajets,
+               cela ne doit pas être fait automatiquement, mais proposé à
+               l'enregistrement à la fin du parcours au moment du récapitulatif
+               […] un bouton en bas de la fenêtre "Enregistrer ce parcours" ».
+               Un GPS qui archive tout seul devient un carnet de déplacements ;
+               un bouton qu'on presse est un consentement. -->
+          <div class="bg-bilan-boutons">
+            <button type="button" class="bg-bilan-garder">Enregistrer ce parcours</button>
+            <button type="button" class="bg-bilan-fermer">Fermer</button>
+          </div>
+          <p class="bg-bilan-garde" role="status" hidden></p>
         </section>
         <!-- CE QUI SE DÉPLIE. « Soit l'utilisateur scrolle la barre vers le
              haut pour afficher les options cachées, soit il appuie une fois
@@ -781,6 +796,9 @@ export class BandeauGuidage extends HTMLElement {
     this.querySelector('.bg-parking-p')?.addEventListener('click', () => {
       void this.#ouvrirParkings();
     });
+    this.querySelector('.bg-bilan-garder')?.addEventListener('click', () => {
+      void this.#garderLeTrajet();
+    });
     this.querySelector('.bg-bilan-fermer')?.addEventListener('click', () => {
       const boite = this.querySelector<HTMLElement>('.bg-bilan');
       if (boite) boite.hidden = true;
@@ -975,11 +993,26 @@ export class BandeauGuidage extends HTMLElement {
            boutons à l'arrêt. Ici, un appel = un fixe du récepteur.
            LA MESURE BRUTE, pas le point aimanté qu'on DESSINE : une
            statistique se fait de ce qu'on a mesuré. */
+        const maintenant = Date.now();
         this.#bilan = ajouterFixe(this.#bilan, {
-          instant: Date.now(),
+          instant: maintenant,
           vitesse: typeof p.coords.speed === 'number' && Number.isFinite(p.coords.speed)
             ? p.coords.speed : null,
         });
+        /* LE RELEVÉ SUIT LE MÊME CHEMIN QUE LE BILAN — ici, où un appel vaut
+           un fixe du récepteur, et nulle part ailleurs. */
+        if (this.#departMs === null) this.#departMs = maintenant;
+        const tMs = maintenant - this.#departMs;
+        if (estLHeureDunReleve(this.#dernierReleveMs, tMs)) {
+          this.#dernierReleveMs = tMs;
+          this.#releves.push({
+            tMs,
+            vitesseMs: typeof p.coords.speed === 'number' && Number.isFinite(p.coords.speed)
+              ? p.coords.speed : null,
+            altitudeM: typeof p.coords.altitude === 'number'
+              && Number.isFinite(p.coords.altitude) ? p.coords.altitude : null,
+          });
+        }
         this.#majPosition(p.coords);
       },
       (e) => {
@@ -1024,6 +1057,15 @@ export class BandeauGuidage extends HTMLElement {
   /* LE BILAN S'ACCUMULE PENDANT LE TRAJET (STATS-1) : chaque fixe y entre,
      aucun ne repart ailleurs. */
   #bilan: EtatBilan = nouveauBilan();
+
+  /* LES RELEVÉS RÉGULIERS (STATS-2) : ce qui se MESURE en roulant, sans un
+     appel de plus. Trente secondes — 360 points pour trois heures, ~32 Ko.
+     Ils ne partent nulle part tant qu'on n'a pas pressé « Enregistrer ». */
+  #releves: ReleveTrajet[] = [];
+
+  #departMs: number | null = null;
+
+  #dernierReleveMs: number | null = null;
 
   #marqueurArrivee: HTMLElement | null = null;
 
@@ -1085,7 +1127,55 @@ export class BandeauGuidage extends HTMLElement {
      CHARGE demandé n'y figure pas encore : il ne se mesure pas aux fixes, il
      vient du plan de recharge — le déduire d'un arrêt prendrait une pause
      déjeuner pour une borne. */
+  /**
+   * Enregistre le trajet qu'on vient de faire — SUR DEMANDE.
+   *
+   * Rien ne quitte le navigateur : IndexedDB, comme les favoris. Le bouton se
+   * désarme après coup pour qu'un double appui ne fasse pas deux entrées.
+   */
+  async #garderLeTrajet(): Promise<void> {
+    const r = resumerBilan(this.#bilan);
+    const dit = this.querySelector<HTMLElement>('.bg-bilan-garde');
+    const bouton = this.querySelector<HTMLButtonElement>('.bg-bilan-garder');
+    if (r === null || this.#departMs === null) return;
+    const o = this.#options;
+    try {
+      const liste = await lireHistorique();
+      await ecrireHistorique(ajouterTrajet(liste, {
+        /* L'IDENTIFIANT EST L'INSTANT DU DÉPART : deux trajets ne partent pas
+           à la même milliseconde, et cela évite de dépendre d'un générateur
+           d'aléa que les tests devraient alors piloter. */
+        id: `t${this.#departMs}`,
+        departMs: this.#departMs,
+        /* LE TITRE VIENT DE LA DESTINATION QUAND ELLE EST NOMMÉE : c'est le
+           seul libellé que le suivi connaît. Le départ, lui, n'est qu'un point
+           GPS — l'inventer donnerait un titre faux. */
+        titre: titreParDefaut('', o?.destination?.libelle ?? ''),
+        resume: r,
+        releves: [...this.#releves],
+      }));
+      if (dit) {
+        dit.textContent = 'Parcours enregistré — retrouvez-le dans « Historique ».';
+        dit.hidden = false;
+      }
+      if (bouton) bouton.disabled = true;
+    } catch {
+      /* UNE ÉCRITURE QUI ÉCHOUE SE DIT : perdre en silence un parcours que
+         l'usager vient de demander à garder serait le pire des deux. */
+      if (dit) {
+        dit.textContent = 'Impossible d’enregistrer ce parcours sur cet appareil.';
+        dit.hidden = false;
+      }
+    }
+  }
+
   #montrerBilan(): void {
+    /* LE BOUTON REPART ARMÉ À CHAQUE ARRIVÉE, et le mot de confirmation
+       s'efface : c'est un nouveau trajet. */
+    const bouton = this.querySelector<HTMLButtonElement>('.bg-bilan-garder');
+    if (bouton) bouton.disabled = false;
+    const dit = this.querySelector<HTMLElement>('.bg-bilan-garde');
+    if (dit) { dit.hidden = true; dit.textContent = ''; }
     const boite = this.querySelector<HTMLElement>('.bg-bilan');
     const liste = this.querySelector<HTMLElement>('.bg-bilan-liste');
     if (!boite || !liste) return;
@@ -1301,6 +1391,9 @@ export class BandeauGuidage extends HTMLElement {
        au précédent. Il reste À L'ÉCRAN si l'arrivée vient de l'afficher —
        c'est `demarrer` qui le referme, pas `arreter`. */
     this.#bilan = nouveauBilan();
+    this.#releves = [];
+    this.#departMs = null;
+    this.#dernierReleveMs = null;
     this.#retirerMarqueurArrivee();
     this.#parkings = null;
     this.#parkingRegle = false;
