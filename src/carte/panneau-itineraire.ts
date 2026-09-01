@@ -469,11 +469,22 @@ export class PanneauItineraire extends HTMLElement {
               <span class="iti-heure-note">vide : maintenant</span>
             </label>
 
-            <p class="iti-resultat" role="status" hidden></p>
-            <p class="iti-erreur" role="alert" hidden></p>
+            <!-- LE PIED COLLE AU BAS DU VOLET (ITI-1, 01/09). Armelin :
+                 « si je scrolle tout en bas de la fenêtre itinéraire jusqu'à
+                 afficher la feuille de route, je suis obligé de scroller à
+                 nouveau vers le haut pour retrouver le bouton "Démarrer le
+                 suivi", ce qui n'est pas pratique ».
+                 LE RÉSUMÉ VOYAGE AVEC LE BOUTON, et c'est volontaire : les
+                 kilomètres et l'heure d'arrivée sont ce qu'on relit AVANT de
+                 partir. Les séparer aurait donné un bouton qui s'engage sans
+                 dire à quoi. -->
+            <div class="iti-pied">
+              <p class="iti-resultat" role="status" hidden></p>
+              <p class="iti-erreur" role="alert" hidden></p>
 
-            <div class="iti-actions" hidden>
-              <button type="button" class="iti-demarrer" hidden>Démarrer le suivi</button>
+              <div class="iti-actions" hidden>
+                <button type="button" class="iti-demarrer" hidden>Démarrer le suivi</button>
+              </div>
             </div>
 
             <!-- DEUX MENUS, PARCE QU'IL Y A DEUX SORTES DE PAGES.
