@@ -25,6 +25,9 @@
  */
 import type { Map as CarteMapLibre } from 'maplibre-gl';
 import {
+  chercherReleves, resumerReleves, ageEnMots, PEREMPTION_OCCUPATION_MS,
+} from '../lib/irve-dynamique';
+import {
   chargerDetail, ErreurStation, type DetailStation, type GroupePdc,
 } from '../lib/station';
 import {
@@ -239,6 +242,7 @@ export class FicheBorne extends HTMLElement {
     corps.append(this.#blocPratique(d));
     corps.append(this.#blocPaiement(d));
     corps.append(this.#blocCommodites(cible));
+    corps.append(this.#blocEtat(d));
     corps.append(this.#blocProvenance(d));
   }
 
@@ -588,6 +592,80 @@ export class FicheBorne extends HTMLElement {
     return enveloppe;
   }
 
+  /**
+   * L'ÉTAT DÉCLARÉ DES POINTS — daté, jamais donné pour l'instant présent.
+   *
+   * IRVE-1 (01/09). Armelin demandait « les points libres ou occupés » et un
+   * reroutage automatique quand une station est chargée. La base existe et
+   * elle est française, publique et gratuite ; elle n'est simplement PAS
+   * vivante. Mesuré le jour même sur 1 400 points : aucun relevé de moins de
+   * 9,6 heures, 45 % de plus de sept jours. Un reroutage bâti là-dessus
+   * détournerait quelqu'un sur une file d'attente d'avant-hier.
+   *
+   * ALORS ON MONTRE CE QUI SE TIENT : le nombre de points signalés HORS
+   * SERVICE — une panne ne se vide pas comme une place — et l'occupation
+   * DATÉE en toutes lettres, tant qu'elle a moins d'une semaine. UN SEUL
+   * APPEL, à l'ouverture de la fiche, jamais en boucle.
+   */
+  #blocEtat(d: DetailStation): HTMLElement {
+    const b = this.#bloc('État déclaré des points', 'fb-etat');
+    const attente = this.#note('Lecture des derniers relevés…', 'fb-attente');
+    b.append(attente);
+    const cible = this.#cible;
+    void chercherReleves(d.pdcIds).then(
+      (releves) => {
+        /* LA FICHE A PU CHANGER PENDANT L'APPEL : écrire dans celle d'une
+           autre station serait pire que ne rien écrire. */
+        if (this.#cible !== cible) return;
+        attente.remove();
+        const r = resumerReleves(releves);
+        if (r.releves === 0 || r.leFrais === null) {
+          b.append(this.#note(
+            'Aucun relevé public pour les points de cette station. Ce silence'
+            + ' est celui du fichier national, pas de la carte : la plupart'
+            + ' des opérateurs n’y déposent rien.',
+            'fb-nuance',
+          ));
+          return;
+        }
+        const age = ageEnMots(r.leFrais, Date.now());
+        this.#ligne(b, 'Dernier relevé', `${age} · ${r.releves} point${
+          r.releves > 1 ? 's' : ''} sur ${d.pdcIds.length}`);
+        if (r.horsService > 0) {
+          /* CELLE-LÀ SE VOIT : c'est la seule qui peut rendre le détour
+             inutile, et elle ne se périme pas comme une place occupée. */
+          const p = this.#note(
+            `${r.horsService} point${r.horsService > 1 ? 's' : ''} signalé${
+              r.horsService > 1 ? 's' : ''} HORS SERVICE au dernier relevé.`,
+            'fb-alerte',
+          );
+          b.append(p);
+        }
+        if (Date.now() - r.leFrais <= PEREMPTION_OCCUPATION_MS) {
+          this.#ligne(b, 'Occupation ce jour-là',
+            `${r.libres} libre${r.libres > 1 ? 's' : ''}, ${r.occupes} occupé${
+              r.occupes > 1 ? 's' : ''}`);
+        }
+        b.append(this.#note(
+          'Ces relevés ne sont PAS en direct : le plus frais mesuré sur ce'
+          + ' fichier avait neuf heures. Ils disent l’état d’un jour passé,'
+          + ' pas la place libre qui vous attend.',
+          'fb-nuance',
+        ));
+      },
+      () => {
+        if (this.#cible !== cible) return;
+        attente.remove();
+        /* UNE PANNE DE CE SERVICE N'EST PAS UNE ABSENCE DE RELEVÉ : le dire
+           autrement ferait porter au réseau un silence qui vient d'ailleurs. */
+        b.append(this.#note(
+          'Les relevés d’état ne répondent pas pour le moment.', 'fb-nuance',
+        ));
+      },
+    );
+    return b;
+  }
+
   /* LA DERNIÈRE RUBRIQUE DIT D'OÙ VIENT LA DONNÉE, ET CE QU'ELLE N'A PAS.
      Un cartouche silencieux sur l'occupation laisse croire à un oubli
      d'affichage ; il vaut mieux écrire qu'aucune source publique française ne
@@ -600,10 +678,15 @@ export class FicheBorne extends HTMLElement {
       `IRVE consolidé (data.gouv.fr)${age ? `, mis à jour ${age}` : ''}`,
     );
     if (d.id) this.#ligne(b, 'Identifiant d’itinérance', d.id);
+    /* CETTE PHRASE ÉTAIT FAUSSE, ET IRVE-1 L'A ÉTABLI : une source publique
+       française DIFFUSE bien l'état des points à l'échelle nationale. Elle
+       n'est simplement pas vivante. Se tromper dans ce sens-là revenait à
+       cacher une donnée qui existe. */
     b.append(this.#note(
-      'Occupation en direct indisponible : aucune source publique française'
-      + ' ne la diffuse à l’échelle nationale. Vérifiez la disponibilité dans'
-      + ' l’application de l’opérateur avant de vous engager.',
+      'L’occupation en direct n’existe dans aucune source publique française :'
+      + ' le fichier national d’état des points est déposé par lots, et son'
+      + ' relevé le plus frais mesuré avait neuf heures. Vérifiez la'
+      + ' disponibilité dans l’application de l’opérateur avant de vous engager.',
       'fb-nuance',
     ));
     return b;

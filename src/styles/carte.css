@@ -1306,6 +1306,18 @@ fiche-borne:not([hidden]), fiche-lieu:not([hidden]) { z-index: var(--z-volet-ouv
 }
 .fb-bloc h3 + .fb-nuance { margin-top: 0; }
 
+/* UN POINT HORS SERVICE PEUT RENDRE LE DÉTOUR INUTILE (IRVE-1) : c'est la
+   seule ligne de ce cartouche qui mérite d'arrêter l'œil. L'ambre foncé porte
+   déjà l'avertissement ailleurs dans l'application (bandeau hors-ligne) ; le
+   fond reste sobre pour que la ligne se lise en clair comme en sombre, et le
+   texte ne compte PAS sur la couleur seule — il écrit « HORS SERVICE ». */
+.fb-alerte {
+  margin: 8px 0 0; padding: 7px 9px; border-radius: 8px;
+  background: color-mix(in srgb, var(--ambre) 18%, var(--fond));
+  border: 1px solid var(--ambre-fonce);
+  font: 600 12.5px var(--police); color: var(--texte-1); line-height: 1.45;
+}
+
 .fb-commodites {
   width: 100%; padding: 7px 10px; border-radius: 8px;
   border: 1px solid var(--accent); background: var(--fond); cursor: pointer;
