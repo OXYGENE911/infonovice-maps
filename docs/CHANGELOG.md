@@ -2,6 +2,40 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.28.0] — 2026-09-01 — Chercher : la BAN a-t-elle répondu ? (PR #173)
+
+### Corrigé
+- **Le collège d'Armelin se trouve enfin.** Troisième signalement : « Je n'ai
+  toujours pas le collège de ma fille visible ». Le correctif de la veille
+  (RECHERCHE-3/4) ne s'est jamais déclenché en production, et la cause est une
+  erreur de mesure de ma part : j'avais calibré le seuil de confiance sur des
+  scores relevés à la main SANS le paramètre `autocomplete` que l'application,
+  elle, envoie. Mesuré dans son navigateur le 01/09, « Collège Albert Camus »
+  vaut **0,945** — au-dessus du seuil de 0,9 — et non 0,48. La porte restait
+  donc close sur le cas même qu'elle devait ouvrir.
+- **Le score ne décide plus de rien.** Deux questions le remplacent, et aucune
+  ne coûte un appel : *la BAN rend-elle les mots qu'on a tapés* (« Collège
+  Albert Camus » rend « avenue albert camus » — « collège » a disparu), et
+  *son résultat est-il là où l'on regarde* (le lieu-dit homonyme est dans le
+  Nord, à deux cents kilomètres). Il faut les deux pour se taire : le lieu-dit
+  du Nord porte bien les trois mots, et c'est la vue qui le disqualifie.
+- **Overpass reste protégé.** Chercher à chaque frappe aurait réglé le cas
+  d'Armelin en ajoutant deux appels par recherche sur un service bénévole —
+  contraire à la règle du projet. « lyon » rend « Lyon » : tous les mots y
+  sont, la carte n'appelle personne de plus.
+- **L'emprise remplace le centre.** La barre de recherche connaît désormais
+  l'étendue de la vue et non son seul centre : une carte de France entière
+  n'exprime aucune préférence et laisse la BAN décider, là où son centre
+  géographique aurait tiré toutes les recherches vers le Berry.
+
+### Tests
+- `repondALaSaisie` et `dansEmprise` sont des fonctions pures, testées sur les
+  libellés réellement mesurés — y compris le piège : le lieu-dit de Thumeries
+  répond mot pour mot à la saisie, et seul l'écart à la vue le récuse.
+- Le parcours « UN HOMONYME LOINTAIN NE DÉPLACE PAS LA RECHERCHE » portait le
+  score erroné 0,48 ; il porte maintenant le 0,945 mesuré. Contre-épreuve
+  faite : il échoue sans le correctif, il passe avec.
+
 ## [1.27.0] — 2026-09-01 — FOND-2 : les étiquettes se posent APRÈS le style (PR #172)
 
 **FOND-1 NE FONCTIONNAIT PAS EN PRODUCTION, ET MES TESTS NE POUVAIENT PAS LE

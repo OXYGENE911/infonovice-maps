@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  elargir, contient, estCouverte, memoriser, FACTEUR_MARGE, ZONES_GARDEES,
+  elargir, contient, dansEmprise, estCouverte, memoriser,
+  FACTEUR_MARGE, ZONES_GARDEES,
   type Emprise,
 } from '../src/lib/couverture';
 
@@ -86,5 +87,36 @@ describe('memoriser', () => {
     const depart = [vue(0, 0, 1, 1)];
     memoriser(depart, vue(5, 5, 6, 6));
     expect(depart).toHaveLength(1);
+  });
+});
+
+describe('dansEmprise', () => {
+  /* CE QUI DÉCIDE SI LA BAN A COMPRIS OÙ L'ON CHERCHE (RECHERCHE-5, 01/09).
+     Le cas mesuré : taper « Collège Albert Camus » en regardant Le
+     Plessis-Trévise rend un lieu-dit du Nord — que la BAN donne pour sûr à
+     0,945. Un score élevé dit qu'elle est sûre de SON lieu-dit ; il ne dit
+     pas que c'est celui-là qu'on cherchait. La vue, elle, le dit. */
+  const plessis = vue(2.53, 48.79, 2.61, 48.83);
+
+  it('le point du Plessis est dans la vue du Plessis', () => {
+    expect(dansEmprise(plessis, { lon: 2.5760, lat: 48.8051 })).toBe(true);
+  });
+
+  it('le lieu-dit de Thumeries n’y est pas — c’est tout le sujet', () => {
+    expect(dansEmprise(plessis, { lon: 3.0640, lat: 50.4750 })).toBe(false);
+  });
+
+  it('une vue sur la France entière n’exclut personne, et c’est voulu', () => {
+    /* Une carte qui montre tout le pays n'exprime AUCUNE préférence : elle
+       doit donc laisser la BAN décider, et non tirer la recherche vers le
+       centre géographique de la France où personne ne cherche rien. */
+    const france = vue(-5.2, 41.3, 9.6, 51.1);
+    expect(dansEmprise(france, { lon: 2.5760, lat: 48.8051 })).toBe(true);
+    expect(dansEmprise(france, { lon: 3.0640, lat: 50.4750 })).toBe(true);
+  });
+
+  it('les bords appartiennent à l’emprise', () => {
+    expect(dansEmprise(plessis, { lon: 2.53, lat: 48.79 })).toBe(true);
+    expect(dansEmprise(plessis, { lon: 2.61, lat: 48.83 })).toBe(true);
   });
 });

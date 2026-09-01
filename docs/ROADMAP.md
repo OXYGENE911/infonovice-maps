@@ -537,6 +537,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #162 — RECHERCHE-3 (01/09) : la recherche par nom part enfin (la
       BAN rend toujours quelque chose) et interroge l'ÉGALITÉ indexée, la
       regex expirant (mesuré : 57 s). Expiration lue comme telle.
+- [x] PR #173 — RECHERCHE-5 (01/09) : le collège se trouve enfin. RECHERCHE-4
+      ne s'est jamais déclenché en production — seuil calibré sur des scores
+      mesurés SANS `autocomplete` (0,48 relevé à la main, 0,945 réellement
+      servi à l'application). Le score est remplacé par deux questions
+      gratuites : la BAN rend-elle les mots tapés, et son résultat est-il dans
+      la vue. Il faut les deux, car le lieu-dit de Thumeries porte les mots.
 - [x] PR #171 — STATS-2 (01/09) : l'historique des trajets, ENREGISTRÉ SUR
       DEMANDE, avec comparaison côte à côte. Conception d'Armelin.
 - [ ] À SUIVRE — le partage à INFONOVICE : bouton dédié, floutage des

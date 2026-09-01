@@ -212,10 +212,39 @@ export async function adresseInverse(p: PointGeo): Promise<ResultatAdresse | nul
  * LE SCORE NE LES SÉPARE PAS ; la commune, si. On n'ancre la recherche sur un
  * résultat approximatif que si l'on retrouve sa commune dans la saisie.
  */
-export function communeNommee(texte: string, contexte: string): boolean {
-  const nu = (s: string): string => s
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+function nu(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/**
+ * LE RÉSULTAT DE LA BAN RÉPOND-IL À CE QU'ON A TAPÉ ? — PURE.
+ *
+ * RECHERCHE-5 (01/09), et c'est la question que j'aurais dû poser d'emblée.
+ * J'ai d'abord cru que le SCORE dirait quand chercher plus loin ; il ne le dit
+ * pas — la BAN annonce 0,945 sur un lieu-dit du Nord qui n'a rien à voir. J'ai
+ * ensuite cru pouvoir chercher à chaque saisie ; c'est deux appels de plus par
+ * recherche sur un service bénévole, et la règle du projet l'interdit.
+ *
+ * CE QUI SE LIT SANS RIEN DEMANDER À PERSONNE : les mots. Mesuré le jour même,
+ *  - « lyon » rend « Lyon » — tous les mots y sont, la BAN a répondu ;
+ *  - « Collège Albert Camus » rend « avenue albert camus … » — « collège » a
+ *    disparu, elle a rendu autre chose ;
+ *  - « Tour Eiffel Paris » rend « Avenue Gustave Eiffel » — « tour » manque.
+ *
+ * Un mot de la saisie absent du libellé, c'est une question sans réponse : là,
+ * et là seulement, on va voir ailleurs.
+ */
+export function repondALaSaisie(texte: string, libelle: string): boolean {
+  const dans = ` ${nu(libelle)} `;
+  /* LES MOTS COURTS NE PROUVENT RIEN — « rue », « le », « de » se retrouvent
+     partout et diraient oui à tort. Trois lettres, comme pour les communes. */
+  const mots = nu(texte).split(' ').filter((m) => m.length >= 3);
+  if (mots.length === 0) return false;
+  return mots.every((m) => dans.includes(` ${m} `));
+}
+
+export function communeNommee(texte: string, contexte: string): boolean {
   const saisie = ` ${nu(texte)} `;
   /* LE CONTEXTE EST « 75007 Paris » : on essaie chaque mot d'au moins trois
      lettres — « Le » ou « sur » ne prouveraient rien. */
