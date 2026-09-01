@@ -553,9 +553,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       la vue. Il faut les deux, car le lieu-dit de Thumeries porte les mots.
 - [x] PR #171 — STATS-2 (01/09) : l'historique des trajets, ENREGISTRÉ SUR
       DEMANDE, avec comparaison côte à côte. Conception d'Armelin.
-- [ ] À SUIVRE — le partage à INFONOVICE : bouton dédié, floutage des
-      adresses de départ et d'arrivée, fichier montré avant envoi. L'appli
-      EXPORTE, l'usager attache (un mailto ne porte pas de pièce jointe).
+- [x] LIVRÉ par la PR #175 (PARTAGE-1) — le partage à INFONOVICE : bouton
+      dédié, floutage des adresses de départ et d'arrivée, fichier montré
+      avant envoi. L'appli EXPORTE, l'usager attache (un mailto ne porte pas
+      de pièce jointe).
 - [x] PR #172 — FOND-2 (01/09) : les étiquettes se posent sur `style.load`.
       FOND-1 les déclarait dans le style initial et la PRODUCTION ne les
       dessinait pas.
@@ -571,6 +572,22 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       par Armelin le 01/09 (Wikidata exclu, chercher un équivalent français
       pour les logos) : Éducation nationale (mesuré : le collège introuvable
       dans OSM y est), entreprises, Culture, DATAtourisme.
+      MESURÉ LE 01/09, et cela réduit le chantier :
+      - **Culture** : le portail ODS a déménagé sur `culture.data.gouv.fr` et
+        n'expose plus l'API ODS à l'ancienne adresse ; la « Liste des musées
+        de France » sur data.gouv est un jeu de CSV PAR TERRITOIRE datant de
+        2021. Rien de mieux que la couche « Culture et visites » déjà servie
+        par OSM, qui est vivante. À reprendre si le portail réouvre une API.
+      - **Équipements sportifs** : le recensement national (RES) n'est publié
+        qu'en WMS ou par lien vers son portail ; les jeux interrogeables sont
+        RÉGIONAUX (Île-de-France), ce qui donnerait une couverture inégale.
+        Mesuré côté OSM : 55 équipements NOMMÉS dans 8 km autour du
+        Plessis-Trévise — la couche « Sport et stades » (POI-6) les porte
+        déjà, et la recherche par nom les trouve depuis RECHERCHE-5.
+      - **Logos** : aucune base française ne les expose (l'INPI n'a pas d'API
+        d'images utilisable) et Wikidata est écarté par Armelin. La
+        recommandation reste les pictogrammes maison.
+      - **DATAtourisme, entreprises** : pas encore mesurés.
 - [x] PR #167 — BORNES-8 (01/09) : le rappel des filtres rentre dans le
       panneau « Autour de moi » (un point sur l'entonnoir le remplace sur la
       carte) ; le bouton « Tout afficher » devient lisible en thème sombre.
