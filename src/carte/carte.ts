@@ -89,6 +89,47 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     visualizePitch: true, showZoom: false, showCompass: true,
   }), 'bottom-right');
 
+  /* QUAND LE SYSTÈME REPREND LA CARTE : la perte de contexte WebGL (CARTE-1,
+     01/09).
+     LE TERRAIN. Armelin, après un essai à pied : « quand un trajet est
+     terminé, la cartographie affiche une page noire et plus aucune carte ne
+     s'affiche ». Les boutons, l'échelle et la boussole restaient là — ils
+     vivent DANS le conteneur de la carte — mais le canevas ne dessinait plus
+     rien.
+     LA CAUSE EST DANS MAPLIBRE, et elle est documentée : à la perte du
+     contexte WebGL, `_contextLost` DÉTRUIT le style (`this.style = null`) et
+     attend `webglcontextrestored` pour le reconstruire. Un téléphone qui
+     reprend sa mémoire graphique après une longue navigation — écran allumé,
+     GPU occupé — provoque exactement cela. Mesuré du côté de l'application :
+     `isStyleLoaded()` faux, zéro calque, canevas noir.
+     CE QU'ON PEUT FAIRE, ET CE QU'ON NE PEUT PAS. On ne rend pas un contexte
+     que le système a repris ; c'est lui qui le rend, quand il le veut. Mais
+     un rectangle noir SANS UN MOT est le pire des deux : il fait croire à une
+     application cassée là où il s'agit d'une reprise de mémoire. On le dit
+     donc, et on offre la seule issue sûre — recharger. L'itinéraire vit dans
+     l'adresse (`#iti=…`) : le rechargement ne le perd pas. */
+  const perdue = document.createElement('div');
+  perdue.className = 'carte-perdue';
+  perdue.hidden = true;
+  perdue.setAttribute('role', 'alert');
+  const motPerdue = document.createElement('p');
+  motPerdue.textContent = 'Le système a repris la mémoire graphique : la carte'
+    + ' ne peut plus se dessiner. Votre itinéraire est conservé.';
+  const boutonPerdue = document.createElement('button');
+  boutonPerdue.type = 'button';
+  boutonPerdue.className = 'carte-perdue-recharger';
+  boutonPerdue.textContent = 'Recharger la carte';
+  boutonPerdue.addEventListener('click', () => { window.location.reload(); });
+  perdue.append(motPerdue, boutonPerdue);
+  conteneur.appendChild(perdue);
+
+  carte.on('webglcontextlost', () => { perdue.hidden = false; });
+  /* ET S'IL LA REND, ON SE TAIT : MapLibre réapplique alors le style, ce qui
+     rejoue `style.load` — les étiquettes, le tracé, les bornes et les POI se
+     reposent d'eux-mêmes, chacun ayant déjà ce contrat pour le changement de
+     fond. Rien de plus à faire ici que d'effacer le message. */
+  carte.on('webglcontextrestored', () => { perdue.hidden = true; });
+
   /* LE MODE SOMBRE DU FOND PLAN est un filtre CSS sur le canevas — le
      vectoriel ferait mieux, mais il exigerait glyphes et sprites hébergés ;
      le filtre inversé bien réglé rend le Plan IGN parfaitement lisible de

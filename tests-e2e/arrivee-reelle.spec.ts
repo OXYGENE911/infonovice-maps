@@ -216,7 +216,7 @@ test('VOIX-2 : l’arrêt de recharge s’annonce à voix haute', async ({ page,
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 20_000 });
   await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
-  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
+  // La voix parle par défaut depuis VOIX-3 : plus rien à allumer.
 
   /* AU DÉPART, L'ARRÊT EST À DES CENTAINES DE KILOMÈTRES : rien à dire. La
      voix se présente, et c'est tout — la preuve qu'elle ne bavarde pas. */
@@ -225,7 +225,11 @@ test('VOIX-2 : l’arrêt de recharge s’annonce à voix haute', async ({ page,
     (window as unknown as { ditesVoix: string[] }).ditesVoix);
   expect(phrases.some((p) => p.startsWith('Arrêt recharge')),
     `annonce prématurée : ${JSON.stringify(phrases)}`).toBe(false);
-  expect(phrases).toContain('Guidage vocal activé');
+  /* LA PRÉSENTATION PORTE MAINTENANT SON MODE D'EMPLOI (VOIX-3) : elle dit
+     aussi comment couper la voix. On compare donc le DÉBUT, pas la phrase
+     entière — l'égalité stricte ne défendait que sa ponctuation. */
+  expect(phrases.some((p) => p.startsWith('Guidage vocal activé')),
+    'la voix ne s’est pas présentée').toBe(true);
 
   /* PUIS ON AVANCE LE LONG DU TRAJET, par pas d'un pour cent : quelque part
      entre la moitié et les trois quarts, l'arrêt entre dans les dix

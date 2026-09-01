@@ -92,26 +92,62 @@ async function rouler(page: Page, lon: number, lat: number): Promise<void> {
   await page.waitForTimeout(900);
 }
 
-test('LE P PARAÎT À L’APPROCHE — et ne demande RIEN tant qu’on ne le presse pas', async ({ page }) => {
+test('LES PARKINGS SE MONTRENT SEULS À L’APPROCHE — en UN appel', async ({ page }) => {
+  /* CETTE RÈGLE A CHANGÉ, ET C'EST ARMELIN QUI L'A CHANGÉE (PARK-2, 01/09).
+     PARK-1 ne demandait rien tant qu'on n'avait pas pressé le « P » — par
+     frugalité envers Overpass, tenu par des bénévoles. Après son essai à
+     pied : « il faudrait que les places de parking s'affichent toutes seules
+     à proximité de la destination avant même que je clique sur le rond
+     parking ». Il a raison sur l'usage : à l'approche, on cherche déjà des
+     yeux où se garer, et un bouton de plus à trouver au volant est un bouton
+     de trop.
+     LA FRUGALITÉ EST PRÉSERVÉE AUTREMENT, et ce parcours la garde : l'appel
+     automatique est EXACTEMENT celui que le clic aurait fait — un seul, gardé
+     en mémoire pour tout le reste du trajet. */
   const { overpass } = await suivre(page);
   const boutonP = page.locator('.bg-parking-p');
+  const demandes = (): number =>
+    overpass.filter((u) => u.includes('amenity"="parking')).length;
 
-  // Loin de l'arrivée : pas de P.
+  // Loin de l'arrivée : pas de P, et personne n'est dérangé.
   await rouler(page, 2.3450, 48.8500);
   await expect(boutonP).toBeHidden();
+  expect(demandes(), 'les parkings ont été demandés trop tôt').toBe(0);
 
-  // À moins de 1 200 m : le P paraît…
+  // À moins de 1 200 m : le P paraît, ET la liste s'ouvre d'elle-même.
   await rouler(page, 2.3600, 48.8500);
   await expect(boutonP).toBeVisible({ timeout: 10_000 });
-  // …et Overpass n'a PAS été interrogé pour des parkings.
-  expect(overpass.filter((u) => u.includes('amenity"="parking')),
-    'les parkings ont été demandés sans clic').toHaveLength(0);
+  await expect(page.locator('.bg-parkings')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.bg-parkings-liste li')).toHaveCount(2, { timeout: 15_000 });
+
+  /* UN SEUL APPEL, ET IL LE RESTE : on continue de rouler vers l'arrivée,
+     chaque fixe repassant par le même chemin. Sans la garde, c'est une
+     requête par fixe qui partirait vers un service bénévole. */
+  await rouler(page, 2.3610, 48.8500);
+  await rouler(page, 2.3615, 48.8500);
+  expect(demandes(), 'un appel par fixe part vers Overpass').toBe(1);
+});
+
+test('REFERMÉE, LA LISTE NE SE ROUVRE PAS TOUTE SEULE', async ({ page }) => {
+  /* Une feuille qui revient à chaque fixe serait un harcèlement — c'est le
+     bouton « P » qui la rappelle, et lui seul. */
+  await suivre(page);
+  await rouler(page, 2.3600, 48.8500);
+  await expect(page.locator('.bg-parkings')).toBeVisible({ timeout: 15_000 });
+
+  await page.locator('.bg-parking-p').click();
+  await expect(page.locator('.bg-parkings')).toBeHidden();
+
+  await rouler(page, 2.3610, 48.8500);
+  await rouler(page, 2.3615, 48.8500);
+  await expect(page.locator('.bg-parkings')).toBeHidden();
 });
 
 test('LA LISTE VA DU PLUS PRÈS AU PLUS LOIN, et « Se garer » replanifie', async ({ page }) => {
   const { urls } = await suivre(page);
+  /* PLUS DE CLIC : depuis PARK-2 la feuille s'ouvre d'elle-même à l'approche.
+     Presser le « P » ici la REFERMERAIT — c'est un interrupteur. */
   await rouler(page, 2.3600, 48.8500);
-  await page.locator('.bg-parking-p').click();
 
   const items = page.locator('.bg-parkings-liste li');
   await expect(items).toHaveCount(2, { timeout: 15_000 });
@@ -140,8 +176,8 @@ test('UNE FOIS GARÉ, « Finir à pied » bascule le profil piéton', async ({ p
      pied en basculant le mode de trajet de voiture à piéton ». PROPOSER : le
      bouton paraît à l'arrivée au parking, il ne bascule rien tout seul. */
   const { urls } = await suivre(page);
+  // La feuille s'ouvre seule à l'approche (PARK-2) : rien à presser.
   await rouler(page, 2.3600, 48.8500);
-  await page.locator('.bg-parking-p').click();
   await expect(page.locator('.bg-parkings-liste li')).toHaveCount(2, { timeout: 15_000 });
   await page.locator('.bg-parkings-liste li').nth(0)
     .getByRole('button', { name: /Se garer/ }).click();
@@ -192,7 +228,7 @@ test('L’ARRIVÉE ATTEND D’ÊTRE VRAIE — et dit le côté de la chaussée',
   });
   await suivre(page);
   await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
-  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
+  // La voix parle par défaut depuis VOIX-3 : plus rien à allumer.
 
   // À ~45 m de la fin : PAS de « vous êtes arrivé ».
   await rouler(page, 2.36740, 48.8500);
@@ -211,4 +247,40 @@ test('L’ARRIVÉE ATTEND D’ÊTRE VRAIE — et dit le côté de la chaussée',
   expect(apres).toContain('sur la gauche de la chaussée');
   await expect(page.locator('.bg-instruction')).toContainText('Vous êtes arrivé');
   await expect(page.locator('.bg-arrivee-pulse')).toBeVisible();
+});
+
+test('LE « P » NE COUPE PLUS LA BOUSSOLE, et respire à côté de la vitesse', async ({ page }) => {
+  /* PARK-2 (01/09). Armelin, capture à l'appui : « le panneau de parking bleu
+     s'affiche en bas à droite et vient couper la boussole. Je préfère déplacer
+     ce panneau à droite du rond d'indication de la vitesse GPS, mais pas tout
+     collé. Avec un léger espace entre les deux. » */
+  await suivre(page);
+  await rouler(page, 2.3600, 48.8500);
+  const p = page.locator('.bg-parking-p');
+  await expect(p).toBeVisible({ timeout: 10_000 });
+
+  const rond = (await p.boundingBox())!;
+  const boussole = await page.locator('.maplibregl-ctrl-compass').boundingBox();
+  if (boussole) {
+    /* AUCUN RECOUVREMENT AVEC LA BOUSSOLE : deux rectangles qui ne se croisent
+       ni en largeur ni en hauteur. */
+    const croise = rond.x < boussole.x + boussole.width
+      && boussole.x < rond.x + rond.width
+      && rond.y < boussole.y + boussole.height
+      && boussole.y < rond.y + rond.height;
+    expect(croise, 'le rond « P » recouvre encore la boussole').toBe(false);
+  }
+
+  const vitesse = await page.locator('.bg-vitesse').boundingBox();
+  if (vitesse) {
+    // À DROITE DE LA VITESSE, et pas dessus.
+    expect(rond.x, 'le « P » n’est pas à droite du rond de vitesse')
+      .toBeGreaterThanOrEqual(vitesse.x + vitesse.width);
+    /* ET DÉCOLLÉ : « pas tout collé », dit-il. Le blanc entre deux objets est
+       ce qui les rend lisibles séparément — la règle d'ERGO-2. */
+    const espace = rond.x - (vitesse.x + vitesse.width);
+    expect(espace, 'le « P » est collé au rond de vitesse').toBeGreaterThanOrEqual(8);
+    // …SANS PARTIR À L'AUTRE BOUT : ils forment une paire, pas deux îlots.
+    expect(espace, 'le « P » est trop loin du rond de vitesse').toBeLessThanOrEqual(40);
+  }
 });

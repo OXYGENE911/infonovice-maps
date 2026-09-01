@@ -121,21 +121,58 @@ test.beforeEach(async ({ page, context }) => {
   }));
 });
 
-test('LA VOIX SE TAIT tant qu’on ne la demande pas', async ({ page }) => {
-  /* Une application qui se met à parler toute seule au premier trajet est
-     une application qu'on désinstalle. */
+test('LA VOIX PARLE DÈS LE PREMIER TRAJET, et dit comment la couper', async ({ page }) => {
+  /* CE PARCOURS DISAIT L'INVERSE HIER, ET C'EST ARMELIN QUI L'A RENVERSÉ
+     (VOIX-3, 01/09). Il défendait le silence par défaut, au motif qu'« une
+     application qui se met à parler toute seule au premier trajet est une
+     application qu'on désinstalle ». L'argument valait ; il en a rencontré le
+     revers au premier essai réel : « pas de guidage vocal. Je ne sais pas si
+     c'était parce que j'étais à pied ». Ce n'était pas la marche — c'était un
+     bouton qu'il n'avait pas trouvé, sur un GPS dont on attend qu'il parle.
+     LA CRAINTE D'HIER EST TRAITÉE AUTREMENT, et ce parcours le garde : la
+     voix se présente UNE FOIS et dit comment la couper. Elle ne surprend donc
+     personne deux fois, et un silence choisi est respecté pour toujours. */
   await suivre(page, 400);
   await page.waitForTimeout(1_200);
-  expect(await dites(page)).toEqual([]);
+  const phrases = await dites(page);
+  expect(phrases.some((p) => p.startsWith('Guidage vocal activé')),
+    'la voix ne s’est pas présentée au premier trajet').toBe(true);
+  expect(phrases.some((p) => p.includes('pour le couper')),
+    'elle ne dit pas comment la faire taire').toBe(true);
+});
+
+test('ET ELLE NE SE PRÉSENTE PLUS AU TRAJET SUIVANT', async ({ page }) => {
+  /* La présentation est une politesse d'accueil, pas une rengaine : le choix
+     est écrit dès le premier trajet, et l'on ne redemande rien. */
+  await suivre(page, 400);
+  await page.waitForTimeout(1_200);
+  await page.getByRole('button', { name: 'Arrêter le suivi' }).click();
+  await page.waitForTimeout(400);
+  await page.reload();
+  await suivre(page, 400);
+  await page.waitForTimeout(1_200);
+  expect((await dites(page)).some((p) => p.startsWith('Guidage vocal activé')),
+    'elle se présente à chaque trajet').toBe(false);
 });
 
 test('elle RÉPOND en s’allumant — on ne découvre pas au premier virage', async ({ page }) => {
   /* Loin de toute manœuvre, il n'y a rien à annoncer : elle se présente,
      pour qu'on sache qu'elle marche. C'est aussi le geste d'usager qu'exigent
-     les navigateurs avant de laisser une page parler. */
+     les navigateurs avant de laisser une page parler.
+     ON LA COUPE D'ABORD, depuis VOIX-3 : elle parle désormais par défaut, et
+     c'est bien le RALLUMAGE qu'il faut éprouver ici. */
   await suivre(page, 8_000);
+  await page.waitForTimeout(600);
+  await page.getByRole('button', { name: 'Couper le guidage vocal' }).click();
+  /* ON COMPTE AVANT ET APRÈS : la présentation de VOIX-3 occupe déjà la
+     liste, et y chercher une phrase qui s'y trouve déjà ne prouverait rien du
+     rallumage. */
+  const avant = (await dites(page))
+    .filter((p) => p.startsWith('Guidage vocal activé')).length;
   await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
-  expect(await dites(page)).toContain('Guidage vocal activé');
+  await expect.poll(async () => (await dites(page))
+    .filter((p) => p.startsWith('Guidage vocal activé')).length,
+  { timeout: 5_000, message: 'le rallumage ne répond pas' }).toBe(avant + 1);
   // Le bouton dit son état, et change de dessin.
   await expect(page.getByRole('button', { name: 'Couper le guidage vocal' }))
     .toHaveAttribute('aria-pressed', 'true');
@@ -145,7 +182,6 @@ test('elle annonce la manœuvre avec sa distance et la route visée', async ({ p
   /* ANNONCER VAUT MIEUX QUE SE PRÉSENTER : s'il y a une manœuvre à dire, on
      la dit dès l'allumage — c'est une démonstration ET une information. */
   await suivre(page, 400);
-  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
   await page.waitForTimeout(1_200);
   expect(await dites(page), 'la manœuvre remplace la présentation')
     .not.toContain('Guidage vocal activé');
@@ -156,14 +192,12 @@ test('elle annonce la manœuvre avec sa distance et la route visée', async ({ p
 
 test('AU MOMENT de la manœuvre, elle dit la manœuvre seule', async ({ page }) => {
   await suivre(page, 40);
-  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
   await page.waitForTimeout(1_200);
   expect(await dites(page)).toContain('Tournez à droite, vers A7');
 });
 
 test('elle NE SE RÉPÈTE PAS : un GPS qu’on coupe ne prévient plus de rien', async ({ page }) => {
   await suivre(page, 400);
-  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
   await page.waitForTimeout(2_000);
   const phrases = (await dites(page)).filter((p) => p.includes('tournez à droite'));
   expect(phrases, 'un palier ne se dit qu’une fois par manœuvre').toHaveLength(1);
@@ -171,7 +205,7 @@ test('elle NE SE RÉPÈTE PAS : un GPS qu’on coupe ne prévient plus de rien',
 
 test('la COUPER la fait taire, et le choix survit au rechargement', async ({ page }) => {
   await suivre(page, 400);
-  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
+  // Elle parle déjà (VOIX-3) : il n'y a plus qu'à la couper.
   await page.getByRole('button', { name: 'Couper le guidage vocal' }).click();
   await expect(page.getByRole('button', { name: 'Activer le guidage vocal' }))
     .toHaveAttribute('aria-pressed', 'false');
@@ -192,7 +226,6 @@ test('elle se TAIT à l’arrêt du suivi', async ({ page }) => {
   /* Une phrase qui continue après l'arrêt annoncerait un virage qu'on ne
      prend plus. */
   await suivre(page, 400);
-  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
   await page.waitForTimeout(600);
   await page.getByRole('button', { name: 'Arrêter le suivi' }).click();
   const avant = (await dites(page)).length;
@@ -205,7 +238,6 @@ test('LE TRAFIC PARLE DANS LES BLANCS, jamais par-dessus une manœuvre', async (
      proposée : on n'interrompt pas, on attend. Ici la manœuvre est à huit
      kilomètres — la voie est libre pour annoncer les travaux. */
   await suivre(page, 8_000, true);
-  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
   await page.waitForTimeout(1_500);
   const phrases = await dites(page);
   expect(phrases.some((p) => p.includes('signalé')), JSON.stringify(phrases)).toBe(true);
@@ -215,7 +247,6 @@ test('IL SE TAIT quand une manœuvre approche', async ({ page }) => {
   /* Manœuvre à quatre cents mètres : l'annonce de travaux couperait
      l'instruction, ou pire, la remplacerait dans l'oreille de qui conduit. */
   await suivre(page, 400, true);
-  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
   await page.waitForTimeout(1_500);
   expect((await dites(page)).some((p) => p.includes('signalé'))).toBe(false);
 });
@@ -230,7 +261,6 @@ test('LA VOIX PRONONCE LES ACCENTS que la source a perdus', async ({ page }) => 
      qu'on lui donne. La source rend « AV DU PROPHETE » ; ce qui part à la
      voix doit porter l'accent. */
   await suivre(page, 400, false, 'AV DU PROPHETE');
-  await page.getByRole('button', { name: 'Activer le guidage vocal' }).click();
   await page.waitForTimeout(1_200);
   const phrases = (await dites(page)).join(' | ');
   expect(phrases, 'la voix doit prononcer l’accent').toContain('Prophète');

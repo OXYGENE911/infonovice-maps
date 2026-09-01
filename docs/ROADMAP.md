@@ -537,6 +537,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #162 — RECHERCHE-3 (01/09) : la recherche par nom part enfin (la
       BAN rend toujours quelque chose) et interroge l'ÉGALITÉ indexée, la
       regex expirant (mesuré : 57 s). Expiration lue comme telle.
+- [x] PR #177 — CARTE-1 / HIST-1 / BANDEAU-1 / PARK-2 / VOIX-3 (01/09) : les
+      cinq retours du premier essai à pied. Carte noire après le trajet (perte
+      de contexte WebGL, non gérée) ; historique illisible en sombre
+      (contraste mesuré 1,1) ; cartouche qui mangeait la frise ; rond « P »
+      déplacé et parkings ouverts d'eux-mêmes ; voix par défaut. Les deux
+      dernières renversent des décisions antérieures, à sa demande.
 - [x] PR #175 — PARTAGE-1 (01/09) : contribuer un parcours à INFONOVICE, sans
       se livrer. Le titre (qui porte les deux adresses) est retiré, l'instant
       du départ arrondi à l'heure ; le fichier est MONTRÉ en entier avant tout

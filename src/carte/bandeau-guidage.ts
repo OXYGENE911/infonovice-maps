@@ -1040,9 +1040,35 @@ export class BandeauGuidage extends HTMLElement {
        revient à ne rien dire de la première manœuvre. */
     this.#annonces.vider();
     this.#voix.preparer();
+    /* LA VOIX PARLE PAR DÉFAUT (VOIX-3, 01/09), et c'est un renversement.
+       LE TERRAIN. Armelin, après un essai à pied : « pas de guidage vocal. Je
+       ne sais pas si c'était parce que j'étais à pied ». Ce n'était pas la
+       marche : la voix était MUETTE tant qu'on n'avait pas trouvé son bouton.
+       `v === true` — donc muette sans préférence enregistrée.
+       POURQUOI CE DÉFAUT ÉTAIT DÉFENDABLE, ET POURQUOI IL NE L'EST PLUS. Les
+       navigateurs exigent un geste d'usager avant de laisser une page parler,
+       et l'on craignait de promettre une voix qui ne sortirait pas. Mais
+       « Démarrer le suivi » EST ce geste : au moment où l'on arrive ici, la
+       permission est acquise. Le doute ne coûtait donc rien à personne sauf à
+       celui qui roulait en silence.
+       ON L'ANNONCE UNE FOIS, ET ON L'ÉCRIT. Le premier trajet dit que la voix
+       est là et comment la couper — sans quoi le renversement surprendrait
+       autant que le silence. La préférence est alors enregistrée : la phrase
+       ne revient pas, et un choix de silence est respecté pour toujours. */
     void lirePreference<boolean>(PREF_VOIX)
-      .then((v) => { this.#reglerVoix(v === true); })
-      .catch(() => { /* sans préférence lue, la voix reste muette */ });
+      .then((v) => {
+        this.#reglerVoix(v !== false);
+        if (v === undefined) {
+          void ecrirePreference(PREF_VOIX, true);
+          this.#voix.dire('Guidage vocal activé.'
+            + ' Appuyez sur l’icône de voix pour le couper.');
+        }
+      })
+      .catch(() => {
+        /* LE STOCKAGE EN PANNE NE DOIT PAS RENDRE MUET : mieux vaut une voix
+           qu'on coupe qu'un silence qu'on ne s'explique pas. */
+        this.#reglerVoix(true);
+      });
     (this.querySelector('.bg-recentrer') as HTMLElement).hidden = true;
     void this.#prendreVerrou();
     document.addEventListener('visibilitychange', this.#surVisibilite);
@@ -1218,6 +1244,14 @@ export class BandeauGuidage extends HTMLElement {
 
   #parkings: Parking[] | null = null;
 
+  /* LA LISTE S'OUVRE D'ELLE-MÊME, UNE FOIS (PARK-2, 01/09). Armelin : « il
+     faudrait que les places de parking s'affichent toutes seules à proximité
+     de la destination avant même que je clique sur le rond parking. »
+     UNE FOIS, ET PAS DAVANTAGE : refermée, la feuille reste fermée — la
+     rouvrir à chaque fixe serait un harcèlement, et c'est le bouton qui la
+     rappelle. Le drapeau garde aussi l'appel Overpass unique. */
+  #parkingsOfferts = false;
+
   /** Le libellé de la destination d'origine, pour « Finir à pied ». */
   #finApied: string | null = null;
 
@@ -1235,8 +1269,24 @@ export class BandeauGuidage extends HTMLElement {
     const bouton = this.querySelector<HTMLElement>('.bg-parking-p');
     if (!bouton) return;
     if (this.#parkingRegle || e.horsRoute) { bouton.hidden = true; }
-    else if (e.restantM < 1_200) bouton.hidden = false;
-    else if (e.restantM > 1_500) { bouton.hidden = true; this.#fermerParkings(); }
+    else if (e.restantM < 1_200) {
+      bouton.hidden = false;
+      /* ET LA LISTE SE MONTRE SANS QU'ON LA DEMANDE, à la première approche.
+         L'APPEL RESTE UNIQUE : c'est exactement celui que le clic aurait fait,
+         et `#parkings` le garde en mémoire pour le reste du trajet — Overpass
+         est tenu par des bénévoles. */
+      if (!this.#parkingsOfferts) {
+        this.#parkingsOfferts = true;
+        void this.#ouvrirParkings();
+      }
+    } else if (e.restantM > 1_500) {
+      bouton.hidden = true;
+      this.#fermerParkings();
+      /* AU-DELÀ DE 1,5 km ON REPART À ZÉRO : un détour qui éloigne puis
+         rapproche mérite une nouvelle proposition — c'est une arrivée
+         différente. */
+      this.#parkingsOfferts = false;
+    }
 
     /* FINIR À PIED (point 9) : le trajet vers le parking touche à sa fin —
        on PROPOSE de basculer piéton vers la destination d'origine. On
@@ -1397,6 +1447,7 @@ export class BandeauGuidage extends HTMLElement {
     this.#retirerMarqueurArrivee();
     this.#parkings = null;
     this.#parkingRegle = false;
+    this.#parkingsOfferts = false;
     this.#fermerParkings();
     const boutonP = this.querySelector<HTMLElement>('.bg-parking-p');
     if (boutonP) boutonP.hidden = true;

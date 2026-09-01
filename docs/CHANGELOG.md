@@ -2,6 +2,86 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.31.0] — 2026-09-01 — Cinq défauts d'un essai à pied (PR #177)
+
+Armelin a fait le premier essai piéton ce matin. Cinq retours, cinq
+corrections — et deux d'entre elles renversent des décisions que j'avais
+défendues, ce qui est dit ici explicitement.
+
+### Corrigé
+- **CARTE-1 — la carte noire après le trajet.** « Quand un trajet est terminé,
+  la cartographie affiche une page noire et plus aucune carte ne s'affiche. »
+  Les boutons, l'échelle et la boussole restaient là — ils vivent DANS le
+  conteneur de la carte — mais le canevas ne dessinait plus rien.
+  **LA CAUSE EST UNE PERTE DE CONTEXTE WebGL**, et elle est documentée dans
+  MapLibre : `_contextLost` DÉTRUIT le style et attend que le système rende le
+  contexte. Un téléphone qui reprend sa mémoire graphique après une longue
+  navigation fait exactement cela — mesuré du côté de l'application : style
+  absent, zéro calque, canevas noir. Rien ne la gérait.
+  On ne rend pas un contexte que le système a repris. Mais un rectangle noir
+  **sans un mot** fait croire à une application cassée : l'application le dit
+  désormais, rappelle que l'itinéraire est conservé (il vit dans l'adresse) et
+  offre de recharger. Si le système rend le contexte, le message s'efface et
+  la carte revient d'elle-même.
+- **HIST-1 — l'historique illisible en thème sombre.** « C'est écrit ton sur
+  ton sur mobile et je ne peux pas sélectionner le parcours archivé car je ne
+  vois pas ce qu'il y a écrit dessus. » MESURÉ : `rgb(0, 0, 0)` sur
+  `rgb(14, 16, 20)`, soit un contraste de **1,1**. La ligne est un `<label>` et
+  aucune règle ne lui donnait de couleur : elle héritait du NOIR par défaut du
+  navigateur. En thème clair, noir sur blanc, la faute était invisible.
+  Un parcours balaie maintenant TOUT le volet et calcule le contraste réel de
+  chaque texte : la faute — un élément qui ne nomme pas sa couleur — peut
+  renaître partout, et ne se voit jamais en thème clair.
+- **BANDEAU-1 — le cartouche mangeait la frise du trajet.** « Quand ce message
+  arrive, le panneau occupe une grande surface et masque la barre verticale de
+  visualisation du trajet. » DEUX CAUSES, et il fallait les deux : le
+  cartouche allait jusqu'à 12 px du bord droit, là où la frise vit à 10 px sur
+  18 px de large — il la recouvrait PAR CONSTRUCTION, message ou pas ; et
+  l'aveu des repères, deux lignes, le faisait grandir. Le cartouche laisse
+  désormais sa colonne à la frise, et l'aveu suit la règle qu'Armelin a
+  lui-même énoncée pour ce genre d'information (« à l'identique de la ligne
+  info trafic orange ») : il se lit **au dépliage**, pas en roulant.
+
+### Changé — deux décisions renversées, à sa demande
+- **PARK-2 — le rond « P » et les parkings.** « Le panneau de parking bleu
+  s'affiche en bas à droite et vient couper la boussole. Je préfère le déplacer
+  à droite du rond de vitesse GPS, mais pas tout collé. » Il prend maintenant
+  le repère de la vitesse, douze pixels à sa droite — et il ne recouvre plus
+  la boussole (mesuré : il la recouvrait bien).
+  Surtout : **la liste s'ouvre d'elle-même à l'approche**, comme il l'a
+  demandé. PARK-1 ne demandait rien tant qu'on n'avait pas pressé le bouton,
+  par frugalité envers Overpass. La frugalité est préservée autrement, et un
+  parcours la garde : l'appel automatique est EXACTEMENT celui que le clic
+  aurait fait — **un seul**, gardé en mémoire pour tout le trajet. Refermée,
+  la feuille ne se rouvre pas toute seule.
+- **VOIX-3 — la voix parle par défaut.** « Pas de guidage vocal. Je ne sais pas
+  si c'était parce que j'étais à pied. » Ce n'était pas la marche : la voix
+  était **muette tant qu'on n'avait pas trouvé son bouton**.
+  Ce défaut était défendable — « une application qui se met à parler toute
+  seule au premier trajet est une application qu'on désinstalle », disait le
+  parcours qui le gardait. Mais « Démarrer le suivi » EST le geste d'usager
+  que les navigateurs exigent avant de laisser une page parler : le doute ne
+  coûtait rien à personne, sauf à celui qui roulait en silence.
+  La crainte d'hier est traitée autrement : la voix **se présente une fois** et
+  dit comment la couper, puis n'y revient plus. Un silence choisi est respecté
+  pour toujours.
+
+### Tests
+- 2 parcours provoquent une **vraie** perte de contexte WebGL
+  (`WEBGL_lose_context`), pas un événement simulé : l'un vérifie que le style
+  meurt et que l'application le dit, l'autre que le message s'efface quand le
+  système rend le contexte.
+- 1 parcours calcule le contraste WCAG réel de chaque texte du volet en thème
+  sombre sur téléphone.
+- 2 parcours mesurent au pixel que le cartouche laisse sa colonne à la frise,
+  avec garde de non-vacuité (les deux boîtes doivent se croiser en hauteur).
+- 3 parcours de parking : l'ouverture automatique en UN appel, la feuille qui
+  ne se rouvre pas, et la géométrie du rond « P ».
+- Le parcours qui défendait le silence par défaut est réécrit pour défendre
+  la nouvelle règle ET ce qu'elle préserve.
+- Contre-épreuves faites sur les quatre correctifs, construction vérifiée à
+  chaque fois.
+
 ## [1.30.0] — 2026-09-01 — PARTAGE-1 : contribuer sans se livrer (PR #175)
 
 ### Ajouté
