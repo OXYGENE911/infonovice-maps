@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.21.0] — 2026-09-01 — ITI-1 : « Démarrer le suivi » reste sous les yeux (PR #168)
+
+- **LE PIED DU VOLET COLLE.** Armelin : « si je scrolle tout en bas de la
+  fenêtre itinéraire jusqu'à afficher la feuille de route, je suis obligé de
+  scroller à nouveau vers le haut pour retrouver le bouton "Démarrer le
+  suivi", ce qui n'est pas pratique. » Le volet porte des PAGES entières
+  depuis le 27/08 ; le bouton s'en allait avec le reste.
+- **LE RÉSUMÉ VOYAGE AVEC LUI** — kilomètres et heure d'arrivée : c'est ce
+  qu'on relit AVANT de partir, et un bouton qui engage sans dire à quoi ne
+  vaut pas mieux.
+- `sticky` ET NON `fixed` : le pied appartient au volet et s'arrête à son
+  bord, il ne flotte pas sur la carte. Il ne colle QUE s'il porte quelque
+  chose, faute de quoi une bande vide barrerait le bas du volet tant qu'aucun
+  trajet n'est calculé.
+
+**LE PREMIER PARCOURS ÉTAIT CREUX, ET LA MESURE L'A DIT.** Il ne regardait
+que le bord BAS : sans collage, le bouton part par le HAUT quand on défile
+(mesuré : −416 px), et l'assertion passait sans rien prouver. Il mesure
+désormais les DEUX bords, vérifie d'abord que le volet déborde vraiment
+(867 px de contenu pour 485 de cadre), et une contre-épreuve confirme qu'il
+ÉCHOUE quand on retire la règle.
 ## [1.19.0] — 2026-09-01 — BORNES-7 : la recherche de réseaux dit enfin la vérité (PR #166)
 
 **Armelin l'a signalé QUATRE FOIS** : « si je tape McDonald la recherche
