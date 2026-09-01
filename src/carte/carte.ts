@@ -15,7 +15,10 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import lienWorkerMaplibre from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 
 setWorkerUrl(lienWorkerMaplibre);
-import { styleCarte, LOCALE_FR, type OptionsStyle } from './style-ign';
+import {
+  styleCarte, LOCALE_FR, SOURCE_ETIQUETTES, sourceEtiquettes, calquesEtiquettes,
+  type OptionsStyle, type Fond,
+} from './style-ign';
 import { SelecteurFonds } from './selecteur-fonds';
 import { installerPanneaux } from './panneaux';
 import { RechercheAdresse, poserEmpriseCourante } from './recherche';
@@ -121,7 +124,29 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   /* LE FOND DE CARTE est une PRÉFÉRENCE D'AFFICHAGE : il appartient au menu,
      pas au rail des destinations. */
   const selecteur = new SelecteurFonds();
-  selecteur.surChangement = (o) => { carte.setStyle(styleCarte(o)); appliquerSombre(o); };
+  /* LES ÉTIQUETTES SE POSENT APRÈS LE STYLE (FOND-2, 01/09), comme le tracé,
+     les bornes et les POI. Déclarées DANS le style initial, elles restaient
+     invisibles en production — la source ne se remplissait pas, sans une
+     erreur pour le dire, alors qu'un simple `setStyle(getStyle())` les faisait
+     toutes paraître. Le style était juste ; c'est le moment qui ne l'était
+     pas. `style.load` se déclenche aussi à chaque changement de fond, ce qui
+     les repose sans qu'on y pense. */
+  let fondCourant: Fond = 'plan';
+  const poserEtiquettes = (): void => {
+    if (carte.getSource(SOURCE_ETIQUETTES) === undefined) {
+      carte.addSource(SOURCE_ETIQUETTES, sourceEtiquettes());
+    }
+    for (const calque of calquesEtiquettes(fondCourant)) {
+      if (carte.getLayer(calque.id) === undefined) carte.addLayer(calque);
+    }
+  };
+  carte.on('style.load', poserEtiquettes);
+
+  selecteur.surChangement = (o) => {
+    fondCourant = o.fond;
+    carte.setStyle(styleCarte(o));
+    appliquerSombre(o);
+  };
   menu.ajouter('Affichage', selecteur);
 
   /* LES BORNES ET LES SERVICES SONT UNE PAGE DU PLANIFICATEUR.

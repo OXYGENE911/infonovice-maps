@@ -34,10 +34,12 @@ describe('styleCarte', () => {
       const ids = s.layers.map((l) => l.id);
       expect(ids.indexOf('surcouche-cadastre'))
         .toBeGreaterThan(ids.findIndex((i) => i.startsWith('fond-')));
-      const premiereEtiquette = ids.findIndex(
-        (i) => i.startsWith('toponyme-') || i.startsWith('num-route-'));
-      expect(premiereEtiquette, 'les étiquettes doivent rester lisibles')
-        .toBeGreaterThan(ids.indexOf('surcouche-cadastre'));
+      /* LES ÉTIQUETTES NE SONT PLUS DANS LE STYLE depuis FOND-2 (01/09) :
+         elles se posent sur `style.load`, donc APRÈS tout ce qu'il contient —
+         le cadastre compris. L'ordre reste garanti, il ne se vérifie plus
+         ici mais dans le parcours qui les regarde à l'écran. */
+      expect(ids.some((i) => i.startsWith('toponyme-') || i.startsWith('num-route-')),
+        'le style ne porte plus les étiquettes').toBe(false);
       expect((c as { paint: { 'raster-opacity': number } }).paint['raster-opacity']).toBeLessThan(1);
     }
   });

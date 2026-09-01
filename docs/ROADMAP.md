@@ -537,11 +537,14 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #162 — RECHERCHE-3 (01/09) : la recherche par nom part enfin (la
       BAN rend toujours quelque chose) et interroge l'ÉGALITÉ indexée, la
       regex expirant (mesuré : 57 s). Expiration lue comme telle.
-- [x] PR #172 — STATS-2 (01/09) : l'historique des trajets, ENREGISTRÉ SUR
+- [x] PR #171 — STATS-2 (01/09) : l'historique des trajets, ENREGISTRÉ SUR
       DEMANDE, avec comparaison côte à côte. Conception d'Armelin.
 - [ ] À SUIVRE — le partage à INFONOVICE : bouton dédié, floutage des
       adresses de départ et d'arrivée, fichier montré avant envoi. L'appli
       EXPORTE, l'usager attache (un mailto ne porte pas de pièce jointe).
+- [x] PR #172 — FOND-2 (01/09) : les étiquettes se posent sur `style.load`.
+      FOND-1 les déclarait dans le style initial et la PRODUCTION ne les
+      dessinait pas.
 - [x] PR #169 — FOND-1 (01/09) : surcouche vectorielle d'étiquettes — les
       numéros de route sur tous les fonds, les noms de communes sur le
       satellite. Calques extraits du style officiel PLAN.IGN.
@@ -560,7 +563,7 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #161 — BORNES-5 (01/09) : le filtre qui retranche se voit SUR la
       carte, avec « Tout afficher » sur place. BORNES-4 l'avait mis dans des
       volets repliés : personne ne l'a lu.
-- [x] PR #171 — GUIDE-4/5 (01/09) : la carte suit la route, la flèche suit le
+- [x] PR #170 — GUIDE-4/5 (01/09) : la carte suit la route, la flèche suit le
       téléphone ; recalcul à 40 m quand deux signaux s'accordent.
 - [x] PR #170 — BORNES-9 + RECHERCHE-4 (01/09) : le filtre par nom élargit à
       10 km ; un homonyme lointain n'ancre plus la recherche.

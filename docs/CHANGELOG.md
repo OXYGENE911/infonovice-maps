@@ -2,7 +2,46 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.26.0] — 2026-09-01 — STATS-2 : l'historique des trajets, sur demande (PR #172)
+## [1.27.0] — 2026-09-01 — FOND-2 : les étiquettes se posent APRÈS le style (PR #172)
+
+**FOND-1 NE FONCTIONNAIT PAS EN PRODUCTION, ET MES TESTS NE POUVAIENT PAS LE
+DIRE.** Ils vérifiaient la présence des calques dans le style ; la production,
+elle, ne les DESSINAIT pas. Mesuré dans le navigateur, sur le site en ligne :
+
+- la source vectorielle restait **vide** (`querySourceFeatures` : 0), sans
+  aucune erreur émise par MapLibre ;
+- la tuile demandée à la main répondait pourtant **200 avec 41 Ko**, et
+  contenait bien `toponyme_routier_numero_lin` ;
+- le style servi portait la source, les glyphes et les trois calques ;
+- et un simple **`setStyle(getStyle())`** — le MÊME style réappliqué — faisait
+  paraître **66 numéros d'un coup** : A86, A4, A104, N104, D282, D233.
+
+Le style était donc juste ; c'est le **moment** de la création de la source qui
+ne l'était pas. Les étiquettes se posent désormais sur `style.load`, comme le
+tracé, les bornes et les POI — la convention que le reste de l'application
+suivait déjà, et que FOND-1 avait été seule à enfreindre. Les **glyphes**
+restent dans le style : un calque de symboles ajouté plus tard exige une
+police déjà déclarée.
+
+**CE QUE JE NE PEUX PAS PROUVER ICI, ET JE PRÉFÈRE LE DIRE** : le défaut ne se
+reproduit pas en local — le parcours neuf, qui mesure les numéros RÉELLEMENT
+DESSINÉS au premier chargement, passe avec ET sans le correctif. C'est la
+production qui tranchera ; je vérifierai après déploiement et je le dirai quel
+que soit le résultat.
+
+**J'AI REPRIS CETTE MESURE, PARCE QU'ELLE ÉTAIT SUSPECTE.** `npm run preview`
+sert `dist` sans le reconstruire : une comparaison faite sans `npm run build`
+juge deux fois le même code et ne prouve rien. Refaite proprement — source
+ramenée à l'état antérieur, reconstruite, relancée — la conclusion tient.
+Et le garde-fou n'est pas creux : privé de ses calques, il échoue bien
+(« aucun numéro dessiné au premier chargement »). Il mesure donc un rendu
+réel ; il ne sait simplement pas reproduire le décalage de la production.
+
+Tests : les unitaires vérifient désormais que le style ne porte PLUS les
+calques (et qu'il porte toujours les glyphes) ; 1 E2E mesure les numéros
+dessinés sur les vraies tuiles IGN au premier chargement.
+
+## [1.26.0] — 2026-09-01 — STATS-2 : l'historique des trajets, sur demande (PR #171)
 
 **LA CONCEPTION EST CELLE D'ARMELIN, ET ELLE EST MEILLEURE QUE LA MIENNE.**
 J'aurais gardé les trajets tout seul ; il a écrit : « pour l'historique des
@@ -82,7 +121,7 @@ et la correction de latitude), 5 sur l'ancre (« Paris » reconnu, « Thumeries 
 non, les mots de moins de trois lettres ignorés). 2 E2E : l'emprise
 réellement émise, et l'homonyme lointain qui ne déplace plus rien.
 
-## [1.24.0] — 2026-09-01 — Guidage : la carte suit la route, la flèche suit le téléphone (PR #171)
+## [1.24.0] — 2026-09-01 — Guidage : la carte suit la route, la flèche suit le téléphone (PR #170)
 
 - **GUIDE-4 — ET C'EST LA TROISIÈME ÉCRITURE DE CETTE RÈGLE.** GUIDE-1 avait
   donné le cap du TRACÉ à la flèche pour qu'elle cesse de reculer à 4 km/h ;
