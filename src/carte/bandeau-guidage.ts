@@ -27,6 +27,7 @@ import {
 import {
   etatGuidage, distanceEnMots, heureArriveeEstimee, type OptionsGuidage,
   partiAContresens, approcheManoeuvre, pointDuTrace, SEUIL_AIMANT_M,
+  quitteLeTrace, FIXES_CONCORDANTS, ECART_DOUTE_M, type FixeEcart,
   type EtatGuidage,
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
@@ -395,6 +396,21 @@ export class BandeauGuidage extends HTMLElement {
      mitraille pendant qu'on cherche une sortie serait pire que l'ancien
      message. */
   #horsRouteDepuis: number | null = null;
+
+  /* LES DERNIERS ÉCARTS, POUR CONCLURE PLUS TÔT (GUIDE-5, 01/09). Armelin :
+     « le recalcul automatique intervient de plus de 30 m après avoir fait mon
+     écart ». Trois fixes suffisent à distinguer un virage d'une dérive —
+     voir `quitteLeTrace` dans lib/guidage.ts. */
+  #derniersEcarts: FixeEcart[] = [];
+
+  /* UN FIXE NEUF, PAS UN GESTE D'INTERFACE. `#majPosition` est rejouée par SIX
+     chemins (boussole, recentrage, dépliage…), et un écart REJOUÉ à
+     l'identique casse la croissance stricte que le détecteur exige : il ne
+     concluait jamais. Le même piège que le bilan de trajet, retrouvé par un
+     parcours qui restait muet. */
+  #numeroFixe = 0;
+
+  #fixeNote = -1;
   /* LE ZOOM D'APPROCHE (ZOOM-1, 30/08). On garde le zoom qu'on a TROUVÉ en
      entrant dans l'approche, et on le rend en sortant : rendre un zoom
      « par défaut » effacerait le réglage que l'usager venait de poser. */
@@ -944,6 +960,7 @@ export class BandeauGuidage extends HTMLElement {
     this.#copiloteOuvert = false;
     this.#etat = null;
     this.#horsRouteDepuis = null;
+    this.#derniersEcarts = [];
     this.#dernierRecalculMs = Number.NEGATIVE_INFINITY;
     this.#avancementMax = 0;
     this.#zoomAvantApproche = null;
@@ -967,6 +984,7 @@ export class BandeauGuidage extends HTMLElement {
 
     this.#veille = navigator.geolocation.watchPosition(
       (p) => {
+        this.#numeroFixe += 1;
         /* LE BILAN SE NOURRIT ICI, ET NULLE PART AILLEURS (STATS-1).
            `#majPosition` est rappelée par SIX chemins d'interface — bascule
            de boussole, recentrage, changement de mode — qui REJOUENT le
@@ -1865,7 +1883,19 @@ export class BandeauGuidage extends HTMLElement {
        du lissage l'ont rappelé avant l'usager. */
     const capFiable = typeof coords.heading === 'number' && Number.isFinite(coords.heading)
       && typeof coords.speed === 'number' && (coords.speed ?? 0) > 2;
-    const capDessine = capFiable ? capMesure : (aimant ? aimant.cap : capMesure);
+    /* LA FLÈCHE MONTRE OÙ L'ON REGARDE (GUIDE-4, 01/09). Armelin : « la
+       flèche suit le trajet mais pas la direction dans laquelle je regarde ».
+       GUIDE-1 lui avait donné le cap du TRACÉ pour qu'elle cesse de reculer à
+       4 km/h ; GUIDE-2 avait ensuite mis la boussole sur la CARTE. Les deux
+       corrigeaient le mauvais élément : c'est le CURSEUR qui représente
+       l'usager, donc lui qui doit suivre le téléphone.
+       L'ORDRE : le cap GPS quand il est fiable (en roulant, il DIT le sens de
+       la marche et ne tremble pas), sinon la boussole (à l'arrêt, c'est le
+       téléphone qu'on tourne dans les mains), sinon le tracé — qui reste le
+       dernier recours contre la flèche à reculons. */
+    const capDessine = capFiable
+      ? capMesure
+      : (this.#capBoussole ?? (aimant ? aimant.cap : capMesure));
     if (this.#carte) {
       this.#curseur.poser(this.#carte, dessine[0], dessine[1], capDessine);
     }
@@ -1929,9 +1959,20 @@ export class BandeauGuidage extends HTMLElement {
          que de DERNIER recours, quand l'appareil n'a pas de boussole —
          et il continue, lui, d'orienter le CURSEUR, qui est ce que
          GUIDE-1 corrigeait vraiment. */
+      /* LA CARTE SUIT LA ROUTE, PAS LE TÉLÉPHONE (GUIDE-4, 01/09). Armelin :
+         « la boussole tourne mais quand je clique dessus pour garder la
+         voiture dans le sens de la marche il ne se passe rien et la carte
+         continue de tourner avec la boussole ». GUIDE-2 avait mis la boussole
+         devant : la carte pivotait donc à chaque mouvement du téléphone, et
+         le bouton semblait ne rien faire puisque le mode « cap » rendait la
+         même chose que ce qu'il voulait quitter.
+         DEUX OBJETS, DEUX SENS : la carte montre la ROUTE (cap GPS, sinon le
+         cap du tracé), le curseur montre L'USAGER (boussole). La boussole ne
+         reste ici qu'en tout dernier recours — hors trajet, à l'arrêt, quand
+         rien d'autre ne dit où l'on va. */
       const brut = capGps
-        ?? (this.#modeOrientation === 'cap' ? this.#capBoussole : null)
-        ?? (aimant ? aimant.cap : null);
+        ?? (aimant ? aimant.cap : null)
+        ?? (this.#modeOrientation === 'cap' ? this.#capBoussole : null);
       if (brut !== null) {
         this.#capLisse = lisserCap(this.#capLisse, brut);
         this.#dernierCapConnu = this.#capLisse;
@@ -2040,7 +2081,21 @@ export class BandeauGuidage extends HTMLElement {
        Le numéro y suffit quand la voie en porte un ; sinon, son nom. */
     (this.querySelector('.bg-voie') as HTMLElement).textContent = voieCourante;
 
-    if (e.horsRoute) {
+    /* L'HISTORIQUE COURT DES ÉCARTS : on ne garde que ce qu'il faut pour
+       trancher, et il repart à zéro dès qu'on est de nouveau sur la route. */
+    const capTrace = pointDuTrace(o.trace, e.avancementM)?.cap ?? null;
+    if (capTrace !== null && this.#numeroFixe !== this.#fixeNote) {
+      this.#fixeNote = this.#numeroFixe;
+      this.#derniersEcarts.push({ ecartM: e.ecartM, cap: capMesure, capTrace });
+      if (this.#derniersEcarts.length > FIXES_CONCORDANTS) this.#derniersEcarts.shift();
+    }
+    /* DEUX SIGNAUX QUI S'ACCORDENT VALENT MIEUX QU'UN SEUIL PLUS BAS : on
+       conclut à quarante mètres — la moitié — quand l'écart CROÎT et que le
+       cap DIVERGE de la route. Descendre le seuil sec aurait annoncé « vous
+       avez quitté l'itinéraire » à quelqu'un qui roule droit dans une rue
+       encaissée. */
+    const partiTot = !e.horsRoute && quitteLeTrace(this.#derniersEcarts);
+    if (e.horsRoute || partiTot) {
       /* ON LE DIT, ON NE DEVINE PAS. Continuer d'annoncer une manœuvre pour
          une route qu'on ne suit plus est bien pire que de se taire : l'usager
          tournerait sur la foi d'une instruction périmée. */
@@ -2054,7 +2109,11 @@ export class BandeauGuidage extends HTMLElement {
          marteler le service, et quinze secondes y suffisent. */
       const maintenant = performance.now();
       if (this.#horsRouteDepuis === null) this.#horsRouteDepuis = maintenant;
-      else if (maintenant - this.#horsRouteDepuis > 4_000
+      /* LE CONSTAT S'ABRÈGE QUAND LES DEUX SIGNAUX SE SONT DÉJÀ ACCORDÉS :
+         `quitteLeTrace` a exigé trois fixes croissants ET un cap divergent —
+         c'est un constat, pas un soupçon. Attendre encore quatre secondes
+         referait perdre les mètres qu'on vient de gagner. */
+      else if (maintenant - this.#horsRouteDepuis > (partiTot ? 1_000 : 4_000)
         && maintenant - this.#dernierRecalculMs > 15_000) {
         this.#dernierRecalculMs = maintenant;
         this.#avancementMax = 0;
@@ -2064,6 +2123,12 @@ export class BandeauGuidage extends HTMLElement {
       }
     } else {
       this.#horsRouteDepuis = null;
+      /* ON N'OUBLIE QUE LORSQU'ON EST FRANCHEMENT REVENU. Vider l'historique
+         à CHAQUE fixe sur la route — ce que faisait le premier jet — le
+         remettait à un seul élément avant qu'il n'ait pu montrer une
+         croissance : le détecteur ne concluait jamais, et un parcours est
+         resté muet le temps de le comprendre. */
+      if (e.ecartM < ECART_DOUTE_M / 2) this.#derniersEcarts = [];
       /* SUR LE TRACÉ, MAIS DANS QUEL SENS ? Un tour de rond-point ramène à
          deux mètres du tracé, en marche arrière : l'écart ne voit rien,
          l'avancement, lui, recule. On le constate, et on refait le trajet

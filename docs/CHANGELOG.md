@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.25.0] — 2026-09-01 — STATS-2 : l'historique des trajets, sur demande (PR #172)
+## [1.26.0] — 2026-09-01 — STATS-2 : l'historique des trajets, sur demande (PR #172)
 
 **LA CONCEPTION EST CELLE D'ARMELIN, ET ELLE EST MEILLEURE QUE LA MIENNE.**
 J'aurais gardé les trajets tout seul ; il a écrit : « pour l'historique des
@@ -49,6 +49,110 @@ système, et ce que la comparaison couronne ou non). 3 E2E : la comparaison
 côte à côte, l'oubli qui corrige vraiment la mémoire, et l'enregistrement qui
 ne garde RIEN sans un geste.
 
+## [1.25.0] — 2026-09-01 — Chercher : le nom cherche vraiment (PR #170)
+
+Deux défauts qu'Armelin signalait encore : « je n'ai toujours pas le collège
+de ma fille visible ni les bornes McDonald ». **Mesurés dans SON navigateur,
+sur la production** — et ils étaient réels tous les deux, pour deux raisons
+différentes.
+
+- **BORNES-9 — CHERCHER UN NOM N'EST PAS SURVOLER LA VUE.** Sa vue au zoom 13
+  couvre 2,5 km sur 1,9, et il n'y a réellement AUCUNE borne McDonald dedans
+  (requête au portail : total 0). L'application ne mentait pas ; elle
+  répondait à une question qu'il ne posait pas. Taper un nom, c'est CHERCHER :
+  le filtre élargit désormais l'emprise à **dix kilomètres** autour du centre
+  — mesuré au même endroit : **55** stations McDonald à 10 km, 256 à 25. On
+  s'arrête à dix : le portail plafonne à cent, et en annoncer 256 pour n'en
+  montrer que cent serait retomber dans le mensonge qu'on corrige. Et **on le
+  dit** dans la ligne d'état, sans quoi des punaises hors écran
+  paraîtraient sans explication.
+- **RECHERCHE-4 — UN HOMONYME LOINTAIN NE DÉPLACE PLUS LA RECHERCHE.** Taper
+  « Collège Albert Camus » rend, côté BAN, le LIEU-DIT « Collège Albert
+  Camus 59239 **Thumeries** » (Nord, score 0,48). L'annuaire était bien
+  interrogé — j'ai vu l'appel partir — mais **autour de Thumeries**, à deux
+  cents kilomètres de chez lui : il ne pouvait rien trouver.
+  LE SCORE NE SUFFISAIT PAS À TRANCHER : « Tour Eiffel Paris » rend aussi un
+  résultat faible (0,378), et là Paris est le BON endroit — parce que
+  l'usager l'a écrit. On n'ancre donc la recherche sur un résultat approximatif
+  que si l'on **retrouve sa commune dans la saisie** ; sinon, c'est là où l'on
+  regarde qui décide.
+
+Tests : 4 unitaires sur l'emprise élargie (dont « elle ne rétrécit jamais »
+et la correction de latitude), 5 sur l'ancre (« Paris » reconnu, « Thumeries »
+non, les mots de moins de trois lettres ignorés). 2 E2E : l'emprise
+réellement émise, et l'homonyme lointain qui ne déplace plus rien.
+
+## [1.24.0] — 2026-09-01 — Guidage : la carte suit la route, la flèche suit le téléphone (PR #171)
+
+- **GUIDE-4 — ET C'EST LA TROISIÈME ÉCRITURE DE CETTE RÈGLE.** GUIDE-1 avait
+  donné le cap du TRACÉ à la flèche pour qu'elle cesse de reculer à 4 km/h ;
+  GUIDE-2 avait ensuite mis la boussole sur la CARTE. Les deux corrigeaient le
+  mauvais objet, et Armelin l'a dit en deux phrases qui, ensemble, donnent le
+  modèle : « la flèche suit le trajet mais pas la direction dans laquelle je
+  regarde » et « la carte continue de tourner avec la boussole ».
+  **LA CARTE MONTRE LA ROUTE, LE CURSEUR MONTRE L'USAGER.** La carte prend le
+  cap GPS, sinon celui du tracé ; la flèche prend le cap GPS quand il est
+  fiable, sinon la BOUSSOLE. Le bouton de la boussole redevient donc utile :
+  il bascule entre le nord et le sens de la marche, au lieu de rendre deux
+  fois la même chose.
+- **GUIDE-5 — ON CONCLUT PLUS TÔT, SANS CRIER AU LOUP.** « Le recalcul
+  automatique intervient de plus de 30 m après avoir fait mon écart. »
+  Descendre le seuil de 80 m serait une faute : à quarante mètres secs, un
+  récepteur qui dérive dans une rue encaissée annoncerait « vous avez quitté
+  l'itinéraire » à quelqu'un qui roule droit. **DEUX SIGNAUX QUI S'ACCORDENT**
+  valent mieux qu'un seuil plus bas : on conclut à quarante mètres quand
+  l'écart CROÎT sur trois fixes ET que le cap DIVERGE de plus de 55° de la
+  route. Le bruit d'un récepteur, lui, oscille sans direction. Le constat
+  s'abrège alors à une seconde : les trois fixes ont déjà fait le travail.
+
+DEUX PIÈGES REPAYÉS EN CHEMIN, tous deux déjà connus : `#majPosition` est
+rejouée par six chemins d'interface, et l'écart rejoué à l'identique cassait
+la croissance stricte — on ne note plus qu'un fixe NEUF ; et vider
+l'historique à chaque fixe sur la route l'empêchait de jamais s'accumuler.
+
+Tests : 9 unitaires sur le détecteur précoce (l'oscillation qui ne conclut
+pas, le cap resté dans l'axe, l'arrêt sans cap). 2 E2E : la carte à 90° avec
+la flèche à 270° — en absolu, MapLibre composant la rotation du marqueur avec
+le cap de la carte — et le recalcul obtenu sans jamais atteindre 80 m.
+## [1.23.0] — 2026-09-01 — FOND-1 : les numéros de route et les noms de communes (PR #169)
+
+Deux défauts signélés ensemble, et ils avaient la même cause.
+
+- « **Gros défaut pour une application de cartographie** : quand on zoome, il
+  n'y a pas les numéros de nationale, départementale et autoroute qui
+  s'affichent sur la carte. »
+- « Quand je configure la carte avec un fond **Carte Satellite**, les noms de
+  ville et village ne s'affichent pas. »
+
+**LE FOND EST RASTER, ET C'EST TOUTE L'EXPLICATION.** Les tuiles Plan IGN
+portent leurs étiquettes DANS L'IMAGE : la photographie aérienne n'en a donc
+aucune, et les numéros de route disparaissent au-delà du zoom où la planche
+raster les dessine. On ne peut pas rallumer ce qui est peint dans un JPEG.
+
+**CE QUI EST FAIT** : une **surcouche vectorielle** posée par-dessus le
+raster. Mesuré le 01/09, **sans clé** : les tuiles
+`data.geopf.fr/tms/1.0.0/PLAN.IGN` répondent 200 (58 Ko à z12), le style
+officiel aussi (288 Ko), et les glyphes « Source Sans Pro » également (67 Ko).
+
+- **LES CALQUES SONT CEUX D'IGN, PAS LES MIENS** : extraits du style officiel
+  PLAN.IGN et retargetés. Écrire nos propres règles aurait produit un rendu
+  qui RESSEMBLE à l'IGN sans en être — mêmes seuils de zoom (autoroute et
+  nationale dès le 7, départementale au 11), mêmes tailles, même hiérarchie de
+  communes, gratuitement.
+- **SUR LE PLAN, SEULEMENT LES NUMÉROS** : la planche dessine déjà les noms,
+  et deux textes superposés décalés d'un pixel se lisent plus mal qu'un.
+  **Sur le satellite, les deux.**
+- **C'EST UN INSTANTANÉ, PAS UN APPEL** : le style ne se retélécharge pas à
+  chaque démarrage — 288 Ko à chaque ouverture pour quarante calques serait
+  payer cher une donnée qui bouge une fois l'an.
+
+Vérifié à l'écran : 66 numéros dessinés sur le Plan (A4, A86, D130, D203…),
+30 numéros et les noms de communes sur le satellite.
+
+Tests : 6 unitaires sur le style — ce que reçoit chaque fond, l'ordre des
+calques (les étiquettes passent APRÈS le cadastre, un texte sous une
+surcouche opaque ne se lit pas), la déclaration des glyphes sans laquelle
+MapLibre ne dessine aucun texte, et les trois seuils de zoom.
 ## [1.22.0] — 2026-09-01 — BORNES-8 : le rappel se range, et son bouton se lit en sombre (PR #167)
 
 - **UNE ALERTE QUI NE PART JAMAIS CESSE D'ALERTER.** Armelin : « le rectangle
@@ -72,7 +176,6 @@ ne garde RIEN sans un geste.
 Tests : le parcours du signal mesure désormais le POINT avant dépliage ; un
 parcours neuf mesure le **contraste calculé** du bouton en thème sombre — pas
 la présence d'une règle, mais la couleur qu'on voit.
-=======
 ## [1.21.0] — 2026-09-01 — ITI-1 : « Démarrer le suivi » reste sous les yeux (PR #168)
 
 - **LE PIED DU VOLET COLLE.** Armelin : « si je scrolle tout en bas de la

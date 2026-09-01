@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { decomposerNumero, requeteNormalisee, versResultats } from '../src/lib/adresse';
+import {
+  decomposerNumero, requeteNormalisee, versResultats, communeNommee,
+} from '../src/lib/adresse';
 
 /* LES ADRESSES BIS, TER, QUATER (ADRESSE-2, 01/09).
  *
@@ -76,5 +78,34 @@ describe('versResultats — le numéro de la BAN', () => {
       properties: { label: 'avenue du prophète', type: 'street' },
     }] });
     expect(r[0]?.numero).toBeUndefined();
+  });
+});
+
+describe('communeNommee — l’ancre d’une recherche approximative (RECHERCHE-4)', () => {
+  /* Deux cas mesurés le 01/09 sur la production, tous deux avec un score BAN
+     faible, et qui appellent des ancres OPPOSÉES. Le score ne les sépare
+     pas ; la commune, si. */
+  it('« Tour Eiffel Paris » nomme Paris — on ancre là-bas', () => {
+    expect(communeNommee('Tour Eiffel Paris', '75007 Paris')).toBe(true);
+  });
+
+  it('« Collège Albert Camus » ne nomme pas Thumeries — on reste chez soi', () => {
+    expect(communeNommee('Collège Albert Camus', '59239 Thumeries')).toBe(false);
+  });
+
+  it('les accents et la casse ne décident de rien', () => {
+    expect(communeNommee('college albert camus plessis trevise',
+      '94420 Le Plessis-Trévise')).toBe(true);
+    expect(communeNommee('Gare de LYON', '69002 Lyon')).toBe(true);
+  });
+
+  /* LES MOTS COURTS NE PROUVENT RIEN : « Le », « sur » ou « des » se
+     retrouvent dans presque toute saisie, et feraient ancrer n'importe où. */
+  it('ignore les mots de moins de trois lettres', () => {
+    expect(communeNommee('boulangerie le matin', '01000 Le Poizat')).toBe(false);
+  });
+
+  it('ne se casse pas sur un contexte vide', () => {
+    expect(communeNommee('quoi que ce soit', '')).toBe(false);
   });
 });

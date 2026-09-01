@@ -210,3 +210,40 @@ test('L’ÉCHEC D’UNE SOURCE N’EMPORTE PAS L’AUTRE', async ({ page }) => 
     .toHaveText('Collège Albert Camus', { timeout: 10_000 });
   expect(annuaire).toHaveLength(1);
 });
+
+const LIEUDIT_LOINTAIN = {
+  type: 'Feature',
+  geometry: { type: 'Point', coordinates: [3.0640, 50.4750] },
+  properties: {
+    label: 'Collège Albert Camus 59239 Thumeries', type: 'locality',
+    postcode: '59239', city: 'Thumeries',
+    /* LE SCORE MESURÉ SUR LA PRODUCTION : 0,48. La BAN a attrapé un homonyme
+       à deux cents kilomètres, et c'est ce point qui servait d'ancre. */
+    score: 0.48,
+  },
+};
+
+test('UN HOMONYME LOINTAIN NE DÉPLACE PAS LA RECHERCHE', async ({ page }) => {
+  /* RECHERCHE-4 (01/09). MESURÉ dans le navigateur d'Armelin, sur la
+     production : taper « Collège Albert Camus » rend le LIEU-DIT
+     « Collège Albert Camus 59239 Thumeries » (Nord, score 0,48). L'annuaire
+     était bien interrogé — l'appel partait — mais AUTOUR DE THUMERIES : il ne
+     pouvait rien trouver près de chez lui. Sous le seuil de confiance, c'est
+     donc LÀ OÙ L'ON REGARDE qui ancre la recherche. */
+  const { annuaire } = await decor(page, {
+    adresses: [LIEUDIT_LOINTAIN], etablissements: [COLLEGE],
+  });
+  await ouvrir(page);
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [2.5722, 48.8103], zoom: 13 });
+  });
+  await barre(page).getByRole('combobox').fill('Collège Albert Camus');
+
+  await expect(barre(page).locator('[role="option"] .libelle').first())
+    .toHaveText('Collège Albert Camus', { timeout: 10_000 });
+  /* L'ANCRE EST LA VUE, PAS THUMERIES : 48,81 et non 50,47. */
+  expect(annuaire).toHaveLength(1);
+  expect(annuaire[0]).toContain('48.81030');
+  expect(annuaire[0], 'Thumeries ne doit pas ancrer la recherche').not.toContain('50.47');
+});

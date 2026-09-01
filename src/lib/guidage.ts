@@ -34,6 +34,71 @@ import { situerSurLeTrace, distanceM } from './le-long-du-trajet';
    roulent droit. */
 export const ECART_HORS_ROUTE_M = 80;
 
+/* ==========================================================================
+   CONCLURE PLUS TÔT, SANS CRIER AU LOUP (GUIDE-5, 01/09).
+
+   Armelin : « quand je refuse de suivre le trajet, le recalcul automatique
+   intervient de plus de 30 m après avoir fait mon écart ». Il a raison, et
+   pourtant descendre le seuil de distance serait une faute : à quarante
+   mètres secs, un récepteur qui dérive dans une rue encaissée annoncerait
+   « vous avez quitté l'itinéraire » à quelqu'un qui roule droit. C'est
+   exactement pourquoi 80 m avait été choisi.
+
+   DEUX SIGNAUX QUI S'ACCORDENT VALENT MIEUX QU'UN SEUIL PLUS BAS. Quand on
+   tourne dans une autre rue, l'écart ne fait pas que dépasser un nombre : il
+   CROÎT à chaque fixe, et le cap DIVERGE de celui de la route. Le bruit d'un
+   récepteur, lui, oscille sans direction. On conclut donc à quarante mètres
+   — la moitié — mais seulement si les deux s'accordent.
+   ========================================================================== */
+
+/** L'écart à partir duquel on doute, si le reste concorde. */
+export const ECART_DOUTE_M = 40;
+
+/** Au-delà de cet écart d'angle, on ne suit plus la même route. */
+export const DIVERGENCE_CAP_DEG = 55;
+
+/** Combien de fixes doivent s'accorder : deux gestes, pas un sursaut. */
+export const FIXES_CONCORDANTS = 3;
+
+/** Un fixe tel que le détecteur le lit — rien de plus. */
+export interface FixeEcart {
+  /** Écart mesuré au tracé, en mètres. */
+  ecartM: number;
+  /** Cap de déplacement mesuré, `null` quand le récepteur se tait. */
+  cap: number | null;
+  /** Cap du tracé à cet endroit. */
+  capTrace: number;
+}
+
+/** L'écart d'angle le plus court entre deux caps, en degrés — PURE. */
+export function ecartAngulaire(a: number, b: number): number {
+  const d = Math.abs(((a - b) % 360 + 540) % 360 - 180);
+  return d;
+}
+
+/**
+ * A-t-on VRAIMENT quitté la route, avant le seuil de distance ? — PURE.
+ *
+ * Les fixes sont donnés du plus ANCIEN au plus RÉCENT. On exige les trois
+ * accords : l'écart dépasse le doute, il a CRU sans exception, et le cap
+ * diverge franchement de la route. Un seul manque, et l'on attend le seuil
+ * ordinaire — il vaut mieux annoncer trop tard que dérouter quelqu'un qui
+ * roule droit.
+ */
+export function quitteLeTrace(fixes: readonly FixeEcart[]): boolean {
+  if (fixes.length < FIXES_CONCORDANTS) return false;
+  const derniers = fixes.slice(-FIXES_CONCORDANTS);
+  const dernier = derniers[derniers.length - 1]!;
+  if (dernier.ecartM < ECART_DOUTE_M) return false;
+  for (let i = 1; i < derniers.length; i += 1) {
+    if (derniers[i]!.ecartM <= derniers[i - 1]!.ecartM) return false;
+  }
+  /* LE CAP DOIT ÊTRE CONNU : à l'arrêt le récepteur se tait, et l'absence de
+     cap n'est pas une divergence. */
+  if (dernier.cap === null) return false;
+  return ecartAngulaire(dernier.cap, dernier.capTrace) > DIVERGENCE_CAP_DEG;
+}
+
 /**
  * Part-on à CONTRESENS ? — PURE.
  *
