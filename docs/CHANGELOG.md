@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.22.0] — 2026-09-01 — FOND-1 : les numéros de route et les noms de communes (PR #169)
+## [1.23.0] — 2026-09-01 — FOND-1 : les numéros de route et les noms de communes (PR #169)
 
 Deux défauts signélés ensemble, et ils avaient la même cause.
 
@@ -41,6 +41,29 @@ Tests : 6 unitaires sur le style — ce que reçoit chaque fond, l'ordre des
 calques (les étiquettes passent APRÈS le cadastre, un texte sous une
 surcouche opaque ne se lit pas), la déclaration des glyphes sans laquelle
 MapLibre ne dessine aucun texte, et les trois seuils de zoom.
+## [1.22.0] — 2026-09-01 — BORNES-8 : le rappel se range, et son bouton se lit en sombre (PR #167)
+
+- **UNE ALERTE QUI NE PART JAMAIS CESSE D'ALERTER.** Armelin : « le rectangle
+  des bornes filtrées apparaît aussi bien en mode carte qu'en mode navigation
+  et ne part jamais. En mode navigation, le cartouche se fait même écraser par
+  le panneau de direction. Il faudrait fusionner ce filtre à l'intérieur du
+  panneau de filtre des POI. » C'est fait : le rappel et son bouton « Tout
+  afficher » vivent désormais **dans** le panneau « Autour de moi », sous la
+  puce « Bornes de recharge » qu'ils concernent.
+- **CE QUI RESTE VISIBLE DEPUIS LA CARTE** : un **point ambre** de huit pixels
+  sur l'entonnoir. BORNES-5 avait posé le rectangle à côté de la carte pour
+  qu'il ne puisse plus être manqué — le remède était pire que le mal. Un
+  point suffit : assez pour qu'on ouvre, trop peu pour qu'on subisse.
+- **LE BOUTON « TOUT AFFICHER » SE LIT EN THÈME SOMBRE.** « Sur mon mobile, le
+  texte est affiché en noir sur fond noir. » `color: inherit` sur un
+  `<button>` ne suffit pas : sans `color-scheme`, Chrome peint les contrôles
+  avec SA palette claire pendant que le volet reste sombre. Les deux couleurs
+  sont nommées, thème par thème — **6,09:1** en clair, **12,23:1** en sombre
+  (mesurés), là où noir sur noir vaut 1.
+
+Tests : le parcours du signal mesure désormais le POINT avant dépliage ; un
+parcours neuf mesure le **contraste calculé** du bouton en thème sombre — pas
+la présence d'une règle, mais la couleur qu'on voit.
 ## [1.21.0] — 2026-09-01 — ITI-1 : « Démarrer le suivi » reste sous les yeux (PR #168)
 
 - **LE PIED DU VOLET COLLE.** Armelin : « si je scrolle tout en bas de la
