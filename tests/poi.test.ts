@@ -8,6 +8,7 @@ import {
   chargerCarburants, chargerBornes, vueAChange, ErreurPoi, type Bbox,
   PRISES, type FiltresBornes,
   urlFacettesReseaux, versReseaux,
+  empriseElargie,
 } from '../src/lib/poi';
 
 const B: Bbox = { ouest: 2.25, sud: 48.8, est: 2.42, nord: 48.9 };
@@ -350,5 +351,43 @@ describe('les facettes de réseaux', () => {
       { name: '   ', count: 2, value: '   ' },
     ] }] };
     expect(versReseaux(bancal)).toEqual([{ nom: 'Bon', nombre: 5 }]);
+  });
+});
+
+describe('le nom élargit l’emprise (BORNES-9, 01/09)', () => {
+  /* Armelin, pour la cinquième fois : « je n'ai toujours pas les bornes
+     McDonald ». MESURÉ dans son navigateur, sur la production : sa vue au
+     zoom 13 couvre 2,5 km sur 1,9 — et il n'y a réellement AUCUNE borne
+     McDonald dedans. L'application ne mentait pas ; elle répondait à une
+     question qu'il ne posait pas. Taper un nom, c'est CHERCHER. */
+  const vue = { ouest: 2.5550, sud: 48.8018, est: 2.5894, nord: 48.8188 };
+
+  test('sans nom, l’emprise reste celle de la vue', () => {
+    const u = decodeURIComponent(urlBornes(vue));
+    expect(u).toContain('48.8018');
+    expect(u).toContain('2.5894');
+  });
+
+  test('avec un nom, elle s’élargit à dix kilomètres', () => {
+    const u = decodeURIComponent(urlBornes(vue, { nom: 'McDonald' }));
+    /* Dix kilomètres valent 0,0898° de latitude : le sud descend donc sous
+       48,72 là où la vue s'arrêtait à 48,80. */
+    expect(u).toMatch(/in_bbox\(point_geo,48\.7[0-2]/);
+    expect(u).toContain('nom_station');
+  });
+
+  /* L'EMPRISE NE RÉTRÉCIT JAMAIS : à petit zoom, la vue est déjà plus large,
+     et la resserrer ferait disparaître des stations qu'on voyait. */
+  test('ne rétrécit jamais une vue déjà plus large', () => {
+    const large = { ouest: -1, sud: 44, est: 6, nord: 51 };
+    const e = empriseElargie(large);
+    expect(e).toEqual(large);
+  });
+
+  test('tient compte de la latitude pour les longitudes', () => {
+    /* À 48,8° de latitude, un degré de longitude vaut ~73 km : dix
+       kilomètres y font 0,137°, contre 0,0898 en latitude. */
+    const e = empriseElargie({ ouest: 2.57, sud: 48.80, est: 2.58, nord: 48.81 });
+    expect(e.est - e.ouest).toBeGreaterThan(e.nord - e.sud);
   });
 });

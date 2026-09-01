@@ -127,29 +127,93 @@ test('LOIN DU TRACÉ, L’AIMANT LÂCHE — on ne ment pas à qui est vraiment a
     .toBeLessThan(6);
 });
 
-test('SUR LE TRACÉ, LA BOUSSOLE ORIENTE ENCORE LA CARTE', async ({ page }) => {
-  /* GUIDE-2 (01/09) — la régression qu'a vue Armelin : « quand je lance un
-     itinéraire, la boussole ne tourne plus. Du coup le téléphone ne sait pas
-     dans quel sens je suis. » GUIDE-1 avait glissé le cap du TRACÉ devant la
-     boussole : sur la route, la carte se verrouillait au cap de la route.
-     POURQUOI AUCUN PARCOURS NE L'A VU : celui qui défendait le relais de la
-     boussole pousse un fixe à 166 m du tracé — HORS ROUTE, donc sans aimant.
-     Celui-ci roule SUR la route, aimant actif, et c'est là que le défaut
-     vivait. La boussole mesure le TÉLÉPHONE, le tracé mesure la ROUTE : à
-     l'arrêt, c'est le téléphone qu'on tourne dans les mains. */
+test('SUR LE TRACÉ : LA CARTE SUIT LA ROUTE, LA FLÈCHE SUIT LE TÉLÉPHONE', async ({ page }) => {
+  /* GUIDE-4 (01/09) — ET C'EST LA TROISIÈME ÉCRITURE DE CETTE RÈGLE, parce
+     que les deux premières corrigeaient le mauvais objet.
+       GUIDE-1 : la flèche reculait à 4 km/h → on lui a donné le cap du TRACÉ.
+       GUIDE-2 : « la boussole ne tourne plus » → on a mis la boussole sur la
+         CARTE. Ce parcours défendait alors l'inverse de ce qu'il défend ici.
+       GUIDE-4 : « la flèche suit le trajet mais pas la direction dans
+         laquelle je regarde » ET « la carte continue de tourner avec la
+         boussole ». Les deux phrases ensemble disent le modèle, et il est
+         simple : LA CARTE MONTRE LA ROUTE, LE CURSEUR MONTRE L'USAGER.
+     Ici : on roule plein est (tracé à 90°), à l'arrêt, le téléphone tourné
+     vers l'ouest. La carte doit rester à 90, la flèche pointer à 270. */
   await suivre(page);
-  // Sur la ligne (plein est, cap du tracé = 90°), à l'arrêt : le GPS se tait.
   await page.evaluate(() => {
     window.dispatchEvent(new DeviceOrientationEvent('deviceorientationabsolute',
       { alpha: 90, absolute: true }));
     (window as unknown as { __pousserFixe: (c: object) => void })
       .__pousserFixe({ longitude: 2.3500, latitude: 48.8500, speed: 0, heading: null });
   });
-  /* alpha 90 → cap 270. Si la carte suivait le tracé, elle resterait à 90 :
-     c'est exactement ce qu'il a vu. */
-  /* NORMALISÉ : MapLibre rend son cap dans ]-180, 180] — 270° s'y écrit -90,
-     et comparer sans ramener l'angle ferait échouer un test qui a raison. */
-  await expect.poll(async () => (((await page.evaluate(() =>
-    Math.round((window as unknown as { __carte: { getBearing(): number } }).__carte.getBearing()),
-  )) % 360) + 360) % 360, { timeout: 10_000 }).toBe(270);
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __carte: { getZoom(): number } }).__carte.getZoom(),
+  ), { timeout: 10_000 }).toBeGreaterThan(15);
+  await page.waitForTimeout(700);
+
+  const mesure = await page.evaluate(() => {
+    const c = (window as unknown as { __carte: { getBearing(): number } }).__carte;
+    /* LA ROTATION EST CELLE DU MARQUEUR MapLibre (`setRotation`), pas un
+       `transform` à nous : on lit donc le style calculé de la porte, où
+       MapLibre l'écrit. */
+    const porte = document.querySelector('.curseur-porte') as HTMLElement;
+    const m = /rotateZ\(([-\d.]+)deg\)|rotate\(([-\d.]+)deg\)/
+      .exec(porte.style.transform || getComputedStyle(porte).transform);
+    return {
+      carte: (((Math.round(c.getBearing()) % 360) + 360) % 360),
+      brut: porte.style.transform,
+      fleche: m ? (((Math.round(Number(m[1] ?? m[2])) % 360) + 360) % 360) : null,
+    };
+  });
+
+  /* LA CARTE RESTE DANS LE SENS DE LA MARCHE : c'est le cap du tracé, pas
+     celui du téléphone. */
+  expect(mesure.carte, 'la carte ne doit pas tourner avec le téléphone').toBe(90);
+  /* ET LA FLÈCHE MONTRE OÙ L'ON REGARDE — EN ABSOLU, pas à l'écran.
+     MapLibre compose : un marqueur aligné sur la carte est peint à
+     `rotation − cap de la carte`. Sur une carte tournée à 90°, une flèche
+     dessinée à 180° à l'écran pointe donc bien vers l'ouest (270). Comparer
+     la valeur ÉCRAN aurait fait échouer un test qui a raison. */
+  expect(mesure.fleche, 'la flèche doit être dessinée').not.toBeNull();
+  expect(((mesure.fleche! + mesure.carte) % 360 + 360) % 360,
+    'la flèche doit suivre la boussole').toBe(270);
+});
+
+test('ON RECALCULE AVANT LES QUATRE-VINGTS MÈTRES quand deux signaux s’accordent', async ({ page }) => {
+  /* GUIDE-5 (01/09). Armelin : « quand je refuse de suivre le trajet, le
+     recalcul automatique intervient de plus de 30 m après avoir fait mon
+     écart ». Descendre le seuil sec aurait annoncé « vous avez quitté
+     l'itinéraire » à quelqu'un qui roule droit dans une rue encaissée : on
+     exige donc DEUX signaux — l'écart CROÎT et le cap DIVERGE.
+     ICI : la route va plein est, on part vers le nord-est en s'éloignant à
+     chaque fixe, et l'on n'atteint JAMAIS les 80 m du seuil ordinaire. */
+  await suivre(page);
+  const recalculs: unknown[] = [];
+  await page.exposeFunction('__noterRecalcul', (d: unknown) => { recalculs.push(d); });
+  await page.evaluate(() => {
+    document.addEventListener('recalcul-hors-route', (e) => {
+      void (window as unknown as { __noterRecalcul: (d: unknown) => void })
+        .__noterRecalcul((e as CustomEvent).detail);
+    });
+  });
+
+  /* Trois fixes qui s'éloignent : 25, 42 puis 58 m au nord d'une route plein
+     est — sous les 80 m, avec un cap à 45° (divergence de 45°… non : la
+     route est à 90, le cap à 20 → 70° d'écart, au-delà du seuil). */
+  for (const [lat, lon] of [[48.85022, 2.3450], [48.85038, 2.3455], [48.85052, 2.3460]]) {
+    await page.evaluate(([la, lo]) => {
+      (window as unknown as { __pousserFixe: (c: object) => void })
+        .__pousserFixe({ longitude: lo, latitude: la, speed: 9, heading: 20 });
+    }, [lat, lon]);
+    await page.waitForTimeout(400);
+  }
+  /* LE CONSTAT S'ABRÈGE à une seconde quand les deux signaux se sont accordés :
+     on laisse passer ce délai, puis un fixe de plus pour le déclencher. */
+  await page.waitForTimeout(1400);
+  await page.evaluate(() => {
+    (window as unknown as { __pousserFixe: (c: object) => void })
+      .__pousserFixe({ longitude: 2.3465, latitude: 48.85066, speed: 9, heading: 20 });
+  });
+
+  await expect.poll(() => recalculs.length, { timeout: 10_000 }).toBeGreaterThan(0);
 });

@@ -18,6 +18,7 @@ import { poserIconesPuissance, nomIcone, eclairsSVG } from './icone-puissance';
 import {
   chargerCarburants, chargerBornes, chargerParkings, vueAChange,
   resumerFiltresBornes,
+  RAYON_NOM_KM,
   PRISES, type ClePrise, type FiltresBornes,
   type Bbox,
 } from '../lib/poi';
@@ -938,6 +939,13 @@ export class PanneauPoi extends HTMLElement {
     if (this.#actives.has('bornes')) {
       const resume = resumerFiltresBornes(this.#filtres);
       if (resume !== null) bouts.push(`Filtres bornes : ${resume}`);
+      /* ET L'ON DIT QU'ON A CHERCHÉ PLUS LOIN QUE LA VUE (BORNES-9) : sans
+         cela, des punaises apparaîtraient hors écran sans que rien n'explique
+         d'où elles viennent — et l'usager qui n'en voit aucune croirait
+         encore que le filtre est cassé. */
+      if ((this.#filtres.nom ?? '').trim() !== '') {
+        bouts.push(`recherche élargie à ${RAYON_NOM_KM} km autour de la vue`);
+      }
     }
     /* PENDANT LE MODE TRAJET, LE DIRE : une couche cochée mais invisible sans
        explication se lit comme une panne. */

@@ -2,7 +2,7 @@
 // rôles ARIA complets, navigation aux flèches, Entrée sélectionne, Échap
 // referme. Débounce de 300 ms et annulation de la requête précédente : le
 // quota BAN est un bien commun (règle du projet).
-import { chercherAdresses, type ResultatAdresse } from '../lib/adresse';
+import { chercherAdresses, communeNommee, type ResultatAdresse } from '../lib/adresse';
 import { chercherParNom, LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
 import { chercherEtablissements } from '../lib/annuaire-education';
 import { analyser, decoder, departementDe } from '../lib/adresse-mots';
@@ -43,6 +43,18 @@ function ressembleAUnNom(texte: string): boolean {
    SANS SCORE, ON SUPPOSE LA CONFIANCE : une source qui ne dit pas son doute
    ne doit pas déclencher deux appels de plus à chaque frappe. */
 const SEUIL_CONFIANCE_BAN = 0.9;
+
+/* ET SOUS CE SCORE, SON POINT NE VAUT PAS D'ANCRE (RECHERCHE-4, 01/09).
+   MESURÉ sur la production dans le navigateur d'Armelin : taper « Collège
+   Albert Camus » rend, côté BAN, le LIEU-DIT « Collège Albert Camus 59239
+   Thumeries » — dans le Nord, à deux cents kilomètres de chez lui, avec un
+   score de 0,48. L'annuaire était bien interrogé (l'appel part, je l'ai vu),
+   mais AUTOUR DE THUMERIES : il ne pouvait rien trouver.
+   Au-dessus du seuil, la BAN a compris la commune qu'on a écrite et son point
+   vaut mieux que la vue (« … Plessis-Trévise » : 0,636). En dessous, elle a
+   attrapé un homonyme lointain, et c'est LÀ OÙ L'ON REGARDE qui dit le mieux
+   où l'on cherche. */
+const SEUIL_ANCRE_BAN = 0.6;
 
 export class RechercheAdresse extends HTMLElement {
   #resultats: ResultatAdresse[] = [];
@@ -193,7 +205,14 @@ export class RechercheAdresse extends HTMLElement {
       if (ressembleAUnNom(texte) && texte.trim().length >= LONGUEUR_MIN_NOM
         && confiance < SEUIL_CONFIANCE_BAN) {
         const meilleur = this.#resultats[0];
-        const centre = meilleur
+        /* ON N'ANCRE SUR UN RÉSULTAT APPROXIMATIF QUE SI L'ON RETROUVE SA
+           COMMUNE DANS LA SAISIE — voir `communeNommee` pour les deux cas
+           mesurés qui l'exigent. Au-dessus du seuil, la BAN a compris, on la
+           suit sans discuter. */
+        const ancrable = meilleur !== undefined
+          && ((meilleur.score ?? 0) >= SEUIL_ANCRE_BAN
+            || communeNommee(texte, meilleur.contexte));
+        const centre = ancrable && meilleur
           ? { lon: meilleur.lon, lat: meilleur.lat }
           : centreCarte?.() ?? null;
         if (centre === null) {

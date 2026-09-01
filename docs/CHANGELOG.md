@@ -2,6 +2,72 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.23.0] — 2026-09-01 — Chercher : le nom cherche vraiment (PR #170)
+
+Deux défauts qu'Armelin signalait encore : « je n'ai toujours pas le collège
+de ma fille visible ni les bornes McDonald ». **Mesurés dans SON navigateur,
+sur la production** — et ils étaient réels tous les deux, pour deux raisons
+différentes.
+
+- **BORNES-9 — CHERCHER UN NOM N'EST PAS SURVOLER LA VUE.** Sa vue au zoom 13
+  couvre 2,5 km sur 1,9, et il n'y a réellement AUCUNE borne McDonald dedans
+  (requête au portail : total 0). L'application ne mentait pas ; elle
+  répondait à une question qu'il ne posait pas. Taper un nom, c'est CHERCHER :
+  le filtre élargit désormais l'emprise à **dix kilomètres** autour du centre
+  — mesuré au même endroit : **55** stations McDonald à 10 km, 256 à 25. On
+  s'arrête à dix : le portail plafonne à cent, et en annoncer 256 pour n'en
+  montrer que cent serait retomber dans le mensonge qu'on corrige. Et **on le
+  dit** dans la ligne d'état, sans quoi des punaises hors écran
+  paraîtraient sans explication.
+- **RECHERCHE-4 — UN HOMONYME LOINTAIN NE DÉPLACE PLUS LA RECHERCHE.** Taper
+  « Collège Albert Camus » rend, côté BAN, le LIEU-DIT « Collège Albert
+  Camus 59239 **Thumeries** » (Nord, score 0,48). L'annuaire était bien
+  interrogé — j'ai vu l'appel partir — mais **autour de Thumeries**, à deux
+  cents kilomètres de chez lui : il ne pouvait rien trouver.
+  LE SCORE NE SUFFISAIT PAS À TRANCHER : « Tour Eiffel Paris » rend aussi un
+  résultat faible (0,378), et là Paris est le BON endroit — parce que
+  l'usager l'a écrit. On n'ancre donc la recherche sur un résultat approximatif
+  que si l'on **retrouve sa commune dans la saisie** ; sinon, c'est là où l'on
+  regarde qui décide.
+
+Tests : 4 unitaires sur l'emprise élargie (dont « elle ne rétrécit jamais »
+et la correction de latitude), 5 sur l'ancre (« Paris » reconnu, « Thumeries »
+non, les mots de moins de trois lettres ignorés). 2 E2E : l'emprise
+réellement émise, et l'homonyme lointain qui ne déplace plus rien.
+
+## [1.24.0] — 2026-09-01 — Guidage : la carte suit la route, la flèche suit le téléphone (PR #171)
+
+- **GUIDE-4 — ET C'EST LA TROISIÈME ÉCRITURE DE CETTE RÈGLE.** GUIDE-1 avait
+  donné le cap du TRACÉ à la flèche pour qu'elle cesse de reculer à 4 km/h ;
+  GUIDE-2 avait ensuite mis la boussole sur la CARTE. Les deux corrigeaient le
+  mauvais objet, et Armelin l'a dit en deux phrases qui, ensemble, donnent le
+  modèle : « la flèche suit le trajet mais pas la direction dans laquelle je
+  regarde » et « la carte continue de tourner avec la boussole ».
+  **LA CARTE MONTRE LA ROUTE, LE CURSEUR MONTRE L'USAGER.** La carte prend le
+  cap GPS, sinon celui du tracé ; la flèche prend le cap GPS quand il est
+  fiable, sinon la BOUSSOLE. Le bouton de la boussole redevient donc utile :
+  il bascule entre le nord et le sens de la marche, au lieu de rendre deux
+  fois la même chose.
+- **GUIDE-5 — ON CONCLUT PLUS TÔT, SANS CRIER AU LOUP.** « Le recalcul
+  automatique intervient de plus de 30 m après avoir fait mon écart. »
+  Descendre le seuil de 80 m serait une faute : à quarante mètres secs, un
+  récepteur qui dérive dans une rue encaissée annoncerait « vous avez quitté
+  l'itinéraire » à quelqu'un qui roule droit. **DEUX SIGNAUX QUI S'ACCORDENT**
+  valent mieux qu'un seuil plus bas : on conclut à quarante mètres quand
+  l'écart CROÎT sur trois fixes ET que le cap DIVERGE de plus de 55° de la
+  route. Le bruit d'un récepteur, lui, oscille sans direction. Le constat
+  s'abrège alors à une seconde : les trois fixes ont déjà fait le travail.
+
+DEUX PIÈGES REPAYÉS EN CHEMIN, tous deux déjà connus : `#majPosition` est
+rejouée par six chemins d'interface, et l'écart rejoué à l'identique cassait
+la croissance stricte — on ne note plus qu'un fixe NEUF ; et vider
+l'historique à chaque fixe sur la route l'empêchait de jamais s'accumuler.
+
+Tests : 9 unitaires sur le détecteur précoce (l'oscillation qui ne conclut
+pas, le cap resté dans l'axe, l'arrêt sans cap). 2 E2E : la carte à 90° avec
+la flèche à 270° — en absolu, MapLibre composant la rotation du marqueur avec
+le cap de la carte — et le recalcul obtenu sans jamais atteindre 80 m.
+
 ## [1.17.0] — 2026-09-01 — BORNES-6 : un seul filtre pour la carte ET le trajet (PR #164)
 
 - **ARMELIN A TRANCHÉ**, après la question posée par BORNES-5 : « le filtre
