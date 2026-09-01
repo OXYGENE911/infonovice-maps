@@ -680,10 +680,21 @@ etapes-itineraire { display: grid; gap: 7px; }
 .bg-bilan-garde[hidden] { display: none; }
 
 .iti-hist-liste { display: grid; gap: 2px; margin-bottom: 10px; }
+/* LA COULEUR DU TEXTE EST DITE, ET C'EST TOUT LE CORRECTIF (HIST-1, 01/09).
+   Armelin : « quand je vais chercher la carte dans l'historique c'est écrit
+   ton sur ton sur mobile et je ne peux pas sélectionner le parcours archivé
+   car je ne vois pas ce qu'il y a écrit dessus. »
+   MESURÉ : `rgb(0, 0, 0)` sur `rgb(14, 16, 20)`, soit un contraste de **1,1**.
+   La ligne est un `<label>` et rien ne lui donnait de couleur : elle héritait
+   donc du NOIR par défaut du navigateur. En thème clair, noir sur blanc, la
+   faute était invisible ; en sombre, elle efface le texte.
+   LA LEÇON DÉPASSE CETTE LIGNE : un élément de texte qui ne nomme pas sa
+   couleur est un piège de thème sombre différé. Un parcours balaie désormais
+   tout le volet pour cela. */
 .iti-hist-ligne {
   display: flex; gap: 9px; align-items: baseline;
   padding: 7px 8px; border-radius: 8px;
-  font: 400 13px var(--police); cursor: pointer;
+  font: 400 13px var(--police); color: var(--texte-1); cursor: pointer;
 }
 .iti-hist-ligne:hover { background: var(--fond-doux); }
 .iti-hist-actions { display: flex; gap: 8px; margin-bottom: 10px; }
@@ -1336,6 +1347,30 @@ fiche-borne:not([hidden]), fiche-lieu:not([hidden]) { z-index: var(--z-volet-ouv
      élargir le cartouche au-delà de l'écran. */
   overflow-wrap: anywhere;
 }
+/* LA CARTE REPRISE PAR LE SYSTÈME (CARTE-1). Le message se pose SUR le
+   canevas noir, au centre, et ne dépend d'aucun thème : quand il s'affiche,
+   le fond est noir de toute façon — c'est justement le problème qu'il
+   explique. Il laisse passer les clics nulle part : c'est une alerte, elle
+   attend une décision. */
+.carte-perdue {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: 14px;
+  align-items: center; justify-content: center;
+  padding: 24px; text-align: center;
+  background: rgba(20, 20, 22, .92);
+}
+.carte-perdue[hidden] { display: none; }
+.carte-perdue p {
+  margin: 0; max-width: 34ch;
+  font: 400 14px var(--police); color: #F3EFE7; line-height: 1.5;
+}
+.carte-perdue-recharger {
+  padding: 10px 18px; border-radius: 10px; border: none;
+  background: var(--accent); color: var(--blanc);
+  font: 600 14px var(--police); cursor: pointer;
+}
+.carte-perdue-recharger:focus-visible { outline: none; box-shadow: var(--focus); }
+
 .fb-nuance {
   margin: 6px 0 0; font: 400 11.5px var(--police); color: var(--texte-3);
   line-height: 1.45;
@@ -2775,7 +2810,14 @@ summary .picto-menu {
      laissait un tiers d'écran vide à côté de l'information la plus vitale.
      Plafonné à 560 px : sur un ordinateur, un panneau large comme la fenêtre
      ne se lit plus d'un coup d'œil. */
-  right: 12px; width: auto; max-width: 560px;
+  /* IL S'ARRÊTE AVANT LA FRISE DU TRAJET (BANDEAU-1, 01/09). La frise vit à
+     `right: 10px` sur 18 px de large : un cartouche qui va jusqu'à 12 px la
+     recouvrait par construction — et cela se voyait d'autant plus que le
+     cartouche était haut. Trente-six pixels lui laissent sa colonne et une
+     respiration. Six pour cent de largeur en moins sur un téléphone, contre
+     une frise enfin lisible : c'est le bon échange, et TERRAIN-1 — « il faut
+     que les informations soient visibles » — n'en souffre pas. */
+  right: 36px; width: auto; max-width: 560px;
   display: flex; align-items: center; gap: 10px;
   /* UN VRAI PANNEAU (PAN-1, 30/08). Le listel n'est PAS une bordure : sur
      la route, c'est un filet BLANC posé en retrait du bord, et le bord lui
@@ -3202,10 +3244,21 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
 /* IL PREND LA PLACE DE LA FLÈCHE, il ne s'y ajoute pas : dans un giratoire,
    « tournez à droite » ne veut rien dire — c'est le schéma qui informe. */
 /* L'AVEU DES REPÈRES MANQUANTS : discret, jamais alarmant — c'est une
-   précision sur ce qu'on ne sait pas, pas une alerte de conduite. */
+   précision sur ce qu'on ne sait pas, pas une alerte de conduite.
+   IL NE PARAÎT QU'AU DÉPLIAGE (BANDEAU-1, 01/09). Armelin, après un essai à
+   pied : « quand ce message arrive, le panneau occupe une grande surface et
+   masque la barre verticale de visualisation du trajet ». Deux lignes de
+   texte dans le cartouche d'instruction le font grandir d'autant, et ce qu'il
+   recouvre alors, c'est la frise du trajet.
+   C'EST LA RÈGLE QU'ARMELIN A LUI-MÊME ÉNONCÉE pour ce genre d'information —
+   « à l'identique de la ligne info trafic orange » : ce qui n'est pas une
+   consigne de conduite se lit quand on déplie, pas en roulant. L'aveu reste
+   donc entier, à un geste de là ; il ne mange plus l'écran du conducteur. */
 .bg-reperes {
+  display: none;
   margin: 6px 0 0; font: 400 12px/1.4 var(--police); color: var(--texte-3);
 }
+.bg-deploye .bg-reperes { display: block; }
 .bg-reperes[hidden] { display: none; }
 .bg-giratoire {
   /* IL PREND LA PLACE DE LA FLÈCHE, DONC SON RANG : sans `order`, il tombait
@@ -3642,8 +3695,23 @@ filtre-poi {
    ========================================================================== */
 /* LE BOUTON P — un panneau rond, bleu comme la signalisation du
    stationnement, posé au-dessus du bandeau à droite. */
+/* LE ROND « P » PASSE À CÔTÉ DE LA VITESSE (PARK-2, 01/09). Armelin, après
+   un essai à pied : « le panneau de parking bleu s'affiche en bas à droite et
+   vient couper la boussole. Je préfère déplacer ce panneau à droite du rond
+   d'indication de la vitesse GPS, mais pas tout collé. Avec un léger espace
+   entre les deux. »
+   IL PREND DONC LE REPÈRE DE LA VITESSE, pas le sien : `--vitesse-bas` est la
+   seule valeur à corriger si la barre d'échelle change de hauteur, et deux
+   pastilles qui partagent leur repère ne se décalent jamais l'une par rapport
+   à l'autre. DOUZE PIXELS d'écart — le même blanc qu'ERGO-2 a posé entre le
+   cercle et l'échelle, pour la même raison : c'est le vide qui rend deux
+   objets lisibles séparément.
+   ET CINQ PIXELS PLUS HAUT : le « P » fait 46 px contre 56 à la vitesse ;
+   sans cela, deux disques de tailles différentes alignés par le bas paraissent
+   de travers. */
 .bg-parking-p {
-  position: absolute; right: 14px; bottom: calc(100% + 12px);
+  position: absolute; left: calc(56px + 12px);
+  bottom: calc(var(--vitesse-bas) + 5px);
   width: 46px; height: 46px; border-radius: 50%;
   border: 3px solid #FFFFFF; background: #2272C4; color: #FFFFFF;
   font: 800 22px var(--police); cursor: pointer;

@@ -104,6 +104,15 @@ async function suivre(
   return requetes;
 }
 
+/* L'AVEU DES REPÈRES NE PARAÎT QU'AU DÉPLIAGE depuis BANDEAU-1 (01/09) :
+   Armelin l'a demandé après un essai à pied, le cartouche grandissait et
+   masquait la frise du trajet. Ce que ces parcours défendent — que l'aveu
+   soit bien ARMÉ quand le service tombe — n'a pas changé ; il faut seulement
+   ouvrir la barre pour le lire, comme l'usager. */
+async function deplier(page: Page): Promise<void> {
+  await page.locator('.bg-deplier').click();
+}
+
 test.beforeEach(async ({ context }) => {
   await context.grantPermissions(['geolocation']);
   await context.setGeolocation({ longitude: LACETS[0]![0], latitude: LACETS[0]![1] });
@@ -141,6 +150,7 @@ test('UNE EXPIRATION NE SE LIT PAS « route sans repères »', async ({ page }) 
       remark: 'runtime error: Query timed out in "query" at line 1 after 45 seconds.',
     },
   });
+  await deplier(page);
   await expect(page.locator('.bg-reperes')).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('.bg-reperes')).toContainText('indisponibles');
 });
@@ -150,6 +160,7 @@ test('LE SUIVI VAUT TOUJOURS SANS LES REPÈRES', async ({ page }) => {
      qu'OpenStreetMap est saturé serait pire que le défaut qu'il signale. */
   await suivre(page, { statut: 504, corps: {} });
   await expect(page.locator('.bg-cartouche')).toBeVisible();
+  await deplier(page);
   await expect(page.locator('.bg-reperes')).toBeVisible({ timeout: 20_000 });
 });
 
@@ -162,6 +173,7 @@ test('QUAND LE SERVICE EST MORT, ON RENONCE VITE', async ({ page }) => {
      abandonner sur un seul échec priverait le trajet du reste de ses
      repères. */
   const requetes = await suivre(page, { statut: 504, corps: {} });
+  await deplier(page);
   await expect(page.locator('.bg-reperes')).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(1_500);
   expect(requetes.length, 'on s’acharne sur un service qui ne répond pas')
