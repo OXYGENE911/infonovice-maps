@@ -22,6 +22,21 @@ export async function simulerTuiles(page: Page): Promise<void> {
   await page.route('**/data.geopf.fr/wmts**', (route) => route.fulfill({
     contentType: 'image/png', body: PNG_1PX,
   }));
+  /* L'ÉTAT DES POINTS DE CHARGE PART À CHAQUE FICHE OUVERTE (IRVE-1, 01/09) :
+     sans cette simulation, la CI interrogerait `tabular-api.data.gouv.fr` à
+     chaque poussée pour des parcours qui ne cherchent pas à l'éprouver — la
+     règle du projet l'interdit, et une panne du service ferait rougir une CI
+     qui n'a rien à voir. La réponse VIDE est le bon défaut : c'est le cas le
+     plus fréquent sur le terrain (14 points sur 40 seulement portent un
+     relevé autour du Plessis-Trévise). L'en-tête CORS n'est pas décoratif :
+     le portail réel l'envoie, et sans lui la fiche croirait à une panne.
+     Un parcours qui veut VRAIMENT juger l'état pose sa propre route : la
+     dernière enregistrée l'emporte. */
+  await page.route('**/tabular-api.data.gouv.fr/**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json',
+    body: JSON.stringify({ data: [], meta: { total: 0 } }),
+  }));
 }
 
 /* LE RÉPERTOIRE DES COMMUNES est simulé pour la même raison, et il le fallait :

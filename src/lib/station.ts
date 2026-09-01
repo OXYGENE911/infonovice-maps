@@ -74,6 +74,11 @@ export interface DetailStation {
   id: string | null;
   /** Date de dernière mise à jour déclarée, au format ISO. */
   majLe: string | null;
+  /* LES IDENTIFIANTS DES POINTS DE CHARGE (IRVE-1). Ce sont EUX qui joignent
+     la station au jeu des relevés d'état, et pas son propre identifiant : la
+     station `FRALLPGO000669` porte le point `FRALLEGO6000361`, mesuré le
+     01/09. Sans cette liste, l'état des points reste hors d'atteinte. */
+  pdcIds: string[];
 }
 
 /* ---- URL : pures, testées à sec ---- */
@@ -238,6 +243,9 @@ export function versDetail(brut: unknown): DetailStation | null {
     pdc: premier((l) => nombreOuNull(l['nbre_pdc'])),
     id: premier((l) => texteOuNull(l['id_station_itinerance'])),
     majLe: premier((l) => texteOuNull(l['date_maj'])),
+    pdcIds: [...new Set(lignes
+      .map((l) => texteOuNull(l['id_pdc_itinerance']))
+      .filter((x): x is string => x !== null))],
   };
 }
 

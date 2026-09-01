@@ -537,6 +537,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #162 — RECHERCHE-3 (01/09) : la recherche par nom part enfin (la
       BAN rend toujours quelque chose) et interroge l'ÉGALITÉ indexée, la
       regex expirant (mesuré : 57 s). Expiration lue comme telle.
+- [x] PR #174 — IRVE-1 (01/09) : l'état déclaré des points de charge, DATÉ.
+      Pas de reroutage automatique : mesuré, aucun relevé de moins de 9,6 h et
+      45 % de plus de sept jours — le fichier national est déposé par lots, ce
+      n'est pas un flux. Un seul appel, à l'ouverture de la fiche.
 - [x] PR #173 — RECHERCHE-5 (01/09) : le collège se trouve enfin. RECHERCHE-4
       ne s'est jamais déclenché en production — seuil calibré sur des scores
       mesurés SANS `autocomplete` (0,48 relevé à la main, 0,945 réellement

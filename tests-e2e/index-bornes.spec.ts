@@ -269,8 +269,12 @@ test('le cartouche dit l’ACCÈS RÉSERVÉ, le téléphone, et ce qu’il ignor
   await expect(fiche.locator('.fb-tel')).toHaveText('+33 4 91 00 00 00');
   await expect(fiche.locator('.fb-tel')).toHaveAttribute('href', 'tel:+33491000000');
   await expect(fiche).toContainText('Mo-Fr 08:00-18:00');
-  // Ce qu'il ignore est écrit : sans quoi le blanc passe pour un oubli.
-  await expect(fiche).toContainText('Occupation en direct indisponible');
+  /* Ce qu'il ignore est écrit : sans quoi le blanc passe pour un oubli. La
+     phrase a changé avec IRVE-1 (01/09) : une source publique française
+     DIFFUSE bien l'état des points — elle n'est simplement pas vivante, et
+     prétendre qu'elle n'existe pas revenait à cacher une donnée réelle. */
+  await expect(fiche).toContainText('L’occupation en direct n’existe dans'
+    + ' aucune source publique française');
   await expect(fiche).toContainText('Aucun tarif déclaré');
 
   // Échap referme, comme partout ailleurs.
@@ -613,4 +617,139 @@ test('les titres de section restent DANS leur cadre', async ({ page }) => {
     return mauvais;
   });
   expect(fautes).toEqual([]);
+});
+
+/* ================= L'ÉTAT DÉCLARÉ DES POINTS (IRVE-1, 01/09) ================
+ *
+ * Armelin demandait « les points libres ou occupés » et un reroutage
+ * automatique. MESURÉ le jour même sur 1 400 points du fichier national :
+ * AUCUN relevé de moins de 9,6 heures, 45 % de plus de sept jours. Ce que ces
+ * parcours défendent, c'est donc la seule chose honnête à en tirer : une
+ * panne signalée, une occupation DATÉE, et pas un mot qui laisse croire au
+ * direct. */
+
+const STATION_DEUX_POINTS = {
+  nom_station: 'Relais du Plessis', adresse_station: '2 avenue Ardouin, 94420',
+  nom_enseigne: 'Ionity', nom_operateur: 'Ionity',
+  condition_acces: 'Accès libre', puissance_nominale: 350, nbre_pdc: 2,
+  id_station_itinerance: 'FRIOYP1', date_maj: '2026-08-01',
+  prise_type_combo_ccs: '1', prise_type_2: '0',
+  prise_type_chademo: '0', prise_type_ef: '0',
+};
+
+/** Les deux lignes de points que rend le portail pour cette station. */
+const LIGNES_STATION = [
+  { ...STATION_DEUX_POINTS, id_pdc_itinerance: 'FRIOYE410255' },
+  { ...STATION_DEUX_POINTS, id_pdc_itinerance: 'FRIOYE410256' },
+];
+
+/** Ouvre la fiche de la station simulée, et rend les URL de relevés appelées. */
+async function ficheAvecReleves(
+  page: Page, releves: Record<string, unknown>[],
+): Promise<string[]> {
+  const appels: string[] = [];
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+  await page.route('**/tabular-api.data.gouv.fr/**', (route) => {
+    appels.push(decodeURIComponent(route.request().url()));
+    /* L'EN-TÊTE CORS N'EST PAS UN DÉTAIL DE SIMULATION : le portail réel
+       l'envoie (`access-control-allow-origin: *`, vérifié le 01/09), et sans
+       lui le navigateur refuse la réponse — la fiche affichait alors « les
+       relevés ne répondent pas », ce qui aurait fait passer un correctif
+       correct pour une panne. */
+    return route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      contentType: 'application/json',
+      body: JSON.stringify({ data: releves, meta: { total: releves.length } }),
+    });
+  });
+  await simulerPortail(page, [{
+    nom: 'Relais du Plessis', lon: 2.5722, lat: 48.8103, p: 350,
+    operateur: 'Ionity',
+  }], LIGNES_STATION);
+  await ouvrirBornes(page);
+  await page.evaluate(() => {
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [2.5722, 48.8103], zoom: 11 });
+  });
+  await expect.poll(() => compterRendus(page, 'poi-bornes'), { timeout: 20_000 })
+    .toBeGreaterThan(0);
+  const point = await page.evaluate(() => (window as unknown as {
+    __carte: { project(c: [number, number]): { x: number; y: number } };
+  }).__carte.project([2.5722, 48.8103]));
+  const cadre = await page.locator('#carte canvas.maplibregl-canvas').boundingBox();
+  await page.mouse.click(cadre!.x + point.x, cadre!.y + point.y);
+  await expect(page.locator('fiche-borne')).toBeVisible({ timeout: 10_000 });
+  return appels;
+}
+
+/** Un relevé daté de `heures` heures avant maintenant. */
+const releve = (id: string, etat: string, occupation: string, heures: number) => ({
+  id_pdc_itinerance: id, etat_pdc: etat, occupation_pdc: occupation,
+  horodatage: new Date(Date.now() - heures * 3600_000)
+    .toISOString().replace('T', ' ').replace('Z', '+00:00'),
+});
+
+test('UN POINT HORS SERVICE SE VOIT, ET SE LIT SANS LA COULEUR', async ({ page }) => {
+  /* C'est la seule information de ce cartouche qui peut rendre le détour
+     inutile — et la seule qui ne se périme pas comme une place occupée :
+     mesuré, les trois quarts des points en panne ont été relevés il y a plus
+     d'une semaine et le sont probablement encore. */
+  const appels = await ficheAvecReleves(page, [
+    releve('FRIOYE410255', 'en_service', 'libre', 16),
+    releve('FRIOYE410256', 'hors_service', 'inconnu', 16),
+  ]);
+  const bloc = page.locator('fiche-borne .fb-etat');
+  await expect(bloc.locator('.fb-alerte')).toContainText('HORS SERVICE',
+    { timeout: 10_000 });
+  await expect(bloc.locator('.fb-alerte')).toContainText('1 point');
+
+  /* L'ÂGE EST ÉCRIT, ET IL EST INMANQUABLE : sans lui, une ligne « 1 libre »
+     se lit « maintenant » — alors que le relevé date de la veille. */
+  await expect(bloc).toContainText('il y a 16 h');
+  await expect(bloc).toContainText('ne sont PAS en direct');
+
+  /* UN SEUL APPEL, JAMAIS EN BOUCLE. Interroger « à intervalles en
+     approchant », comme demandé, redemanderait la même valeur d'hier à un
+     service public. */
+  expect(appels).toHaveLength(1);
+  expect(appels[0]).toContain('id_pdc_itinerance__in=FRIOYE410255,FRIOYE410256');
+});
+
+test('L’OCCUPATION SE DATE, ET DISPARAÎT PASSÉ UNE SEMAINE', async ({ page }) => {
+  /* Au-delà de sept jours la valeur ne dit plus rien d'une place de parking,
+     et l'afficher même datée inviterait à la lire. La PANNE, elle, reste. */
+  await ficheAvecReleves(page, [
+    releve('FRIOYE410255', 'hors_service', 'libre', 24 * 40),
+    releve('FRIOYE410256', 'en_service', 'libre', 24 * 40),
+  ]);
+  const bloc = page.locator('fiche-borne .fb-etat');
+  await expect(bloc).toContainText('il y a un mois', { timeout: 10_000 });
+  await expect(bloc.locator('.fb-alerte')).toContainText('HORS SERVICE');
+  await expect(bloc, 'une occupation d’il y a un mois ne se montre pas')
+    .not.toContainText('Occupation ce jour-là');
+});
+
+test('SANS RELEVÉ, LA FICHE DIT DE QUI EST LE SILENCE', async ({ page }) => {
+  /* Une rubrique muette se lit comme un oubli d'affichage. Mesuré autour du
+     Plessis-Trévise : 14 points sur 40 seulement portent un relevé — c'est le
+     fichier qui se tait, pas la carte, et il faut le dire. */
+  await ficheAvecReleves(page, []);
+  const bloc = page.locator('fiche-borne .fb-etat');
+  await expect(bloc).toContainText('Aucun relevé public', { timeout: 10_000 });
+  await expect(bloc).toContainText('pas de la carte');
+});
+
+test('LA FICHE NE PRÉTEND PLUS QU’AUCUNE SOURCE N’EXISTE', async ({ page }) => {
+  /* Cette phrase était FAUSSE et IRVE-1 l'a établi : une source publique
+     française diffuse bien l'état des points à l'échelle nationale. Se tromper
+     dans ce sens-là revenait à cacher une donnée qui existe. */
+  await ficheAvecReleves(page, []);
+  const source = page.locator('fiche-borne .fb-source');
+  await expect(source).toContainText('déposé par lots', { timeout: 10_000 });
+  /* C'EST CETTE AFFIRMATION-LÀ QUI ÉTAIT FAUSSE — « aucune source ne la
+     DIFFUSE » — et non le constat que l'occupation en direct n'existe pas.
+     La nuance est tout le correctif : la donnée est publiée, elle n'est pas
+     vivante. */
+  await expect(source).not.toContainText('ne la diffuse à l’échelle nationale');
 });

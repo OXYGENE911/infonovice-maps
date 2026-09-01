@@ -841,5 +841,45 @@ qu'une fois — la projection retient le point le plus proche. Le cas est rare,
 et le chiffre sert à COMPARER trois itinéraires, pas à promettre un décompte
 exact.
 
+## État des points de charge — IRVE dynamique (mesuré 01/09/2026)
+
+Armelin, le 01/09 : « il existe une base de données de l'état dynamique des
+bornes […] montrer les points libres ou occupés et proposer un reroutage
+automatique quand une station est trop chargée, en interrogeant la base à
+intervalles quand on s'en approche ».
+
+**La base existe, elle est française, publique, gratuite et sans clé.** Elle
+n'est simplement **pas vivante**, et c'est ce qui décide de tout ce qui suit.
+
+Point d'entrée :
+`https://tabular-api.data.gouv.fr/api/resources/411443b1-6667-473f-8217-1c57c167408f/data/`
+— `access-control-allow-origin: *` vérifié, appelable depuis le navigateur.
+
+| Question | Réponse | Mesure du 01/09 |
+|---|---|---|
+| La donnée existe-t-elle ? | **oui** | consolidation nationale, champs `etat_pdc`, `occupation_pdc`, `horodatage` |
+| Est-elle en direct ? | **NON** | sur 1 400 points tirés au hasard, **aucun relevé de moins de 9,6 h** ; 45 % ont plus de sept jours |
+| Couvre-t-elle le terrain ? | **en partie** | autour du Plessis-Trévise, **14 points sur 40** portent un relevé |
+| Peut-on rerouter dessus ? | **non** | rerouter sur une occupation d'avant-hier détournerait quelqu'un pour rien |
+| Que peut-on en faire ? | **dater** | l'état HORS SERVICE (8,5 % des points) ne se périme pas comme une place ; l'occupation ne s'affiche que datée, et pas au-delà de sept jours |
+
+**LE PIÈGE DE LA JOINTURE, et il coûte une requête vide** : l'identifiant de
+STATION n'est **pas** un préfixe de celui de ses POINTS. Mesuré : la station
+`FRALLPGO000669` porte le point `FRALLEGO6000361`. Une recherche par préfixe
+rend zéro. Ce sont les `id_pdc_itinerance`, et eux seuls, qui joignent le
+fichier statique au fichier d'état.
+
+**UN SEUL APPEL PAR STATION** : le filtre `id_pdc_itinerance__in` accepte la
+liste entière — quarante identifiants tiennent dans une URL de 838 caractères.
+Un appel par point aurait multiplié par quarante la charge pour la même
+réponse. Et **jamais en boucle** : interroger « à intervalles en approchant »
+redemanderait la même valeur de la veille.
+
+Le catalogue confirme la nature du jeu : les producteurs y **déposent** des
+fichiers (`IRVE Statique + Dynamique`, dépôt du 06/07 pour la partie dynamique),
+ils n'y publient pas un flux. Aucune source publique française ne diffuse
+l'occupation en direct à l'échelle nationale — seuls les opérateurs la
+connaissent, dans leurs propres applications.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.
