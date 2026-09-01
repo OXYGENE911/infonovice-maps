@@ -241,6 +241,27 @@ body { font-family: var(--police); background: var(--fond); }
   background: var(--fond); box-shadow: var(--ombre-m);
   display: grid; gap: 11px;
 }
+/* LE PIED DU VOLET RESTE SOUS LES YEUX (ITI-1, 01/09). Le volet défile — il
+   porte des pages entières depuis le 27/08 — et le bouton « Démarrer le
+   suivi » s'en allait avec le reste : arrivé à la feuille de route, il
+   fallait remonter pour partir.
+   `sticky` ET NON `fixed` : le pied appartient au volet, il doit s'arrêter à
+   son bord, pas flotter sur la carte. Les marges négatives lui font couvrir
+   les 14 px de rembourrage du corps, sans quoi le texte défilerait dans la
+   bande laissée nue.
+   IL NE COLLE QUE S'IL PORTE QUELQUE CHOSE : `:has()` évite qu'une bande
+   vide barre le bas du volet tant qu'aucun trajet n'est calculé. Là où
+   `:has()` manque, le pied redevient un bloc ordinaire — on perd le collage,
+   jamais le bouton. */
+.iti-pied:has(.iti-actions:not([hidden])) {
+  position: sticky; bottom: -14px; z-index: 1;
+  margin: 0 -14px -14px; padding: 10px 14px 14px;
+  background: var(--fond);
+  border-top: 1px solid var(--bord);
+  box-shadow: 0 -6px 14px -10px rgb(0 0 0 / 35%);
+}
+.iti-pied { display: grid; gap: 11px; }
+
 .iti-champs { display: grid; gap: 9px; }
 .iti-champs > label { display: grid; gap: 5px;
   font: 700 11px var(--police); color: var(--texte-3);

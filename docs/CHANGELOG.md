@@ -2,8 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-<<<<<<< HEAD
-## [1.20.0] — 2026-09-01 — BORNES-8 : le rappel se range, et son bouton se lit en sombre (PR #167)
+## [1.22.0] — 2026-09-01 — BORNES-8 : le rappel se range, et son bouton se lit en sombre (PR #167)
 
 - **UNE ALERTE QUI NE PART JAMAIS CESSE D'ALERTER.** Armelin : « le rectangle
   des bornes filtrées apparaît aussi bien en mode carte qu'en mode navigation
@@ -27,6 +26,27 @@ Tests : le parcours du signal mesure désormais le POINT avant dépliage ; un
 parcours neuf mesure le **contraste calculé** du bouton en thème sombre — pas
 la présence d'une règle, mais la couleur qu'on voit.
 =======
+## [1.21.0] — 2026-09-01 — ITI-1 : « Démarrer le suivi » reste sous les yeux (PR #168)
+
+- **LE PIED DU VOLET COLLE.** Armelin : « si je scrolle tout en bas de la
+  fenêtre itinéraire jusqu'à afficher la feuille de route, je suis obligé de
+  scroller à nouveau vers le haut pour retrouver le bouton "Démarrer le
+  suivi", ce qui n'est pas pratique. » Le volet porte des PAGES entières
+  depuis le 27/08 ; le bouton s'en allait avec le reste.
+- **LE RÉSUMÉ VOYAGE AVEC LUI** — kilomètres et heure d'arrivée : c'est ce
+  qu'on relit AVANT de partir, et un bouton qui engage sans dire à quoi ne
+  vaut pas mieux.
+- `sticky` ET NON `fixed` : le pied appartient au volet et s'arrête à son
+  bord, il ne flotte pas sur la carte. Il ne colle QUE s'il porte quelque
+  chose, faute de quoi une bande vide barrerait le bas du volet tant qu'aucun
+  trajet n'est calculé.
+
+**LE PREMIER PARCOURS ÉTAIT CREUX, ET LA MESURE L'A DIT.** Il ne regardait
+que le bord BAS : sans collage, le bouton part par le HAUT quand on défile
+(mesuré : −416 px), et l'assertion passait sans rien prouver. Il mesure
+désormais les DEUX bords, vérifie d'abord que le volet déborde vraiment
+(867 px de contenu pour 485 de cadre), et une contre-épreuve confirme qu'il
+ÉCHOUE quand on retire la règle.
 ## [1.19.0] — 2026-09-01 — BORNES-7 : la recherche de réseaux dit enfin la vérité (PR #166)
 
 **Armelin l'a signalé QUATRE FOIS** : « si je tape McDonald la recherche
@@ -66,7 +86,6 @@ ce qui est corrigé.
 Tests : 2 E2E — le message qui ne dit plus « aucun réseau », et celui qui
 nomme les filtres cumulés.
 
->>>>>>> origin/main
 ## [1.17.0] — 2026-09-01 — BORNES-6 : un seul filtre pour la carte ET le trajet (PR #164)
 
 - **ARMELIN A TRANCHÉ**, après la question posée par BORNES-5 : « le filtre
