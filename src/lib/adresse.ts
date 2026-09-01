@@ -195,3 +195,31 @@ export async function adresseInverse(p: PointGeo): Promise<ResultatAdresse | nul
   const r = versResultats(await appelResilient(url));
   return r[0] ?? null;
 }
+
+/**
+ * La saisie NOMME-T-ELLE la commune du résultat ? — PURE.
+ *
+ * RECHERCHE-4 (01/09). Deux cas mesurés le même jour, tous deux avec un score
+ * BAN faible, et qui appellent des ancres OPPOSÉES :
+ *
+ *  - « Collège Albert Camus » rend le lieu-dit « Collège Albert Camus 59239
+ *    Thumeries » (Nord, 0,48). Armelin habite à deux cents kilomètres de là :
+ *    chercher autour de Thumeries ne pouvait rien donner, et c'est ce qui se
+ *    passait.
+ *  - « Tour Eiffel Paris » rend « Avenue Gustave Eiffel 75007 Paris » (0,378).
+ *    Là, Paris est le bon endroit — parce que L'USAGER L'A ÉCRIT.
+ *
+ * LE SCORE NE LES SÉPARE PAS ; la commune, si. On n'ancre la recherche sur un
+ * résultat approximatif que si l'on retrouve sa commune dans la saisie.
+ */
+export function communeNommee(texte: string, contexte: string): boolean {
+  const nu = (s: string): string => s
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const saisie = ` ${nu(texte)} `;
+  /* LE CONTEXTE EST « 75007 Paris » : on essaie chaque mot d'au moins trois
+     lettres — « Le » ou « sur » ne prouveraient rien. */
+  return nu(contexte).split(' ')
+    .filter((mot) => mot.length >= 3)
+    .some((mot) => saisie.includes(` ${mot} `));
+}

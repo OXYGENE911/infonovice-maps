@@ -111,8 +111,39 @@ const citer = (valeur: string): string => `"${valeur.replace(/"/g, '')}"`;
    Formats vérifiés par appel réel le 25/08/2026 : `puissance_nominale` est un
    NOMBRE (une comparaison entre guillemets ne compare pas), les `prise_type_*`
    sont des CHAÎNES « 0 »/« 1 ». */
+/* CHERCHER UN NOM N'EST PAS SURVOLER LA VUE (BORNES-9, 01/09).
+   Armelin, pour la cinquième fois : « je n'ai toujours pas les bornes
+   McDonald ». MESURÉ dans son navigateur, sur la production : sa vue au zoom
+   13 couvre 2,5 km sur 1,9 — et il n'y a réellement AUCUNE borne McDonald
+   dedans. L'application ne mentait pas, elle répondait à une question qu'il
+   ne posait pas.
+   Taper un nom, c'est CHERCHER. Le filtre élargit donc l'emprise à dix
+   kilomètres autour du centre de la vue — mesuré au même endroit : 55
+   stations McDonald à 10 km, 256 à 25 km. On s'arrête à dix : le portail
+   plafonne à cent enregistrements, et rendre 256 stations dont on n'en montre
+   que cent serait retomber dans le mensonge qu'on vient de corriger.
+   L'EMPRISE NE RÉTRÉCIT JAMAIS : à petit zoom, la vue est déjà plus large. */
+export const RAYON_NOM_KM = 10;
+
+/** L'emprise élargie autour du centre d'une vue — PURE. */
+export function empriseElargie(b: Bbox, rayonKm = RAYON_NOM_KM): Bbox {
+  const lat = (b.sud + b.nord) / 2;
+  const lon = (b.ouest + b.est) / 2;
+  const dLat = rayonKm / 111.32;
+  const dLon = rayonKm / (111.32 * Math.max(0.05, Math.cos((lat * Math.PI) / 180)));
+  return {
+    ouest: Math.min(b.ouest, lon - dLon),
+    est: Math.max(b.est, lon + dLon),
+    sud: Math.min(b.sud, lat - dLat),
+    nord: Math.max(b.nord, lat + dLat),
+  };
+}
+
 export function urlBornes(b: Bbox, filtres: FiltresBornes = {}): string {
-  const clauses = [odsBbox('point_geo', b)];
+  /* LE NOM ÉLARGIT L'EMPRISE, et lui seul : les autres filtres RETRANCHENT
+     de ce qu'on regarde, celui-ci CHERCHE. */
+  const cherche = (filtres.nom ?? '').trim() !== '';
+  const clauses = [odsBbox('point_geo', cherche ? empriseElargie(b) : b)];
 
   if (typeof filtres.puissanceMin === 'number' && filtres.puissanceMin > 0) {
     clauses.push(`puissance_nominale >= ${filtres.puissanceMin}`);
