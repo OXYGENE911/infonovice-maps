@@ -491,7 +491,6 @@ test('UN POINT SUR L’ENTONNOIR ANNONCE LE FILTRE, ET LE PANNEAU LE RETIRE', as
     .not.toContain('ZUNDER');
 });
 
-<<<<<<< HEAD
 test('LE BOUTON « Tout afficher » SE LIT EN THÈME SOMBRE', async ({ page }) => {
   /* BORNES-8 (01/09). Armelin, sur mobile : « le texte est affiché en noir
      sur fond noir, du coup je ne vois pas ce qui est écrit ». `color:
@@ -531,7 +530,8 @@ test('LE BOUTON « Tout afficher » SE LIT EN THÈME SOMBRE', async ({ page }) =
      1 — c'est ce que mesurait son téléphone. */
   expect(contraste, `contraste insuffisant : ${mesure.texte} sur ${mesure.fond}`)
     .toBeGreaterThan(4.5);
-=======
+});
+
 test('CHERCHER « McDonald » NE DIT PLUS « aucun réseau »', async ({ page }) => {
   /* BORNES-7 (01/09). Armelin, pour la QUATRIÈME fois : « si je tape
      McDonald la recherche n'affiche aucun résultat […] ça fait plusieurs fois
@@ -568,5 +568,4 @@ test('ET IL DIT QUE LE NOM S’AJOUTE AUX AUTRES FILTRES', async ({ page }) => {
   await expect(cumul).toBeVisible({ timeout: 10_000 });
   await expect(cumul).toContainText('150 kW et plus');
   await expect(cumul).toContainText('TOUT à la fois');
->>>>>>> origin/main
 });
