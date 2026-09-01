@@ -1218,7 +1218,17 @@ test('LE FILTRE DE PUISSANCE VAUT AUSSI POUR LES BORNES DU TRAJET', async ({ pag
 
   // APRÈS : elle disparaît de l'affichage, sans nouveau calcul de plan.
   await expect.poll(nomsCorridor, { timeout: 15_000 }).not.toContain('Aire des Deux Tiers');
-  // ET LES ARRÊTS DU PLAN SONT TOUJOURS LÀ : le plan ne se cache pas.
+  /* ET LES ARRÊTS DU PLAN SONT TOUJOURS LÀ : le plan ne se cache pas.
+     ON ATTEND QUE LA CARTE SE POSE AVANT DE COMPTER (01/09). Ce parcours
+     échouait une fois sur trois, en CI comme en local : changer le filtre
+     reconstruit les DEUX sources, et `querySourceFeatures` ne rend que les
+     tuiles déjà analysées. Une lecture unique pouvait donc tomber pendant la
+     reconstruction et compter zéro arrêt — un défaut du parcours, pas de
+     l'application. `areTilesLoaded` dit quand il n'y a plus rien en vol ;
+     c'est l'état posé qu'on veut juger, pas un instant de transition. */
+  await expect.poll(() => page.evaluate(() => (window as unknown as {
+    __carte: { areTilesLoaded(): boolean };
+  }).__carte.areTilesLoaded()), { timeout: 15_000 }).toBe(true);
   const arrets = await page.evaluate(() => {
     const c = (window as unknown as { __carte: {
       querySourceFeatures(id: string): unknown[];
