@@ -665,6 +665,59 @@ etapes-itineraire { display: grid; gap: 7px; }
   margin: 0; font-weight: 650; font-variant-numeric: tabular-nums;
   text-align: right;
 }
+/* STATS-2 — les deux boutons du bilan, et l'historique. */
+.bg-bilan-boutons { display: flex; gap: 8px; flex-wrap: wrap; }
+.bg-bilan-garder {
+  padding: 6px 12px; border-radius: 9px;
+  border: 1px solid var(--bleu, #2272C4); background: transparent;
+  color: var(--bleu, #2272C4); font: 600 12.5px var(--police); cursor: pointer;
+}
+.bg-bilan-garder:disabled { opacity: .5; cursor: default; }
+.bg-bilan-garder:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-bilan-garde {
+  margin: 8px 0 0; font: 500 12px var(--police); color: var(--texte-2);
+}
+.bg-bilan-garde[hidden] { display: none; }
+
+.iti-hist-liste { display: grid; gap: 2px; margin-bottom: 10px; }
+.iti-hist-ligne {
+  display: flex; gap: 9px; align-items: baseline;
+  padding: 7px 8px; border-radius: 8px;
+  font: 400 13px var(--police); cursor: pointer;
+}
+.iti-hist-ligne:hover { background: var(--fond-doux); }
+.iti-hist-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+.iti-hist-actions[hidden] { display: none; }
+.iti-hist-comparer, .iti-hist-oublier {
+  padding: 6px 12px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond);
+  color: var(--texte-1); font: 600 12.5px var(--police); cursor: pointer;
+}
+.iti-hist-comparer:disabled { opacity: .5; cursor: default; }
+.iti-hist-note, .iti-hist-vide {
+  margin: 0; font: 400 11.5px var(--police); color: var(--texte-3);
+}
+.iti-hist-vide[hidden] { display: none; }
+
+/* LA COMPARAISON CÔTE À CÔTE. Le tableau défile de lui-même quand on compare
+   trois parcours sur un téléphone : c'est LUI qui déborde, jamais la page. */
+.iti-hist-comparaison { overflow-x: auto; margin-top: 10px; }
+.iti-hist-comparaison table {
+  border-collapse: collapse; font: 400 12.5px var(--police); min-width: 100%;
+}
+.iti-hist-comparaison th, .iti-hist-comparaison td {
+  padding: 6px 9px; text-align: right; white-space: nowrap;
+  border-bottom: 1px solid var(--bord);
+}
+.iti-hist-comparaison th[scope="row"] {
+  text-align: left; color: var(--texte-2); font-weight: 500;
+}
+.iti-hist-comparaison td { font-variant-numeric: tabular-nums; }
+.iti-hist-comparaison td[data-meilleur] { font-weight: 700; color: #1E7A46; }
+@media (prefers-color-scheme: dark) {
+  .iti-hist-comparaison td[data-meilleur] { color: #6BD79B; }
+}
+
 .bg-bilan-fermer {
   padding: 6px 12px; border-radius: 9px;
   border: 1px solid var(--bord-2); background: transparent;

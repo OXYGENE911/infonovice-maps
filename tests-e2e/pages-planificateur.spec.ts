@@ -167,14 +167,17 @@ test('PIC-1 : chaque entrée de menu porte son picto — et le libellé reste en
   await ouvrirTrajet(page);
 
   const rangee = page.locator('.iti-vers');
-  await expect(rangee).toHaveCount(7);
-  for (let i = 0; i < 7; i += 1) {
+  /* HUIT DEPUIS STATS-2 (01/09) : « Historique » a rejoint les réglages — on
+     le consulte SANS avoir planifié quoi que ce soit, c'est même à cela
+     qu'il sert. */
+  await expect(rangee).toHaveCount(8);
+  for (let i = 0; i < 8; i += 1) {
     await expect(rangee.nth(i).locator('svg.picto-menu'),
       'une rangée de menu sans picto').toHaveCount(1);
   }
   // Les libellés n'ont pas bougé d'une lettre : le sens reste dans le texte.
   await expect(page.locator('.iti-vers span:first-of-type')).toHaveText([
-    'Mon véhicule', 'Recharge et services', 'Options du trajet',
+    'Mon véhicule', 'Recharge et services', 'Options du trajet', 'Historique',
     'Arrêts de recharge', 'Lieux d’exception', 'Feuille de route', 'Partager ou exporter',
   ]);
 

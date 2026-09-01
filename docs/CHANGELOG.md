@@ -2,6 +2,53 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.25.0] — 2026-09-01 — STATS-2 : l'historique des trajets, sur demande (PR #172)
+
+**LA CONCEPTION EST CELLE D'ARMELIN, ET ELLE EST MEILLEURE QUE LA MIENNE.**
+J'aurais gardé les trajets tout seul ; il a écrit : « pour l'historique des
+trajets, cela ne doit pas être fait automatiquement, mais proposé à
+l'enregistrement à la fin du parcours au moment du récapitulatif ». Un GPS qui
+archive de lui-même devient un carnet de déplacements — exactement ce que le
+contrat du projet refuse. Un bouton qu'on presse, c'est un consentement.
+
+- **« ENREGISTRER CE PARCOURS »** paraît au bas du bilan d'arrivée, à côté de
+  « Fermer ». Rien n'est gardé tant qu'on ne l'a pas pressé — un parcours le
+  vérifie en lisant la mémoire AVANT le clic. Le bouton se désarme ensuite :
+  un double appui ne fait pas deux entrées.
+- **UNE SECTION « HISTORIQUE »** dans les réglages du planificateur — pas dans
+  le menu du trajet : on la consulte SANS avoir planifié quoi que ce soit,
+  c'est même à cela qu'elle sert.
+- **COMPARER, EN COCHANT DEUX PARCOURS OU PLUS.** « Cela permet de regarder si
+  on a fait mieux d'une semaine à l'autre ou observer la différence quand on
+  voyage seul ou en famille sur un même trajet. » Ce ne sont donc pas des
+  chiffres qu'on aligne, ce sont des **écarts** qu'on nomme : la meilleure
+  colonne est marquée — et **dite en toutes lettres**, une pastille verte ne
+  s'entendant pas dans un lecteur d'écran.
+- **« MEILLEUR » NE VEUT PAS DIRE « PLUS RAPIDE » PARTOUT** : c'est vrai pour la
+  durée et le temps d'arrêt, cela n'a aucun sens pour la vitesse MAXIMALE.
+  Rouler plus vite n'est pas mieux, et le couronner encouragerait à le faire :
+  la colonne existe, elle n'est pas décorée.
+- **LE BOUTON « COMPARER » RESTE ÉTEINT SOUS DEUX PARCOURS** : promettre un
+  écart entre un parcours et lui-même serait mentir.
+- **CE QUI EST RELEVÉ EN ROUTE** : la vitesse et l'altitude, toutes les trente
+  secondes. Chiffré : 360 points pour trois heures, ~32 Ko en JSON ; deux
+  trajets par semaine pendant un an tiennent dans 3 Mo. Cinq secondes
+  n'apprendraient rien de plus et pèseraient six fois plus. La météo et le
+  trafic n'y sont PAS : les relever obligerait à interroger un service pendant
+  qu'on conduit, ce que la frugalité du projet refuse.
+- **CINQUANTE TRAJETS GARDÉS**, le plus ancien s'efface. Tout vit dans
+  IndexedDB, comme les favoris : rien ne quitte l'appareil, et la page le dit.
+
+**CE QUI RESTE À FAIRE** : le partage à INFONOVICE, qu'Armelin a précisé —
+bouton dédié, floutage des adresses de départ et d'arrivée annoncé, fichier
+montré avant envoi. Il arrive dans sa propre PR : l'application EXPORTERA le
+fichier (un `mailto:` ne porte pas de pièce jointe, et un backend est exclu).
+
+Tests : 16 unitaires (le rythme des relevés, la liste bornée, la frontière
+système, et ce que la comparaison couronne ou non). 3 E2E : la comparaison
+côte à côte, l'oubli qui corrige vraiment la mémoire, et l'enregistrement qui
+ne garde RIEN sans un geste.
+
 ## [1.22.0] — 2026-09-01 — BORNES-8 : le rappel se range, et son bouton se lit en sombre (PR #167)
 
 - **UNE ALERTE QUI NE PART JAMAIS CESSE D'ALERTER.** Armelin : « le rectangle
