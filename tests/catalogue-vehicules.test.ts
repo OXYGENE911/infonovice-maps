@@ -179,6 +179,44 @@ describe('le catalogue couvre ce qu’on croise sur les routes', () => {
     }
   });
 
+  /* LES SEIZE MODÈLES DEMANDÉS NOMMÉMENT LE 02/09 (VEHIC-3). Armelin avait
+     donné les liens des configurateurs ; ce test dit que la liste a été
+     honorée en entier, et non aux trois quarts. */
+  it('contient les modèles réclamés avec leurs liens officiels', () => {
+    const cles = new Set(CATALOGUE.map((m) => m.cle));
+    for (const attendu of ['cupra-raval-endurance', 'vw-id-polo-52',
+      'ds-n7-74', 'ds-n7-97', 'ds-n7-97-awd', 'ds-3-etense',
+      'byd-atto3-evo-rwd', 'byd-atto3-evo-awd',
+      'tesla-m3-rwd-26', 'tesla-m3-premium-rwd-26', 'tesla-m3-premium-awd-26',
+      'tesla-my-rwd-26', 'tesla-my-premium-rwd-26', 'tesla-my-premium-awd-26',
+      'tesla-ms-plaid-26', 'tesla-mx-plaid-26']) {
+      expect(cles.has(attendu), attendu).toBe(true);
+    }
+  });
+
+  /* « TESLA PAR ANNÉE » VEUT DIRE : LISIBLE DANS LA LISTE. Le champ `annees`
+     ne s'affiche qu'une fois le modèle appliqué ; au moment de CHOISIR, seul
+     le libellé est visible. Une Model 3 2026 qui s'appelle « Propulsion »
+     comme celle de 2023 laisserait l'usager choisir au hasard. */
+  it('les Tesla 2026 portent leur millésime dans le libellé, pas seulement dans le champ', () => {
+    const teslas26 = CATALOGUE.filter((m) => m.marque === 'Tesla' && m.annees?.includes('2026'));
+    expect(teslas26.length, 'aucune Tesla 2026 au catalogue').toBeGreaterThanOrEqual(8);
+    for (const m of teslas26) {
+      expect(m.variante, m.cle).toContain('2026');
+    }
+  });
+
+  /* LES DEUX COUSINES DE LA PLATE-FORME MEB ENTRY doivent rester d'accord :
+     même batterie utile, même pointe de charge. Le jour où l'une des deux
+     fiches bougera sans l'autre, c'est ici qu'on l'apprendra — et c'est
+     exactement le désaccord qui m'a fait écarter leurs versions 37 kWh. */
+  it('le Raval Endurance et l’ID. Polo 52 kWh s’accordent, comme leur plate-forme', () => {
+    const raval = modeleParCle('cupra-raval-endurance')!;
+    const polo = modeleParCle('vw-id-polo-52')!;
+    expect(raval.capaciteKwh).toBe(polo.capaciteKwh);
+    expect(raval.puissanceMaxKw).toBe(polo.puissanceMaxKw);
+  });
+
   /* LA VF 8 PLUS PORTE LES CHIFFRES D'ARMELIN, pas les miens : 87,7 kWh et
      457 km, qu'il a donnés lui-même. Une fiche constructeur approximative sur
      LA voiture de l'usager principal serait le pire endroit où se tromper. */

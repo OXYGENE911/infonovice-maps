@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.41.0] — 2026-09-02 — VEHIC-3
+
+### Ajouté
+- Seize modèles 2026 au catalogue, exactement la liste qu'Armelin avait
+  donnée avec ses liens de configurateurs : Cupra Raval Endurance, VW
+  ID. Polo 52 kWh, DS N°7 (74 kWh, grande autonomie, grande autonomie
+  intégrale), DS 3 E-Tense, BYD Atto 3 EVO (propulsion et intégrale), et les
+  huit Tesla du millésime 2026 (Model 3 et Model Y en Propulsion, Premium
+  propulsion et Premium intégrale ; Model S et Model X Plaid).
+- Les Tesla 2026 portent leur ANNÉE DANS LEUR NOM et non seulement dans le
+  champ `annees` : une liste déroulante ne montre que le libellé, et
+  « Model 3 Propulsion » de 2023 et de 2026 n'ont ni la même batterie ni la
+  même pointe de charge. C'était la demande « Tesla par année ».
+
+### Mesuré, et pas ajouté
+- Les versions d'entrée du Raval et de l'ID. Polo (37,5 kWh) sont annoncées
+  par la même source à 50 kW de charge pour l'une et 88 kW pour l'autre, sur
+  la même plate-forme et la même batterie. L'une des deux fiches est fausse ;
+  elles restent dehors jusqu'à ce qu'une seconde source tranche.
+- Le BYD Atto 3 EVO a été recoupé sur le communiqué de BYD France : 510 km et
+  220 kW sous 800 V, chiffres assez surprenants pour mériter la vérification.
+
 ## [1.40.0] — 2026-09-02 — FOND-4 et RAYON-1 : les noms de rue, et un cercle honnête (PR #186)
 
 ### Corrigé
