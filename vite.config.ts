@@ -12,16 +12,25 @@ import { JOURS_EN_CACHE, RESERVES_TUILES } from './src/lib/tuiles-en-cache';
 // arguments qui ressemblent à des chemins POSIX, pas les variables.
 const BASE = process.env.BASE_PUBLIQUE ?? '/';
 
-/* LA VERSION EST GRAVÉE DANS LE PAQUET (VERSION-1, 02/09). Armelin, après un
-   essai à pied : « je ne sais pas si j'ai la bonne version en cache ». Il
-   avait raison de douter, et rien dans l'application ne pouvait le lui dire.
-   ELLE VIENT DE `package.json`, et non d'une étiquette Git : la construction
-   n'a pas accès au dépôt en CI comme en local, et une version qui dépend de
-   l'endroit où l'on construit ne vaut rien. La discipline de version reste
-   la même — on l'incrémente avec l'étiquette. */
-const VERSION = JSON.parse(
-  readFileSync(resolve(__dirname, 'package.json'), 'utf-8'),
-).version as string;
+/* LA VERSION VIENT DU JOURNAL, ET C'EST LA CORRECTION DE MON PREMIER JET
+   (VERSION-2, 02/09).
+   VERSION-1 la lisait dans `package.json`. Deux versions plus tard, la
+   production affichait « 1.31.0 » alors qu'elle servait la 1.33.0 : j'avais
+   oublié d'incrémenter le fichier deux fois de suite. Un numéro FAUX est pire
+   qu'aucun numéro — c'est précisément le doute qu'Armelin signalait, rendu
+   officiel par l'application elle-même.
+   LE JOURNAL, LUI, NE S'OUBLIE PAS : la règle du projet impose une entrée de
+   `docs/CHANGELOG.md` à chaque PR, et son entrée la plus haute EST la version
+   qu'on livre. En faire la source unique supprime la discipline à tenir au
+   lieu de la répéter. Un test unitaire garde l'accord des deux fichiers. */
+const VERSION = (() => {
+  const journal = readFileSync(resolve(__dirname, 'docs/CHANGELOG.md'), 'utf-8');
+  const m = /^## \[(\d+\.\d+\.\d+)\]/m.exec(journal);
+  /* PAS DE REPLI SILENCIEUX : un journal illisible doit ARRÊTER la
+     construction, pas livrer un « 0.0.0 » que personne ne remarquerait. */
+  if (!m) throw new Error('vite.config : version introuvable en tête de docs/CHANGELOG.md');
+  return m[1] as string;
+})();
 
 export default defineConfig({
   base: BASE,
