@@ -974,6 +974,13 @@ etat-connexion { display: contents; }
 .veh-bascule { display: flex; align-items: center; gap: 9px; margin-top: 6px;
   padding-top: 9px; border-top: 1px solid var(--bord);
   font: 400 14px var(--police); color: var(--texte-1); cursor: pointer; }
+/* POURQUOI L'ANNEAU EST PLUS PETIT QUE L'AUTONOMIE (RAYON-1) : discret, mais
+   présent — un chiffre juste et inexpliqué se lit comme un chiffre faux. */
+.veh-anneaux-note {
+  margin: 4px 0 0; font: 400 11.5px var(--police); color: var(--texte-3);
+  line-height: 1.45;
+}
+
 .veh-bilan { font: 400 12.5px var(--police); color: var(--texte-2); }
 .veh-bilan-lignes { margin: 6px 0 0; font-weight: 600; color: var(--texte-1); }
 .veh-bilan-usure { margin: 4px 0 0; font-size: 12px; color: var(--texte-2); }

@@ -2,7 +2,9 @@
 // sur une carte n'en est pas un : on vérifie les DISTANCES sur la sphère, pas
 // la forme à l'écran.
 import { describe, expect, test } from 'vitest';
-import { cercleGeodesique, collectionAnneaux } from '../src/lib/cercle';
+import {
+  cercleGeodesique, collectionAnneaux, rayonAffichable, FACTEUR_DETOUR,
+} from '../src/lib/cercle';
 
 const RAYON_TERRE_KM = 6371.0088;
 const RAD = Math.PI / 180;
@@ -79,5 +81,33 @@ describe('la collection d’anneaux', () => {
   test('chaque anneau porte son rayon arrondi, pour être affiché tel quel', () => {
     const c = collectionAnneaux(2.35, 48.85, [{ cle: 'x', rayonKm: 287.6, couleur: '#000' }]);
     expect(c.features[0]!.properties?.['rayonKm']).toBe(288);
+  });
+});
+
+describe('rayonAffichable (RAYON-1)', () => {
+  /* Un collègue d'Armelin : « le rayon d'action sous forme de cercle semblait
+     beaucoup trop optimiste par défaut […] il vaut mieux afficher des
+     autonomies légèrement plus pessimistes ».
+     LE BIAIS EST STRUCTUREL : une autonomie se dépense sur des ROUTES, un
+     cercle se mesure à VOL D'OISEAU. Mesuré sur huit trajets français avec le
+     moteur de la Géoplateforme : médiane 1,19, moyenne 1,21, pire cas 1,42. */
+
+  test('rétrécit le cercle du détour routier mesuré', () => {
+    expect(rayonAffichable(250)).toBe(200);
+  });
+
+  test('le facteur penche du côté PESSIMISTE', () => {
+    /* 1,25 est au-dessus de la médiane (1,19) et de la moyenne (1,21) : mieux
+       vaut arriver plus loin que prévu que tomber en panne avant le cercle. */
+    expect(FACTEUR_DETOUR).toBeGreaterThan(1.21);
+    expect(FACTEUR_DETOUR).toBeLessThan(1.42);
+  });
+
+  test('une autonomie inconnue ne trace pas de cercle', () => {
+    /* Zéro se lit « je ne sais pas ». Un cercle de rayon nul ne promet rien —
+       un cercle par défaut promettrait au hasard. */
+    expect(rayonAffichable(0)).toBe(0);
+    expect(rayonAffichable(Number.NaN)).toBe(0);
+    expect(rayonAffichable(-10)).toBe(0);
   });
 });

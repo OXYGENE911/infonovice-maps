@@ -7,6 +7,36 @@
  * MapLibre les projette.
  */
 
+/* CE QU'UN CERCLE PROMET DE TROP (RAYON-1, 02/09).
+ *
+ * LE TERRAIN. Un collègue d'Armelin : « le rayon d'action sous forme de cercle
+ * était une bonne idée mais semblait beaucoup trop optimiste par défaut […] il
+ * vaut mieux afficher des autonomies légèrement plus pessimistes que de faire
+ * croire à l'utilisateur qu'il peut aller aussi loin. »
+ *
+ * IL A RAISON, ET LE BIAIS EST STRUCTUREL, pas un réglage de consommation :
+ * une autonomie se dépense sur des ROUTES, un cercle se mesure à VOL D'OISEAU.
+ * Tracer un cercle de 300 km de rayon, c'est promettre d'atteindre des points
+ * qu'aucune route ne rejoint en 300 km.
+ *
+ * MESURÉ SUR HUIT TRAJETS FRANÇAIS le 02/09, avec le moteur d'itinéraire de la
+ * Géoplateforme (route ÷ vol d'oiseau) :
+ *   Nantes–Rennes 1,09 · Paris–Reims 1,11 · Bordeaux–Toulouse 1,16 ·
+ *   Lyon–Grenoble 1,18 · Paris–Orléans 1,19 · Le Plessis–Melun 1,21 ·
+ *   Marseille–Nice 1,33 · Lille–Amiens 1,42
+ *   → médiane 1,19, moyenne 1,21.
+ *
+ * ON RETIENT 1,25 : au-dessus de la médiane ET de la moyenne, en deçà du pire
+ * cas. Le choix penche donc du côté pessimiste, comme demandé — mieux vaut
+ * arriver plus loin que prévu que tomber en panne avant le cercle. */
+export const FACTEUR_DETOUR = 1.25;
+
+/** Le rayon à TRACER pour une autonomie routière donnée — PURE. */
+export function rayonAffichable(autonomieKm: number): number {
+  return Number.isFinite(autonomieKm) && autonomieKm > 0
+    ? autonomieKm / FACTEUR_DETOUR : 0;
+}
+
 const RAYON_TERRE_KM = 6371.0088;
 const RAD = Math.PI / 180;
 

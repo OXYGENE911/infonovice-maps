@@ -148,3 +148,44 @@ describe('les étiquettes sur imagerie (FOND-3)', () => {
     expect(pourImagerie([ligne])[0]).toEqual(ligne);
   });
 });
+
+describe('les noms de rue (FOND-4)', () => {
+  /* Armelin : « en mode satellite, quand on zoome au maximum sur une rue, les
+     noms de rue ne sont pas affichés alors qu'ils le sont en carte IGN. »
+     La couche `toponyme_routier_odonyme_lin` était dans les mêmes tuiles
+     depuis FOND-1 ; je ne l'avais pas extraite. */
+
+  const odonymes = (fond: 'ortho' | 'plan') => calquesEtiquettes(fond)
+    .filter((c) => (c as { 'source-layer'?: string })['source-layer']
+      === 'toponyme_routier_odonyme_lin');
+
+  it('deux calques d’odonymes paraissent sur l’imagerie', () => {
+    expect(odonymes('ortho')).toHaveLength(2);
+  });
+
+  it('l’abrégé cède la place à la forme entière au zoom 17', () => {
+    /* C'est le style officiel qui le veut : « R. de la Paix » de 15 à 17,
+       « Rue de la Paix » au-delà. Les garder tous deux ouverts aurait écrit
+       le nom deux fois sur la même rue. */
+    const [abrege, entier] = odonymes('ortho') as [
+      { minzoom?: number; maxzoom?: number }, { minzoom?: number },
+    ];
+    expect(abrege.minzoom).toBe(15);
+    expect(abrege.maxzoom).toBe(17);
+    expect(entier.minzoom).toBe(17);
+  });
+
+  it('ils héritent du blanc cerné de noir, sans qu’on le répète', () => {
+    for (const c of odonymes('ortho')) {
+      const p = c.paint as Record<string, unknown>;
+      expect(p['text-color']).toBe('#FFFFFF');
+      expect(p['text-halo-color']).toBe('rgba(0, 0, 0, 0.85)');
+    }
+  });
+
+  it('le fond Plan les porte déjà nativement : on n’en ajoute pas', () => {
+    /* Sur le Plan IGN, les noms de rue sont CUITS dans la tuile raster. Les
+       superposer y ferait un doublon décalé. */
+    expect(odonymes('plan')).toHaveLength(0);
+  });
+});

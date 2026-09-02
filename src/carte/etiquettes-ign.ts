@@ -139,6 +139,17 @@ export const CALQUES_NUMEROS_ROUTE: LayerSpecification[] = [
 /* LES NOMS DE COMMUNES, par importance aux petits zooms et par typographie
    aux grands. Lieux-dits, quartiers, pays et continents sont laissés de côté :
    la demande porte sur « les noms de ville et village ». */
+/* LES NOMS DE RUE MANQUAIENT SUR LE SATELLITE (FOND-4, 02/09). Armelin :
+   « en mode satellite, quand on zoome au maximum sur une rue, les noms de rue
+   ne sont pas affichés alors qu'ils le sont en carte IGN. »
+   IL A RAISON, ET LA CAUSE EST DANS MON EXTRACTION : FOND-1 avait pris les
+   toponymes de LOCALITÉ — les noms de villes — et les numéros de route, mais
+   PAS `toponyme_routier_odonyme_lin`, la couche des ODONYMES. Elle était dans
+   les mêmes tuiles depuis le début ; je ne l'avais pas vue.
+   DEUX CALQUES, ET C'EST LE STYLE OFFICIEL QUI LE VEUT : la forme abrégée
+   (« R. de la Paix ») entre les zooms 15 et 17, la forme entière au-delà.
+   Sur imagerie, `pourImagerie` les repeint en blanc cerné de noir comme les
+   autres — ils héritent de la règle sans qu'on la répète. */
 export const CALQUES_TOPONYMES: LayerSpecification[] = [
     {
       "id": "toponyme-toponyme-localite-importance-5",
@@ -717,6 +728,46 @@ export const CALQUES_TOPONYMES: LayerSpecification[] = [
         "text-color": "#000000",
         "text-halo-color": "rgba(255, 255, 255, 0.5)",
         "text-halo-width": 4
+      }
+    }
+    ,
+    {
+      "id": "odonyme-abrege",
+      "type": "symbol",
+      "source-layer": "toponyme_routier_odonyme_lin",
+      "minzoom": 15,
+      "maxzoom": 17,
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": "{nom_gauche}",
+        "text-size": 10,
+        "text-anchor": "center",
+        "text-max-angle": 30,
+        "text-font": ["Source Sans Pro Regular"]
+      },
+      "paint": {
+        "text-color": "#000000",
+        "text-halo-color": "rgba(255, 255, 255, 1)",
+        "text-halo-width": 2
+      }
+    },
+    {
+      "id": "odonyme-desabrege",
+      "type": "symbol",
+      "source-layer": "toponyme_routier_odonyme_lin",
+      "minzoom": 17,
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": "{nom_desabrege}",
+        "text-size": 11,
+        "text-anchor": "center",
+        "text-max-angle": 30,
+        "text-font": ["Source Sans Pro Regular"]
+      },
+      "paint": {
+        "text-color": "#000000",
+        "text-halo-color": "rgba(255, 255, 255, 1)",
+        "text-halo-width": 2
       }
     }
   ] as unknown as LayerSpecification[];
