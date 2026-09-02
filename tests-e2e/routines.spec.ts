@@ -51,6 +51,12 @@ test('un mardi matin, le travail déclaré se propose : « → Au travail », un
   await page.locator('.iti > summary').click();
   await page.locator('.iti > summary').click();
 
+  /* LES TRAJETS HABITUELS SE RANGENT DERRIÈRE UN BOUTON depuis ERGO-5, et ils
+     s'y rangent VRAIMENT depuis ERGO-6 : `display: flex` battait l'attribut
+     `hidden`, si bien que la liste restait ouverte et que ce parcours passait
+     sans jamais ouvrir quoi que ce soit. On fait maintenant le geste de
+     l'usager. */
+  await page.getByRole('button', { name: 'Trajets habituels récents' }).click();
   const routine = page.getByRole('button', { name: /Au travail — trajet habituel/ });
   await expect(routine).toBeVisible();
   await routine.click();

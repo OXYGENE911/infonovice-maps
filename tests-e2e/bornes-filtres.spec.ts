@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
-import { ouvrirVolet } from './volets';
+import { ouvrirReglagesBornes } from './volets';
 
 /* FILTRES DES BORNES — ce qui compte n'est pas ce que l'interface affiche,
    c'est CE QUI PART DANS LA REQUÊTE. Le portail plafonne à 100
@@ -48,7 +48,7 @@ async function ouvrirBornes(page: import('@playwright/test').Page): Promise<void
     (window as unknown as { __carte: { jumpTo(o: object): void } })
       .__carte.jumpTo({ center: [2.3522, 48.8566], zoom: 13 });
   });
-  await ouvrirVolet(page, '.poi');
+  await ouvrirReglagesBornes(page);
   await page.getByRole('checkbox', { name: 'Bornes électriques' }).check();
 }
 
@@ -56,7 +56,7 @@ test('les filtres ne paraissent qu’une fois la couche des bornes active', asyn
   await espionnerIrve(page);
   await page.goto('/');
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
-  await ouvrirVolet(page, '.poi');
+  await ouvrirReglagesBornes(page);
 
   const filtres = page.locator('.poi-filtres');
   await expect(filtres, 'des réglages sans objet encombrent').toBeHidden();
@@ -330,12 +330,17 @@ test('la puce « Bornes de recharge » du filtre POI actionne LA couche du volet
   await expect(puce).toHaveAttribute('aria-pressed', 'true');
 
   // La MÊME couche : la case du volet des services est cochée.
-  await ouvrirVolet(page, '.poi');
+  await ouvrirReglagesBornes(page);
   const case_ = page.getByRole('checkbox', { name: 'Bornes électriques' });
   await expect(case_).toBeChecked();
 
   // Et l'inverse : décocher au volet éteint la puce.
   await case_.uncheck();
+  /* ON REVIENT AUX LIEUX POUR LA REGARDER (ERGO-7, 02/09) : les réglages sont
+     une page à part depuis qu'Armelin a demandé « une fenêtre dédiée », et la
+     puce vit sur l'autre. Elle a changé d'état pendant qu'on ne la voyait
+     pas — c'est justement ce qu'on vérifie. */
+  await page.getByRole('button', { name: 'Revenir aux lieux à afficher' }).click();
   await expect(puce).toHaveAttribute('aria-pressed', 'false');
 });
 
@@ -398,7 +403,7 @@ test('un filtre RESTAURÉ se dit — badge sur le volet, phrase d’état, retra
     .toHaveAttribute('title', 'Filtres actifs : réseau ZUNDER');
 
   // Dans le volet, la phrase d'état le dit en clair…
-  await ouvrirVolet(page, '.poi');
+  await ouvrirReglagesBornes(page);
   await expect(page.locator('.poi-etat')).toContainText('Filtres bornes : réseau ZUNDER');
 
   // …ET LE RETRAIT TIENT EN UN GESTE — le bouton dit ce qu'il retire.
@@ -430,7 +435,7 @@ test('un filtre RESTAURÉ se dit — badge sur le volet, phrase d’état, retra
   // ressuscite — c'était exactement le mécanisme du mystère.
   await page.reload();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
-  await ouvrirVolet(page, '.poi');
+  await ouvrirReglagesBornes(page);
   await expect(page.getByRole('checkbox', { name: 'Bornes électriques' })).toBeChecked();
   await page.getByRole('button', { name: 'Filtrer les lieux affichés sur la carte' }).click();
   await expect(page.locator('.poi-famille-filtres')).toBeHidden();

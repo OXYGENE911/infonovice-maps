@@ -64,18 +64,39 @@ export async function ouvrirVolet(page: Page, selecteur: string): Promise<void> 
       await page.locator('.poi-bulle').click();
     }
     await expect(page.locator('.poi-panneau')).toBeVisible();
-    /* LE RÉSUMÉ A DISPARU (ERGO-5, 02/09) : Armelin ne le voyait pas comme un
-       bouton — « un menu invisible est un menu que les utilisateurs ne peuvent
-       pas trouver ». C'est une ROUE CRANTÉE, à côté de la puce des bornes, qui
-       ouvre désormais ces réglages.
-       IDEMPOTENT, comme `ouvrirMenu` : le volet garde son état, et le cliquer
-       sans regarder le refermerait. */
-    if (await page.locator(`${selecteur}[open]`).count() === 0) {
+    /* LES RÉGLAGES SONT UNE PAGE, PLUS UN DÉPLIANT (ERGO-7, 02/09) : la roue
+       crantée y MÈNE, une flèche en revient. Armelin : « il devrait s'ouvrir
+       dans une fenêtre dédiée et pas afficher un menu interminable à
+       scroller ».
+       ON REGARDE LA PAGE, PAS L'ATTRIBUT `open` : le `<details>` arrive ouvert
+       puisqu'il EST la page, si bien qu'un test d'`[open]` conclurait « déjà
+       là » sans jamais y aller. Ce piège a coûté dix-sept parcours d'un coup.
+       IDEMPOTENT, comme `ouvrirMenu`. */
+    if (await page.locator('.poi-vue-recharge').isHidden()) {
       await page.locator('.poi-reglages-bornes').click();
-      await expect(page.locator(`${selecteur}[open]`)).toHaveCount(1);
     }
+    await expect(page.locator('.poi-vue-recharge')).toBeVisible();
     return;
   }
 
   await page.locator(`${selecteur} summary`).first().click();
+}
+
+/**
+ * Ouvre la PAGE des réglages de bornes dans l'entonnoir (ERGO-7, 02/09).
+ *
+ * La couche des bornes et ses filtres y vivent depuis ERGO-3, et depuis
+ * ERGO-7 ils occupent une page à eux : ouvrir l'entonnoir ne suffit plus, il
+ * faut passer la roue crantée. Ce raccourci évite de réécrire ces deux gestes
+ * dans chaque parcours — et de les réécrire faux au prochain déménagement.
+ */
+export async function ouvrirReglagesBornes(page: Page): Promise<void> {
+  if (await page.locator('.poi-panneau').isHidden()) {
+    await page.locator('.poi-bulle').click();
+  }
+  await expect(page.locator('.poi-panneau')).toBeVisible();
+  if (await page.locator('.poi-vue-recharge').isHidden()) {
+    await page.locator('.poi-reglages-bornes').click();
+  }
+  await expect(page.locator('.poi-vue-recharge')).toBeVisible();
 }

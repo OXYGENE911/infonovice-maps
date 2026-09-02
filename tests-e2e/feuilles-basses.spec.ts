@@ -20,7 +20,25 @@ async function ouvrirCarte(page: Page): Promise<void> {
 }
 
 /** Tire la poignée d'une feuille de `dy` pixels (négatif = vers le haut). */
+/* ON ATTEND QUE LA FEUILLE AIT FINI DE SE DIMENSIONNER (ERGO-6, 02/09).
+   Depuis qu'elle s'ouvre à la taille de son contenu, elle bouge encore
+   quelques centaines de millisecondes après l'ouverture — le temps que les
+   raccourcis arrivent d'IndexedDB. Mesurer la poignée PUIS la presser pendant
+   ce mouvement fait tomber le clic à côté : la feuille grandit vers le haut,
+   la poignée monte, et le doigt trouve du contenu. La CI l'a montré avant
+   l'usager. */
+async function attendreStabilite(page: Page, selecteur: string): Promise<void> {
+  let precedente = -1;
+  await expect.poll(async () => {
+    const h = Math.round((await page.locator(selecteur).boundingBox())?.height ?? -1);
+    const stable = h === precedente;
+    precedente = h;
+    return stable;
+  }, { timeout: 5_000, message: 'la feuille ne se stabilise pas' }).toBe(true);
+}
+
 async function tirer(page: Page, selecteur: string, dy: number, pas = 12): Promise<void> {
+  await attendreStabilite(page, '.iti-corps');
   const poignee = (await page.locator(selecteur).boundingBox())!;
   const x = poignee.x + poignee.width / 2;
   const y = poignee.y + poignee.height / 2;

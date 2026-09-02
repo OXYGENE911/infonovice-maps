@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
-import { ouvrirVolet } from './volets';
+import { ouvrirVolet, ouvrirReglagesBornes } from './volets';
 
 /* L'INDEX NATIONAL DES BORNES RAPIDES, VU DE L'INTERFACE.
  *
@@ -88,7 +88,7 @@ const FRANCE: Station[] = [
 async function ouvrirBornes(page: Page): Promise<void> {
   await page.goto('/');
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
-  await ouvrirVolet(page, '.poi');
+  await ouvrirReglagesBornes(page);
   await page.getByRole('checkbox', { name: 'Bornes électriques' }).check();
 }
 
@@ -348,6 +348,13 @@ const COMMODITES = {
 
 async function ouvrirCartoucheBeaune(page: Page): Promise<void> {
   await ouvrirBornes(page);
+  /* ON REFERME L'ENTONNOIR AVANT DE CLIQUER LA CARTE (ERGO-7, 02/09). Les
+     réglages de bornes occupent désormais une PAGE entière du panneau —
+     « une fenêtre dédiée », comme Armelin l'a demandé — et cette page couvre
+     le point qu'on veut atteindre. C'est aussi le geste réel : on règle, on
+     referme, on regarde la carte. */
+  await page.locator('.poi-bulle').click();
+  await expect(page.locator('.poi-panneau')).toBeHidden();
   await page.evaluate(() => {
     (window as unknown as { __carte: { jumpTo(o: object): void } })
       .__carte.jumpTo({ center: [4.84, 47.02], zoom: 11 });

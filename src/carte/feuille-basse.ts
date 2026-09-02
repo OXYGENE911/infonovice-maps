@@ -77,8 +77,76 @@ export function installerFeuilleBasse(volet: HTMLDetailsElement, corps: HTMLElem
     else corps.style.setProperty('--feuille-hauteur', `${h}px`);
   };
 
-  // Fermé, la hauteur s'oublie : chaque ouverture repart à mi-hauteur.
-  volet.addEventListener('toggle', () => { if (!volet.open) poser(null); });
+  /* À L'OUVERTURE, LA FEUILLE PREND LA TAILLE DE SON CONTENU (ERGO-6, 02/09).
+     Elle s'ouvrait à mi-hauteur, toujours, quoi qu'elle porte. Mesuré sur un
+     écran de 412 × 915 : le planificateur demande 512 px et la mi-hauteur en
+     donne 458 — d'où les cinquante-quatre pixels qu'Armelin devait aller
+     chercher au doigt. « Il faut absolument que le menu Itinéraire s'affiche
+     en entier au complet quand on clic dessus, sans avoir à scroller. »
+     ELLE NE DESCEND PAS SOUS LA MI-HAUTEUR : un panneau court ne doit pas
+     donner une feuille ridicule, et le palier reste celui vers lequel la
+     poignée retombe. ELLE NE MONTE PAS AU-DELÀ DU PLEIN ÉCRAN (88 %) : une
+     feuille qui mange tout l'écran n'est plus une feuille.
+     ET SI LE CONTENU DÉPASSE ENCORE, il défile comme avant — on n'a rien
+     cassé, on a seulement cessé de forcer le défilement quand il était
+     évitable. */
+  /* LE DOIGT A TOUJOURS RAISON : dès que l'usager tire la poignée, la feuille
+     cesse de se redimensionner toute seule. Lui reprendre sa hauteur parce
+     qu'un contenu vient d'arriver serait le pire des automatismes. */
+  let regleAuDoigt = false;
+
+  /* ET ELLE SE FIGE VITE. L'ajustement ne dure qu'une seconde et demie après
+     l'ouverture : au-delà, la feuille ne bouge plus, même si un contenu
+     arrive. UNE FEUILLE QUI GRANDIT SOUS LE DOIGT EST PIRE QU'UNE FEUILLE
+     TROP COURTE — le geste visait un bouton qui a bougé. Le défaut s'est vu
+     dans un parcours avant de se voir à l'usage : la poignée mesurée puis
+     pressée n'était plus au même endroit, et le glissement ne partait pas.
+     QUATRE CENTS MILLISECONDES SUFFISENT, et c'est mesuré : les lectures
+     d'IndexedDB qui remplissent les raccourcis se comptent en dizaines de
+     millisecondes, et la feuille passe de 458 à 470 pixels — douze pixels,
+     une seule fois. Une seconde et demie laissait la fenêtre ouverte assez
+     longtemps pour qu'un doigt (ou un parcours) atteigne la poignée pendant
+     qu'elle bougeait encore. */
+  const FENETRE_AJUSTEMENT_MS = 400;
+  let ouvertA = 0;
+
+  const ajuster = (): void => {
+    if (!volet.open || !mobile.matches || regleAuDoigt) return;
+    if (ouvertA === 0 || performance.now() - ouvertA > FENETRE_AJUSTEMENT_MS) return;
+    const { mi, plein } = paliers();
+    const voulu = corps.scrollHeight;
+    if (!Number.isFinite(voulu) || voulu <= 0) return;
+    poser(Math.round(Math.min(Math.max(voulu, mi), plein)));
+  };
+
+  volet.addEventListener('toggle', () => {
+    if (!volet.open) { poser(null); regleAuDoigt = false; ouvertA = 0; return; }
+    ouvertA = performance.now();
+    /* APRÈS UNE IMAGE : à l'instant du `toggle`, le contenu n'est pas encore
+       disposé et `scrollHeight` rend zéro — une feuille de quarante pixels. */
+    requestAnimationFrame(ajuster);
+  });
+
+  /* ET ELLE SUIT LE CONTENU QUI ARRIVE APRÈS COUP. C'est le cas réel, pas un
+     cas d'école : le planificateur remplit ses raccourcis et ses trajets
+     habituels par des lectures ASYNCHRONES de la base locale. Mesurer une
+     seule fois à l'ouverture aurait dimensionné la feuille sur un contenu
+     encore incomplet — et rendu à Armelin le défilement qu'on vient de lui
+     retirer. */
+  if (typeof ResizeObserver === 'function') {
+    const suivi = new ResizeObserver(() => { ajuster(); });
+    for (const enfant of corps.children) suivi.observe(enfant);
+    /* LES ENFANTS CHANGENT (une page du planificateur remplace l'autre) : on
+       observe aussi les nouveaux venus. */
+    new MutationObserver((lots) => {
+      for (const lot of lots) {
+        for (const n of lot.addedNodes) {
+          if (n instanceof Element) suivi.observe(n);
+        }
+      }
+      ajuster();
+    }).observe(corps, { childList: true });
+  }
   // Un passage sur grand écran (rotation, fenêtre redimensionnée) rend le
   // volet à sa forme latérale : la hauteur de feuille n'y a pas de sens.
   mobile.addEventListener('change', () => { if (!mobile.matches) poser(null); });
@@ -89,8 +157,15 @@ export function installerFeuilleBasse(volet: HTMLDetailsElement, corps: HTMLElem
 
   poignee.addEventListener('pointerdown', (e) => {
     if (!mobile.matches) return;
-    poignee.setPointerCapture(e.pointerId);
+    /* LE DRAPEAU SE LÈVE AVANT TOUT LE RESTE (ERGO-6, 02/09). Il était posé
+       APRÈS `setPointerCapture`, qui peut jeter — un `pointerId` absent, un
+       pointeur déjà relâché. Le geste se poursuivait alors sans que la
+       feuille sache qu'un doigt la réglait, et l'ajustement automatique lui
+       reprenait sa hauteur au relâchement. Attrapé par le parcours de la
+       poignée : 470 px au lieu des 805 demandés. */
+    regleAuDoigt = true;
     depart = { y: e.clientY, h: corps.getBoundingClientRect().height };
+    try { poignee.setPointerCapture(e.pointerId); } catch { /* geste synthétique */ }
     precedent = dernier = { y: e.clientY, t: performance.now() };
     // La transition se coupe sous le doigt : une feuille qui « rattrape » le
     // geste avec 200 ms de retard paraît molle.

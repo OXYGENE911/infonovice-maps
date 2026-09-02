@@ -61,9 +61,19 @@ const TRACES: Record<NomPicto, string> = {
      de l'historique, et il se distingue de l'étoile des favoris. */
   remonter: '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/>'
     + '<path d="M3 3.4V9h5.6"/><path d="M12 7.6V12l3.2 2"/>',
-  engrenage: '<circle cx="12" cy="12" r="3.2"/>'
-    + '<path d="M12 2.6v2.6M12 18.8v2.6M21.4 12h-2.6M5.2 12H2.6'
-    + 'M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8M18.6 18.6l-1.8-1.8M7.2 7.2 5.4 5.4"/>',
+  /* UNE VRAIE ROUE CRANTÉE, PAS UN SOLEIL (ERGO-6, 02/09). Le premier tracé
+     était un cercle entouré de huit rayons DÉTACHÉS : c'est exactement le
+     dessin d'un soleil, et Armelin l'a lu comme tel — « la roue crantée
+     ressemble à un soleil ». Ce qui fait une roue, c'est que les dents
+     TIENNENT à la couronne : le contour est donc continu, huit dents portées
+     par un anneau, avec le moyeu au centre. */
+  engrenage: '<path d="M10.2 4.6 L10.4 2.1 L13.6 2.1 L13.8 4.6 L15.9 5.5 '
+    + 'L17.9 3.9 L20.1 6.1 L18.5 8.1 L19.4 10.2 L21.9 10.4 L21.9 13.6 '
+    + 'L19.4 13.8 L18.5 15.9 L20.1 17.9 L17.9 20.1 L15.9 18.5 L13.8 19.4 '
+    + 'L13.6 21.9 L10.4 21.9 L10.2 19.4 L8.1 18.5 L6.1 20.1 L3.9 17.9 '
+    + 'L5.5 15.9 L4.6 13.8 L2.1 13.6 L2.1 10.4 L4.6 10.2 L5.5 8.1 '
+    + 'L3.9 6.1 L6.1 3.9 L8.1 5.5 Z"/>'
+    + '<circle cx="12" cy="12" r="3.4"/>',
   options: '<path d="M4 7h16M4 12h16M4 17h16"/>'
     + '<circle cx="9" cy="7" r="2" style="fill:var(--fond-doux)"/>'
     + '<circle cx="15" cy="12" r="2" style="fill:var(--fond-doux)"/>'
