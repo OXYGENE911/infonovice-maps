@@ -543,6 +543,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       refermable ; feuille de parking au-dessus de son bouton ; écart
       hors-route selon le profil (30 m à pied) ; étiquettes blanches cernées de
       noir sur imagerie ; les filtres de recharge passent dans l'entonnoir.
+- [x] PR #180 — VERSION-2 (02/09) : le numéro affiché vient du journal, plus
+      de `package.json`. La production annonçait 1.31.0 en servant la 1.33.0 —
+      j'avais oublié d'incrémenter deux fois. La discipline est supprimée, pas
+      répétée.
 - [x] PR #179 — PARK-4 (02/09) : les places libres en direct, là où une
       collectivité les publie. Aix-Marseille (à la minute) et Nantes (à
       l'heure) branchées ; Issy écartée (relevé d'avril 2025, tous pleins) et

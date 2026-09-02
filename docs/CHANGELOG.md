@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.34.0] — 2026-09-02 — VERSION-2 : le numéro affiché ne peut plus mentir (PR #180)
+
+### Corrigé
+- **La production affichait « 1.31.0 » en servant la 1.33.0.** VERSION-1, livré
+  quelques heures plus tôt pour répondre à « je ne sais pas si j'ai la bonne
+  version en cache », lisait le numéro dans `package.json` — et j'ai oublié de
+  l'incrémenter deux livraisons de suite. **Un numéro faux est pire qu'aucun
+  numéro** : c'est exactement le doute d'Armelin, mais estampillé par
+  l'application.
+- **Le numéro vient désormais du journal.** L'entrée la plus haute de
+  `docs/CHANGELOG.md` EST la version livrée, et la règle du projet impose une
+  entrée à chaque PR. La discipline n'est plus à tenir : elle est supprimée.
+  Un journal illisible **arrête la construction** au lieu de livrer un
+  « 0.0.0 » que personne ne remarquerait.
+
+### Tests
+- 4 tests gardent la forme dont la construction dépend : l'entrée de tête est
+  un numéro sémantique, elle est la plus haute, aucun numéro n'est écrit deux
+  fois, et **aucun marqueur de fusion ne traîne** — celui-là a été payé trois
+  fois cette semaine.
+
 ## [1.33.0] — 2026-09-02 — PARK-4 : les places libres, en direct (PR #179)
 
 ### Ajouté
