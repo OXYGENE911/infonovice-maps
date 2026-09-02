@@ -573,6 +573,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #183 — VÉHICULES (02/09) : six modèles sur quinze ajoutés (Alpine
       A390, MG Cyberster, Smart #5, BYD Atto 2, Seal U, Tang), d'une SEULE
       source cohérente qui distingue capacité brute et utile.
+- [x] PR #186 — FOND-4 + RAYON-1 (02/09) : les noms de rue sur le satellite
+      (la couche des odonymes manquait à mon extraction de FOND-1) ; le rayon
+      d'action réduit du détour routier mesuré (médiane 1,19 sur huit trajets,
+      facteur retenu 1,25).
 - [x] PR #185 — ERGO-5 (02/09) : le doublon de catégories tombe (décision
       d'Armelin), une roue crantée remplace la ligne « Recharge et services »,
       et les trajets habituels se rangent derrière un bouton.

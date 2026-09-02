@@ -17,7 +17,7 @@ import {
   autonomies, consommationsDepuisEssais, capaciteReelle, facteursDAffichage,
   CONTEXTES, type Vehicule, type CleContexte,
 } from '../lib/vehicule';
-import { collectionAnneaux } from '../lib/cercle';
+import { collectionAnneaux, rayonAffichable } from '../lib/cercle';
 import {
   CATALOGUE, libelleModele, libelleDansMarque, parMarque,
   modeleParCle, autonomiesProposees, chercherModeles,
@@ -207,6 +207,15 @@ export class PanneauVehicule extends HTMLElement {
           <label class="veh-bascule">
             <input type="checkbox" class="veh-anneaux"> Afficher mon rayon d’action
           </label>
+          <!-- ON DIT POURQUOI LE CERCLE EST PLUS PETIT QUE L'AUTONOMIE
+               (RAYON-1, 02/09). Sans cette phrase, l'écart entre le chiffre du
+               bilan et le rayon tracé se lirait comme une incohérence — c'est
+               exactement le reproche qu'Armelin avait fait le 31/08 sur un
+               autre chiffre juste et inexpliqué. -->
+          <p class="veh-anneaux-note">Les anneaux sont tracés à vol d’oiseau,
+            réduits d’un quart : une autonomie se dépense sur des routes, qui
+            tournent. Mesuré sur huit trajets français, la route fait 1,19 fois
+            le vol d’oiseau en médiane — l’anneau penche donc du côté prudent.</p>
 
           <div class="veh-bilan" role="status"></div>
         </fieldset>
@@ -586,7 +595,14 @@ export class PanneauVehicule extends HTMLElement {
     const a = autonomies(this.#vehicule);
     const donnees = this.#actif && this.#position
       ? collectionAnneaux(this.#position.lon, this.#position.lat,
-        CONTEXTES.map((c) => ({ cle: c.cle, rayonKm: a[c.cle], couleur: c.couleur })))
+        /* LE CERCLE SE RÉTRÉCIT DU DÉTOUR ROUTIER (RAYON-1, 02/09) : une
+           autonomie se dépense sur des routes, un cercle se mesure à vol
+           d'oiseau. Mesuré sur huit trajets français : 1,19 en médiane. Sans
+           cette correction, l'anneau promettait des points qu'aucune route
+           ne rejoint. */
+        CONTEXTES.map((c) => ({
+          cle: c.cle, rayonKm: rayonAffichable(a[c.cle]), couleur: c.couleur,
+        })))
       : { type: 'FeatureCollection' as const, features: [] };
 
     /* ON TENTE, ET L'ON NE DIFFÈRE QUE SUR L'ÉCHEC RÉEL.

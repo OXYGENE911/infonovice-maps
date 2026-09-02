@@ -131,8 +131,13 @@ test('les trois anneaux se dessinent, et le plus petit reste visible', async ({ 
   // Du plus grand au plus petit : sinon le petit disparaît sous le grand.
   expect(anneaux.map((a) => a.cle)).toEqual(['ville', 'route', 'autoroute']);
   expect(anneaux[0]!.rayon).toBeGreaterThan(anneaux[2]!.rayon);
-  expect(anneaux[0]!.rayon).toBe(400);
-  expect(anneaux[2]!.rayon).toBe(280);
+  /* LES RAYONS SONT RÉDUITS DU DÉTOUR ROUTIER (RAYON-1, 02/09) : 400 et 280 km
+     d'autonomie deviennent 320 et 224 km de cercle. Une autonomie se dépense
+     sur des ROUTES, un cercle se mesure à VOL D'OISEAU — mesuré sur huit
+     trajets français, la route fait 1,19 fois le vol d'oiseau en médiane, et
+     l'on retient 1,25 pour pencher du côté prudent, comme demandé. */
+  expect(anneaux[0]!.rayon).toBe(320);
+  expect(anneaux[2]!.rayon).toBe(224);
   for (const a of anneaux) expect(a.sommets, 'un anneau fermé').toBeGreaterThan(90);
 });
 

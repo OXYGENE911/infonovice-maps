@@ -2,6 +2,48 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.40.0] — 2026-09-02 — FOND-4 et RAYON-1 : les noms de rue, et un cercle honnête (PR #186)
+
+### Corrigé
+- **Les noms de rue paraissent sur le satellite.** « En mode satellite, quand
+  on zoome au maximum sur une rue, les noms de rue ne sont pas affichés alors
+  qu'ils le sont en carte IGN. » **La cause était dans mon extraction** :
+  FOND-1 avait pris les toponymes de LOCALITÉ et les numéros de route, mais pas
+  `toponyme_routier_odonyme_lin` — la couche des odonymes. Elle était dans les
+  mêmes tuiles depuis le début ; je ne l'avais pas vue.
+  Deux calques, comme le veut le style officiel : la forme abrégée entre les
+  zooms 15 et 17, la forme entière au-delà. Sur imagerie ils héritent du blanc
+  cerné de noir, sans qu'on répète la règle.
+
+### Changé — le rayon d'action penche du côté prudent
+Un collègue d'Armelin : « le rayon d'action sous forme de cercle semblait
+beaucoup trop optimiste par défaut […] il vaut mieux afficher des autonomies
+légèrement plus pessimistes que de faire croire à l'utilisateur qu'il peut
+aller aussi loin. »
+
+**Il a raison, et le biais est structurel** — ce n'était pas un réglage de
+consommation : une autonomie se dépense sur des **routes**, un cercle se mesure
+à **vol d'oiseau**. Un cercle de 300 km de rayon promet des points qu'aucune
+route ne rejoint en 300 km.
+
+**Mesuré sur huit trajets français** avec le moteur de la Géoplateforme
+(route ÷ vol d'oiseau) : Nantes–Rennes 1,09 · Paris–Reims 1,11 ·
+Bordeaux–Toulouse 1,16 · Lyon–Grenoble 1,18 · Paris–Orléans 1,19 ·
+Le Plessis–Melun 1,21 · Marseille–Nice 1,33 · Lille–Amiens 1,42.
+**Médiane 1,19, moyenne 1,21.**
+
+On retient **1,25** — au-dessus des deux, en deçà du pire cas : le choix penche
+du côté pessimiste, comme demandé. Concrètement, 400 km d'autonomie tracent un
+cercle de 320 km. Et **l'écart s'explique à l'écran** : un chiffre juste et
+inexpliqué se lit comme un chiffre faux, la leçon du 31/08.
+
+### Tests
+- 4 tests sur les odonymes, dont celui qui garde le fond Plan intact (il porte
+  déjà ses noms de rue, cuits dans la tuile).
+- 3 tests sur le rayon, dont celui qui borne le facteur entre la moyenne
+  mesurée et le pire cas.
+- Le parcours des anneaux vérifie les rayons réduits : 400 et 280 km
+  d'autonomie donnent 320 et 224 km de cercle.
 ## [1.39.0] — 2026-09-02 — ERGO-5 : le doublon tombe, la roue crantée arrive (PR #185)
 
 ### Supprimé — la décision d'Armelin
