@@ -35,6 +35,7 @@ import {
 } from '../lib/commodites';
 import { distanceM } from '../lib/le-long-du-trajet';
 import { cleBorne } from '../lib/arrets';
+import { brancherAjoutFavori } from './choix-liste';
 import { adresseInverse } from '../lib/adresse';
 import { PRISES } from '../lib/poi';
 import { palierDe, PALIERS } from '../lib/puissance';
@@ -290,6 +291,30 @@ export class FicheBorne extends HTMLElement {
   #actions(d: DetailStation, cible: CibleBorne): HTMLElement {
     const boite = document.createElement('div');
     boite.className = 'fb-actions';
+
+    /* GARDER LA BORNE, DANS LA LISTE QU'ON VEUT (FAVORIS-4, 03/09).
+       Armelin : « quand on clique sur une borne de recharge, on peut y aller,
+       mais on ne peut pas l'ajouter en favoris dans une liste qu'on aurait
+       créée pour retrouver plus facilement ses bornes de recharge favorites ».
+       Ce cartouche n'avait AUCUN bouton de favori — les fiches de lieu et
+       d'adresse en avaient un depuis longtemps, celle-ci était restée dehors.
+
+       IL PASSE AVANT LE GARDE `#itineraire` : garder une borne ne demande
+       aucun planificateur, et le retour d'Armelin porte précisément sur ce
+       qu'on fait d'une borne QUAND ON NE PART PAS TOUT DE SUITE. */
+    const favori = document.createElement('button');
+    favori.type = 'button';
+    favori.className = 'fb-favori';
+    favori.textContent = 'Ajouter aux favoris';
+    /* LE NOM PORTE L'ADRESSE, pour la même raison que le bouton « Itinéraire »
+       plus bas : « SIGEIF » seul, dans une liste de favoris, ne se retrouve
+       pas. */
+    brancherAjoutFavori(favori, boite, () => ({
+      nom: d.adresse ? `${d.nom} — ${d.adresse}` : d.nom,
+      point: { lon: cible.lon, lat: cible.lat },
+    }));
+    boite.append(favori);
+
     if (!this.#itineraire) return boite;
 
     const aller = document.createElement('button');

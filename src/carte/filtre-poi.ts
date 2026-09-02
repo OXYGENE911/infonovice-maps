@@ -50,7 +50,7 @@ import {
   imagePastille, cleImage, svgPastille, RAPPORT_PASTILLE,
 } from './icone-lieu';
 import { rubriquesDe, lignesHoraires, etatOuverture } from '../lib/detail-lieu';
-import { ajouterFavori } from '../lib/favoris';
+import { brancherAjoutFavori } from './choix-liste';
 import type { PorteItineraire } from './fiche-borne';
 import {
   elargir, estCouverte, memoriser, type Emprise,
@@ -640,16 +640,14 @@ export class FiltrePoi extends HTMLElement {
     favori.type = 'button';
     favori.className = 'poi-fiche-favori';
     favori.textContent = 'Ajouter aux favoris';
-    favori.addEventListener('click', () => {
-      void ajouterFavori(nom, { lon: lieu.lon, lat: lieu.lat }).then(() => {
-        /* LE BOUTON DIT CE QU'IL A FAIT, et ne se laisse pas presser deux
-           fois : sans cela, on ne sait pas si le clic a porté. */
-        favori.textContent = 'Ajouté aux favoris';
-        favori.disabled = true;
-      }).catch(() => {
-        favori.textContent = 'Échec de l’ajout';
-      });
-    });
+    /* LA LISTE SE CHOISIT ICI (FAVORIS-4, 03/09). Armelin : « on n'a pas la
+       possibilité de choisir directement dans quelle catégorie
+       l'enregistrer ». Le stockage portait déjà les listes depuis FAVORIS-2 ;
+       seule l'interface ne les demandait jamais, et tout tombait dans « Lieux
+       favoris ». Ranger après coup demande de retrouver ce qu'on vient
+       d'ajouter : c'est le geste que personne ne fait. */
+    brancherAjoutFavori(favori, boutons,
+      () => ({ nom, point: { lon: lieu.lon, lat: lieu.lat } }));
 
     if (this.#porte) boutons.append(aller);
     boutons.append(favori);

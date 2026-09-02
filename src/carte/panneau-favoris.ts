@@ -5,6 +5,7 @@
 // serveur. Les noms de favoris passent par textContent : ils peuvent venir
 // d'un libellé BAN (service externe) comme d'une saisie libre.
 import type { Map as CarteMapLibre } from 'maplibre-gl';
+import { AJOUT_FAVORI } from './choix-liste';
 import {
   listerFavoris, retirerFavori, renommerFavori, exporterDonnees, importerDonnees, ajouterFavori,
   listerListes, creerListe, effacerListe, rangerFavori,
@@ -205,6 +206,12 @@ export class PanneauFavoris extends HTMLElement {
       if (!f) return;
       void this.#importerGoogle(f).finally(() => { fichierGoogle.value = ''; });
     });
+
+    /* UN LIEU GARDÉ DEPUIS UNE FICHE ENTRE DANS LA LISTE TOUT DE SUITE
+       (FAVORIS-4, 03/09) : sans cette écoute, le volet restait à ce qu'il
+       montrait à l'ouverture, et une borne qu'on venait de garder n'y
+       paraissait qu'au rechargement. */
+    document.addEventListener(AJOUT_FAVORI, () => { void this.rafraichir(); });
 
     void this.rafraichir();
     this.#recevoirDuLien();

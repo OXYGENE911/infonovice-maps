@@ -34,7 +34,7 @@ import { PanneauFavoris } from './panneau-favoris';
 import { PanneauTrafic } from './panneau-trafic';
 import { PanneauVehicule } from './panneau-vehicule';
 import { MenuReglages } from './menu-reglages';
-import { ajouterFavori } from '../lib/favoris';
+import { brancherAjoutFavori } from './choix-liste';
 import { depuisFragmentLieu } from '../lib/partage-favoris';
 import { ecrireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { VisionneusePhoto } from './visionneuse-photo';
@@ -566,13 +566,10 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
        choisir : aucune attente, aucun bouton désactivé, contrairement à
        l'appui long qui doit d'abord résoudre l'adresse. */
     const favori = bloc.querySelector('.pa-favori') as HTMLButtonElement;
-    favori.addEventListener('click', () => {
-      favori.disabled = true;
-      ajouterFavori(r.libelle, point).then(
-        () => { favori.textContent = 'Ajouté aux favoris ✓'; void favoris.rafraichir(); },
-        () => { favori.textContent = 'Ajout impossible (stockage local indisponible)'; },
-      );
-    });
+    /* LA LISTE SE CHOISIT (FAVORIS-4, 03/09) — ici comme sur les fiches de
+       lieu et de borne : le même geste, la même question, au même moment. */
+    brancherAjoutFavori(favori, favori.parentElement ?? bloc,
+      () => ({ nom: r.libelle, point }));
 
     bloc.querySelector('.pa-copier')?.addEventListener('click', () => {
       void navigator.clipboard.writeText(coords);
@@ -667,13 +664,8 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
       });
     }
 
-    bouton.addEventListener('click', () => {
-      bouton.disabled = true;
-      ajouterFavori(nomFavori, point).then(
-        () => { bouton.textContent = 'Ajouté aux favoris ✓'; void favoris.rafraichir(); },
-        () => { bouton.textContent = 'Ajout impossible (stockage local indisponible)'; },
-      );
-    });
+    brancherAjoutFavori(bouton, bouton.parentElement ?? bloc,
+      () => ({ nom: nomFavori, point }));
     /* L'ADRESSE EN MOTS — « Dijon-21 BAKE 4831 ». Elle se dicte au téléphone
        et s'écrit sur un papier, là où un lien de partage ne le peut pas.
 

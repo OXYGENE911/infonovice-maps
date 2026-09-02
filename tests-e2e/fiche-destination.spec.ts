@@ -58,8 +58,11 @@ test('« Y aller » ouvre le planificateur, destination NOMMÉE, départ demand�
 test('« Ajouter aux favoris » garde le lieu sous son nom BAN, sans attente', async ({ page }) => {
   await choisirLyon(page);
   await page.locator('.fiche-destination .pa-favori').click();
+  /* LA LISTE SE CHOISIT (FAVORIS-4, 03/09), et le bouton REDIT laquelle : un
+     choix qu'on ne voit pas repris est un choix qu'on ira vérifier. */
+  await page.locator('.choix-liste').getByRole('button', { name: '🚩 À visiter' }).click();
   await expect(page.locator('.fiche-destination .pa-favori'))
-    .toHaveText('Ajouté aux favoris ✓');
+    .toHaveText('Ajouté aux favoris — À visiter');
 
   // Le favori EST là : le planificateur le compte dans son bouton d'entrée.
   await page.locator('.iti > summary').click();

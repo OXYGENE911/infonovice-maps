@@ -3956,6 +3956,44 @@ filtre-poi {
 
 
 /* ==========================================================================
+   FAVORIS-4 — CHOISIR SA LISTE EN GARDANT (03/09). Armelin, deux fois dans le
+   même retour : « on n'a pas la possibilité de choisir directement dans quelle
+   catégorie l'enregistrer » (POI) et « on ne peut pas l'ajouter en favoris
+   dans une liste qu'on aurait créée » (borne de recharge).
+
+   LA RANGÉE PARAÎT SOUS LE BOUTON, dans la fiche elle-même — pas dans une
+   fenêtre par-dessus. Les fiches occupent déjà un bord de l'écran, et la règle
+   « une seule surface à la fois » les fermerait l'une l'autre.
+   ========================================================================== */
+.choix-liste {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  /* PRENDRE SA PROPRE LIGNE : les hôtes sont des rangées de boutons
+     (`.poi-fiche-boutons` en flex, `.fd-actions` et `.fb-actions` en grille).
+     Sans cette base, la rangée de listes se glisserait à côté d'un bouton. */
+  flex-basis: 100%; width: 100%;
+  margin-top: 8px; padding: 8px; border-radius: 10px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+}
+.choix-liste-titre {
+  flex-basis: 100%; margin: 0 0 2px;
+  font: 600 11.5px var(--police); color: var(--texte-2);
+}
+/* DEUX CLASSES, ET C'EST VOULU : les hôtes portent des règles en
+   `.fd-actions button` et `.poi-fiche-boutons button` (0-1-1) qui imposent
+   `width: 100%` — un sélecteur à une seule classe perdrait, et chaque liste
+   occuperait une ligne entière. Leçon déjà payée sur le survol des volets. */
+.choix-liste .choix-liste-bouton {
+  flex: 0 1 auto; width: auto;
+  padding: 6px 10px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--teinte, var(--bord-2));
+  border-left-width: 4px;
+  background: var(--fond); color: var(--texte-1);
+  font: 600 12px var(--police);
+}
+.choix-liste .choix-liste-bouton:hover { background: var(--fond-doux); }
+.choix-liste .choix-liste-bouton:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* ==========================================================================
    FAVORIS-2 — LES LISTES DE FAVORIS (31/08). Armelin : « une catégorie custom
    de ses POI en indiquant soi-même un nom, un émoji et couleur dédiée […] ou
    une liste prédéfinie comme sur Google Maps ».

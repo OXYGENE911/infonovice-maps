@@ -40,6 +40,10 @@ async function poserUnFavori(page: Page): Promise<void> {
   await page.mouse.up();
   await expect(page.locator('.pa-libelle')).toContainText(ADRESSE, { timeout: 10_000 });
   await page.getByRole('button', { name: 'Ajouter aux favoris' }).click();
+  /* LA LISTE SE CHOISIT MAINTENANT (FAVORIS-4, 03/09) : trois listes sont
+     livrées, donc le bouton pose la question au lieu de tout verser dans
+     « Lieux favoris ». */
+  await page.locator('.choix-liste').getByRole('button', { name: '⭐ Lieux favoris' }).click();
   await expect(page.getByRole('button', { name: /Ajouté aux favoris/ })).toBeVisible();
 }
 

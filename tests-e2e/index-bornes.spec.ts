@@ -634,6 +634,38 @@ test('un bouton mène de la borne au planificateur', async ({ page }) => {
     .toHaveValue(/Aire de Beaune — Autoroute A6/);
 });
 
+test('ON GARDE UNE BORNE EN FAVORI, dans la liste qu’on choisit', async ({ page }) => {
+  /* « Quand on clique sur une borne de recharge, on peut y aller, mais on ne
+     peut pas l'ajouter en favoris dans une liste qu'on aurait créée pour
+     retrouver plus facilement ses bornes de recharge favorites » (Armelin,
+     03/09/2026).
+
+     CE CARTOUCHE N'AVAIT AUCUN BOUTON DE FAVORI. Les fiches de lieu et
+     d'adresse en avaient un depuis longtemps ; celle-ci, née pour répondre au
+     « je ne peux pas y aller » du 26/08, était restée dehors. */
+  await simulerPortail(page, FRANCE, DETAIL_TYPE);
+  await ouvrirCartoucheBeaune(page);
+
+  const favori = page.locator('fiche-borne').getByRole('button', { name: 'Ajouter aux favoris' });
+  await expect(favori).toBeVisible();
+  await favori.click();
+  /* LA LISTE SE DEMANDE ICI, comme sur toutes les autres fiches : c'est le
+     même geste, la même question, au même moment. */
+  await page.locator('.choix-liste').getByRole('button', { name: '🍽️ Restaurants' }).click();
+  await expect(page.getByRole('button', { name: 'Ajouté aux favoris — Restaurants' }))
+    .toBeVisible();
+
+  /* LA BORNE EST GARDÉE SOUS SON ADRESSE, pour la même raison que le bouton
+     « Itinéraire » : « Aire de Beaune » seul, dans une liste de favoris, ne se
+     retrouve pas. */
+  await page.locator('fiche-borne .fb-fermer').click();
+  await ouvrirVolet(page, '.favoris');
+  const nom = 'Aire de Beaune — Autoroute A6, aire de Beaune-Tailly, 21200 Merceuil';
+  await expect(page.getByRole('button', { name: `Aller à ${nom}` }))
+    .toBeVisible({ timeout: 10_000 });
+  await expect(page.getByLabel(`Liste de ${nom}`)).toHaveValue('restaurants');
+});
+
 test('les titres de section restent DANS leur cadre', async ({ page }) => {
   /* « J'ai toujours les titres des fenêtres qui se chevauchent » (Armelin,
      26/08/2026, capture à l'appui). La cause est native : un `<legend>` est
