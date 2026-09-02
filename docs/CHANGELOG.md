@@ -2,6 +2,52 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.36.0] — 2026-09-02 — PONT-1 : les passages trop limités s'annoncent (PR #182)
+
+### Ajouté
+- **L'application prévient quand un passage du trajet est limité à un tonnage
+  inférieur au poids déclaré du véhicule** — à mille mètres, de quoi s'arrêter
+  ou tourner avant l'ouvrage. La phrase nomme le pont, sa limite ET la masse :
+  c'est la comparaison qui décide, et vingt kilos d'écart ne valent pas une
+  tonne. Elle est dite à voix haute : celui qui roule ne lit pas l'écran.
+
+Armelin : « ma Vinfast VF8 Plus […] pèse 2 520 kg et peut être dangereuse sur
+certains ponts de France. Par exemple, le pont de fer situé entre Coudret et
+Germeville en Charente a fait l'objet d'une limitation à 2 tonnes. »
+
+### Ce que ça coûte : rien
+La donnée est dans OpenStreetMap et elle est **dense** — 184 chemins
+`maxweight` mesurés dans 35 × 30 km de Charente, dont 122 à 3,5 t. Et le
+corridor interroge **déjà** Overpass le long du tracé pour les limites de
+vitesse et les giratoires : `maxweight` entre dans la même union. **Zéro
+requête de plus** pour un service tenu par des bénévoles.
+
+### Ce qu'on ne prétend PAS faire
+**On avertit, on n'évite pas.** Le service public d'itinéraire n'accepte aucun
+paramètre de poids : on ne peut pas lui demander de contourner. Ce qu'on peut
+faire, c'est le dire assez tôt.
+
+**Et sans masse déclarée, on se tait.** Aucune source publique française ne
+donne la masse d'un modèle — même constat qu'en août pour la capacité de
+batterie. Le champ « Masse » existe déjà dans « Mon véhicule » (il sert au
+dénivelé depuis le 28/08) ; tant qu'il est vide, aucun avertissement. Alerter
+au hasard vaut moins que se taire : un conducteur qui reçoit un avertissement
+infondé cesse d'écouter les suivants.
+
+### Corrigé en route
+La masse se lit **seule**. Mon premier jet la prenait dans le profil complet du
+planificateur, qui rend `null` tant que la batterie et la consommation ne sont
+pas saisies — or on peut connaître le poids de sa voiture sans avoir renseigné
+le reste. Attrapé par un parcours, pas au volant.
+
+### Tests
+- 17 tests unitaires sur la lecture d'OSM, dont les livres (7 500 lbs valent
+  3,4 t, pas 7 500 — l'erreur aurait été silencieuse), `maxweight=none`, et
+  l'égalité qui PASSE (un panneau « 3,5 t » autorise 3,5 t).
+- Un pont de trente mètres est retenu là où la règle des limites de vitesse
+  — deux points, cent mètres — l'aurait écarté.
+- 5 tests sur la lecture de la masse, et 2 parcours : l'avertissement à
+  l'approche, et le silence sans masse déclarée.
 ## [1.35.0] — 2026-09-02 — ERGO-4 : six menus rendus atteignables (PR #181)
 
 Six retours d'usage, tous sur la même idée : **une option qu'on ne voit pas

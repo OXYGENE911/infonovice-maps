@@ -9,6 +9,7 @@ import { describe, expect, test } from 'vitest';
 import {
   capaciteReelle, energieDisponible, autonomies, consommationsDepuisEssais,
   facteursDAffichage, CONTEXTES, type Vehicule,
+  masseDeclaree,
 } from '../src/lib/vehicule';
 
 const VF8: Vehicule = {
@@ -160,5 +161,39 @@ describe('facteursDAffichage', () => {
     const affiche = autonomies(v).ville;
     expect(affiche).toBeCloseTo(384, 0);
     expect(affiche * (100 / facteursDAffichage(v).soc)).toBeCloseTo(480, 0);
+  });
+});
+
+describe('masseDeclaree (PONT-1)', () => {
+  /* ELLE SE LIT SEULE, et c'est le correctif d'un premier jet : je prenais la
+     masse dans le profil complet du planificateur, qui rend `null` tant que la
+     BATTERIE et la CONSOMMATION ne sont pas saisies. On peut connaître le poids
+     de sa voiture sans avoir renseigné le reste. Attrapé par un parcours. */
+
+  test('lit la masse du profil', () => {
+    expect(masseDeclaree({ vehicule: { masseKg: 2520 } })).toBe(2520);
+  });
+
+  test('rend null quand elle n’est pas déclarée', () => {
+    expect(masseDeclaree({ vehicule: {} })).toBeNull();
+    expect(masseDeclaree({})).toBeNull();
+    expect(masseDeclaree(null)).toBeNull();
+    expect(masseDeclaree(undefined)).toBeNull();
+  });
+
+  test('ZÉRO VAUT « NON DÉCLARÉ » — c’est le contrat du formulaire', () => {
+    expect(masseDeclaree({ vehicule: { masseKg: 0 } })).toBeNull();
+  });
+
+  test('et une saisie absurde ne passe pas pour une masse', () => {
+    expect(masseDeclaree({ vehicule: { masseKg: -100 } })).toBeNull();
+    expect(masseDeclaree({ vehicule: { masseKg: Number.NaN } })).toBeNull();
+    expect(masseDeclaree({ vehicule: { masseKg: '2520' } })).toBeNull();
+  });
+
+  test('N’EXIGE PAS le reste du profil : c’est tout le sujet', () => {
+    /* Ni batterie, ni consommation : la masse suffit à l'avertissement de
+       tonnage, et c'est le seul chiffre dont il a besoin. */
+    expect(masseDeclaree({ vehicule: { masseKg: 2520 } })).toBe(2520);
   });
 });

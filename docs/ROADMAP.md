@@ -552,14 +552,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       l'heure) branchées ; Issy écartée (relevé d'avril 2025, tous pleins) et
       Paris n'expose pas d'occupation. Piège payé : Aix-Marseille horodate en
       heure de Paris sans le dire.
-- [ ] PONT-1 — AVERTIR DES LIMITES DE TONNAGE. Demandé le 02/09 (« ma VF8
-      pèse 2 520 kg et peut être dangereuse sur certains ponts »). MESURÉ : la
-      donnée est dans OSM et elle est dense — 184 tronçons `maxweight` dans
-      35 × 30 km de Charente, dont 122 à 3,5 t. Et elle ne coûterait AUCUNE
-      requête de plus : le corridor interroge déjà Overpass le long du tracé.
-      CE QUI MANQUE est le POIDS DU VÉHICULE : aucune source publique
-      française ne le donne par modèle, il faudra un champ déclaré dans
-      « Mon véhicule ». Sans poids déclaré, aucun avertissement.
+- [x] PR #182 — PONT-1 (02/09) : les passages limités en tonnage s'annoncent à
+      mille mètres, quand la masse est déclarée. Zéro requête de plus — la
+      clause entre dans le corridor existant. On AVERTIT, on n'évite pas : le
+      moteur public n'accepte aucun paramètre de poids.
 - [ ] RÈGLES DE CIRCULATION — DiaLog, demandé le 02/09. MESURÉ ET BLOQUÉ pour
       l'instant : la plateforme publie un DATEX II national de **100 Mo**, et
       elle IGNORE tout filtre (`?bbox=`, `?limit=` rendent les mêmes 100 Mo).

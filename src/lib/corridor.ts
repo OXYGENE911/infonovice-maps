@@ -15,6 +15,9 @@
  * refus et les coutures restent dans les deux modules, qui se testent à sec.
  */
 import type { LineString } from 'geojson';
+import {
+  versTonnages, RAYON_TONNAGE_M, type LimiteTonnage,
+} from './tonnage';
 import { versLimites, RAYON_LIMITE_M, ErreurLimites, type LimiteTrajet,
 } from './limites';
 import {
@@ -34,6 +37,8 @@ export interface Corridor {
   destinations: DestinationBretelle[];
   giratoires: Giratoire[];
   affectations: AffectationTrajet[];
+  /** Les passages dont le tonnage est limité (PONT-1). */
+  tonnages: LimiteTonnage[];
 }
 
 /* L'ÉCART TOLÉRÉ EN SIMPLIFIANT LE TRACÉ, en mètres. Huit : bien SOUS le plus
@@ -85,6 +90,12 @@ export function requeteCorridor(paquet: readonly [number, number][]): string {
     + `way(around:25,${points})["turn:lanes"];`
     + `way(around:25,${points})["turn:lanes:forward"];`
     + `way(around:25,${points})["turn:lanes:backward"];`
+    /* LE TONNAGE ENTRE DANS LA MÊME UNION (PONT-1, 02/09) : Armelin roule une
+       VF8 de 2 520 kg et certains ponts sont limités à 2 t. La donnée est dans
+       OSM et elle est dense — 184 chemins `maxweight` mesurés dans 35 × 30 km
+       de Charente. Une clause de plus dans une requête qui part déjà, c'est
+       zéro requête de plus pour un service tenu par des bénévoles. */
+    + `way(around:${RAYON_TONNAGE_M},${points})["maxweight"];`
     + ');out geom tags;'
     + 'node(w.anneaux)->.bords;way(bn.bords)[highway];out geom tags;';
 }
@@ -106,12 +117,14 @@ export function versCorridor(brut: unknown, trace: readonly [number, number][]):
     destinations: versDestinations(liste, trace),
     giratoires: versGiratoires(liste, trace),
     affectations: versAffectations(liste, trace),
+    tonnages: versTonnages(brut, trace as [number, number][]),
   };
 }
 
 /** Vide — ce que rend un corridor dont on n'a rien pu relever. */
 export const CORRIDOR_VIDE: Corridor = {
   limites: [], sorties: [], destinations: [], giratoires: [], affectations: [],
+  tonnages: [],
 };
 
 /**
