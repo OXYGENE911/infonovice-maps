@@ -15,8 +15,9 @@ import type { Map as CarteMapLibre, GeoJSONSource } from 'maplibre-gl';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import {
   autonomies, consommationsDepuisEssais, capaciteReelle, facteursDAffichage,
-  CONTEXTES, type Vehicule, type CleContexte,
+  CONTEXTES, RESERVE_ANNEAUX, type Vehicule, type CleContexte,
 } from '../lib/vehicule';
+import { meteoA } from '../lib/meteo';
 import { collectionAnneaux, rayonAffichable } from '../lib/cercle';
 import {
   CATALOGUE, libelleModele, libelleDansMarque, parMarque,
@@ -65,10 +66,29 @@ export class PanneauVehicule extends HTMLElement {
      à une mesure. */
   #position: { lon: number; lat: number } | null = null;
 
+  /* LA TEMPÉRATURE DEHORS (RAYON-2, 02/09), quand on a pu la demander.
+     `null` : on suppose la référence, comme avant. */
+  #celsius: number | null = null;
+
   set position(p: { lon: number; lat: number }) {
     this.#position = p;
     this.#bilan();
     if (this.#actif) this.#poser();
+    /* ET L'ON DEMANDE LA TEMPÉRATURE — UNE FOIS, sur la position qu'on vient
+       de recevoir. Le froid coûte jusqu'à 45 % de consommation dans le modèle
+       (lib/vehicule), et le cercle l'ignorait complètement : en janvier, il
+       promettait les kilomètres d'un mois de mai. Armelin, 02/09 : « le rayon
+       d'action trop optimiste par défaut ».
+       C'EST LE MÊME SERVICE QUE LE COPILOTE, sur des coordonnées qu'il
+       interroge déjà. L'échec est muet : on retombe sur la référence. */
+    void meteoA(p.lon, p.lat, new Date())
+      .then((m) => {
+        if (!Number.isFinite(m.temperature)) return;
+        this.#celsius = m.temperature;
+        this.#bilan();
+        if (this.#actif) this.#poser();
+      })
+      .catch(() => { /* sans météo, la référence — c'est le comportement d'avant */ });
   }
 
   set carte(c: CarteMapLibre) {
@@ -232,7 +252,8 @@ export class PanneauVehicule extends HTMLElement {
           <p class="veh-anneaux-note">Les anneaux sont tracés à vol d’oiseau,
             réduits d’un quart : une autonomie se dépense sur des routes, qui
             tournent. Mesuré sur huit trajets français, la route fait 1,19 fois
-            le vol d’oiseau en médiane — l’anneau penche donc du côté prudent.</p>
+            le vol d’oiseau en médiane — l’anneau penche donc du côté prudent.
+            <span class="veh-anneaux-reserve"></span></p>
 
           <div class="veh-bilan" role="status"></div>
         </fieldset>
@@ -279,6 +300,10 @@ export class PanneauVehicule extends HTMLElement {
            à un modèle qui n'a rien à voir. L'usager corrige ensuite. */
         soce: 100,
         puissanceMaxKw: modele.puissanceMaxKw,
+        /* LA MOYENNE RELEVÉE SUIT LE MODÈLE (RECHARGE-1, 02/09), y compris
+           vers l'absence : garder celle d'une autre voiture donnerait un temps
+           de charge emprunté. */
+        puissanceMoyenneKw: modele.puissanceMoyenneKw ?? 0,
         /* Les bridages SUIVENT le modèle — y compris vers zéro (« non
            déclaré ») : garder ceux du véhicule précédent appliquerait le BMS
            d'une autre voiture. */
@@ -295,6 +320,11 @@ export class PanneauVehicule extends HTMLElement {
           modele.annees ? `Génération ${modele.annees}` : null,
           `${modele.capaciteKwh} kWh utiles`,
           `${modele.puissanceMaxKw} kW en pointe`,
+          /* CE QU'ELLE TIENT VRAIMENT (RECHARGE-1, 02/09) : c'est ce chiffre
+             qui décide du temps de charge annoncé, et l'écart avec la pointe
+             surprend assez pour être écrit. */
+          modele.puissanceMoyenneKw
+            ? `${modele.puissanceMoyenneKw} kW soutenus de 10 à 80 %` : null,
           `${modele.wltpKm} km WLTP constructeur (optimiste, surtout sur autoroute)`,
         ].filter(Boolean).join(' · ');
       }
@@ -488,6 +518,7 @@ export class PanneauVehicule extends HTMLElement {
       soc: nombre(v['soc'], 80),
       consommations: { ville: 0, route: 0, autoroute: 0 },
       puissanceMaxKw: nombre(v['puissanceMaxKw']),
+      puissanceMoyenneKw: nombre(v['puissanceMoyenneKw']),
       /* Zéro vaut « non déclaré » — c'est la convention de lib/vehicule : on
          garde donc la clé même à zéro, sans quoi le champ resterait vide à
          l'écran alors que la base porte bien un 0 voulu. */
@@ -620,7 +651,28 @@ export class PanneauVehicule extends HTMLElement {
        pas à une autre question : il répond à la même, faussement. La mention
        sous les anneaux ne rattrapait pas ce qu'un cercle affirme d'un coup
        d'œil. */
-    const a = autonomies(this.#vehicule);
+    /* LE CERCLE GARDE LA RÉSERVE ET SUBIT LE FROID (RAYON-2, 02/09). Le
+       planificateur refuse déjà tout plan qui descend sous 10 % ; le cercle,
+       lui, promettait les kilomètres des dix derniers pourcents. Deux moitiés
+       de la même application disaient deux choses de la même voiture. */
+    const a = autonomies(
+      this.#vehicule, this.#celsius ?? undefined, RESERVE_ANNEAUX,
+    );
+    /* ON DIT CE QU'ON A RETIRÉ, sans quoi l'écart entre le bilan chiffré et
+       l'anneau se lirait comme une incohérence — le reproche exact d'Armelin
+       le 31/08 sur un autre chiffre juste et inexpliqué. */
+    const note = this.querySelector<HTMLElement>('.veh-anneaux-reserve');
+    if (note) {
+      note.textContent = `Ils gardent ${RESERVE_ANNEAUX} % de batterie en`
+        + ' réserve, comme le plan de recharge'
+        /* LE VRAI SIGNE MOINS, comme dans le tableau de comparaison des
+           parcours : un trait d'union ASCII pour « −5 °C » se voit, et deux
+           conventions dans la même application se lisent comme une
+           négligence. */
+        + (this.#celsius === null ? '' : `, et tiennent compte des ${
+          String(Math.round(this.#celsius)).replace('-', '−')} °C relevés dehors`)
+        + '.';
+    }
     const donnees = this.#actif && this.#position
       ? collectionAnneaux(this.#position.lon, this.#position.lat,
         /* LE CERCLE SE RÉTRÉCIT DU DÉTOUR ROUTIER (RAYON-1, 02/09) : une

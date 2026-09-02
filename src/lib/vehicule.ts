@@ -46,6 +46,10 @@ export interface Vehicule {
      vaut « non déclaré » : le plan reste alors celui d'avant. */
   /** Masse en ordre de marche, kg — pour l'énergie du dénivelé. */
   masseKg?: number;
+  /* CE QUE LE VÉHICULE TIENT VRAIMENT SUR UNE SESSION, en kW (RECHARGE-1,
+     02/09). Relevée par le catalogue quand elle est publiée ; absente, le
+     planificateur l'estime aux deux tiers de la pointe. */
+  puissanceMoyenneKw?: number;
   /** Bridage BMS de la charge DC quand l'air est sous 0 °C, en kW. */
   puissanceFroidKw?: number;
   /** Bridage BMS de la charge DC en canicule (air ≥ 35 °C), en kW. */
@@ -92,6 +96,30 @@ export function energieDisponible(v: Vehicule): number {
   return capaciteReelle(v) * (borner(v.soc, 100) / 100);
 }
 
+/* LA RÉSERVE QU'ON N'ENTAME PAS (RAYON-2, 02/09).
+ *
+ * LE DÉFAUT. Le cercle d'action supposait qu'on roule jusqu'à ZÉRO POUR CENT.
+ * Personne ne le fait, et le planificateur ne le fait pas non plus : son
+ * réglage « réserve » vaut 10 % par défaut, et il refuse tout plan qui
+ * l'entame. Les deux moitiés de l'application disaient donc deux choses
+ * différentes sur la même voiture — le plan s'arrêtait à 10 %, le cercle
+ * promettait les kilomètres des dix derniers pourcents.
+ *
+ * DIX POUR CENT, PARCE QUE C'EST DÉJÀ LE CHIFFRE DU PLAN : la cohérence
+ * vaut mieux qu'une seconde valeur à défendre. */
+export const RESERVE_ANNEAUX = 10;
+
+/**
+ * L'énergie qu'on accepte VRAIMENT de dépenser — PURE.
+ *
+ * @param reserve part de batterie qu'on refuse d'entamer, en %.
+ */
+export function energieUtilisable(v: Vehicule, reserve = RESERVE_ANNEAUX): number {
+  const soc = borner(v.soc, 100);
+  const utile = Math.max(soc - borner(reserve, 100), 0);
+  return capaciteReelle(v) * (utile / 100);
+}
+
 /* L'EFFET DE LA TEMPÉRATURE, en surcoût de consommation.
  *
  * Un véhicule électrique paie le froid deux fois : la chimie de la batterie
@@ -123,8 +151,14 @@ export type Autonomies = Record<CleContexte, number>;
  * Les trois autonomies, en kilomètres.
  * @param celsius température extérieure ; omise, on suppose la référence.
  */
-export function autonomies(v: Vehicule, celsius = TEMPERATURE_REFERENCE): Autonomies {
-  const energie = energieDisponible(v);
+export function autonomies(
+  v: Vehicule, celsius = TEMPERATURE_REFERENCE, reserve = 0,
+): Autonomies {
+  /* LA RÉSERVE EST NULLE PAR DÉFAUT, et ce n'est pas une négligence : le
+     bilan chiffré du panneau répond à « combien contient ma batterie »,
+     tandis que le CERCLE répond à « jusqu'où puis-je aller » — deux questions
+     dont une seule garde une marge. L'appelant tranche. */
+  const energie = reserve > 0 ? energieUtilisable(v, reserve) : energieDisponible(v);
   const facteur = facteurTemperature(celsius);
   const rendu = {} as Autonomies;
   for (const { cle } of CONTEXTES) {

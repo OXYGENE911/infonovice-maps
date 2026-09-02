@@ -11,7 +11,10 @@ import { masseDeclaree, estUneMoto } from '../lib/vehicule';
 import { Marker } from 'maplibre-gl';
 import { RechercheAdresse } from './recherche';
 import { EtapesItineraire } from './etapes-itineraire';
-import { calculerItineraire, formaterDistance, formaterDuree, PROFILS, EVITEMENTS, OPTIMISATIONS, ErreurItineraire, MAX_ETAPES, type Profil, type Itineraire, type Eviter, type Optimisation } from '../lib/itineraire';
+import {
+  meriteUneAlternative, vautLaPeine, phraseAlternative,
+} from '../lib/detour';
+import { calculerItineraire, itineraireDirect, formaterDistance, formaterDuree, PROFILS, EVITEMENTS, OPTIMISATIONS, ErreurItineraire, MAX_ETAPES, type Profil, type Itineraire, type Eviter, type Optimisation } from '../lib/itineraire';
 import { formaterCoordonnees, type PointGeo } from '../lib/coordonnees';
 import { lireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { listerFavoris } from '../lib/favoris';
@@ -218,7 +221,8 @@ export class PanneauItineraire extends HTMLElement {
      usage est un réglage qu'on cesse d'utiliser. */
   #voletsOuverts: { reseaux: boolean; toutes: boolean } = { reseaux: false, toutes: false };
   /** Le profil véhicule du dernier plan, pour rejouer sans relire IndexedDB. */
-  #vehiculeCourant: { capaciteKwh: number; consommationKwh100: number; puissanceMaxKw: number } | null = null;
+  #vehiculeCourant: { capaciteKwh: number; consommationKwh100: number; puissanceMaxKw: number;
+    puissanceMoyenneKw?: number } | null = null;
 
   /* LES CONDITIONS DU TRAJET (28/08) — température aux deux bouts, dénivelé,
      vitesse moyenne. Relevées UNE fois par itinéraire quand la page recharge
@@ -536,6 +540,24 @@ export class PanneauItineraire extends HTMLElement {
                  dire à quoi. -->
             <div class="iti-pied">
               <p class="iti-resultat" role="status" hidden></p>
+              <!-- LE TRAJET PLUS DIRECT (ROUTE-1, 02/09). Armelin : « je ne
+                   comprends pas l'itinéraire… qui me fait faire presque 200 km
+                   de plus que le trajet des autres GPS ». Vérifié : le service
+                   public rend 492 km là où les autres en rendent 345, sur ses
+                   TROIS moteurs — il surestime de moitié le temps sur les
+                   nationales et fuit donc le corridor direct.
+                   ON PROPOSE, ON NE REMPLACE PAS : les deux chiffres sont
+                   là, et c'est l'usager qui tranche. Remplacer d'office ferait
+                   de nous le juge d'un graphe public, et il nous arrivera de
+                   nous tromper. -->
+              <div class="iti-direct" role="status" hidden>
+                <p class="iti-direct-texte"></p>
+                <div class="iti-direct-gestes">
+                  <button type="button" class="iti-direct-prendre">Prendre ce trajet</button>
+                  <button type="button" class="iti-direct-ignorer"
+                    aria-label="Garder le trajet proposé par le service">Garder celui-ci</button>
+                </div>
+              </div>
               <p class="iti-erreur" role="alert" hidden></p>
 
               <div class="iti-actions" hidden>
@@ -809,6 +831,33 @@ export class PanneauItineraire extends HTMLElement {
       if (!liste) return;
       liste.hidden = !liste.hidden;
       b.setAttribute('aria-expanded', String(!liste.hidden));
+    });
+    /* PRENDRE LE TRAJET DIRECT (ROUTE-1, 02/09). On ne relance PAS un calcul :
+       le tracé est déjà là, payé par les deux requêtes de la proposition. On
+       le pose comme s'il venait du service — parce qu'il en vient. */
+    this.querySelector('.iti-direct-prendre')?.addEventListener('click', () => {
+      const direct = this.#direct;
+      if (!direct) return;
+      this.#dernier = direct;
+      this.#direct = null;
+      (this.querySelector('.iti-direct') as HTMLElement).hidden = true;
+      /* LE PLAN DE RECHARGE REPART : il décrivait l'autre trajet, et ses
+         bornes ne sont plus sur la route. Même raisonnement qu'au recalcul. */
+      this.#planCourant = null;
+      this.#bornesTrajet = [];
+      this.#imposees.clear();
+      this.#ecartees.clear();
+      this.#agrements = null;
+      this.#agrementsPour = null;
+      this.#majResume();
+      this.#reinitialiserSections(false);
+      this.#tracer(direct);
+      clearTimeout(this.#minuteurPlanAuto);
+      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, 1200);
+    });
+    this.querySelector('.iti-direct-ignorer')?.addEventListener('click', () => {
+      this.#direct = null;
+      (this.querySelector('.iti-direct') as HTMLElement).hidden = true;
     });
     this.querySelector('.iti-effacer')?.addEventListener('click', () => this.#effacer());
 
@@ -1141,7 +1190,8 @@ export class PanneauItineraire extends HTMLElement {
    * seule interprétation des champs.
    */
   async #lireVehicule(): Promise<{
-    vehicule: { capaciteKwh: number; consommationKwh100: number; puissanceMaxKw: number };
+    vehicule: { capaciteKwh: number; consommationKwh100: number; puissanceMaxKw: number;
+      puissanceMoyenneKw?: number };
     socDepart: number;
     profilConditions: ProfilConditions;
   } | null> {
@@ -1164,6 +1214,12 @@ export class PanneauItineraire extends HTMLElement {
         consommationKwh100: nombre(conso),
         // 150 kW par défaut : une valeur courante, et l'interface le dit.
         puissanceMaxKw: nombre(brut['puissanceMaxKw']) || 150,
+        /* LA MOYENNE RELEVÉE SUIT LE VÉHICULE quand le catalogue la connaît
+           (RECHARGE-1, 02/09) : c'est elle qui décide du temps de charge, et
+           non la pointe qu'aucune borne ne tient. Absente, le planificateur
+           l'estime et le dit. */
+        ...(optionnel(brut['puissanceMoyenneKw']) !== undefined
+          ? { puissanceMoyenneKw: nombre(brut['puissanceMoyenneKw']) } : {}),
       },
       socDepart: nombre(brut['soc']) || 100,
       profilConditions: {
@@ -3781,6 +3837,51 @@ export class PanneauItineraire extends HTMLElement {
   }
 
 
+  /** Le trajet direct proposé, gardé pour le bouton qui l'applique. */
+  #direct: Itineraire | null = null;
+
+  /**
+   * Cherche un trajet plus direct, et le PROPOSE (ROUTE-1, 02/09).
+   *
+   * TROIS GARDES AVANT DE DÉPENSER QUOI QUE CE SOIT :
+   *   1. le rapport route / vol d'oiseau dépasse 1,5 — gratuit ;
+   *   2. le trajet trouvé est vraiment plus court (un dixième ET 25 km) ;
+   *   3. le jeton de séquence n'a pas bougé — sinon on répondrait à un trajet
+   *      que l'usager a déjà remplacé.
+   *
+   * L'ÉCHEC EST MUET. Un service qui ne répond pas n'a pas à produire un
+   * message : on n'avait rien promis.
+   */
+  #chercherPlusDirect(
+    jeton: number, depart: PointGeo, arrivee: PointGeo, profil: Profil,
+    eviter: Eviter[], distanceM: number,
+  ): void {
+    const boite = this.querySelector<HTMLElement>('.iti-direct');
+    if (boite) boite.hidden = true;
+    this.#direct = null;
+    if (!meriteUneAlternative(distanceM, depart, arrivee)) return;
+    void itineraireDirect(depart, arrivee, profil, { eviter })
+      .then((direct) => {
+        if (jeton !== this.#sequence || !boite) return;
+        if (!vautLaPeine(distanceM, direct.distance)) return;
+        this.#direct = direct;
+        const texte = boite.querySelector<HTMLElement>('.iti-direct-texte');
+        if (texte) {
+          /* ON DIT LE TEMPS AUSSI, ET C'EST HONNÊTE : le service estime le
+             direct plus lent, parce qu'il surestime les nationales. Cacher
+             cette moitié ferait passer la proposition pour gratuite. */
+          const min = Math.round((direct.duree - this.#dernier!.duree) / 60);
+          texte.textContent = `${phraseAlternative(distanceM, direct.distance)}`
+            + (min > 0
+              ? ` Le service l’estime ${min} min plus lent — il surestime le`
+                + ' temps sur les nationales.'
+              : '');
+        }
+        boite.hidden = false;
+      })
+      .catch(() => { /* le service n'a pas répondu : on n'avait rien promis */ });
+  }
+
   async #calculer(): Promise<void> {
     this.#majBoutons();
     if (!this.#carte || !this.#depart || !this.#arrivee) return;
@@ -3854,6 +3955,10 @@ export class PanneauItineraire extends HTMLElement {
       // vidés — leurs contenus ne valent que pour l'itinéraire qui les a produits.
       this.#reinitialiserSections(false);
       this.#tracer(iti);
+      /* ET L'ON REGARDE SI LE SERVICE NOUS A FAIT DÉTOURNER (ROUTE-1, 02/09).
+         Le détecteur ne coûte RIEN — deux coordonnées et une racine carrée ;
+         les deux requêtes qui suivent ne partent que s'il a parlé. */
+      this.#chercherPlusDirect(jeton, depart, arrivee, profil, eviter, iti.distance);
     } catch (e) {
       if (jeton !== this.#sequence) return;
       resultat.hidden = true;

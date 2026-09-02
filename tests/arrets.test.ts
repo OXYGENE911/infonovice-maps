@@ -5,7 +5,9 @@
 // LE SERVICE LE PLUS UTILE EST PARFOIS DE DIRE NON, TÔT, AVEC LE MOTIF.
 import { describe, expect, test } from 'vitest';
 import {
-  planifierArrets, cleBorne, type BorneCandidate, type OptionsPlan,
+  planifierArrets, cleBorne, dureeChargeMin, puissanceSoutenue,
+  PART_MOYENNE, PLAFOND_MOYENNE_KW,
+  type BorneCandidate, type OptionsPlan,
 } from '../src/lib/arrets';
 
 /** La VF8 d'Armelin, relevés réels : 82,44 kWh utilisables, 29,4 kWh/100 km
@@ -565,5 +567,82 @@ describe('planifierArrets — le dernier arrêt dérisoire', () => {
     });
     // Faisable dans tous les cas : c'est le contrat qu'on ne casse pas.
     expect(plan.faisable).toBe(true);
+  });
+});
+
+/* CE QU'UNE BORNE TIENT VRAIMENT (RECHARGE-1, 02/09).
+ *
+ * Armelin : « il me dit 23 minutes de recharge… c'est très très optimiste » et
+ * « quand 16 min de charge sont affichées, j'en fais généralement 5 à 10 de
+ * plus ». Le modèle calculait avec la POINTE du véhicule pendant toute la
+ * session ; une borne ne tient jamais sa pointe.
+ *
+ * LES CHIFFRES DE CES TESTS SONT DES RELEVÉS (EV Database, 02/09) : la VF 8
+ * d'Armelin tient 105 kW de moyenne pour 150 de pointe, la Model Y Premium
+ * 125 pour 250. */
+
+describe('puissanceSoutenue', () => {
+  const base = { capaciteKwh: 80, consommationKwh100: 20, puissanceMaxKw: 150 };
+
+  test('prend la moyenne RELEVÉE quand le catalogue la connaît', () => {
+    expect(puissanceSoutenue({ ...base, puissanceMoyenneKw: 105 })).toBe(105);
+  });
+
+  /* SANS RELEVÉ, ON ESTIME — ET L'ON DIT QUE C'EST UNE ESTIMATION (l'en-tête
+     du module). Deux tiers : la médiane des huit relevés vaut 0,63, et un
+     chiffre rond s'explique. */
+  test('estime aux deux tiers de la pointe quand elle est inconnue', () => {
+    expect(puissanceSoutenue(base)).toBeCloseTo(100, 5);
+    expect(PART_MOYENNE).toBeCloseTo(2 / 3, 5);
+  });
+
+  /* AUCUNE MOYENNE MESURÉE NE DÉPASSE 130 kW, pointe à 250 comprise. Sans ce
+     plafond, une borne annoncée à 400 kW promettrait 267 kW soutenus. */
+  test('plafonne l’estimation à ce qu’aucun véhicule ne dépasse', () => {
+    expect(puissanceSoutenue({ ...base, puissanceMaxKw: 400 })).toBe(PLAFOND_MOYENNE_KW);
+    expect(PLAFOND_MOYENNE_KW).toBe(130);
+  });
+
+  /* UNE MOYENNE RELEVÉE PLUS HAUTE QUE LA POINTE serait une donnée fausse :
+     on ne la croit pas au-delà de ce que le véhicule accepte. */
+  test('ne dépasse jamais la pointe, même sur un relevé aberrant', () => {
+    expect(puissanceSoutenue({ ...base, puissanceMoyenneKw: 400 })).toBe(150);
+  });
+});
+
+describe('dureeChargeMin — la correction de RECHARGE-1', () => {
+  const vf8 = { capaciteKwh: 82.44, consommationKwh100: 29.4, puissanceMaxKw: 150 };
+
+  /* LE CAS D'ARMELIN, chiffré. 40 kWh sur une borne de 150 kW : la pointe
+     donnait 17,8 min, la moyenne relevée en donne 25,4 — les « 5 à 10 minutes
+     de plus » qu'il constate. */
+  test('rend une durée plus longue avec la moyenne relevée qu’avec la pointe', () => {
+    /* L'ANCIEN MODÈLE SE REJOUE en déclarant une moyenne ÉGALE à la pointe :
+       c'est exactement ce qu'il supposait, et la comparaison devient lisible.
+       (Comparer à `vf8` nu aurait comparé à l'ESTIMATION des deux tiers, pas
+       à l'ancien comportement — le premier jet de ce test s'y est trompé.) */
+    const ancien = dureeChargeMin(40, 350, { ...vf8, puissanceMoyenneKw: 150 }, 20, 60);
+    const parLaMoyenne = dureeChargeMin(40, 350, { ...vf8, puissanceMoyenneKw: 105 }, 20, 60);
+    expect(parLaMoyenne).toBeGreaterThan(ancien);
+    expect(parLaMoyenne / ancien).toBeCloseTo(150 / 105, 1);
+    /* 17,8 min hier, 25,4 aujourd'hui : les « 5 à 10 minutes de plus »
+       qu'Armelin constate à la borne. */
+    expect(Math.round(ancien)).toBe(18);
+    expect(Math.round(parLaMoyenne)).toBe(25);
+  });
+
+  /* LA BORNE GARDE SA POINTE : c'est le véhicule qui décroît, pas elle.
+     Appliquer la décroissance aux deux compterait deux fois le même
+     phénomène — et une borne de 50 kW resterait une borne de 50 kW. */
+  test('n’applique pas la décroissance à la puissance de la borne', () => {
+    const v = { ...vf8, puissanceMoyenneKw: 105 };
+    /* Sur une borne de 50 kW, c'est ELLE qui limite : la moyenne du véhicule
+       (105) ne s'applique pas, et la durée suit les 50 kW annoncés. */
+    expect(dureeChargeMin(40, 50, v, 20, 60))
+      .toBeCloseTo((40 / (50 * 0.9)) * 60, 5);
+  });
+
+  test('rend zéro sans énergie à charger, comme avant', () => {
+    expect(dureeChargeMin(0, 150, vf8, 50, 50)).toBe(0);
   });
 });

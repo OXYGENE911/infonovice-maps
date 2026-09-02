@@ -6,11 +6,7 @@
 // 87,7 kWh nominaux, SOCE 94 %, 436 km annoncés à 100 % après dégradation,
 // ~400 km en ville, ~280 km sur autoroute à 130 km/h l'été.
 import { describe, expect, test } from 'vitest';
-import {
-  capaciteReelle, energieDisponible, autonomies, consommationsDepuisEssais,
-  facteursDAffichage, CONTEXTES, type Vehicule,
-  masseDeclaree,
-} from '../src/lib/vehicule';
+import { capaciteReelle, energieDisponible, autonomies, consommationsDepuisEssais, facteursDAffichage, CONTEXTES, type Vehicule, masseDeclaree, energieUtilisable, RESERVE_ANNEAUX } from '../src/lib/vehicule';
 
 const VF8: Vehicule = {
   nom: 'VinFast VF8',
@@ -195,5 +191,68 @@ describe('masseDeclaree (PONT-1)', () => {
     /* Ni batterie, ni consommation : la masse suffit à l'avertissement de
        tonnage, et c'est le seul chiffre dont il a besoin. */
     expect(masseDeclaree({ vehicule: { masseKg: 2520 } })).toBe(2520);
+  });
+});
+
+/* LE CERCLE D'ACTION GARDE UNE RÉSERVE (RAYON-2, 02/09).
+ *
+ * LE DÉFAUT. Il supposait qu'on roule jusqu'à ZÉRO POUR CENT. Personne ne le
+ * fait, et le planificateur ne le fait pas non plus : son réglage « réserve »
+ * vaut 10 % et il refuse tout plan qui l'entame. Les deux moitiés de
+ * l'application disaient donc deux choses de la même voiture — le plan
+ * s'arrêtait à 10 %, le cercle promettait les kilomètres des dix derniers
+ * pourcents. Armelin : « le rayon d'action trop optimiste par défaut ». */
+
+describe('energieUtilisable', () => {
+  const vf8: Vehicule = {
+    nom: 'VF8', capaciteNominale: 87.7, soce: 94, soc: 100,
+    consommations: { ville: 20, route: 23, autoroute: 29.4 }, puissanceMaxKw: 150,
+  };
+
+  test('retire la réserve de ce qu’on accepte de dépenser', () => {
+    const tout = energieDisponible(vf8);
+    const utile = energieUtilisable(vf8, 10);
+    expect(utile).toBeCloseTo(tout * 0.9, 5);
+  });
+
+  /* LA RÉSERVE EST CELLE DU PLAN — une seconde valeur à défendre aurait rouvert
+     l'incohérence qu'on vient de fermer. */
+  test('vaut dix pour cent par défaut, comme le plan de recharge', () => {
+    expect(RESERVE_ANNEAUX).toBe(10);
+    expect(energieUtilisable(vf8)).toBeCloseTo(energieUtilisable(vf8, 10), 5);
+  });
+
+  /* UNE BATTERIE SOUS LA RÉSERVE NE DONNE RIEN À DÉPENSER, et surtout pas un
+     nombre négatif : un anneau de rayon négatif ne se dessine pas, il se
+     retourne. */
+  test('rend zéro plutôt qu’un négatif quand la charge est sous la réserve', () => {
+    expect(energieUtilisable({ ...vf8, soc: 5 }, 10)).toBe(0);
+  });
+});
+
+describe('autonomies — réserve et température', () => {
+  const vf8: Vehicule = {
+    nom: 'VF8', capaciteNominale: 87.7, soce: 94, soc: 100,
+    consommations: { ville: 20, route: 23, autoroute: 29.4 }, puissanceMaxKw: 150,
+  };
+
+  /* LE BILAN CHIFFRÉ ET LE CERCLE RÉPONDENT À DEUX QUESTIONS : « combien
+     contient ma batterie » et « jusqu'où puis-je aller ». Une seule des deux
+     garde une marge, et l'appelant tranche. */
+  test('ne retire rien par défaut : c’est l’appelant qui demande la réserve', () => {
+    const sans = autonomies(vf8);
+    const avec = autonomies(vf8, undefined, 10);
+    expect(avec.autoroute).toBeCloseTo(sans.autoroute * 0.9, 3);
+  });
+
+  /* LE FROID COÛTE, ET LE CERCLE L'IGNORAIT : en janvier il promettait les
+     kilomètres d'un mois de mai. */
+  test('raccourcit l’autonomie quand il fait froid dehors', () => {
+    const doux = autonomies(vf8, 20, 10);
+    const gel = autonomies(vf8, -5, 10);
+    expect(gel.autoroute).toBeLessThan(doux.autoroute);
+    /* −5 °C : vingt-cinq degrés sous la référence, soit +30 % de
+       consommation dans le modèle — l'autonomie tombe donc à 1/1,3. */
+    expect(gel.autoroute).toBeCloseTo(doux.autoroute / 1.3, 1);
   });
 });

@@ -2574,6 +2574,37 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
 .fav-repere-saisie .recherche input { width: 100%; box-sizing: border-box; }
 
 /* --- Les routines locales (décision d'Armelin du 29/08) --- */
+/* LA PROPOSITION DE TRAJET DIRECT (ROUTE-1, 02/09). Elle se remarque sans
+   crier : un liseré ambre, comme le rappel des bornes filtrées — c'est une
+   information, pas une alerte. Elle ne remplace rien tant qu'on n'a pas
+   cliqué. */
+.iti-direct {
+  margin: 6px 0 2px; padding: 8px 10px; border-radius: 10px;
+  border: 1px solid #B45309; background: var(--fond);
+  display: grid; gap: 7px;
+}
+/* ET LA GARDE QUI VA AVEC. `display: grid` bat la règle par défaut de
+   l'attribut `hidden` : sans cette ligne, le cartouche resterait affiché en
+   permanence — c'est le défaut exact qu'ERGO-6 a corrigé sur sept classes le
+   même jour, et il n'a pas fallu deux heures pour le refaire. */
+.iti-direct[hidden] { display: none; }
+.iti-direct-texte {
+  margin: 0; font: 500 12px/1.4 var(--police); color: var(--texte-1);
+}
+.iti-direct-gestes { display: flex; flex-wrap: wrap; gap: 6px; }
+.iti-direct-prendre, .iti-direct-ignorer {
+  padding: 5px 10px; border-radius: 8px; cursor: pointer;
+  font: 600 11.5px var(--police);
+}
+.iti-direct-prendre {
+  border: 1px solid #B45309; background: #B45309; color: var(--blanc);
+}
+.iti-direct-ignorer {
+  border: 1px solid var(--bord-2); background: var(--fond); color: var(--texte-2);
+}
+.iti-direct-prendre:focus-visible,
+.iti-direct-ignorer:focus-visible { outline: none; box-shadow: var(--focus); }
+
 .iti-routines { display: flex; flex-wrap: wrap; gap: 6px; }
 .iti-routine {
   padding: 6px 12px; border-radius: 999px;

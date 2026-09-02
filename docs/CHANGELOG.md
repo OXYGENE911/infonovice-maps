@@ -2,6 +2,74 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.48.0] — 2026-09-02 — RECHARGE-1, RAYON-2 et ROUTE-1
+
+### Corrigé — le temps de charge était calculé sur une puissance qu'aucune borne ne tient
+- Armelin : « il me dit 23 minutes de recharge… c'est très très optimiste » et
+  « quand 16 min de charge sont affichées, j'en fais généralement 5 à 10 de
+  plus ». Le modèle calculait avec la **puissance de pointe** du véhicule
+  pendant toute la session. Une borne ne tient jamais sa pointe : elle décroît
+  dès les premiers pourcents.
+- **Huit relevés, une seule source** (EV Database, 02/09). La puissance
+  moyenne d'une session 10 → 80 % vaut de 0,50 à 0,90 fois la pointe, médiane
+  **0,63** — et la VF 8 d'Armelin tient 105 kW pour 150 de pointe. Ces
+  moyennes entrent au catalogue, modèle par modèle.
+- **Là où le relevé manque**, le planificateur estime aux **deux tiers** de la
+  pointe, plafonnés à 130 kW — aucune moyenne mesurée ne dépasse ce plafond,
+  pointe à 250 kW comprise. Mesuré vaut mieux que modélisé ; modélisé vaut
+  mieux qu'optimiste.
+- Effet chiffré sur la VF 8 : 40 kWh sur une borne rapide passent de **18 à
+  25 minutes**. Ce sont les « 5 à 10 minutes de plus » constatées à la borne.
+- Le choix de la borne suit la même puissance : comparer des bornes sur des
+  pointes qu'aucune ne tient classait mal celles qui les tiennent le mieux.
+
+### Corrigé — le cercle d'action supposait qu'on roule jusqu'à zéro
+- Il promettait les kilomètres des **dix derniers pourcents**, quand le
+  planificateur refuse déjà tout plan qui descend sous 10 %. Deux moitiés de
+  l'application disaient deux choses de la même voiture. Le cercle garde
+  désormais la même réserve que le plan.
+- Il **ignorait la température** alors que l'application connaît la météo : en
+  janvier, il promettait les kilomètres d'un mois de mai. Un appel, sur la
+  position qu'on vient de recevoir, et le modèle du froid s'applique — jusqu'à
+  45 % de consommation en plus.
+- Sur la VF 8 : 400 km d'autonomie donnaient un cercle de 320 km, ils en
+  donnent **288** ; 280 km donnaient 224, ils donnent **202**. Et par −5 °C,
+  ce même cercle tombe sous 230 km.
+- **La note le dit** : « Ils gardent 10 % de batterie en réserve, comme le
+  plan de recharge, et tiennent compte des −5 °C relevés dehors. » Un chiffre
+  juste et inexpliqué se lit comme une incohérence.
+
+### Ajouté — un trajet plus direct, quand le service en propose un qui détourne
+- Armelin : « je ne comprends pas l'itinéraire… qui me fait faire presque
+  200 km de plus que le trajet des autres GPS ». Saumur → Montignac-Lascaux
+  rendait **492 km** contre 345 partout ailleurs, en contournant Poitiers par
+  Vierzon.
+- L'application repère maintenant ces détours et **propose** l'autre trajet,
+  avec les deux chiffres. Elle ne remplace rien : c'est l'usager qui tranche.
+
+### Mesuré — la cause est dans le graphe public, et c'est chiffré
+- Les **trois** moteurs d'IGN rendent les mêmes 492 km (OSRM, Valhalla,
+  pgRouting). Ce n'est donc pas notre calcul.
+- La décomposition dit pourquoi : le moteur est juste sur autoroute
+  (Paris → Lyon ×1,06 sur le temps, Paris → Marseille ×1,12) et **surestime de
+  moitié le temps sur les nationales** (Poitiers → Limoges : 2 h 25 annoncées
+  pour 1 h 45 réelles, ×1,51). Il fuit un corridor qu'il croit lent.
+- La parade mesurée : redemander le trajet « le plus rapide » en le
+  **contraignant** à passer par trois points du tracé « le plus court ». Sur
+  les sept trajets éprouvés, 492 km deviennent 318, et 166 deviennent 98 sur
+  Saumur → Poitiers.
+
+### Ce que ça coûte, et ce qui l'encadre
+- **Le détecteur est gratuit** : le rapport route ÷ vol d'oiseau, deux
+  coordonnées et une racine carrée. Les deux requêtes supplémentaires ne
+  partent que s'il dépasse 1,5 — mesuré sur quatorze trajets, les liaisons
+  autoroutières ordinaires tiennent entre 1,10 et 1,36.
+- **La proposition n'apparaît qu'au-delà d'un dixième de la distance ET de
+  25 km.** Cette règle garde les trois vrais cas et écarte les quatre autres,
+  dont Paris → Lyon où le « direct » serait **plus long** (499 contre 466).
+- **On dit aussi que le service l'estime plus lent**, parce qu'il surestime les
+  nationales. Cacher cette moitié ferait passer la proposition pour gratuite.
+- Appliquer le trajet ne repaie **aucune requête** : le tracé est déjà là.
 ## [1.47.0] — 2026-09-02 — ERGO-6 et ERGO-7
 
 ### Corrigé — trois défauts d'un même retour, capture d'écran à l'appui

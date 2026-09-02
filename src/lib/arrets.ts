@@ -43,6 +43,9 @@ export interface Vehicule {
   consommationKwh100: number;
   /** Ce que le véhicule accepte en pointe. Une borne plus rapide n'y change rien. */
   puissanceMaxKw: number;
+  /* CE QU'IL TIENT VRAIMENT SUR UNE SESSION, en kW (RECHARGE-1, 02/09).
+     Absent : le modèle ci-dessous l'estime depuis la pointe. */
+  puissanceMoyenneKw?: number;
 }
 
 export interface OptionsPlan {
@@ -147,6 +150,44 @@ const SEUIL_RALENTI = 80;
 /** Rendement de la charge : une part de l'énergie part en chaleur. */
 const RENDEMENT = 0.9;
 
+/* CE QU'UNE BORNE TIENT VRAIMENT (RECHARGE-1, 02/09).
+ *
+ * LE DÉFAUT. Le modèle calculait avec la POINTE du véhicule pendant toute la
+ * session. Armelin : « il me dit 23 minutes de recharge… c'est très très
+ * optimiste » et « quand 16 min de charge sont affichées, j'en fais
+ * généralement 5 à 10 de plus ». Il a raison, et l'écart est exactement celui
+ * qu'on peut mesurer.
+ *
+ * CE QUE J'AI RELEVÉ (EV Database, 02/09, huit modèles — table complète en
+ * tête de catalogue-vehicules.ts) : la puissance MOYENNE d'une session de 10 à
+ * 80 % vaut de 0,50 à 0,90 fois la pointe, médiane 0,63. La VF 8 d'Armelin :
+ * 150 kW de pointe, 105 kW de moyenne.
+ *
+ * LA MOYENNE RELEVÉE PASSE D'ABORD. Elle vient du catalogue quand elle y est ;
+ * sinon on applique ce facteur, qui est une ESTIMATION et non une mesure.
+ *
+ * DEUX TIERS, ET PAS LA MÉDIANE EXACTE : 0,63 collerait à un échantillon de
+ * huit, 2/3 est le même ordre de grandeur avec un chiffre rond qu'on peut
+ * expliquer. L'erreur moyenne sur les huit relevés est de 14 kW.
+ *
+ * PLAFOND À 130 kW, et il vient des mêmes relevés : aucune moyenne mesurée ne
+ * le dépasse, pointe à 250 kW comprise. Sans lui, une borne annoncée à 400 kW
+ * promettrait 267 kW soutenus, que rien ne tient aujourd'hui. */
+export const PART_MOYENNE = 2 / 3;
+export const PLAFOND_MOYENNE_KW = 130;
+
+/**
+ * La puissance réellement soutenue par un véhicule, en kW — PURE.
+ *
+ * `puissanceMoyenneKw` du catalogue si elle est connue, sinon l'estimation.
+ */
+export function puissanceSoutenue(v: Vehicule): number {
+  if (Number.isFinite(v.puissanceMoyenneKw) && (v.puissanceMoyenneKw ?? 0) > 0) {
+    return Math.min(v.puissanceMoyenneKw!, v.puissanceMaxKw);
+  }
+  return Math.min(v.puissanceMaxKw * PART_MOYENNE, PLAFOND_MOYENNE_KW);
+}
+
 /** Garde-fou de boucle. Vingt arrêts dépassent tout trajet français réaliste. */
 const MAX_ARRETS = 20;
 
@@ -168,8 +209,12 @@ export function dureeChargeMin(
   /* LE BMS A LE DERNIER MOT : batterie trop froide ou trop chaude, la
      puissance réelle tombe sous ce que la borne ET le véhicule promettent
      (relevé d'Armelin sur son VF8, 28/08). */
+  /* LA BORNE GARDE SA POINTE, LE VÉHICULE PREND SA MOYENNE. Ce n'est pas une
+     dissymétrie de confort : la borne EST capable de sa puissance nominale
+     pendant toute la session — c'est le véhicule qui décroît. Appliquer la
+     décroissance à la borne compterait deux fois le même phénomène. */
   const puissance = Math.min(
-    puissanceBorneKw ?? 0, v.puissanceMaxKw,
+    puissanceBorneKw ?? 0, puissanceSoutenue(v),
     plafondThermiqueKw2 ?? Infinity,
   );
   if (!(puissance > 0) || !(energieKwh > 0)) return 0;
@@ -212,8 +257,13 @@ function choisir(
   for (const c of candidates) {
     const gainKm = (c.avancementM - departM) / 1000;
     /* Bridée par le BMS, une borne de 350 kW ne vaut pas mieux qu'une de
-       60 : le score doit compter la puissance qu'on AURA, pas la promesse. */
-    const puissance = Math.min(c.puissanceKw ?? 0, v.puissanceMaxKw, plafondKw ?? Infinity);
+       60 : le score doit compter la puissance qu'on AURA, pas la promesse.
+       ET C'EST LA PUISSANCE SOUTENUE (RECHARGE-1, 02/09), la même que celle
+       du calcul de durée : comparer des bornes sur des pointes qu'aucune ne
+       tient classerait mal celles qui les tiennent le mieux. */
+    const puissance = Math.min(
+      c.puissanceKw ?? 0, puissanceSoutenue(v), plafondKw ?? Infinity,
+    );
     if (puissance <= 0) continue;
     // Minutes qu'il faudrait pour récupérer 40 kWh sur cette borne : un étalon
     // commun, qui rend les puissances comparables entre elles.
