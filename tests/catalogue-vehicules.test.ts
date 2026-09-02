@@ -309,3 +309,42 @@ describe('les modèles ajoutés le 02/09', () => {
     expect(cle('smart-5')!.capaciteKwh).toBe(94);
   });
 });
+
+describe('le XPENG L03 (02/09)', () => {
+  /* Je l'avais écarté la veille : XPENG ne cataloguait alors que des G6, G9,
+     P7 et X9, et « L03 » ne correspondait à rien que je sache rattacher.
+     Armelin a donné le configurateur officiel français — c'est un modèle réel
+     de 2026, avec quatre versions. Demander plutôt que deviner a rendu la
+     bonne réponse ; inventer aurait rendu la mauvaise. */
+  const versions = CATALOGUE.filter((m) => m.modele === 'L03');
+
+  it('ses quatre versions sont là', () => {
+    expect(versions.map((m) => m.variante)).toEqual([
+      'RWD Standard Range', 'RWD Long Range', 'RWD Long Range Ultra',
+      'AWD Performance Ultra',
+    ]);
+  });
+
+  it('les autonomies sont celles du configurateur officiel', () => {
+    expect(versions.map((m) => m.wltpKm)).toEqual([445, 520, 480, 440]);
+  });
+
+  it('LES DEUX « ULTRA » PARTAGENT LA BATTERIE DE LA LONG RANGE', () => {
+    /* Leur autonomie plus faible vient des jantes de 20 pouces et de la
+       transmission intégrale, PAS d'un pack plus petit. Leur donner une
+       capacité réduite aurait sous-estimé leur portée à chaque trajet. */
+    const grosses = versions.filter((m) => m.variante !== 'RWD Standard Range');
+    for (const m of grosses) {
+      expect(m.capaciteKwh).toBe(69.5);
+      expect(m.puissanceMaxKw).toBe(236);
+    }
+  });
+
+  it('la Standard Range porte SA crête, recoupée par XPENG France', () => {
+    /* 193 kW : EV Database et le site officiel disent la même chose. C'est le
+       recoupement qui manquait à l'Alpine A390 la veille. */
+    const sr = versions.find((m) => m.variante === 'RWD Standard Range')!;
+    expect(sr.capaciteKwh).toBe(57);
+    expect(sr.puissanceMaxKw).toBe(193);
+  });
+});

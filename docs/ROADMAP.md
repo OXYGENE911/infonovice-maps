@@ -573,10 +573,14 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #183 — VÉHICULES (02/09) : six modèles sur quinze ajoutés (Alpine
       A390, MG Cyberster, Smart #5, BYD Atto 2, Seal U, Tang), d'une SEULE
       source cohérente qui distingue capacité brute et utile.
-- [ ] VÉHICULES — les neuf restants : Cupra Raval, VW ID.Polo, DS N°7 et DS 3
-      E-Tense, BYD Atto 3 EVO, XPENG L03, variantes Tesla par année. Les uns
-      sont trop récents pour avoir une fiche stable ; « XPENG L03 » ne
-      correspond à aucun modèle que j'aie su rattacher — à faire préciser.
+- [x] PR #184 — XPENG L03 (02/09) : ses quatre versions, capacités UTILES
+      d'EV Database, crête de la Standard Range recoupée par XPENG France,
+      autonomies du configurateur officiel. Armelin a fourni la source que je
+      demandais.
+- [ ] VÉHICULES — les huit restants : Cupra Raval, VW ID.Polo, DS N°7 et DS 3
+      E-Tense, BYD Atto 3 EVO, variantes Tesla par année. Tous trop récents
+      pour une fiche stable — à reprendre quand EV Database ou une fiche
+      technique les détaillera.
 - [x] PR #181 — ERGO-4 (02/09) : six menus rendus atteignables. Recharge en
       tête de l'entonnoir avec son picto ; panneau borné et défilant sur
       mobile ; historique extrait vers le Menu ; menu du trajet réduit à deux
