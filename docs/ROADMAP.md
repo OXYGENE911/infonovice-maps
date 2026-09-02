@@ -600,6 +600,19 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       vient d'UN appel météo sur le point d'arrivée, déjà interrogé pendant le
       trajet. La comparaison les affiche, le fichier de contribution les
       emporte, et l'absence se dit au lieu de s'écrire zéro.
+- [x] PR #194 — RECHARGE-1 + RAYON-2 (02/09) : les deux « trop optimistes »
+      du premier retour utilisateur. Le temps de charge se calculait sur la
+      POINTE ; huit relevés donnent la moyenne réelle d'une session (0,63 de
+      la pointe en médiane, 105 kW pour les 150 de la VF 8), et le catalogue
+      les porte. Le cercle d'action roulait jusqu'à 0 % et ignorait la
+      température : il garde maintenant les 10 % du plan et subit le froid.
+- [x] ROUTE-1 (02/09), livré avec la PR #194 : le détour de 165 km signalé par Armelin.
+      LA CAUSE EST DANS LE GRAPHE PUBLIC — les trois moteurs d'IGN rendent les
+      mêmes 492 km, et le moteur surestime de moitié le temps sur les
+      nationales (×1,51 mesuré sur Poitiers → Limoges) quand il est juste sur
+      autoroute (×1,06). On PROPOSE donc un trajet contraint à passer par le
+      corridor direct — 318 km au lieu de 492 — sans jamais remplacer.
+      Détecteur gratuit, deux requêtes seulement s'il parle.
 - [x] PR #193 — ERGO-6 (02/09) : les trois défauts du premier retour
       utilisateur d'Armelin. Rappel ambre coincé dans la rangée flex des
       bornes (panneau de recharge illisible) ; roue crantée qui était un

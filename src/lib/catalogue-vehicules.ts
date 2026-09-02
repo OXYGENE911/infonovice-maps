@@ -62,6 +62,25 @@
  * contredisent ne se moyennent pas, ils s'écartent. Les versions à 52 kWh de
  * ces deux voitures, elles, s'accordent (51,7 kWh, 105 kW) et sont entrées.
  *
+ * LA PUISSANCE MOYENNE, RELEVÉE LE 02/09 SUR HUIT MODÈLES. Une borne ne tient
+ * jamais sa pointe : EV Database publie, à côté d'elle, la puissance MOYENNE
+ * d'une session de 10 à 80 %, et l'écart est considérable.
+ *
+ *   VinFast VF 8 Plus     150 → 105 kW   (0,70)
+ *   Tesla Model Y Premium 250 → 125 kW   (0,50)
+ *   Tesla Model 3 2026    175 → 110 kW   (0,63)
+ *   BYD Atto 3 EVO        220 → 130 kW   (0,59)
+ *   DS N°7 74 kWh         160 →  90 kW   (0,56)
+ *   Cupra Raval Endurance 105 →  95 kW   (0,90)
+ *   VW ID. Polo 52 kWh    105 →  95 kW   (0,90)
+ *
+ * MÉDIANE 0,63, et une tendance nette : plus la pointe est haute, moins elle
+ * se tient. C'est physique — une pointe de 250 kW ne dure que quelques
+ * pourcents de charge, une pointe de 105 kW se maintient presque jusqu'à 80 %.
+ *
+ * LÀ OÙ LE CHAMP EST ABSENT, le planificateur applique sa propre règle et le
+ * DIT. Mesuré vaut mieux que modélisé ; modélisé vaut mieux qu'optimiste.
+ *
  * ILS SONT INDICATIFS ET RÉVISABLES. Un constructeur change une batterie en
  * cours de série sans changer le nom du modèle ; une finition diffère d'une
  * autre. Chaque champ reste modifiable après application — le catalogue
@@ -80,6 +99,16 @@ export interface ModeleVehicule {
   capaciteKwh: number;
   /** Pointe de charge en courant continu, en kW. */
   puissanceMaxKw: number;
+  /* LA PUISSANCE MOYENNE D'UNE SESSION 10 → 80 %, en kW (RECHARGE-1, 02/09).
+     C'EST ELLE QUI DÉCIDE D'UN TEMPS DE CHARGE, pas la pointe : une borne ne
+     tient jamais sa pointe, elle décroît dès les premiers pourcents. Armelin,
+     02/09 : « il me dit 23 minutes de recharge… c'est très très optimiste » et
+     « quand 16 min de charge sont affichées, j'en fais généralement 5 à 10 de
+     plus ».
+     ELLE EST RELEVÉE, JAMAIS DÉDUITE : EV Database la publie modèle par
+     modèle, et le champ reste ABSENT là où je ne l'ai pas lue — le modèle du
+     planificateur prend alors le relais, et il dit qu'il estime. */
+  puissanceMoyenneKw?: number;
   /** Bridage BMS de la charge sous 0 °C d'air, en kW — quand un RELEVÉ le
       documente ; jamais deviné. */
   puissanceFroidKw?: number;
@@ -141,8 +170,8 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
   { cle: 'byd-sealion7', marque: 'BYD', modele: 'Sealion 7', capaciteKwh: 82.5, puissanceMaxKw: 150, wltpKm: 502, prise: 'combo_ccs' },
   { cle: 'byd-sealu', marque: 'BYD', modele: 'Seal U', capaciteKwh: 71.8, puissanceMaxKw: 115, wltpKm: 420, prise: 'combo_ccs' },
   { cle: 'byd-tang', marque: 'BYD', modele: 'Tang', capaciteKwh: 108.8, puissanceMaxKw: 170, wltpKm: 530, prise: 'combo_ccs' },
-  { cle: 'byd-atto3-evo-rwd', marque: 'BYD', modele: 'Atto 3 EVO', variante: 'Design propulsion', capaciteKwh: 74.8, puissanceMaxKw: 220, wltpKm: 510, prise: 'combo_ccs', annees: '2026' },
-  { cle: 'byd-atto3-evo-awd', marque: 'BYD', modele: 'Atto 3 EVO', variante: 'Excellence intégrale', capaciteKwh: 74.8, puissanceMaxKw: 220, wltpKm: 470, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'byd-atto3-evo-rwd', marque: 'BYD', modele: 'Atto 3 EVO', variante: 'Design propulsion', capaciteKwh: 74.8, puissanceMaxKw: 220, wltpKm: 510, puissanceMoyenneKw: 130, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'byd-atto3-evo-awd', marque: 'BYD', modele: 'Atto 3 EVO', variante: 'Excellence intégrale', capaciteKwh: 74.8, puissanceMaxKw: 220, wltpKm: 470, puissanceMoyenneKw: 130, prise: 'combo_ccs', annees: '2026' },
 
   // — Citroën —
   { cle: 'citroen-ec3', marque: 'Citroën', modele: 'ë-C3', capaciteKwh: 44, puissanceMaxKw: 100, wltpKm: 320, prise: 'combo_ccs' },
@@ -155,7 +184,7 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
   { cle: 'cupra-born-58', marque: 'Cupra', modele: 'Born', variante: '58 kWh', capaciteKwh: 58, puissanceMaxKw: 120, wltpKm: 420, prise: 'combo_ccs' },
   { cle: 'cupra-born-77', marque: 'Cupra', modele: 'Born', variante: '77 kWh', capaciteKwh: 77, puissanceMaxKw: 170, wltpKm: 548, prise: 'combo_ccs' },
   { cle: 'cupra-tavascan', marque: 'Cupra', modele: 'Tavascan', capaciteKwh: 77, puissanceMaxKw: 135, wltpKm: 549, prise: 'combo_ccs' },
-  { cle: 'cupra-raval-endurance', marque: 'Cupra', modele: 'Raval', variante: 'Endurance 55 kWh', capaciteKwh: 51.7, puissanceMaxKw: 105, wltpKm: 444, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'cupra-raval-endurance', marque: 'Cupra', modele: 'Raval', variante: 'Endurance 55 kWh', capaciteKwh: 51.7, puissanceMaxKw: 105, wltpKm: 444, puissanceMoyenneKw: 95, prise: 'combo_ccs', annees: '2026' },
 
   // — Dacia —
   { cle: 'dacia-spring', marque: 'Dacia', modele: 'Spring', capaciteKwh: 26.8, puissanceMaxKw: 30, wltpKm: 225, prise: 'combo_ccs' },
@@ -163,7 +192,7 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
   // — DS —
   { cle: 'ds-n4', marque: 'DS', modele: 'N°4', variante: '54 kWh', capaciteKwh: 50, puissanceMaxKw: 100, wltpKm: 450, prise: 'combo_ccs' },
   { cle: 'ds-n8', marque: 'DS', modele: 'N°8', capaciteKwh: 97.2, puissanceMaxKw: 160, wltpKm: 750, prise: 'combo_ccs' },
-  { cle: 'ds-n7-74', marque: 'DS', modele: 'N°7', variante: '74 kWh', capaciteKwh: 73.7, puissanceMaxKw: 160, wltpKm: 543, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'ds-n7-74', marque: 'DS', modele: 'N°7', variante: '74 kWh', capaciteKwh: 73.7, puissanceMaxKw: 160, wltpKm: 543, puissanceMoyenneKw: 90, prise: 'combo_ccs', annees: '2026' },
   { cle: 'ds-n7-97', marque: 'DS', modele: 'N°7', variante: 'Grande autonomie 97 kWh', capaciteKwh: 97.2, puissanceMaxKw: 160, wltpKm: 739, prise: 'combo_ccs', annees: '2026' },
   { cle: 'ds-n7-97-awd', marque: 'DS', modele: 'N°7', variante: 'Grande autonomie intégrale', capaciteKwh: 97.2, puissanceMaxKw: 160, wltpKm: 679, prise: 'combo_ccs', annees: '2026' },
   { cle: 'ds-3-etense', marque: 'DS', modele: 'DS 3', variante: 'E-Tense 54 kWh', capaciteKwh: 50.8, puissanceMaxKw: 107, wltpKm: 404, prise: 'combo_ccs', annees: '2023-2026' },
@@ -282,12 +311,12 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
   { cle: 'tesla-my-lr', marque: 'Tesla', modele: 'Model Y', variante: 'Grande Autonomie', capaciteKwh: 75, puissanceMaxKw: 250, wltpKm: 600, prise: 'combo_ccs' },
   { cle: 'tesla-ms-lr', marque: 'Tesla', modele: 'Model S', variante: 'Grande Autonomie', capaciteKwh: 95, puissanceMaxKw: 250, wltpKm: 634, prise: 'combo_ccs' },
   { cle: 'tesla-mx-lr', marque: 'Tesla', modele: 'Model X', variante: 'Grande Autonomie', capaciteKwh: 95, puissanceMaxKw: 250, wltpKm: 576, prise: 'combo_ccs' },
-  { cle: 'tesla-m3-rwd-26', marque: 'Tesla', modele: 'Model 3', variante: 'Propulsion 2026', capaciteKwh: 60, puissanceMaxKw: 175, wltpKm: 534, prise: 'combo_ccs', annees: '2025-2026' },
+  { cle: 'tesla-m3-rwd-26', marque: 'Tesla', modele: 'Model 3', variante: 'Propulsion 2026', capaciteKwh: 60, puissanceMaxKw: 175, wltpKm: 534, puissanceMoyenneKw: 110, prise: 'combo_ccs', annees: '2025-2026' },
   { cle: 'tesla-m3-premium-rwd-26', marque: 'Tesla', modele: 'Model 3', variante: 'Premium propulsion 2026', capaciteKwh: 79, puissanceMaxKw: 250, wltpKm: 750, prise: 'combo_ccs', annees: '2026' },
   { cle: 'tesla-m3-premium-awd-26', marque: 'Tesla', modele: 'Model 3', variante: 'Premium intégrale 2026', capaciteKwh: 79, puissanceMaxKw: 250, wltpKm: 716, prise: 'combo_ccs', annees: '2026' },
   { cle: 'tesla-my-rwd-26', marque: 'Tesla', modele: 'Model Y', variante: 'Propulsion 2026', capaciteKwh: 60, puissanceMaxKw: 175, wltpKm: 534, prise: 'combo_ccs', annees: '2025-2026' },
   { cle: 'tesla-my-premium-rwd-26', marque: 'Tesla', modele: 'Model Y', variante: 'Premium propulsion 2026', capaciteKwh: 74, puissanceMaxKw: 250, wltpKm: 603, prise: 'combo_ccs', annees: '2026' },
-  { cle: 'tesla-my-premium-awd-26', marque: 'Tesla', modele: 'Model Y', variante: 'Premium intégrale 2026', capaciteKwh: 79, puissanceMaxKw: 250, wltpKm: 629, prise: 'combo_ccs', annees: '2025-2026' },
+  { cle: 'tesla-my-premium-awd-26', marque: 'Tesla', modele: 'Model Y', variante: 'Premium intégrale 2026', capaciteKwh: 79, puissanceMaxKw: 250, wltpKm: 629, puissanceMoyenneKw: 125, prise: 'combo_ccs', annees: '2025-2026' },
   { cle: 'tesla-ms-plaid-26', marque: 'Tesla', modele: 'Model S', variante: 'Plaid 2026', capaciteKwh: 95, puissanceMaxKw: 250, wltpKm: 611, prise: 'combo_ccs', annees: '2025-2026' },
   { cle: 'tesla-mx-plaid-26', marque: 'Tesla', modele: 'Model X', variante: 'Plaid 2026', capaciteKwh: 95, puissanceMaxKw: 250, wltpKm: 567, prise: 'combo_ccs', annees: '2025-2026' },
 
@@ -303,7 +332,7 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
      (28/08/2026) — « 60 kW à 43 °C de batterie, 30 kW à 45 °C ; sous 0 °C
      je ne dépasse pas 30 kW ». Seuls des RELEVÉS entrent ici. */
   { cle: 'vinfast-vf8', marque: 'VinFast', modele: 'VF 8', variante: 'Eco', capaciteKwh: 82.4, puissanceMaxKw: 150, wltpKm: 447, prise: 'combo_ccs', puissanceFroidKw: 30, puissanceChaudKw: 60 },
-  { cle: 'vinfast-vf8-plus', marque: 'VinFast', modele: 'VF 8', variante: 'Plus', capaciteKwh: 87.7, puissanceMaxKw: 150, wltpKm: 457, prise: 'combo_ccs', puissanceFroidKw: 30, puissanceChaudKw: 60 },
+  { cle: 'vinfast-vf8-plus', marque: 'VinFast', modele: 'VF 8', variante: 'Plus', capaciteKwh: 87.7, puissanceMaxKw: 150, wltpKm: 457, puissanceMoyenneKw: 105, prise: 'combo_ccs', puissanceFroidKw: 30, puissanceChaudKw: 60 },
   { cle: 'vinfast-vf9', marque: 'VinFast', modele: 'VF 9', variante: 'Eco', capaciteKwh: 123, puissanceMaxKw: 150, wltpKm: 594, prise: 'combo_ccs' },
 
   // — Volkswagen —
@@ -316,7 +345,7 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
   { cle: 'vw-id7-86', marque: 'Volkswagen', modele: 'ID.7', variante: 'Pro S 86 kWh', capaciteKwh: 86, puissanceMaxKw: 200, wltpKm: 709, prise: 'combo_ccs' },
   { cle: 'vw-idbuzz-79', marque: 'Volkswagen', modele: 'ID. Buzz', variante: 'Pro 79 kWh', capaciteKwh: 79, puissanceMaxKw: 185, wltpKm: 481, prise: 'combo_ccs' },
   { cle: 'vw-idbuzz-86', marque: 'Volkswagen', modele: 'ID. Buzz', variante: 'LWB 86 kWh', capaciteKwh: 86, puissanceMaxKw: 200, wltpKm: 484, prise: 'combo_ccs' },
-  { cle: 'vw-id-polo-52', marque: 'Volkswagen', modele: 'ID. Polo', variante: '52 kWh', capaciteKwh: 51.7, puissanceMaxKw: 105, wltpKm: 454, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'vw-id-polo-52', marque: 'Volkswagen', modele: 'ID. Polo', variante: '52 kWh', capaciteKwh: 51.7, puissanceMaxKw: 105, wltpKm: 454, puissanceMoyenneKw: 95, prise: 'combo_ccs', annees: '2026' },
 
   // — Volvo —
   { cle: 'volvo-ex30-69', marque: 'Volvo', modele: 'EX30', variante: 'Extended Range', capaciteKwh: 64, puissanceMaxKw: 153, wltpKm: 476, prise: 'combo_ccs' },

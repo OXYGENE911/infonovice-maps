@@ -5,6 +5,7 @@
 // reprise, erreurs en français (règles du projet).
 import type { LineString } from 'geojson';
 import type { PointGeo } from './coordonnees';
+import { relaisDuTrace } from './detour';
 
 const SERVICE = 'https://data.geopf.fr/navigation/itineraire';
 const DELAI_MS = 8000;
@@ -98,6 +99,41 @@ export function versItineraire(brut: unknown): Itineraire {
     throw new ErreurItineraire('Le service n’a pas rendu de distance ou de durée.');
   }
   return { geometrie: g, distance, duree };
+}
+
+/**
+ * Le trajet DIRECT, quand le service en propose un qui détourne (ROUTE-1).
+ *
+ * DEUX REQUÊTES, ET SEULEMENT QUAND LE DÉTECTEUR A PARLÉ. On demande d'abord
+ * le trajet « le plus court » — celui qui suit le corridor géographique, au
+ * prix de petites routes — puis on redemande le « plus rapide » CONTRAINT à
+ * passer par trois points de son tracé. Le résultat suit le bon corridor tout
+ * en empruntant les routes rapides qui s'y trouvent.
+ *
+ * MESURÉ (02/09) : sur Saumur → Montignac, 492 km deviennent 318. Sur
+ * Saumur → Poitiers, 166 deviennent 98.
+ *
+ * IL PEUT RENDRE PIRE, et c'est prévu : sur Paris → Lyon le direct donne
+ * 499 km contre 466. C'est l'appelant qui compare et décide de montrer — voir
+ * `vautLaPeine` dans lib/detour.
+ */
+export async function itineraireDirect(
+  depart: PointGeo, arrivee: PointGeo, profil: Profil,
+  options: OptionsItineraire = {},
+): Promise<Itineraire> {
+  /* LES ÉTAPES DE L'USAGER SONT ÉCARTÉES : elles décrivent SON trajet, et le
+     trajet direct est une autre proposition. Les mêler donnerait un chemin qui
+     n'est ni l'un ni l'autre. Les ÉVITEMENTS restent, eux : refuser les
+     autoroutes vaut pour toutes les variantes. */
+  const sansEtapes: OptionsItineraire = {
+    ...(options.eviter?.length ? { eviter: options.eviter } : {}),
+  };
+  const court = await calculerItineraire(depart, arrivee, profil,
+    { ...sansEtapes, optimisation: 'shortest' });
+  const relais = relaisDuTrace(court.geometrie.coordinates as [number, number][]);
+  if (relais.length === 0) return court;
+  return calculerItineraire(depart, arrivee, profil,
+    { ...sansEtapes, optimisation: 'fastest', etapes: relais });
 }
 
 export async function calculerItineraire(

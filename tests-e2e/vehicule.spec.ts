@@ -10,6 +10,35 @@ import { ouvrirVolet } from './volets';
 const VF8 = { batterie: '87.7', soce: '94', soc: '100',
   ville: '400', route: '360', autoroute: '280' };
 
+
+/* LA MÉTÉO EST SIMULÉE, ET C'EST NÉCESSAIRE DEPUIS RAYON-2 (02/09) : le
+   cercle d'action tient compte de la température relevée dehors, et un
+   parcours qui laisserait partir le vrai appel mesurerait la météo du jour —
+   320 km en mai, 281 un matin frais. Vingt degrés : la référence du modèle,
+   qui n'applique donc aucune correction et rend les chiffres lisibles. */
+async function simulerMeteo(page: Page, celsius: number): Promise<void> {
+  await page.route('**/api.open-meteo.com/**', (route) => {
+    const base = new Date();
+    const heure = (h: number): string => {
+      const d = new Date(base.getTime() + h * 3600 * 1000);
+      const p = (n: number): string => String(n).padStart(2, '0');
+      return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`
+        + `T${p(d.getUTCHours())}:00`;
+    };
+    const heures = [-1, 0, 1, 2];
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      utc_offset_seconds: 0,
+      hourly: {
+        time: heures.map(heure),
+        temperature_2m: heures.map(() => celsius),
+        precipitation: heures.map(() => 0),
+        weather_code: heures.map(() => 0),
+        wind_speed_10m: heures.map(() => 5),
+      },
+    }) });
+  });
+}
+
 test.beforeEach(async ({ page, context }) => {
   await simulerTuiles(page);
   await simulerCommunes(page);
@@ -106,6 +135,7 @@ test('sans position, AUCUN anneau — un cercle centré ailleurs répondrait fau
 });
 
 test('les trois anneaux se dessinent, et le plus petit reste visible', async ({ page }) => {
+  await simulerMeteo(page, 20);
   await ouvrirVehicule(page);
   await saisirVF8(page);
   await seLocaliser(page);
@@ -131,13 +161,18 @@ test('les trois anneaux se dessinent, et le plus petit reste visible', async ({ 
   // Du plus grand au plus petit : sinon le petit disparaît sous le grand.
   expect(anneaux.map((a) => a.cle)).toEqual(['ville', 'route', 'autoroute']);
   expect(anneaux[0]!.rayon).toBeGreaterThan(anneaux[2]!.rayon);
-  /* LES RAYONS SONT RÉDUITS DU DÉTOUR ROUTIER (RAYON-1, 02/09) : 400 et 280 km
-     d'autonomie deviennent 320 et 224 km de cercle. Une autonomie se dépense
-     sur des ROUTES, un cercle se mesure à VOL D'OISEAU — mesuré sur huit
-     trajets français, la route fait 1,19 fois le vol d'oiseau en médiane, et
-     l'on retient 1,25 pour pencher du côté prudent, comme demandé. */
-  expect(anneaux[0]!.rayon).toBe(320);
-  expect(anneaux[2]!.rayon).toBe(224);
+  /* LES RAYONS SONT RÉDUITS DEUX FOIS, ET CHAQUE FOIS POUR UNE RAISON MESURÉE.
+     DU DÉTOUR ROUTIER (RAYON-1, 02/09) : une autonomie se dépense sur des
+     ROUTES, un cercle se mesure à VOL D'OISEAU — la route fait 1,19 fois le
+     vol d'oiseau en médiane sur huit trajets français, et l'on retient 1,25.
+     ET DE LA RÉSERVE (RAYON-2, 02/09) : le cercle supposait qu'on roule
+     jusqu'à zéro pour cent, quand le planificateur refuse déjà de descendre
+     sous 10 %. Deux moitiés de l'application disaient deux choses de la même
+     voiture.
+     400 km d'autonomie → 400 × 0,9 ÷ 1,25 = 288 km de cercle.
+     280 km d'autonomie → 280 × 0,9 ÷ 1,25 = 202 km. */
+  expect(anneaux[0]!.rayon).toBe(288);
+  expect(anneaux[2]!.rayon).toBe(202);
   for (const a of anneaux) expect(a.sommets, 'un anneau fermé').toBeGreaterThan(90);
 });
 
@@ -433,4 +468,42 @@ test('LE MODE DEUX-ROUES SE COCHE, SE GARDE, et dit sur quoi il se fonde', async
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
   await ouvrirVolet(page, '.vehicule');
   await expect(page.getByRole('checkbox', { name: 'Je roule en deux-roues' })).toBeChecked();
+});
+
+/* LE CERCLE TIENT COMPTE DU FROID (RAYON-2, 02/09).
+ *
+ * Armelin : « le rayon d'action trop optimiste par défaut ». Le cercle
+ * ignorait la température alors que l'application connaît la météo — en
+ * janvier, il promettait les kilomètres d'un mois de mai. Le modèle chiffre le
+ * froid à environ +1,2 % de consommation par degré sous 20 °C. */
+
+test('PAR GRAND FROID, LES ANNEAUX RÉTRÉCISSENT — et le disent', async ({ page }) => {
+  await simulerMeteo(page, -5);
+  await ouvrirVehicule(page);
+  await saisirVF8(page);
+  await seLocaliser(page);
+  await page.getByRole('checkbox', { name: 'Afficher mon rayon d’action' }).check();
+
+  const rayonVille = async (): Promise<number> => page.evaluate(async () => {
+    const carte = (window as unknown as {
+      __carte: { getSource(id: string): { getData(): unknown } | undefined };
+    }).__carte;
+    const d = await carte.getSource('rayon-action')?.getData() as
+      GeoJSON.FeatureCollection | undefined;
+    const f = (d?.features ?? []).find((x) => x.properties?.['cle'] === 'ville');
+    return (f?.properties?.['rayonKm'] as number) ?? 0;
+  });
+
+  /* À −5 °C, vingt-cinq degrés sous la référence : le modèle ajoute 30 % de
+     consommation, et les 288 km de mai tombent sous 230. */
+  await expect.poll(rayonVille, { timeout: 10_000 }).toBeGreaterThan(0);
+  const froid = await rayonVille();
+  expect(froid, `rayon par −5 °C : ${froid} km`).toBeLessThan(230);
+  expect(froid).toBeGreaterThan(200);
+
+  /* ET LA NOTE LE DIT : un chiffre juste et inexpliqué se lit comme une
+     incohérence — c'est le reproche d'Armelin du 31/08 sur un autre chiffre. */
+  const note = page.locator('.veh-anneaux-reserve');
+  await expect(note).toContainText('10 % de batterie en réserve');
+  await expect(note).toContainText('−5 °C');
 });
