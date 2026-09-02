@@ -95,6 +95,17 @@ function refermer(details: HTMLDetailsElement): void {
  */
 export function refermerPanneaux(racine: ParentNode = document): void {
   for (const details of panneauxPrincipauxOuverts(racine)) refermer(details);
+  /* L'ENTONNOIR DES FILTRES N'EST PAS UN `<details>`, ET IL COMPTE QUAND MÊME
+     (ERGO-3, 02/09). Depuis que « Recharge et services » y vit, il occupe le
+     même bord d'écran que les cartouches de détail — et la CI l'a attrapé
+     avant l'usager : la fiche d'une station recouvrait le panneau, dont le
+     bouton devenait impossible à presser.
+     LA RÈGLE « UNE SEULE SURFACE À LA FOIS » VIT ICI, et c'est le bon endroit
+     pour l'étendre : la dire une seconde fois dans chaque fiche, c'était la
+     dire une seconde fois FAUX le jour où l'une d'elles l'oublierait. */
+  for (const f of racine.querySelectorAll('filtre-poi')) {
+    (f as HTMLElement & { fermer?: () => void }).fermer?.();
+  }
 }
 
 /**

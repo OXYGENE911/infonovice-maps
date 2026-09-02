@@ -540,10 +540,20 @@ test('le cartouche et les volets ne se recouvrent JAMAIS : une surface a la fois
   await simulerPortail(page, FRANCE, DETAIL_TYPE);
   await ouvrirCartoucheBeaune(page);
 
-  /* Ouvrir le cartouche a referme le PLANIFICATEUR, qui abrite depuis le
-     27/08 la page des couches : c'est lui qui occupe la colonne. */
+  /* Ouvrir le cartouche a referme le PLANIFICATEUR, qui occupe la colonne. */
   await expect(page.locator('.iti'), 'le volet reste ouvert SOUS le cartouche')
     .not.toHaveAttribute('open', '');
+
+  /* ET L'ENTONNOIR DES FILTRES AVEC (ERGO-3, 02/09) : depuis que « Recharge
+     et services » y vit, il occupe le meme bord d'ecran. La CI l'a attrape
+     avant l'usager — la fiche recouvrait le panneau, dont le bouton devenait
+     impossible a presser. Ce parcours ne le laissait passer que par chance
+     d'ordonnancement ; il le juge maintenant. */
+  await page.locator('.poi-bulle').click();
+  await expect(page.locator('.poi-panneau')).toBeVisible();
+  await ouvrirCartoucheBeaune(page);
+  await expect(page.locator('.poi-panneau'),
+    'la fiche s’ouvre par-dessus le panneau des filtres').toBeHidden();
 
   // Et aucune boite ne croise l'autre — la preuve par les rectangles.
   const croisement = await page.evaluate(() => {

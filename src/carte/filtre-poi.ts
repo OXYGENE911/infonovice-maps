@@ -91,6 +91,24 @@ export class FiltrePoi extends HTMLElement {
      volets orphelins sans une erreur. */
   #recharge: HTMLElement | null = null;
 
+  /**
+   * Referme le panneau des filtres — appelé par la règle « une seule surface ».
+   *
+   * IDEMPOTENT ET SILENCIEUX : il est appelé chaque fois qu'un cartouche
+   * s'ouvre, y compris quand le panneau est déjà fermé.
+   */
+  fermer(): void {
+    const panneau = this.querySelector<HTMLElement>('.poi-panneau');
+    const bulle = this.querySelector<HTMLButtonElement>('.poi-bulle');
+    if (!panneau || panneau.hidden) return;
+    /* L'ÉTAT INTERNE SUIT, sans quoi le prochain clic sur l'entonnoir le
+       « refermerait » une seconde fois et il faudrait deux gestes pour le
+       rouvrir — un défaut qui ne se voit qu'à l'usage. */
+    this.#ouvert = false;
+    panneau.hidden = true;
+    bulle?.setAttribute('aria-expanded', 'false');
+  }
+
   /** Accueille le panneau « Recharge et services » dans le filtre. */
   logerRecharge(element: HTMLElement): void {
     this.#recharge = element;
