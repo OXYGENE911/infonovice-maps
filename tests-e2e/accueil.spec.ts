@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { ouvrirVolet } from './volets';
+import { ouvrirVolet, ouvrirReglagesBornes } from './volets';
 import { PNG_1PX, simulerTuiles, simulerCommunes } from './tuiles-simulees';
 import { allerA, retour } from './planificateur';
 
@@ -723,7 +723,7 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
     (window as unknown as { __carte: { jumpTo(o: object): void } })
       .__carte.jumpTo({ center: [2.3540, 48.8570], zoom: 13 });
   });
-  await ouvrirVolet(page, '.poi');
+  await ouvrirReglagesBornes(page);
 
   // La panne d'UNE couche s'affiche pour elle, sans gêner les autres.
   await page.getByRole('checkbox', { name: 'Carburants' }).check();
@@ -782,7 +782,7 @@ test('POI : décocher vide la carte, la panne s’affiche par couche, le zoom ar
      même bord de l'écran, et depuis le 26/08 ils sont EXCLUSIFS — le cartouche
      recouvrait les filtres, ce qu'aucune mesure de texte ne montrait puisque
      c'est la surface entière qui masquait l'autre. */
-  await ouvrirVolet(page, '.poi');
+  await ouvrirReglagesBornes(page);
 
   // DÉCOCHER vide réellement la carte — pixels à l'appui.
   await page.getByRole('checkbox', { name: 'Bornes électriques' }).uncheck();
@@ -1299,7 +1299,7 @@ test('la légende des bornes dessine les MÊMES éclairs que la carte', async ({
      SVG que les pastilles de la carte. */
   await page.goto('/');
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
-  await ouvrirVolet(page, '.poi');
+  await ouvrirReglagesBornes(page);
   await page.getByRole('checkbox', { name: 'Bornes électriques' }).check();
   // Six éclairs dans les trois pastilles de palier (1 + 2 + 3).
   await expect(page.locator('.poi-legende-pastille svg polygon')).toHaveCount(6);

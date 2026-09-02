@@ -2,6 +2,51 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.47.0] — 2026-09-02 — ERGO-6 et ERGO-7
+
+### Corrigé — trois défauts d'un même retour, capture d'écran à l'appui
+- **Le panneau de recharge était inutilisable.** ERGO-5 avait laissé le rappel
+  ambre À L'INTÉRIEUR de la rangée `display:flex` des deux boutons : il en
+  devenait un troisième élément, réduit à une colonne de quelques caractères,
+  son texte coupé lettre par lettre et « Tout afficher » débordant du cadre.
+  « On ne comprend pas où cliquer. » La rangée se ferme désormais après ses
+  deux boutons, et un parcours mesure la géométrie — pas les attributs.
+- **La roue crantée ressemblait à un soleil**, et c'en était un : un cercle
+  entouré de huit rayons DÉTACHÉS. Ce qui fait une roue, c'est que les dents
+  tiennent à la couronne ; le contour est maintenant continu.
+- **Le bouton « Trajets habituels » ne faisait rien.** `.iti-routines` portait
+  `display: flex`, qui bat la règle par défaut de l'attribut `hidden` : la
+  liste était TOUJOURS ouverte. Le même défaut expliquait la seconde moitié du
+  retour — les deux lignes qu'ERGO-5 devait replier poussaient toujours le
+  menu hors de l'écran.
+
+### Ajouté — les réglages de bornes ont leur propre page (ERGO-7)
+- Armelin : « la configuration du filtre de borne de recharge devrait s'ouvrir
+  dans une fenêtre dédiée et pas afficher un menu interminable à scroller en
+  plus des POI ». La roue crantée MÈNE désormais à une page qui ne porte que
+  les réglages, avec une flèche pour revenir aux lieux — la même mécanique que
+  les pages du planificateur, et la même leçon : deux réglages dépliés l'un
+  sous l'autre forment un couloir, pas une interface.
+- Refermer l'entonnoir ramène à la première page : on l'ouvre pour choisir ce
+  qui s'affiche, et retomber sur les réglages des bornes surprendrait.
+
+### Ajouté — pour que ça ne se reproduise pas
+- Une règle globale `[hidden] { display: none !important }`, en tête de
+  feuille. Un balayage a trouvé **sept classes** dans le même cas —
+  `.iti-routines`, `.iti-actions`, `.bg-chiffres`, `.bg-poignee`,
+  `.poi-filtres-effacer`, `.poi-legende-pastille`, `.reglages-barres`. Les
+  corriger une par une aurait laissé la huitième arriver au prochain
+  composant. Un test garde la règle et interdit tout concurrent.
+- **La feuille basse s'ouvre à la taille de son contenu**, entre la
+  mi-hauteur et 88 % de l'écran. Mesuré sur 412 × 915 : le planificateur
+  demande 512 px et la mi-hauteur en donnait 458 — d'où les cinquante-quatre
+  pixels qu'il fallait aller chercher au doigt. Elle SUIT aussi le contenu qui
+  arrive après coup, parce que les raccourcis et les trajets habituels se
+  lisent de façon asynchrone ; elle s'arrête dès que le doigt touche la
+  poignée, et **au bout de 400 ms** de toute façon — une feuille qui grandit
+  sous le doigt est pire qu'une feuille trop courte : le geste visait un
+  bouton qui a bougé.
+
 ## [1.46.0] — 2026-09-02 — RGPD-1
 
 ### Corrigé — la page publique disait le contraire du code

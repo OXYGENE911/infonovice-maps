@@ -1,6 +1,29 @@
 /* L'application carte : la carte EST la page. L'en-tête flotte dessus,
    discret ; les contrôles MapLibre héritent des tokens. */
 * { margin: 0; box-sizing: border-box; }
+
+/* `hidden` GAGNE TOUJOURS (ERGO-6, 02/09) — et ce n'est pas une précaution
+   théorique, c'est la réparation d'une panne qu'Armelin a vécue.
+
+   LE DÉFAUT. `.iti-routines` portait `display: flex`. La règle du navigateur
+   pour l'attribut `hidden` est `display: none`, mais elle vit dans la feuille
+   par DÉFAUT : n'importe quelle règle d'auteur qui pose un `display` la bat.
+   La liste des trajets habituels était donc TOUJOURS visible, et le bouton
+   qui la replie ne faisait rien — « quand on clic sur le bouton "Trajets
+   habituels" il ne se passe rien ». Le même défaut expliquait la seconde
+   moitié du retour : « le menu n'est pas affiché en entier à l'écran, il faut
+   scroller », puisque les deux lignes qu'ERGO-5 devait replier ne se
+   repliaient jamais.
+
+   POURQUOI UNE RÈGLE GLOBALE PLUTÔT QU'UNE DE PLUS. Un balayage de la feuille
+   le 02/09 a trouvé SEPT classes dans le même cas : `.iti-routines`,
+   `.iti-actions`, `.bg-chiffres`, `.bg-poignee`, `.poi-filtres-effacer`,
+   `.poi-legende-pastille`, `.reglages-barres`. Les corriger une par une
+   aurait laissé la huitième arriver au prochain composant. Un élément marqué
+   `hidden` est masqué : c'est le contrat de l'attribut, et il se pose ici une
+   fois pour toutes. Le `!important` est ce qui le rend vrai — sans lui, la
+   prochaine règle de classe le battrait à nouveau. */
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body { font-family: var(--police); background: var(--fond); }
 
@@ -3542,6 +3565,27 @@ filtre-poi {
    de plus n'ajoutait qu'une hauteur. Le `<details>` reste — il porte l'état
    ouvert/fermé que la roue pilote. */
 .poi-hote-recharge .poi > summary { display: none; }
+
+/* LA TÊTE DE LA PAGE DES RÉGLAGES (ERGO-7, 02/09) : une flèche et un titre,
+   comme les pages du planificateur. C'est elle qui remplace le résumé masqué
+   du volet — sans elle, on saurait où l'on est mais pas comment revenir. */
+.poi-vue-tete {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 8px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--bord);
+}
+.poi-retour {
+  flex: 0 0 auto;
+  width: 30px; height: 30px; border-radius: 8px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-1); font: 600 16px var(--police); cursor: pointer;
+  line-height: 1;
+}
+.poi-retour:hover { background: var(--bleu-50); border-color: var(--accent); }
+.poi-retour:focus-visible { outline: none; box-shadow: var(--focus); }
+.poi-vue-titre {
+  margin: 0; font: 700 13.5px var(--police); color: var(--texte-1);
+}
 .poi-panneau[hidden] { display: none; }
 .poi-panneau-titre {
   margin: 0 0 8px; font: 650 13px var(--police); color: var(--texte-1);

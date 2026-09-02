@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
-import { ouvrirVolet } from './volets';
+import { ouvrirReglagesBornes } from './volets';
 
 /* CHERCHER UN NOM N'EST PAS SURVOLER LA VUE (BORNES-9, 01/09).
  *
@@ -41,7 +41,7 @@ test('LE FILTRE PAR NOM CHERCHE PLUS LOIN QUE LA VUE', async ({ page }) => {
     (window as unknown as { __carte: { jumpTo(o: object): void } })
       .__carte.jumpTo({ center: [2.5722, 48.8103], zoom: 13 });
   });
-  await ouvrirVolet(page, '.poi');
+  await ouvrirReglagesBornes(page);
   await page.getByRole('checkbox', { name: 'Bornes électriques' }).check();
   await page.getByLabel('Chercher un réseau ou un nom de station').fill('McDonald');
 

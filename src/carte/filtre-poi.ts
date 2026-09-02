@@ -108,13 +108,81 @@ export class FiltrePoi extends HTMLElement {
     this.#ouvert = false;
     panneau.hidden = true;
     bulle?.setAttribute('aria-expanded', 'false');
+    /* ET L'ON REVIENT À LA PREMIÈRE PAGE (ERGO-7) : rouvrir l'entonnoir sur
+       les réglages des bornes, parce qu'on y était la dernière fois,
+       surprendrait — on l'ouvre pour choisir ce qui s'affiche. */
+    this.#allerA('familles');
+  }
+
+  /**
+   * Montre une des deux pages de l'entonnoir — PRIVÉE (ERGO-7, 02/09).
+   *
+   * UNE SEULE À L'ÉCRAN, comme dans le planificateur. Les afficher l'une sous
+   * l'autre était le défaut signalé : « un menu interminable à scroller en
+   * plus des POI à afficher ».
+   */
+  /* LA PAGE AFFICHÉE (ERGO-7) — et non `#vue`, qui nomme déjà l'emprise de
+     la carte dans ce fichier. La collision a été attrapée par le typage ; le
+     préfixe se choisit d'avance, comme le rappelle le commentaire des classes
+     CSS plus haut. */
+  #page: 'familles' | 'recharge' = 'familles';
+
+  #allerA(vue: 'familles' | 'recharge'): void {
+    this.#page = vue;
+    for (const section of this.querySelectorAll<HTMLElement>('.poi-vue')) {
+      section.hidden = section.dataset['vue'] !== vue;
+    }
+    /* LE VOLET HÔTE SUIT LA PAGE, À CHAQUE FOIS — pas seulement au premier
+       rendu. `refermerPanneaux` referme tous les `<details>` de l'écran quand
+       une fiche s'ouvre, celui-ci compris : arriver ensuite sur la page des
+       réglages donnait une page VIDE, avec un volet replié et rien à régler.
+       Attrapé par un parcours d'accueil qui ne trouvait plus la case
+       « Bornes électriques » — invisible pour l'arbre d'accessibilité. */
+    const volet = this.querySelector<HTMLDetailsElement>('.poi-hote-recharge .poi');
+    if (volet) volet.open = vue === 'recharge';
+    const roue = this.querySelector<HTMLButtonElement>('.poi-reglages-bornes');
+    roue?.setAttribute('aria-expanded', String(vue === 'recharge'));
+    /* LE FOCUS SUIT LA PAGE : au clavier comme au lecteur d'écran, changer de
+       page sans déplacer le focus laisse l'usager sur un bouton qui n'existe
+       plus à l'écran. */
+    const cible = vue === 'recharge'
+      ? this.querySelector<HTMLElement>('.poi-retour')
+      : roue;
+    cible?.focus({ preventScroll: true });
   }
 
   /** Accueille le panneau « Recharge et services » dans le filtre. */
   logerRecharge(element: HTMLElement): void {
     this.#recharge = element;
     const hote = this.querySelector<HTMLElement>('.poi-hote-recharge');
-    if (hote) hote.appendChild(element);
+    if (hote) { hote.appendChild(element); this.#tenirVoletHote(); }
+  }
+
+  /**
+   * Le volet hôte reste OUVERT tant qu'il est la page (ERGO-7, 02/09).
+   *
+   * `refermerPanneaux` referme TOUS les `<details>` de l'écran quand une fiche
+   * s'ouvre — celui-ci compris. On revenait alors sur une page vide : le volet
+   * replié, rien à régler, et la case « Bornes électriques » disparue de
+   * l'arbre d'accessibilité. Deux parcours l'ont attrapé.
+   *
+   * ELLE S'APPELLE DE DEUX ENDROITS, et c'est la leçon du premier correctif :
+   * je ne l'avais posée qu'au rendu, or l'hôte peut arriver APRÈS lui
+   * (`logerRecharge` est appelée par la carte à l'assemblage). Un seul des
+   * deux chemins était couvert, et c'était le mauvais.
+   *
+   * SON RÉSUMÉ EST MASQUÉ ICI : personne ne peut le replier volontairement,
+   * et le rouvrir ne contrarie donc aucun geste.
+   */
+  #tenirVoletHote(): void {
+    const volet = this.querySelector<HTMLDetailsElement>('.poi-hote-recharge .poi');
+    if (!volet || volet.dataset['tenu'] === 'oui') return;
+    volet.dataset['tenu'] = 'oui';
+    volet.open = this.#page === 'recharge';
+    volet.addEventListener('toggle', () => {
+      const page = this.querySelector<HTMLElement>('.poi-vue-recharge');
+      if (!volet.open && page && !page.hidden) volet.open = true;
+    });
   }
 
   #carte: CarteMapLibre | null = null;
@@ -155,6 +223,18 @@ export class FiltrePoi extends HTMLElement {
       </button>
       <div class="poi-panneau" hidden role="group"
         aria-label="Lieux à afficher autour de vous">
+        <!-- DEUX PAGES, ET UNE SEULE À L'ÉCRAN (ERGO-7, 02/09). Armelin :
+             « quand la configuration du filtre de borne de recharge s'ouvre,
+             il devrait s'ouvrir dans une fenêtre dédiée et pas afficher un
+             menu interminable à scroller en plus des POI à afficher.
+             Seulement le menu de charge avec une flèche retour pour revenir
+             aux POI sera peut-être plus adapté et ergonomique ? »
+             IL A RAISON, ET C'EST LA MÊME LEÇON QUE LE PLANIFICATEUR l'avait
+             apprise le 26/08 : « le site déroule seulement un formulaire en
+             cascade et on doit scroller dans la fenêtre ». Deux réglages
+             dépliés l'un sous l'autre forment un couloir, pas une interface.
+             La roue crantée MÈNE désormais à une page ; la flèche revient. -->
+        <section class="poi-vue poi-vue-familles" data-vue="familles">
         <!-- LA RECHARGE EST EN TÊTE (ERGO-4, 02/09). Armelin : « le bouton
              Recharge et services est écrit tout en bas et sans aucun logo. On
              voit à peine que c'est un menu cliquable. Un menu invisible est un
@@ -167,6 +247,15 @@ export class FiltrePoi extends HTMLElement {
              c'est cacher. C'est d'ailleurs la raison d'être de cette
              application : trouver où recharger. -->
         <p class="poi-panneau-titre">Recharge</p>
+        <!-- CETTE LIGNE NE CONTIENT QUE DEUX BOUTONS, ET C'EST UNE RÈGLE
+             (ERGO-6, 02/09). ERGO-5 avait laissé le rappel ambre À
+             L'INTÉRIEUR de ce conteneur en display:flex : il devenait un
+             TROISIÈME élément de la rangée, réduit à une colonne de quelques
+             caractères, son texte coupé lettre par lettre et son bouton
+             « Tout afficher » débordant du cadre. Armelin : « le menu de
+             recharge est devenu inutilisable, on ne comprend pas où
+             cliquer », capture d'écran à l'appui. Un parcours de non-débord
+             garde désormais cette ligne. -->
         <div class="poi-ligne-bornes">
         <!-- LA PUCE DES BORNES (BORNES-4). Armelin : « une nouvelle
              suggestion de POI [...] les bornes de recharge ». Elle ne
@@ -201,6 +290,7 @@ export class FiltrePoi extends HTMLElement {
         <button type="button" class="poi-reglages-bornes" aria-expanded="false"
           aria-label="Paramétrer les bornes : réseaux, puissance, nom de station"
           >${pictoMenu('engrenage')}</button>
+        </div>
         <!-- LE RAPPEL EST RANGÉ ICI (BORNES-8, 01/09), sous la puce qu'il
              concerne. BORNES-5 l'avait posé À CÔTÉ de la carte pour qu'il ne
              puisse plus être manqué ; c'était trop : « le rectangle apparaît
@@ -228,8 +318,6 @@ export class FiltrePoi extends HTMLElement {
              CE QUI SE RANGE ENSEMBLE SE RÈGLE ENSEMBLE : la puce « Bornes de
              recharge » et le choix des réseaux étaient deux moitiés du même
              geste, séparées par tout l'écran. -->
-        </div>
-        <div class="poi-hote-recharge"></div>
 
         <p class="poi-panneau-titre poi-titre-second">Autour de moi</p>
         <div class="poi-familles">
@@ -249,6 +337,20 @@ export class FiltrePoi extends HTMLElement {
              panne du service, ou pour rafraîchir un quartier. -->
         <button type="button" class="poi-chercher">Chercher à nouveau ici</button>
         <p class="poi-filtre-etat" role="status"></p>
+        </section>
+
+        <!-- LA PAGE DES RÉGLAGES DE BORNES (ERGO-7). Elle porte sa tête et sa
+             flèche, comme les pages du planificateur : on sait où l'on est et
+             comment revenir. Rien d'autre ne s'affiche pendant qu'on règle. -->
+        <section class="poi-vue poi-vue-recharge" data-vue="recharge" hidden
+          aria-label="Réglages des bornes de recharge">
+          <div class="poi-vue-tete">
+            <button type="button" class="poi-retour"
+              aria-label="Revenir aux lieux à afficher">←</button>
+            <h2 class="poi-vue-titre">Bornes de recharge</h2>
+          </div>
+          <div class="poi-hote-recharge"></div>
+        </section>
       </div>`;
 
     const hote = this.querySelector<HTMLElement>('.poi-hote-recharge');
@@ -258,21 +360,20 @@ export class FiltrePoi extends HTMLElement {
          parce qu'il occupait une page entière. Rangé dans l'entonnoir, ouvert
          d'office, il repousserait les familles hors de l'écran — le défaut
          même qu'Armelin signalait. La roue l'ouvre à la demande. */
-      const volet = hote.querySelector<HTMLDetailsElement>('.poi');
-      if (volet) volet.open = false;
+      /* IL ARRIVE OUVERT (ERGO-7) : sur sa propre page, il n'y a rien
+         d'autre à voir, et un `<details>` fermé demanderait un geste de plus
+         pour atteindre ce qu'on vient précisément chercher. Son résumé reste
+         masqué par la CSS — c'est la tête de page qui nomme l'endroit. */
+      this.#tenirVoletHote();
     }
 
-    /* LA ROUE OUVRE ET FERME LE VOLET DE RÉGLAGES (ERGO-5) — c'est elle qui
-       remplace la ligne « Recharge et services », dont le résumé est masqué
-       par la CSS quand il vit ici. On pilote le `<details>` plutôt que de le
-       reconstruire : tout ce qu'il contient continue de fonctionner. */
+    /* LA ROUE MÈNE À LA PAGE DES RÉGLAGES (ERGO-7), la flèche en revient.
+       ERGO-5 l'avait faite dépliante : elle ouvrait un volet SOUS les
+       quatorze pastilles, et l'on retrouvait le couloir à faire défiler. */
     const roue = this.querySelector<HTMLButtonElement>('.poi-reglages-bornes');
-    roue?.addEventListener('click', () => {
-      const volet = this.querySelector<HTMLDetailsElement>('.poi-hote-recharge .poi');
-      if (!volet) return;
-      volet.open = !volet.open;
-      roue.setAttribute('aria-expanded', String(volet.open));
-    });
+    roue?.addEventListener('click', () => { this.#allerA('recharge'); });
+    this.querySelector<HTMLButtonElement>('.poi-retour')
+      ?.addEventListener('click', () => { this.#allerA('familles'); });
 
     const bulle = this.querySelector<HTMLButtonElement>('.poi-bulle')!;
     const panneau = this.querySelector<HTMLElement>('.poi-panneau')!;
@@ -280,6 +381,15 @@ export class FiltrePoi extends HTMLElement {
       this.#ouvert = !this.#ouvert;
       panneau.hidden = !this.#ouvert;
       bulle.setAttribute('aria-expanded', String(this.#ouvert));
+      /* ON REVIENT À LA PREMIÈRE PAGE EN FERMANT (ERGO-7, 02/09). `fermer()`
+         le faisait déjà, mais lui n'est appelé que du dehors : refermer par
+         l'entonnoir lui-même laissait la page des réglages en place, et
+         l'ouverture suivante y retombait. On ouvre l'entonnoir pour choisir ce
+         qui s'affiche, jamais pour reprendre un réglage abandonné. */
+      if (!this.#ouvert) this.#allerA('familles');
+      /* ET L'OUVERTURE REPOSE L'INVARIANT DE LA PAGE COURANTE : entre deux
+         ouvertures, une fiche a pu replier le volet hôte. */
+      if (this.#ouvert) this.#allerA(this.#page);
       if (this.#ouvert) {
         this.#majEtat();
         /* UNE SEULE SURFACE À LA FOIS, DANS LES DEUX SENS (ERGO-3, 02/09).

@@ -600,6 +600,15 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       vient d'UN appel météo sur le point d'arrivée, déjà interrogé pendant le
       trajet. La comparaison les affiche, le fichier de contribution les
       emporte, et l'absence se dit au lieu de s'écrire zéro.
+- [x] PR #193 — ERGO-6 (02/09) : les trois défauts du premier retour
+      utilisateur d'Armelin. Rappel ambre coincé dans la rangée flex des
+      bornes (panneau de recharge illisible) ; roue crantée qui était un
+      soleil ; `display:flex` battant l'attribut `hidden` sur les trajets
+      habituels — un seul défaut CSS expliquait à la fois « le bouton ne fait
+      rien » et « il faut scroller ». Règle globale `[hidden]` posée (sept
+      classes étaient dans ce cas) et feuille basse dimensionnée à son
+      contenu. ERGO-7 dans la même PR : les réglages de bornes ont leur propre
+      page, avec flèche de retour.
 - [x] PR #188 — HIST-2 (02/09) : « aucun moyen de relancer le même trajet
       depuis l'historique » et « l'historique ne conserve pas le tracé […] donc
       contribuer envoie trop peu ». Même cause : on gardait des CHIFFRES,

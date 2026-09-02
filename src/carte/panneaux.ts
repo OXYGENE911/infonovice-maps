@@ -65,9 +65,22 @@ function estSurfaceDeTravail(details: HTMLDetailsElement): boolean {
     || details.classList.contains(CLASSE_SURFACE);
 }
 
+/* CE QUI EST HÉBERGÉ N'EST PAS PRINCIPAL, MÊME SANS `<details>` AU-DESSUS
+   (ERGO-7, 02/09). Le volet « Recharge et services » vit à l'intérieur de
+   l'entonnoir des filtres depuis ERGO-3, et depuis ERGO-7 il en occupe une
+   PAGE. Or l'entonnoir n'est pas un `<details>` : la règle du parent ne le
+   voyait pas, et ce volet passait pour un panneau de tête.
+   CONSÉQUENCE MESURÉE : ouvrir la page des réglages fermait le planificateur,
+   qui en se rouvrant refermait la page — deux parcours de recharge sont
+   tombés dans cette boucle. La SURFACE, ici, c'est l'entonnoir ; ce qu'il
+   héberge n'a pas à décider du sort des autres. */
+const HOTES: readonly string[] = ['.poi-hote-recharge'];
+
 /** Un panneau est « principal » s'il est à nous et non imbriqué dans un autre. */
 function estPrincipal(details: HTMLDetailsElement): boolean {
-  return dansUnComposant(details) && !details.parentElement?.closest('details');
+  if (!dansUnComposant(details)) return false;
+  if (details.parentElement?.closest('details')) return false;
+  return !HOTES.some((h) => details.closest(h));
 }
 
 function panneauxPrincipauxOuverts(racine: ParentNode): HTMLDetailsElement[] {
