@@ -1980,9 +1980,12 @@ test('POI : sous le zoom 12, les recherches se DISENT inertes — avant le clic'
   await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
   await allerA(page, 'couches');
 
-  // AU ZOOM DU TRAJET : boutons désactivés, raison écrite, champ inerte.
-  await expect(page.locator('.poi-categorie').first()).toBeDisabled();
-  await expect(page.locator('.poi-seuil-vue')).toContainText('Rapprochez-vous');
+  /* LES BOUTONS « À LA DEMANDE » ONT DISPARU (ERGO-5, 02/09) : ils faisaient
+     doublon avec les familles de l'entonnoir, et Armelin a tranché — « on va
+     garder les POI continus et supprimer le doublon dans le panneau de
+     recharge ». Ce que ce parcours défendait reste vrai de l'AUTRE surface :
+     au zoom d'un trajet entier, la ligne d'état des familles dit qu'elle ne
+     cherche rien. Le champ de réseau, lui, reste actif à tout zoom. */
   /* Le champ de recherche a FUSIONNÉ avec celui des réseaux le 30/08 : il
      reste actif (on cherche un réseau à tout zoom), et c'est la note qui
      porte l'avertissement sur le nom de station. */
@@ -1993,8 +1996,8 @@ test('POI : sous le zoom 12, les recherches se DISENT inertes — avant le clic'
     (window as unknown as { __carte: { jumpTo(o: object): void } })
       .__carte.jumpTo({ center: [2.35, 48.85], zoom: 14 });
   });
-  await expect(page.locator('.poi-categorie').first()).toBeEnabled();
-  await expect(page.locator('.poi-seuil-vue')).toBeHidden();
+  /* AU BON ZOOM, LE CHAMP DE RÉSEAU RESTE ACTIF — il l'était déjà à tout
+     zoom, et c'est ce que ce parcours garde depuis ERGO-5. */
   await expect(page.locator('.poi-reseau-recherche')).toBeEnabled();
 });
 

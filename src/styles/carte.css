@@ -3489,6 +3489,46 @@ filtre-poi {
 /* Le second titre respire : deux sections dans un même panneau doivent se
    distinguer sans trait de séparation. */
 .poi-titre-second { margin-top: 14px; }
+
+/* LA PUCE DES BORNES ET SA ROUE, SUR UNE SEULE LIGNE (ERGO-5, 02/09) : la
+   première ALLUME la couche, la seconde la RÈGLE. Ensemble elles remplacent la
+   ligne « Recharge et services », qu'Armelin ne voyait pas comme cliquable. */
+.poi-ligne-bornes { display: flex; align-items: center; gap: 6px; }
+
+/* LE BOUTON DES TRAJETS HABITUELS (ERGO-5) : il tient sur une ligne, et la
+   liste qu'il ouvre ne pousse plus « Options du trajet » hors de l'écran. */
+.iti-routines-ligne { display: flex; }
+.iti-routines-ligne[hidden] { display: none; }
+.iti-routines-ouvrir {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 11px; border-radius: 999px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-2); font: 500 12px var(--police); cursor: pointer;
+}
+.iti-routines-ouvrir svg { width: 15px; height: 15px; }
+.iti-routines-ouvrir[aria-expanded="true"] {
+  border-color: var(--accent); color: var(--accent);
+}
+.iti-routines-ouvrir:focus-visible { outline: none; box-shadow: var(--focus); }
+.poi-ligne-bornes .poi-famille-bornes { flex: 1 1 auto; }
+.poi-reglages-bornes {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-2); cursor: pointer;
+}
+.poi-reglages-bornes svg { width: 17px; height: 17px; }
+.poi-reglages-bornes[aria-expanded="true"] {
+  border-color: var(--accent); color: var(--accent);
+}
+.poi-reglages-bornes:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* LE RÉSUMÉ DU VOLET DISPARAÎT ICI, et c'est la ligne qu'Armelin voulait
+   récupérer : la roue crantée dit désormais qu'on peut régler, et un titre
+   de plus n'ajoutait qu'une hauteur. Le `<details>` reste — il porte l'état
+   ouvert/fermé que la roue pilote. */
+.poi-hote-recharge .poi > summary { display: none; }
 .poi-panneau[hidden] { display: none; }
 .poi-panneau-titre {
   margin: 0 0 8px; font: 650 13px var(--police); color: var(--texte-1);

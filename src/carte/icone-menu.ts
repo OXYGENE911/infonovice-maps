@@ -29,7 +29,7 @@ export type NomPicto =
      bouton Vue à plat et Cap en haut par un unique bouton en forme d'icône
      de boussole en mode pressoir ». */
   | 'orient-cap' | 'orient-nord' | 'orient-libre' | 'vue-3d' | 'vue-plat'
-  | 'copilote' | 'croix'
+  | 'copilote' | 'croix' | 'engrenage' | 'remonter'
   /* VOIX-1 (30/08) — le guidage vocal se coupe d'une icône. */
   | 'voix' | 'voix-muette';
 
@@ -51,6 +51,19 @@ const TRACES: Record<NomPicto, string> = {
     + '<path d="M9.2 13.6h3.6M11 11.8v3.6" style="stroke-width:1.6"/>',
   /* Les boutons des curseurs sont PLEINS, du fond des rangées de menu : la
      ligne ne les traverse pas — c'est ce qui fait lire « réglages ». */
+  /* LA ROUE CRANTÉE (ERGO-5, 02/09), demandée par Armelin : « ajouter une
+     roue crantée à droite pour indiquer aux gens qu'ils peuvent paramétrer ce
+     POI ». C'est le signe universel du réglage — un intitulé, lui, se lit
+     comme un titre. */
+  /* LA FLÈCHE QUI REMONTE LE TEMPS (ERGO-5, 02/09) — le dessin qu'Armelin
+     décrit : « un bouton ayant pour logo une flèche qui revient dans le
+     temps ». Une horloge et une flèche antihoraire : c'est le signe reconnu
+     de l'historique, et il se distingue de l'étoile des favoris. */
+  remonter: '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/>'
+    + '<path d="M3 3.4V9h5.6"/><path d="M12 7.6V12l3.2 2"/>',
+  engrenage: '<circle cx="12" cy="12" r="3.2"/>'
+    + '<path d="M12 2.6v2.6M12 18.8v2.6M21.4 12h-2.6M5.2 12H2.6'
+    + 'M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8M18.6 18.6l-1.8-1.8M7.2 7.2 5.4 5.4"/>',
   options: '<path d="M4 7h16M4 12h16M4 17h16"/>'
     + '<circle cx="9" cy="7" r="2" style="fill:var(--fond-doux)"/>'
     + '<circle cx="15" cy="12" r="2" style="fill:var(--fond-doux)"/>'

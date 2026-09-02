@@ -573,6 +573,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #183 — VÉHICULES (02/09) : six modèles sur quinze ajoutés (Alpine
       A390, MG Cyberster, Smart #5, BYD Atto 2, Seal U, Tang), d'une SEULE
       source cohérente qui distingue capacité brute et utile.
+- [x] PR #185 — ERGO-5 (02/09) : le doublon de catégories tombe (décision
+      d'Armelin), une roue crantée remplace la ligne « Recharge et services »,
+      et les trajets habituels se rangent derrière un bouton.
 - [x] PR #184 — XPENG L03 (02/09) : ses quatre versions, capacités UTILES
       d'EV Database, crête de la Standard Range recoupée par XPENG France,
       autonomies du configurateur officiel. Armelin a fourni la source que je
