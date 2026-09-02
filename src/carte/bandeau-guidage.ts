@@ -1034,6 +1034,11 @@ export class BandeauGuidage extends HTMLElement {
               ? p.coords.speed : null,
             altitudeM: typeof p.coords.altitude === 'number'
               && Number.isFinite(p.coords.altitude) ? p.coords.altitude : null,
+            /* LE TRACÉ (HIST-2, 02/09) — le fixe qui donne la vitesse donne
+               déjà la position, et on la jetait. Arrondi au mètre : les dix
+               décimales du récepteur auraient triplé le poids pour du bruit. */
+            lon: Number(p.coords.longitude.toFixed(5)),
+            lat: Number(p.coords.latitude.toFixed(5)),
           });
         }
         this.#majPosition(p.coords);
@@ -1188,6 +1193,7 @@ export class BandeauGuidage extends HTMLElement {
     const bouton = this.querySelector<HTMLButtonElement>('.bg-bilan-garder');
     if (r === null || this.#departMs === null) return;
     const o = this.#options;
+    const premier = this.#releves[0];
     try {
       const liste = await lireHistorique();
       await ecrireHistorique(ajouterTrajet(liste, {
@@ -1202,6 +1208,23 @@ export class BandeauGuidage extends HTMLElement {
         titre: titreParDefaut('', o?.destination?.libelle ?? ''),
         resume: r,
         releves: [...this.#releves],
+        /* LES DEUX EXTRÉMITÉS, pour pouvoir relancer (HIST-2, 02/09).
+           L'ARRIVÉE VIENT DE LA CONSIGNE, avec son nom : c'est elle qu'on
+           relancera. LE DÉPART VIENT DU PREMIER RELEVÉ et n'a pas de nom —
+           le suivi ne l'a jamais su ; lui en inventer un serait mentir. Il ne
+           sert pas au relancement, il sert au tracé qu'on partage. */
+        ...(o?.destination
+          ? {
+            arrivee: {
+              lon: o.destination.lon,
+              lat: o.destination.lat,
+              ...(o.destination.libelle ? { libelle: o.destination.libelle } : {}),
+            },
+          }
+          : {}),
+        ...(premier?.lon !== undefined && premier.lat !== undefined
+          ? { depart: { lon: premier.lon, lat: premier.lat } }
+          : {}),
       }));
       if (dit) {
         dit.textContent = 'Parcours enregistré — retrouvez-le dans « Historique ».';

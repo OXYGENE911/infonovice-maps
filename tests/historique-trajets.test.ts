@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   estLHeureDunReleve, titreParDefaut, versTrajets, ajouterTrajet,
-  comparerTrajets, PAS_RELEVE_MS, TRAJETS_GARDES, type TrajetEnregistre,
+  comparerTrajets, traceDuTrajet, peutRelancer,
+  PAS_RELEVE_MS, TRAJETS_GARDES, type TrajetEnregistre,
 } from '../src/lib/historique-trajets';
 
 /* L'HISTORIQUE DES TRAJETS (STATS-2, 01/09).
@@ -128,5 +129,81 @@ describe('comparerTrajets', () => {
   it('dit « non mesurée » plutôt qu’un zéro trompeur', () => {
     const c = comparerTrajets([trajet('a', { vitesseMoyenneKmh: null })]);
     expect(c[1]?.valeurs[0]).toBe('non mesurée');
+  });
+});
+
+/* LE TRACÉ ET LE RELANCEMENT (HIST-2, 02/09).
+ *
+ * Armelin, deux remarques du même essai : « l'historique ne conserve pas le
+ * tracé […] donc contribuer à l'algorithme envoie trop peu » et « il n'y a
+ * aucun moyen de relancer le même trajet depuis l'historique ». Les deux
+ * tenaient à la même cause : on gardait des CHIFFRES, jamais un LIEU. */
+
+const base = (sur: Partial<TrajetEnregistre> = {}): TrajetEnregistre => ({
+  id: 'x', departMs: 1_700_000_000_000, titre: '→ Lyon', releves: [],
+  resume: { dureeMs: 60_000, vitesseMaxKmh: 90, vitesseMoyenneKmh: 70, arrets: 0, arretMs: 0 },
+  ...sur,
+});
+
+describe('traceDuTrajet', () => {
+  it('rend les points dans l’ordre des relevés', () => {
+    expect(traceDuTrajet(base({ releves: [
+      { tMs: 0, vitesseMs: 10, altitudeM: null, lon: 2.1, lat: 48.1 },
+      { tMs: 30_000, vitesseMs: 12, altitudeM: null, lon: 2.2, lat: 48.2 },
+    ] }))).toEqual([[2.1, 48.1], [2.2, 48.2]]);
+  });
+
+  /* UN TRAJET D'AVANT HIST-2 REND UN TABLEAU VIDE, et c'est la vérité sur ce
+     qu'on en sait. Inventer une position à partir de la vitesse serait
+     fabriquer une donnée pour un fichier qu'on envoie ensuite à quelqu'un. */
+  it('saute les relevés sans position, sans en inventer', () => {
+    expect(traceDuTrajet(base({ releves: [
+      { tMs: 0, vitesseMs: 10, altitudeM: 42 },
+      { tMs: 30_000, vitesseMs: 12, altitudeM: 43, lon: 2.2, lat: 48.2 },
+    ] }))).toEqual([[2.2, 48.2]]);
+  });
+});
+
+describe('peutRelancer', () => {
+  it('accepte dès que l’arrivée est connue — le départ ne sert pas', () => {
+    expect(peutRelancer(base({ arrivee: { lon: 4.83, lat: 45.76 } }))).toBe(true);
+  });
+
+  /* LE DÉPART D'ALORS N'EST PAS UNE CONDITION : relancer « → Travail » depuis
+     chez un ami doit marcher, et c'est le cas où l'on en a le plus besoin. */
+  it('n’exige pas le départ enregistré', () => {
+    expect(peutRelancer(base({ depart: { lon: 2.3, lat: 48.8 } }))).toBe(false);
+  });
+
+  it('refuse un parcours gardé avant HIST-2', () => {
+    expect(peutRelancer(base())).toBe(false);
+  });
+});
+
+describe('versTrajets — les extrémités', () => {
+  it('relit une arrivée complète, avec son nom', () => {
+    const [t] = versTrajets([{ ...base(), arrivee: { lon: 4.83, lat: 45.76, libelle: 'Lyon' } }]);
+    expect(t?.arrivee).toEqual({ lon: 4.83, lat: 45.76, libelle: 'Lyon' });
+  });
+
+  /* UNE EXTRÉMITÉ À MOITIÉ NE PLACE RIEN : la garder ferait échouer le
+     relancement plus tard, loin d'ici, et le bouton aurait promis. */
+  it('écarte une extrémité amputée plutôt que de la garder à moitié', () => {
+    const [t] = versTrajets([{ ...base(), arrivee: { lon: 4.83 } }]);
+    expect(t?.arrivee).toBeUndefined();
+    expect(t?.id, 'le trajet lui-même ne doit pas être jeté').toBe('x');
+  });
+
+  it('ne fabrique pas d’extrémité pour un trajet qui n’en a pas', () => {
+    const [t] = versTrajets([base()]);
+    expect(t?.arrivee).toBeUndefined();
+    expect(t?.depart).toBeUndefined();
+  });
+
+  it('garde le tracé des relevés qui en portent un', () => {
+    const [t] = versTrajets([{ ...base(), releves: [
+      { tMs: 0, vitesseMs: 10, altitudeM: null, lon: 2.1, lat: 48.1 },
+    ] }]);
+    expect(traceDuTrajet(t!)).toEqual([[2.1, 48.1]]);
   });
 });

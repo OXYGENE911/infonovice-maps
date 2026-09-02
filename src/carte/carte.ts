@@ -388,7 +388,13 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      sert, comparer d'une semaine à l'autre. Le ranger derrière « Itinéraire »
      supposait un trajet en cours ; et son départ y libère la place qu'Armelin
      réclame : « que tout le menu s'affiche en entier à l'écran ». */
-  menu.ajouter('', new PanneauHistorique());
+  const historique = new PanneauHistorique();
+  /* ET IL SAIT RELANCER (HIST-2, 02/09) : « aucun moyen de relancer le même
+     trajet depuis l'historique ». Le planificateur lui est passé ici, comme
+     aux cartouches de lieux — l'historique ne le cherche pas dans le document,
+     il le reçoit. */
+  historique.itineraire = panneau;
+  menu.ajouter('', historique);
 
   /* LA VERSION VA TOUT EN BAS (ERGO-4, 02/09). Armelin : « la version est
      affichée en plein milieu des options. Il faudrait que la section Version

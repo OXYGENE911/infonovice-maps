@@ -584,6 +584,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       d'EV Database, crête de la Standard Range recoupée par XPENG France,
       autonomies du configurateur officiel. Armelin a fourni la source que je
       demandais.
+- [x] PR #188 — HIST-2 (02/09) : « aucun moyen de relancer le même trajet
+      depuis l'historique » et « l'historique ne conserve pas le tracé […] donc
+      contribuer envoie trop peu ». Même cause : on gardait des CHIFFRES,
+      jamais un LIEU. Le tracé s'enregistre (sans un appel de plus, +11 Ko par
+      trajet), la destination aussi, et « Relancer » ouvre le planificateur
+      dessus. Le fichier de contribution emporte le tracé AMPUTÉ de 500 m à
+      chaque bout — un tracé entier commence devant une porte.
 - [x] PR #187 — VEHIC-3 (02/09) : les seize modèles réclamés avec leurs liens
       officiels — Cupra Raval Endurance, VW ID. Polo 52 kWh, DS N°7 (trois
       versions), DS 3 E-Tense, BYD Atto 3 EVO (deux versions) et les huit
