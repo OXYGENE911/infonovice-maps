@@ -15,6 +15,14 @@
 // 360 points pour trois heures de route, soit ~32 Ko en JSON. Deux trajets par
 // semaine pendant un an tiennent dans 3 Mo. Cinq secondes n'apprendraient rien
 // de plus sur une comparaison et pèseraient six fois plus.
+//
+// CE QUE LE TRACÉ AJOUTE, MESURÉ AUSSI (HIST-2, 02/09) : deux coordonnées
+// arrondies à cinq décimales — le mètre — pèsent 32 caractères par relevé, soit
+// ~11 Ko de plus sur ces trois heures, et ~43 Ko par trajet. Les cinquante
+// trajets gardés passent de 1,6 à 2,2 Mo : le plafond ne bouge pas.
+// CINQ DÉCIMALES ET PAS QUINZE : `toFixed(5)` place à un mètre près, ce qui
+// suffit à savoir sur quelle route on roulait ; les dix décimales que crache
+// le récepteur auraient triplé le poids pour du bruit.
 
 import { lirePreference, ecrirePreference } from './stockage';
 import type { ResumeBilan } from './bilan-trajet';
@@ -36,6 +44,22 @@ export interface ReleveTrajet {
   vitesseMs: number | null;
   /** Altitude en mètres, quand elle est connue. */
   altitudeM: number | null;
+  /* LA POSITION DU RELEVÉ (HIST-2, 02/09). Armelin : « l'historique ne
+     conserve pas le tracé […] donc contribuer à l'algorithme envoie trop
+     peu ». Il a raison : sans le OÙ, une vitesse ne dit rien — 40 km/h en
+     ville et 40 km/h sur une nationale ne racontent pas la même chose.
+     ELLE NE COÛTE AUCUN APPEL : le fixe qui donne la vitesse donne déjà la
+     position ; on la jetait. Absente sur les trajets d'avant ce jour. */
+  lon?: number;
+  lat?: number;
+}
+
+/** Une extrémité de trajet, telle qu'on peut la rejouer. */
+export interface BoutDeTrajet {
+  lon: number;
+  lat: number;
+  /** Le nom, quand on l'a — le départ n'est souvent qu'un point GPS. */
+  libelle?: string;
 }
 
 /** Un trajet enregistré, tel qu'il vit dans le navigateur. */
@@ -50,6 +74,13 @@ export interface TrajetEnregistre {
   resume: ResumeBilan;
   /** Les relevés réguliers, s'il y en a. */
   releves: ReleveTrajet[];
+  /* LES DEUX EXTRÉMITÉS (HIST-2, 02/09). Armelin : « il n'y a aucun moyen de
+     relancer le même trajet depuis l'historique ». Il n'y en avait aucun
+     parce qu'on ne gardait que le TITRE — « Domicile → Travail » ne se
+     recalcule pas. Absentes sur les trajets d'avant ce jour, et le bouton
+     s'en tait alors plutôt que de proposer un geste sans effet. */
+  depart?: BoutDeTrajet;
+  arrivee?: BoutDeTrajet;
 }
 
 /* UN RELEVÉ TOUTES LES TRENTE SECONDES. Armelin demandait « à intervalle
@@ -80,6 +111,20 @@ export function titreParDefaut(depart: string, arrivee: string): string {
   return `${d} → ${a}`;
 }
 
+/* UNE EXTRÉMITÉ N'EST VALIDE QU'ENTIÈRE : une longitude sans latitude ne
+   place rien, et la garder à moitié ferait planter le relancement plus tard,
+   loin d'ici. */
+function boutSiComplet(
+  brut: unknown, champ: 'depart' | 'arrivee',
+): Record<string, BoutDeTrajet> {
+  const b = brut as Record<string, unknown> | null | undefined;
+  if (!b || typeof b['lon'] !== 'number' || typeof b['lat'] !== 'number'
+    || !Number.isFinite(b['lon']) || !Number.isFinite(b['lat'])) return {};
+  const bout: BoutDeTrajet = { lon: b['lon'], lat: b['lat'] };
+  if (typeof b['libelle'] === 'string' && b['libelle'] !== '') bout.libelle = b['libelle'];
+  return { [champ]: bout };
+}
+
 /** Valide ce qui revient du navigateur — frontière système — PURE. */
 export function versTrajets(brut: unknown): TrajetEnregistre[] {
   if (!Array.isArray(brut)) return [];
@@ -105,6 +150,12 @@ export function versTrajets(brut: unknown): TrajetEnregistre[] {
         ? (o['releves'] as unknown[]).filter(
           (x): x is ReleveTrajet => typeof (x as ReleveTrajet)?.tMs === 'number',
         ) : [],
+      /* LES ANCIENS TRAJETS N'ONT NI DÉPART NI ARRIVÉE, et c'est normal :
+         ils ont été gardés avant HIST-2. On ne les jette pas et on ne leur
+         invente pas de coordonnées — le champ reste absent, et l'interface
+         le lit comme « ce trajet ne se relance pas ». */
+      ...boutSiComplet(o['depart'], 'depart'),
+      ...boutSiComplet(o['arrivee'], 'arrivee'),
     });
   }
   return sortie;
@@ -130,6 +181,34 @@ export async function lireHistorique(): Promise<TrajetEnregistre[]> {
 /** Écrit l'historique. */
 export async function ecrireHistorique(liste: readonly TrajetEnregistre[]): Promise<void> {
   await ecrirePreference(PREF_HISTORIQUE, liste);
+}
+
+/**
+ * Le tracé d'un trajet, en points [lon, lat] — PURE.
+ *
+ * LES RELEVÉS SANS POSITION SONT SAUTÉS, pas remplacés : un trajet d'avant
+ * HIST-2 rend un tableau vide, et c'est la vérité sur ce qu'on en sait.
+ */
+export function traceDuTrajet(trajet: TrajetEnregistre): [number, number][] {
+  const points: [number, number][] = [];
+  for (const r of trajet.releves) {
+    if (typeof r.lon === 'number' && typeof r.lat === 'number') points.push([r.lon, r.lat]);
+  }
+  return points;
+}
+
+/**
+ * Ce trajet peut-il être relancé ? — PURE.
+ *
+ * IL FAUT UNE ARRIVÉE, ET RIEN D'AUTRE. Le départ ne sert pas : on relance
+ * depuis là où l'on est, pas depuis là où l'on était la semaine dernière —
+ * c'est déjà ce que fait le planificateur, qui remplit le départ tout seul
+ * avec la position courante. Exiger le départ enregistré interdirait de
+ * relancer « → Travail » depuis chez un ami, ce qui est justement le cas où
+ * l'on en a le plus besoin.
+ */
+export function peutRelancer(trajet: TrajetEnregistre): boolean {
+  return trajet.arrivee !== undefined;
 }
 
 /* ==========================================================================

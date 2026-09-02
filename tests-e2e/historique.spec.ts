@@ -18,7 +18,12 @@ async function semer(page: import('@playwright/test').Page): Promise<void> {
          un test de floutage ne prouverait rien — il faut que quelque chose
          PUISSE fuiter pour qu'on établisse que rien ne fuit. */
       { id: 't2', departMs: 1_700_600_000_000,
-        titre: 'Le Plessis-Trévise → 12 rue de la Paix, Paris', releves: [],
+        titre: 'Le Plessis-Trévise → 12 rue de la Paix, Paris',
+        /* CELUI-CI PORTE SON ARRIVÉE (HIST-2) : c'est lui qu'on relancera.
+           L'autre n'en a pas, comme les parcours gardés avant HIST-2 — et
+           c'est exprès : les deux cas doivent se distinguer à l'écran. */
+        arrivee: { lon: 2.3316, lat: 48.8687, libelle: '12 rue de la Paix, Paris' },
+        releves: [],
         resume: { dureeMs: 3_000_000, vitesseMaxKmh: 130,
           vitesseMoyenneKmh: 95, arrets: 0, arretMs: 0 } },
       { id: 't1', departMs: 1_700_000_000_000, titre: '→ Lyon', releves: [],
@@ -176,4 +181,51 @@ test('CONTRIBUER MONTRE LE FICHIER, ET AUCUNE ADRESSE N’Y SURVIT', async ({ pa
      que pas de contenu du tout. */
   await lignes.nth(1).locator('input').check();
   await expect(boite).toBeHidden();
+});
+
+/* RELANCER LE MÊME TRAJET (HIST-2, 02/09).
+ *
+ * Armelin, après un essai : « il n'y a aucun moyen de relancer le même trajet
+ * depuis l'historique ». Il n'y en avait aucun parce qu'on ne gardait que le
+ * TITRE — « Domicile → Travail » ne se recalcule pas. */
+
+test('UN PARCOURS SE RELANCE — et celui qui n’a pas d’arrivée le dit', async ({ page }) => {
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await semer(page);
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  await ouvrirVolet(page, '.hist');
+  const lignes = page.locator('.iti-hist-ligne');
+  await expect(lignes).toHaveCount(2, { timeout: 10_000 });
+
+  const relancer = page.getByRole('button', { name: 'Relancer' });
+
+  /* LE PARCOURS D'AVANT HIST-2 N'A PAS D'ARRIVÉE : le bouton reste éteint, et
+     son infobulle dit pourquoi. Un clic sans effet passerait pour une panne. */
+  await lignes.nth(1).locator('input').check();
+  await expect(relancer).toBeDisabled();
+  await expect(relancer).toHaveAttribute('title', /gardé avant/);
+
+  /* DEUX PARCOURS COCHÉS : on ne repart pas vers deux endroits. */
+  await lignes.first().locator('input').check();
+  await expect(relancer).toBeDisabled();
+
+  /* UN SEUL, AVEC SON ARRIVÉE : le bouton s'allume. */
+  await lignes.nth(1).locator('input').uncheck();
+  await expect(relancer).toBeEnabled();
+
+  await relancer.click();
+
+  /* LE VOLET DE L'HISTORIQUE SE REFERME — le planificateur qui s'ouvre
+     derrière lui doit se voir. */
+  await expect(page.locator('details.hist')).not.toHaveAttribute('open', '');
+
+  /* ET LA DESTINATION PORTE SON NOM, pas ses coordonnées : « itinéraire vers
+     2,3316 ; 48,8687 » ne dit à personne vers quoi il va. */
+  await expect(page.locator('[data-role="arrivee"] recherche-adresse input'))
+    .toHaveValue('12 rue de la Paix, Paris', { timeout: 10_000 });
 });

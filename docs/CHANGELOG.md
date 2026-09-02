@@ -2,6 +2,32 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.42.0] — 2026-09-02 — HIST-2
+
+### Ajouté
+- **Relancer** un parcours depuis l'historique : cocher un trajet, cliquer, et
+  le planificateur s'ouvre sur la même destination. Le départ n'est PAS celui
+  d'alors — c'est la position courante, pour que « → Travail » se relance
+  aussi depuis chez un ami.
+- Le **tracé** est enregistré : chaque relevé porte sa position, arrondie au
+  mètre. Elle ne coûte aucun appel — le fixe qui donne la vitesse donnait déjà
+  la position, et on la jetait. Mesuré : +11 Ko par trajet de trois heures,
+  les cinquante trajets gardés passant de 1,6 à 2,2 Mo.
+- Le fichier de contribution emporte désormais le tracé, **privé de ses 500
+  premiers et 500 derniers mètres**. Un tracé entier commence devant une
+  porte ; le milieu est ce qui apprend quelque chose. Les deux listes « ce qui
+  part / ce qui ne part pas » ont été réécrites en conséquence.
+
+### Corrigé
+- Les extrémités enregistrées (avec le libellé de l'adresse d'arrivée) ne
+  partent PAS dans le fichier de contribution — un test le vérifie, parce que
+  c'est exactement ce que le floutage promet de retirer.
+
+### Compatibilité
+- Les parcours gardés avant cette version n'ont ni tracé ni destination : le
+  bouton « Relancer » reste éteint pour eux et dit pourquoi, plutôt que de
+  faire un clic sans effet.
+
 ## [1.41.0] — 2026-09-02 — VEHIC-3
 
 ### Ajouté

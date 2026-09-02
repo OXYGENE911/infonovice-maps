@@ -16,14 +16,23 @@
 // gauche. La réponse n'était pas de renoncer, c'était d'EXTRAIRE la page dans
 // son propre composant — ce que fait ce fichier.
 import {
-  lireHistorique, ecrireHistorique, comparerTrajets, type TrajetEnregistre,
+  lireHistorique, ecrireHistorique, comparerTrajets, peutRelancer,
+  type TrajetEnregistre,
 } from '../lib/historique-trajets';
 import {
   texteDuPartage, nomDuFichier, CONTACT, CE_QUI_PART, CE_QUI_RESTE,
 } from '../lib/partage-trajet';
 import { pictoMenu } from './icone-menu';
 
+/** Ce que l'historique sait demander au planificateur — rien de plus. */
+export interface PorteRelance {
+  allerVers(point: { lon: number; lat: number }, libelle: string): void;
+}
+
 export class PanneauHistorique extends HTMLElement {
+  /** Le planificateur, posé par la carte. Absent : « Relancer » ne fait rien. */
+  itineraire: PorteRelance | null = null;
+
   connectedCallback(): void {
     if (this.firstElementChild) return;
     this.innerHTML = `
@@ -35,6 +44,12 @@ export class PanneauHistorique extends HTMLElement {
             d’un trajet, le bilan propose de le garder.</p>
           <div class="iti-hist-liste" role="group" aria-label="Parcours enregistrés"></div>
           <div class="iti-hist-actions" hidden>
+            <!-- REFAIRE LE MÊME TRAJET (HIST-2, 02/09). Armelin : « il n'y a
+                 aucun moyen de relancer le même trajet depuis l'historique ».
+                 IL VIENT EN TÊTE parce que c'est le geste le plus fréquent :
+                 on relance un trajet habituel bien plus souvent qu'on ne
+                 compare deux semaines. -->
+            <button type="button" class="iti-hist-relancer">Relancer</button>
             <button type="button" class="iti-hist-comparer">Comparer</button>
             <button type="button" class="iti-hist-contribuer">Contribuer à
               l’algorithme</button>
@@ -53,6 +68,9 @@ export class PanneauHistorique extends HTMLElement {
       else this.#fermerComparaison();
     });
 
+    this.querySelector('.iti-hist-relancer')?.addEventListener('click', () => {
+      this.#relancer();
+    });
     this.querySelector('.iti-hist-comparer')?.addEventListener('click', () => {
       this.#montrerComparaison();
     });
@@ -269,11 +287,52 @@ export class PanneauHistorique extends HTMLElement {
     this.querySelector('.iti-hist-comparaison')?.remove();
   }
 
+  /**
+   * Repart vers la destination d'un parcours gardé.
+   *
+   * LE DÉPART N'EST PAS CELUI D'ALORS, ET C'EST VOULU. Le planificateur
+   * remplit le départ avec la position courante ; relancer « → Travail »
+   * depuis chez un ami doit donner le trajet de chez cet ami, pas celui de la
+   * semaine dernière. C'est aussi pourquoi `peutRelancer` n'exige que
+   * l'arrivée : exiger le départ enregistré interdirait le cas où l'on en a
+   * le plus besoin.
+   *
+   * LE VOLET SE REFERME : il a rempli son office, et le planificateur qui
+   * s'ouvre derrière lui doit se voir.
+   */
+  #relancer(): void {
+    const seul = this.#trajets.find((x) => this.#coches.has(x.id));
+    if (!seul?.arrivee) return;
+    const volet = this.querySelector('details.hist') as HTMLDetailsElement | null;
+    if (volet) volet.open = false;
+    this.itineraire?.allerVers(
+      { lon: seul.arrivee.lon, lat: seul.arrivee.lat },
+      /* LE NOM D'ALORS QUAND ON L'A : « itinéraire vers 2,4487 ; 48,7913 » ne
+         dit à personne vers quoi il va. Le titre du parcours sert de secours
+         — c'est ce que l'usager lisait dans la liste juste avant de cliquer. */
+      seul.arrivee.libelle ?? seul.titre,
+    );
+  }
+
   #majActionsHistorique(): void {
     const actions = this.querySelector<HTMLElement>('.iti-hist-actions');
     const comparer = this.querySelector<HTMLButtonElement>('.iti-hist-comparer');
     if (!actions || !comparer) return;
     actions.hidden = this.#coches.size === 0;
+    /* RELANCER EXIGE UN SEUL PARCOURS — on ne repart pas vers deux endroits —
+       ET UNE ARRIVÉE ENREGISTRÉE. Les parcours gardés avant HIST-2 n'en ont
+       pas : le bouton reste éteint et DIT POURQUOI, plutôt que de faire un
+       clic sans effet qu'on prendrait pour une panne. */
+    const relancer = this.querySelector<HTMLButtonElement>('.iti-hist-relancer');
+    if (relancer) {
+      const seul = this.#coches.size === 1
+        ? this.#trajets.find((x) => this.#coches.has(x.id)) : undefined;
+      const bon = seul !== undefined && peutRelancer(seul);
+      relancer.disabled = !bon;
+      relancer.title = this.#coches.size !== 1
+        ? 'Cochez un seul parcours'
+        : (bon ? '' : 'Ce parcours a été gardé avant que la destination ne soit enregistrée');
+    }
     /* COMPARER EXIGE DEUX PARCOURS, et le bouton le dit en restant éteint :
        proposer une comparaison à un seul serait promettre un écart qui
        n'existe pas. */
