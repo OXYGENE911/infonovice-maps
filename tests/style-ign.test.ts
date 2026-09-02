@@ -138,9 +138,18 @@ describe('les étiquettes sur imagerie (FOND-3)', () => {
   });
 
   it('LE FOND PLAN N’EST PAS TOUCHÉ : corriger l’IGN chez lui serait présomptueux', () => {
+    /* CE TEST JUGEAIT SUR LA COULEUR DU TEXTE, et ce raccourci est mort avec
+       FOND-6 (02/09) : le numéro d'autoroute s'écrit désormais en BLANC sur
+       les deux fonds, parce qu'il est posé sur un écusson rouge. Le blanc
+       n'est donc plus la signature du traitement d'imagerie.
+       ON JUGE MAINTENANT SUR CE QUI LE DÉFINIT VRAIMENT — son halo noir
+       opaque et serré. C'est lui que `pourImagerie` pose, et lui seul qui ne
+       doit jamais paraître sur le fond Plan. */
     for (const s of calquesEtiquettes('plan').filter((x) => x.type === 'symbol')) {
       const p = s.paint as Record<string, unknown>;
-      expect(p['text-color']).not.toBe('#FFFFFF');
+      expect(p['text-halo-color'],
+        `${s.id} porte le halo d’imagerie sur le fond Plan`)
+        .not.toBe('rgba(0, 0, 0, 0.85)');
     }
   });
 

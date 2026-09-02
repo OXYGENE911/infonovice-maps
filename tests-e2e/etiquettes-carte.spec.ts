@@ -112,3 +112,72 @@ test('LE RELIEF SE DESSINE, et ses hauteurs viennent de l’IGN', async ({ page 
   { timeout: 5_000, message: 'la caméra est restée à plat : le relief ne se voit pas' })
     .toBeGreaterThan(20);
 });
+
+/* LES NUMÉROS DE ROUTE SONT DANS LEUR ÉCUSSON (FOND-6, 02/09).
+ *
+ * Armelin : « on voit les numéros des routes s'afficher seulement au format
+ * texte. Ce serait bien que les routes et autoroutes soient affichées dans
+ * leur vrai cartouche cartographique. Par exemple, l'autoroute A86 apparaît
+ * seulement sous format texte écrit en blanc au contour noir, alors que sur
+ * Google Maps, une autoroute apparaît dans un cartouche rouge A86 aux
+ * contours blancs. »
+ *
+ * CE PARCOURS TOUCHE LES VRAIES TUILES, comme les deux précédents et pour la
+ * même raison : un écusson déclaré n'est pas un écusson dessiné, et c'est la
+ * leçon de FOND-2. */
+
+test('LES ÉCUSSONS SONT POSÉS, et les numéros les portent', async ({ page }) => {
+  test.slow();
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 20_000 });
+
+  await page.evaluate(() => {
+    /* AUTOUR DU PLESSIS-TRÉVISE : l'A4, l'A86 et une poignée de
+       départementales — de quoi voir les deux écussons à la fois. */
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [2.5722, 48.8103], zoom: 12 });
+  });
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __carte: { areTilesLoaded(): boolean } })
+      .__carte.areTilesLoaded()), { timeout: 30_000 }).toBe(true);
+
+  /* LES DEUX IMAGES SONT DANS LE REGISTRE : sans elles, `icon-optional`
+     laisserait paraître les numéros nus — et rien ne le dirait. */
+  const registre = await page.evaluate(() => {
+    const c = (window as unknown as { __carte: { hasImage(id: string): boolean } }).__carte;
+    return { rouge: c.hasImage('cartouche-rouge'), jaune: c.hasImage('cartouche-jaune') };
+  });
+  expect(registre.rouge, 'l’écusson rouge n’a pas été posé').toBe(true);
+  expect(registre.jaune, 'l’écusson jaune n’a pas été posé').toBe(true);
+
+  /* ET LES CALQUES LES RÉCLAMENT, chacun le sien. C'est ce lien-là qui
+     transforme un numéro nu en cartouche. */
+  const calques = await page.evaluate(() => {
+    const c = (window as unknown as { __carte: {
+      getStyle(): { layers: { id: string; layout?: Record<string, unknown> }[] };
+    } }).__carte;
+    return c.getStyle().layers
+      .filter((l) => /^num-route-/.test(l.id))
+      .map((l) => ({ id: l.id, image: l.layout?.['icon-image'] as string | undefined }));
+  });
+  expect(calques.length, 'aucun calque de numéro de route').toBeGreaterThanOrEqual(3);
+  for (const c of calques) {
+    expect(c.image, `${c.id} n’a pas d’écusson`).toMatch(/^cartouche-(rouge|jaune)$/);
+  }
+  /* L'AUTOROUTE ET LA NATIONALE SUR ROUGE, LA DÉPARTEMENTALE SUR JAUNE :
+     c'est la signalisation française, et c'est ce qu'Armelin a photographié. */
+  expect(calques.find((c) => c.id.includes('autoroute'))?.image).toBe('cartouche-rouge');
+  expect(calques.find((c) => c.id.includes('nationale'))?.image).toBe('cartouche-rouge');
+  expect(calques.find((c) => c.id.includes('partementale'))?.image).toBe('cartouche-jaune');
+
+  /* ET DES NUMÉROS SONT BIEN DESSINÉS — le reste ne vaudrait rien sans ça. */
+  const numeros = await page.evaluate(() => {
+    const c = (window as unknown as { __carte: {
+      queryRenderedFeatures(): { layer: { id: string }; properties: Record<string, unknown> }[];
+    } }).__carte;
+    return [...new Set(c.queryRenderedFeatures()
+      .filter((x) => /^num-route-/.test(x.layer.id))
+      .map((x) => String(x.properties['texte'])))];
+  });
+  expect(numeros.length, `numéros dessinés : ${numeros.join(', ')}`).toBeGreaterThanOrEqual(3);
+});
