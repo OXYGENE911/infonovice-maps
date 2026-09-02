@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   styleIGNPlan, styleCarte, urlTuiles, ATTRIBUTION_IGN, LOCALE_FR,
   calquesEtiquettes, sourceEtiquettes,
+  pourImagerie,
 } from '../src/carte/style-ign';
 
 describe('styleIGNPlan', () => {
@@ -100,5 +101,50 @@ describe('les étiquettes qui manquent au raster (FOND-1, puis FOND-2)', () => {
       .map((c2) => (c2 as { minzoom?: number }).minzoom);
     // L'autoroute et la nationale dès le zoom 7, la départementale au 11.
     expect([...zooms].sort((a, b) => (a ?? 0) - (b ?? 0))).toEqual([7, 7, 11]);
+  });
+});
+
+describe('les étiquettes sur imagerie (FOND-3)', () => {
+  /* Armelin : « en cartographie satellite, la police d'écriture des villes
+     n'est pas belle du tout. Un halo blanc en fond […] vient faire tache avec
+     un rendu qui bave un peu. »
+     Le style d'origine écrit les toponymes en NOIR cerné de blanc à moitié
+     transparent : invisible sur un fond uni, laiteux sur une photo. */
+
+  it('sur l’imagerie, le texte devient blanc à cerne noir', () => {
+    const c = calquesEtiquettes('ortho');
+    const symboles = c.filter((x) => x.type === 'symbol');
+    expect(symboles.length).toBeGreaterThan(0);
+    for (const s of symboles) {
+      const p = s.paint as Record<string, unknown>;
+      expect(p['text-color']).toBe('#FFFFFF');
+      expect(p['text-halo-color']).toBe('rgba(0, 0, 0, 0.85)');
+    }
+  });
+
+  it('le fond « ortho-routes » aussi : c’est de la photo également', () => {
+    for (const s of calquesEtiquettes('ortho-routes').filter((x) => x.type === 'symbol')) {
+      expect((s.paint as Record<string, unknown>)['text-color']).toBe('#FFFFFF');
+    }
+  });
+
+  it('le cerne est SERRÉ — un halo large auréole au lieu de détacher', () => {
+    for (const s of calquesEtiquettes('ortho').filter((x) => x.type === 'symbol')) {
+      const p = s.paint as Record<string, unknown>;
+      expect(p['text-halo-width']).toBeLessThanOrEqual(2);
+      expect(p['text-halo-blur']).toBe(0);
+    }
+  });
+
+  it('LE FOND PLAN N’EST PAS TOUCHÉ : corriger l’IGN chez lui serait présomptueux', () => {
+    for (const s of calquesEtiquettes('plan').filter((x) => x.type === 'symbol')) {
+      const p = s.paint as Record<string, unknown>;
+      expect(p['text-color']).not.toBe('#FFFFFF');
+    }
+  });
+
+  it('pourImagerie ne touche pas les calques qui ne portent pas de texte', () => {
+    const ligne = { id: 'x', type: 'line' as const, source: 's', paint: { 'line-color': '#123456' } };
+    expect(pourImagerie([ligne])[0]).toEqual(ligne);
   });
 });

@@ -92,17 +92,26 @@ test('le menu range les couches, les lieux et l’affichage', async ({ page }) =
   }
 });
 
-test('la recharge est une PAGE du trajet — jamais un bouton de plus', async ({ page }) => {
-  /* CE TEST EXISTE POUR EMPÊCHER UN RETOUR EN ARRIÈRE, deux fois. Le
-     va-et-vient entre les deux côtés de l'écran était le premier reproche ; la
-     multiplication des boutons à gauche fut le second. Ni l'un ni l'autre ne
-     doit se réinstaller par souci de symétrie — la symétrie n'est pas le
-     critère, l'intention l'est. */
+test('LA RECHARGE EST UN FILTRE — elle vit avec les filtres', async ({ page }) => {
+  /* CE TEST A CHANGÉ DE CAMP, ET C'EST ARMELIN QUI L'A RETOURNÉ (ERGO-3,
+     02/09). Il défendait la recharge comme PAGE DU PLANIFICATEUR, contre deux
+     retours en arrière : le va-et-vient entre les deux côtés de l'écran, puis
+     la multiplication des boutons à gauche.
+     UN TROISIÈME ARGUMENT A EMPORTÉ LA DÉCISION, venu d'un collègue
+     d'Armelin : « il s'agit également d'un filtre de POI de type bornes de
+     recharge et […] ça doit rester dans le menu des filtres par logique ».
+     Armelin : « je suis assez d'accord avec lui ». Le va-et-vient ne
+     réapparaît pas pour autant — l'entonnoir est SUR la carte, à côté de la
+     puce qui allume ces mêmes bornes.
+     CE QUE CE PARCOURS GARDE ENCORE : pas de bouton de plus à gauche, et
+     rien qui reparte dans le menu de droite. */
   await ouvrirLaCarte(page);
   await expect(page.locator('.reglages-corps .poi'),
     'la recherche de bornes est retournée dans le menu de droite').toHaveCount(0);
-  await expect(page.locator('.vue-hote[data-vue="couches"] .poi'),
-    'la recherche de bornes n’est plus une page du planificateur').toHaveCount(1);
+  await expect(page.locator('.poi-hote-recharge .poi'),
+    'la recherche de bornes n’est pas dans le filtre des POI').toHaveCount(1);
+  await expect(page.locator('.iti-vers[data-vers="couches"]'),
+    'le planificateur a gardé une entrée qui a déménagé').toHaveCount(0);
   await expect(page.locator('.vue-hote[data-vue="vehicule"] .vehicule')).toHaveCount(1);
 });
 
@@ -130,8 +139,14 @@ test('le menu ouvert ne recouvre AUCUN contrôle de la carte', async ({ page }) 
   await ouvrirMenu(page);
 
   const panneau = await boite(page.locator('.reglages-corps'));
+  /* LES BOUTONS DU MENU NE SONT PAS DES CONTRÔLES DE LA CARTE, et les compter
+     comme tels rendait ce parcours faux dès que le menu gagnait un bouton :
+     il « recouvrait » alors son propre contenu. Attrapé le 02/09 en ajoutant
+     « Mettre à jour l'application » — mesuré, pas deviné : le bouton fautif
+     était à l'intérieur du panneau, à quinze pixels de son bord. */
   const controles = page.locator(
-    '.maplibregl-ctrl-top-right button, .maplibregl-ctrl-bottom-right button');
+    '.maplibregl-ctrl-top-right button, .maplibregl-ctrl-bottom-right button')
+    .and(page.locator(':not(.reglages-corps *)'));
   const nombre = await controles.count();
   expect(nombre, 'aucun contrôle — la vérification serait vide').toBeGreaterThan(0);
 

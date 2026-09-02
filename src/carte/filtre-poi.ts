@@ -84,6 +84,20 @@ export const INTERVALLE_MIN_MS = 1_500;
 export const LIEUX_GARDES = 600;
 
 export class FiltrePoi extends HTMLElement {
+  /* LE PANNEAU DE RECHARGE, ACCUEILLI ICI (ERGO-3, 02/09). Il peut arriver
+     AVANT que le squelette ne soit bâti — l'assemblage le range dès sa
+     création — d'où la mémoire : on le pose au moment du rendu. C'est la même
+     leçon que le menu des réglages, qui l'avait apprise en avalant cinq
+     volets orphelins sans une erreur. */
+  #recharge: HTMLElement | null = null;
+
+  /** Accueille le panneau « Recharge et services » dans le filtre. */
+  logerRecharge(element: HTMLElement): void {
+    this.#recharge = element;
+    const hote = this.querySelector<HTMLElement>('.poi-hote-recharge');
+    if (hote) hote.appendChild(element);
+  }
+
   #carte: CarteMapLibre | null = null;
 
   #actives = new Set<string>();
@@ -173,7 +187,25 @@ export class FiltrePoi extends HTMLElement {
         </div>
         <button type="button" class="poi-chercher">Chercher à nouveau ici</button>
         <p class="poi-filtre-etat" role="status"></p>
+        <!-- LES FILTRES DE RECHARGE VIENNENT ICI (ERGO-3, 02/09).
+             LE RAISONNEMENT N'EST PAS DE MOI, ET IL EST JUSTE. Un collègue
+             d'Armelin : « lorsqu'on clique sur itinéraire, on a le bouton
+             "Recharge et services" qui permet de configurer le filtre des
+             bornes […] et lorsque je suis dans la carte, j'ai le bouton en
+             entonnoir qui permet de configurer le filtre des POI, mais
+             seulement d'afficher ou masquer les bornes. Il aurait été plus
+             logique de sortir la section "Recharge et services" du menu
+             itinéraire pour l'inclure directement au niveau des filtres, car
+             il s'agit également d'un filtre de POI. » Armelin : « je suis
+             assez d'accord avec lui ».
+             CE QUI SE RANGE ENSEMBLE SE RÈGLE ENSEMBLE : la puce « Bornes de
+             recharge » et le choix des réseaux étaient deux moitiés du même
+             geste, séparées par tout l'écran. -->
+        <div class="poi-hote-recharge"></div>
       </div>`;
+
+    const hote = this.querySelector<HTMLElement>('.poi-hote-recharge');
+    if (hote && this.#recharge) hote.appendChild(this.#recharge);
 
     const bulle = this.querySelector<HTMLButtonElement>('.poi-bulle')!;
     const panneau = this.querySelector<HTMLElement>('.poi-panneau')!;

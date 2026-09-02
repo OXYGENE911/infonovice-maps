@@ -141,10 +141,47 @@ export function sourceEtiquettes(): { type: 'vector'; tiles: string[];
  * déjà les noms, et deux textes superposés décalés d'un pixel se lisent plus
  * mal qu'un. Sur le SATELLITE, les deux — la photographie ne porte rien.
  */
+/* SUR DE LA PHOTO, ON ÉCRIT EN BLANC CERNÉ DE NOIR (FOND-3, 02/09).
+   LE TERRAIN. Armelin : « en cartographie satellite, la police d'écriture des
+   villes n'est pas belle du tout. Un halo blanc en fond pour faire ressortir
+   les lettres noires du nom des villes vient faire tache avec un rendu qui
+   bave un peu. »
+   IL A RAISON, ET LA CAUSE EST DANS LE STYLE D'ORIGINE : les toponymes du
+   PLAN IGN sont NOIRS cernés d'un halo BLANC À MOITIÉ TRANSPARENT
+   (`rgba(255,255,255,0.5)`) de 2 à 3 pixels. Sur un fond clair et uni, ce
+   halo ne se voit pas. Sur une photo aérienne — des tuiles, des arbres, des
+   toits — il devient une tache laiteuse qui ne masque rien franchement : le
+   texte noir se pose sur des zones sombres, et le halo translucide n'a pas
+   assez de corps pour l'en détacher. D'où l'impression de bavure.
+   LA CONVENTION CARTOGRAPHIQUE SUR IMAGERIE EST L'INVERSE : texte BLANC,
+   halo NOIR OPAQUE et SERRÉ. Le blanc tient sur presque tous les sols, et un
+   cerne franc de 1,6 px découpe la lettre au lieu de l'auréoler.
+   ON NE TOUCHE QUE L'IMAGERIE : sur le fond Plan, le style d'origine est
+   juste, et le corriger serait corriger l'IGN chez lui. */
+export function pourImagerie(
+  calques: StyleSpecification['layers'],
+): StyleSpecification['layers'] {
+  return calques.map((calque) => {
+    if (calque.type !== 'symbol') return calque;
+    return {
+      ...calque,
+      paint: {
+        ...calque.paint,
+        'text-color': '#FFFFFF',
+        'text-halo-color': 'rgba(0, 0, 0, 0.85)',
+        /* SERRÉ, ET C'EST LE POINT : un halo large auréole la lettre au lieu
+           de la détacher — c'est la « bavure » signalée. */
+        'text-halo-width': 1.6,
+        'text-halo-blur': 0,
+      },
+    };
+  });
+}
+
 export function calquesEtiquettes(fond: Fond): StyleSpecification['layers'] {
   return fond === 'plan'
     ? [...CALQUES_NUMEROS_ROUTE]
-    : [...CALQUES_TOPONYMES, ...CALQUES_NUMEROS_ROUTE];
+    : pourImagerie([...CALQUES_TOPONYMES, ...CALQUES_NUMEROS_ROUTE]);
 }
 
 /** Le style historique de la PR #2, conservé comme raccourci. */

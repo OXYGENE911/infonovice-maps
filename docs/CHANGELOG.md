@@ -2,6 +2,78 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.32.0] — 2026-09-02 — Savoir ce qu'on exécute, et sept défauts (PR #178)
+
+### D'ABORD : la version se lit, et la mise à jour se force — VERSION-1
+Armelin, après un second essai à pied : « je ne sais pas si j'ai la bonne
+version en cache ». **Il avait raison de douter, et rien ne pouvait le lui
+dire.** L'application est une PWA : son service worker garde le paquet
+précédent jusqu'à ce qu'il cède la place. Trois de ses retours du jour — la
+carte noire, l'absence de voix, l'absence de recalcul — peuvent s'expliquer par
+un paquet périmé, et **sans numéro affiché, ni lui ni moi ne pouvons
+trancher**.
+
+Le menu porte donc « Version 1.32.0 » et un bouton **« Mettre à jour
+l'application »** qui vide les caches, désinscrit le service worker et
+recharge. Les favoris et l'historique ne sont pas touchés, et c'est écrit. Le
+message de carte perdue vide lui aussi le cache : si le noir venait d'un paquet
+périmé plutôt que de la mémoire graphique, ce bouton doit aussi en sortir.
+
+### Corrigé
+- **HIST-2 — la comparaison illisible en sombre.** Deuxième signalement du même
+  défaut : le balayage de contraste de HIST-1 **n'ouvrait pas la comparaison**,
+  il n'avait donc rien à y mesurer. Un garde-fou ne vaut que ce que son
+  parcours fait paraître à l'écran ; celui-ci l'ouvre désormais.
+- **HIST-3 — la comparaison ne partait plus.** « L'affichage reste et je ne
+  peux pas l'enlever même en fermant la page d'historique. » Elle a un bouton
+  « Fermer », elle tombe quand on quitte la page, et elle tombe aussi quand la
+  sélection change — ses chiffres portaient sur les parcours cochés à ce
+  moment-là.
+- **PARK-3 — la feuille masquait son propre interrupteur.** Elle s'ouvre
+  maintenant au-dessus du rond « P », qui reste pressable.
+- **GUIDE-6 — aucun recalcul à pied.** « Le GPS m'a fait passer le tracé à
+  l'intérieur d'une résidence protégée par un digicode […] j'ai fait le tour du
+  pâté de maison et le GPS n'a jamais recalculé. » **Le seuil d'écart était
+  celui d'une voiture** : quatre-vingts mètres, la distance d'une rue à sa
+  parallèle. Un piéton contourne un immeuble en trente. Le seuil suit
+  désormais le profil — trente mètres à pied, quatre-vingts en voiture, et la
+  marge de la voiture reste le défaut prudent quand le profil est inconnu.
+- **FOND-3 — les étiquettes qui bavent sur le satellite.** « Un halo blanc en
+  fond pour faire ressortir les lettres noires du nom des villes vient faire
+  tache avec un rendu qui bave un peu. » Le style PLAN IGN écrit ses toponymes
+  en **noir cerné de blanc à moitié transparent** : invisible sur un fond uni,
+  laiteux sur une photo. Sur imagerie, on applique la convention
+  cartographique — **texte blanc, cerne noir opaque et serré**. Le fond Plan
+  n'est pas touché : corriger l'IGN chez lui serait présomptueux.
+
+### Changé — ERGO-3, l'ergonomie des filtres
+Le raisonnement vient d'un collègue d'Armelin, et il est juste : « lorsqu'on
+clique sur itinéraire, on a le bouton "Recharge et services" qui permet de
+configurer le filtre des bornes […] et lorsque je suis dans la carte, j'ai le
+bouton en entonnoir qui permet de configurer le filtre des POI […] il aurait
+été plus logique de sortir la section "Recharge et services" du menu itinéraire
+pour l'inclure directement au niveau des filtres ». Armelin : « je suis assez
+d'accord avec lui ».
+
+**Les filtres de recharge vivent désormais dans l'entonnoir**, avec les autres
+filtres. La puce « Bornes de recharge » et le choix des réseaux étaient deux
+moitiés du même geste, séparées par tout l'écran. Le planificateur y gagne une
+entrée de moins à faire défiler — le but même de la remarque.
+
+### Tests
+- 2 parcours pour la version : un vrai numéro (et non un gabarit non remplacé),
+  et un cache témoin qui doit VRAIMENT disparaître au clic.
+- 2 parcours pour la comparaison : contraste réel calculé dans la page, et les
+  trois façons dont elle doit disparaître.
+- 1 parcours pour la feuille de parking, qui presse ensuite le bouton — la
+  géométrie ne prouve pas l'atteignabilité.
+- 5 tests unitaires pour l'écart piéton, dont celui qui garde le défaut
+  prudent quand le profil est inconnu.
+- 4 tests unitaires pour les étiquettes sur imagerie, dont celui qui garde le
+  fond Plan intact.
+- Les deux raccourcis de parcours (`volets.ts`, `planificateur.ts`) absorbent
+  le déménagement, comme ils le promettent : un seul fichier bouge.
+
 ## [1.31.0] — 2026-09-01 — Cinq défauts d'un essai à pied (PR #177)
 
 Armelin a fait le premier essai piéton ce matin. Cinq retours, cinq

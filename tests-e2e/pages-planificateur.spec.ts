@@ -167,17 +167,18 @@ test('PIC-1 : chaque entrée de menu porte son picto — et le libellé reste en
   await ouvrirTrajet(page);
 
   const rangee = page.locator('.iti-vers');
-  /* HUIT DEPUIS STATS-2 (01/09) : « Historique » a rejoint les réglages — on
-     le consulte SANS avoir planifié quoi que ce soit, c'est même à cela
-     qu'il sert. */
-  await expect(rangee).toHaveCount(8);
-  for (let i = 0; i < 8; i += 1) {
+  /* SEPT DEPUIS ERGO-3 (02/09) : « Recharge et services » a rejoint
+     l'entonnoir des filtres — c'est un filtre de POI, il se règle avec les
+     autres filtres (remarque d'un collègue d'Armelin, reprise par lui). Le
+     menu du trajet s'allège d'autant, ce qui était le but. */
+  await expect(rangee).toHaveCount(7);
+  for (let i = 0; i < 7; i += 1) {
     await expect(rangee.nth(i).locator('svg.picto-menu'),
       'une rangée de menu sans picto').toHaveCount(1);
   }
   // Les libellés n'ont pas bougé d'une lettre : le sens reste dans le texte.
   await expect(page.locator('.iti-vers span:first-of-type')).toHaveText([
-    'Mon véhicule', 'Recharge et services', 'Options du trajet', 'Historique',
+    'Mon véhicule', 'Options du trajet', 'Historique',
     'Arrêts de recharge', 'Lieux d’exception', 'Feuille de route', 'Partager ou exporter',
   ]);
 

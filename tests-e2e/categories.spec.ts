@@ -34,7 +34,11 @@ test('un clic, un appel — et la carte qui bouge n’en refait PAS', async ({ p
   });
   await ouvrirVolet(page, '.poi');
 
-  const bouton = page.getByRole('button', { name: 'Santé' });
+  /* ON DÉSIGNE LA CATÉGORIE « À LA DEMANDE », pas la famille continue de
+     l'entonnoir : depuis ERGO-3 (02/09) les deux vivent dans le même
+     panneau, et elles portent les mêmes libellés. Ce parcours juge le
+     mécanisme « un clic, un appel » — celui du panneau de recharge. */
+  const bouton = page.locator('.poi-categorie[data-cle="sante"]');
   await bouton.click();
   const etat = page.locator('.poi-categorie-etat');
   await expect(etat).toContainText('2 dans la vue');
@@ -90,7 +94,7 @@ test('sous le zoom 12, on REFUSE en disant pourquoi — aucun appel ne part', as
   await ouvrirVolet(page, '.poi');
 
   // La France entière est à l'écran (zoom 5,4) : chercher serait mentir.
-  await page.getByRole('button', { name: 'Restaurants' }).click();
+  await page.locator('.poi-categorie[data-cle="restaurant"]').click();
   await expect(page.locator('.poi-categorie-etat')).toContainText('Rapprochez-vous');
   expect(appels, 'un appel est parti malgré le refus').toBe(0);
 });
@@ -113,7 +117,11 @@ test('Overpass saturé : un message français, et l’état repart propre', asyn
      « Boulangeries » est entrée dans « Commerces » le 30/08 ; « Pharmacies »
      est devenue « Santé » le 31/08, pour que le dentiste et le vétérinaire
      soient cherchables. */
-  const bouton = page.getByRole('button', { name: 'Santé' });
+  /* ON DÉSIGNE LA CATÉGORIE « À LA DEMANDE », pas la famille continue de
+     l'entonnoir : depuis ERGO-3 (02/09) les deux vivent dans le même
+     panneau, et elles portent les mêmes libellés. Ce parcours juge le
+     mécanisme « un clic, un appel » — celui du panneau de recharge. */
+  const bouton = page.locator('.poi-categorie[data-cle="sante"]');
   await bouton.click();
   await expect(page.locator('.poi-categorie-etat')).toContainText('saturé');
   // Le bouton n'est plus « actif » sur du vide : on peut réessayer d'un clic.

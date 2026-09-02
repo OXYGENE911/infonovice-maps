@@ -39,6 +39,11 @@ async function semer(page: import('@playwright/test').Page): Promise<void> {
           releves: [],
           resume: { dureeMs: 3_600_000, vitesseMaxKmh: 128, vitesseMoyenneKmh: 88,
             arrets: 2, arretMs: 900_000 },
+        }, {
+          id: 't2', departMs: 1_700_600_000_000, titre: 'Travail → Domicile',
+          releves: [],
+          resume: { dureeMs: 3_000_000, vitesseMaxKmh: 130, vitesseMoyenneKmh: 95,
+            arrets: 0, arretMs: 0 },
         }], 'historique-trajets');
         tx.oncomplete = () => ok();
         tx.onerror = () => ko(tx.error);
@@ -113,16 +118,94 @@ test('L’HISTORIQUE SE LIT EN SOMBRE — et tout le volet avec lui', async ({ p
 
   await ouvrirVolet(page, '.iti');
   await page.getByRole('button', { name: /Historique/ }).click();
-  await expect(page.locator('.iti-hist-ligne')).toHaveCount(1, { timeout: 10_000 });
+  await expect(page.locator('.iti-hist-ligne')).toHaveCount(2, { timeout: 10_000 });
 
   /* LE TEXTE DU PARCOURS EST LÀ ET IL SE LIT : c'est exactement ce qu'Armelin
      ne voyait pas, et donc ce qu'il ne pouvait pas cocher. */
-  await expect(page.locator('.iti-hist-ligne')).toContainText('Domicile → Travail');
+  await expect(page.locator('.iti-hist-ligne').first()).toContainText('Domicile → Travail');
 
   const pales = await textesTropPales(page, '.iti-corps');
   expect(pales, `textes sous le seuil AA : ${JSON.stringify(pales)}`).toEqual([]);
 
   // ET LE PARCOURS SE COCHE VRAIMENT — le but de la lecture.
-  await page.locator('.iti-hist-ligne input').check();
+  await page.locator('.iti-hist-ligne input').first().check();
   await expect(page.locator('.iti-hist-actions')).toBeVisible();
+});
+
+test('LA COMPARAISON SE LIT AUSSI — le balayage d’hier ne l’ouvrait pas', async ({ page }) => {
+  /* HIST-2 (02/09), deuxième signalement du même défaut : « quand je clique
+     sur l'historique pour comparer deux trajets, les textes sont écrits en
+     noir sur fond noir en mode sombre ».
+     ET C'EST UNE LEÇON SUR MON PROPRE GARDE-FOU : le balayage de HIST-1
+     n'OUVRAIT PAS la comparaison, il n'avait donc rien à mesurer dedans. Un
+     balayage ne vaut que ce que son parcours a fait paraître à l'écran. */
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await semer(page);
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  await ouvrirVolet(page, '.iti');
+  await page.getByRole('button', { name: /Historique/ }).click();
+  const lignes = page.locator('.iti-hist-ligne');
+  await expect(lignes).toHaveCount(2, { timeout: 10_000 });
+  await lignes.nth(0).locator('input').check();
+  await lignes.nth(1).locator('input').check();
+  await page.getByRole('button', { name: 'Comparer' }).click();
+  await expect(page.locator('.iti-hist-comparaison table')).toBeVisible();
+
+  const pales = await textesTropPales(page, '.iti-corps');
+  expect(pales, `textes sous le seuil AA : ${JSON.stringify(pales)}`).toEqual([]);
+});
+
+test('ELLE SE REFERME, ET NE REVIENT PAS TOUTE SEULE', async ({ page }) => {
+  /* HIST-3 (02/09). « L'affichage de la comparaison reste et je ne peux pas
+     l'enlever même en fermant la page d'historique. Quand je reviens sur
+     l'historique, la dernière comparaison reste affichée à l'écran. » */
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await semer(page);
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  await ouvrirVolet(page, '.iti');
+  await page.getByRole('button', { name: /Historique/ }).click();
+  const lignes = page.locator('.iti-hist-ligne');
+  await expect(lignes).toHaveCount(2, { timeout: 10_000 });
+  await lignes.nth(0).locator('input').check();
+  await lignes.nth(1).locator('input').check();
+  await page.getByRole('button', { name: 'Comparer' }).click();
+
+  const tableau = page.locator('.iti-hist-comparaison');
+  await expect(tableau).toBeVisible();
+
+  // 1. ELLE SE FERME À LA DEMANDE.
+  await tableau.getByRole('button', { name: 'Fermer' }).click();
+  await expect(tableau).toHaveCount(0);
+
+  // 2. ELLE NE REVIENT PAS QUAND ON REVIENT SUR LA PAGE.
+  await page.getByRole('button', { name: 'Comparer' }).click();
+  await expect(tableau).toBeVisible();
+  await page.getByRole('button', { name: 'Revenir au trajet' }).click();
+  await page.getByRole('button', { name: /Historique/ }).click();
+  await expect(tableau, 'la comparaison d’hier est encore là').toHaveCount(0);
+  /* LA LISTE SE RECONSTRUIT À CHAQUE OUVERTURE (la lecture d'IndexedDB est
+     asynchrone) et les cases repartent décochées : on l'attend, plutôt que
+     de cocher des éléments que le rendu suivant remplacera. */
+  await expect(lignes.nth(0).locator('input')).not.toBeChecked();
+
+  /* 3. ET COCHER AUTRE CHOSE L'EFFACE : ses chiffres portaient sur la
+     sélection précédente — les laisser afficherait un écart qui n'existe
+     plus. */
+  await lignes.nth(0).locator('input').check();
+  await lignes.nth(1).locator('input').check();
+  await page.getByRole('button', { name: 'Comparer' }).click();
+  await expect(tableau).toBeVisible();
+  await lignes.nth(1).locator('input').uncheck();
+  await expect(tableau, 'un changement de sélection laisse des chiffres périmés')
+    .toHaveCount(0);
 });
