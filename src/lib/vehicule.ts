@@ -153,3 +153,20 @@ export function consommationsDepuisEssais(
   }
   return rendu;
 }
+
+/**
+ * La masse déclarée dans le profil, en kg — PURE, et `null` si absente.
+ *
+ * ELLE SE LIT SEULE (PONT-1, 02/09), et c'est le correctif d'un premier jet :
+ * je la prenais dans le profil complet du planificateur, qui rend `null` tant
+ * que la BATTERIE et la CONSOMMATION ne sont pas renseignées. Or on peut
+ * parfaitement connaître le poids de sa voiture sans avoir saisi le reste — et
+ * l'avertissement de tonnage n'a besoin que de ce chiffre-là. Attrapé par un
+ * parcours, pas au volant.
+ */
+export function masseDeclaree(memoire: unknown): number | null {
+  const m = (memoire ?? {}) as Record<string, unknown>;
+  const brut = (m['vehicule'] ?? {}) as Record<string, unknown>;
+  const v = brut['masseKg'];
+  return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null;
+}

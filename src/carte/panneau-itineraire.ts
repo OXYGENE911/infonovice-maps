@@ -7,6 +7,7 @@
 // itinéraire et le repose à chaque `style.load` — sans cela, basculer en
 // satellite effacerait silencieusement le trajet qu'on vient de calculer.
 import type { Map as CarteMapLibre, GeoJSONSource } from 'maplibre-gl';
+import { masseDeclaree } from '../lib/vehicule';
 import { Marker } from 'maplibre-gl';
 import { RechercheAdresse } from './recherche';
 import { EtapesItineraire } from './etapes-itineraire';
@@ -2774,6 +2775,13 @@ export class PanneauItineraire extends HTMLElement {
         bandeau.destinations = corridor.destinations;
         bandeau.giratoires = corridor.giratoires;
         bandeau.affectations = corridor.affectations;
+        /* LES PASSAGES LIMITÉS EN TONNAGE (PONT-1, 02/09), avec la masse que
+           l'usager a déclarée dans « Mon véhicule ». Sans masse, le bandeau se
+           tait : alerter au hasard vaut moins que se taire. */
+        bandeau.tonnages = corridor.tonnages;
+        void lirePreference<unknown>(PREF_VEHICULE)
+          .then((memo) => { bandeau.masseVehiculeKg = masseDeclaree(memo); })
+          .catch(() => { /* sans profil lisible, on se tait */ });
         bandeau.reperesManquants = false;
       })
       .catch(() => {

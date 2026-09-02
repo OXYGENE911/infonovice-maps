@@ -22,6 +22,9 @@
  */
 import type { Map as CarteMapLibre } from 'maplibre-gl';
 import {
+  tonnagesInterdits, phraseTonnage, type LimiteTonnage,
+} from '../lib/tonnage';
+import {
   lisserCap, capDeBoussole, type ModeOrientation,
 } from '../lib/orientation';
 import {
@@ -223,6 +226,23 @@ export class BandeauGuidage extends HTMLElement {
   #limites: readonly LimiteTrajet[] = [];
 
   set limites(l: readonly LimiteTrajet[]) { this.#limites = l; }
+
+  /* LES PASSAGES LIMITÉS EN TONNAGE (PONT-1, 02/09) et la masse déclarée du
+     véhicule. Les deux ensemble, ou rien : une limite sans masse ne se compare
+     à rien, et une masse sans limite n'a rien à dire. */
+  #tonnages: readonly LimiteTonnage[] = [];
+
+  #masseKg: number | null = null;
+
+  /** Les tonnages DÉJÀ annoncés — on ne répète pas un pont à chaque fixe. */
+  #tonnagesDits = new Set<number>();
+
+  set tonnages(l: readonly LimiteTonnage[]) {
+    this.#tonnages = l;
+    if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+  }
+
+  set masseVehiculeKg(m: number | null) { this.#masseKg = m; }
 
   /* LES REPÈRES CARTOGRAPHIÉS ONT-ILS MANQUÉ ? (CORRIDOR-1, 31/08)
      Leur absence était TOTALEMENT muette : ni panneau de vitesse, ni numéro
@@ -1308,6 +1328,42 @@ export class BandeauGuidage extends HTMLElement {
     }
   }
 
+  /**
+   * Avertit d'un passage trop limité pour le véhicule (PONT-1, 02/09).
+   *
+   * Armelin : « ma VF8 pèse 2 520 kg et peut être dangereuse sur certains
+   * ponts de France […] cela permettrait au GPS d'éviter de faire passer par
+   * des voies interdites au véhicule configuré dans le profil. »
+   *
+   * ON AVERTIT, ON N'ÉVITE PAS — et la nuance est honnête : le service public
+   * d'itinéraire n'accepte aucun paramètre de poids, on ne peut donc pas lui
+   * demander de contourner. Ce qu'on peut faire, c'est le DIRE assez tôt pour
+   * qu'un conducteur décide lui-même.
+   *
+   * MILLE MÈTRES : de quoi s'arrêter ou tourner avant l'ouvrage. Plus tôt, on
+   * annoncerait un pont qu'on ne prendra peut-être jamais ; plus tard, on
+   * annoncerait devant le panneau.
+   *
+   * UNE FOIS PAR PASSAGE : `#tonnagesDits` retient ceux qu'on a nommés. Une
+   * alerte répétée à chaque fixe cesse d'alerter.
+   */
+  #majTonnage(e: EtatGuidage): void {
+    if (this.#masseKg === null || e.horsRoute) return;
+    const interdits = tonnagesInterdits(this.#tonnages, this.#masseKg);
+    for (const l of interdits) {
+      const devant = l.debutM - e.avancementM;
+      if (devant < 0 || devant > 1_000) continue;
+      if (this.#tonnagesDits.has(l.debutM)) continue;
+      this.#tonnagesDits.add(l.debutM);
+      const phrase = phraseTonnage(l, this.#masseKg);
+      this.#alerte(phrase);
+      /* ET ON LE DIT À VOIX HAUTE : c'est une information de sécurité, pas un
+         agrément — celui qui roule ne lit pas l'écran. */
+      if (this.#parle) this.#voix.dire(phrase);
+      return;
+    }
+  }
+
   /** Ouvre la feuille des parkings — UNE requête Overpass, au clic. */
   async #ouvrirParkings(): Promise<void> {
     const feuille = this.querySelector<HTMLElement>('.bg-parkings');
@@ -1517,6 +1573,8 @@ export class BandeauGuidage extends HTMLElement {
     this.#retirerMarqueurArrivee();
     this.#parkings = null;
     this.#placesLibres = null;
+    this.#tonnages = [];
+    this.#tonnagesDits.clear();
     this.#parkingRegle = false;
     this.#parkingsOfferts = false;
     this.#fermerParkings();
@@ -2291,6 +2349,7 @@ export class BandeauGuidage extends HTMLElement {
        plus tard par la ligne ci-dessus — vu à l'écran, pas déduit. */
     this.#majGiratoire(e);
     this.#majParking(e);
+    this.#majTonnage(e);
     this.#majArrivee(e);
 
     /* L'ARRIVÉE RÉELLE (décision d'Armelin du 29/08) : l'heure affichée
