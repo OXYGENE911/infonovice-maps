@@ -66,7 +66,7 @@
       il n’y a rien à consentir.</p>
 
     <h2>Qu’est-ce qui est enregistré, alors ?</h2>
-    <p>Trois choses, toutes dans le <strong>stockage local de votre
+    <p>Quatre choses, toutes dans le <strong>stockage local de votre
       navigateur</strong>, sur votre appareil :</p>
     <ul>
       <li><strong>Vos réglages d’affichage</strong> : le fond de carte choisi,
@@ -82,15 +82,62 @@
         au bout de <strong>quatorze jours</strong>. Vous pouvez la vider quand
         vous voulez, voir plus bas.</li>
     </ul>
-    <p>Rien d’autre : pas d’historique de vos recherches, pas de trajets
-      conservés, pas d’identifiant, pas de profil. Et aucune de ces données
-      n’est transmise — il n’existe aucun serveur Infonovice qui les reçoive.</p>
+      <li><strong>Les parcours que vous avez choisi de garder</strong>, et
+        seulement ceux-là. À la fin d’un trajet suivi, le bilan propose de
+        l’enregistrer ; tant que vous n’appuyez pas, rien n’est gardé. Ce qui
+        l’est alors est détaillé juste en dessous, parce que c’est de loin la
+        donnée la plus sensible de cette liste.</li>
+    </ul>
+
+    <h3>Ce que contient un parcours gardé</h3>
+    <p>Un parcours enregistré contient <strong>le tracé GPS de votre
+      trajet</strong> : un point tous les trente secondes, avec sa vitesse et
+      son altitude, plus la destination que vous aviez saisie, la durée, les
+      arrêts, le dénivelé et la température à l’arrivée. Disons-le sans
+      détour : <em>c’est la donnée la plus révélatrice que cette application
+      manipule</em> — un tracé commence devant une porte et finit devant une
+      autre.</p>
+    <p>Trois choses la bornent :</p>
+    <ul>
+      <li><strong>Elle n’existe que si vous l’avez demandée</strong>, trajet
+        par trajet. Aucun enregistrement automatique : une application qui
+        archive d’elle-même devient un carnet de déplacements.</li>
+      <li><strong>Elle ne quitte pas votre appareil</strong>, comme le reste
+        de cette page — sauf par le bouton « Contribuer à l’algorithme »,
+        décrit plus bas, qui ne part jamais tout seul.</li>
+      <li><strong>Cinquante parcours au plus</strong> sont gardés ; au-delà,
+        le plus ancien s’efface. Vous pouvez en supprimer n’importe lequel à
+        tout moment : volet « Historique » → cochez → « Oublier ».</li>
+    </ul>
+
+    <p>Rien d’autre : pas d’historique de vos recherches, pas d’identifiant,
+      pas de profil. Et aucune de ces données n’est transmise — il n’existe
+      aucun serveur Infonovice qui les reçoive.</p>
+
+    <h2>Et si je veux contribuer un parcours ?</h2>
+    <p>Le volet « Historique » propose un bouton « Contribuer à
+      l’algorithme ». Il ne <strong>fabrique qu’un fichier</strong> : c’est
+      vous qui le lisez, puis vous qui l’envoyez si vous le voulez. Rien ne
+      part tout seul.</p>
+    <p>Avant l’envoi, l’application affiche deux listes — ce qui part et ce
+      qui ne part pas — et le fichier lui-même, lisible. Ce n’est pas une
+      formalité : une promesse de floutage qu’on ne peut pas vérifier ne vaut
+      rien.</p>
+    <p>Ce que le fichier <strong>ne contient pas</strong> : les adresses de
+      départ et d’arrivée, le nom que vous avez donné au parcours, l’heure
+      exacte du départ (elle est arrondie à l’heure pleine), et
+      <strong>les 500 premiers et 500 derniers mètres du tracé</strong> —
+      coupés précisément parce qu’un tracé entier commence devant une porte.
+      Un trajet plus court que ces deux amputations ne contribue aucun point
+      de position.</p>
 
     <h2>Comment les récupérer ou les effacer ?</h2>
     <ul>
       <li><strong>Les récupérer</strong> : volet « Favoris » →
         « Exporter mes données ». Vous obtenez un fichier JSON lisible qui
         contient vos favoris et vos réglages. Il vous appartient.</li>
+      <li><strong>Effacer un parcours</strong> : volet « Historique » →
+        cochez-le → « Oublier ». L’effacement est immédiat.</li>
       <li><strong>Les restaurer</strong> : volet « Favoris » → « Importer ».
         Utile pour passer d’un appareil à un autre, sans compte.</li>
       <li><strong>Tout effacer</strong>, y compris la réserve de tuiles :
@@ -128,9 +175,16 @@
       escale chez nous.</p>
 
     <h2>Et la géolocalisation ?</h2>
-    <p>Elle ne se déclenche que si vous appuyez sur « Me localiser », et votre
-      navigateur vous demandera confirmation. La position sert à centrer la
-      carte, dans le navigateur. Elle n’est ni enregistrée, ni transmise.</p>
+    <p>Elle ne se déclenche que si vous appuyez sur « Me localiser » ou si
+      vous démarrez un suivi de trajet, et votre navigateur vous demandera
+      confirmation. La position sert à centrer la carte et à vous suivre sur
+      l’itinéraire, dans le navigateur. Elle n’est <strong>pas
+      transmise</strong>.</p>
+    <p>Elle n’est pas non plus enregistrée, à une exception près, et elle est
+      importante : <strong>si vous demandez à garder un parcours à la fin d’un
+      trajet suivi</strong>, les positions relevées pendant ce trajet sont
+      écrites dans le stockage local de votre appareil, comme décrit plus
+      haut. Sans ce geste, elles disparaissent avec la page.</p>
 
     <h2>Et le guidage vocal ?</h2>
     <p>La voix est celle de votre appareil : c’est la synthèse vocale intégrée
