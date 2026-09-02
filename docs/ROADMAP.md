@@ -588,6 +588,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       d'EV Database, crête de la Standard Range recoupée par XPENG France,
       autonomies du configurateur officiel. Armelin a fourni la source que je
       demandais.
+- [x] PR #192 — RGPD-1 (02/09) : la page « Vie privée » affirmait « pas de
+      trajets conservés » alors que l'application en garde depuis le 01/09 et
+      qu'elle y écrit le tracé GPS depuis le 02/09. Corrigée, et désormais
+      TESTÉE — le contrat n'était écrit qu'à un endroit et rien ne le
+      regardait.
 - [x] PR #191 — HIST-3 (02/09) : le dénivelé et la température, les deux
       manques qu'Armelin citait avec le tracé. Le dénivelé se lit dans les
       altitudes GNSS quand il y en a (zéro appel, seuil de bruit à 5 m), sinon

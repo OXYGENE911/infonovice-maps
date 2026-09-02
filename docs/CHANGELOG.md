@@ -2,6 +2,43 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.46.0] — 2026-09-02 — RGPD-1
+
+### Corrigé — la page publique disait le contraire du code
+- La page **« Vie privée »** affirmait « pas de trajets conservés ». C'était
+  vrai quand elle a été écrite ; ça ne l'est plus depuis STATS-2 (01/09), qui
+  enregistre des parcours à la demande, et encore moins depuis HIST-2 (02/09),
+  qui y met le **tracé GPS complet**. Une page qui promet la franchise et
+  affirme le contraire du code est le pire des faux.
+- Elle décrit maintenant, sans détour, ce qu'un parcours gardé contient : un
+  point tous les trente secondes avec vitesse et altitude, la destination
+  saisie, le dénivelé, la température. Et elle dit que c'est *la donnée la
+  plus révélatrice que cette application manipule*.
+- Elle porte les trois bornes réelles : rien sans un appui explicite, rien qui
+  quitte l'appareil, cinquante parcours au plus.
+- Nouvelle section sur **« Contribuer à l'algorithme »** : rien ne part tout
+  seul, ce que le fichier ne contient pas, et les **500 premiers et 500
+  derniers mètres du tracé** qui sont coupés.
+- La section géolocalisation disait « ni enregistrée, ni transmise ». La
+  seconde moitié tient ; la première portait désormais une exception, qui est
+  écrite.
+
+### Corrigé — la page « À propos » avait deux affirmations périmées
+- **« Aucune position envoyée »** était vraie du bouton « Me localiser » et
+  fausse dès qu'on calcule un itinéraire DEPUIS sa position, ou qu'on suit un
+  trajet : ce point part au service public de calcul d'itinéraire et à
+  Overpass, qui relève les panneaux le long du tracé. C'est ce qui permet de
+  guider, il n'y a pas d'autre façon de le faire, et c'est justement pour cela
+  qu'il fallait l'écrire. Le titre devient « Aucun serveur qui nous
+  appartienne » — ce qui, lui, reste vrai sans réserve.
+- **« seulement si vous ouvrez la section Météo à l'arrivée »** : HIST-3
+  appelle aussi Open-Meteo au moment où l'on enregistre un parcours. Les deux
+  gestes sont maintenant nommés.
+
+### Ajouté
+- Un parcours E2E dédié à ces deux pages. Le contrat n'était écrit qu'à un
+  seul endroit, et **rien ne le regardait** — c'est ainsi qu'il a dérivé
+  pendant deux jours sans que personne le voie.
 ## [1.45.0] — 2026-09-02 — HIST-3
 
 ### Ajouté
