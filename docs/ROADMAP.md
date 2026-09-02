@@ -570,13 +570,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       départements. Piste honnête : un profil qui ne change pas le TRACÉ mais
       annonce une fourchette de temps quand le trafic est dense, en disant
       explicitement sur quelle hypothèse.
-- [ ] VÉHICULES MANQUANTS — liste donnée le 02/09 (Alpine A390, MG Cyberster,
-      Smart #5, BYD Atto 2 / Atto 3 EVO / Seal U / Tang, Cupra Raval,
-      VW ID.Polo, DS N°7 et DS 3 E-Tense, variantes Tesla par année, XPENG
-      L03). NON AJOUTÉS CETTE NUIT, ET C'EST DÉLIBÉRÉ : dès le premier modèle
-      (A390), deux sources françaises donnaient 150 kW et 190 kW de charge
-      rapide. Ces chiffres pilotent la planification des arrêts ; il faut les
-      recouper modèle par modèle, pas les recopier vite.
+- [x] PR #183 — VÉHICULES (02/09) : six modèles sur quinze ajoutés (Alpine
+      A390, MG Cyberster, Smart #5, BYD Atto 2, Seal U, Tang), d'une SEULE
+      source cohérente qui distingue capacité brute et utile.
+- [ ] VÉHICULES — les neuf restants : Cupra Raval, VW ID.Polo, DS N°7 et DS 3
+      E-Tense, BYD Atto 3 EVO, XPENG L03, variantes Tesla par année. Les uns
+      sont trop récents pour avoir une fiche stable ; « XPENG L03 » ne
+      correspond à aucun modèle que j'aie su rattacher — à faire préciser.
 - [x] PR #181 — ERGO-4 (02/09) : six menus rendus atteignables. Recharge en
       tête de l'entonnoir avec son picto ; panneau borné et défilant sur
       mobile ; historique extrait vers le Menu ; menu du trajet réduit à deux

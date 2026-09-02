@@ -2,6 +2,37 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.37.0] — 2026-09-02 — Six véhicules ajoutés, neuf laissés de côté (PR #183)
+
+### Ajouté
+Sur les quinze modèles listés par Armelin le 02/09, **six sont entrés** :
+Alpine A390, MG Cyberster, Smart #5, BYD Atto 2, BYD Seal U, BYD Tang.
+
+**Une seule source, et c'est délibéré.** La veille, dès le premier modèle de sa
+liste, deux sources françaises donnaient **150 kW et 190 kW** de charge rapide
+pour la même A390. Ces chiffres pilotent la planification des arrêts : mélanger
+les provenances aurait produit un catalogue *incohérent* plutôt qu'imprécis.
+Les six viennent des fiches techniques d'automobile-propre relevées le 02/09,
+qui distinguent capacité **brute** et **utile** — ce que la plupart des
+communiqués ne font pas. La Smart #5 en est l'exemple : 100 kWh bruts,
+**94 utilisables**, et prendre la brute aurait promis 6 % d'autonomie qui
+n'existent pas.
+
+### Ce qui reste à sourcer, et pourquoi
+Cupra Raval, VW ID.Polo, DS N°7 et DS 3 E-Tense, BYD Atto 3 EVO, XPENG L03, et
+les variantes Tesla par année. Les uns sont trop récents pour avoir une fiche
+stable ; les autres portent un nom qui ne correspond à aucun modèle catalogué —
+« XPENG L03 » notamment, que je n'ai pas su rattacher à un véhicule réel.
+
+**Le catalogue ne fait que pré-remplir un formulaire** : chaque champ reste
+modifiable, et un modèle absent ne bloque personne. C'est ce qui permet
+d'attendre une source sûre plutôt que d'inventer.
+
+### Tests
+- Les six modèles ont leurs trois chiffres, et deux tests nomment les pièges
+  évités : les 150 kW de la fiche contre les 190 du communiqué, et la capacité
+  utile de la Smart #5 contre sa capacité brute.
+
 ## [1.36.0] — 2026-09-02 — PONT-1 : les passages trop limités s'annoncent (PR #182)
 
 ### Ajouté

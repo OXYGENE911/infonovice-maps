@@ -25,6 +25,18 @@
  *   - `puissanceMaxKw` est la pointe de charge en courant continu. Une borne
  *     plus rapide n'y change rien.
  *
+ * D'OÙ VIENNENT LES SIX ENTRÉES DU 02/09 (Alpine A390, MG Cyberster, Smart #5,
+ * BYD Atto 2, BYD Seal U, BYD Tang) : des fiches techniques d'automobile-propre,
+ * relevées ce jour-là. UNE SEULE SOURCE, ET C'EST DÉLIBÉRÉ — la veille, deux
+ * sources françaises donnaient 150 kW et 190 kW de charge rapide pour la même
+ * A390, et mélanger les provenances aurait produit un catalogue incohérent
+ * plutôt qu'imprécis. La fiche retenue distingue capacité BRUTE et UTILE, ce
+ * que la plupart des communiqués ne font pas.
+ * CE QUI RESTE À SOURCER, et qu'Armelin avait cité : Cupra Raval, VW ID.Polo,
+ * DS N°7 et DS 3 E-Tense, BYD Atto 3 EVO, XPENG L03, et les variantes Tesla par
+ * année. Les uns sont trop récents pour avoir une fiche stable, les autres
+ * portent un nom qui ne correspond à aucun modèle catalogué.
+ *
  * ILS SONT INDICATIFS ET RÉVISABLES. Un constructeur change une batterie en
  * cours de série sans changer le nom du modèle ; une finition diffère d'une
  * autre. Chaque champ reste modifiable après application — le catalogue
@@ -80,6 +92,7 @@ export interface ModeleVehicule {
 export const CATALOGUE: readonly ModeleVehicule[] = [
   // — Alpine —
   { cle: 'alpine-a290', marque: 'Alpine', modele: 'A290', capaciteKwh: 52, puissanceMaxKw: 100, wltpKm: 380, prise: 'combo_ccs' },
+  { cle: 'alpine-a390', marque: 'Alpine', modele: 'A390', capaciteKwh: 89, puissanceMaxKw: 150, wltpKm: 555, prise: 'combo_ccs' },
 
   // — Audi —
   { cle: 'audi-q4-45', marque: 'Audi', modele: 'Q4 e-tron', variante: '45', capaciteKwh: 77, puissanceMaxKw: 175, wltpKm: 562, prise: 'combo_ccs' },
@@ -96,10 +109,13 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
   { cle: 'bmw-ix-xdrive50', marque: 'BMW', modele: 'iX', variante: 'xDrive50', capaciteKwh: 105.2, puissanceMaxKw: 195, wltpKm: 630, prise: 'combo_ccs' },
 
   // — BYD —
+  { cle: 'byd-atto2', marque: 'BYD', modele: 'Atto 2', capaciteKwh: 42.4, puissanceMaxKw: 65, wltpKm: 312, prise: 'combo_ccs' },
   { cle: 'byd-dolphin', marque: 'BYD', modele: 'Dolphin', variante: 'Comfort', capaciteKwh: 60.4, puissanceMaxKw: 88, wltpKm: 427, prise: 'combo_ccs' },
   { cle: 'byd-atto3', marque: 'BYD', modele: 'Atto 3', capaciteKwh: 60.4, puissanceMaxKw: 88, wltpKm: 420, prise: 'combo_ccs' },
   { cle: 'byd-seal', marque: 'BYD', modele: 'Seal', variante: 'Design', capaciteKwh: 82.5, puissanceMaxKw: 150, wltpKm: 570, prise: 'combo_ccs' },
   { cle: 'byd-sealion7', marque: 'BYD', modele: 'Sealion 7', capaciteKwh: 82.5, puissanceMaxKw: 150, wltpKm: 502, prise: 'combo_ccs' },
+  { cle: 'byd-sealu', marque: 'BYD', modele: 'Seal U', capaciteKwh: 71.8, puissanceMaxKw: 115, wltpKm: 420, prise: 'combo_ccs' },
+  { cle: 'byd-tang', marque: 'BYD', modele: 'Tang', capaciteKwh: 108.8, puissanceMaxKw: 170, wltpKm: 530, prise: 'combo_ccs' },
 
   // — Citroën —
   { cle: 'citroen-ec3', marque: 'Citroën', modele: 'ë-C3', capaciteKwh: 44, puissanceMaxKw: 100, wltpKm: 320, prise: 'combo_ccs' },
@@ -167,6 +183,7 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
   { cle: 'mercedes-cla-ev', marque: 'Mercedes-Benz', modele: 'CLA', variante: 'EQ 250+', capaciteKwh: 85, puissanceMaxKw: 320, wltpKm: 792, prise: 'combo_ccs' },
 
   // — MG —
+  { cle: 'mg-cyberster', marque: 'MG', modele: 'Cyberster', variante: 'Propulsion 340 ch', capaciteKwh: 77, puissanceMaxKw: 144, wltpKm: 507, prise: 'combo_ccs' },
   { cle: 'mg4-51', marque: 'MG', modele: 'MG4', variante: 'Standard 51 kWh', capaciteKwh: 50.8, puissanceMaxKw: 117, wltpKm: 350, prise: 'combo_ccs' },
   { cle: 'mg4-64', marque: 'MG', modele: 'MG4', variante: 'Comfort 64 kWh', capaciteKwh: 61.7, puissanceMaxKw: 140, wltpKm: 435, prise: 'combo_ccs' },
   { cle: 'mg-zs-ev', marque: 'MG', modele: 'ZS EV', variante: 'Long Range', capaciteKwh: 68.3, puissanceMaxKw: 92, wltpKm: 440, prise: 'combo_ccs' },
@@ -224,6 +241,7 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
   // — Smart —
   { cle: 'smart-1', marque: 'Smart', modele: '#1', variante: 'Premium', capaciteKwh: 62, puissanceMaxKw: 150, wltpKm: 440, prise: 'combo_ccs' },
   { cle: 'smart-3', marque: 'Smart', modele: '#3', variante: 'Premium', capaciteKwh: 62, puissanceMaxKw: 150, wltpKm: 455, prise: 'combo_ccs' },
+  { cle: 'smart-5', marque: 'Smart', modele: '#5', capaciteKwh: 94, puissanceMaxKw: 400, wltpKm: 590, prise: 'combo_ccs' },
 
   // — Tesla —
   { cle: 'tesla-m3-sr', marque: 'Tesla', modele: 'Model 3', variante: 'Propulsion', capaciteKwh: 57.5, puissanceMaxKw: 170, wltpKm: 513, prise: 'combo_ccs' },
