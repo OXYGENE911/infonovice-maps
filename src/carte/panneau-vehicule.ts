@@ -204,6 +204,23 @@ export class PanneauVehicule extends HTMLElement {
           <p class="veh-note">Vos relevés, pas la fiche du constructeur : c’est
             ce qui rend le calcul juste pour VOTRE voiture.</p>
 
+          <!-- LE MODE DEUX-ROUES (MOTO-1, 02/09). Armelin : « ajouter un mode
+               Moto avec l'interfile ». Il NE CHANGE NI LE TRACÉ ni l'heure
+               d'arrivée — le moteur d'itinéraire public n'a pas de profil
+               moto, et le temps qu'un motard gagne dépend de son allure entre
+               les files, donc d'un choix qui lui appartient. Il allume
+               l'annonce des sections où la remontée est permise. -->
+          <label class="veh-bascule">
+            <input type="checkbox" class="veh-moto"> Je roule en deux-roues
+          </label>
+          <p class="veh-note veh-note-moto">Depuis le décret n° 2025-33 du
+            9 janvier 2025, la remontée d’interfile est permise dans toute la
+            France sur autoroute et route à chaussées séparées limitées à
+            70 km/h ou plus, quand le trafic est bloqué sur toutes les voies.
+            L’application VOUS DIT où ces sections commencent ; elle ne change
+            ni l’itinéraire ni l’heure d’arrivée, et ne suppose jamais que
+            vous remonterez.</p>
+
           <label class="veh-bascule">
             <input type="checkbox" class="veh-anneaux"> Afficher mon rayon d’action
           </label>
@@ -291,6 +308,12 @@ export class PanneauVehicule extends HTMLElement {
         if (c && !(this.#vehicule[cle] && this.#vehicule[cle]! > 0)) c.value = '';
       }
       this.#recalculer();
+    });
+
+    this.querySelector<HTMLInputElement>('.veh-moto')?.addEventListener('change', (e) => {
+      this.#touche = true;
+      this.#vehicule.moto = (e.target as HTMLInputElement).checked;
+      this.#enregistrer();
     });
 
     this.querySelector<HTMLInputElement>('.veh-anneaux')?.addEventListener('change', (e) => {
@@ -471,6 +494,9 @@ export class PanneauVehicule extends HTMLElement {
       masseKg: nombre(v['masseKg']),
       puissanceFroidKw: nombre(v['puissanceFroidKw']),
       puissanceChaudKw: nombre(v['puissanceChaudKw']),
+      /* PAS DE `nombre()` ICI : c'est un booléen, et la convention « zéro vaut
+         non déclaré » ne s'y applique pas. */
+      moto: v['moto'] === true,
     };
     for (const { cle } of CONTEXTES) this.#essais[cle] = nombre(e[cle]);
     this.#actif = m['anneaux'] === true;
@@ -478,6 +504,8 @@ export class PanneauVehicule extends HTMLElement {
     this.#refletChamps();
     const bascule = this.querySelector<HTMLInputElement>('.veh-anneaux');
     if (bascule) bascule.checked = this.#actif;
+    const moto = this.querySelector<HTMLInputElement>('.veh-moto');
+    if (moto) moto.checked = this.#vehicule.moto === true;
 
     this.#recalculer();
   }

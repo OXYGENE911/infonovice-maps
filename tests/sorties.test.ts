@@ -208,3 +208,33 @@ describe('versCorridor', () => {
     expect(versCorridor({ elements: 'non' }, trace)).toEqual(CORRIDOR_VIDE);
   });
 });
+
+/* L'INTERFILE SORT DE LA MÊME RÉPONSE (MOTO-1, 02/09).
+ *
+ * C'est tout l'argument du corridor : « une union, un aller-retour ». Les
+ * chemins portant `lanes` et `oneway` sont DÉJÀ dans la réponse des limites de
+ * vitesse — on ne les lisait pas. Ce test dit que le tri les trouve, et qu'il
+ * ne dispute rien aux autres lecteurs. */
+describe('versCorridor — l’interfile', () => {
+  const traceDroite: [number, number][] = Array.from({ length: 21 },
+    (_, i) => [2.35 + i * 0.00137, 48.85] as [number, number]);
+
+  it('relève l’autoroute pour la moto ET sa limite de vitesse, d’un seul coup', () => {
+    const autoroute = {
+      type: 'way',
+      tags: { highway: 'motorway', maxspeed: '110', ref: 'A86' },
+      geometry: Array.from({ length: 21 },
+        (_, i) => ({ lon: 2.35 + i * 0.00137, lat: 48.85 })),
+    };
+    const c = versCorridor({ elements: [autoroute] }, traceDroite);
+    expect(c.interfiles).toHaveLength(1);
+    expect(c.interfiles[0]?.nom).toBe('A86');
+    /* ET LE MÊME CHEMIN A NOURRI LES LIMITES : rien ne se dispute, rien ne se
+       perd — c'est le contrat écrit en tête de corridor.ts. */
+    expect(c.limites.length).toBeGreaterThan(0);
+  });
+
+  it('le corridor vide n’a aucune section d’interfile', () => {
+    expect(CORRIDOR_VIDE.interfiles).toEqual([]);
+  });
+});

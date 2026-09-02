@@ -562,14 +562,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       Inexploitable sans backend, que le projet s'interdit. À rouvrir si
       DiaLog ajoute un filtrage par emprise — la demande vaut la peine d'être
       faite auprès d'eux.
-- [ ] MODE MOTO — demandé le 02/09 (remontée d'interfile jusqu'à 50-70 km/h en
-      Île-de-France). À CADRER AVANT DE CODER : le moteur d'itinéraire public
-      n'a pas de profil moto, et l'interfile est une TOLÉRANCE encadrée, pas
-      un droit — promettre un temps de parcours qui la suppose engagerait
-      l'application sur une pratique dont la légalité varie selon les
-      départements. Piste honnête : un profil qui ne change pas le TRACÉ mais
-      annonce une fourchette de temps quand le trafic est dense, en disant
-      explicitement sur quelle hypothèse.
+- [x] PR #190 — MOTO-1 (02/09) : le mode deux-roues. LE CADRAGE ÉTAIT FAUX SUR
+      UN POINT et la vérification l'a corrigé — l'interfile n'est plus une
+      tolérance à géométrie départementale : le décret n° 2025-33 du 9 janvier
+      2025 l'a GÉNÉRALISÉE à toute la France (article R. 412-11-3). On annonce
+      donc les sections éligibles avec les conditions du texte, 300 m avant, et
+      SANS toucher au tracé ni à l'heure d'arrivée. Zéro requête de plus : les
+      tags `lanes` et `oneway` étaient déjà dans la réponse du corridor.
 - [x] PR #183 — VÉHICULES (02/09) : six modèles sur quinze ajoutés (Alpine
       A390, MG Cyberster, Smart #5, BYD Atto 2, Seal U, Tang), d'une SEULE
       source cohérente qui distingue capacité brute et utile.
