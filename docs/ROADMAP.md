@@ -600,6 +600,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       vient d'UN appel météo sur le point d'arrivée, déjà interrogé pendant le
       trajet. La comparaison les affiche, le fichier de contribution les
       emporte, et l'absence se dit au lieu de s'écrire zéro.
+- [x] PR #197 — CIBLE-1 (02/09) : « Sélectionner sur la carte », demandé au
+      premier retour utilisateur. Croix fixe au centre, carte qui bouge sous
+      elle, adresse lue à chaque arrêt, bouton « Définir ». Le geste existait
+      depuis la PR #4 par appui long — rien ne le proposait depuis le
+      formulaire, donc personne ne le trouvait.
 - [x] PR #196 — FOND-6 (02/09) : les numéros de route dans leur écusson —
       blanc sur rouge pour autoroute et nationale, noir sur jaune pour la
       départementale, comme la signalisation. Images dessinées à l'exécution

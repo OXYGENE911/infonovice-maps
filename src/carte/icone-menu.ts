@@ -29,7 +29,7 @@ export type NomPicto =
      bouton Vue à plat et Cap en haut par un unique bouton en forme d'icône
      de boussole en mode pressoir ». */
   | 'orient-cap' | 'orient-nord' | 'orient-libre' | 'vue-3d' | 'vue-plat'
-  | 'copilote' | 'croix' | 'engrenage' | 'remonter'
+  | 'copilote' | 'croix' | 'engrenage' | 'remonter' | 'cible'
   /* VOIX-1 (30/08) — le guidage vocal se coupe d'une icône. */
   | 'voix' | 'voix-muette';
 
@@ -74,6 +74,11 @@ const TRACES: Record<NomPicto, string> = {
     + 'L5.5 15.9 L4.6 13.8 L2.1 13.6 L2.1 10.4 L4.6 10.2 L5.5 8.1 '
     + 'L3.9 6.1 L6.1 3.9 L8.1 5.5 Z"/>'
     + '<circle cx="12" cy="12" r="3.4"/>',
+  /* LA CIBLE (CIBLE-1, 02/09) : une croix de visée, le dessin même de la
+     fonction — « la carte s'affiche avec une croix au milieu ». */
+  cible: '<circle cx="12" cy="12" r="7"/>'
+    + '<path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/>'
+    + '<circle cx="12" cy="12" r="1.6" style="fill:currentColor"/>',
   options: '<path d="M4 7h16M4 12h16M4 17h16"/>'
     + '<circle cx="9" cy="7" r="2" style="fill:var(--fond-doux)"/>'
     + '<circle cx="15" cy="12" r="2" style="fill:var(--fond-doux)"/>'
