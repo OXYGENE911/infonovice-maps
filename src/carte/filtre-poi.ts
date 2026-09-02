@@ -231,7 +231,20 @@ export class FiltrePoi extends HTMLElement {
       this.#ouvert = !this.#ouvert;
       panneau.hidden = !this.#ouvert;
       bulle.setAttribute('aria-expanded', String(this.#ouvert));
-      if (this.#ouvert) this.#majEtat();
+      if (this.#ouvert) {
+        this.#majEtat();
+        /* UNE SEULE SURFACE À LA FOIS, DANS LES DEUX SENS (ERGO-3, 02/09).
+           Les fiches se referment déjà les volets en s'ouvrant ; il manquait
+           la réciproque, et elle ne manquait pas avant : l'entonnoir ne
+           portait qu'une poignée de pastilles, il porte maintenant tout le
+           panneau de recharge et occupe le même bord d'écran qu'elles.
+           LA CI L'A ATTRAPÉ DEUX FOIS AVANT L'USAGER : ouvert SOUS une fiche,
+           le panneau devenait impossible à presser — la fiche interceptait
+           le doigt. */
+        for (const f of document.querySelectorAll('fiche-borne, fiche-lieu')) {
+          (f as HTMLElement & { fermer?: () => void }).fermer?.();
+        }
+      }
     });
 
     for (const b of this.querySelectorAll<HTMLButtonElement>('.poi-famille[data-cle]')) {
