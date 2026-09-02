@@ -31,6 +31,10 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   le copilote interrogeait déjà pendant le trajet : aucune coordonnée nouvelle
   ne part. Pas de relevé par demi-minute en roulant, ce que la frugalité du
   projet refuse.
+- **Le parcours est gardé D'ABORD, enrichi ensuite.** Attendre les deux
+  relevés avant d'écrire aurait fait patienter jusqu'à dix-sept secondes —
+  deux appels réseau, huit secondes de délai et une reprise chacun — devant un
+  écran muet, et perdu le parcours si l'onglet s'était fermé entre-temps.
 - **Les deux échouent en silence** : le champ reste absent, l'historique dit
   « non mesuré » et « non relevée », et le parcours s'enregistre quand même.
   Un « +0 / −0 m » serait un chiffre faux là où l'absence est vraie.

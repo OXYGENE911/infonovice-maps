@@ -1210,13 +1210,6 @@ export class BandeauGuidage extends HTMLElement {
     if (r === null || this.#departMs === null) return;
     const o = this.#options;
     const premier = this.#releves[0];
-    /* LE RELIEF ET LA TEMPÉRATURE (HIST-3, 02/09) — les deux manques qu'il
-       restait après HIST-2. Ils se cherchent AVANT l'écriture, et leur échec
-       n'empêche rien : un parcours sans relief vaut mieux qu'un parcours
-       perdu. Voir `#relierLeTrajet` et `#temperatureALArrivee`. */
-    const [relief, temperatureC] = await Promise.all([
-      this.#relierLeTrajet(), this.#temperatureALArrivee(),
-    ]);
     try {
       const liste = await lireHistorique();
       await ecrireHistorique(ajouterTrajet(liste, {
@@ -1248,14 +1241,21 @@ export class BandeauGuidage extends HTMLElement {
         ...(premier?.lon !== undefined && premier.lat !== undefined
           ? { depart: { lon: premier.lon, lat: premier.lat } }
           : {}),
-        ...(relief ? { relief } : {}),
-        ...(temperatureC !== null ? { temperatureC } : {}),
       }));
       if (dit) {
         dit.textContent = 'Parcours enregistré — retrouvez-le dans « Historique ».';
         dit.hidden = false;
       }
       if (bouton) bouton.disabled = true;
+      /* LE RELIEF ET LA TEMPÉRATURE ARRIVENT APRÈS (HIST-3, 02/09), et c'est
+         l'ordre qui compte. Les chercher AVANT d'écrire aurait fait attendre
+         jusqu'à dix-sept secondes — deux appels réseau, huit secondes de
+         délai et une reprise chacun — entre l'appui et la moindre réponse à
+         l'écran, avec le risque de tout perdre si l'onglet se ferme
+         entre-temps. Le parcours est donc GARDÉ D'ABORD, puis enrichi.
+         `void` assumé : l'enrichissement ne doit rien bloquer, et son échec
+         laisse un parcours complet de tout le reste. */
+      void this.#enrichirLeTrajet(`t${this.#departMs}`);
     } catch {
       /* UNE ÉCRITURE QUI ÉCHOUE SE DIT : perdre en silence un parcours que
          l'usager vient de demander à garder serait le pire des deux. */
@@ -1263,6 +1263,44 @@ export class BandeauGuidage extends HTMLElement {
         dit.textContent = 'Impossible d’enregistrer ce parcours sur cet appareil.';
         dit.hidden = false;
       }
+    }
+  }
+
+  /**
+   * Ajoute le relief et la température à un parcours DÉJÀ enregistré (HIST-3).
+   *
+   * IL TOURNE APRÈS COUP, ET SANS RIEN BLOQUER. Les deux relevés partent sur
+   * le réseau ; les attendre avant d'écrire aurait fait patienter jusqu'à
+   * dix-sept secondes devant un écran muet, et perdu le parcours si l'onglet
+   * s'était fermé.
+   *
+   * IL RELIT L'HISTORIQUE AVANT D'ÉCRIRE, plutôt que de garder la liste en
+   * mémoire : entre l'enregistrement et le retour du réseau, l'usager a pu
+   * ouvrir « Historique » et en oublier un. Écraser avec une liste périmée
+   * ressusciterait ce qu'il vient de supprimer.
+   *
+   * ET SI LE PARCOURS N'EST PLUS LÀ, ON NE LE RECRÉE PAS : il a été effacé
+   * pendant l'attente, et c'était un geste.
+   */
+  async #enrichirLeTrajet(id: string): Promise<void> {
+    const [relief, temperatureC] = await Promise.all([
+      this.#relierLeTrajet(), this.#temperatureALArrivee(),
+    ]);
+    if (relief === null && temperatureC === null) return;
+    try {
+      const liste = await lireHistorique();
+      const i = liste.findIndex((x) => x.id === id);
+      if (i < 0) return;
+      liste[i] = {
+        ...liste[i]!,
+        ...(relief ? { relief } : {}),
+        ...(temperatureC !== null ? { temperatureC } : {}),
+      };
+      await ecrireHistorique(liste);
+    } catch {
+      /* Le parcours reste enregistré sans ces deux champs, et l'historique
+         dira « non mesuré » : c'est exactement ce que ces mots servent à
+         dire. */
     }
   }
 
