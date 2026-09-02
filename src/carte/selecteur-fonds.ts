@@ -29,7 +29,7 @@ export class SelecteurFonds extends HTMLElement {
   }
 
   #rendre(): void {
-    const { fond, cadastre } = this.#options;
+    const { fond, cadastre, relief3d } = this.#options;
     this.innerHTML = `
       <details class="fonds">
         <summary aria-label="Choisir le fond de carte">${pictoMenu('fonds')}Fonds</summary>
@@ -41,6 +41,15 @@ export class SelecteurFonds extends HTMLElement {
           <hr>
           <label><input type="checkbox" name="cadastre" ${cadastre ? 'checked' : ''}>
             Parcelles cadastrales</label>
+          <!-- LE RELIEF DES BÂTIMENTS (FOND-5, 02/09), réponse à « existe-t-il
+               des cartes 3D gouvernementales ? ». La hauteur vient de la MÊME
+               tuile IGN que les noms de rue : aucune source de plus, aucun
+               octet de plus. La case INCLINE la caméra, sans quoi elle ne
+               ferait rien de visible. -->
+          <label><input type="checkbox" name="relief3d" ${relief3d ? 'checked' : ''}>
+            Bâtiments en relief</label>
+          <p class="fonds-note">Hauteurs IGN, à partir du zoom 15. Les
+            bâtiments dont l’IGN ne connaît pas la hauteur restent plats.</p>
         </fieldset>
       </details>`;
     /* LE DOM N'EST RENDU QU'UNE FOIS. La première version reconstruisait tout
@@ -57,6 +66,9 @@ export class SelecteurFonds extends HTMLElement {
     });
     this.querySelector('input[name="cadastre"]')?.addEventListener('change', (e) => {
       this.#appliquer({ cadastre: (e.target as HTMLInputElement).checked });
+    });
+    this.querySelector('input[name="relief3d"]')?.addEventListener('change', (e) => {
+      this.#appliquer({ relief3d: (e.target as HTMLInputElement).checked });
     });
   }
 }

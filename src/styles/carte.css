@@ -215,6 +215,12 @@ body { font-family: var(--police); background: var(--fond); }
   font: 400 14px var(--police); color: var(--texte-1); cursor: pointer; }
 .fonds input:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
 .fonds hr { border: 0; border-top: 1px solid var(--bord); margin: 2px 0; }
+/* LA NOTE DU RELIEF (FOND-5) : elle dit ce que la case ne peut pas promettre
+   — l'IGN ne connaît pas la hauteur de tous les bâtiments (68 % en
+   pavillonnaire, 82 % à Paris, mesuré le 02/09). Une carte à trous sans
+   explication passerait pour une carte cassée. */
+.fonds-note { margin: -2px 0 0; max-width: 210px;
+  font: 400 11.5px/1.45 var(--police); color: var(--texte-3); }
 
 /* Mode sombre du fond Plan IGN : inversion calibrée, canevas seulement. */
 @media (prefers-color-scheme: dark) {

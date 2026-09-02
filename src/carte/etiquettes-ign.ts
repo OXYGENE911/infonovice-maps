@@ -38,6 +38,59 @@ export const TUILES_ETIQUETTES =
 export const GLYPHES_IGN =
   'https://data.geopf.fr/annexes/ressources/vectorTiles/fonts/{fontstack}/{range}.pbf';
 
+/* LE RELIEF DES BÂTIMENTS (FOND-5, 02/09).
+ *
+ * LA QUESTION D'ARMELIN, mot pour mot : « existe-t-il des cartes 3D
+ * gouvernementales pour une navigation en 3D avec les bâtiments en relief ? »
+ *
+ * LA RÉPONSE EST OUI, ET ELLE ÉTAIT DÉJÀ DANS NOS TUILES. Les mêmes tuiles
+ * vectorielles PLAN.IGN qui portent les noms de rue portent une couche
+ * `bati_surf`, et cette couche porte un attribut `hauteur` en mètres. Aucune
+ * source de plus, aucune clé, aucun octet de plus sur le réseau : la tuile est
+ * déjà téléchargée pour les étiquettes.
+ *
+ * CE QUE J'AI MESURÉ AVANT D'ÉCRIRE (02/09), en décodant cinq tuiles réelles :
+ *   - Paris 4e (z16)        : 710 bâtiments, 583 avec hauteur (82 %),
+ *                             médiane 8,8 m, max 35,7 m ;
+ *   - Lyon (z15)            : 2 222 bâtiments, 1 806 avec hauteur (81 %) ;
+ *   - Le Plessis-Trévise    : 256 bâtiments, 175 avec hauteur (68 %),
+ *                             médiane 5,1 m — du pavillonnaire, et ça se voit ;
+ *   - Marseille, un village de Charente : 100 %.
+ * Les valeurs sont plausibles, en mètres, et la couverture tient entre 68 et
+ * 100 %. C'est utilisable.
+ *
+ * LES 18 À 32 % SANS HAUTEUR RESTENT PLATS, et c'est délibéré : leur donner
+ * une hauteur par défaut ferait une ville inventée. Le fond raster continue de
+ * les dessiner en deux dimensions — ils ne disparaissent pas, ils ne mentent
+ * pas.
+ *
+ * PAS DE `alti_sol` EN BASE. L'attribut existe mais c'est l'altitude
+ * ABSOLUE du sol (des dizaines à des centaines de mètres) : le passer en
+ * `fill-extrusion-base` ferait flotter Paris à trente-cinq mètres au-dessus
+ * de sa propre carte. La base est le sol, donc zéro.
+ */
+export const CALQUE_BATI_3D: LayerSpecification = {
+  id: 'bati-relief',
+  type: 'fill-extrusion',
+  source: 'etiquettes-ign',
+  'source-layer': 'bati_surf',
+  /* QUINZE, PARCE QUE C'EST LÀ QUE LA COUCHE COMMENCE À ÊTRE PEUPLÉE — et
+     parce qu'en dessous, des volumes de cinq mètres sur une ville entière ne
+     font qu'un tapis gris. */
+  minzoom: 15,
+  paint: {
+    'fill-extrusion-color': '#cfc8bf',
+    'fill-extrusion-base': 0,
+    /* SANS HAUTEUR, ZÉRO : le bâtiment reste plat plutôt qu'inventé. */
+    'fill-extrusion-height': ['to-number', ['get', 'hauteur'], 0],
+    /* UNE APPARITION PROGRESSIVE : surgir d'un coup au zoom 15 ferait sauter
+       la carte sous le doigt. */
+    'fill-extrusion-opacity': [
+      'interpolate', ['linear'], ['zoom'], 15, 0, 16, 0.85,
+    ],
+  },
+};
+
 /* LES NUMÉROS DE ROUTE : autoroute et nationale dès le zoom 7,
    départementale à partir du 11 — les seuils d'IGN, pas les nôtres. */
 export const CALQUES_NUMEROS_ROUTE: LayerSpecification[] = [

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ouvrirVolet } from './volets';
 
 /* LES ÉTIQUETTES SE DESSINENT AU PREMIER CHARGEMENT (FOND-2, 01/09).
  *
@@ -48,4 +49,66 @@ test('AU PREMIER CHARGEMENT, les numéros de route sont DESSINÉS', async ({ pag
     `aucun numéro dessiné au premier chargement (vu : ${numeros.join(', ')})`)
     .toBeGreaterThanOrEqual(3);
   expect(numeros.some((n) => /^A\d/.test(n)), 'au moins une autoroute').toBe(true);
+});
+
+/* LES BÂTIMENTS EN RELIEF SONT DESSINÉS, AVEC DE VRAIES HAUTEURS IGN
+ * (FOND-5, 02/09).
+ *
+ * Armelin : « existe-t-il des cartes 3D gouvernementales pour une navigation
+ * en 3D avec les bâtiments en relief ? » Les tests unitaires prouvent que le
+ * calque est BIEN FORMÉ ; seul un parcours sur les vraies tuiles prouve que
+ * l'attribut `hauteur` existe et qu'il est peuplé. C'est exactement la leçon
+ * de FOND-2 : un calque déclaré n'est pas un calque dessiné. */
+
+test('LE RELIEF SE DESSINE, et ses hauteurs viennent de l’IGN', async ({ page }) => {
+  test.slow();
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 20_000 });
+
+  /* LA CASE EST DANS « Affichage » — on passe par elle, et non par une
+     manipulation directe du style : c'est le geste de l'usager qu'on
+     éprouve, pas l'API de MapLibre. */
+  /* ON SE PLACE D'ABORD, ON COCHE ENSUITE — et c'est l'ordre de l'usager, qui
+     regarde une ville avant de demander à la voir en relief. L'ordre inverse
+     ferait courir la caméra : `jumpTo` interrompt l'inclinaison en cours et la
+     fige à mi-chemin, ce qui n'apprendrait rien sur le calque. */
+  await page.evaluate(() => {
+    /* PARIS 4e, ZOOM 16 : 710 bâtiments dans la tuile, 583 avec hauteur
+       (mesuré le 02/09 en décodant la tuile). */
+    (window as unknown as { __carte: { jumpTo(o: object): void } })
+      .__carte.jumpTo({ center: [2.3550, 48.8560], zoom: 16 });
+  });
+
+  await ouvrirVolet(page, '.fonds');
+  await page.locator('input[name="relief3d"]').check();
+
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __carte: { areTilesLoaded(): boolean } })
+      .__carte.areTilesLoaded()), { timeout: 30_000 }).toBe(true);
+
+  const hauteurs = await page.evaluate(() => {
+    const c = (window as unknown as { __carte: {
+      queryRenderedFeatures(o?: object): { layer: { id: string };
+        properties: Record<string, unknown> }[];
+    } }).__carte;
+    return c.queryRenderedFeatures({ layers: ['bati-relief'] })
+      .map((f) => Number(f.properties['hauteur']))
+      .filter((h) => Number.isFinite(h) && h > 0);
+  });
+
+  expect(hauteurs.length,
+    'aucun bâtiment avec hauteur dessiné — le calque 3D ne rend rien')
+    .toBeGreaterThan(20);
+  /* DES HAUTEURS PLAUSIBLES, ET PAS DES MÈTRES INVENTÉS : à Paris, la
+     médiane mesurée vaut 8,8 m et le maximum 35,7 m. Un bâtiment de 300 m
+     signalerait qu'on lit le mauvais attribut. */
+  expect(Math.max(...hauteurs)).toBeLessThan(200);
+  expect(Math.min(...hauteurs)).toBeGreaterThan(0.5);
+
+  /* ET LA CAMÉRA S'EST INCLINÉE : à plat, l'extrusion ne se verrait pas, et
+     la case n'aurait rien fait de visible. */
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __carte: { getPitch(): number } }).__carte.getPitch()),
+  { timeout: 5_000, message: 'la caméra est restée à plat : le relief ne se voit pas' })
+    .toBeGreaterThan(20);
 });

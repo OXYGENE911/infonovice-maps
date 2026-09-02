@@ -573,6 +573,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #183 — VÉHICULES (02/09) : six modèles sur quinze ajoutés (Alpine
       A390, MG Cyberster, Smart #5, BYD Atto 2, Seal U, Tang), d'une SEULE
       source cohérente qui distingue capacité brute et utile.
+- [x] PR #189 — FOND-5 (02/09) : « existe-t-il des cartes 3D gouvernementales
+      pour une navigation en 3D ? » Oui, et c'était déjà dans nos tuiles : la
+      couche `bati_surf` du PLAN.IGN porte `hauteur`. Case dans Affichage,
+      caméra inclinée à 50°, zéro requête de plus. Couverture mesurée sur cinq
+      tuiles : 68 % en pavillonnaire, 82 % à Paris, 100 % en rural.
 - [x] PR #186 — FOND-4 + RAYON-1 (02/09) : les noms de rue sur le satellite
       (la couche des odonymes manquait à mon extraction de FOND-1) ; le rayon
       d'action réduit du détour routier mesuré (médiane 1,19 sur huit trajets,

@@ -9,6 +9,7 @@
 import type { StyleSpecification } from 'maplibre-gl';
 import {
   TUILES_ETIQUETTES, GLYPHES_IGN, CALQUES_NUMEROS_ROUTE, CALQUES_TOPONYMES,
+  CALQUE_BATI_3D,
 } from './etiquettes-ign';
 
 const WMTS = 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0'
@@ -36,7 +37,18 @@ export const FONDS: Record<Fond, string> = {
 export interface OptionsStyle {
   fond: Fond;
   cadastre?: boolean;
+  /* LES BÂTIMENTS EN RELIEF (FOND-5, 02/09) — la réponse à « existe-t-il des
+     cartes 3D gouvernementales ? ». Oui, et c'est la même tuile : voir
+     etiquettes-ign.ts pour la mesure de couverture. */
+  relief3d?: boolean;
 }
+
+/* L'INCLINAISON QUI VA AVEC LE RELIEF. À plat, une extrusion ne se voit PAS —
+   on regarde les toits par-dessus. Cocher la case sans incliner la caméra
+   donnerait une option qui ne fait rien, ce qui est le défaut qu'Armelin
+   signale depuis une semaine : « un menu caché est un menu que l'utilisateur
+   peut ne pas trouver ». Une option sans effet visible est pire encore. */
+export const INCLINAISON_RELIEF = 50;
 
 export function styleCarte({ fond, cadastre = false }: OptionsStyle): StyleSpecification {
   const sources: StyleSpecification['sources'] = {};
@@ -178,10 +190,15 @@ export function pourImagerie(
   });
 }
 
-export function calquesEtiquettes(fond: Fond): StyleSpecification['layers'] {
-  return fond === 'plan'
+export function calquesEtiquettes(
+  fond: Fond, relief3d = false,
+): StyleSpecification['layers'] {
+  const textes = fond === 'plan'
     ? [...CALQUES_NUMEROS_ROUTE]
     : pourImagerie([...CALQUES_TOPONYMES, ...CALQUES_NUMEROS_ROUTE]);
+  /* LE RELIEF PASSE AVANT LES TEXTES : un nom de rue caché derrière un
+     immeuble ne se lit pas, et c'est le nom qu'on cherche en conduisant. */
+  return relief3d ? [CALQUE_BATI_3D, ...textes] : textes;
 }
 
 /** Le style historique de la PR #2, conservé comme raccourci. */
