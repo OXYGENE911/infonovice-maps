@@ -2605,6 +2605,76 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
 .iti-direct-prendre:focus-visible,
 .iti-direct-ignorer:focus-visible { outline: none; box-shadow: var(--focus); }
 
+/* LA VISÉE SUR LA CARTE (CIBLE-1, 02/09).
+   Armelin : « la carte s'affiche avec une croix au milieu […] on peut déplacer
+   la carte, mais la croix reste fixe au milieu. »
+   RIEN N'INTERCEPTE LES GESTES : la mire couvre l'écran mais laisse tout
+   passer (`pointer-events: none`) — sans quoi on ne pourrait plus déplacer la
+   carte, c'est-à-dire plus viser. Seule la barre du bas réarme les
+   événements. */
+.cible-mire {
+  position: fixed; inset: 0; z-index: var(--z-bandeaux);
+  pointer-events: none;
+}
+.cible-mire[hidden] { display: none; }
+
+/* LA CROIX EST AU CENTRE GÉOMÉTRIQUE DE LA CARTE, celui que `getCenter()`
+   rend — pas au centre de l'espace laissé libre par les panneaux. Les deux
+   doivent coïncider, sinon on valide un point qu'on ne visait pas. */
+.cible-croix {
+  position: absolute; top: 50%; left: 50%;
+  width: 44px; height: 44px; margin: -22px 0 0 -22px;
+}
+.cible-croix::before, .cible-croix::after {
+  content: ''; position: absolute; background: var(--accent);
+  box-shadow: 0 0 0 1.5px rgb(255 255 255 / 90%);
+}
+/* Une croix AJOURÉE EN SON MILIEU : un point plein masquerait justement ce
+   qu'on cherche à voir. */
+.cible-croix::before { left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; }
+.cible-croix::after { top: 50%; left: 0; right: 0; height: 2px; margin-top: -1px; }
+.cible-croix > span {
+  position: absolute; top: 50%; left: 50%;
+  width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  border: 2px solid var(--accent); border-radius: 50%;
+  background: transparent; box-shadow: 0 0 0 1.5px rgb(255 255 255 / 90%);
+}
+
+/* LA BARRE DU BAS : « un unique bouton tout en bas qui s'appelle Définir ».
+   Elle est ancrée au pouce, pas au regard. */
+.cible-barre {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  pointer-events: auto;
+  padding: 12px 14px max(14px, var(--sur-barre-basse));
+  background: var(--fond); border-top: 1px solid var(--bord);
+  box-shadow: 0 -10px 34px rgb(10 30 60 / 20%);
+  display: grid; gap: 8px;
+}
+.cible-titre {
+  margin: 0; font: 600 13.5px var(--police); color: var(--texte-1);
+}
+.cible-adresse {
+  margin: 0; min-height: 1.3em;
+  font: 400 12.5px/1.3 var(--police); color: var(--texte-2);
+}
+.cible-gestes { display: flex; gap: 8px; }
+.cible-definir, .cible-annuler {
+  padding: 10px 16px; border-radius: 10px; cursor: pointer;
+  font: 650 13px var(--police);
+}
+/* « DÉFINIR » PREND LA PLACE : c'est le geste qu'on vient faire, et au pouce
+   une cible large vaut mieux qu'une cible bien nommée. */
+.cible-definir {
+  flex: 1 1 auto; border: 1px solid var(--accent);
+  background: var(--accent); color: var(--blanc);
+}
+.cible-annuler {
+  flex: 0 0 auto; border: 1px solid var(--bord-2);
+  background: var(--fond); color: var(--texte-2);
+}
+.cible-definir:focus-visible,
+.cible-annuler:focus-visible { outline: none; box-shadow: var(--focus); }
+
 .iti-routines { display: flex; flex-wrap: wrap; gap: 6px; }
 .iti-routine {
   padding: 6px 12px; border-radius: 999px;

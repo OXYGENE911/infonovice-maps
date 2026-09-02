@@ -3043,6 +3043,29 @@ export class PanneauItineraire extends HTMLElement {
       const role = boite.dataset['pour'] === 'arrivee' ? 'arrivee' : 'depart';
       boite.replaceChildren();
 
+      /* CHOISIR SUR LA CARTE (CIBLE-1, 02/09). Armelin : « comment choisir
+         manuellement, on ne peut pas déplacer le point ? […] dans Google
+         Maps, la fonction s'appelle "Sélectionner sur la carte" : la carte
+         s'affiche avec une croix au milieu, on déplace la carte, la croix
+         reste fixe, et un unique bouton en bas valide. »
+         IL A RAISON, ET IL MANQUAIT UNE CHOSE SIMPLE : on savait déjà poser
+         un point par appui long sur la carte, mais rien ne le proposait
+         depuis le formulaire — donc personne ne le trouvait.
+         SUR LES DEUX CHAMPS : on choisit un départ sur la carte aussi
+         souvent qu'une arrivée — un parking, un point de rendez-vous. */
+      const surCarte = document.createElement('button');
+      surCarte.type = 'button';
+      surCarte.className = 'iti-raccourci iti-raccourci-carte';
+      /* `pictoMenu` REND DU TEXTE, pas un nœud : on le pose par innerHTML,
+         puis on ajoute le mot — comme les autres raccourcis. */
+      surCarte.innerHTML = pictoMenu('cible');
+      surCarte.append(document.createTextNode('Sur la carte'));
+      surCarte.setAttribute('aria-label', role === 'depart'
+        ? 'Choisir le départ sur la carte'
+        : 'Choisir la destination sur la carte');
+      surCarte.addEventListener('click', () => { this.#viser(role); });
+      boite.append(surCarte);
+
       /* « MA POSITION » N'EST PROPOSÉE QU'AU DÉPART, et c'est délibéré : on
          part d'où l'on est, on ne s'y rend pas. La géolocalisation reste un
          GESTE — le bouton la demande, l'application ne la prend jamais
@@ -3880,6 +3903,135 @@ export class PanneauItineraire extends HTMLElement {
         boite.hidden = false;
       })
       .catch(() => { /* le service n'a pas répondu : on n'avait rien promis */ });
+  }
+
+  /* LA VISÉE SUR LA CARTE (CIBLE-1, 02/09).
+   *
+   * Armelin : « comment choisir manuellement, on ne peut pas déplacer le
+   * point ? […] dans Google Maps, la fonction s'appelle "Sélectionner sur la
+   * carte" : la carte s'affiche avec une croix au milieu et une icône rouge de
+   * destination, on peut déplacer la carte mais la croix reste fixe au milieu.
+   * Quand on a positionné la croix sur l'emplacement choisi, on peut cliquer
+   * sur un unique bouton tout en bas qui s'appelle "Définir". »
+   *
+   * IL MANQUAIT UNE CHOSE SIMPLE. On savait déjà poser un point par appui long
+   * sur la carte depuis la PR #4 — mais rien ne le proposait depuis le
+   * formulaire, donc personne ne le trouvait. Un geste qu'on ne devine pas
+   * n'existe pas, et c'est le même reproche que « Recharge et services » a
+   * valu à l'application deux jours plus tôt.
+   *
+   * LA CROIX NE BOUGE PAS, LA CARTE BOUGE, et c'est tout le principe : on
+   * n'attrape pas un point à la souris, on amène le paysage sous la mire.
+   * C'est ce qui rend le geste possible au doigt, d'une seule main.
+   *
+   * LE PLANIFICATEUR SE RANGE PENDANT CE TEMPS : sur téléphone il occupe la
+   * moitié basse de l'écran, et viser à travers un panneau n'est pas viser.
+   */
+  #cible: { role: 'depart' | 'arrivee' } | null = null;
+
+  #sequenceVisee = 0;
+
+  /** Entre en visée pour un des deux champs. */
+  #viser(role: 'depart' | 'arrivee'): void {
+    const carte = this.#carte;
+    if (!carte) return;
+    this.#cible = { role };
+    (this.querySelector('details.iti') as HTMLDetailsElement).open = false;
+    const mire = this.#mire();
+    mire.hidden = false;
+    const titre = mire.querySelector<HTMLElement>('.cible-titre');
+    if (titre) {
+      titre.textContent = role === 'depart'
+        ? 'Amenez la croix sur votre départ'
+        : 'Amenez la croix sur votre destination';
+    }
+    /* L'ADRESSE SE LIT PENDANT QU'ON VISE, et se relit à chaque arrêt de la
+       carte : savoir CE QU'ON DÉSIGNE avant de valider vaut mieux que le
+       découvrir après. Un arrêt, une requête — jamais pendant le glissement,
+       ce qui en ferait des dizaines. */
+    carte.on('moveend', this.#surArretVisee);
+    this.#lireAdresseVisee();
+  }
+
+  /** Sort de la visée, qu'on ait choisi ou non. */
+  #arreterVisee(): void {
+    this.#cible = null;
+    this.#carte?.off('moveend', this.#surArretVisee);
+    const mire = document.querySelector<HTMLElement>('.cible-mire');
+    if (mire) mire.hidden = true;
+    (this.querySelector('details.iti') as HTMLDetailsElement).open = true;
+  }
+
+  #surArretVisee = (): void => { this.#lireAdresseVisee(); };
+
+  /** Dit ce que la croix désigne — une requête par arrêt de carte. */
+  #lireAdresseVisee(): void {
+    const carte = this.#carte;
+    const dit = document.querySelector<HTMLElement>('.cible-adresse');
+    if (!carte || !dit || !this.#cible) return;
+    const c = carte.getCenter();
+    const jeton = (this.#sequenceVisee += 1);
+    dit.textContent = 'Lecture de l’adresse…';
+    void adresseInverse({ lon: c.lng, lat: c.lat })
+      .then((r) => {
+        if (jeton !== this.#sequenceVisee || !this.#cible) return;
+        /* SANS ADRESSE, LES COORDONNÉES. En pleine campagne la BAN ne rend
+           rien, et un champ vide laisserait croire à une panne — le point,
+           lui, reste parfaitement utilisable. */
+        dit.textContent = r?.libelle ?? formaterCoordonnees({ lon: c.lng, lat: c.lat });
+      })
+      .catch(() => {
+        if (jeton !== this.#sequenceVisee) return;
+        dit.textContent = formaterCoordonnees({ lon: c.lng, lat: c.lat });
+      });
+  }
+
+  /** Le calque de visée, créé au premier usage. */
+  #mire(): HTMLElement {
+    const existante = document.querySelector<HTMLElement>('.cible-mire');
+    if (existante) return existante;
+    const mire = document.createElement('div');
+    mire.className = 'cible-mire';
+    mire.hidden = true;
+    mire.innerHTML = `
+      <div class="cible-croix" aria-hidden="true"><span></span></div>
+      <div class="cible-barre" role="group" aria-label="Choisir un point sur la carte">
+        <p class="cible-titre"></p>
+        <p class="cible-adresse" role="status"></p>
+        <div class="cible-gestes">
+          <button type="button" class="cible-definir">Définir</button>
+          <button type="button" class="cible-annuler">Annuler</button>
+        </div>
+      </div>`;
+    /* IL VIT HORS DU VOLET, à même la page : le volet se referme pendant la
+       visée, et un enfant d'élément fermé ne s'affiche pas. */
+    document.body.appendChild(mire);
+    mire.querySelector('.cible-definir')?.addEventListener('click', () => {
+      void this.#definirVisee();
+    });
+    mire.querySelector('.cible-annuler')?.addEventListener('click', () => {
+      this.#arreterVisee();
+    });
+    return mire;
+  }
+
+  /** Valide le point visé : il devient le départ ou l'arrivée. */
+  async #definirVisee(): Promise<void> {
+    const carte = this.#carte;
+    const cible = this.#cible;
+    if (!carte || !cible) return;
+    const c = carte.getCenter();
+    const point = { lon: c.lng, lat: c.lat };
+    /* ON RELIT L'ADRESSE AU MOMENT DE VALIDER plutôt que de garder celle
+       qu'on affichait : entre le dernier arrêt de carte et le clic, la carte
+       a pu bouger d'un doigt. Le libellé doit décrire CE POINT-LÀ. */
+    let libelle = formaterCoordonnees(point);
+    try {
+      const r = await adresseInverse(point);
+      if (r) libelle = r.libelle;
+    } catch { /* sans adresse, les coordonnées : le point vaut quand même */ }
+    this.#arreterVisee();
+    this.#poser(cible.role, point, libelle);
   }
 
   async #calculer(): Promise<void> {

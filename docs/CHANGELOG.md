@@ -2,6 +2,39 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.50.0] — 2026-09-02 — CIBLE-1
+
+### Ajouté — choisir un point sur la carte
+- Armelin : « comment choisir manuellement, on ne peut pas déplacer le point ?
+  […] dans Google Maps, la fonction s'appelle "Sélectionner sur la carte" : la
+  carte s'affiche avec une croix au milieu, on peut déplacer la carte mais la
+  croix reste fixe. Quand on a positionné la croix, on clique sur un unique
+  bouton tout en bas qui s'appelle "Définir". »
+- Un raccourci **« Sur la carte »** apparaît sous les deux champs du
+  planificateur. Il ouvre une mire : la croix reste **fixe au centre**, c'est
+  la carte qui bouge — c'est ce qui rend le geste possible au doigt, d'une
+  seule main.
+- **L'adresse se lit pendant qu'on vise**, relue à chaque arrêt de la carte :
+  savoir ce qu'on désigne avant de valider vaut mieux que le découvrir après.
+  Une requête par arrêt, jamais pendant le glissement.
+- Le bouton **« Définir »** relit l'adresse au moment de valider : entre le
+  dernier arrêt de carte et le clic, la carte a pu bouger d'un doigt.
+
+### Ce que ça corrige, au fond
+- **Le geste existait déjà et personne ne le trouvait.** On sait poser un
+  point par appui long depuis la PR #4, mais rien ne le proposait depuis le
+  formulaire. Un geste qu'on ne devine pas n'existe pas — c'est le même
+  reproche que « Recharge et services » a valu à l'application deux jours plus
+  tôt.
+
+### Trois décisions, et leur raison
+- **Le planificateur se range pendant la visée** : sur téléphone il occupe la
+  moitié basse de l'écran, et viser à travers un panneau n'est pas viser.
+- **La mire n'intercepte aucun geste** : sans cela, la carte ne bougerait plus
+  — et une croix fixe sur une carte fixe ne désigne rien. Un parcours vérifie
+  qu'au centre de l'écran, c'est bien la carte qu'on touche.
+- **Sans adresse, les coordonnées** : en pleine campagne la BAN ne rend rien,
+  et un champ vide laisserait croire à une panne. Le point reste utilisable.
 ## [1.49.0] — 2026-09-02 — FOND-6
 
 ### Ajouté — les numéros de route dans leur écusson
