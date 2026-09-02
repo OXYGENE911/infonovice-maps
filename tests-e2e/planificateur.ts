@@ -65,6 +65,21 @@ export async function ouvrirPlanificateur(page: Page): Promise<void> {
  * délai. Le véhicule, les couches et les options, eux, sont toujours là.
  */
 export async function allerA(page: Page, vers: PageTrajet): Promise<void> {
+  /* « RECHARGE ET SERVICES » A DÉMÉNAGÉ DANS L'ENTONNOIR (ERGO-3, 02/09) : ce
+     sont des filtres de POI, et ils se règlent désormais là où se règlent les
+     filtres de POI. Ce raccourci absorbe le déplacement — c'est exactement ce
+     qu'il promet en tête de fichier : « le jour où elle changera encore, un
+     seul fichier bougera ». */
+  if (vers === 'couches') {
+    /* ON DÉLÈGUE À `ouvrirVolet` PLUTÔT QUE DE RÉÉCRIRE L'OUVERTURE : elle
+       sait déjà ouvrir l'entonnoir ET respecter un `<details open>` — deux
+       règles qu'écrire une seconde fois ici, c'était les écrire une seconde
+       fois FAUX. La leçon est déjà inscrite plus bas dans ce fichier. */
+    const { ouvrirVolet } = await import('./volets');
+    await ouvrirVolet(page, '.poi');
+    await expect(page.locator('.poi-hote-recharge panneau-poi')).toBeVisible();
+    return;
+  }
   await ouvrirPlanificateur(page);
   const entree = page.locator(`.iti-vers[data-vers="${vers}"]`);
   await expect(entree, `la page « ${vers} » n’est pas proposée :`

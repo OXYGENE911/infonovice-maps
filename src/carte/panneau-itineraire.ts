@@ -130,7 +130,6 @@ const REGLAGES_MEMORISES = ['.recharge-cible', '.recharge-reserve', '.recharge-p
 const VUES = {
   accueil: 'Où allez-vous ?',
   vehicule: 'Mon véhicule',
-  couches: 'Recharge et services',
   options: 'Options du trajet',
   recharge: 'Arrêts de recharge',
   feuille: 'Feuille de route',
@@ -362,7 +361,7 @@ export class PanneauItineraire extends HTMLElement {
    * gain purement cosmétique, et fait courir un risque là où rien ne le
    * demandait.
    */
-  loger(vue: 'vehicule' | 'couches', element: HTMLElement): void {
+  loger(vue: 'vehicule', element: HTMLElement): void {
     this.querySelector(`.vue[data-vue="${vue}"]`)?.appendChild(element);
   }
 
@@ -488,8 +487,6 @@ export class PanneauItineraire extends HTMLElement {
             <nav class="iti-menu iti-menu-toujours" aria-label="Réglages">
               <button type="button" class="iti-vers" data-vers="vehicule">
                 ${pictoMenu('vehicule')}<span>Mon véhicule</span><span aria-hidden="true">›</span></button>
-              <button type="button" class="iti-vers" data-vers="couches">
-                ${pictoMenu('couches')}<span>Recharge et services</span><span aria-hidden="true">›</span></button>
               <button type="button" class="iti-vers" data-vers="options">
                 ${pictoMenu('options')}<span>Options du trajet</span><span aria-hidden="true">›</span></button>
               <!-- L'HISTORIQUE VIT AVEC LES RÉGLAGES, pas avec le trajet en
@@ -580,7 +577,6 @@ export class PanneauItineraire extends HTMLElement {
           </section>
 
           <section class="vue vue-hote" data-vue="vehicule" hidden></section>
-          <section class="vue vue-hote" data-vue="couches" hidden></section>
 
           <!-- ======================= OPTIONS ======================= -->
           <section class="vue" data-vue="options" hidden>
@@ -2651,6 +2647,25 @@ export class PanneauItineraire extends HTMLElement {
       })();
     boite.replaceChildren();
 
+    /* ELLE SE REFERME (HIST-3, 02/09). Armelin : « quand j'ai comparé deux
+       trajets, l'affichage de la comparaison reste et je ne peux pas
+       l'enlever même en fermant la page d'historique. Quand je reviens sur
+       l'historique, la dernière comparaison reste affichée. » Un tableau
+       qu'on ne peut pas retirer occupe l'écran pour toujours — et il porte
+       en plus des chiffres périmés dès que la sélection change. */
+    const tete = document.createElement('div');
+    tete.className = 'iti-hist-comparaison-tete';
+    const titreComp = document.createElement('p');
+    titreComp.className = 'iti-hist-comparaison-titre';
+    titreComp.textContent = `Comparaison de ${choisis.length} parcours`;
+    const fermer = document.createElement('button');
+    fermer.type = 'button';
+    fermer.className = 'iti-hist-fermer-comparaison';
+    fermer.textContent = 'Fermer';
+    fermer.addEventListener('click', () => { this.#fermerComparaison(); });
+    tete.append(titreComp, fermer);
+    boite.appendChild(tete);
+
     const table = document.createElement('table');
     const entete = document.createElement('tr');
     entete.appendChild(document.createElement('th'));
@@ -2755,6 +2770,11 @@ export class PanneauItineraire extends HTMLElement {
     boite.appendChild(envoi);
   }
 
+  /** Retire la comparaison — elle ne survit ni au geste, ni à la sortie. */
+  #fermerComparaison(): void {
+    this.querySelector('.iti-hist-comparaison')?.remove();
+  }
+
   #majActionsHistorique(): void {
     const actions = this.querySelector<HTMLElement>('.iti-hist-actions');
     const comparer = this.querySelector<HTMLButtonElement>('.iti-hist-comparer');
@@ -2773,6 +2793,10 @@ export class PanneauItineraire extends HTMLElement {
        rien montrer. */
     const boite = this.querySelector<HTMLElement>('.iti-hist-partage');
     if (boite) { boite.hidden = true; boite.replaceChildren(); }
+    /* ET LA COMPARAISON TOMBE AVEC (HIST-3) : ses chiffres portent sur les
+       parcours cochés À CE MOMENT-LÀ. Cocher un troisième trajet sans que le
+       tableau bouge afficherait un écart qui n'existe plus. */
+    this.#fermerComparaison();
     if (this.#urlPartage !== null) {
       URL.revokeObjectURL(this.#urlPartage);
       this.#urlPartage = null;
@@ -2781,6 +2805,9 @@ export class PanneauItineraire extends HTMLElement {
 
   #allerA(vue: CleVue): void {
     this.#vue = vue;
+    /* ON QUITTE L'HISTORIQUE, LA COMPARAISON QUITTE AUSSI (HIST-3) : elle
+       reparaissait telle quelle au retour, chiffres d'hier compris. */
+    if (vue !== 'historique') this.#fermerComparaison();
     if (vue === 'historique') void this.#ouvrirHistorique();
     for (const section of this.querySelectorAll<HTMLElement>('.vue')) {
       section.hidden = section.dataset['vue'] !== vue;
@@ -2990,6 +3017,10 @@ export class PanneauItineraire extends HTMLElement {
       trace: iti.geometrie.coordinates as [number, number][],
       distanceTotaleM: iti.distance,
       dureeTotaleS: iti.duree,
+      /* LE PROFIL DÉCIDE DE L'ÉCART TOLÉRÉ (GUIDE-6, 02/09) : à pied, quatre-
+         vingts mètres sont un pâté de maisons — c'est ce qui a empêché le
+         recalcul quand Armelin a contourné une résidence fermée. */
+      aPied: this.#profil === 'pedestrian',
       /* LA DESTINATION DEMANDÉE (PARK-1) : le tracé s'arrête sur la route,
          l'adresse est à côté — c'est autour d'ELLE qu'on cherche à se
          garer. */

@@ -752,10 +752,34 @@ etapes-itineraire { display: grid; gap: 7px; }
 .iti-hist-comparaison table {
   border-collapse: collapse; font: 400 12.5px var(--police); min-width: 100%;
 }
+/* LA COULEUR EST DITE ICI AUSSI (HIST-2, 02/09), et pour la même raison
+   qu'à la ligne d'un parcours : Armelin, deuxième signalement — « quand je
+   clique sur l'historique pour comparer deux trajets, les textes sont écrits
+   en noir sur fond noir en mode sombre ». Le balayage de contraste de HIST-1
+   n'ouvrait PAS la comparaison : il n'avait donc rien à voir. Le parcours le
+   fait maintenant, et cette faute-là ne reviendra pas en silence. */
 .iti-hist-comparaison th, .iti-hist-comparaison td {
   padding: 6px 9px; text-align: right; white-space: nowrap;
+  color: var(--texte-1);
   border-bottom: 1px solid var(--bord);
 }
+
+/* ET ELLE SE REFERME (HIST-3, 02/09). « L'affichage de la comparaison reste et
+   je ne peux pas l'enlever même en fermant la page d'historique. » Un tableau
+   qu'on ne peut pas retirer occupe l'écran pour toujours. */
+.iti-hist-comparaison-tete {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; margin-bottom: 6px;
+}
+.iti-hist-comparaison-titre {
+  margin: 0; font: 600 12.5px var(--police); color: var(--texte-1);
+}
+.iti-hist-fermer-comparaison {
+  padding: 4px 10px; border-radius: 8px;
+  border: 1px solid var(--bord-2); background: var(--fond);
+  color: var(--texte-1); font: 600 12px var(--police); cursor: pointer;
+}
+.iti-hist-fermer-comparaison:focus-visible { outline: none; box-shadow: var(--focus); }
 .iti-hist-comparaison th[scope="row"] {
   text-align: left; color: var(--texte-2); font-weight: 500;
 }
@@ -1370,6 +1394,28 @@ fiche-borne:not([hidden]), fiche-lieu:not([hidden]) { z-index: var(--z-volet-ouv
   font: 600 14px var(--police); cursor: pointer;
 }
 .carte-perdue-recharger:focus-visible { outline: none; box-shadow: var(--focus); }
+.carte-perdue-version {
+  margin: 0; font: 400 12px var(--police); color: #B5BDC8;
+}
+
+/* LA VERSION ET LA MISE À JOUR, DANS LE MENU (VERSION-1, 02/09) : le seul
+   endroit qu'on maîtrise et qui reste atteignable quand la carte ne se
+   dessine plus. */
+.reglages-version { display: grid; gap: 8px; }
+.reglages-version-mot {
+  margin: 0; font: 600 13px var(--police); color: var(--texte-1);
+}
+.reglages-maj {
+  padding: 8px 12px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond);
+  color: var(--texte-1); font: 600 12.5px var(--police); cursor: pointer;
+}
+.reglages-maj:disabled { opacity: .55; cursor: default; }
+.reglages-maj:focus-visible { outline: none; box-shadow: var(--focus); }
+.reglages-version-note {
+  margin: 0; font: 400 11.5px var(--police); color: var(--texte-3);
+  line-height: 1.45;
+}
 
 .fb-nuance {
   margin: 6px 0 0; font: 400 11.5px var(--police); color: var(--texte-3);
@@ -3719,8 +3765,18 @@ filtre-poi {
   pointer-events: auto;
 }
 .bg-parking-p:focus-visible { outline: none; box-shadow: var(--focus); }
+/* LA FEUILLE S'OUVRE AU-DESSUS DU ROND « P » (PARK-3, 02/09). Armelin :
+   « la fenêtre s'ouvre en masquant le bouton de parking ce qui rend difficile
+   l'appui pour refermer la fenêtre. Il faudrait que la fenêtre de parking
+   s'ouvre un peu plus haut que le bouton de parking dédié. »
+   ELLE SE CALE SUR LE ROND, ET NON SUR UNE VALEUR À ELLE : `--vitesse-bas`
+   porte déjà le repère commun, le « P » fait 46 px et se pose 5 px plus haut.
+   63 px = 5 + 46 + 12 de blanc. Une constante écrite à la main se serait
+   désalignée au premier changement de la barre d'échelle — c'est arrivé, et
+   c'est pour cela que ce repère existe. */
 .bg-parkings {
-  position: absolute; right: 8px; left: 8px; bottom: calc(100% + 68px);
+  position: absolute; right: 8px; left: 8px;
+  bottom: calc(var(--vitesse-bas) + 63px);
   max-width: 420px; margin-left: auto;
   background: var(--fond); border: 1px solid var(--bord-2);
   border-radius: 14px; box-shadow: var(--ombre-flottante);

@@ -34,6 +34,20 @@ import { situerSurLeTrace, distanceM } from './le-long-du-trajet';
    roulent droit. */
 export const ECART_HORS_ROUTE_M = 80;
 
+/* À PIED, QUATRE-VINGTS MÈTRES SONT UN PÂTÉ DE MAISONS (GUIDE-6, 02/09).
+   LE TERRAIN. Armelin, essai piéton : « le GPS m'a fait passer le tracé à
+   l'intérieur d'une résidence protégée par un digicode. Ne pouvant pas prendre
+   ce parcours, j'ai fait le tour du pâté de maison en suivant la seule rue
+   praticable et le GPS n'a jamais recalculé. »
+   POURQUOI CE SEUIL ÉTAIT CELUI D'UNE VOITURE : 80 m sépare une rue de sa
+   parallèle, et il fallait cette marge pour ne pas crier au loup dans une rue
+   encaissée où le récepteur dérive. Un piéton, lui, contourne un immeuble en
+   trente mètres — et c'est exactement là qu'il a quitté le trajet.
+   TRENTE MÈTRES : deux fois la dérive urbaine ordinaire d'un récepteur, et la
+   moitié d'une traversée de rue. En dessous, on annoncerait un écart à qui
+   change de trottoir. */
+export const ECART_HORS_ROUTE_PIETON_M = 30;
+
 /* ==========================================================================
    CONCLURE PLUS TÔT, SANS CRIER AU LOUP (GUIDE-5, 01/09).
 
@@ -220,6 +234,8 @@ export interface OptionsGuidage {
   distanceTotaleM: number;
   dureeTotaleS: number;
   etapes: readonly EtapeRoute[];
+  /** Vrai en profil piéton : l'écart toléré n'est pas le même (GUIDE-6). */
+  aPied?: boolean;
 }
 
 /**
@@ -250,7 +266,7 @@ export function etatGuidage(o: OptionsGuidage, p: Position): EtatGuidage {
   return {
     avancementM: avancement,
     ecartM: ecart,
-    horsRoute: ecart > ECART_HORS_ROUTE_M,
+    horsRoute: ecart > (o.aPied ? ECART_HORS_ROUTE_PIETON_M : ECART_HORS_ROUTE_M),
     restantM,
     restantS: duree * part,
     etape,

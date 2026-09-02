@@ -2,6 +2,7 @@
 // Tout ce qui est TESTABLE hors navigateur vit dans style-ign.ts ; ce module
 // ne fait que l'assemblage MapLibre.
 import { Map as CarteMapLibre, NavigationControl, GeolocateControl, ScaleControl, Marker, Popup, setWorkerUrl } from 'maplibre-gl';
+import { VERSION, libelleVersion, forcerMiseAJour } from '../lib/version';
 import 'maplibre-gl/dist/maplibre-gl.css';
 // LE WORKER DE MAPLIBRE DOIT ÊTRE ÉMIS PAR LE BUILD. MapLibre 6 le charge en
 // module séparé, résolu PAR DÉFAUT relativement à son propre fichier — dans
@@ -119,8 +120,17 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   boutonPerdue.type = 'button';
   boutonPerdue.className = 'carte-perdue-recharger';
   boutonPerdue.textContent = 'Recharger la carte';
-  boutonPerdue.addEventListener('click', () => { window.location.reload(); });
-  perdue.append(motPerdue, boutonPerdue);
+  /* ON VIDE LE CACHE AU PASSAGE (VERSION-1) : un simple `reload()` peut
+     revenir sur le même paquet servi par le service worker. Si le noir venait
+     d'un paquet périmé plutôt que de la mémoire graphique, ce bouton doit
+     aussi en sortir. */
+  boutonPerdue.addEventListener('click', () => {
+    void forcerMiseAJour().finally(() => { window.location.reload(); });
+  });
+  const versionPerdue = document.createElement('p');
+  versionPerdue.className = 'carte-perdue-version';
+  versionPerdue.textContent = libelleVersion(VERSION);
+  perdue.append(motPerdue, boutonPerdue, versionPerdue);
   conteneur.appendChild(perdue);
 
   carte.on('webglcontextlost', () => { perdue.hidden = false; });
@@ -190,6 +200,37 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   };
   menu.ajouter('Affichage', selecteur);
 
+  /* LA VERSION SE LIT, ET LA MISE À JOUR SE FORCE (VERSION-1, 02/09).
+     Armelin, devant un écran noir : « je ne sais pas si j'ai la bonne version
+     en cache ». Il avait raison de douter — une PWA garde son paquet jusqu'à
+     ce que le service worker cède la place, et rien ne disait laquelle
+     tournait.
+     DANS LE MENU, ET NON DANS LA BULLE « i » : c'était mon premier jet, et
+     MapLibre RECONSTRUIT sa bulle d'attribution à chaque changement de
+     contenu — elle se refermait sous le doigt, mesuré au parcours. Le menu
+     est un composant qu'on maîtrise, et il reste tout aussi atteignable quand
+     la carte ne se dessine plus : il vit dans l'en-tête, pas dans le canevas. */
+  const boiteVersion = document.createElement('div');
+  boiteVersion.className = 'reglages-version';
+  const motVersion = document.createElement('p');
+  motVersion.className = 'reglages-version-mot';
+  motVersion.textContent = libelleVersion();
+  const majVersion = document.createElement('button');
+  majVersion.type = 'button';
+  majVersion.className = 'reglages-maj';
+  majVersion.textContent = 'Mettre à jour l’application';
+  majVersion.addEventListener('click', () => {
+    majVersion.disabled = true;
+    majVersion.textContent = 'Mise à jour…';
+    void forcerMiseAJour().finally(() => { window.location.reload(); });
+  });
+  const notePlus = document.createElement('p');
+  notePlus.className = 'reglages-version-note';
+  notePlus.textContent = 'Vide le cache et recharge la dernière version'
+    + ' publiée. Vos favoris et votre historique ne sont pas touchés.';
+  boiteVersion.append(motVersion, majVersion, notePlus);
+  menu.ajouter('Version', boiteVersion);
+
   /* LES BORNES ET LES SERVICES SONT UNE PAGE DU PLANIFICATEUR.
      D'abord passés à gauche le 26/08 — « la recherche de point de charge
      devrait être dans le menu de gauche » — ils y formaient un TROISIÈME
@@ -218,7 +259,6 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      reste dans l'histoire git si le besoin renaît. */
   const poi = new PanneauPoi();
   poi.carte = carte;
-  panneau.loger('couches', poi);
   /* LE MODE TRAJET DU PLANIFICATEUR SAIT EFFACER LES BORNES NATIONALES : quand
      un plan de recharge est à l'écran, seules restent les bornes du corridor. */
   panneau.couchesBornes = poi;
@@ -247,6 +287,12 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   portePoi.appendChild(filtrePoi);
   carte.addControl({ onAdd: () => portePoi, onRemove: () => portePoi.remove() }, 'top-left');
   filtrePoi.carte = carte;
+  /* LES FILTRES DE RECHARGE VIVENT DANS L'ENTONNOIR (ERGO-3, 02/09), et non
+     plus dans le planificateur : ce sont des filtres de POI, ils se règlent
+     là où se règlent les filtres de POI. Le planificateur y gagne une entrée
+     de moins à faire défiler — le but même de la remarque du collègue
+     d'Armelin, qu'il a reprise à son compte. */
+  filtrePoi.logerRecharge(poi);
   // « Y ALLER » DEPUIS LA FICHE D'UN LIEU (LIEUX-1, 31/08) : la même porte
   // que la fiche de borne, pas un second chemin à maintenir.
   filtrePoi.porteItineraire = panneau;

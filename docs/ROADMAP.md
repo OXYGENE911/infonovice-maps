@@ -537,6 +537,16 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #162 — RECHERCHE-3 (01/09) : la recherche par nom part enfin (la
       BAN rend toujours quelque chose) et interroge l'ÉGALITÉ indexée, la
       regex expirant (mesuré : 57 s). Expiration lue comme telle.
+- [x] PR #178 — VERSION-1 + HIST-2/3 + PARK-3 + GUIDE-6 + FOND-3 + ERGO-3
+      (02/09) : la version se lit et la mise à jour se force (« je ne sais pas
+      si j'ai la bonne version en cache ») ; comparaison lisible et
+      refermable ; feuille de parking au-dessus de son bouton ; écart
+      hors-route selon le profil (30 m à pied) ; étiquettes blanches cernées de
+      noir sur imagerie ; les filtres de recharge passent dans l'entonnoir.
+- [ ] À SUIVRE — déplacer « Historique » du planificateur vers le Menu, comme
+      demandé le 02/09. Non fait dans la PR #178 : la page vit dans le
+      composant du planificateur et son extraction est un vrai remaniement —
+      à faire proprement plutôt qu'à moitié.
 - [x] PR #177 — CARTE-1 / HIST-1 / BANDEAU-1 / PARK-2 / VOIX-3 (01/09) : les
       cinq retours du premier essai à pied. Carte noire après le trajet (perte
       de contexte WebGL, non gérée) ; historique illisible en sombre

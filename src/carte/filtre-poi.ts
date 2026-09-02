@@ -84,6 +84,38 @@ export const INTERVALLE_MIN_MS = 1_500;
 export const LIEUX_GARDES = 600;
 
 export class FiltrePoi extends HTMLElement {
+  /* LE PANNEAU DE RECHARGE, ACCUEILLI ICI (ERGO-3, 02/09). Il peut arriver
+     AVANT que le squelette ne soit bâti — l'assemblage le range dès sa
+     création — d'où la mémoire : on le pose au moment du rendu. C'est la même
+     leçon que le menu des réglages, qui l'avait apprise en avalant cinq
+     volets orphelins sans une erreur. */
+  #recharge: HTMLElement | null = null;
+
+  /**
+   * Referme le panneau des filtres — appelé par la règle « une seule surface ».
+   *
+   * IDEMPOTENT ET SILENCIEUX : il est appelé chaque fois qu'un cartouche
+   * s'ouvre, y compris quand le panneau est déjà fermé.
+   */
+  fermer(): void {
+    const panneau = this.querySelector<HTMLElement>('.poi-panneau');
+    const bulle = this.querySelector<HTMLButtonElement>('.poi-bulle');
+    if (!panneau || panneau.hidden) return;
+    /* L'ÉTAT INTERNE SUIT, sans quoi le prochain clic sur l'entonnoir le
+       « refermerait » une seconde fois et il faudrait deux gestes pour le
+       rouvrir — un défaut qui ne se voit qu'à l'usage. */
+    this.#ouvert = false;
+    panneau.hidden = true;
+    bulle?.setAttribute('aria-expanded', 'false');
+  }
+
+  /** Accueille le panneau « Recharge et services » dans le filtre. */
+  logerRecharge(element: HTMLElement): void {
+    this.#recharge = element;
+    const hote = this.querySelector<HTMLElement>('.poi-hote-recharge');
+    if (hote) hote.appendChild(element);
+  }
+
   #carte: CarteMapLibre | null = null;
 
   #actives = new Set<string>();
@@ -173,7 +205,25 @@ export class FiltrePoi extends HTMLElement {
         </div>
         <button type="button" class="poi-chercher">Chercher à nouveau ici</button>
         <p class="poi-filtre-etat" role="status"></p>
+        <!-- LES FILTRES DE RECHARGE VIENNENT ICI (ERGO-3, 02/09).
+             LE RAISONNEMENT N'EST PAS DE MOI, ET IL EST JUSTE. Un collègue
+             d'Armelin : « lorsqu'on clique sur itinéraire, on a le bouton
+             "Recharge et services" qui permet de configurer le filtre des
+             bornes […] et lorsque je suis dans la carte, j'ai le bouton en
+             entonnoir qui permet de configurer le filtre des POI, mais
+             seulement d'afficher ou masquer les bornes. Il aurait été plus
+             logique de sortir la section "Recharge et services" du menu
+             itinéraire pour l'inclure directement au niveau des filtres, car
+             il s'agit également d'un filtre de POI. » Armelin : « je suis
+             assez d'accord avec lui ».
+             CE QUI SE RANGE ENSEMBLE SE RÈGLE ENSEMBLE : la puce « Bornes de
+             recharge » et le choix des réseaux étaient deux moitiés du même
+             geste, séparées par tout l'écran. -->
+        <div class="poi-hote-recharge"></div>
       </div>`;
+
+    const hote = this.querySelector<HTMLElement>('.poi-hote-recharge');
+    if (hote && this.#recharge) hote.appendChild(this.#recharge);
 
     const bulle = this.querySelector<HTMLButtonElement>('.poi-bulle')!;
     const panneau = this.querySelector<HTMLElement>('.poi-panneau')!;
@@ -181,7 +231,20 @@ export class FiltrePoi extends HTMLElement {
       this.#ouvert = !this.#ouvert;
       panneau.hidden = !this.#ouvert;
       bulle.setAttribute('aria-expanded', String(this.#ouvert));
-      if (this.#ouvert) this.#majEtat();
+      if (this.#ouvert) {
+        this.#majEtat();
+        /* UNE SEULE SURFACE À LA FOIS, DANS LES DEUX SENS (ERGO-3, 02/09).
+           Les fiches se referment déjà les volets en s'ouvrant ; il manquait
+           la réciproque, et elle ne manquait pas avant : l'entonnoir ne
+           portait qu'une poignée de pastilles, il porte maintenant tout le
+           panneau de recharge et occupe le même bord d'écran qu'elles.
+           LA CI L'A ATTRAPÉ DEUX FOIS AVANT L'USAGER : ouvert SOUS une fiche,
+           le panneau devenait impossible à presser — la fiche interceptait
+           le doigt. */
+        for (const f of document.querySelectorAll('fiche-borne, fiche-lieu')) {
+          (f as HTMLElement & { fermer?: () => void }).fermer?.();
+        }
+      }
     });
 
     for (const b of this.querySelectorAll<HTMLButtonElement>('.poi-famille[data-cle]')) {

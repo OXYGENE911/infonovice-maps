@@ -55,5 +55,23 @@ export async function ouvrirVolet(page: Page, selecteur: string): Promise<void> 
     return;
   }
 
+  /* OU EST-IL RANGÉ DANS L'ENTONNOIR DES FILTRES ? (ERGO-3, 02/09) « Recharge
+     et services » y a déménagé : ce sont des filtres de POI, et un collègue
+     d'Armelin a fait remarquer qu'ils devaient donc se régler avec les autres
+     filtres. On demande encore au DOM, jamais à une liste écrite ici. */
+  if (await page.locator(`.poi-hote-recharge ${selecteur}`).count() > 0) {
+    if (await page.locator('.poi-panneau').isHidden()) {
+      await page.locator('.poi-bulle').click();
+    }
+    await expect(page.locator('.poi-panneau')).toBeVisible();
+    /* IDEMPOTENT, comme `ouvrirMenu` : le panneau de recharge est un
+       `<details open>` — le cliquer sans regarder le REFERMAIT, et cinq
+       parcours cherchaient ensuite des cases qui n'existaient plus. */
+    if (await page.locator(`${selecteur}[open]`).count() === 0) {
+      await page.locator(`${selecteur} summary`).first().click();
+    }
+    return;
+  }
+
   await page.locator(`${selecteur} summary`).first().click();
 }

@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   etapeAlAvancement, etatGuidage, distanceEnMots, heureArriveeEstimee,
-  ECART_HORS_ROUTE_M, partiAContresens, approcheManoeuvre, type OptionsGuidage,
+  ECART_HORS_ROUTE_M, ECART_HORS_ROUTE_PIETON_M,
+  partiAContresens, approcheManoeuvre, type OptionsGuidage,
 } from '../src/lib/guidage';
 import type { EtapeRoute } from '../src/lib/feuille-de-route';
 
@@ -315,5 +316,53 @@ describe('approcheManoeuvre', () => {
   it('refuse une distance absurde plutôt que de zoomer au hasard', () => {
     expect(approcheManoeuvre(Number.NaN, 'right', false)).toBe(false);
     expect(approcheManoeuvre(-10, 'right', false)).toBe(false);
+  });
+});
+
+describe('l’écart toléré dépend du profil (GUIDE-6)', () => {
+  /* LE TERRAIN. Armelin, essai piéton du 02/09 : « le GPS m'a fait passer le
+     tracé à l'intérieur d'une résidence protégée par un digicode […] j'ai fait
+     le tour du pâté de maison […] et le GPS n'a jamais recalculé le parcours
+     malgré le fait que je me suis éloigné de plusieurs centaines de mètres. »
+     Quatre-vingts mètres séparent une rue de sa parallèle : c'est la marge
+     d'une VOITURE. Un piéton contourne un immeuble en trente. */
+
+  /** Un tracé droit d'un kilomètre, plein est. */
+  const droit: [number, number][] = Array.from({ length: 21 }, (_, i) => [
+    2.35 + i * 0.00045, 48.85,
+  ]);
+  const options = (aPied: boolean) => ({
+    trace: droit, distanceTotaleM: 1_000, dureeTotaleS: 700, etapes: [], aPied,
+  });
+  /** Un point décalé vers le nord de `m` mètres. */
+  const aCote = (m: number) => ({ lon: 2.355, lat: 48.85 + m / 111_320 });
+
+  it('à pied, cinquante mètres suffisent à quitter le trajet', () => {
+    expect(etatGuidage(options(true), aCote(50)).horsRoute).toBe(true);
+  });
+
+  it('en voiture, les mêmes cinquante mètres ne sont PAS un écart', () => {
+    /* Et c'est voulu : une rue encaissée fait dériver le récepteur, et
+       annoncer « vous avez quitté l'itinéraire » à qui roule droit est pire
+       que de se taire. */
+    expect(etatGuidage(options(false), aCote(50)).horsRoute).toBe(false);
+  });
+
+  it('à pied, changer de trottoir ne déclenche rien', () => {
+    /* Le seuil doit rester au-dessus de la dérive urbaine ordinaire : sinon
+       l'application crierait au loup à chaque passage piéton. */
+    expect(etatGuidage(options(true), aCote(12)).horsRoute).toBe(false);
+  });
+
+  it('sans profil déclaré, on garde la marge de la voiture', () => {
+    /* Le défaut prudent : mieux vaut un écart annoncé trop tard qu'un
+       recalcul déclenché à tort sur une autoroute. */
+    expect(etatGuidage({
+      trace: droit, distanceTotaleM: 1_000, dureeTotaleS: 700, etapes: [],
+    }, aCote(50)).horsRoute).toBe(false);
+  });
+
+  it('trente mètres : deux fois la dérive urbaine, la moitié d’une rue', () => {
+    expect(ECART_HORS_ROUTE_PIETON_M).toBe(30);
   });
 });

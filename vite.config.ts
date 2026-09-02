@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -11,8 +12,22 @@ import { JOURS_EN_CACHE, RESERVES_TUILES } from './src/lib/tuiles-en-cache';
 // arguments qui ressemblent à des chemins POSIX, pas les variables.
 const BASE = process.env.BASE_PUBLIQUE ?? '/';
 
+/* LA VERSION EST GRAVÉE DANS LE PAQUET (VERSION-1, 02/09). Armelin, après un
+   essai à pied : « je ne sais pas si j'ai la bonne version en cache ». Il
+   avait raison de douter, et rien dans l'application ne pouvait le lui dire.
+   ELLE VIENT DE `package.json`, et non d'une étiquette Git : la construction
+   n'a pas accès au dépôt en CI comme en local, et une version qui dépend de
+   l'endroit où l'on construit ne vaut rien. La discipline de version reste
+   la même — on l'incrémente avec l'étiquette. */
+const VERSION = JSON.parse(
+  readFileSync(resolve(__dirname, 'package.json'), 'utf-8'),
+).version as string;
+
 export default defineConfig({
   base: BASE,
+  define: {
+    __VERSION__: JSON.stringify(VERSION),
+  },
   // Vitest ne regarde QUE tests/ : les specs Playwright (tests-e2e/) ont leur
   // propre exécuteur, et les mêler faisait échouer la suite unitaire.
   test: { include: ['tests/**/*.test.ts'] },

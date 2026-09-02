@@ -284,3 +284,25 @@ test('LE « P » NE COUPE PLUS LA BOUSSOLE, et respire à côté de la vitesse',
     expect(espace, 'le « P » est trop loin du rond de vitesse').toBeLessThanOrEqual(40);
   }
 });
+
+test('LA FEUILLE S’OUVRE AU-DESSUS DU ROND « P », qui reste cliquable', async ({ page }) => {
+  /* PARK-3 (02/09). Armelin : « la fenêtre s'ouvre en masquant le bouton de
+     parking ce qui rend difficile l'appui pour refermer la fenêtre. Il
+     faudrait que la fenêtre de parking s'ouvre un peu plus haut. »
+     LE BOUTON EST L'INTERRUPTEUR DE CETTE FEUILLE : le recouvrir enferme
+     l'usager dans ce qu'il vient d'ouvrir. */
+  await suivre(page);
+  await rouler(page, 2.3600, 48.8500);
+  const feuille = page.locator('.bg-parkings');
+  await expect(feuille).toBeVisible({ timeout: 15_000 });
+
+  const boite = (await feuille.boundingBox())!;
+  const rond = (await page.locator('.bg-parking-p').boundingBox())!;
+  expect(boite.y + boite.height, 'la feuille recouvre le rond « P »')
+    .toBeLessThanOrEqual(rond.y + 1);
+
+  /* ET ON LE PRESSE VRAIMENT : la géométrie ne prouve pas l'atteignabilité —
+     un autre calque pourrait encore intercepter le doigt. */
+  await page.locator('.bg-parking-p').click();
+  await expect(feuille).toBeHidden();
+});
