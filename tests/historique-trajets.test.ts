@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   estLHeureDunReleve, titreParDefaut, versTrajets, ajouterTrajet,
   comparerTrajets, traceDuTrajet, peutRelancer,
+  reliefDesReleves, SEUIL_MARCHE_GPS_M,
   PAS_RELEVE_MS, TRAJETS_GARDES, type TrajetEnregistre,
 } from '../src/lib/historique-trajets';
 
@@ -95,12 +96,51 @@ describe('versTrajets — frontière système', () => {
 });
 
 describe('comparerTrajets', () => {
-  it('aligne les quatre lignes du bilan', () => {
+  it('aligne les six lignes du bilan', () => {
     const c = comparerTrajets([trajet('a'), trajet('b')]);
+    /* SIX DEPUIS HIST-3 : le dénivelé et la température ont rejoint les
+       quatre premières. Ce sont eux qui EXPLIQUENT les écarts que les autres
+       lignes montrent — Armelin les nommait dans la même phrase que le
+       tracé. */
     expect(c.map((l) => l.libelle)).toEqual([
       'Durée du trajet', 'Vitesse moyenne', 'Vitesse maximale', 'Arrêts',
+      'Dénivelé', 'Température',
     ]);
     expect(c[0]?.valeurs).toEqual(['1 h 00', '1 h 00']);
+  });
+
+  /* CE QU'ON N'A PAS MESURÉ, ON LE DIT — on n'écrit pas zéro. Un « +0 / −0 m »
+     sur un trajet de montagne serait un chiffre faux là où l'absence est
+     vraie ; c'est la règle du bilan depuis STATS-1. */
+  it('dit « non mesuré » et « non relevée » plutôt que des zéros', () => {
+    const c = comparerTrajets([trajet('a')]);
+    expect(c[4]?.valeurs[0]).toBe('non mesuré');
+    expect(c[5]?.valeurs[0]).toBe('non relevée');
+  });
+
+  /* UN DÉNIVELÉ TIRÉ DU RÉCEPTEUR LE DIT : l'altitude GNSS est bruitée de
+     plusieurs mètres, et « +340 m (GPS) » ne se lit pas comme « +340 m »
+     mesuré sur le modèle altimétrique de l'IGN. */
+  it('nomme la provenance quand le dénivelé vient du récepteur', () => {
+    const c = comparerTrajets([
+      { ...trajet('a'), relief: { monteeM: 340, descenteM: 310, source: 'gps' as const } },
+      { ...trajet('b'), relief: { monteeM: 340, descenteM: 310, source: 'ign' as const } },
+    ]);
+    expect(c[4]?.valeurs[0]).toBe('+340 / −310 m (GPS)');
+    expect(c[4]?.valeurs[1]).toBe('+340 / −310 m');
+  });
+
+  /* AUCUNE COURONNE SUR CES DEUX LIGNES : monter 400 m n'est ni mieux ni
+     moins bien que d'en monter 40, et il ne fait pas « mieux » 20 °C que 5.
+     Ce sont des CIRCONSTANCES, pas des performances. */
+  it('ne couronne ni le relief ni la température', () => {
+    const c = comparerTrajets([
+      { ...trajet('a'), temperatureC: 22, relief: { monteeM: 40, descenteM: 40, source: 'ign' as const } },
+      { ...trajet('b'), temperatureC: 3, relief: { monteeM: 400, descenteM: 400, source: 'ign' as const } },
+    ]);
+    expect(c[4]?.meilleur).toBeNull();
+    expect(c[5]?.meilleur).toBeNull();
+    expect(c[5]?.valeurs).toEqual(['22 °C', '3 °C']);
   });
 
   it('désigne le plus court, et le moins arrêté', () => {
@@ -205,5 +245,60 @@ describe('versTrajets — les extrémités', () => {
       { tMs: 0, vitesseMs: 10, altitudeM: null, lon: 2.1, lat: 48.1 },
     ] }]);
     expect(traceDuTrajet(t!)).toEqual([[2.1, 48.1]]);
+  });
+});
+
+/* LE DÉNIVELÉ LU DANS LES RELEVÉS (HIST-3, 02/09).
+ *
+ * L'ALTITUDE GNSS EST BRUITÉE DE PLUSIEURS MÈTRES, même à l'arrêt. Sommer les
+ * écarts bruts sur 360 relevés fabriquerait des centaines de mètres de montée
+ * sur un trajet parfaitement plat — un chiffre faux, et convaincant. C'est
+ * exactement le genre de donnée qu'il vaut mieux ne pas produire. */
+
+describe('reliefDesReleves', () => {
+  const r = (tMs: number, altitudeM: number | null) => ({ tMs, vitesseMs: 10, altitudeM });
+
+  it('compte une vraie montée', () => {
+    expect(reliefDesReleves([r(0, 100), r(30_000, 150), r(60_000, 120)]))
+      .toEqual({ monteeM: 50, descenteM: 30, source: 'gps' });
+  });
+
+  /* LE BRUIT NE COMPTE PAS : trois relevés qui oscillent de deux mètres sur
+     un plateau ne font ni montée ni descente. */
+  it('ignore les oscillations sous le seuil de bruit', () => {
+    expect(reliefDesReleves([r(0, 100), r(30_000, 102), r(60_000, 98), r(90_000, 101)]))
+      .toEqual({ monteeM: 0, descenteM: 0, source: 'gps' });
+    expect(SEUIL_MARCHE_GPS_M).toBe(5);
+  });
+
+  /* QUELQUES ALTITUDES ÉPARSES N'ÉCHANTILLONNENT PAS UN RELIEF : c'est ce qui
+     décide d'aller DEMANDER le profil au service d'altimétrie. */
+  it('rend null quand moins de la moitié des relevés portent une altitude', () => {
+    expect(reliefDesReleves([r(0, 100), r(1, null), r(2, null), r(3, null)])).toBeNull();
+  });
+
+  it('rend null quand le récepteur n’a rien donné', () => {
+    expect(reliefDesReleves([r(0, null), r(1, null)])).toBeNull();
+    expect(reliefDesReleves([])).toBeNull();
+  });
+});
+
+describe('versTrajets — le relief et la température', () => {
+  it('relit un relief complet', () => {
+    const [t] = versTrajets([{ ...base(), relief: { monteeM: 340, descenteM: 310, source: 'ign' } }]);
+    expect(t?.relief).toEqual({ monteeM: 340, descenteM: 310, source: 'ign' });
+  });
+
+  /* UN RELIEF SANS PROVENANCE NE SE GARDE PAS : « 340 m » se lit autrement
+     selon qu'il vient d'un récepteur bruité ou du modèle de l'IGN. */
+  it('écarte un relief dont la provenance est inconnue', () => {
+    const [t] = versTrajets([{ ...base(), relief: { monteeM: 340, descenteM: 310, source: 'devine' } }]);
+    expect(t?.relief).toBeUndefined();
+  });
+
+  it('relit une température, et n’en invente pas', () => {
+    expect(versTrajets([{ ...base(), temperatureC: -3 }])[0]?.temperatureC).toBe(-3);
+    expect(versTrajets([base()])[0]?.temperatureC).toBeUndefined();
+    expect(versTrajets([{ ...base(), temperatureC: 'froid' }])[0]?.temperatureC).toBeUndefined();
   });
 });

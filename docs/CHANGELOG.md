@@ -2,6 +2,45 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.45.0] — 2026-09-02 — HIST-3
+
+### Ajouté
+- **Le dénivelé et la température** rejoignent l'historique — les deux manques
+  qu'Armelin nommait dans la même phrase que le tracé, arrivé avec HIST-2.
+- La comparaison de parcours porte deux lignes de plus. Ce sont elles qui
+  **expliquent** les écarts que les autres montraient sans jamais en donner la
+  cause : une consommation en hausse de 20 % un matin de janvier n'a rien d'un
+  mystère quand la ligne « Température » dit −3 °C.
+- Le fichier de contribution les emporte. Ni l'un ni l'autre ne désigne
+  personne — un dénivelé décrit une route, une température à l'heure près
+  décrit une journée dans un département — et ce sont les deux chiffres qui
+  expliquent une consommation.
+
+### Mesuré, et ce qui en découle
+- **Le dénivelé a deux sources, et la gratuite passe d'abord.** Quand le
+  récepteur a donné des altitudes sur au moins la moitié des relevés, on les
+  lit : zéro appel. Sinon — le cas sur beaucoup de téléphones, et la raison du
+  manque signalé — on demande le profil au service d'altimétrie de la
+  Géoplateforme, **une fois**, au moment où l'usager appuie sur « Garder ».
+  L'historique dit laquelle des deux a servi : « +340 / −310 m (GPS) » ne se
+  lit pas comme « +340 / −310 m ».
+- **L'altitude GNSS est bruitée de plusieurs mètres, même à l'arrêt.** Sommer
+  les écarts bruts sur 360 relevés fabriquerait des centaines de mètres de
+  montée sur un trajet plat. Une marche n'est comptée qu'au-delà de 5 m.
+- **Un appel météo, à l'enregistrement**, sur le point d'arrivée — celui que
+  le copilote interrogeait déjà pendant le trajet : aucune coordonnée nouvelle
+  ne part. Pas de relevé par demi-minute en roulant, ce que la frugalité du
+  projet refuse.
+- **Le parcours est gardé D'ABORD, enrichi ensuite.** Attendre les deux
+  relevés avant d'écrire aurait fait patienter jusqu'à dix-sept secondes —
+  deux appels réseau, huit secondes de délai et une reprise chacun — devant un
+  écran muet, et perdu le parcours si l'onglet s'était fermé entre-temps.
+- **Les deux échouent en silence** : le champ reste absent, l'historique dit
+  « non mesuré » et « non relevée », et le parcours s'enregistre quand même.
+  Un « +0 / −0 m » serait un chiffre faux là où l'absence est vraie.
+- Aucune couronne sur ces deux lignes : monter 400 m n'est ni mieux ni moins
+  bien que d'en monter 40. Ce sont des circonstances, pas des performances.
+
 ## [1.44.0] — 2026-09-02 — MOTO-1
 
 ### Ajouté

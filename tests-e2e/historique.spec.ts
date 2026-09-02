@@ -23,6 +23,11 @@ async function semer(page: import('@playwright/test').Page): Promise<void> {
            L'autre n'en a pas, comme les parcours gardés avant HIST-2 — et
            c'est exprès : les deux cas doivent se distinguer à l'écran. */
         arrivee: { lon: 2.3316, lat: 48.8687, libelle: '12 rue de la Paix, Paris' },
+        /* LE RELIEF ET LA TEMPÉRATURE (HIST-3) sur celui-ci seulement :
+           l'autre est un parcours d'avant, et la comparaison doit montrer les
+           deux cas côte à côte. */
+        relief: { monteeM: 340, descenteM: 310, source: 'ign' },
+        temperatureC: -3,
         releves: [],
         resume: { dureeMs: 3_000_000, vitesseMaxKmh: 130,
           vitesseMoyenneKmh: 95, arrets: 0, arretMs: 0 } },
@@ -228,4 +233,41 @@ test('UN PARCOURS SE RELANCE — et celui qui n’a pas d’arrivée le dit', as
      2,3316 ; 48,8687 » ne dit à personne vers quoi il va. */
   await expect(page.locator('[data-role="arrivee"] recherche-adresse input'))
     .toHaveValue('12 rue de la Paix, Paris', { timeout: 10_000 });
+});
+
+/* CE QUI EXPLIQUE LES ÉCARTS (HIST-3, 02/09).
+ *
+ * Armelin nommait trois manques dans la même phrase : « l'historique ne
+ * conserve pas le tracé, le dénivelé, la température ». Le tracé est venu
+ * avec HIST-2. La comparaison montrait jusqu'ici des écarts de durée et de
+ * vitesse SANS jamais en donner la cause — or une consommation qui monte de
+ * 20 % un matin de janvier n'a rien d'un mystère quand la ligne
+ * « Température » dit −3 °C. */
+
+test('LA COMPARAISON DIT LE DÉNIVELÉ ET LA TEMPÉRATURE — ou qu’elle ne les a pas', async ({ page }) => {
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await semer(page);
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  await ouvrirVolet(page, '.hist');
+  const lignes = page.locator('.iti-hist-ligne');
+  await expect(lignes).toHaveCount(2, { timeout: 10_000 });
+  await lignes.first().locator('input').check();
+  await lignes.nth(1).locator('input').check();
+  await page.getByRole('button', { name: 'Comparer' }).click();
+
+  const tableau = page.locator('.iti-hist-comparaison');
+  await expect(tableau).toBeVisible();
+
+  /* LE PARCOURS QUI LES PORTE LES MONTRE… */
+  await expect(tableau).toContainText('+340 / −310 m');
+  await expect(tableau).toContainText('−3 °C');
+  /* …ET CELUI D'AVANT DIT QU'IL NE LES A PAS. Écrire « +0 / −0 m » ou
+     « 0 °C » serait un chiffre faux là où l'absence est vraie. */
+  await expect(tableau).toContainText('non mesuré');
+  await expect(tableau).toContainText('non relevée');
 });

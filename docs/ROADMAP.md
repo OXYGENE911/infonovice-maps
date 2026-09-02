@@ -588,6 +588,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       d'EV Database, crête de la Standard Range recoupée par XPENG France,
       autonomies du configurateur officiel. Armelin a fourni la source que je
       demandais.
+- [x] PR #191 — HIST-3 (02/09) : le dénivelé et la température, les deux
+      manques qu'Armelin citait avec le tracé. Le dénivelé se lit dans les
+      altitudes GNSS quand il y en a (zéro appel, seuil de bruit à 5 m), sinon
+      UN appel au service d'altimétrie IGN à l'enregistrement ; la température
+      vient d'UN appel météo sur le point d'arrivée, déjà interrogé pendant le
+      trajet. La comparaison les affiche, le fichier de contribution les
+      emporte, et l'absence se dit au lieu de s'écrire zéro.
 - [x] PR #188 — HIST-2 (02/09) : « aucun moyen de relancer le même trajet
       depuis l'historique » et « l'historique ne conserve pas le tracé […] donc
       contribuer envoie trop peu ». Même cause : on gardait des CHIFFRES,

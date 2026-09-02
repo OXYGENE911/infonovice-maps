@@ -40,7 +40,7 @@
 
 import type { TrajetEnregistre } from './historique-trajets';
 import type { ResumeBilan } from './bilan-trajet';
-import type { ReleveTrajet } from './historique-trajets';
+import type { ReleveTrajet, ReliefTrajet } from './historique-trajets';
 import { distanceM } from './le-long-du-trajet';
 
 /* CINQ CENTS MÈTRES À CHAQUE BOUT. C'est la coupe d'usage pour anonymiser une
@@ -56,6 +56,13 @@ export interface TrajetPartage {
   departHeure: string;
   resume: ResumeBilan;
   releves: ReleveTrajet[];
+  /* LE RELIEF ET LA TEMPÉRATURE (HIST-3, 02/09). NI L'UN NI L'AUTRE NE
+     DÉSIGNE QUELQU'UN : un dénivelé décrit une route, et une température à
+     l'heure près décrit une journée dans un département. Ce sont, en
+     revanche, les deux chiffres qui EXPLIQUENT une consommation — c'est-à-dire
+     exactement ce qu'une contribution doit apporter. */
+  relief?: ReliefTrajet;
+  temperatureC?: number;
 }
 
 /** L'adresse à qui l'envoyer. Écrite ici pour n'exister qu'à un seul endroit. */
@@ -70,6 +77,8 @@ export const CE_QUI_PART: readonly string[] = [
   'les vitesses moyenne et maximale',
   'un relevé toutes les trente secondes : vitesse et altitude',
   'le tracé, PRIVÉ DE SES 500 PREMIERS ET 500 DERNIERS MÈTRES',
+  'le dénivelé total du parcours, et d’où il est tiré',
+  'la température relevée à l’arrivée',
   'la date et l’HEURE du départ, arrondie à l’heure pleine',
 ];
 
@@ -97,6 +106,8 @@ export function flouterTrajet(t: TrajetEnregistre): TrajetPartage {
     departHeure: new Date(heure).toISOString().slice(0, 13) + ':00Z',
     resume: t.resume,
     releves: couperLesBouts(t.releves),
+    ...(t.relief ? { relief: t.relief } : {}),
+    ...(t.temperatureC !== undefined ? { temperatureC: t.temperatureC } : {}),
   };
 }
 

@@ -81,6 +81,25 @@ export interface TrajetEnregistre {
      s'en tait alors plutôt que de proposer un geste sans effet. */
   depart?: BoutDeTrajet;
   arrivee?: BoutDeTrajet;
+  /* LE DÉNIVELÉ ET LA TEMPÉRATURE (HIST-3, 02/09). Armelin nommait les trois
+     manques dans la même phrase : « l'historique ne conserve pas le tracé, le
+     dénivelé, la température ». Le tracé est venu avec HIST-2 ; voici les deux
+     autres. Absents quand on n'a pas su les établir — jamais devinés. */
+  relief?: ReliefTrajet;
+  /** La température à l'arrivée, en °C. */
+  temperatureC?: number;
+}
+
+/** Le dénivelé d'un trajet, et d'où il vient. */
+export interface ReliefTrajet {
+  monteeM: number;
+  descenteM: number;
+  /* D'OÙ IL VIENT, ET C'EST UNE INFORMATION EN SOI. `gps` : le récepteur a
+     donné des altitudes, on n'a rien demandé à personne — mais l'altitude GNSS
+     est bruitée de plusieurs mètres. `ign` : le service d'altimétrie de la
+     Géoplateforme a été interrogé UNE fois, au moment de l'enregistrement,
+     sur le tracé relevé ; c'est plus juste, et cela a coûté un appel. */
+  source: 'gps' | 'ign';
 }
 
 /* UN RELEVÉ TOUTES LES TRENTE SECONDES. Armelin demandait « à intervalle
@@ -125,6 +144,21 @@ function boutSiComplet(
   return { [champ]: bout };
 }
 
+/* UN RELIEF SANS SA PROVENANCE NE SE GARDE PAS : « 340 m de montée » se lit
+   autrement selon qu'il vient d'un récepteur GNSS bruité ou du modèle
+   altimétrique de l'IGN, et l'affichage le dit. */
+function reliefSiComplet(brut: unknown): Record<string, ReliefTrajet> {
+  const r = brut as Record<string, unknown> | null | undefined;
+  if (!r || typeof r['monteeM'] !== 'number' || typeof r['descenteM'] !== 'number'
+    || !Number.isFinite(r['monteeM']) || !Number.isFinite(r['descenteM'])) return {};
+  if (r['source'] !== 'gps' && r['source'] !== 'ign') return {};
+  return {
+    relief: {
+      monteeM: r['monteeM'], descenteM: r['descenteM'], source: r['source'],
+    },
+  };
+}
+
 /** Valide ce qui revient du navigateur — frontière système — PURE. */
 export function versTrajets(brut: unknown): TrajetEnregistre[] {
   if (!Array.isArray(brut)) return [];
@@ -156,6 +190,9 @@ export function versTrajets(brut: unknown): TrajetEnregistre[] {
          le lit comme « ce trajet ne se relance pas ». */
       ...boutSiComplet(o['depart'], 'depart'),
       ...boutSiComplet(o['arrivee'], 'arrivee'),
+      ...reliefSiComplet(o['relief']),
+      ...(typeof o['temperatureC'] === 'number' && Number.isFinite(o['temperatureC'])
+        ? { temperatureC: o['temperatureC'] } : {}),
     });
   }
   return sortie;
@@ -195,6 +232,39 @@ export function traceDuTrajet(trajet: TrajetEnregistre): [number, number][] {
     if (typeof r.lon === 'number' && typeof r.lat === 'number') points.push([r.lon, r.lat]);
   }
   return points;
+}
+
+/* CINQ MÈTRES DE SEUIL SUR LE DÉNIVELÉ GNSS. L'altitude d'un récepteur GPS
+   est bruitée de plusieurs mètres même à l'arrêt : sommer les écarts bruts sur
+   360 relevés fabriquerait des centaines de mètres de montée sur un trajet
+   parfaitement plat. On ne compte donc une marche que si elle dépasse le
+   bruit. Le service d'altimétrie IGN, lui, n'a pas ce défaut. */
+export const SEUIL_MARCHE_GPS_M = 5;
+
+/**
+ * Le dénivelé lu dans les altitudes des relevés — PURE.
+ *
+ * `null` quand le récepteur n'a rien donné : c'est ce qui décide d'aller
+ * DEMANDER le profil au service d'altimétrie, et de ne pas le demander quand
+ * l'information était déjà là.
+ */
+export function reliefDesReleves(
+  releves: readonly ReleveTrajet[],
+): ReliefTrajet | null {
+  const z = releves.map((r) => r.altitudeM)
+    .filter((a): a is number => typeof a === 'number' && Number.isFinite(a));
+  /* LA MOITIÉ DES RELEVÉS AU MOINS : quelques altitudes éparses sur un trajet
+     de trois heures ne décrivent pas son relief, elles l'échantillonnent au
+     hasard. */
+  if (z.length < 2 || z.length * 2 < releves.length) return null;
+  let monteeM = 0; let descenteM = 0; let ancre = z[0]!;
+  for (const a of z) {
+    const d = a - ancre;
+    if (Math.abs(d) < SEUIL_MARCHE_GPS_M) continue;
+    if (d > 0) monteeM += d; else descenteM -= d;
+    ancre = a;
+  }
+  return { monteeM: Math.round(monteeM), descenteM: Math.round(descenteM), source: 'gps' };
 }
 
 /**
@@ -275,6 +345,32 @@ export function comparerTrajets(trajets: readonly TrajetEnregistre[]): LigneComp
       valeurs: trajets.map((t) => (t.resume.arrets === 0
         ? 'aucun' : `${t.resume.arrets} · ${duree(t.resume.arretMs)}`)),
       meilleur: plusPetit(arrets),
+    },
+    /* LE DÉNIVELÉ ET LA TEMPÉRATURE (HIST-3) : ce sont EUX qui expliquent
+       l'écart entre deux passages sur le même trajet — une consommation qui
+       monte de 20 % un matin de janvier n'a rien d'un mystère quand la ligne
+       « Température » dit −3 °C. Sans eux, la comparaison montrait des écarts
+       sans jamais en donner la cause.
+       AUCUNE COURONNE : monter 400 m n'est ni mieux ni moins bien que d'en
+       monter 40, et il ne fait pas « mieux » 20 °C que 5. Ce sont des
+       CIRCONSTANCES, pas des performances. */
+    {
+      libelle: 'Dénivelé',
+      valeurs: trajets.map((t) => (t.relief === undefined
+        ? 'non mesuré'
+        : `+${t.relief.monteeM} / −${t.relief.descenteM} m`
+          + (t.relief.source === 'gps' ? ' (GPS)' : ''))),
+      meilleur: null,
+    },
+    {
+      libelle: 'Température',
+      /* LE VRAI SIGNE MOINS, comme sur la ligne du dénivelé juste au-dessus :
+         un trait d'union ASCII à côté d'un « −310 m » se voit, et deux
+         conventions dans le même tableau se lisent comme une négligence. */
+      valeurs: trajets.map((t) => (t.temperatureC === undefined
+        ? 'non relevée'
+        : `${String(Math.round(t.temperatureC)).replace('-', '−')} °C`)),
+      meilleur: null,
     },
   ];
 }

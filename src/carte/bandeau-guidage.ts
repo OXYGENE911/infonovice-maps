@@ -45,6 +45,7 @@ import {
 } from '../lib/bilan-trajet';
 import {
   lireHistorique, ecrireHistorique, ajouterTrajet, titreParDefaut,
+  reliefDesReleves, type ReliefTrajet,
   estLHeureDunReleve, type ReleveTrajet,
 } from '../lib/historique-trajets';
 import type { PointGeo } from '../lib/coordonnees';
@@ -1246,6 +1247,17 @@ export class BandeauGuidage extends HTMLElement {
         dit.hidden = false;
       }
       if (bouton) bouton.disabled = true;
+      /* LE RELIEF ET LA TEMPÉRATURE ARRIVENT APRÈS (HIST-3, 02/09), et c'est
+         l'ordre qui compte. Les chercher AVANT d'écrire aurait fait attendre
+         jusqu'à dix-sept secondes — deux appels réseau, huit secondes de
+         délai et une reprise chacun — entre l'appui et la moindre réponse à
+         l'écran, avec le risque de tout perdre si l'onglet se ferme
+         entre-temps. Le parcours est donc GARDÉ D'ABORD, puis enrichi.
+         `void` assumé : l'enrichissement ne doit rien bloquer, et son échec
+         laisse un parcours complet de tout le reste. */
+      void this.#enrichirLeTrajet(
+        `t${this.#departMs}`, [...this.#releves], o?.destination ?? null,
+      );
     } catch {
       /* UNE ÉCRITURE QUI ÉCHOUE SE DIT : perdre en silence un parcours que
          l'usager vient de demander à garder serait le pire des deux. */
@@ -1253,6 +1265,52 @@ export class BandeauGuidage extends HTMLElement {
         dit.textContent = 'Impossible d’enregistrer ce parcours sur cet appareil.';
         dit.hidden = false;
       }
+    }
+  }
+
+  /**
+   * Ajoute le relief et la température à un parcours DÉJÀ enregistré (HIST-3).
+   *
+   * IL TOURNE APRÈS COUP, ET SANS RIEN BLOQUER. Les deux relevés partent sur
+   * le réseau ; les attendre avant d'écrire aurait fait patienter jusqu'à
+   * dix-sept secondes devant un écran muet, et perdu le parcours si l'onglet
+   * s'était fermé.
+   *
+   * IL RELIT L'HISTORIQUE AVANT D'ÉCRIRE, plutôt que de garder la liste en
+   * mémoire : entre l'enregistrement et le retour du réseau, l'usager a pu
+   * ouvrir « Historique » et en oublier un. Écraser avec une liste périmée
+   * ressusciterait ce qu'il vient de supprimer.
+   *
+   * ET SI LE PARCOURS N'EST PLUS LÀ, ON NE LE RECRÉE PAS : il a été effacé
+   * pendant l'attente, et c'était un geste.
+   */
+  async #enrichirLeTrajet(
+    id: string, releves: readonly ReleveTrajet[],
+    destination: PointGeo | null,
+  ): Promise<void> {
+    /* LES RELEVÉS ET LA DESTINATION SONT PASSÉS, PAS RELUS DANS L'INSTANCE.
+       Un nouveau trajet — ou une simple remise à zéro — vide `#releves` et
+       `#options` ; le faire au milieu de l'attente réseau aurait fait rendre
+       « rien à ajouter » en silence, sur un parcours qu'on venait pourtant de
+       mesurer. */
+    const [relief, temperatureC] = await Promise.all([
+      this.#relierLeTrajet(releves), this.#temperatureALArrivee(destination),
+    ]);
+    if (relief === null && temperatureC === null) return;
+    try {
+      const liste = await lireHistorique();
+      const i = liste.findIndex((x) => x.id === id);
+      if (i < 0) return;
+      liste[i] = {
+        ...liste[i]!,
+        ...(relief ? { relief } : {}),
+        ...(temperatureC !== null ? { temperatureC } : {}),
+      };
+      await ecrireHistorique(liste);
+    } catch {
+      /* Le parcours reste enregistré sans ces deux champs, et l'historique
+         dira « non mesuré » : c'est exactement ce que ces mots servent à
+         dire. */
     }
   }
 
@@ -1429,6 +1487,70 @@ export class BandeauGuidage extends HTMLElement {
       this.#interfilesDites.add(s.debutM);
       this.#alerte(phraseInterfile(s));
       return;
+    }
+  }
+
+  /**
+   * Le dénivelé du parcours qu'on vient de faire (HIST-3, 02/09).
+   *
+   * DEUX SOURCES, ET LA GRATUITE D'ABORD. Quand le récepteur a donné des
+   * altitudes sur au moins la moitié des relevés, on les lit : zéro appel, et
+   * ce sont les altitudes RÉELLEMENT parcourues. Sinon — c'est le cas sur
+   * beaucoup de téléphones, et c'est pour cela qu'Armelin notait le manque —
+   * on demande le profil au service d'altimétrie de la Géoplateforme, UNE
+   * fois, sur le tracé relevé.
+   *
+   * UN SEUL APPEL, ET AU MOMENT OÙ L'USAGER LE DEMANDE. Pas pendant la
+   * conduite : interroger un service toutes les trente secondes en roulant
+   * est exactement ce que la frugalité du projet refuse, et ce que le
+   * commentaire de `PAS_RELEVE_MS` disait déjà.
+   *
+   * L'ÉCHEC EST MUET ET BÉNIN : le champ reste absent, l'historique dit « non
+   * mesuré », et le parcours s'enregistre quand même.
+   */
+  async #relierLeTrajet(
+    releves: readonly ReleveTrajet[],
+  ): Promise<ReliefTrajet | null> {
+    const duGps = reliefDesReleves(releves);
+    if (duGps !== null) return duGps;
+    const trace = releves
+      .filter((r) => typeof r.lon === 'number' && typeof r.lat === 'number')
+      .map((r) => [r.lon!, r.lat!] as [number, number]);
+    if (trace.length < 2) return null;
+    try {
+      const profil = await profilItineraire({ type: 'LineString', coordinates: trace });
+      const d = denivele(profil);
+      return {
+        monteeM: Math.round(d.montee), descenteM: Math.round(d.descente), source: 'ign',
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * La température à l'arrivée (HIST-3, 02/09).
+   *
+   * POURQUOI ELLE COMPTE, ET POURQUOI ELLE EST DEMANDÉE ICI. C'est elle qui
+   * explique l'écart entre deux passages sur le même trajet : une
+   * consommation qui monte de 20 % un matin de janvier n'a rien d'un mystère
+   * quand l'historique dit −3 °C. Sans elle, la comparaison montrait des
+   * écarts sans jamais en donner la cause.
+   *
+   * UN APPEL, À L'ENREGISTREMENT — pas un relevé par demi-minute pendant la
+   * route. Le point interrogé est l'arrivée, celle que le copilote
+   * interrogeait déjà pendant le trajet : aucune coordonnée nouvelle ne part.
+   *
+   * L'ÉCHEC EST MUET : le champ reste absent, et l'historique dit « non
+   * relevée ».
+   */
+  async #temperatureALArrivee(d: PointGeo | null): Promise<number | null> {
+    if (!d) return null;
+    try {
+      const m = await meteoA(d.lon, d.lat, new Date());
+      return Number.isFinite(m.temperature) ? m.temperature : null;
+    } catch {
+      return null;
     }
   }
 
