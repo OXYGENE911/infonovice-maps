@@ -3,8 +3,9 @@ import { describe, it, expect } from 'vitest';
 import {
   styleIGNPlan, styleCarte, urlTuiles, ATTRIBUTION_IGN, LOCALE_FR,
   calquesEtiquettes, sourceEtiquettes,
-  pourImagerie,
+  pourImagerie, INCLINAISON_RELIEF,
 } from '../src/carte/style-ign';
+import { CALQUE_BATI_3D } from '../src/carte/etiquettes-ign';
 
 describe('styleIGNPlan', () => {
   it('pointe vers la Géoplateforme, et nulle part ailleurs', () => {
@@ -187,5 +188,64 @@ describe('les noms de rue (FOND-4)', () => {
     /* Sur le Plan IGN, les noms de rue sont CUITS dans la tuile raster. Les
        superposer y ferait un doublon décalé. */
     expect(odonymes('plan')).toHaveLength(0);
+  });
+});
+
+/* LES BÂTIMENTS EN RELIEF (FOND-5, 02/09).
+ *
+ * Armelin : « existe-t-il des cartes 3D gouvernementales pour une navigation
+ * en 3D avec les bâtiments en relief ? » Oui, et la donnée était déjà dans
+ * nos tuiles : la couche `bati_surf` du PLAN.IGN porte un attribut `hauteur`
+ * en mètres, mesuré le 02/09 sur cinq tuiles réelles (68 à 100 % de
+ * couverture, médiane 8,8 m à Paris). */
+
+describe('le relief des bâtiments', () => {
+  it('ne se pose QUE si on le demande', () => {
+    const sans = calquesEtiquettes('plan').map((c) => c.id);
+    const avec = calquesEtiquettes('plan', true).map((c) => c.id);
+    expect(sans).not.toContain('bati-relief');
+    expect(avec).toContain('bati-relief');
+  });
+
+  /* IL PASSE AVANT LES TEXTES : un nom de rue caché derrière un immeuble ne
+     se lit pas, et c'est le nom qu'on cherche en conduisant. */
+  it('passe SOUS les étiquettes, jamais par-dessus', () => {
+    const ids = calquesEtiquettes('ortho', true).map((c) => c.id);
+    expect(ids[0]).toBe('bati-relief');
+    expect(ids.length).toBeGreaterThan(1);
+  });
+
+  it('lit la hauteur de l’IGN, et rien d’autre', () => {
+    const p = CALQUE_BATI_3D.paint as Record<string, unknown>;
+    expect(CALQUE_BATI_3D.type).toBe('fill-extrusion');
+    expect((CALQUE_BATI_3D as { 'source-layer'?: string })['source-layer']).toBe('bati_surf');
+    expect(JSON.stringify(p['fill-extrusion-height'])).toContain('hauteur');
+  });
+
+  /* SANS HAUTEUR CONNUE, ZÉRO. Les 18 à 32 % de bâtiments qu'IGN ne mesure
+     pas restent PLATS : leur donner une hauteur par défaut ferait une ville
+     inventée, et le fond raster continue de les dessiner en deux dimensions. */
+  it('laisse plats les bâtiments dont la hauteur est inconnue', () => {
+    const h = (CALQUE_BATI_3D.paint as Record<string, unknown>)['fill-extrusion-height'];
+    expect(h).toEqual(['to-number', ['get', 'hauteur'], 0]);
+  });
+
+  /* PAS D'`alti_sol` EN BASE : c'est l'altitude ABSOLUE du sol, et la passer
+     en base ferait flotter Paris trente-cinq mètres au-dessus de sa carte. */
+  it('pose les bâtiments au sol, pas à leur altitude absolue', () => {
+    const p = CALQUE_BATI_3D.paint as Record<string, unknown>;
+    expect(p['fill-extrusion-base']).toBe(0);
+    expect(JSON.stringify(p)).not.toContain('alti_sol');
+  });
+
+  /* À PLAT, UNE EXTRUSION NE SE VOIT PAS : on regarde les toits par-dessus.
+     Sans inclinaison, la case serait une option sans effet. */
+  it('s’accompagne d’une inclinaison qui rend le relief visible', () => {
+    expect(INCLINAISON_RELIEF).toBeGreaterThan(20);
+    expect(INCLINAISON_RELIEF).toBeLessThanOrEqual(60);
+  });
+
+  it('n’apparaît qu’à partir du zoom 15, là où la couche est peuplée', () => {
+    expect(CALQUE_BATI_3D.minzoom).toBe(15);
   });
 });

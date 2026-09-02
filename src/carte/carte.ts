@@ -20,6 +20,7 @@ import lienWorkerMaplibre from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&u
 setWorkerUrl(lienWorkerMaplibre);
 import {
   styleCarte, LOCALE_FR, SOURCE_ETIQUETTES, sourceEtiquettes, calquesEtiquettes,
+  INCLINAISON_RELIEF,
   type OptionsStyle, type Fond,
 } from './style-ign';
 import { SelecteurFonds } from './selecteur-fonds';
@@ -211,11 +212,12 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      pas. `style.load` se déclenche aussi à chaque changement de fond, ce qui
      les repose sans qu'on y pense. */
   let fondCourant: Fond = 'plan';
+  let relief3d = false;
   const poserEtiquettes = (): void => {
     if (carte.getSource(SOURCE_ETIQUETTES) === undefined) {
       carte.addSource(SOURCE_ETIQUETTES, sourceEtiquettes());
     }
-    for (const calque of calquesEtiquettes(fondCourant)) {
+    for (const calque of calquesEtiquettes(fondCourant, relief3d)) {
       if (carte.getLayer(calque.id) === undefined) carte.addLayer(calque);
     }
   };
@@ -223,8 +225,24 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
 
   selecteur.surChangement = (o) => {
     fondCourant = o.fond;
+    /* LE RELIEF SUIT LE STYLE : `setStyle` efface tout, et `style.load`
+       repose la surcouche — c'est déjà le chemin des étiquettes depuis
+       FOND-2, et le calque 3D emprunte le même. */
+    relief3d = o.relief3d === true;
     carte.setStyle(styleCarte(o));
     appliquerSombre(o);
+    /* ET LA CAMÉRA S'INCLINE (FOND-5, 02/09). À plat, une extrusion ne se
+       voit pas : on regarde les toits par-dessus, et la case paraîtrait sans
+       effet. On ne redresse au nord QUE si l'on vient de décocher — pendant
+       un guidage, la caméra a ses propres raisons d'être inclinée, et lui
+       imposer le zéro couperait le suivi sous le conducteur. */
+    if (relief3d) {
+      if (carte.getPitch() < INCLINAISON_RELIEF) {
+        carte.easeTo({ pitch: INCLINAISON_RELIEF, duration: 600 });
+      }
+    } else if (carte.getPitch() >= INCLINAISON_RELIEF) {
+      carte.easeTo({ pitch: 0, duration: 600 });
+    }
   };
   menu.ajouter('Affichage', selecteur);
 

@@ -2,6 +2,29 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.43.0] — 2026-09-02 — FOND-5
+
+### Ajouté
+- **Bâtiments en relief** (Affichage → Fonds → « Bâtiments en relief ») :
+  réponse à « existe-t-il des cartes 3D gouvernementales pour une navigation
+  en 3D avec les bâtiments en relief ? ». Oui — et la donnée était déjà dans
+  nos tuiles. La couche `bati_surf` du PLAN.IGN porte un attribut `hauteur`
+  en mètres : **aucune source de plus, aucune clé, aucun octet de plus sur le
+  réseau**, la tuile étant déjà téléchargée pour les noms de rue.
+- Cocher la case **incline la caméra** à 50° : à plat, une extrusion ne se
+  voit pas, et l'option n'aurait rien fait de visible.
+
+### Mesuré
+- Couverture de l'attribut `hauteur`, cinq tuiles réelles décodées le 02/09 :
+  Paris 4e 583/710 (82 %, médiane 8,8 m, max 35,7 m), Lyon 1 806/2 222
+  (81 %), Le Plessis-Trévise 175/256 (68 %, médiane 5,1 m — du
+  pavillonnaire), Marseille et un village de Charente 100 %.
+- Les 18 à 32 % de bâtiments sans hauteur **restent plats** : leur en donner
+  une par défaut ferait une ville inventée. Le fond raster continue de les
+  dessiner en deux dimensions, et la note du panneau le dit.
+- `alti_sol` n'est PAS utilisé comme base : c'est l'altitude absolue du sol,
+  et la passer en base ferait flotter Paris trente-cinq mètres au-dessus de sa
+  propre carte.
 ## [1.42.0] — 2026-09-02 — HIST-2
 
 ### Ajouté
