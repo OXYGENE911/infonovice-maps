@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
+import { ouvrirMenu } from './volets';
 
 /* LE FILTRE DES LIEUX, SUR LA CARTE (POI-2 du 30/08, POI-3 du 31/08).
  *
@@ -513,4 +514,45 @@ test('LE « PARTAGE FACILE » fait un lien qui rouvre la fiche', async ({ page, 
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.poi-fiche')).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.poi-fiche')).toContainText('Chez Paul');
+});
+
+test('CLIQUER SUR UN POINT NE REFERME RIEN — le va-et-vient est préservé', async ({ page }) => {
+  /* ERGO-4 (02/09). Un clic DANS LE VIDE referme les volets, à la demande
+     d'un collègue d'Armelin. Mais la règle qu'elle remplace protégeait un
+     usage réel, écrit noir sur blanc le 27/08 : « on coche une couche, on
+     inspecte un point, on en coche une autre ». Refermer au premier POI
+     cliqué aurait cassé ce va-et-vient.
+     D'OÙ LA FORMULATION EXACTE — « dans le vide » — et ce parcours, qui garde
+     l'autre moitié de la règle. */
+  await ouvrirCarte(page);
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json',
+    body: JSON.stringify({ elements: [{
+      type: 'node', id: 1, lat: 48.8566, lon: 2.3600,
+      tags: { amenity: 'restaurant', name: 'Le Va-et-Vient' },
+    }] }),
+  }));
+  await ouvrir(page);
+  await page.locator('.poi-famille[data-cle="restaurant"]').click();
+  await poser(page, 2.3600, 48.8566);
+  await expect(page.locator('.poi-filtre-etat')).toContainText('1 lieu', { timeout: 15_000 });
+
+  // Le menu des réglages est ouvert : c'est lui qu'on ne veut pas perdre.
+  await ouvrirMenu(page);
+  await expect(page.locator('details.reglages[open]')).toHaveCount(1);
+
+  const p = await page.evaluate(() => {
+    const c = (window as unknown as { __carte: {
+      project(l: [number, number]): { x: number; y: number };
+    } }).__carte;
+    const q = c.project([2.3600, 48.8566]);
+    return { x: Math.round(q.x), y: Math.round(q.y) };
+  });
+  await page.locator('#carte canvas.maplibregl-canvas').click({ position: p });
+
+  /* LE POINT S'OUVRE, ET LE MENU RESTE : les deux moitiés de la règle. */
+  await expect(page.locator('.poi-fiche')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('details.reglages[open]'),
+    'cliquer un point a refermé le menu — le va-et-vient est cassé').toHaveCount(1);
 });

@@ -116,8 +116,10 @@ test('L’HISTORIQUE SE LIT EN SOMBRE — et tout le volet avec lui', async ({ p
   await page.reload();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
 
-  await ouvrirVolet(page, '.iti');
-  await page.getByRole('button', { name: /Historique/ }).click();
+  /* L'HISTORIQUE VIT DANS LE MENU DEPUIS ERGO-3/4 (02/09) : on le consulte
+     SANS avoir planifié quoi que ce soit. Le raccourci demande au DOM où il
+     est rangé — un déménagement de plus ne touchera toujours qu'un fichier. */
+  await ouvrirVolet(page, '.hist');
   await expect(page.locator('.iti-hist-ligne')).toHaveCount(2, { timeout: 10_000 });
 
   /* LE TEXTE DU PARCOURS EST LÀ ET IL SE LIT : c'est exactement ce qu'Armelin
@@ -147,8 +149,10 @@ test('LA COMPARAISON SE LIT AUSSI — le balayage d’hier ne l’ouvrait pas', 
   await page.reload();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
 
-  await ouvrirVolet(page, '.iti');
-  await page.getByRole('button', { name: /Historique/ }).click();
+  /* L'HISTORIQUE VIT DANS LE MENU DEPUIS ERGO-3/4 (02/09) : on le consulte
+     SANS avoir planifié quoi que ce soit. Le raccourci demande au DOM où il
+     est rangé — un déménagement de plus ne touchera toujours qu'un fichier. */
+  await ouvrirVolet(page, '.hist');
   const lignes = page.locator('.iti-hist-ligne');
   await expect(lignes).toHaveCount(2, { timeout: 10_000 });
   await lignes.nth(0).locator('input').check();
@@ -172,8 +176,10 @@ test('ELLE SE REFERME, ET NE REVIENT PAS TOUTE SEULE', async ({ page }) => {
   await page.reload();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
 
-  await ouvrirVolet(page, '.iti');
-  await page.getByRole('button', { name: /Historique/ }).click();
+  /* L'HISTORIQUE VIT DANS LE MENU DEPUIS ERGO-3/4 (02/09) : on le consulte
+     SANS avoir planifié quoi que ce soit. Le raccourci demande au DOM où il
+     est rangé — un déménagement de plus ne touchera toujours qu'un fichier. */
+  await ouvrirVolet(page, '.hist');
   const lignes = page.locator('.iti-hist-ligne');
   await expect(lignes).toHaveCount(2, { timeout: 10_000 });
   await lignes.nth(0).locator('input').check();
@@ -190,8 +196,12 @@ test('ELLE SE REFERME, ET NE REVIENT PAS TOUTE SEULE', async ({ page }) => {
   // 2. ELLE NE REVIENT PAS QUAND ON REVIENT SUR LA PAGE.
   await page.getByRole('button', { name: 'Comparer' }).click();
   await expect(tableau).toBeVisible();
-  await page.getByRole('button', { name: 'Revenir au trajet' }).click();
-  await page.getByRole('button', { name: /Historique/ }).click();
+  /* « QUITTER LA PAGE » SE DIT AUTREMENT DEPUIS ERGO-4 : l'historique est un
+     volet du Menu, on le referme et on le rouvre. Le geste change, la règle
+     qu'il défend ne bouge pas — la comparaison ne doit pas ressusciter. */
+  await page.locator('.hist summary').click();
+  await expect(page.locator('details.hist')).not.toHaveAttribute('open', '');
+  await page.locator('.hist summary').click();
   await expect(tableau, 'la comparaison d’hier est encore là').toHaveCount(0);
   /* LA LISTE SE RECONSTRUIT À CHAQUE OUVERTURE (la lecture d'IndexedDB est
      asynchrone) et les cases repartent décochées : on l'attend, plutôt que

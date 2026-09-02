@@ -2,6 +2,60 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.35.0] — 2026-09-02 — ERGO-4 : six menus rendus atteignables (PR #181)
+
+Six retours d'usage, tous sur la même idée : **une option qu'on ne voit pas
+n'existe pas.**
+
+### Changé
+- **« Recharge et services » passe en TÊTE de l'entonnoir, avec son picto.**
+  « Écrit tout en bas et sans aucun logo, on voit à peine que c'est un menu
+  cliquable. » C'est moi qui l'avais enterré : ERGO-3 l'a déménagé dans
+  l'entonnoir et posé À LA SUITE du reste, sous quatorze pastilles et deux
+  boutons. **Déplacer sans hiérarchiser, c'est cacher** — et il s'agit de la
+  raison d'être de cette application. La puce « Bornes de recharge » monte
+  avec lui.
+- **Le panneau des filtres ne sort plus de l'écran.** Sur mobile, il déroulait
+  sous le pli sans le moindre ascenseur. Il se borne désormais à ce qui reste
+  d'écran, avec son propre défilement.
+  *Ce n'est pas le centrage demandé, et voici pourquoi* : une mesure a montré
+  que le conteneur de contrôle MapLibre porte une `transform`, ce qui en fait
+  le bloc conteneur de tout descendant `fixed` — le panneau « centré » se
+  posait à x = −143, y = −179, moitié hors écran. Le borner dans le flux fait
+  ce qui était demandé au fond : **en voir le contenu et le faire défiler.**
+- **L'historique rejoint le Menu**, dans son propre composant. Demandé deux
+  fois. Mon premier refus était mauvais : j'avais craint un bouton de droite
+  qui ouvre le volet de gauche — la réponse n'était pas de renoncer, c'était
+  d'extraire la page.
+- **Le menu du trajet tient à l'écran** : deux entrées permanentes — « Mon
+  véhicule » et « Options du trajet » — au lieu de huit il y a deux jours.
+  « Des options masquées sont des options potentiellement introuvables. »
+- **La version descend tout en bas du Menu.** On ouvre ce menu pour régler
+  l'affichage, pas pour lire un numéro : le poser au milieu, c'était le faire
+  lire à tout le monde à chaque ouverture.
+- **Un clic dans le vide referme les volets** — deux moyens de fermer valent
+  mieux qu'un.
+
+### Ce que ce dernier changement PRÉSERVE, et qui n'était pas gratuit
+Deux parcours défendaient la règle inverse depuis le 27/08, avec un motif
+réel : « on coche une couche, on inspecte un point, on en coche une autre ».
+Refermer au premier POI cliqué aurait cassé ce va-et-vient. **La règle porte
+donc sur LE VIDE** : un clic sur une de nos couches ne referme rien, et un
+parcours neuf le garde.
+
+Premier jet raté, gardé ici parce qu'il vaut leçon : j'avais énuméré NOS
+couches (`poi-`, `iti-`, `trafic-`, `bg-`) et oublié `filtre-poi-points`,
+`itineraire-trait`, `variantes-trait`. Une liste de ce qu'on possède se périme
+au prochain calque ; **on énumère donc le FOND**, qui ne bouge que si l'on
+change de fond.
+
+### Tests
+- Les deux parcours qui défendaient l'ancienne règle sont retournés, motifs
+  des deux époques conservés.
+- 1 parcours neuf garde le va-et-vient : cliquer un point n'efface pas le menu.
+- Les parcours de l'historique passent par le Menu — le raccourci `volets.ts`
+  a absorbé le déménagement, comme il le promet.
+
 ## [1.34.0] — 2026-09-02 — VERSION-2 : le numéro affiché ne peut plus mentir (PR #180)
 
 ### Corrigé

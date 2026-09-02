@@ -679,6 +679,11 @@ etapes-itineraire { display: grid; gap: 7px; }
 }
 .bg-bilan-garde[hidden] { display: none; }
 
+/* L'HISTORIQUE EST UN VOLET DU MENU (ERGO-4, 02/09) : son corps suit la
+   largeur du menu et défile avec lui. Les classes gardent leur préfixe
+   `iti-` — les renommer aurait rendu illisible l'histoire de ces lignes sans
+   rien changer à l'écran. */
+.hist-corps { display: grid; gap: 8px; padding-top: 6px; }
 .iti-hist-liste { display: grid; gap: 2px; margin-bottom: 10px; }
 /* LA COULEUR DU TEXTE EST DITE, ET C'EST TOUT LE CORRECTIF (HIST-1, 01/09).
    Armelin : « quand je vais chercher la carte dans l'historique c'est écrit
@@ -3448,12 +3453,42 @@ filtre-poi {
 .poi-bulle[aria-expanded="true"] { border-color: var(--accent); }
 .poi-bulle[aria-expanded="true"] svg { stroke: var(--accent); }
 .poi-bulle:focus-visible { outline: none; box-shadow: var(--focus); }
+/* LE PANNEAU NE SORT PLUS DE L'ÉCRAN (ERGO-4, 02/09). Armelin, sur mobile :
+   « quand je clique sur Recharge et services, le menu se déplie vers le bas de
+   l'écran et disparaît hors de l'écran. Impossible d'en voir le contenu ou de
+   scroller. Le menu doit apparaître au milieu de l'écran et centré pour
+   pouvoir être utilisé. Un menu caché est un menu inutilisable. »
+   IL A RAISON, ET C'EST ENCORE UNE SUITE D'ERGO-3 : l'entonnoir tenait ses
+   quatorze pastilles ; il porte maintenant un volet entier, et il pousse vers
+   le bas depuis un bouton déjà haut placé. Sur un téléphone, le contenu passait
+   sous le pli sans le moindre ascenseur.
+   IL SE BORNE DONC PARTOUT, et se CENTRE sur mobile. */
 .poi-panneau {
   width: min(300px, calc(100vw - 24px));
   padding: 12px; border-radius: 14px;
   background: var(--fond); border: 1px solid var(--bord-2);
   box-shadow: var(--ombre-flottante);
+  max-height: min(72vh, 620px);
+  overflow-y: auto; overscroll-behavior: contain;
 }
+@media (max-width: 640px) {
+  .poi-panneau {
+    width: min(360px, calc(100vw - 24px));
+    /* CE QUI RESTE D'ÉCRAN SOUS LE BOUTON, et rien de plus : l'entonnoir vit
+       sous l'en-tête et sous l'entrée « Itinéraire ». Le panneau s'arrête donc
+       avant le bas, avec son propre ascenseur.
+       PAS DE `position: fixed` POUR LE CENTRER, et c'est une mesure qui l'a
+       tranché : le conteneur de contrôle MapLibre porte une `transform` — même
+       identité — ce qui en fait le BLOC CONTENEUR de tout descendant fixe. Le
+       panneau « centré » se posait alors à x = −143, y = −179, moitié hors de
+       l'écran. Le borner dans le flux fait ce qu'Armelin demande vraiment :
+       « pouvoir en voir le contenu » et le faire défiler. */
+    max-height: calc(100dvh - var(--hauteur-entete, 45px) - 150px);
+  }
+}
+/* Le second titre respire : deux sections dans un même panneau doivent se
+   distinguer sans trait de séparation. */
+.poi-titre-second { margin-top: 14px; }
 .poi-panneau[hidden] { display: none; }
 .poi-panneau-titre {
   margin: 0 0 8px; font: 650 13px var(--police); color: var(--texte-1);

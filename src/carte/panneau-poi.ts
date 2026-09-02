@@ -11,6 +11,7 @@
 // Leurs données voyagent DANS les propriétés des features — jamais par indice
 // vers un tableau vivant, qu'un rechargement rendrait périmé (revue du 22/08).
 import type { Map as CarteMapLibre, GeoJSONSource, MapGeoJSONFeature } from 'maplibre-gl';
+import { pictoMenu } from './icone-menu';
 import { Popup } from 'maplibre-gl';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import { palierDe, libellePalier, PALIERS } from '../lib/puissance';
@@ -279,7 +280,16 @@ export class PanneauPoi extends HTMLElement {
              esperluette n'est pas le mot « et » pour un moteur de commande
              vocale, et l'écart suffit à faire échouer « cliquer sur Recharge
              et services ». -->
-        <summary aria-label="Recharge et services : bornes, carburants, parkings">Recharge et services</summary>
+        <!-- LE PICTO REND LE BOUTON VISIBLE (ERGO-4, 02/09). Armelin : « sans
+             aucun logo, on voit à peine que c'est un menu cliquable ». Toutes
+             les autres entrées de menu en portent un depuis PIC-1 ; celle-ci
+             ne l'avait jamais eu parce qu'elle était un TITRE de volet, pas
+             une entrée. Depuis ERGO-3 elle vit parmi des pastilles : elle doit
+             s'annoncer comme elles.
+             L'ÉTIQUETTE ACCESSIBLE CONTIENT LE TEXTE VISIBLE, mot pour mot —
+             le picto est décoratif et se retire de l'arbre. -->
+        <summary aria-label="Recharge et services : bornes, carburants, parkings">${
+  pictoMenu('recharge')}<span>Recharge et services</span></summary>
         <fieldset>
           <legend>Points d’intérêt</legend>
           ${(Object.keys(COUCHES) as Couche[]).map((c) => `
