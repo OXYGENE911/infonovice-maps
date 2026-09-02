@@ -86,6 +86,67 @@ export function echapperNom(texte: string): string {
 export interface CentreRecherche { lon: number; lat: number }
 
 /**
+ * Retire de la saisie la commune que la BAN vient d'y reconnaître — PURE.
+ *
+ * LE TERRAIN (RECHERCHE-6, 03/09). Un usager tape « INRAE beaucouzé » et ne
+ * trouve rien. OpenStreetMap connaît pourtant TROIS objets nommés « INRAE »
+ * à Beaucouzé — mais nommés « INRAE », pas « INRAE beaucouzé ». L'égalité
+ * exacte, qui est ce qui rend la recherche rapide, ne pouvait pas aboutir.
+ *
+ * OR LA COMMUNE EST UNE INDICATION DE LIEU, PAS UNE PARTIE DU NOM. C'est
+ * même ainsi qu'on parle : on dit « le INRAE de Beaucouzé » pour dire « le
+ * INRAE, à Beaucouzé ». La BAN, elle, a déjà reconnu Beaucouzé — elle la rend
+ * en tête, comme commune. On s'en sert donc pour SITUER la recherche, et l'on
+ * cherche le reste comme nom.
+ *
+ * ON NE RETIRE QUE CE QUI RESTE UN NOM. « Beaucouzé » seul ne doit pas
+ * devenir une recherche vide : s'il ne reste rien, on rend la saisie telle
+ * quelle et la BAN répond, comme avant.
+ */
+export function sansLaCommune(texte: string, commune: string): string {
+  const nu = (s: string): string => s.normalize('NFD')
+    .replace(/[̀-ͯ]/g, '').toLowerCase();
+  const mots = texte.trim().split(/\s+/).filter((m) => m !== '');
+  const cible = nu(commune).split(/\s+/).filter((m) => m.length >= 3);
+  if (cible.length === 0) return texte.trim();
+  const gardes = mots.filter((m) => !cible.includes(nu(m)));
+  /* IL FAUT QU'IL RESTE QUELQUE CHOSE À CHERCHER, et que ce ne soit pas un
+     mot de liaison : « de » ou « la » ne nomment aucun lieu. */
+  const utiles = gardes.filter((m) => nu(m).length >= 3);
+  if (utiles.length === 0) return texte.trim();
+  return gardes.join(' ').trim();
+}
+
+/* LES TROIS CLÉS OÙ VIT UN NOM D'ENSEIGNE (RECHERCHE-6, 03/09).
+ *
+ * LE TERRAIN. Un usager d'Armelin tape « Carrefour » et ne trouve rien ; il
+ * tape « Leroy Merlin », rien non plus. « Aucun commerce n'est disponible […]
+ * en l'état, l'application est difficilement utilisable. »
+ *
+ * LA CAUSE, MESURÉE LE 03/09. On ne cherchait que dans `name`, et les
+ * enseignes ne s'y appellent pas comme on les nomme : autour d'Angers,
+ * OpenStreetMap connaît « Carrefour City », « Carrefour Market », « Carrefour
+ * Contact », « Carrefour Angers Saint Serge » — et TROIS objets seulement
+ * nommés exactement « Carrefour ». Chercher l'égalité sur `name` ne pouvait
+ * donc pas rendre l'hypermarché qu'on visait.
+ *
+ * CE QUI LE REND, ET POUR LE MÊME PRIX : la clé `brand`. OpenStreetMap y
+ * inscrit la MARQUE, identique quelle que soit l'enseigne locale. Mesuré au
+ * même endroit : `["brand"="Carrefour"]` rend 7 objets en 1,4 s, et l'union
+ * des trois clés en rend ONZE en 1,6 s — Carrefour City, Market, Express,
+ * Contact et l'hypermarché Saint-Serge compris.
+ *
+ * `operator` COMPLÈTE : les services publics et les réseaux s'y déclarent là
+ * où ils n'ont pas de « marque » commerciale.
+ *
+ * ET TOUT RESTE INDEXÉ. C'est l'essentiel : la leçon de RECHERCHE-3 tient
+ * toujours, et elle a été re-mesurée le 03/09 sur le service réel — une
+ * expression régulière sur `name` dans un rayon de 25 km met **29 à 61
+ * secondes** et rend zéro (elle expire en silence), là où l'égalité répond en
+ * une à six secondes. On ajoute donc des CLÉS, jamais de la souplesse. */
+const CLES_NOM: readonly string[] = ['name', 'brand', 'operator'];
+
+/**
  * L'URL Overpass d'une recherche par nom autour d'un point — PURE.
  *
  * Rend `null` quand il n'y a rien à chercher : l'appelant ne part pas.
@@ -95,7 +156,9 @@ export function urlNomLieu(nom: string, centre: CentreRecherche): string | null 
   if (graphies.length === 0) return null;
   const autour = `around:${RAYON_NOM_M},${centre.lat.toFixed(5)},${centre.lon.toFixed(5)}`;
   const clauses = graphies
-    .map((g) => `nwr["name"="${echapperNom(g)}"](${autour});`)
+    .flatMap((g) => CLES_NOM.map(
+      (cle) => `nwr["${cle}"="${echapperNom(g)}"](${autour});`,
+    ))
     .join('');
   const requete = `[out:json][timeout:25];(${clauses});out center tags ${PLAFOND_NOMS};`;
   return `https://overpass.openstreetmap.fr/api/interpreter?data=${encodeURIComponent(requete)}`;

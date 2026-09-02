@@ -638,6 +638,21 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       Le fichier se présente désormais et légende chaque bloc, origine
       comprise. Un test lit les clés à la source et refuse qu'une seule parte
       sans explication.
+- [x] PR #199 — RECHERCHE-6 + VEHIC-4 (03/09) : « Carrefour », « Leroy
+      Merlin » et « INRAE Beaucouzé » ne rendaient rien. On ne cherchait que
+      dans `name` — les enseignes vivent dans `brand` (onze Carrefour au lieu
+      de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
+      nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
+      dossier de signalement à la Géoplateforme rédigé.
+- [ ] RECHERCHE-7 — LE CHANTIER QUI RESTE, et c'est le plus important de
+      l'application (mot d'Armelin, 03/09) : « si un utilisateur teste
+      l'application et que ses 3 premières adresses ne fonctionnent pas, c'est
+      un utilisateur qui quitte sans jamais revenir ». À faire, dans l'ordre :
+      l'annuaire de l'administration (api-lannuaire.service-public.fr, sans
+      clé, CORS ouvert, MESURÉ le 03/09 : il trouve les centres INRAE par nom
+      partiel) ; une page de recherche en plein écran avec les distances ; et
+      la géolocalisation au démarrage — qui demande une DÉCISION d'Armelin,
+      car elle contredit la contrainte 4 et la page « Vie privée ».
 - [x] PR #188 — HIST-2 (02/09) : « aucun moyen de relancer le même trajet
       depuis l'historique » et « l'historique ne conserve pas le tracé […] donc
       contribuer envoie trop peu ». Même cause : on gardait des CHIFFRES,
