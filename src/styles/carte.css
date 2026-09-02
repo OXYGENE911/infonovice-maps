@@ -3784,6 +3784,13 @@ filtre-poi {
   max-height: 46vh; overflow-y: auto; overscroll-behavior: contain;
 }
 .bg-parkings[hidden] { display: none; }
+
+/* LES PARKINGS DONT ON CONNAÎT LES PLACES (PARK-4, 02/09) : ils passent
+   devant, et un filet vert dit d'où vient la différence. LE MOT RESTE LE
+   PORTEUR — « 56 places libres », « complet au dernier relevé » — la couleur
+   ne fait que confirmer. */
+.bg-parking-live { border-left: 3px solid var(--vert); padding-left: 7px; }
+.bg-parking-live[data-complet] { border-left-color: var(--ambre-fonce); }
 .bg-parkings-titre { margin: 0 0 8px; font: 650 14px var(--police); color: var(--texte-1); }
 .bg-parkings-liste { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
 .bg-parkings-liste li {

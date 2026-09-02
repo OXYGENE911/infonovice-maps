@@ -32,6 +32,9 @@ import {
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
 import { chargerParkings, ErreurParkings, type Parking } from '../lib/parkings';
+import {
+  chercherPlacesLibres, libellePlaces, sourcePour, type ParkingLive,
+} from '../lib/parkings-live';
 import { coteDestination, phraseArrivee, SEUIL_ARRIVE_M } from '../lib/arrivee';
 import {
   nouveauBilan, ajouterFixe, resumerBilan, dureeEnMots, type EtatBilan,
@@ -1244,6 +1247,10 @@ export class BandeauGuidage extends HTMLElement {
 
   #parkings: Parking[] | null = null;
 
+  /* LES PLACES LIBRES DE LA VILLE (PARK-4), gardées comme les parkings : un
+     appel par arrivée, pas un par fixe. */
+  #placesLibres: ParkingLive[] | null = null;
+
   /* LA LISTE S'OUVRE D'ELLE-MÊME, UNE FOIS (PARK-2, 01/09). Armelin : « il
      faudrait que les places de parking s'affichent toutes seules à proximité
      de la destination avant même que je clique sur le rond parking. »
@@ -1329,6 +1336,23 @@ export class BandeauGuidage extends HTMLElement {
         return;
       }
     }
+    /* LES PLACES LIBRES, QUAND LA VILLE LES PUBLIE (PARK-4, 02/09).
+       Armelin : « ce serait bien d'intégrer la disponibilité des parkings en
+       codant les API libres et sans clé […] pour qu'il ne galère pas à
+       stationner ».
+       UN APPEL DE PLUS, ET SEULEMENT SI UNE SOURCE COUVRE L'ARRIVÉE :
+       `sourcePour` répond non pour l'immense majorité des destinations, et
+       l'on ne dérange alors personne. Il part EN MÊME TEMPS que rien du tout —
+       la liste cartographiée est déjà là. */
+    if (this.#placesLibres === null && sourcePour(dest) !== null) {
+      try {
+        this.#placesLibres = await chercherPlacesLibres(dest);
+      } catch {
+        /* UNE VILLE QUI NE RÉPOND PAS N'EFFACE PAS LES PARKINGS CONNUS : on
+           retombe sur la liste cartographiée, qui vaut sans elle. */
+        this.#placesLibres = [];
+      }
+    }
     const parkings = this.#parkings;
     liste.replaceChildren();
     if (parkings.length === 0) {
@@ -1340,8 +1364,54 @@ export class BandeauGuidage extends HTMLElement {
        la disponibilité ne l'est pas — aucune source nationale gratuite et
        sans clé ne l'expose. Un mot juste vaut mieux qu'une promesse
        fausse. */
-    etat.textContent = 'Du plus près au plus loin de votre destination — la'
-      + ' fin se fera à pied. Capacité OpenStreetMap, pas les places libres.';
+    const live = this.#placesLibres ?? [];
+    /* LA PHRASE CHANGE QUAND ON SAIT VRAIMENT (PARK-4) : dire « pas les places
+       libres » alors qu'on vient de les afficher serait faux dans l'autre
+       sens. Elle nomme la collectivité — on cite toujours qui publie. */
+    etat.textContent = live.length > 0
+      ? `Du plus près au plus loin de votre destination — la fin se fera à`
+        + ` pied. Places libres publiées par ${live[0]!.source}.`
+      : 'Du plus près au plus loin de votre destination — la'
+        + ' fin se fera à pied. Capacité OpenStreetMap, pas les places libres.';
+
+    /* LES PARKINGS AVEC PLACES LIBRES PASSENT DEVANT : c'est l'information
+       qu'on cherche en arrivant, et elle vaut mieux qu'une capacité. */
+    for (const p of live) {
+      const item = document.createElement('li');
+      item.className = 'bg-parking-live';
+      const infos = document.createElement('span');
+      infos.className = 'bg-parking-infos';
+      const nom = document.createElement('strong');
+      nom.textContent = p.nom;
+      const detail = document.createElement('span');
+      const age = Math.max(0, Math.round((Date.now() - p.instant) / 60_000));
+      detail.textContent = `${libellePlaces(p)} · relevé il y a ${age} min`;
+      /* COMPLET SE VOIT : c'est la seule ligne qui doit décourager d'y aller,
+         et elle se lit sans la couleur — le mot « complet » y est écrit. */
+      if (p.libres <= 0) item.dataset['complet'] = 'oui';
+      infos.append(nom, detail);
+      const garer = document.createElement('button');
+      garer.type = 'button';
+      garer.className = 'bg-parking-garer';
+      garer.textContent = 'Se garer';
+      garer.setAttribute('aria-label', `Se garer à ${p.nom}`);
+      garer.addEventListener('click', () => {
+        this.#parkingRegle = true;
+        this.#fermerParkings();
+        const b = this.querySelector<HTMLElement>('.bg-parking-p');
+        if (b) b.hidden = true;
+        const ici = this.#derniersCoords;
+        document.dispatchEvent(new CustomEvent('se-garer', {
+          detail: {
+            lon: p.lon, lat: p.lat, nom: p.nom,
+            position: ici ? { lon: ici.longitude, lat: ici.latitude } : null,
+          },
+        }));
+      });
+      item.append(infos, garer);
+      liste.append(item);
+    }
+
     for (const p of parkings) {
       const item = document.createElement('li');
       const infos = document.createElement('span');
@@ -1446,6 +1516,7 @@ export class BandeauGuidage extends HTMLElement {
     this.#dernierReleveMs = null;
     this.#retirerMarqueurArrivee();
     this.#parkings = null;
+    this.#placesLibres = null;
     this.#parkingRegle = false;
     this.#parkingsOfferts = false;
     this.#fermerParkings();

@@ -305,4 +305,129 @@ test('LA FEUILLE S’OUVRE AU-DESSUS DU ROND « P », qui reste cliquable', asyn
      un autre calque pourrait encore intercepter le doigt. */
   await page.locator('.bg-parking-p').click();
   await expect(feuille).toBeHidden();
+/* ================== LES PLACES LIBRES EN DIRECT (PARK-4) ==================
+ *
+ * Armelin : « certaines villes exposent des API permettant de consulter en
+ * live le taux d'occupation et disponibilité des places de parking […] pour
+ * qu'il ne galère pas à stationner, notamment dans Paris ».
+ *
+ * DEUX SOURCES MESURÉES VIVANTES le 02/09 (Aix-Marseille à la minute, Nantes
+ * à l'heure) ; deux autres écartées après mesure — Issy annonce « temps
+ * réel » sur un relevé d'avril 2025, et Paris publie ses parkings sans leur
+ * occupation. */
+
+/** Un trajet court qui arrive au Vieux-Port : la source d'Aix-Marseille y répond. */
+const TRACE_MARSEILLE: [number, number][] = Array.from({ length: 21 }, (_, i) =>
+  [5.3600 + i * 0.00055, 43.2950]);
+const DEST_MARSEILLE = { lon: 5.3710, lat: 43.2952 };
+
+/** Le même décor que `suivre`, mais à Marseille, avec sa source de places. */
+async function suivreAMarseille(page: Page, live: unknown[]): Promise<string[]> {
+  const appels: string[] = [];
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+  await page.context().grantPermissions(['geolocation']);
+  await page.context().setGeolocation({
+    longitude: TRACE_MARSEILLE[0]![0], latitude: TRACE_MARSEILLE[0]![1],
+  });
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null, ...c } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await page.route('**/data.ampmetropole.fr/**', (route) => {
+    appels.push(decodeURIComponent(route.request().url()));
+    return route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      contentType: 'application/json',
+      body: JSON.stringify({ total_count: live.length, results: live }),
+    });
+  });
+  /* LES PARKINGS CARTOGRAPHIÉS RESTENT LÀ : ce parcours juge l'ORDRE, et il
+     faut donc quelque chose derrière quoi passer devant. */
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json',
+    body: JSON.stringify({ elements: [{
+      type: 'node', id: 1, lat: 43.2949, lon: 5.3705,
+      tags: { amenity: 'parking', name: 'Parking cartographié', capacity: '120' },
+    }] }),
+  }));
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: TRACE_MARSEILLE },
+      distance: 1_000, duration: 300,
+    }),
+  }));
+  await page.route('**/www.bison-fute.gouv.fr/**', (route) => route.fulfill({
+    contentType: 'application/json', body: '[]',
+  }));
+  const d = TRACE_MARSEILLE[0]!;
+  await page.goto(`/#iti=${d[0].toFixed(5)},${d[1].toFixed(5)};`
+    + `${DEST_MARSEILLE.lon.toFixed(5)},${DEST_MARSEILLE.lat.toFixed(5)};car`);
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+  return appels;
+}
+
+/** Avance jusqu'à l'arrivée, où la feuille de parkings s'ouvre d'elle-même. */
+async function approcher(page: Page): Promise<void> {
+  await expect.poll(async () => {
+    await page.evaluate(() => {
+      (window as unknown as { __pousserFixe: (c: object) => void })
+        .__pousserFixe({ longitude: 5.3705, latitude: 43.2951, speed: 4, heading: 90 });
+    });
+    return page.locator('.bg-parkings').isVisible();
+  }, { timeout: 20_000 }).toBe(true);
+}
+
+test('LES PLACES LIBRES PASSENT DEVANT, avec l’âge du relevé', async ({ page }) => {
+  /* Un relevé de maintenant, écrit en heure de PARIS comme le fait le
+     portail — c'est le piège que ce parcours garde fermé : lu comme de
+     l'UTC, il tomberait deux heures dans le futur. */
+  const parisMaintenant = new Date(Date.now() + 2 * 3600_000)
+    .toISOString().replace('T', ' ').slice(0, 19);
+  const appels = await suivreAMarseille(page, [{
+    nom: 'Charles de Gaulle', voitureplacesdisponibles: 56,
+    voitureplacescapacite: 520, longitude: 5.3709, latitude: 43.2953,
+    datemajpy: parisMaintenant,
+  }]);
+  await approcher(page);
+
+  const premier = page.locator('.bg-parkings-liste li').first();
+  await expect(premier).toHaveClass(/bg-parking-live/);
+  await expect(premier).toContainText('56 places libres sur 520');
+  await expect(premier).toContainText('relevé il y a');
+  // ET LE PARKING CARTOGRAPHIÉ RESTE, DERRIÈRE : on n'a rien perdu.
+  await expect(page.locator('.bg-parkings-liste li')).toHaveCount(2);
+  // ON CITE QUI PUBLIE.
+  await expect(page.locator('.bg-parkings-etat')).toContainText('Aix-Marseille');
+  expect(appels.length, 'un appel par fixe part vers la collectivité').toBe(1);
+});
+
+test('UN RELEVÉ PÉRIMÉ NE S’AFFICHE PAS — le cas d’Issy', async ({ page }) => {
+  /* Le jeu d'Issy s'appelle « disponibilité temps réel » et n'a pas bougé
+     depuis avril 2025, tous parkings pleins. Afficher ce zéro aurait envoyé
+     les gens ailleurs pour rien. */
+  await suivreAMarseille(page, [{
+    nom: 'Vieux-Port', voitureplacesdisponibles: 0, voitureplacescapacite: 545,
+    longitude: 5.3709, latitude: 43.2953, datemajpy: '2025-04-06 02:12:00',
+  }]);
+  await approcher(page);
+
+  await expect(page.locator('.bg-parking-live')).toHaveCount(0);
+  /* ET LA PHRASE REDEVIENT CELLE D'AVANT : on ne promet pas des places libres
+     qu'on n'a pas. */
+  await expect(page.locator('.bg-parkings-etat'))
+    .toContainText('pas les places libres');
 });
