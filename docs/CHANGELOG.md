@@ -23,10 +23,22 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   seconde moitié tient ; la première portait désormais une exception, qui est
   écrite.
 
+### Corrigé — la page « À propos » avait deux affirmations périmées
+- **« Aucune position envoyée »** était vraie du bouton « Me localiser » et
+  fausse dès qu'on calcule un itinéraire DEPUIS sa position, ou qu'on suit un
+  trajet : ce point part au service public de calcul d'itinéraire et à
+  Overpass, qui relève les panneaux le long du tracé. C'est ce qui permet de
+  guider, il n'y a pas d'autre façon de le faire, et c'est justement pour cela
+  qu'il fallait l'écrire. Le titre devient « Aucun serveur qui nous
+  appartienne » — ce qui, lui, reste vrai sans réserve.
+- **« seulement si vous ouvrez la section Météo à l'arrivée »** : HIST-3
+  appelle aussi Open-Meteo au moment où l'on enregistre un parcours. Les deux
+  gestes sont maintenant nommés.
+
 ### Ajouté
-- Un parcours E2E dédié à cette page. Le contrat n'était écrit qu'à un seul
-  endroit, et **rien ne le regardait** — c'est ainsi qu'il a dérivé pendant
-  deux jours sans que personne le voie.
+- Un parcours E2E dédié à ces deux pages. Le contrat n'était écrit qu'à un
+  seul endroit, et **rien ne le regardait** — c'est ainsi qu'il a dérivé
+  pendant deux jours sans que personne le voie.
 ## [1.45.0] — 2026-09-02 — HIST-3
 
 ### Ajouté

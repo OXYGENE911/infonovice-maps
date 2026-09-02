@@ -69,3 +69,38 @@ test('ET ELLE NE POSE TOUJOURS AUCUN COOKIE', async ({ page }) => {
   await expect(page.getByText('Non — aucun.')).toBeVisible();
   expect(await page.context().cookies()).toHaveLength(0);
 });
+
+/* LA PAGE « À PROPOS » PORTE LES MÊMES PROMESSES, ET LES MÊMES DÉRIVES
+ * (RGPD-1, 02/09).
+ *
+ * DEUX AFFIRMATIONS Y ÉTAIENT DEVENUES FAUSSES :
+ *   1. « Aucune position envoyée » — vrai du bouton « Me localiser », faux dès
+ *      qu'on calcule un itinéraire DEPUIS sa position ou qu'on suit un trajet :
+ *      ce point part au service de calcul d'itinéraire et à Overpass, qui
+ *      relève les panneaux le long du tracé. C'est ce qui permet de guider ;
+ *      il n'y a pas d'autre façon de le faire, et c'est justement pour cela
+ *      qu'il fallait l'écrire.
+ *   2. « seulement si vous ouvrez la section Météo à l'arrivée » — HIST-3
+ *      appelle aussi Open-Meteo à l'enregistrement d'un parcours. */
+
+test('À PROPOS ne promet plus « aucune position envoyée » sans réserve', async ({ page }) => {
+  await page.goto('/a-propos.html');
+  const corps = page.locator('.page-corps');
+  await expect(corps).not.toContainText('Aucune position envoyée');
+  await expect(corps).toContainText('Aucun serveur qui nous appartienne');
+  /* LA RÉSERVE EST NOMMÉE, et elle dit QUAND la position part. */
+  await expect(corps).toContainText('si vous calculez un itinéraire depuis');
+  await expect(corps).toContainText('votre position ou si vous suivez un trajet');
+});
+
+test('À PROPOS dit les DEUX gestes qui appellent la météo', async ({ page }) => {
+  await page.goto('/a-propos.html');
+  const corps = page.locator('.page-corps');
+  await expect(corps).toContainText('Météo à l’arrivée');
+  /* LE SECOND GESTE, ajouté par HIST-3 : l'enregistrement d'un parcours. */
+  await expect(corps).toContainText('enregistrer un parcours');
+  /* ET LA PROMESSE QUI TIENT TOUJOURS : la destination part, jamais la
+     position — c'est la moitié de l'affirmation qui n'a pas bougé. */
+  await expect(corps).toContainText('seules les coordonnées de votre');
+  await expect(corps).toContainText('destination');
+});
