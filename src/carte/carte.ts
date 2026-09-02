@@ -3,6 +3,7 @@
 // ne fait que l'assemblage MapLibre.
 import { Map as CarteMapLibre, NavigationControl, GeolocateControl, ScaleControl, Marker, Popup, setWorkerUrl } from 'maplibre-gl';
 import { PanneauHistorique } from './panneau-historique';
+import { CARTOUCHES, imageCartouche, zonesEtirables } from './cartouche-route';
 import { refermerPanneaux } from './panneaux';
 import { VERSION, libelleVersion, forcerMiseAJour } from '../lib/version';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -214,6 +215,18 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   let fondCourant: Fond = 'plan';
   let relief3d = false;
   const poserEtiquettes = (): void => {
+    /* LES ÉCUSSONS DE ROUTE D'ABORD (FOND-6, 02/09) : un calque qui réclame
+       une image absente se dessine sans elle — le numéro paraîtrait nu, et
+       l'on chercherait longtemps pourquoi. Ils se posent AVANT les calques
+       qui les nomment, et à chaque `style.load` comme tout le reste : un
+       changement de fond vide le registre d'images. */
+    for (const style of CARTOUCHES) {
+      if (carte.hasImage(style.cle)) continue;
+      const image = imageCartouche(style);
+      /* SANS CANEVAS 2D, ON N'EN POSE AUCUN et `icon-optional` fait son
+         office : le numéro s'écrit nu, comme avant FOND-6. */
+      if (image) carte.addImage(style.cle, image, zonesEtirables(2));
+    }
     if (carte.getSource(SOURCE_ETIQUETTES) === undefined) {
       carte.addSource(SOURCE_ETIQUETTES, sourceEtiquettes());
     }

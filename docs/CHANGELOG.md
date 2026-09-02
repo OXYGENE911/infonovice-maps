@@ -2,6 +2,36 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.49.0] — 2026-09-02 — FOND-6
+
+### Ajouté — les numéros de route dans leur écusson
+- Armelin : « on voit les numéros des routes s'afficher seulement au format
+  texte. Ce serait bien que les routes et autoroutes soient affichées dans
+  leur vrai cartouche cartographique […] sur Google Maps, une autoroute
+  apparaît dans un cartouche rouge A86 aux contours blancs. » Photo à l'appui.
+- C'est la **signalisation française** : blanc sur rouge pour l'autoroute et
+  la nationale, noir sur jaune pour la départementale. Un numéro nu ne dit pas
+  de quelle sorte de route il s'agit — or c'est ce qu'on cherche à savoir d'un
+  coup d'œil.
+
+### Mesuré
+- La couche `toponyme_routier_numero_lin` porte un `txt_typo` à **trois
+  valeurs et trois seulement** (trois tuiles décodées le 02/09) : Autoroute
+  (A13, A14), Nationale (N10, N12, N13, N184), Départementale (D195, D838,
+  D936, D938). Les routes européennes, forestières, rurales et communales de
+  la photo n'y figurent pas : **on ne leur fabrique donc pas d'écusson**, et
+  une catégorie inconnue garde son numéro nu plutôt qu'une couleur inventée.
+
+### Ce que ça coûte : rien
+- **Aucun fichier, aucune requête.** Les deux écussons sont dessinés sur un
+  canevas au démarrage, puis **étirés autour du texte** par MapLibre. Le
+  sprite officiel d'IGN aurait demandé de l'héberger — c'est d'ailleurs
+  pourquoi FOND-1 avait retiré tout ce qui en dépendait.
+- On n'étire que la **bande centrale**, coins exclus : sans cette borne, un
+  « D1054 » déformerait les coins arrondis en ovales.
+- Le halo disparaît : il servait à détacher un texte nu, l'écusson le fait
+  mieux. Et `icon-optional` garde le numéro si le canevas 2D manque — une
+  carte sans écussons vaut mieux qu'une carte qui refuse de se dessiner.
 ## [1.48.0] — 2026-09-02 — RECHARGE-1, RAYON-2 et ROUTE-1
 
 ### Corrigé — le temps de charge était calculé sur une puissance qu'aucune borne ne tient

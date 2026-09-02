@@ -600,6 +600,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       vient d'UN appel météo sur le point d'arrivée, déjà interrogé pendant le
       trajet. La comparaison les affiche, le fichier de contribution les
       emporte, et l'absence se dit au lieu de s'écrire zéro.
+- [x] PR #196 — FOND-6 (02/09) : les numéros de route dans leur écusson —
+      blanc sur rouge pour autoroute et nationale, noir sur jaune pour la
+      départementale, comme la signalisation. Images dessinées à l'exécution
+      et étirées par MapLibre : aucun sprite à héberger. Les tuiles ne portent
+      que ces trois catégories (mesuré), les autres gardent leur numéro nu.
 - [x] PR #194 — RECHARGE-1 + RAYON-2 (02/09) : les deux « trop optimistes »
       du premier retour utilisateur. Le temps de charge se calculait sur la
       POINTE ; huit relevés donnent la moyenne réelle d'une session (0,63 de

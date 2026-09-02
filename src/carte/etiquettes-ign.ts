@@ -92,7 +92,18 @@ export const CALQUE_BATI_3D: LayerSpecification = {
 };
 
 /* LES NUMÉROS DE ROUTE : autoroute et nationale dès le zoom 7,
-   départementale à partir du 11 — les seuils d'IGN, pas les nôtres. */
+   départementale à partir du 11 — les seuils d'IGN, pas les nôtres.
+
+   ET DEPUIS FOND-6 (02/09), CHACUN DANS SON ÉCUSSON. Armelin : « on voit les
+   numéros des routes s'afficher seulement au format texte […] sur Google Maps,
+   une autoroute apparaît dans un cartouche rouge A86 aux contours blancs. »
+   C'est la signalisation française : blanc sur rouge pour l'autoroute et la
+   nationale, noir sur jaune pour la départementale.
+   L'IMAGE EST DESSINÉE À L'EXÉCUTION (voir cartouche-route.ts) et ÉTIRÉE
+   autour du texte par MapLibre — aucun sprite à héberger, aucune requête. Le
+   halo disparaît : il servait à détacher un texte nu, l'écusson le fait mieux.
+   `icon-optional` GARDE LE NUMÉRO SI L'ÉCUSSON MANQUE : sur un navigateur
+   sans canevas 2D, on écrit le numéro nu plutôt que rien. */
 export const CALQUES_NUMEROS_ROUTE: LayerSpecification[] = [
     {
       "id": "num-route-toponyme-num-ro-de-route-d-partementale",
@@ -117,12 +128,17 @@ export const CALQUES_NUMEROS_ROUTE: LayerSpecification[] = [
         "text-font": [
           "Source Sans Pro Semibold"
         ],
-        "text-rotation-alignment": "viewport"
+        "text-rotation-alignment": "viewport",
+        "icon-image": "cartouche-jaune",
+        "icon-text-fit": "both",
+        "icon-text-fit-padding": [1, 3, 1, 3],
+        "icon-rotation-alignment": "viewport",
+        "icon-allow-overlap": false,
+        "icon-optional": true
       },
       "paint": {
-        "text-color": "#4D4D4D",
-        "text-halo-color": "rgba(255, 255, 255, 0.5)",
-        "text-halo-width": 4
+        "text-color": "#1A1A1A",
+        "text-halo-width": 0
       }
     },
     {
@@ -148,12 +164,17 @@ export const CALQUES_NUMEROS_ROUTE: LayerSpecification[] = [
         "text-font": [
           "Source Sans Pro Regular"
         ],
-        "text-rotation-alignment": "viewport"
+        "text-rotation-alignment": "viewport",
+        "icon-image": "cartouche-rouge",
+        "icon-text-fit": "both",
+        "icon-text-fit-padding": [1, 3, 1, 3],
+        "icon-rotation-alignment": "viewport",
+        "icon-allow-overlap": false,
+        "icon-optional": true
       },
       "paint": {
-        "text-color": "#F0F0F0",
-        "text-halo-color": "rgba(80, 80, 80, 0.5)",
-        "text-halo-width": 4
+        "text-color": "#FFFFFF",
+        "text-halo-width": 0
       }
     },
     {
@@ -179,12 +200,17 @@ export const CALQUES_NUMEROS_ROUTE: LayerSpecification[] = [
         "text-font": [
           "Source Sans Pro Regular"
         ],
-        "text-rotation-alignment": "viewport"
+        "text-rotation-alignment": "viewport",
+        "icon-image": "cartouche-rouge",
+        "icon-text-fit": "both",
+        "icon-text-fit-padding": [1, 3, 1, 3],
+        "icon-rotation-alignment": "viewport",
+        "icon-allow-overlap": false,
+        "icon-optional": true
       },
       "paint": {
-        "text-color": "#F0F0F0",
-        "text-halo-color": "rgba(80, 80, 80, 0.5)",
-        "text-halo-width": 5
+        "text-color": "#FFFFFF",
+        "text-halo-width": 0
       }
     }
   ] as unknown as LayerSpecification[];
