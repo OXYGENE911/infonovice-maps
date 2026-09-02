@@ -274,3 +274,38 @@ describe('chercherModeles', () => {
     expect(chercherModeles('zzzz-inexistant')).toEqual([]);
   });
 });
+
+describe('les modèles ajoutés le 02/09', () => {
+  /* Armelin en avait listé quinze ; six seulement sont entrés, et c'est
+     délibéré : la veille, deux sources françaises donnaient 150 kW et 190 kW
+     de charge rapide pour la même Alpine A390. Ces chiffres pilotent la
+     planification des arrêts — mieux vaut six modèles sourcés d'une seule
+     fiche cohérente que quinze recopiés vite. */
+  const cle = (c: string) => CATALOGUE.find((m) => m.cle === c);
+
+  it('les six sont là, avec leurs trois chiffres', () => {
+    for (const c of ['alpine-a390', 'mg-cyberster', 'smart-5',
+      'byd-atto2', 'byd-sealu', 'byd-tang']) {
+      const m = cle(c);
+      expect(m, `modèle absent : ${c}`).toBeDefined();
+      expect(m!.capaciteKwh).toBeGreaterThan(0);
+      expect(m!.puissanceMaxKw).toBeGreaterThan(0);
+      expect(m!.wltpKm).toBeGreaterThan(0);
+    }
+  });
+
+  it('l’A390 porte les chiffres de sa fiche, pas ceux du communiqué', () => {
+    /* 150 kW : la fiche technique. Le communiqué de presse annonçait 190 —
+       c'est l'écart qui m'a fait renoncer à tout recopier vite. */
+    const m = cle('alpine-a390')!;
+    expect(m.capaciteKwh).toBe(89);
+    expect(m.puissanceMaxKw).toBe(150);
+    expect(m.wltpKm).toBe(555);
+  });
+
+  it('la Smart #5 porte sa capacité UTILE, pas la brute', () => {
+    /* 100 kWh bruts, 94 utilisables. Prendre la brute aurait promis six
+       pour cent d'autonomie qui n'existent pas. */
+    expect(cle('smart-5')!.capaciteKwh).toBe(94);
+  });
+});
