@@ -2,6 +2,47 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.38.0] — 2026-09-02 — Le XPENG L03, ses quatre versions (PR #184)
+
+### Ajouté
+Les quatre versions du **XPENG L03** — RWD Standard Range, RWD Long Range,
+RWD Long Range Ultra, AWD Performance Ultra.
+
+**Je l'avais écarté la veille, et j'avais raison de le faire ainsi.** XPENG ne
+cataloguait alors que des G6, G9, P7 et X9 : « L03 » ne correspondait à rien
+que je sache rattacher, et j'ai préféré demander plutôt que deviner. Armelin a
+donné le configurateur officiel français — c'est un modèle de 2026, arrivé en
+concession. **Demander a rendu la bonne réponse ; inventer aurait rendu la
+mauvaise.**
+
+### D'où viennent ces chiffres
+Le modèle est **trop récent** pour avoir une fiche complète chez la source des
+six véhicules d'hier. Les capacités **utiles** et les crêtes de charge viennent
+donc d'EV Database, qui distingue explicitement « usable » de la capacité brute
+— c'est le champ dont ce catalogue a besoin, et la raison même pour laquelle je
+refuse les communiqués.
+
+**Et elles sont recoupées** : les 193 kW de la Standard Range figurent aussi
+sur le site officiel de XPENG France. C'est exactement le recoupement qui
+manquait à l'Alpine A390 la veille, et qui m'avait fait renoncer à recopier
+vite.
+
+| Version | Utile | Crête DC | WLTP |
+|---|---|---|---|
+| RWD Standard Range | 57,0 kWh | 193 kW | 445 km |
+| RWD Long Range | 69,5 kWh | 236 kW | 520 km |
+| RWD Long Range Ultra | 69,5 kWh | 236 kW | 480 km |
+| AWD Performance Ultra | 69,5 kWh | 236 kW | 440 km |
+
+**Les deux « Ultra » partagent la batterie de la Long Range** : leur autonomie
+plus faible vient des jantes de 20 pouces et de la transmission intégrale, pas
+d'un pack plus petit. Leur donner une capacité réduite aurait sous-estimé leur
+portée à chaque trajet — et c'est ce qu'un tableau lu trop vite aurait produit.
+
+### Tests
+- 4 tests, dont celui qui garde la batterie partagée des « Ultra » et celui qui
+  nomme le recoupement des 193 kW.
+
 ## [1.37.0] — 2026-09-02 — Six véhicules ajoutés, neuf laissés de côté (PR #183)
 
 ### Ajouté

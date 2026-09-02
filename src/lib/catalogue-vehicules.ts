@@ -32,10 +32,14 @@
  * A390, et mélanger les provenances aurait produit un catalogue incohérent
  * plutôt qu'imprécis. La fiche retenue distingue capacité BRUTE et UTILE, ce
  * que la plupart des communiqués ne font pas.
+ * LE XPENG L03 A SUIVI LE MÊME JOUR : je l'avais écarté faute de savoir à quel
+ * véhicule le rattacher, Armelin a donné le configurateur officiel français.
+ * Ses quatre versions viennent d'EV Database — la seule base à jour sur un
+ * modèle de 2026, et elle distingue « usable » de la capacité brute. Les 193 kW
+ * de la Standard Range sont recoupés par le site officiel de XPENG France.
  * CE QUI RESTE À SOURCER, et qu'Armelin avait cité : Cupra Raval, VW ID.Polo,
- * DS N°7 et DS 3 E-Tense, BYD Atto 3 EVO, XPENG L03, et les variantes Tesla par
- * année. Les uns sont trop récents pour avoir une fiche stable, les autres
- * portent un nom qui ne correspond à aucun modèle catalogué.
+ * DS N°7 et DS 3 E-Tense, BYD Atto 3 EVO, et les variantes Tesla par année —
+ * tous trop récents pour avoir une fiche stable.
  *
  * ILS SONT INDICATIFS ET RÉVISABLES. Un constructeur change une batterie en
  * cours de série sans changer le nom du modèle ; une finition diffère d'une
@@ -288,6 +292,26 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
      n'ont rien à voir : le restylage 2025 passe à une batterie LFP 5C de
      80,8 kWh sous 800 V, 451 kW en crête (10-80 % en 12 minutes), 525 km
      WLTP. Sources : fiches automobile-propre.com et largus.fr, 27/08/2026. */
+  /* LE L03, ARRIVÉ EN CONCESSION EN 2026 (02/09). Je l'avais écarté la veille
+     faute de savoir à quel véhicule le rattacher — XPENG ne cataloguait alors
+     que des G6, G9, P7 et X9. Armelin a donné le configurateur officiel
+     français, qui l'a tranché : c'est un modèle réel, avec quatre versions.
+     D'OÙ VIENNENT CES CHIFFRES, ET POURQUOI PAS DE LA MÊME SOURCE QUE LES SIX
+     AUTRES. Le modèle est trop récent pour avoir une fiche complète chez
+     automobile-propre. Les capacités UTILES et les crêtes de charge viennent
+     donc d'EV Database, qui distingue explicitement « usable » de la capacité
+     brute — c'est le champ dont ce catalogue a besoin, et la raison même pour
+     laquelle je refuse les communiqués.
+     ET ELLES SONT RECOUPÉES : les 193 kW de la Standard Range figurent aussi
+     sur le site officiel de XPENG France. Les autonomies WLTP sont celles du
+     configurateur qu'Armelin a envoyé.
+     LES DEUX « ULTRA » PARTAGENT LA BATTERIE DE LA LONG RANGE : leur autonomie
+     plus faible vient des jantes de 20 pouces (480 km contre 520) et de la
+     transmission intégrale (440 km) — pas d'un pack différent. */
+  { cle: 'xpeng-l03-sr', marque: 'XPENG', modele: 'L03', variante: 'RWD Standard Range', annees: 'depuis 2026', capaciteKwh: 57, puissanceMaxKw: 193, wltpKm: 445, prise: 'combo_ccs' },
+  { cle: 'xpeng-l03-lr', marque: 'XPENG', modele: 'L03', variante: 'RWD Long Range', annees: 'depuis 2026', capaciteKwh: 69.5, puissanceMaxKw: 236, wltpKm: 520, prise: 'combo_ccs' },
+  { cle: 'xpeng-l03-lr-ultra', marque: 'XPENG', modele: 'L03', variante: 'RWD Long Range Ultra', annees: 'depuis 2026', capaciteKwh: 69.5, puissanceMaxKw: 236, wltpKm: 480, prise: 'combo_ccs' },
+  { cle: 'xpeng-l03-awd', marque: 'XPENG', modele: 'L03', variante: 'AWD Performance Ultra', annees: 'depuis 2026', capaciteKwh: 69.5, puissanceMaxKw: 236, wltpKm: 440, prise: 'combo_ccs' },
   { cle: 'xpeng-g6-66', marque: 'XPENG', modele: 'G6', variante: 'Standard Range', annees: '2024-2025', capaciteKwh: 66, puissanceMaxKw: 215, wltpKm: 435, prise: 'combo_ccs' },
   { cle: 'xpeng-g6-87', marque: 'XPENG', modele: 'G6', variante: 'Long Range', annees: '2024-2025', capaciteKwh: 87.5, puissanceMaxKw: 280, wltpKm: 570, prise: 'combo_ccs' },
   { cle: 'xpeng-g6-81-2025', marque: 'XPENG', modele: 'G6', variante: 'Long Range restylé', annees: 'depuis 2025', capaciteKwh: 80.8, puissanceMaxKw: 451, wltpKm: 525, prise: 'combo_ccs' },
