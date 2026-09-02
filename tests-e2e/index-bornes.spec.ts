@@ -549,6 +549,13 @@ test('le cartouche et les volets ne se recouvrent JAMAIS : une surface a la fois
      avant l'usager — la fiche recouvrait le panneau, dont le bouton devenait
      impossible a presser. Ce parcours ne le laissait passer que par chance
      d'ordonnancement ; il le juge maintenant. */
+  /* ON REFERME LA FICHE AVANT D'OUVRIR L'ENTONNOIR, et ce n'est pas une
+     commodité de parcours : la fiche recouvre ce coin de l'écran, bouton de
+     l'entonnoir compris. La CI l'a montré — le clic n'atteignait pas la
+     bulle. « Une seule surface à la fois » vaut aussi pour l'ordre des
+     gestes. */
+  await page.keyboard.press('Escape');
+  await expect(page.locator('fiche-borne')).toBeHidden();
   await page.locator('.poi-bulle').click();
   await expect(page.locator('.poi-panneau')).toBeVisible();
   await ouvrirCartoucheBeaune(page);
