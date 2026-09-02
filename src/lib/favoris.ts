@@ -91,10 +91,91 @@ export async function renommerFavori(id: string, nom: string): Promise<Favori> {
 
 /* ---- export / import ---- */
 
+/* CE QUE CHAQUE CLÉ CONTIENT, EN FRANÇAIS (EXPORT-1, 02/09).
+ *
+ * LE TERRAIN. Armelin, premier retour utilisateur : « fonction export : ok, ça
+ * télécharge un JSON, mais il contient des repères qui ne sont pas les miens
+ * et ne font pas partie des recherches que j'ai faites. »
+ *
+ * CE QUE J'AI TROUVÉ EN OUVRANT LE FICHIER. Il ne contenait rien d'étranger —
+ * mais rien ne DISAIT ce qu'il contenait. L'export vidait le magasin des
+ * préférences tel quel : treize clés techniques (`routines-trajets`,
+ * `poi-filtres-bornes`, `repere-travail`…) et leurs valeurs brutes. Trois de
+ * ces clés portent des POINTS GÉOGRAPHIQUES, et l'une d'elles — les trajets
+ * habituels — est remplie par l'application SANS GESTE DE L'USAGER : elle
+ * apprend chaque destination calculée, y compris celles d'un lien partagé
+ * qu'on a simplement ouvert. De son point de vue, ces repères n'étaient donc
+ * pas les siens ; du point de vue du code, ils l'étaient. Les deux avaient
+ * raison, et c'est le fichier qui manquait à son devoir.
+ *
+ * ON NE RETIRE RIEN — ce sont ses données, et un export amputé serait pire
+ * qu'un export obscur. ON NOMME. Chaque bloc porte son intitulé, ce qu'il
+ * contient, et surtout D'OÙ IL VIENT : saisi à la main, ou appris tout seul.
+ */
+export const LEGENDES: Readonly<Record<string, { quoi: string; origine: string }>> = {
+  'routines-trajets': {
+    quoi: 'Vos trajets habituels : une destination, son nom et le nombre de'
+      + ' fois où vous y êtes allé, par tranche de la journée.',
+    origine: 'APPRIS AUTOMATIQUEMENT à chaque itinéraire calculé, sans geste de'
+      + ' votre part. Volet « Mes lieux » → « Tout oublier » les efface.',
+  },
+  'historique-trajets': {
+    quoi: 'Les parcours que vous avez choisi de garder, avec leur tracé GPS.',
+    origine: 'Enregistrés UN PAR UN, sur votre demande, à la fin d’un trajet'
+      + ' suivi. Volet « Historique » → « Oublier ».',
+  },
+  'listes-favoris': {
+    quoi: 'Les listes dans lesquelles vous rangez vos favoris.',
+    origine: 'Créées par vous.',
+  },
+  'repere-domicile': {
+    quoi: 'Votre domicile : coordonnées et adresse.',
+    origine: 'Défini par vous, par appui long sur la carte ou depuis le volet.',
+  },
+  'repere-travail': {
+    quoi: 'Votre lieu de travail : coordonnées et adresse.',
+    origine: 'Défini par vous, par appui long sur la carte ou depuis le volet.',
+  },
+  vehicule: {
+    quoi: 'Le profil de votre véhicule : batterie, consommations, puissance.',
+    origine: 'Saisi par vous, ou pré-rempli depuis le catalogue puis modifiable.',
+  },
+  fonds: { quoi: 'Le fond de carte choisi et ses surcouches.', origine: 'Vos réglages.' },
+  poi: { quoi: 'Les familles de lieux affichées sur la carte.', origine: 'Vos réglages.' },
+  'familles-poi': { quoi: 'Les familles de lieux cochées dans le filtre.', origine: 'Vos réglages.' },
+  'poi-filtres-bornes': {
+    quoi: 'Vos filtres de bornes : réseaux, puissance minimale, prises.',
+    origine: 'Vos réglages.',
+  },
+  'poi-etendue-bornes': { quoi: 'L’étendue de recherche des bornes.', origine: 'Vos réglages.' },
+  'reglages-recharge': {
+    quoi: 'Vos règles de recharge : réserve, plafond de charge, pauses.',
+    origine: 'Vos réglages.',
+  },
+  'guidage-vocal': { quoi: 'Le guidage vocal, allumé ou éteint.', origine: 'Vos réglages.' },
+  'curseur-vehicule': { quoi: 'La forme de votre repère pendant la navigation.', origine: 'Vos réglages.' },
+  trafic: { quoi: 'L’affichage des événements routiers.', origine: 'Vos réglages.' },
+};
+
+/** Ce qu'on dit d'une clé — et l'aveu franc quand on n'en sait rien — PURE. */
+export function legendeDe(cle: string): { quoi: string; origine: string } {
+  return LEGENDES[cle] ?? {
+    quoi: `Réglage « ${cle} ».`,
+    /* UNE CLÉ QUE CE FICHIER NE CONNAÎT PAS est une clé ajoutée depuis, et le
+       dire vaut mieux que d'inventer une description. */
+    origine: 'Réglage de l’application, gardé sur cet appareil.',
+  };
+}
+
 interface Sauvegarde {
   application: 'infonovice-maps';
   version: 1;
   exporte: string;
+  /* CE QUE CE FICHIER EST, écrit DANS le fichier : il peut être ouvert dans
+     six mois, par quelqu'un qui n'a pas cette conversation sous les yeux. */
+  quoi: string;
+  /** Ce que chaque bloc contient et d'où il vient — voir LEGENDES. */
+  legendes: Record<string, { quoi: string; origine: string }>;
   preferences: Record<string, unknown>;
   favoris: Favori[];
 }
@@ -104,10 +185,21 @@ export async function exporterDonnees(): Promise<string> {
   for (const [cle, valeur] of await entreesMagasin(MAGASIN_PREFERENCES)) {
     preferences[String(cle)] = valeur;
   }
+  /* LES LÉGENDES NE DÉCRIVENT QUE CE QUI EST LÀ : lister les quinze clés
+     connues alors que le fichier en porte trois donnerait un sommaire plus
+     long que le livre. */
+  const legendes: Record<string, { quoi: string; origine: string }> = {};
+  for (const cle of Object.keys(preferences)) legendes[cle] = legendeDe(cle);
+
   const sauvegarde: Sauvegarde = {
     application: 'infonovice-maps',
     version: 1,
     exporte: new Date().toISOString(),
+    quoi: 'Sauvegarde Infonovice Maps. Tout ce qui suit vient de CET appareil'
+      + ' et n’a jamais été envoyé nulle part. La section « legendes » dit ce'
+      + ' que contient chaque bloc et d’où il vient — certains sont saisis par'
+      + ' vous, d’autres appris par l’application au fil de vos trajets.',
+    legendes,
     preferences,
     favoris: await listerFavoris(),
   };

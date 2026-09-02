@@ -1357,6 +1357,24 @@ test('FAVORIS : appui long → ajout, persistance, export JSON, retrait, import'
   expect(contenu.favoris).toHaveLength(1);
   expect(contenu.favoris[0].nom).toBe('8 Rue de la Paix 75002 Paris');
 
+  /* ET IL DIT CE QU'IL CONTIENT (EXPORT-1, 02/09). Armelin : « il contient
+     des repères qui ne sont pas les miens et ne font pas partie des
+     recherches que j'ai faites. » Rien d'étranger n'y était — mais rien ne
+     DISAIT ce qui s'y trouvait : des clés techniques et des valeurs brutes.
+     Le fichier se présente maintenant lui-même. */
+  expect(contenu.quoi, 'le fichier ne dit pas ce qu’il est')
+    .toContain('CET appareil');
+  expect(contenu.legendes, 'aucune légende dans le fichier').toBeDefined();
+  /* CHAQUE BLOC PRÉSENT EST LÉGENDÉ — et rien de plus : un sommaire plus long
+     que le livre n'aide personne. */
+  expect(Object.keys(contenu.legendes).sort())
+    .toEqual(Object.keys(contenu.preferences).sort());
+  for (const [cle, l] of Object.entries(contenu.legendes)) {
+    const legende = l as { quoi: string; origine: string };
+    expect(legende.quoi, `${cle} sans description`).toBeTruthy();
+    expect(legende.origine, `${cle} sans origine`).toBeTruthy();
+  }
+
   // LE RETRAIT vide la liste, ANNONCE ce qu'il a fait, et rend le focus —
   // sans quoi l'usager clavier repart du haut du document.
   await page.getByRole('button', { name: /Retirer 8 Rue de la Paix/ }).click();
