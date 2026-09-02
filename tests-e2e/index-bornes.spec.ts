@@ -354,12 +354,30 @@ async function ouvrirCartoucheBeaune(page: Page): Promise<void> {
   });
   await expect.poll(() => compterRendus(page, 'poi-bornes'), { timeout: 20_000 })
     .toBeGreaterThan(0);
-  const point = await page.evaluate(() => (window as unknown as {
-    __carte: { project(c: [number, number]): { x: number; y: number } };
-  }).__carte.project([4.84, 47.02]));
+  /* ON CLIQUE LÀ OÙ LA PASTILLE EST RÉELLEMENT DESSINÉE, PUIS ON RECOMMENCE
+     SI RIEN NE S'OUVRE (02/09).
+     Projeter une coordonnée théorique tombait à un ou deux pixels du symbole
+     selon la densité d'écran — ce parcours a flanché QUATRE fois en
+     intégration continue, sur des branches sans rapport entre elles, sans
+     jamais flancher en local. Demander à MapLibre où il a posé le point règle
+     la visée ; la reprise règle le MOMENT, car les pastilles se redessinent
+     après un `jumpTo` et le clic peut tomber entre deux rendus.
+     `toPass` rejoue le geste entier plutôt que d'attendre plus longtemps un
+     clic déjà perdu — c'est la leçon de `ouvrirPlanificateur`. */
   const cadre = await page.locator('#carte canvas.maplibregl-canvas').boundingBox();
-  await page.mouse.click(cadre!.x + point.x, cadre!.y + point.y);
-  await expect(page.locator('fiche-borne')).toBeVisible({ timeout: 10_000 });
+  await expect(async () => {
+    const point = await page.evaluate(() => {
+      const c = (window as unknown as { __carte: {
+        project(l: [number, number]): { x: number; y: number };
+        queryRenderedFeatures(o: object): { geometry: { coordinates: [number, number] } }[];
+      } }).__carte;
+      const rendus = c.queryRenderedFeatures({ layers: ['poi-bornes'] });
+      const f = rendus[0];
+      return c.project(f ? f.geometry.coordinates : [4.84, 47.02]);
+    });
+    await page.mouse.click(cadre!.x + point.x, cadre!.y + point.y);
+    await expect(page.locator('fiche-borne')).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
 }
 
 test('les textes du cartouche ne se chevauchent JAMAIS, adresse longue comprise', async ({ page }) => {
