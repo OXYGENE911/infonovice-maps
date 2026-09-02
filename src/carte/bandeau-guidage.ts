@@ -1255,7 +1255,9 @@ export class BandeauGuidage extends HTMLElement {
          entre-temps. Le parcours est donc GARDÉ D'ABORD, puis enrichi.
          `void` assumé : l'enrichissement ne doit rien bloquer, et son échec
          laisse un parcours complet de tout le reste. */
-      void this.#enrichirLeTrajet(`t${this.#departMs}`);
+      void this.#enrichirLeTrajet(
+        `t${this.#departMs}`, [...this.#releves], o?.destination ?? null,
+      );
     } catch {
       /* UNE ÉCRITURE QUI ÉCHOUE SE DIT : perdre en silence un parcours que
          l'usager vient de demander à garder serait le pire des deux. */
@@ -1282,9 +1284,17 @@ export class BandeauGuidage extends HTMLElement {
    * ET SI LE PARCOURS N'EST PLUS LÀ, ON NE LE RECRÉE PAS : il a été effacé
    * pendant l'attente, et c'était un geste.
    */
-  async #enrichirLeTrajet(id: string): Promise<void> {
+  async #enrichirLeTrajet(
+    id: string, releves: readonly ReleveTrajet[],
+    destination: PointGeo | null,
+  ): Promise<void> {
+    /* LES RELEVÉS ET LA DESTINATION SONT PASSÉS, PAS RELUS DANS L'INSTANCE.
+       Un nouveau trajet — ou une simple remise à zéro — vide `#releves` et
+       `#options` ; le faire au milieu de l'attente réseau aurait fait rendre
+       « rien à ajouter » en silence, sur un parcours qu'on venait pourtant de
+       mesurer. */
     const [relief, temperatureC] = await Promise.all([
-      this.#relierLeTrajet(), this.#temperatureALArrivee(),
+      this.#relierLeTrajet(releves), this.#temperatureALArrivee(destination),
     ]);
     if (relief === null && temperatureC === null) return;
     try {
@@ -1498,10 +1508,12 @@ export class BandeauGuidage extends HTMLElement {
    * L'ÉCHEC EST MUET ET BÉNIN : le champ reste absent, l'historique dit « non
    * mesuré », et le parcours s'enregistre quand même.
    */
-  async #relierLeTrajet(): Promise<ReliefTrajet | null> {
-    const duGps = reliefDesReleves(this.#releves);
+  async #relierLeTrajet(
+    releves: readonly ReleveTrajet[],
+  ): Promise<ReliefTrajet | null> {
+    const duGps = reliefDesReleves(releves);
     if (duGps !== null) return duGps;
-    const trace = this.#releves
+    const trace = releves
       .filter((r) => typeof r.lon === 'number' && typeof r.lat === 'number')
       .map((r) => [r.lon!, r.lat!] as [number, number]);
     if (trace.length < 2) return null;
@@ -1532,8 +1544,7 @@ export class BandeauGuidage extends HTMLElement {
    * L'ÉCHEC EST MUET : le champ reste absent, et l'historique dit « non
    * relevée ».
    */
-  async #temperatureALArrivee(): Promise<number | null> {
-    const d = this.#options?.destination;
+  async #temperatureALArrivee(d: PointGeo | null): Promise<number | null> {
     if (!d) return null;
     try {
       const m = await meteoA(d.lon, d.lat, new Date());
