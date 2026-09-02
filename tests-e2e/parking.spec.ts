@@ -305,6 +305,8 @@ test('LA FEUILLE S’OUVRE AU-DESSUS DU ROND « P », qui reste cliquable', asyn
      un autre calque pourrait encore intercepter le doigt. */
   await page.locator('.bg-parking-p').click();
   await expect(feuille).toBeHidden();
+});
+
 /* ================== LES PLACES LIBRES EN DIRECT (PARK-4) ==================
  *
  * Armelin : « certaines villes exposent des API permettant de consulter en

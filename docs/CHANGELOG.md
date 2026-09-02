@@ -2,6 +2,59 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.33.0] — 2026-09-02 — PARK-4 : les places libres, en direct (PR #179)
+
+### Ajouté
+- **La feuille de parkings montre les places réellement libres**, quand la
+  collectivité les publie — avec **l'âge du relevé** et le nom de qui publie.
+  Ces parkings-là passent devant : c'est l'information qu'on cherche en
+  arrivant, et elle vaut mieux qu'une capacité.
+- **« Complet » s'écrit en toutes lettres**, jamais « 0 place » : le premier se
+  lit comme une décision, le second comme une donnée.
+
+### Mesuré, et c'est ce qui a trié les sources
+Armelin donnait deux liens. **Aucun des deux n'était utilisable, et deux
+autres l'étaient** :
+
+| Source | Verdict | Mesure du 02/09 |
+|---|---|---|
+| **Aix-Marseille Provence** | **branchée** | 38 parkings, horodatés à la **minute** |
+| **Nantes Métropole** | **branchée** | 21 parcs-relais, relevés de **3 minutes** |
+| **Issy-les-Moulineaux** (son lien) | **écartée** | « temps réel » depuis le **6 avril 2025** — 17 mois — et tous les parkings à 100 % |
+| **Paris** (son lien) | **rien à brancher** | 125 ouvrages, tarifs, capacités — **aucune occupation** |
+
+**LE PIÈGE QUI VALAIT LA MESURE** : Aix-Marseille horodate en **heure de
+Paris** sans le dire. Lu comme de l'UTC, son relevé tombe deux heures dans le
+futur — et une garde de fraîcheur écrite naïvement le laisse passer. Nantes,
+lui, horodate en ISO avec son fuseau : lui appliquer la même correction
+décalerait deux fois. Les deux cas sont testés, changements d'heure compris.
+
+**LA RÈGLE** : moins d'une heure, sinon rien. Un relevé absent vaut mieux qu'un
+zéro faux — c'est exactement ce qu'Issy publie depuis dix-sept mois.
+
+### Frugalité
+Un appel de plus, et **seulement si une collectivité couvre l'arrivée** : pour
+l'immense majorité des destinations, la carte des emprises répond non et
+personne n'est dérangé. Le résultat est gardé pour tout le trajet. Une ville
+qui ne répond pas n'efface rien : on retombe sur la liste OpenStreetMap.
+
+### Aussi mesuré cette nuit, sans code à la clé
+- **Règles de circulation (DiaLog)** : la plateforme publie un DATEX II
+  national de **100 Mo** et **ignore tout filtre** — `?bbox=` et `?limit=`
+  rendent les mêmes 100 Mo. Inexploitable sans backend, que le projet
+  s'interdit. À rouvrir si DiaLog ajoute un filtrage par emprise.
+- **Limites de tonnage** : la donnée est dans OpenStreetMap et elle est
+  **dense** — 184 tronçons `maxweight` dans 35 × 30 km de Charente, dont 122 à
+  3,5 t. Et elle ne coûterait **aucune requête de plus** : le corridor
+  interroge déjà Overpass le long du tracé. Ce qui manque est le POIDS DU
+  VÉHICULE, qu'aucune source publique ne donne par modèle.
+
+### Tests
+- 17 tests unitaires, dont les deux formes d'horodatage, le relevé d'Issy
+  écarté, et un relevé « dans le futur » qui doit l'être aussi.
+- 2 parcours : l'ordre d'affichage avec l'âge du relevé, et le relevé périmé
+  qui ramène la phrase d'avant.
+
 ## [1.32.0] — 2026-09-02 — Savoir ce qu'on exécute, et sept défauts (PR #178)
 
 ### D'ABORD : la version se lit, et la mise à jour se force — VERSION-1

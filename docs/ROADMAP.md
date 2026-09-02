@@ -543,6 +543,40 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       refermable ; feuille de parking au-dessus de son bouton ; écart
       hors-route selon le profil (30 m à pied) ; étiquettes blanches cernées de
       noir sur imagerie ; les filtres de recharge passent dans l'entonnoir.
+- [x] PR #179 — PARK-4 (02/09) : les places libres en direct, là où une
+      collectivité les publie. Aix-Marseille (à la minute) et Nantes (à
+      l'heure) branchées ; Issy écartée (relevé d'avril 2025, tous pleins) et
+      Paris n'expose pas d'occupation. Piège payé : Aix-Marseille horodate en
+      heure de Paris sans le dire.
+- [ ] PONT-1 — AVERTIR DES LIMITES DE TONNAGE. Demandé le 02/09 (« ma VF8
+      pèse 2 520 kg et peut être dangereuse sur certains ponts »). MESURÉ : la
+      donnée est dans OSM et elle est dense — 184 tronçons `maxweight` dans
+      35 × 30 km de Charente, dont 122 à 3,5 t. Et elle ne coûterait AUCUNE
+      requête de plus : le corridor interroge déjà Overpass le long du tracé.
+      CE QUI MANQUE est le POIDS DU VÉHICULE : aucune source publique
+      française ne le donne par modèle, il faudra un champ déclaré dans
+      « Mon véhicule ». Sans poids déclaré, aucun avertissement.
+- [ ] RÈGLES DE CIRCULATION — DiaLog, demandé le 02/09. MESURÉ ET BLOQUÉ pour
+      l'instant : la plateforme publie un DATEX II national de **100 Mo**, et
+      elle IGNORE tout filtre (`?bbox=`, `?limit=` rendent les mêmes 100 Mo).
+      Inexploitable sans backend, que le projet s'interdit. À rouvrir si
+      DiaLog ajoute un filtrage par emprise — la demande vaut la peine d'être
+      faite auprès d'eux.
+- [ ] MODE MOTO — demandé le 02/09 (remontée d'interfile jusqu'à 50-70 km/h en
+      Île-de-France). À CADRER AVANT DE CODER : le moteur d'itinéraire public
+      n'a pas de profil moto, et l'interfile est une TOLÉRANCE encadrée, pas
+      un droit — promettre un temps de parcours qui la suppose engagerait
+      l'application sur une pratique dont la légalité varie selon les
+      départements. Piste honnête : un profil qui ne change pas le TRACÉ mais
+      annonce une fourchette de temps quand le trafic est dense, en disant
+      explicitement sur quelle hypothèse.
+- [ ] VÉHICULES MANQUANTS — liste donnée le 02/09 (Alpine A390, MG Cyberster,
+      Smart #5, BYD Atto 2 / Atto 3 EVO / Seal U / Tang, Cupra Raval,
+      VW ID.Polo, DS N°7 et DS 3 E-Tense, variantes Tesla par année, XPENG
+      L03). NON AJOUTÉS CETTE NUIT, ET C'EST DÉLIBÉRÉ : dès le premier modèle
+      (A390), deux sources françaises donnaient 150 kW et 190 kW de charge
+      rapide. Ces chiffres pilotent la planification des arrêts ; il faut les
+      recouper modèle par modèle, pas les recopier vite.
 - [ ] À SUIVRE — déplacer « Historique » du planificateur vers le Menu, comme
       demandé le 02/09. Non fait dans la PR #178 : la page vit dans le
       composant du planificateur et son extraction est un vrai remaniement —
