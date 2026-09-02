@@ -154,22 +154,18 @@ export class FiltrePoi extends HTMLElement {
       </button>
       <div class="poi-panneau" hidden role="group"
         aria-label="Lieux à afficher autour de vous">
-        <p class="poi-panneau-titre">Autour de moi</p>
-        <div class="poi-familles">
-          ${CATEGORIES.map((c) => `
-            <button type="button" class="poi-famille" data-cle="${c.cle}"
-              aria-pressed="false" style="--teinte:${c.couleur}">
-              <!-- LE DESSIN DE LA CARTE, PAS UN ROND (POI-5, 31/08) : la
-                   pastille du filtre et celle de la carte sont LE MÊME
-                   dessin — c'est ce qui fait du panneau une légende. -->
-              <span class="poi-pastille" aria-hidden="true">${svgPastille(
-    MOTIF_DE_FAMILLE[c.cle] ?? 'point', c.couleur, 20,
-  )}</span>${c.libelle}
-            </button>`).join('')}
-        </div>
-        <!-- LE BOUTON RESTE, MAIS IL NE COMMANDE PLUS : la recherche suit la
-             carte. Il sert à REDEMANDER une zone déjà couverte — après une
-             panne du service, ou pour rafraîchir un quartier. -->
+        <!-- LA RECHARGE EST EN TÊTE (ERGO-4, 02/09). Armelin : « le bouton
+             Recharge et services est écrit tout en bas et sans aucun logo. On
+             voit à peine que c'est un menu cliquable. Un menu invisible est un
+             menu que les utilisateurs ne peuvent pas trouver. Il doit être
+             affiché tout en haut avec les POI bornes de recharge qui doivent
+             également être mis en avant tout en haut. »
+             IL A RAISON, ET C'EST MOI QUI L'AI ENTERRÉ : ERGO-3 a déménagé ce
+             panneau dans l'entonnoir et l'a posé À LA SUITE du reste, sous
+             quatorze pastilles et deux boutons. Déplacer sans hiérarchiser,
+             c'est cacher. C'est d'ailleurs la raison d'être de cette
+             application : trouver où recharger. -->
+        <p class="poi-panneau-titre">Recharge</p>
         <!-- LA PUCE DES BORNES (BORNES-4). Armelin : « une nouvelle
              suggestion de POI [...] les bornes de recharge ». Elle ne
              cherche PAS dans Overpass : elle actionne la couche IRVE du
@@ -203,8 +199,6 @@ export class FiltrePoi extends HTMLElement {
           <span class="poi-rappel-texte"></span>
           <button type="button" class="poi-rappel-tout">Tout afficher</button>
         </div>
-        <button type="button" class="poi-chercher">Chercher à nouveau ici</button>
-        <p class="poi-filtre-etat" role="status"></p>
         <!-- LES FILTRES DE RECHARGE VIENNENT ICI (ERGO-3, 02/09).
              LE RAISONNEMENT N'EST PAS DE MOI, ET IL EST JUSTE. Un collègue
              d'Armelin : « lorsqu'on clique sur itinéraire, on a le bouton
@@ -220,6 +214,25 @@ export class FiltrePoi extends HTMLElement {
              recharge » et le choix des réseaux étaient deux moitiés du même
              geste, séparées par tout l'écran. -->
         <div class="poi-hote-recharge"></div>
+
+        <p class="poi-panneau-titre poi-titre-second">Autour de moi</p>
+        <div class="poi-familles">
+          ${CATEGORIES.map((c) => `
+            <button type="button" class="poi-famille" data-cle="${c.cle}"
+              aria-pressed="false" style="--teinte:${c.couleur}">
+              <!-- LE DESSIN DE LA CARTE, PAS UN ROND (POI-5, 31/08) : la
+                   pastille du filtre et celle de la carte sont LE MÊME
+                   dessin — c'est ce qui fait du panneau une légende. -->
+              <span class="poi-pastille" aria-hidden="true">${svgPastille(
+    MOTIF_DE_FAMILLE[c.cle] ?? 'point', c.couleur, 20,
+  )}</span>${c.libelle}
+            </button>`).join('')}
+        </div>
+        <!-- LE BOUTON RESTE, MAIS IL NE COMMANDE PLUS : la recherche suit la
+             carte. Il sert à REDEMANDER une zone déjà couverte — après une
+             panne du service, ou pour rafraîchir un quartier. -->
+        <button type="button" class="poi-chercher">Chercher à nouveau ici</button>
+        <p class="poi-filtre-etat" role="status"></p>
       </div>`;
 
     const hote = this.querySelector<HTMLElement>('.poi-hote-recharge');

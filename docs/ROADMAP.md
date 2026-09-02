@@ -581,10 +581,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       (A390), deux sources françaises donnaient 150 kW et 190 kW de charge
       rapide. Ces chiffres pilotent la planification des arrêts ; il faut les
       recouper modèle par modèle, pas les recopier vite.
-- [ ] À SUIVRE — déplacer « Historique » du planificateur vers le Menu, comme
-      demandé le 02/09. Non fait dans la PR #178 : la page vit dans le
-      composant du planificateur et son extraction est un vrai remaniement —
-      à faire proprement plutôt qu'à moitié.
+- [x] PR #181 — ERGO-4 (02/09) : six menus rendus atteignables. Recharge en
+      tête de l'entonnoir avec son picto ; panneau borné et défilant sur
+      mobile ; historique extrait vers le Menu ; menu du trajet réduit à deux
+      entrées permanentes ; version tout en bas ; clic dans le vide qui
+      referme, sans casser le va-et-vient sur les points.
 - [x] PR #177 — CARTE-1 / HIST-1 / BANDEAU-1 / PARK-2 / VOIX-3 (01/09) : les
       cinq retours du premier essai à pied. Carte noire après le trajet (perte
       de contexte WebGL, non gérée) ; historique illisible en sombre

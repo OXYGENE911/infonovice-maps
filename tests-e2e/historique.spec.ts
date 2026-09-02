@@ -52,8 +52,10 @@ test('LES PARCOURS ENREGISTRÉS SE COMPARENT CÔTE À CÔTE', async ({ page }) =
   await page.reload();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
 
-  await ouvrirVolet(page, '.iti');
-  await page.getByRole('button', { name: /Historique/ }).click();
+  /* L'HISTORIQUE VIT DANS LE MENU DEPUIS ERGO-3/4 (02/09) : on le consulte
+     SANS avoir planifié quoi que ce soit. Le raccourci demande au DOM où il
+     est rangé — un déménagement de plus ne touchera toujours qu'un fichier. */
+  await ouvrirVolet(page, '.hist');
 
   const lignes = page.locator('.iti-hist-ligne');
   await expect(lignes).toHaveCount(2, { timeout: 10_000 });
@@ -93,8 +95,10 @@ test('OUBLIER UN PARCOURS LE RETIRE POUR DE BON', async ({ page }) => {
   await semer(page);
   await page.reload();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
-  await ouvrirVolet(page, '.iti');
-  await page.getByRole('button', { name: /Historique/ }).click();
+  /* L'HISTORIQUE VIT DANS LE MENU DEPUIS ERGO-3/4 (02/09) : on le consulte
+     SANS avoir planifié quoi que ce soit. Le raccourci demande au DOM où il
+     est rangé — un déménagement de plus ne touchera toujours qu'un fichier. */
+  await ouvrirVolet(page, '.hist');
 
   await expect(page.locator('.iti-hist-ligne')).toHaveCount(2, { timeout: 10_000 });
   await page.locator('.iti-hist-ligne').first().locator('input').check();
@@ -130,8 +134,10 @@ test('CONTRIBUER MONTRE LE FICHIER, ET AUCUNE ADRESSE N’Y SURVIT', async ({ pa
   await page.reload();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
 
-  await ouvrirVolet(page, '.iti');
-  await page.getByRole('button', { name: /Historique/ }).click();
+  /* L'HISTORIQUE VIT DANS LE MENU DEPUIS ERGO-3/4 (02/09) : on le consulte
+     SANS avoir planifié quoi que ce soit. Le raccourci demande au DOM où il
+     est rangé — un déménagement de plus ne touchera toujours qu'un fichier. */
+  await ouvrirVolet(page, '.hist');
   const lignes = page.locator('.iti-hist-ligne');
   await expect(lignes).toHaveCount(2, { timeout: 10_000 });
 

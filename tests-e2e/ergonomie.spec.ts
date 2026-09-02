@@ -199,40 +199,47 @@ test('Échap referme aussi le menu des réglages', async ({ page }) => {
   await expect(page.locator('details.reglages[open]')).toHaveCount(0);
 });
 
-test('un clic sur la carte NE referme PAS le planificateur', async ({ page }) => {
-  /* CE PARCOURS A CHANGÉ DE SENS LE 27/08/2026, et le motif compte.
-     Le rail portait des volets TRANSITOIRES qu'un clic à côté refermait — le
-     bon comportement pour un formulaire qu'on remplit puis qu'on quitte.
-     Depuis que le planificateur ABRITE les couches de la carte et le profil du
-     véhicule, il est devenu une SURFACE DE TRAVAIL : on y coche « Bornes
-     électriques », on inspecte une borne, on en coche une autre. Le refermer à
-     chaque clic obligerait à le rouvrir entre chaque geste — c'est exactement
-     le défaut relevé le 26/08 sur ce même volet. */
+test('UN CLIC DANS LE VIDE REFERME le planificateur', async ({ page }) => {
+  /* CE PARCOURS A CHANGÉ DE SENS DEUX FOIS, et les deux motifs comptent.
+     Le 27/08, il est passé de « le clic referme » à « le clic NE referme
+     PAS » : le planificateur abritait les couches, il était devenu une
+     SURFACE DE TRAVAIL — on coche « Bornes électriques », on inspecte une
+     borne, on en coche une autre, et le refermer entre chaque geste était le
+     défaut relevé la veille.
+     LE 02/09, IL REPASSE DE L'AUTRE CÔTÉ, à la demande d'un collègue
+     d'Armelin : « ce n'est pas pratique de cliquer sur le même bouton pour
+     fermer le menu ouvert […] fermer une fenêtre ouverte en cliquant dans le
+     vide sur la carte, ce qui laisserait deux moyens d'accès. »
+     ET LE VA-ET-VIENT DE 2027 EST PRÉSERVÉ, parce que la règle porte sur LE
+     VIDE : un clic sur une de nos couches ne referme rien. Le parcours
+     suivant le garde. */
   await ouvrirLaCarte(page);
 
   await entree(page, 'Itinéraire').click();
   await expect(page.locator('.maplibregl-ctrl-top-left > div > * > details[open]')).toHaveCount(1);
   await page.mouse.click(640, 500);   // plein centre, loin des contrôles
   await expect(page.locator('.maplibregl-ctrl-top-left > div > * > details[open]'),
-    'le planificateur s’est évanoui au premier clic sur la carte').toHaveCount(1);
+    'le clic dans le vide n’a pas refermé le planificateur').toHaveCount(0);
 
-  // Il se ferme par Échap, ou par son propre bouton.
+  // Et les deux autres chemins restent : Échap, et son propre bouton.
+  await entree(page, 'Itinéraire').click();
+  await expect(page.locator('.maplibregl-ctrl-top-left > div > * > details[open]')).toHaveCount(1);
   await page.keyboard.press('Escape');
   await expect(page.locator('.maplibregl-ctrl-top-left > div > * > details[open]')).toHaveCount(0);
 });
 
-test('mais un clic sur la carte NE referme PAS le menu des réglages', async ({ page }) => {
-  /* LE MENU EST UNE SURFACE DE TRAVAIL, pas un volet transitoire. On y active
-     une couche, on inspecte un point sur la carte, on en active une autre :
-     le refermer à chaque clic obligerait à le rouvrir entre chaque geste.
-     Cinq parcours écrits AVANT ce menu encodaient déjà ce va-et-vient, et la
-     CI les a vus rougir le jour où le menu s'est mis à disparaître. */
+test('ET LE MENU DES RÉGLAGES AUSSI', async ({ page }) => {
+  /* Même renversement, même motif (ERGO-4, 02/09) : deux moyens de fermer
+     valent mieux qu'un. Ce que le parcours défendait — le va-et-vient
+     « j'active une couche, j'inspecte un point, j'en active une autre » — est
+     préservé autrement : la règle ne joue que dans LE VIDE. */
   await ouvrirLaCarte(page);
   await ouvrirMenu(page);
 
   await page.mouse.click(640, 500);
   await expect(page.locator('details.reglages[open]'),
-    'le menu s’est évanoui au premier clic sur la carte').toHaveCount(1);
+    'le clic dans le vide n’a pas refermé le menu').toHaveCount(0);
+  await ouvrirMenu(page);
 
   // Il se ferme par Échap, par son bouton, ou en ouvrant le planificateur.
   await entree(page, 'Itinéraire').click();

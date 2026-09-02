@@ -2,6 +2,8 @@
 // Tout ce qui est TESTABLE hors navigateur vit dans style-ign.ts ; ce module
 // ne fait que l'assemblage MapLibre.
 import { Map as CarteMapLibre, NavigationControl, GeolocateControl, ScaleControl, Marker, Popup, setWorkerUrl } from 'maplibre-gl';
+import { PanneauHistorique } from './panneau-historique';
+import { refermerPanneaux } from './panneaux';
 import { VERSION, libelleVersion, forcerMiseAJour } from '../lib/version';
 import 'maplibre-gl/dist/maplibre-gl.css';
 // LE WORKER DE MAPLIBRE DOIT ÊTRE ÉMIS PAR LE BUILD. MapLibre 6 le charge en
@@ -133,6 +135,32 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   perdue.append(motPerdue, boutonPerdue, versionPerdue);
   conteneur.appendChild(perdue);
 
+  /* CLIQUER DANS LE VIDE REFERME (ERGO-4, 02/09). Un collègue d'Armelin :
+     « ce n'est pas pratique de cliquer sur le même bouton pour fermer le menu
+     ouvert. Il préconise que ce soit aussi possible de fermer une fenêtre
+     ouverte en cliquant dans le vide sur la carte. Ce qui laisserait deux
+     moyens d'accès pour fermer un menu. » Armelin le reprend à son compte.
+     DANS LE VIDE, ET PAS SUR UN POINT : c'est sa formulation, et elle protège
+     un usage réel — cocher une couche, inspecter un point, en cocher une
+     autre. Fermer le panneau au premier POI cliqué casserait ce va-et-vient.
+     On ne referme donc que si le clic ne touche AUCUNE de nos couches.
+     LES ÉTIQUETTES IGN NE COMPTENT PAS : ce sont des noms de villes et des
+     numéros de route, dessinés par le fond ; cliquer dessus, c'est cliquer
+     dans le vide. */
+  /* ON ÉNUMÈRE LE FOND, PAS NOS COUCHES, et c'est la leçon d'un premier jet
+     raté. La liste « poi-, iti-, trafic-, bg- » oubliait `filtre-poi-points`,
+     `itineraire-trait` et `variantes-trait` — un parcours l'a montré en
+     refermant le menu sur un clic de POI. Une liste de CE QU'ON POSSÈDE se
+     périme au prochain calque ajouté ; une liste du FOND, elle, ne bouge que
+     si l'on change de fond. Tout ce qui n'est pas le fond est à nous. */
+  const FOND = /^(num-route-|toponyme-)/;
+  carte.on('click', (e) => {
+    const surQuelqueChose = carte.queryRenderedFeatures(e.point)
+      .some((f) => !FOND.test(f.layer.id));
+    if (surQuelqueChose) return;
+    refermerPanneaux(document);
+  });
+
   carte.on('webglcontextlost', () => { perdue.hidden = false; });
   /* ET S'IL LA REND, ON SE TAIT : MapLibre réapplique alors le style, ce qui
      rejoue `style.load` — les étiquettes, le tracé, les bornes et les POI se
@@ -200,36 +228,6 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   };
   menu.ajouter('Affichage', selecteur);
 
-  /* LA VERSION SE LIT, ET LA MISE À JOUR SE FORCE (VERSION-1, 02/09).
-     Armelin, devant un écran noir : « je ne sais pas si j'ai la bonne version
-     en cache ». Il avait raison de douter — une PWA garde son paquet jusqu'à
-     ce que le service worker cède la place, et rien ne disait laquelle
-     tournait.
-     DANS LE MENU, ET NON DANS LA BULLE « i » : c'était mon premier jet, et
-     MapLibre RECONSTRUIT sa bulle d'attribution à chaque changement de
-     contenu — elle se refermait sous le doigt, mesuré au parcours. Le menu
-     est un composant qu'on maîtrise, et il reste tout aussi atteignable quand
-     la carte ne se dessine plus : il vit dans l'en-tête, pas dans le canevas. */
-  const boiteVersion = document.createElement('div');
-  boiteVersion.className = 'reglages-version';
-  const motVersion = document.createElement('p');
-  motVersion.className = 'reglages-version-mot';
-  motVersion.textContent = libelleVersion();
-  const majVersion = document.createElement('button');
-  majVersion.type = 'button';
-  majVersion.className = 'reglages-maj';
-  majVersion.textContent = 'Mettre à jour l’application';
-  majVersion.addEventListener('click', () => {
-    majVersion.disabled = true;
-    majVersion.textContent = 'Mise à jour…';
-    void forcerMiseAJour().finally(() => { window.location.reload(); });
-  });
-  const notePlus = document.createElement('p');
-  notePlus.className = 'reglages-version-note';
-  notePlus.textContent = 'Vide le cache et recharge la dernière version'
-    + ' publiée. Vos favoris et votre historique ne sont pas touchés.';
-  boiteVersion.append(motVersion, majVersion, notePlus);
-  menu.ajouter('Version', boiteVersion);
 
   /* LES BORNES ET LES SERVICES SONT UNE PAGE DU PLANIFICATEUR.
      D'abord passés à gauche le 26/08 — « la recherche de point de charge
@@ -384,6 +382,52 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   const favoris = new PanneauFavoris();
   favoris.carte = carte;
   menu.ajouter('Mes lieux', favoris);
+
+  /* L'HISTORIQUE REJOINT LE MENU (ERGO-4, 02/09), demandé deux fois. On le
+     consulte SANS avoir planifié quoi que ce soit — c'est même à cela qu'il
+     sert, comparer d'une semaine à l'autre. Le ranger derrière « Itinéraire »
+     supposait un trajet en cours ; et son départ y libère la place qu'Armelin
+     réclame : « que tout le menu s'affiche en entier à l'écran ». */
+  menu.ajouter('', new PanneauHistorique());
+
+  /* LA VERSION VA TOUT EN BAS (ERGO-4, 02/09). Armelin : « la version est
+     affichée en plein milieu des options. Il faudrait que la section Version
+     soit affichée tout en bas et laisser les menus Fonds, Trafic et Favoris
+     au-dessus. » Il a raison : on ouvre ce menu pour régler l'affichage, pas
+     pour lire un numéro de version — celui-ci se consulte une fois, quand on
+     doute. Le poser au milieu, c'était le faire lire à tout le monde à chaque
+     ouverture. */
+  /* LA VERSION SE LIT, ET LA MISE À JOUR SE FORCE (VERSION-1, 02/09).
+     Armelin, devant un écran noir : « je ne sais pas si j'ai la bonne version
+     en cache ». Il avait raison de douter — une PWA garde son paquet jusqu'à
+     ce que le service worker cède la place, et rien ne disait laquelle
+     tournait.
+     DANS LE MENU, ET NON DANS LA BULLE « i » : c'était mon premier jet, et
+     MapLibre RECONSTRUIT sa bulle d'attribution à chaque changement de
+     contenu — elle se refermait sous le doigt, mesuré au parcours. Le menu
+     est un composant qu'on maîtrise, et il reste tout aussi atteignable quand
+     la carte ne se dessine plus : il vit dans l'en-tête, pas dans le canevas. */
+  const boiteVersion = document.createElement('div');
+  boiteVersion.className = 'reglages-version';
+  const motVersion = document.createElement('p');
+  motVersion.className = 'reglages-version-mot';
+  motVersion.textContent = libelleVersion();
+  const majVersion = document.createElement('button');
+  majVersion.type = 'button';
+  majVersion.className = 'reglages-maj';
+  majVersion.textContent = 'Mettre à jour l’application';
+  majVersion.addEventListener('click', () => {
+    majVersion.disabled = true;
+    majVersion.textContent = 'Mise à jour…';
+    void forcerMiseAJour().finally(() => { window.location.reload(); });
+  });
+  const notePlus = document.createElement('p');
+  notePlus.className = 'reglages-version-note';
+  notePlus.textContent = 'Vide le cache et recharge la dernière version'
+    + ' publiée. Vos favoris et votre historique ne sont pas touchés.';
+  boiteVersion.append(motVersion, majVersion, notePlus);
+  menu.ajouter('Version', boiteVersion);
+
 
   /* UN SEUL volet ouvert à la fois, Échap et clic extérieur pour refermer.
      Le comportement vit dans panneaux.ts, et il reconnaît les volets de tête

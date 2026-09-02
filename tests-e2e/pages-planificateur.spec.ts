@@ -167,18 +167,22 @@ test('PIC-1 : chaque entrée de menu porte son picto — et le libellé reste en
   await ouvrirTrajet(page);
 
   const rangee = page.locator('.iti-vers');
-  /* SEPT DEPUIS ERGO-3 (02/09) : « Recharge et services » a rejoint
-     l'entonnoir des filtres — c'est un filtre de POI, il se règle avec les
-     autres filtres (remarque d'un collègue d'Armelin, reprise par lui). Le
-     menu du trajet s'allège d'autant, ce qui était le but. */
-  await expect(rangee).toHaveCount(7);
-  for (let i = 0; i < 7; i += 1) {
+  /* SIX DEPUIS ERGO-4 (02/09), et c'est le but même de la demande : Armelin
+     voulait « que tout le menu s'affiche en entier à l'écran […] afin que je
+     n'aie pas à scroller vers le bas. Car des options masquées sont des
+     options potentiellement introuvables. » « Recharge et services » est parti
+     dans l'entonnoir (c'est un filtre de POI), « Historique » dans le Menu (on
+     le consulte sans trajet). Restent DEUX entrées permanentes — « Mon
+     véhicule » et « Options du trajet » — et quatre qui n'existent qu'avec un
+     trajet calculé. */
+  await expect(rangee).toHaveCount(6);
+  for (let i = 0; i < 6; i += 1) {
     await expect(rangee.nth(i).locator('svg.picto-menu'),
       'une rangée de menu sans picto').toHaveCount(1);
   }
   // Les libellés n'ont pas bougé d'une lettre : le sens reste dans le texte.
   await expect(page.locator('.iti-vers span:first-of-type')).toHaveText([
-    'Mon véhicule', 'Options du trajet', 'Historique',
+    'Mon véhicule', 'Options du trajet',
     'Arrêts de recharge', 'Lieux d’exception', 'Feuille de route', 'Partager ou exporter',
   ]);
 
