@@ -30,6 +30,7 @@ import {
   aRenonce, delaiClientMs, respirer, ECHECS_AVANT_ABANDON,
 } from './troncons';
 import { versAffectations, type AffectationTrajet } from './affectation';
+import { versInterfiles, type SectionInterfile } from './interfile';
 
 export interface Corridor {
   limites: LimiteTrajet[];
@@ -39,6 +40,10 @@ export interface Corridor {
   affectations: AffectationTrajet[];
   /** Les passages dont le tonnage est limité (PONT-1). */
   tonnages: LimiteTonnage[];
+  /* LES SECTIONS OÙ L'INTERFILE EST PERMISE (MOTO-1, 02/09). Elles se lisent
+     dans la MÊME réponse : les chemins sont déjà là, avec leurs tags — on ne
+     lisait simplement pas `lanes` ni `oneway`. Zéro requête de plus. */
+  interfiles: SectionInterfile[];
 }
 
 /* L'ÉCART TOLÉRÉ EN SIMPLIFIANT LE TRACÉ, en mètres. Huit : bien SOUS le plus
@@ -118,13 +123,14 @@ export function versCorridor(brut: unknown, trace: readonly [number, number][]):
     giratoires: versGiratoires(liste, trace),
     affectations: versAffectations(liste, trace),
     tonnages: versTonnages(brut, trace as [number, number][]),
+    interfiles: versInterfiles(brut, trace as [number, number][]),
   };
 }
 
 /** Vide — ce que rend un corridor dont on n'a rien pu relever. */
 export const CORRIDOR_VIDE: Corridor = {
   limites: [], sorties: [], destinations: [], giratoires: [], affectations: [],
-  tonnages: [],
+  tonnages: [], interfiles: [],
 };
 
 /**

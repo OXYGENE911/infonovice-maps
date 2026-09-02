@@ -24,6 +24,7 @@ import type { Map as CarteMapLibre } from 'maplibre-gl';
 import {
   tonnagesInterdits, phraseTonnage, type LimiteTonnage,
 } from '../lib/tonnage';
+import { phraseInterfile, type SectionInterfile } from '../lib/interfile';
 import {
   lisserCap, capDeBoussole, type ModeOrientation,
 } from '../lib/orientation';
@@ -243,6 +244,20 @@ export class BandeauGuidage extends HTMLElement {
   }
 
   set masseVehiculeKg(m: number | null) { this.#masseKg = m; }
+
+  /* L'INTERFILE (MOTO-1, 02/09), et le même contrat que les tonnages : les
+     deux ensemble ou rien. Sans « deux-roues » coché, les sections restent
+     muettes ; sans sections relevées, le mode moto n'a rien à dire. */
+  #interfiles: readonly SectionInterfile[] = [];
+
+  #moto = false;
+
+  /** Les sections DÉJÀ annoncées — on ne répète pas l'A86 à chaque fixe. */
+  #interfilesDites = new Set<number>();
+
+  set interfiles(s: readonly SectionInterfile[]) { this.#interfiles = s; }
+
+  set moto(v: boolean) { this.#moto = v; }
 
   /* LES REPÈRES CARTOGRAPHIÉS ONT-ILS MANQUÉ ? (CORRIDOR-1, 31/08)
      Leur absence était TOTALEMENT muette : ni panneau de vitesse, ni numéro
@@ -1387,6 +1402,36 @@ export class BandeauGuidage extends HTMLElement {
     }
   }
 
+  /**
+   * Annonce l'entrée sur une section où l'interfile est permise (MOTO-1).
+   *
+   * ELLE NE SE DIT QU'À QUI ROULE EN DEUX-ROUES, et une seule fois par
+   * section : `#interfilesDites` retient celles qu'on a nommées. Une alerte
+   * répétée à chaque fixe cesse d'alerter — c'est la leçon des tonnages.
+   *
+   * TROIS CENTS MÈTRES AVANT, et non mille comme un pont : un pont se
+   * contourne et demande une décision anticipée ; une section d'interfile se
+   * prend ou non sur place, et l'annoncer un kilomètre trop tôt la ferait
+   * oublier avant d'y être.
+   *
+   * ELLE NE SE DIT PAS À VOIX HAUTE. C'est une information de contexte, pas
+   * de sécurité — contrairement à un pont limité à deux tonnes sous un
+   * véhicule qui en pèse deux et demie. Une voix qui parle d'interfile
+   * pendant qu'on remonte les files ferait exactement ce qu'il ne faut pas :
+   * détourner l'attention au pire moment.
+   */
+  #majInterfile(e: EtatGuidage): void {
+    if (!this.#moto || e.horsRoute) return;
+    for (const s of this.#interfiles) {
+      const devant = s.debutM - e.avancementM;
+      if (devant < 0 || devant > 300) continue;
+      if (this.#interfilesDites.has(s.debutM)) continue;
+      this.#interfilesDites.add(s.debutM);
+      this.#alerte(phraseInterfile(s));
+      return;
+    }
+  }
+
   /** Ouvre la feuille des parkings — UNE requête Overpass, au clic. */
   async #ouvrirParkings(): Promise<void> {
     const feuille = this.querySelector<HTMLElement>('.bg-parkings');
@@ -1598,6 +1643,8 @@ export class BandeauGuidage extends HTMLElement {
     this.#placesLibres = null;
     this.#tonnages = [];
     this.#tonnagesDits.clear();
+    this.#interfiles = [];
+    this.#interfilesDites.clear();
     this.#parkingRegle = false;
     this.#parkingsOfferts = false;
     this.#fermerParkings();
@@ -2373,6 +2420,7 @@ export class BandeauGuidage extends HTMLElement {
     this.#majGiratoire(e);
     this.#majParking(e);
     this.#majTonnage(e);
+    this.#majInterfile(e);
     this.#majArrivee(e);
 
     /* L'ARRIVÉE RÉELLE (décision d'Armelin du 29/08) : l'heure affichée

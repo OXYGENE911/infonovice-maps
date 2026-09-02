@@ -382,3 +382,55 @@ test('à pleine charge, il ne s’excuse de rien', async ({ page }) => {
   await expect(page.locator('.veh-bilan-charge')).toContainText('à pleine charge');
   await expect(page.locator('.veh-bilan-charge')).not.toContainText('pas à pleine');
 });
+
+/* LE MODE DEUX-ROUES (MOTO-1, 02/09).
+ *
+ * Armelin : « ajouter un mode Moto avec l'interfile ». Il ne change NI le
+ * tracé — le moteur d'itinéraire public n'a pas de profil moto — NI l'heure
+ * d'arrivée : le temps qu'un motard gagne dépend de son allure entre les
+ * files, donc d'un choix qui engage sa sécurité. Il allume l'annonce des
+ * sections où la remontée est permise, avec les conditions du décret. */
+
+test('LE MODE DEUX-ROUES SE COCHE, SE GARDE, et dit sur quoi il se fonde', async ({ page }) => {
+  await ouvrirVehicule(page);
+
+  const moto = page.getByRole('checkbox', { name: 'Je roule en deux-roues' });
+  await expect(moto).not.toBeChecked();
+
+  /* LA NOTE CITE LE TEXTE, pas une impression : une application qui parle
+     d'une manœuvre routière doit dire d'où elle tient sa règle. */
+  const note = page.locator('.veh-note-moto');
+  await expect(note).toContainText('décret n° 2025-33');
+  await expect(note).toContainText('70 km/h');
+
+  /* ET ELLE DIT CE QU'ELLE NE FAIT PAS. Sans cette phrase, cocher la case
+     laisserait croire à un itinéraire ou à une heure d'arrivée différents. */
+  await expect(note).toContainText('ne change ni l’itinéraire ni l’heure');
+
+  await moto.check();
+
+  /* ON ATTEND QUE LA BASE AIT PRIS. L'écriture est asynchrone et lancée sans
+     être attendue (`void ecrirePreference`) : recharger dans la
+     milliseconde qui suit le clic courserait l'écriture, et le parcours
+     échouerait sur une race, pas sur un défaut. */
+  await expect.poll(() => page.evaluate(() => new Promise<boolean>((ok) => {
+    const d = indexedDB.open('infonovice-maps', 2);
+    d.onsuccess = () => {
+      const r = d.result.transaction('preferences', 'readonly')
+        .objectStore('preferences').get('vehicule');
+      r.onsuccess = () => ok(
+        (r.result as { vehicule?: { moto?: boolean } } | undefined)?.vehicule?.moto === true,
+      );
+      r.onerror = () => ok(false);
+    };
+    d.onerror = () => ok(false);
+  })), { timeout: 10_000, message: 'le choix « deux-roues » n’a pas atteint la base' })
+    .toBe(true);
+
+  /* LE CHOIX SURVIT AU RECHARGEMENT : c'est un fait sur le véhicule, pas un
+     réglage d'une session. */
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await ouvrirVolet(page, '.vehicule');
+  await expect(page.getByRole('checkbox', { name: 'Je roule en deux-roues' })).toBeChecked();
+});

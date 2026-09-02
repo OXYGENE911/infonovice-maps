@@ -50,6 +50,11 @@ export interface Vehicule {
   puissanceFroidKw?: number;
   /** Bridage BMS de la charge DC en canicule (air ≥ 35 °C), en kW. */
   puissanceChaudKw?: number;
+  /* DEUX-ROUES (MOTO-1, 02/09). Armelin : « ajouter un mode Moto avec
+     l'interfile ». Ce champ ne change ni le tracé — le moteur public n'a pas
+     de profil moto — ni l'heure d'arrivée. Il ALLUME l'annonce des sections
+     où la remontée d'interfile est permise, avec ses conditions. */
+  moto?: boolean;
 }
 
 /** Ramène une valeur dans [0, max] — les saisies humaines sont une frontière système. */
@@ -164,6 +169,16 @@ export function consommationsDepuisEssais(
  * l'avertissement de tonnage n'a besoin que de ce chiffre-là. Attrapé par un
  * parcours, pas au volant.
  */
+export function estUneMoto(memoire: unknown): boolean {
+  const m = (memoire ?? {}) as Record<string, unknown>;
+  const brut = (m['vehicule'] ?? {}) as Record<string, unknown>;
+  return brut['moto'] === true;
+}
+
+/* LE MODE MOTO SE LIT SEUL, comme la masse. Passer par le profil complet
+   demanderait une batterie et une consommation renseignées, et une moto
+   thermique n'en a pas — l'usager qui coche « je roule en deux-roues »
+   n'aurait alors rien vu paraître. */
 export function masseDeclaree(memoire: unknown): number | null {
   const m = (memoire ?? {}) as Record<string, unknown>;
   const brut = (m['vehicule'] ?? {}) as Record<string, unknown>;

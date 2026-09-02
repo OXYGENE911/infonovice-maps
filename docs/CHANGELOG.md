@@ -2,6 +2,37 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.44.0] — 2026-09-02 — MOTO-1
+
+### Ajouté
+- **Mode deux-roues** (Mon véhicule → « Je roule en deux-roues ») : pendant le
+  suivi, l'application annonce les sections du trajet où la **remontée
+  d'interfile est permise**, 300 m avant d'y entrer, avec la longueur de la
+  section et les deux plafonds d'allure.
+- Zéro requête de plus : les sections se lisent dans la MÊME réponse Overpass
+  que les limites de vitesse et les tonnages. Les chemins portaient déjà
+  `lanes` et `oneway` — on ne les lisait pas.
+
+### Vérifié avant d'écrire
+- L'interfile n'est plus une expérimentation : le **décret n° 2025-33 du
+  9 janvier 2025** l'a généralisée à toute la France depuis le 11 janvier
+  2025, en créant l'article R. 412-11-3 du code de la route. Les conditions
+  codées sont celles de cet article, relues sur Légifrance : autoroute ou
+  route à chaussées séparées d'au moins deux voies, limitée à 70 km/h ou
+  plus, trafic bloqué sur toutes les voies, 50 km/h au plus — 30 si une file
+  est à l'arrêt.
+
+### Ce que ce mode NE fait PAS
+- Il ne change **ni le tracé** (le moteur d'itinéraire public n'a pas de
+  profil moto) **ni l'heure d'arrivée**. Ce qu'un motard gagne dépend de son
+  allure entre les files, donc d'un choix qui engage sa sécurité : annoncer
+  « vingt minutes de moins » fixerait un objectif à tenir.
+- Il ne parle **pas à voix haute** : c'est une information de contexte, pas de
+  sécurité, et une voix pendant qu'on remonte les files détournerait
+  l'attention au pire moment.
+- Il **se tait** sur toute voie dont OSM ne prouve pas qu'elle est à chaussées
+  séparées. Se taire à tort coûte une information ; parler à tort envoie
+  quelqu'un entre deux files qui se croisent.
 ## [1.43.0] — 2026-09-02 — FOND-5
 
 ### Ajouté
