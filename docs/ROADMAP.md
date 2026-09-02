@@ -584,10 +584,15 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       d'EV Database, crête de la Standard Range recoupée par XPENG France,
       autonomies du configurateur officiel. Armelin a fourni la source que je
       demandais.
-- [ ] VÉHICULES — les huit restants : Cupra Raval, VW ID.Polo, DS N°7 et DS 3
-      E-Tense, BYD Atto 3 EVO, variantes Tesla par année. Tous trop récents
-      pour une fiche stable — à reprendre quand EV Database ou une fiche
-      technique les détaillera.
+- [x] PR #187 — VEHIC-3 (02/09) : les seize modèles réclamés avec leurs liens
+      officiels — Cupra Raval Endurance, VW ID. Polo 52 kWh, DS N°7 (trois
+      versions), DS 3 E-Tense, BYD Atto 3 EVO (deux versions) et les huit
+      Tesla 2026, millésime écrit DANS LE LIBELLÉ puisque c'est la seule chose
+      qu'une liste déroulante montre. Fiches lues page par page sur EV
+      Database ; l'Atto 3 EVO recoupé sur le communiqué de BYD France.
+- [ ] RAVAL/ID. POLO 37 kWh — écartées : la même source donne 50 kW de charge
+      à l'une et 88 kW à l'autre, même plate-forme et même batterie. À
+      reprendre quand une seconde source tranchera.
 - [x] PR #181 — ERGO-4 (02/09) : six menus rendus atteignables. Recharge en
       tête de l'entonnoir avec son picto ; panneau borné et défilant sur
       mobile ; historique extrait vers le Menu ; menu du trajet réduit à deux
