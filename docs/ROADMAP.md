@@ -632,6 +632,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       classes étaient dans ce cas) et feuille basse dimensionnée à son
       contenu. ERGO-7 dans la même PR : les réglages de bornes ont leur propre
       page, avec flèche de retour.
+- [x] PR #198 — EXPORT-1 (02/09) : « le JSON contient des repères qui ne sont
+      pas les miens ». Rien d'étranger dedans — mais rien ne disait ce qui s'y
+      trouvait, et les trajets habituels sont APPRIS sans geste de l'usager.
+      Le fichier se présente désormais et légende chaque bloc, origine
+      comprise. Un test lit les clés à la source et refuse qu'une seule parte
+      sans explication.
 - [x] PR #188 — HIST-2 (02/09) : « aucun moyen de relancer le même trajet
       depuis l'historique » et « l'historique ne conserve pas le tracé […] donc
       contribuer envoie trop peu ». Même cause : on gardait des CHIFFRES,

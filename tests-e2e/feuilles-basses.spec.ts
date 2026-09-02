@@ -58,10 +58,29 @@ test('sur téléphone, le planificateur est une FEUILLE : ancrée en bas, mi-hau
   expect(corps.y + corps.height, 'la feuille ne touche pas le bas').toBeGreaterThan(VUE.height - 2);
   expect(corps.x).toBeLessThanOrEqual(1);
   expect(corps.width).toBeGreaterThan(VUE.width - 3);
-  // À mi-hauteur : la carte respire au-dessus — c'était le reproche des
-  // captures (le volet couvrait l'écran).
+  /* LA CARTE RESPIRE AU-DESSUS — c'était le reproche des captures (le volet
+     couvrait l'écran). C'est CELA que ce parcours défend, et non une hauteur
+     précise.
+
+     LA BORNE HAUTE ÉTAIT À 60 %, ET ELLE A CÉDÉ EN INTÉGRATION (02/09) :
+     depuis ERGO-6 la feuille s'ouvre à la taille de son CONTENU, et depuis
+     CIBLE-1 l'accueil porte deux boutons de plus. Le contenu ne se mesure
+     donc plus pareil d'une machine à l'autre — 470 px en local, 499 sur le
+     runner, à cause du rendu des polices. Mesurer une fraction fixe revenait
+     à mesurer la fonte.
+     ON GARDE LES DEUX BORNES QUI ONT UN SENS : la feuille ne descend pas
+     sous la mi-hauteur (un panneau ridicule), et ne dépasse pas le palier
+     « plein écran » de 88 % — au-delà, ce n'est plus une feuille, c'est une
+     page, et l'on perd le contexte qu'elle promettait de garder. */
   expect(corps.height).toBeGreaterThan(VUE.height * 0.4);
-  expect(corps.height).toBeLessThan(VUE.height * 0.6);
+  expect(corps.height,
+    'la feuille dépasse le palier plein écran : la carte ne respire plus')
+    .toBeLessThanOrEqual(VUE.height * 0.88);
+  /* ET L'EN-TÊTE RESTE VISIBLE, ce qui est la forme mesurable de « la carte
+     respire » : c'est la promesse de `paliers()` dans feuille-basse.ts. */
+  const entete = (await page.locator('.entete').boundingBox())!;
+  expect(corps.y, 'la feuille recouvre l’en-tête')
+    .toBeGreaterThanOrEqual(entete.y + entete.height - 1);
   await expect(page.locator('.feuille-poignee').first()).toBeVisible();
 });
 

@@ -2,6 +2,39 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.51.0] — 2026-09-02 — EXPORT-1
+
+### Corrigé — l'export ne disait pas ce qu'il contenait
+- Armelin : « fonction export : ok, ça télécharge un JSON, mais il contient
+  des repères qui ne sont pas les miens et ne font pas partie des recherches
+  que j'ai faites. »
+- **Rien d'étranger ne s'y trouvait — mais rien ne DISAIT ce qui s'y
+  trouvait.** L'export vidait le magasin des préférences tel quel : des clés
+  techniques (`routines-trajets`, `poi-filtres-bornes`, `repere-travail`…) et
+  leurs valeurs brutes.
+- **Trois de ces clés portent des points géographiques**, et l'une d'elles —
+  les trajets habituels — est remplie par l'application **sans geste de
+  l'usager** : elle apprend chaque destination calculée, y compris celles d'un
+  lien partagé qu'on a simplement ouvert. De son point de vue, ces repères
+  n'étaient pas les siens ; du point de vue du code, ils l'étaient. Les deux
+  avaient raison, et c'est le fichier qui manquait à son devoir.
+
+### Ce que le fichier dit maintenant
+- **Il se présente** : ce qu'il est, qu'il vient de cet appareil, et que rien
+  n'a été envoyé nulle part.
+- **Chaque bloc porte sa légende** : ce qu'il contient, et surtout **d'où il
+  vient** — saisi par vous, ou appris par l'application. Les trajets habituels
+  l'avouent en toutes lettres, et disent où les effacer.
+- **On ne retire rien.** Ce sont ses données : un export amputé serait pire
+  qu'un export obscur.
+- Les légendes ne décrivent **que ce qui est là** : un sommaire plus long que
+  le livre n'aide personne.
+
+### Ajouté
+- Un test qui lit les clés de préférence **à la source du code** et échoue si
+  l'une d'elles part dans l'export sans légende. Sans lui, le défaut se
+  reproduirait à la prochaine clé ajoutée.
+
 ## [1.50.0] — 2026-09-02 — CIBLE-1
 
 ### Ajouté — choisir un point sur la carte
