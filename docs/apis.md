@@ -881,5 +881,96 @@ ils n'y publient pas un flux. Aucune source publique française ne diffuse
 l'occupation en direct à l'échelle nationale — seuls les opérateurs la
 connaissent, dans leurs propres applications.
 
+## Places de parking en direct (mesuré 02/09/2026)
+
+Armelin : « certaines villes exposent des API permettant de consulter en live
+le taux d'occupation et disponibilité des places de parking […] ce serait bien
+d'intégrer la disponibilité des parkings en codant les API libres et sans clé
+d'accès. »
+
+**Elle existe — mais par ville, et il faut mesurer chacune.** Un jeu qui
+s'appelle « temps réel » ne l'est pas forcément.
+
+| Source | Verdict | Mesure du 02/09 |
+|---|---|---|
+| **Aix-Marseille Provence** (`data.ampmetropole.fr`) | **branchée** | 38 parkings temps réel, horodatés à la **minute** (relevé 7 min avant la requête). CORS `*`. |
+| **Nantes Métropole** (`data.nantesmetropole.fr`) | **branchée** | 21 parcs-relais, relevés de **3 minutes**. CORS `*`. |
+| **Issy-les-Moulineaux** (lien d'Armelin) | **écartée** | le jeu s'appelle « disponibilité temps réel » ; dernier relevé le **6 avril 2025** — 17 mois — et **tous les parkings à 100 %**. |
+| **Paris** (lien d'Armelin) | **rien à brancher** | `stationnement-en-ouvrage` donne 125 ouvrages, tarifs et capacités — **aucune occupation**. Paris publie ses parkings, pas leurs places libres. |
+| Bordeaux (CUB) | à voir | WFS/WMS seulement, pas de REST JSON. |
+| Lyon (LPA) | à voir | fichier JSON déposé, pas d'API interrogeable par emprise. |
+
+**LE PIÈGE DE L'HORODATAGE, et il valait la peine d'être mesuré** :
+Aix-Marseille écrit `datemajpy` en **heure de Paris**, sans le dire —
+`2026-09-02 03:15:07` relevé à 01:22 UTC. Lu comme de l'UTC, ce relevé tombe
+deux heures dans le FUTUR, et une garde de fraîcheur naïve le laisse passer
+puis le rejette au changement d'heure. Nantes, lui, horodate en ISO avec son
+fuseau : lui appliquer la même correction décalerait deux fois.
+
+**LA RÈGLE QUI EN DÉCOULE** : on n'affiche un nombre de places que s'il a moins
+d'une heure, on écrit son âge à côté, et on cite la collectivité. Un relevé
+absent vaut mieux qu'un zéro faux — c'est exactement ce qu'Issy publie depuis
+dix-sept mois.
+
+Les deux portails parlent OpenDataSoft : ajouter une ville, c'est ajouter une
+emprise, une URL et un lecteur dans `src/lib/parkings-live.ts`, plus un test
+qui la mesure.
+
+## Règles de circulation — DiaLog (mesuré 02/09/2026)
+
+Un collègue d'Armelin : « le gouvernement a mis en place une plateforme en
+ligne (DiaLog). Ce portail permet d'afficher les zones interdites à la
+circulation, les limitations de vitesse, les zones à circulation alternée, les
+stationnements interdits. »
+
+**La plateforme existe et publie vraiment.** `dialog.beta.gouv.fr` expose
+`/api/regulations.geojson` — malgré son nom, c'est un **DATEX II en XML**.
+
+| Question | Réponse | Mesure |
+|---|---|---|
+| La donnée existe-t-elle ? | **oui** | DATEX II national, HTTP 200 |
+| Quelle taille ? | **100 516 430 octets** | soit **100 Mo** à chaque appel |
+| Peut-on filtrer par zone ? | **NON** | `?bbox=…` et `?limit=5` rendent **exactement les mêmes 100 Mo** ; `?insee=` échoue |
+
+**Donc inexploitable en l'état pour ce client.** Cent mégaoctets par
+consultation sur un forfait mobile, sans backend pour les découper, ne se
+défend pas — et le projet s'interdit précisément un backend.
+
+**CE QUI DÉBLOQUERAIT** : un filtrage par emprise côté DiaLog. C'est une
+startup d'État en bêta, qui prend les retours ; la demande vaut la peine
+d'être faite. À rouvrir dès qu'un `bbox` existe.
+
+## Limites de tonnage — OpenStreetMap (mesuré 02/09/2026)
+
+Armelin : « ma Vinfast VF8 Plus avec sa batterie de 87,7 kWh pèse 2 520 kg et
+peut être dangereuse sur certains ponts de France. Par exemple, le pont de fer
+situé entre Coudret et Germeville en Charente a fait l'objet d'une limitation
+à 2 tonnes. »
+
+**La donnée est dans OpenStreetMap, et elle est dense.** Mesuré sur une zone
+de 35 × 30 km en Charente :
+
+| `maxweight` | tronçons |
+|---|---|
+| 3,5 t | 122 |
+| 10 t | 26 |
+| 19 t | 22 |
+| 6 t | 6 |
+| 16 t | 4 |
+| 12 t | 3 |
+| 38 t | 1 |
+| **total** | **184** |
+
+**ET ELLE NE COÛTERAIT AUCUNE REQUÊTE DE PLUS** : le corridor interroge déjà
+Overpass le long du tracé pour les limites de vitesse et les giratoires
+(`chargerCorridor`). Ajouter `maxweight` à cette requête unique suffit.
+
+**CE QUI MANQUE, ET QUI N'EST PAS DANS OSM** : le POIDS DU VÉHICULE. Le
+catalogue ne le porte pas, et aucune source publique française ne donne la
+masse par modèle (même constat qu'en août pour la capacité de batterie). Il
+faudra donc un champ déclaré dans « Mon véhicule » — ce qu'Armelin peut
+remplir, il connaît sa VF8. Sans poids déclaré, aucun avertissement : mieux
+vaut se taire que d'alerter au hasard.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.
