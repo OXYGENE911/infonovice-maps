@@ -2,6 +2,45 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.39.0] — 2026-09-02 — ERGO-5 : le doublon tombe, la roue crantée arrive (PR #185)
+
+### Supprimé — la décision d'Armelin
+La recherche par catégories « dans la vue, à la demande » **disparaît du
+panneau de recharge**. Elle faisait doublon avec les familles de POI de
+l'entonnoir, mêmes libellés, dans le même panneau depuis ERGO-3 : deux listes
+identiques ne se choisissent pas, elles se confondent.
+
+Armelin a tranché : « on va garder les POI continus et supprimer le doublon
+dans le panneau de recharge. » Les familles de l'entonnoir font le même
+travail, et mieux — elles restent affichées, ce qui en fait une **légende**.
+
+### Changé
+- **Une roue crantée remplace la ligne « Recharge et services ».** « Elle n'est
+  pas assez visible comme étant un bouton cliquable […] ajouter une roue
+  crantée à droite de l'indication "filtres actifs" […] ce qui permettrait
+  également de soulager l'écran en supprimant une ligne. » C'est fait : la puce
+  **allume** la couche, la roue la **règle**, et la ligne de titre a disparu.
+  Deux boutons côte à côte, jamais l'un dans l'autre — les imbriquer aurait
+  rendu l'un des deux inatteignable au clavier.
+- **Le volet de réglages arrive fermé.** Chez lui c'était un `<details open>`,
+  parce qu'il occupait une page entière ; rangé dans l'entonnoir et ouvert
+  d'office, il repoussait les familles hors de l'écran — le défaut même
+  signalé.
+- **Les trajets habituels se rangent derrière un bouton** à flèche remontant le
+  temps. « Deux lignes s'ajoutent automatiquement […] cela permettrait de voir
+  le menu Itinéraire entier sans avoir à scroller. »
+  *Ce n'est pas une contradiction avec « un menu caché est un menu
+  introuvable »*, et c'est pourquoi le bouton reste **en ligne et visible** :
+  ce qui se replie est une liste variable qui repoussait le reste hors écran ;
+  son point d'entrée, lui, ne bouge pas.
+
+### Tests
+- `categories.spec.ts` disparaît avec la fonctionnalité qu'il gardait.
+- Le parcours du seuil de zoom garde ce qui reste vrai : le champ de réseau
+  fonctionne à tout zoom.
+- Les raccourcis de parcours absorbent la roue crantée — un seul fichier bouge,
+  comme promis.
+
 ## [1.38.0] — 2026-09-02 — Le XPENG L03, ses quatre versions (PR #184)
 
 ### Ajouté

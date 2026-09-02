@@ -442,6 +442,23 @@ export class PanneauItineraire extends HTMLElement {
                  un matin de semaine, « À la maison » le soir, les habitudes
                  apprises LOCALEMENT sinon. Rien ne quitte le navigateur, et
                  le volet Favoris sait tout effacer. -->
+            <!-- ELLES SE RANGENT DERRIÈRE UN BOUTON (ERGO-5, 02/09). Armelin :
+                 « deux lignes s'ajoutent automatiquement pour indiquer les
+                 deux dernières adresses configurées. Ne serait-ce pas mieux
+                 de cacher les adresses récemment utilisées dans un bouton
+                 ayant pour logo une flèche qui revient dans le temps […] ?
+                 Cela permettrait de voir le menu Itinéraire entier sans avoir
+                 à scroller. »
+                 CE N'EST PAS UNE CONTRADICTION avec « un menu caché est un
+                 menu introuvable », et c'est pour cela que le bouton reste
+                 EN LIGNE, visible, à côté du champ : ce qui se replie, c'est
+                 une liste variable qui repoussait le reste hors de l'écran ;
+                 ce qui reste, c'est son point d'entrée. -->
+            <div class="iti-routines-ligne" hidden>
+              <button type="button" class="iti-routines-ouvrir" aria-expanded="false"
+                aria-label="Trajets habituels récents">${
+  pictoMenu('remonter')}<span>Trajets habituels</span></button>
+            </div>
             <div class="iti-routines" role="group" aria-label="Trajets habituels" hidden></div>
 
             <label class="iti-champ-principal">Départ
@@ -786,6 +803,13 @@ export class PanneauItineraire extends HTMLElement {
     });
     void this.#majRaccourcis();
     this.#allerA('accueil');
+    this.querySelector('.iti-routines-ouvrir')?.addEventListener('click', (e) => {
+      const b = e.currentTarget as HTMLButtonElement;
+      const liste = this.querySelector<HTMLElement>('.iti-routines');
+      if (!liste) return;
+      liste.hidden = !liste.hidden;
+      b.setAttribute('aria-expanded', String(!liste.hidden));
+    });
     this.querySelector('.iti-effacer')?.addEventListener('click', () => this.#effacer());
 
     /* L'HEURE DE DÉPART change l'arrivée affichée ET les relevés météo :
@@ -2936,7 +2960,19 @@ export class PanneauItineraire extends HTMLElement {
         });
         routines.append(b);
       }
-      routines.hidden = suggestions.length === 0;
+      /* LA LIGNE DU BOUTON PARAÎT AVEC LES SUGGESTIONS, la liste reste
+         repliée : c'est l'inverse d'avant, où la liste s'ouvrait d'office et
+         poussait « Options du trajet » hors de l'écran. */
+      const ligne = this.querySelector<HTMLElement>('.iti-routines-ligne');
+      const ouvrir = this.querySelector<HTMLButtonElement>('.iti-routines-ouvrir');
+      const aDesRoutines = suggestions.length > 0;
+      if (ligne) ligne.hidden = !aDesRoutines;
+      if (!aDesRoutines) {
+        routines.hidden = true;
+        ouvrir?.setAttribute('aria-expanded', 'false');
+      } else if (ouvrir?.getAttribute('aria-expanded') !== 'true') {
+        routines.hidden = true;
+      }
     }
 
     for (const boite of this.querySelectorAll<HTMLElement>('.iti-raccourcis')) {

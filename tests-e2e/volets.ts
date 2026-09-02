@@ -64,11 +64,15 @@ export async function ouvrirVolet(page: Page, selecteur: string): Promise<void> 
       await page.locator('.poi-bulle').click();
     }
     await expect(page.locator('.poi-panneau')).toBeVisible();
-    /* IDEMPOTENT, comme `ouvrirMenu` : le panneau de recharge est un
-       `<details open>` — le cliquer sans regarder le REFERMAIT, et cinq
-       parcours cherchaient ensuite des cases qui n'existaient plus. */
+    /* LE RÉSUMÉ A DISPARU (ERGO-5, 02/09) : Armelin ne le voyait pas comme un
+       bouton — « un menu invisible est un menu que les utilisateurs ne peuvent
+       pas trouver ». C'est une ROUE CRANTÉE, à côté de la puce des bornes, qui
+       ouvre désormais ces réglages.
+       IDEMPOTENT, comme `ouvrirMenu` : le volet garde son état, et le cliquer
+       sans regarder le refermerait. */
     if (await page.locator(`${selecteur}[open]`).count() === 0) {
-      await page.locator(`${selecteur} summary`).first().click();
+      await page.locator('.poi-reglages-bornes').click();
+      await expect(page.locator(`${selecteur}[open]`)).toHaveCount(1);
     }
     return;
   }

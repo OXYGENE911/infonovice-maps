@@ -38,6 +38,7 @@
  * l'usager attend qu'on lui dise ce qui se passe.
  */
 import type { Map as CarteMapLibre, GeoJSONSource } from 'maplibre-gl';
+import { pictoMenu } from './icone-menu';
 import { Popup } from 'maplibre-gl';
 import {
   CATEGORIES, urlFamilles, versLieux, PLAFOND_LIEUX, ErreurCategories,
@@ -166,6 +167,7 @@ export class FiltrePoi extends HTMLElement {
              c'est cacher. C'est d'ailleurs la raison d'être de cette
              application : trouver où recharger. -->
         <p class="poi-panneau-titre">Recharge</p>
+        <div class="poi-ligne-bornes">
         <!-- LA PUCE DES BORNES (BORNES-4). Armelin : « une nouvelle
              suggestion de POI [...] les bornes de recharge ». Elle ne
              cherche PAS dans Overpass : elle actionne la couche IRVE du
@@ -186,6 +188,19 @@ export class FiltrePoi extends HTMLElement {
                regarde quand on regarde la carte. -->
           <span class="poi-famille-filtres" hidden>filtres actifs</span>
         </button>
+        <!-- LA ROUE CRANTÉE OUVRE LES RÉGLAGES DE CETTE PUCE (ERGO-5, 02/09).
+             Armelin, deuxième passage : « la ligne "Recharge et services"
+             n'est pas assez visible comme étant un bouton cliquable […] ou
+             alors fusionner le POI "Bornes de recharge" et ajouter une roue
+             crantée à droite de l'indication "filtres actifs" […] ce qui
+             permettrait également de soulager l'écran en supprimant une
+             ligne. »
+             DEUX BOUTONS CÔTE À CÔTE, ET NON UN BOUTON DANS UN BOUTON : la
+             puce ALLUME la couche, la roue la RÈGLE. Les imbriquer aurait
+             rendu l'un des deux inatteignable au clavier. -->
+        <button type="button" class="poi-reglages-bornes" aria-expanded="false"
+          aria-label="Paramétrer les bornes : réseaux, puissance, nom de station"
+          >${pictoMenu('engrenage')}</button>
         <!-- LE RAPPEL EST RANGÉ ICI (BORNES-8, 01/09), sous la puce qu'il
              concerne. BORNES-5 l'avait posé À CÔTÉ de la carte pour qu'il ne
              puisse plus être manqué ; c'était trop : « le rectangle apparaît
@@ -213,6 +228,7 @@ export class FiltrePoi extends HTMLElement {
              CE QUI SE RANGE ENSEMBLE SE RÈGLE ENSEMBLE : la puce « Bornes de
              recharge » et le choix des réseaux étaient deux moitiés du même
              geste, séparées par tout l'écran. -->
+        </div>
         <div class="poi-hote-recharge"></div>
 
         <p class="poi-panneau-titre poi-titre-second">Autour de moi</p>
@@ -236,7 +252,27 @@ export class FiltrePoi extends HTMLElement {
       </div>`;
 
     const hote = this.querySelector<HTMLElement>('.poi-hote-recharge');
-    if (hote && this.#recharge) hote.appendChild(this.#recharge);
+    if (hote && this.#recharge) {
+      hote.appendChild(this.#recharge);
+      /* IL ARRIVE FERMÉ (ERGO-5) : le volet est un `<details open>` chez lui,
+         parce qu'il occupait une page entière. Rangé dans l'entonnoir, ouvert
+         d'office, il repousserait les familles hors de l'écran — le défaut
+         même qu'Armelin signalait. La roue l'ouvre à la demande. */
+      const volet = hote.querySelector<HTMLDetailsElement>('.poi');
+      if (volet) volet.open = false;
+    }
+
+    /* LA ROUE OUVRE ET FERME LE VOLET DE RÉGLAGES (ERGO-5) — c'est elle qui
+       remplace la ligne « Recharge et services », dont le résumé est masqué
+       par la CSS quand il vit ici. On pilote le `<details>` plutôt que de le
+       reconstruire : tout ce qu'il contient continue de fonctionner. */
+    const roue = this.querySelector<HTMLButtonElement>('.poi-reglages-bornes');
+    roue?.addEventListener('click', () => {
+      const volet = this.querySelector<HTMLDetailsElement>('.poi-hote-recharge .poi');
+      if (!volet) return;
+      volet.open = !volet.open;
+      roue.setAttribute('aria-expanded', String(volet.open));
+    });
 
     const bulle = this.querySelector<HTMLButtonElement>('.poi-bulle')!;
     const panneau = this.querySelector<HTMLElement>('.poi-panneau')!;
