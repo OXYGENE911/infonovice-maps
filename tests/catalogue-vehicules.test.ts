@@ -184,7 +184,7 @@ describe('le catalogue couvre ce qu’on croise sur les routes', () => {
      honorée en entier, et non aux trois quarts. */
   it('contient les modèles réclamés avec leurs liens officiels', () => {
     const cles = new Set(CATALOGUE.map((m) => m.cle));
-    for (const attendu of ['cupra-raval-endurance', 'vw-id-polo-52',
+    for (const attendu of ['cupra-raval-endurance', 'vw-id-polo-life-52',
       'ds-n7-74', 'ds-n7-97', 'ds-n7-97-awd', 'ds-3-etense',
       'byd-atto3-evo-rwd', 'byd-atto3-evo-awd',
       'tesla-m3-rwd-26', 'tesla-m3-premium-rwd-26', 'tesla-m3-premium-awd-26',
@@ -206,15 +206,31 @@ describe('le catalogue couvre ce qu’on croise sur les routes', () => {
     }
   });
 
-  /* LES DEUX COUSINES DE LA PLATE-FORME MEB ENTRY doivent rester d'accord :
-     même batterie utile, même pointe de charge. Le jour où l'une des deux
-     fiches bougera sans l'autre, c'est ici qu'on l'apprendra — et c'est
-     exactement le désaccord qui m'a fait écarter leurs versions 37 kWh. */
-  it('le Raval Endurance et l’ID. Polo 52 kWh s’accordent, comme leur plate-forme', () => {
+  /* LES DEUX COUSINES DE LA PLATE-FORME MEB ENTRY partagent leur batterie —
+     51,5 kWh utiles de part et d'autre, confirmés le 03/09 par les deux
+     configurateurs officiels qu'Armelin a relevés.
+     LEUR CHARGE, ELLE, DIFFÈRE, et c'est le constructeur qui le dit : 105 kW
+     pour le Raval, 90 pour l'ID. Polo. Le désaccord de la veille — 50 contre
+     88 kW, qui m'avait fait écarter les versions 37 kWh — venait d'une base
+     tierce, pas des constructeurs. Les fiches officielles l'ont tranché, et
+     les sept finitions d'ID. Polo sont entrées. */
+  it('le Raval Endurance et l’ID. Polo 52 kWh partagent leur batterie', () => {
     const raval = modeleParCle('cupra-raval-endurance')!;
-    const polo = modeleParCle('vw-id-polo-52')!;
+    const polo = modeleParCle('vw-id-polo-life-52')!;
     expect(raval.capaciteKwh).toBe(polo.capaciteKwh);
-    expect(raval.puissanceMaxKw).toBe(polo.puissanceMaxKw);
+  });
+
+  /* LES TROIS RAVAL ET LES SEPT ID. POLO d'Armelin, relevés sur les
+     configurateurs officiels le 03/09. Ce test dit que la liste a été honorée
+     en entier. */
+  it('porte les trois Raval et les sept ID. Polo', () => {
+    const cles = new Set(CATALOGUE.map((m) => m.cle));
+    for (const c of ['cupra-raval-plus', 'cupra-raval-endurance', 'cupra-raval-vz',
+      'vw-id-polo-trend-37', 'vw-id-polo-life-37', 'vw-id-polo-style-37',
+      'vw-id-polo-life-52', 'vw-id-polo-life-edition-52', 'vw-id-polo-style-52',
+      'vw-id-polo-style-exclusive-52']) {
+      expect(cles.has(c), c).toBe(true);
+    }
   });
 
   /* LA VF 8 PLUS PORTE LES CHIFFRES D'ARMELIN, pas les miens : 87,7 kWh et

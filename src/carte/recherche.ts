@@ -6,7 +6,7 @@ import {
   chercherAdresses, communeNommee, repondALaSaisie, type ResultatAdresse,
 } from '../lib/adresse';
 import { dansEmprise, type Emprise } from '../lib/couverture';
-import { chercherParNom, LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
+import { chercherParNom, sansLaCommune, LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
 import { chercherEtablissements } from '../lib/annuaire-education';
 import { analyser, decoder, departementDe } from '../lib/adresse-mots';
 import { communesParNom } from '../lib/commune';
@@ -245,6 +245,17 @@ export class RechercheAdresse extends HTMLElement {
         const centre = plausible && meilleur
           ? { lon: meilleur.lon, lat: meilleur.lat }
           : (vue === null ? null : { lon: vue.lon, lat: vue.lat });
+        /* LA COMMUNE SITUE, ELLE NE NOMME PAS (RECHERCHE-6, 03/09).
+           « INRAE beaucouzé » ne trouvait rien : OpenStreetMap connaît trois
+           objets « INRAE » à Beaucouzé, nommés « INRAE » et non « INRAE
+           beaucouzé ». Or la BAN vient de reconnaître Beaucouzé et la rend en
+           tête, comme COMMUNE — on s'en sert pour situer, et l'on cherche le
+           reste comme nom. C'est d'ailleurs ainsi qu'on parle : « le INRAE de
+           Beaucouzé » veut dire « le INRAE, à Beaucouzé ». */
+        const commune = this.#resultats.find((r) => r.type === 'municipality');
+        const aChercher = commune
+          ? sansLaCommune(texte, commune.libelle)
+          : texte;
         if (centre === null) {
           note.textContent = 'Impossible de situer la recherche : déplacez la carte'
             + ' vers la zone qui vous intéresse.';
@@ -262,7 +273,7 @@ export class RechercheAdresse extends HTMLElement {
                emporter l'autre — Overpass tombe régulièrement, et une école
                trouvée vaut mieux qu'une page vide. */
             const [cotePlaces, coteEcoles] = await Promise.allSettled([
-              chercherParNom(texte, centre, this.#annulation.signal),
+              chercherParNom(aChercher, centre, this.#annulation.signal),
               chercherEtablissements(texte, centre, this.#annulation.signal),
             ]);
             const lieux = cotePlaces.status === 'fulfilled' ? cotePlaces.value : [];

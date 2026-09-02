@@ -54,13 +54,20 @@
  *     millésime : je n'ai pas sourcé leurs bornes d'années, et une année
  *     devinée serait pire qu'une absence.
  *
- * CE QUE J'AI REFUSÉ D'AJOUTER, ET POURQUOI. Les versions d'entrée de gamme
- * du Cupra Raval et de la VW ID. Polo — 37,5 kWh, même plate-forme, même
- * batterie — sont annoncées par la MÊME source à 50 kW de charge pour l'une
- * et 88 kW pour l'autre. L'une des deux fiches est fausse, et je ne sais pas
- * laquelle. Le même réflexe qu'avec l'A390 la veille : deux chiffres qui se
- * contredisent ne se moyennent pas, ils s'écartent. Les versions à 52 kWh de
- * ces deux voitures, elles, s'accordent (51,7 kWh, 105 kW) et sont entrées.
+ * CE QUE J'AVAIS REFUSÉ D'AJOUTER, ET CE QUI L'A DÉBLOQUÉ (03/09). Les
+ * versions d'entrée du Raval et de l'ID. Polo étaient annoncées par la même
+ * base tierce à 50 kW de charge pour l'une et 88 pour l'autre : l'une des deux
+ * fiches était fausse, et je ne savais pas laquelle. Armelin a relevé les DEUX
+ * CONFIGURATEURS OFFICIELS et tranché — 90 kW pour toutes les ID. Polo, 105
+ * pour le Raval Endurance, et des capacités de 38,5 et 51,5 kWh. Les dix
+ * versions sont donc entrées : trois Raval (Plus, Endurance, VZ) et sept
+ * finitions d'ID. Polo.
+ *
+ * ET LES MOYENNES DE CHARGE DU RAVAL SE DÉDUISENT DE SA FICHE, sans base
+ * tierce : le constructeur annonce 10 → 80 % en 23 à 24 minutes. Sur 38,5 kWh,
+ * cela fait 27 kWh en 23 min, soit 70 kW soutenus ; sur 51,5 kWh, 36 kWh en
+ * 24 min, soit 90 kW. C'est la même grandeur que celle relevée pour les autres
+ * modèles, obtenue par le calcul plutôt que par une lecture.
  *
  * LA PUISSANCE MOYENNE, RELEVÉE LE 02/09 SUR HUIT MODÈLES. Une borne ne tient
  * jamais sa pointe : EV Database publie, à côté d'elle, la puissance MOYENNE
@@ -184,7 +191,9 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
   { cle: 'cupra-born-58', marque: 'Cupra', modele: 'Born', variante: '58 kWh', capaciteKwh: 58, puissanceMaxKw: 120, wltpKm: 420, prise: 'combo_ccs' },
   { cle: 'cupra-born-77', marque: 'Cupra', modele: 'Born', variante: '77 kWh', capaciteKwh: 77, puissanceMaxKw: 170, wltpKm: 548, prise: 'combo_ccs' },
   { cle: 'cupra-tavascan', marque: 'Cupra', modele: 'Tavascan', capaciteKwh: 77, puissanceMaxKw: 135, wltpKm: 549, prise: 'combo_ccs' },
-  { cle: 'cupra-raval-endurance', marque: 'Cupra', modele: 'Raval', variante: 'Endurance 55 kWh', capaciteKwh: 51.7, puissanceMaxKw: 105, wltpKm: 444, puissanceMoyenneKw: 95, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'cupra-raval-plus', marque: 'Cupra', modele: 'Raval', variante: 'Plus 135 ch', capaciteKwh: 38.5, puissanceMaxKw: 90, wltpKm: 328, puissanceMoyenneKw: 70, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'cupra-raval-endurance', marque: 'Cupra', modele: 'Raval', variante: 'Endurance 211 ch', capaciteKwh: 51.5, puissanceMaxKw: 105, wltpKm: 446, puissanceMoyenneKw: 90, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'cupra-raval-vz', marque: 'Cupra', modele: 'Raval', variante: 'VZ 226 ch', capaciteKwh: 51.5, puissanceMaxKw: 105, wltpKm: 387, puissanceMoyenneKw: 90, prise: 'combo_ccs', annees: '2026' },
 
   // — Dacia —
   { cle: 'dacia-spring', marque: 'Dacia', modele: 'Spring', capaciteKwh: 26.8, puissanceMaxKw: 30, wltpKm: 225, prise: 'combo_ccs' },
@@ -345,7 +354,13 @@ export const CATALOGUE: readonly ModeleVehicule[] = [
   { cle: 'vw-id7-86', marque: 'Volkswagen', modele: 'ID.7', variante: 'Pro S 86 kWh', capaciteKwh: 86, puissanceMaxKw: 200, wltpKm: 709, prise: 'combo_ccs' },
   { cle: 'vw-idbuzz-79', marque: 'Volkswagen', modele: 'ID. Buzz', variante: 'Pro 79 kWh', capaciteKwh: 79, puissanceMaxKw: 185, wltpKm: 481, prise: 'combo_ccs' },
   { cle: 'vw-idbuzz-86', marque: 'Volkswagen', modele: 'ID. Buzz', variante: 'LWB 86 kWh', capaciteKwh: 86, puissanceMaxKw: 200, wltpKm: 484, prise: 'combo_ccs' },
-  { cle: 'vw-id-polo-52', marque: 'Volkswagen', modele: 'ID. Polo', variante: '52 kWh', capaciteKwh: 51.7, puissanceMaxKw: 105, wltpKm: 454, puissanceMoyenneKw: 95, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'vw-id-polo-trend-37', marque: 'Volkswagen', modele: 'ID. Polo', variante: 'Trend 37 kWh', capaciteKwh: 37.5, puissanceMaxKw: 90, wltpKm: 323, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'vw-id-polo-life-37', marque: 'Volkswagen', modele: 'ID. Polo', variante: 'Life 37 kWh', capaciteKwh: 37.5, puissanceMaxKw: 90, wltpKm: 331, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'vw-id-polo-style-37', marque: 'Volkswagen', modele: 'ID. Polo', variante: 'Style 37 kWh', capaciteKwh: 37.5, puissanceMaxKw: 90, wltpKm: 330, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'vw-id-polo-life-52', marque: 'Volkswagen', modele: 'ID. Polo', variante: 'Life 52 kWh', capaciteKwh: 51.5, puissanceMaxKw: 90, wltpKm: 453, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'vw-id-polo-life-edition-52', marque: 'Volkswagen', modele: 'ID. Polo', variante: 'Life Edition 52 kWh', capaciteKwh: 51.5, puissanceMaxKw: 90, wltpKm: 453, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'vw-id-polo-style-52', marque: 'Volkswagen', modele: 'ID. Polo', variante: 'Style 52 kWh', capaciteKwh: 51.5, puissanceMaxKw: 90, wltpKm: 452, prise: 'combo_ccs', annees: '2026' },
+  { cle: 'vw-id-polo-style-exclusive-52', marque: 'Volkswagen', modele: 'ID. Polo', variante: 'Style Exclusive 52 kWh', capaciteKwh: 51.5, puissanceMaxKw: 90, wltpKm: 442, prise: 'combo_ccs', annees: '2026' },
 
   // — Volvo —
   { cle: 'volvo-ex30-69', marque: 'Volvo', modele: 'EX30', variante: 'Extended Range', capaciteKwh: 64, puissanceMaxKw: 153, wltpKm: 476, prise: 'combo_ccs' },

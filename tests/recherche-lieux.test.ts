@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  echapperNom, graphiesDe, urlNomLieu, aRenonce, RAYON_NOM_M, PLAFOND_NOMS,
+  echapperNom, graphiesDe, urlNomLieu, aRenonce, sansLaCommune,
+  RAYON_NOM_M, PLAFOND_NOMS,
 } from '../src/lib/recherche-lieux';
 
 /* LA RECHERCHE PAR NOM (RECHERCHE-2, refondue par RECHERCHE-3 le 01/09).
@@ -107,5 +108,81 @@ describe('aRenonce — une réponse vide n’est pas un zéro', () => {
   it('ne se casse pas sur une réponse difforme', () => {
     expect(aRenonce(null)).toBe(false);
     expect(aRenonce('<html>')).toBe(false);
+  });
+});
+
+/* CHERCHER UNE ENSEIGNE, ET SITUER PAR LA COMMUNE (RECHERCHE-6, 03/09).
+ *
+ * LE TERRAIN. Un usager d'Armelin : il tape « INRAE beaucouzé » et ne trouve
+ * rien ; « Carrefour », rien ; « Leroy Merlin », rien. « Aucun commerce n'est
+ * disponible […] en l'état, l'application est difficilement utilisable. »
+ *
+ * DEUX CAUSES, TOUTES DEUX MESURÉES LE 03/09 SUR LE SERVICE RÉEL.
+ *
+ *  1. ON NE CHERCHAIT QUE DANS `name`. Autour d'Angers, OpenStreetMap
+ *     connaît « Carrefour City », « Carrefour Market », « Carrefour Contact »,
+ *     « Carrefour Angers Saint Serge » — et trois objets seulement nommés
+ *     exactement « Carrefour ». La clé `brand`, elle, porte la MARQUE :
+ *     `["brand"="Carrefour"]` rend 7 objets en 1,4 s, et l'union des trois
+ *     clés en rend ONZE en 1,6 s.
+ *
+ *  2. LA COMMUNE ÉTAIT CHERCHÉE COMME UN MORCEAU DU NOM. « INRAE beaucouzé »
+ *     ne peut pas trouver un objet nommé « INRAE » par égalité exacte.
+ *
+ * ET L'ÉGALITÉ RESTE LA RÈGLE : re-mesuré le 03/09, une expression régulière
+ * sur `name` dans 25 km met 29 à 61 secondes et rend ZÉRO — elle expire en
+ * silence. On ajoute des CLÉS, jamais de la souplesse. */
+
+describe('urlNomLieu — les trois clés', () => {
+  const centre = { lon: -0.554, lat: 47.474 };
+
+  it('cherche le nom, la MARQUE et l’opérateur', () => {
+    const u = decodeURIComponent(urlNomLieu('Carrefour', centre)!);
+    expect(u).toContain('["name"="Carrefour"]');
+    expect(u, 'sans `brand`, les Carrefour City et Market restent introuvables')
+      .toContain('["brand"="Carrefour"]');
+    expect(u).toContain('["operator"="Carrefour"]');
+  });
+
+  /* CHAQUE GRAPHIE SUR CHAQUE CLÉ : Overpass n'accepte pas `["name"="x",i]`,
+     et la casse se rattrape donc par l'union. */
+  it('croise les trois graphies avec les trois clés', () => {
+    const u = decodeURIComponent(urlNomLieu('carrefour', centre)!);
+    expect(u).toContain('["brand"="carrefour"]');
+    expect(u).toContain('["brand"="Carrefour"]');
+    expect(u).toContain('["brand"="CARREFOUR"]');
+  });
+
+  /* AUCUNE EXPRESSION RÉGULIÈRE : c'est la leçon de RECHERCHE-3, re-mesurée
+     le 03/09. Une regex expire en silence et rend zéro. */
+  it('n’emploie AUCUNE expression régulière', () => {
+    const u = decodeURIComponent(urlNomLieu('Leroy Merlin', centre)!);
+    expect(u).not.toContain('~');
+  });
+});
+
+describe('sansLaCommune', () => {
+  it('retire la commune que la BAN a reconnue', () => {
+    expect(sansLaCommune('INRAE beaucouzé', 'Beaucouzé')).toBe('INRAE');
+    expect(sansLaCommune('Leroy Merlin Angers', 'Angers')).toBe('Leroy Merlin');
+  });
+
+  it('ignore les accents et la casse', () => {
+    expect(sansLaCommune('INRAE BEAUCOUZE', 'Beaucouzé')).toBe('INRAE');
+  });
+
+  /* « BEAUCOUZÉ » SEUL NE DOIT PAS DEVENIR UNE RECHERCHE VIDE : s'il ne reste
+     rien à chercher, on rend la saisie et la BAN répond, comme avant. */
+  it('rend la saisie entière quand il ne resterait rien', () => {
+    expect(sansLaCommune('Beaucouzé', 'Beaucouzé')).toBe('Beaucouzé');
+    expect(sansLaCommune('Le Mans', 'Le Mans')).toBe('Le Mans');
+  });
+
+  it('ne retire rien quand la commune n’est pas dans la saisie', () => {
+    expect(sansLaCommune('Leroy Merlin', 'Angers')).toBe('Leroy Merlin');
+  });
+
+  it('garde les mots courts qui accompagnent un vrai nom', () => {
+    expect(sansLaCommune('Le Bon Marché Paris', 'Paris')).toBe('Le Bon Marché');
   });
 });

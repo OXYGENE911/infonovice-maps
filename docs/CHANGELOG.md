@@ -2,6 +2,47 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.52.0] — 2026-09-03 — RECHERCHE-6 et VEHIC-4
+
+### Corrigé — on ne trouvait ni les enseignes ni les lieux nommés avec leur commune
+- Un usager : « j'ai tapé INRAE Beaucouzé, je le trouve dans Google Maps mais
+  pas ici. Puis Carrefour, puis Leroy Merlin : toujours rien. Aucun commerce
+  n'est disponible […] en l'état, l'application est difficilement utilisable. »
+- **On ne cherchait que dans `name`.** Autour d'Angers, OpenStreetMap connaît
+  « Carrefour City », « Carrefour Market », « Carrefour Contact », « Carrefour
+  Angers Saint Serge » — et trois objets seulement nommés *exactement*
+  « Carrefour ». La recherche par égalité ne pouvait pas rendre l'hypermarché.
+- **La clé `brand` porte la marque**, identique quelle que soit l'enseigne
+  locale. Mesuré le 03/09 : `brand=Carrefour` rend 7 objets en 1,4 s, et
+  l'union `name` + `brand` + `operator` en rend **onze en 1,6 s**.
+- **La commune situait mal.** « INRAE beaucouzé » ne pouvait pas trouver un
+  objet nommé « INRAE ». La commune reconnue par la BAN sert désormais à
+  SITUER la recherche, et le reste de la saisie à la nommer — c'est ainsi
+  qu'on parle : « le INRAE de Beaucouzé » veut dire « le INRAE, à Beaucouzé ».
+
+### Mesuré — pourquoi on ajoute des clés et jamais de la souplesse
+- Re-mesuré le 03/09 sur le service réel : une **expression régulière** sur
+  `name` dans un rayon de 25 km met **29 à 61 secondes et rend zéro** — elle
+  expire en silence. L'égalité répond en 1 à 6 secondes. La leçon de
+  RECHERCHE-3 tient toujours.
+
+### Ajouté — dix véhicules, sur les configurateurs officiels
+- **Cupra Raval en trois versions** (Plus 135 ch / 38,5 kWh / 328 km,
+  Endurance 211 ch / 51,5 / 446, VZ 226 ch / 51,5 / 387) et **VW ID. Polo en
+  sept finitions**, toutes à 90 kW de charge continue.
+- **Le désaccord qui les tenait dehors est tranché.** Une base tierce donnait
+  50 kW à l'une et 88 à l'autre sur la même plate-forme ; les deux
+  configurateurs officiels disent 105 kW pour le Raval et 90 pour l'ID. Polo.
+- Les puissances soutenues du Raval sont **déduites de sa propre fiche** :
+  10 → 80 % en 23 min sur 38,5 kWh font 70 kW, en 24 min sur 51,5 kWh font
+  90 kW. Calculées, pas lues ailleurs.
+
+### Ajouté — le signalement à la Géoplateforme
+- `docs/signalement-geoplateforme.md` : le dossier de mesures sur la
+  surestimation des temps de parcours sur route nationale (×1,51 sur
+  Poitiers → Limoges, contre ×1,06 sur autoroute), prêt à être adressé.
+  **Il n'a été envoyé nulle part** — les canaux sont donnés en fin de page.
+
 ## [1.51.0] — 2026-09-02 — EXPORT-1
 
 ### Corrigé — l'export ne disait pas ce qu'il contenait
