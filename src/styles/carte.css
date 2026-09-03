@@ -91,6 +91,11 @@ body { font-family: var(--police); background: var(--fond); }
   :root[data-theme="sombre"] .recherche [role="option"]:hover,
 :root[data-theme="sombre"] .recherche [role="option"][aria-selected="true"] { background: #1A2634; }
 
+/* LA PASTILLE DU LIEU (PICTO-2, 03/09) : le dessin de la carte, en tête de
+   ligne — « faire la différence de suite dans les résultats ». */
+.recherche .picto-lieu { flex: 0 0 auto; display: flex; align-items: center; }
+.recherche .picto-lieu svg { width: 20px; height: 20px; display: block; }
+.recherche .picto-lieu[hidden] { display: none; }
 .recherche .contexte { font-size: 11.5px; color: var(--texte-3); white-space: nowrap; }
 /* LA DISTANCE (RECHERCHE-7) : à droite, en chiffres alignés — c'est une
    colonne qu'on parcourt du regard, pas une phrase qu'on lit. */
