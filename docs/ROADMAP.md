@@ -627,6 +627,28 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #208 — RECHERCHE-8c (03/09) : « Seine » était pris pour une commune
       dans « Ivry sur Seine ». La commune la plus longue est essayée d'abord —
       un signal plus fort, et une requête de moins.
+- [ ] BADGE-1 — filtrer les bornes par badge de recharge (Plugsurfing,
+      Chargemap…), demandé le 03/09 : « si je coche Plugsurfing et Chargemap,
+      la carte devrait m'afficher tous les réseaux et bornes compatibles avec
+      mes deux badges ». MESURÉ ET BLOQUÉ EN L'ÉTAT : le schéma IRVE statique
+      (vérifié le 03/09 sur schema.data.gouv.fr) ne porte AUCUN champ de
+      compatibilité e-MSP — seulement paiement_acte / paiement_cb /
+      paiement_autre. La couverture d'un badge est une donnée COMMERCIALE de
+      l'opérateur de mobilité (Chargemap, Plugsurfing), sans API ouverte.
+      APPROXIMATION POSSIBLE, à décider par Armelin : le champ
+      id_station_itinerance dit qu'une station est raccordée à l'itinérance —
+      un filtre « bornes accessibles en itinérance » couvrirait la grande
+      majorité des badges, SANS pouvoir promettre un badge précis. Ce serait
+      écrit tel quel dans l'interface.
+- [ ] SOC-EDIT — corriger le taux de batterie pendant la navigation, demandé
+      le 03/09 : « afficher dans Copilot le taux de batterie estimé à
+      l'instant T et pouvoir renseigner à côté la valeur réelle pour que le
+      planificateur voie s'il surestime ». PERTINENT, et cohérent avec le
+      modèle : le SOC estimé existe déjà (bandeau-guidage) ; il manque le
+      champ de correction et le recalcul du plan depuis la valeur corrigée.
+      À cadrer : où vit le geste (Copilot), et ce qu'on fait de l'écart
+      mesuré (le montrer seulement, ou apprendre une correction de
+      consommation à la MARGE-1 — jamais en silence).
 - [x] PR #182 — PONT-1 (02/09) : les passages limités en tonnage s'annoncent à
       mille mètres, quand la masse est déclarée. Zéro requête de plus — la
       clause entre dans le corridor existant. On AVERTIT, on n'évite pas : le
