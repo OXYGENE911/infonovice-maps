@@ -590,6 +590,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       sa phrase publique, car chercher autour de soi ENVOIE la position à
       Overpass et la page « À propos » ne nomme aujourd'hui que deux cas où
       elle sort.
+- [x] PR #207 — RECHERCHE-8b (03/09) : les communes homonymes. « Castorama
+      Ormesson » ne trouvait rien en production alors que le banc d'essai
+      passait 12/12 — il partait des coordonnées d'Armelin, pas de la vue par
+      défaut. Les communes candidates entrent maintenant TOUTES dans la même
+      requête Overpass.
 - [x] PR #182 — PONT-1 (02/09) : les passages limités en tonnage s'annoncent à
       mille mètres, quand la masse est déclarée. Zéro requête de plus — la
       clause entre dans le corridor existant. On AVERTIT, on n'évite pas : le

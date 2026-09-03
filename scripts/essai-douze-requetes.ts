@@ -30,10 +30,17 @@ globalThis.fetch = ((entree: RequestInfo | URL, init?: RequestInit) => brut(entr
   headers: { ...(init?.headers ?? {}), 'User-Agent': 'infonovice-maps/1.0 (https://maps.infonovice.fr)' },
 })) as typeof fetch;
 
-/* LE CENTRE DE RÉFÉRENCE : le Plessis-Trévise, là où vit Armelin. Il départage
-   les communes homonymes — « Ormesson » en désigne deux — et situe les deux
-   sources qui ne savent chercher qu'autour d'un point. */
-const CHEZ_LUI = { lon: 2.5762, lat: 48.8101 };
+/* LE CENTRE DE RÉFÉRENCE EST CELUI DE L'APPLICATION QUI S'OUVRE, et c'est une
+   correction (RECHERCHE-8b, 03/09). Ce script passait 12/12 en lui donnant les
+   coordonnées d'Armelin — mais l'usager qui ouvre l'application regarde la
+   France entière, zoom 5,4, centre (2.4 ; 46.6). Vérifié EN PRODUCTION juste
+   après la mise en ligne de la v1.57.0 : « Castorama Ormesson » ne rendait
+   alors AUCUN Castorama, parce que « Ormesson » désigne deux communes et que
+   la plus proche du centre de la France est la mauvaise.
+   UN BANC D'ESSAI QUI PART D'UN ÉTAT PRIVILÉGIÉ ne mesure pas ce que
+   l'utilisateur vit. On part donc d'où l'application part. */
+const VUE_PAR_DEFAUT = { lon: 2.4, lat: 46.6 };
+const CHEZ_LUI = VUE_PAR_DEFAUT;
 
 /** Ce qu'on attend de chaque requête, en toutes lettres. */
 const ESSAIS: { q: string; attendu: RegExp }[] = [
