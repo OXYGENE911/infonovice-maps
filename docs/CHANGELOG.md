@@ -22,6 +22,47 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   course que le local ne voyait pas : l'écriture du choix est asynchrone, le
   rechargement du parcours la battait sur machine lente — la leçon de MODE-1,
   repayée avant d'être reconnue.
+## [1.65.0] — 2026-09-03 — MARGE-1
+
+### Les valeurs constructeur sont proposées 5 % plus prudentes
+- Armelin, rapportant ses testeurs sur la 1.60 : « l'algorithme s'améliore
+  mais reste encore 5 % plus optimiste que ce qu'ils constatent en réel sur
+  leur véhicule **par rapport aux caractéristiques constructeurs chargées par
+  défaut**. Ils préfèrent tous avoir un navigateur GPS pessimiste de 5 %
+  qu'optimiste de 5 %. »
+- **La marge s'applique à la proposition du catalogue** — l'endroit exact que
+  les testeurs nomment — jamais aux relevés que l'usager saisit lui-même :
+  punir de 5 % celui qui a mesuré serait punir l'exactitude. Tout l'aval
+  (bilan, plan de recharge, SOC d'arrivée, anneaux) suit sans double compte.
+- **Et elle se dit**, sous le choix du modèle : « valeurs proposées avec 5 %
+  de prudence — vos relevés les remplacent ».
+- Deux emplacements essayés et rejetés avant — l'histoire est dans
+  `lib/prudence` : au cœur de la physique, vingt tests d'arrêts tombaient sur
+  des **structures** ; à l'entrée du planificateur, le bilan **contredisait
+  les relevés réels** (« 400 km mesurés » affichés 381).
+
+## [1.64.0] — 2026-09-03 — BATTERIE-1
+
+### La batterie à l'arrivée se lit dès la première ligne
+- Armelin, en 1.60 : « lorsqu'on planifie un itinéraire, on m'indique qu'il
+  n'est pas indiqué le pourcentage de batterie à l'arrivée ».
+- **Le chiffre existait** — la page « Recharge » le montre depuis toujours —
+  mais il vivait à un volet de profondeur : un chiffre qu'on doit aller
+  chercher est un chiffre qu'on n'a pas. La ligne de résultat dit désormais
+  « … arrivée vers 18:24 **avec 62 % de batterie** ».
+
+## [1.63.0] — 2026-09-03 — FILTRE-1
+
+### Corrigé — le panneau des bornes débordait sur les téléphones étroits
+- Armelin, en 1.60 : « plusieurs rectangles sont décalés et débordent de
+  l'affichage » — puissance minimale, recherche de réseaux, réseau hors
+  ligne, légende.
+- **Mesuré à 360 px** — la largeur Android la plus courante : tout débordait
+  de 12 px, uniformément. À 390 px, rien — c'est pourquoi personne ne l'avait
+  vu. **Cinq symptômes, une cause** : un `<select>` insécable (option de
+  305 px) élargissait la piste de la grille du fieldset, et toutes les sœurs
+  suivaient.
+- Contre-épreuve faite : le parcours à 360 px échoue sans le correctif.
 
 ## [1.62.0] — 2026-09-03 — POPUP-1
 

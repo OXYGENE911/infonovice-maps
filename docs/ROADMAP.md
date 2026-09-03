@@ -607,6 +607,14 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #213 — THEME-1 (03/09) : Auto · Jour · Nuit dans le menu — une PWA
       installée n'a aucun réglage de navigateur sous la main. 17 blocs sombres
       transformés, le canevas prend la même décision que le CSS.
+- [x] PR #212 — MARGE-1 (03/09) : les autonomies proposées par le catalogue
+      abaissées de 5 % — la mesure des testeurs, appliquée à l'endroit exact
+      qu'ils nomment. Les relevés saisis par l'usager ne sont JAMAIS touchés.
+- [x] PR #211 — BATTERIE-1 (03/09) : le pourcentage de batterie à l'arrivée
+      dans la ligne de résultat — il existait, un volet trop loin.
+- [x] PR #210 — FILTRE-1 (03/09) : le panneau des bornes débordait de 12 px à
+      360 px de large. Cinq symptômes, une cause : un <select> insécable qui
+      élargissait la piste de la grille du fieldset.
 - [x] PR #209 — POPUP-1 (03/09) : les fiches de recherche jamais fermées
       (capture FNAC DARTY / Disney Village), et « aucun résultat » posé huit
       pixels sous l'écran en page pleine. Premier retour de la 1.60.
