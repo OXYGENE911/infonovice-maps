@@ -30,6 +30,42 @@ export function separerMotsColles(texte: string): string {
   return texte.replace(/([a-zà-öø-ÿ])([A-ZÀ-ÖØ-Þ])/g, '$1 $2');
 }
 
+/* LES ENSEIGNES QU'ON SAIT DÉCOLLER (RECHERCHE-9, 04/09). Armelin :
+   « "FNACDARTY" renvoie aucun résultat alors que "FNAC DARTY" répond des
+   adresses ». `separerMotsColles` sépare la casse chameau — « FnacDarty » —
+   mais un TOUT-MAJUSCULES collé n'a aucun point de coupe lexical. On coupe
+   donc au DICTIONNAIRE : si le mot commence par une enseigne connue et qu'il
+   reste au moins deux lettres, la coupe est presque sûrement la bonne. La
+   liste reprend celle des familles devinées (famille-devinee) — un seul
+   endroit à enrichir. */
+const ENSEIGNES_COLLABLES: readonly string[] = [
+  'fnac', 'darty', 'carrefour', 'leclerc', 'auchan', 'intermarche', 'lidl',
+  'monoprix', 'casino', 'castorama', 'leroymerlin', 'leroy', 'bricodepot',
+  'ikea', 'decathlon', 'boulanger', 'chargemap', 'plugsurfing',
+];
+
+/**
+ * Les graphies à essayer pour un mot peut-être collé — PURE.
+ *
+ * Rend au plus UNE variante : la première coupe au dictionnaire. En essayer
+ * plus multiplierait les requêtes pour des chimères.
+ */
+export function variantesDecollees(texte: string): string[] {
+  const mots = texte.trim().split(/\s+/);
+  for (let i = 0; i < mots.length; i += 1) {
+    const bas = nu(mots[i] ?? '');
+    for (const e of ENSEIGNES_COLLABLES) {
+      if (bas.length >= e.length + 2 && bas.startsWith(e)) {
+        const coupe = [...mots.slice(0, i),
+          (mots[i] as string).slice(0, e.length), (mots[i] as string).slice(e.length),
+          ...mots.slice(i + 1)].join(' ');
+        return [coupe];
+      }
+    }
+  }
+  return [];
+}
+
 /** Sans accents ni casse — la forme sous laquelle on compare. */
 export function nu(texte: string): string {
   return texte.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();

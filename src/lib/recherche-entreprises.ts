@@ -70,6 +70,12 @@ function texteDe(v: unknown): string {
 }
 
 function nombreDe(v: unknown): number | null {
+  /* `Number(null)` VAUT ZÉRO, et ce zéro a coûté cher (RECHERCHE-9, 04/09) :
+     l'établissement ADP de Persan porte `latitude: null` dans SIRENE, le
+     convertisseur en faisait (0, 0) — l'île Nulle, golfe de Guinée — et
+     l'aérodrome s'affichait « à 5442 km » de chez Armelin, en tête de liste.
+     Vu sur sa capture d'écran, pas en test. */
+  if (v === null || v === undefined || v === '') return null;
   const n = typeof v === 'number' ? v : Number(v);
   return Number.isFinite(n) ? n : null;
 }
@@ -109,6 +115,10 @@ export function versEtablissements(brut: unknown): Etablissement[] {
       const lon = nombreDe(e['longitude']);
       const lat = nombreDe(e['latitude']);
       if (lon === null || lat === null) continue;
+      /* (0, 0) N'EST PAS UNE ADRESSE FRANÇAISE : c'est la valeur qu'un
+         producteur met quand il ne sait pas. La garder enverrait l'usager
+         dans le golfe de Guinée. */
+      if (lon === 0 && lat === 0) continue;
       const nom = texteDe(e['enseigne']) || texteDe(e['nom_commercial']) || nomLegal;
       if (nom === '') continue;
       const adresse = texteDe(e['adresse']);

@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.72.0] — 2026-09-04 — RECHERCHE-9
+
+### Le plus proche d'abord, l'île Nulle fermée, et FNACDARTY décollé
+- Armelin, en 1.68, capture à l'appui : « quand on tape "aéroport", les
+  premiers lieux affichés sont à plus de 5000 km de ma position. Et l'aéroport
+  d'Orly est affiché à plus de 5400 km alors que j'habite à 16 km. »
+- **Trois causes, toutes mesurées.**
+  1. **`latitude: null` devenait (0, 0)** — `Number(null)` vaut zéro. L'ADP
+     de Persan porte un null dans SIRENE, et s'affichait « à 5442 km » :
+     l'île Nulle, golfe de Guinée. Les coordonnées nulles ou (0,0) sont
+     désormais « non déclarées », comme partout dans le modèle.
+  2. **Le tri ignorait la distance.** L'« Aéroport » à 4285 km était RÉEL —
+     Saint-Pierre-et-Miquelon, la France est grande — mais à mots égaux, il
+     sortait avant Orly. À mots égaux, le plus proche passe premier.
+  3. **« FNACDARTY » collé n'avait aucun point de coupe** — tout-majuscules,
+     la casse chameau n'y peut rien. On coupe au **dictionnaire d'enseignes**
+     (la liste des familles devinées), et c'est la requête décollée qui part
+     aux sources.
+- Vérifié sur les vrais services : « aéroport » ouvre sur Le Bourget et Orly,
+  « FNACDARTY » rend les Fnac Darty.
+
 ## [1.71.0] — 2026-09-04 — DEST-1
 
 ### La carte va vraiment à la destination, et la fiche se range
