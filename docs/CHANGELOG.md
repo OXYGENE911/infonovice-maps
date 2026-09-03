@@ -2,6 +2,42 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.60.0] — 2026-09-03 — ADRESSE-POI-1
+
+### L'adresse postale des lieux qui n'en déclarent pas
+- Armelin, la nuit du 03/09 : « il y a trop de POI sur lesquels je clique et il
+  n'y a **aucune information sur l'adresse du lieu au format texte**. Et quand
+  je clic sur "Y aller", le nom commercial du POI s'affiche dans le champ
+  destination et je n'ai toujours aucune idée de l'adresse du lieu. Quand je
+  lance l'itinéraire, ça va bien au bon endroit mais toujours pas de
+  connaissance de l'adresse postale exacte du lieu. »
+- **Il a raison sur le fond, et c'est gênant au volant.** Une destination qui
+  s'appelle « Carrefour City » ne se dicte pas au téléphone, ne se recopie pas
+  sur un papier et ne se vérifie pas d'un coup d'œil. Le trajet était juste ;
+  l'usager, lui, ne savait pas où il allait.
+- **Ce qu'il fallait savoir avant de corriger** : la fiche montrait DÉJÀ une
+  adresse quand OpenStreetMap la déclare — la rubrique « Adresse », depuis
+  FICHE-2. Le manque est dans les lieux qui n'ont PAS d'étiquettes `addr:*`,
+  et ils sont le grand nombre. J'ai failli doubler la ligne existante.
+- **Pour ceux-là, on demande à la BAN** : un géocodage inverse, à l'ouverture
+  de la fiche, jamais avant — une fiche qu'on n'ouvre pas ne coûte rien.
+- **Et l'on dit d'où elle vient** : « Adresse la plus proche : … ». Ce n'est
+  pas la même chose de lire l'adresse déclarée d'un commerce et l'adresse la
+  plus proche de son point ; la seconde peut être celle de l'immeuble d'à côté.
+- **« Y aller » porte l'adresse** dans le champ destination : « Chez Nini —
+  5 Rue Vivienne 75002 Paris ». La fiche de borne le faisait depuis le 26/08 ;
+  les lieux, non.
+
+### Ce qu'on ne fait pas
+- **On ne devine jamais.** Sans étiquette et sans réponse de la BAN, la fiche
+  le dit — poser une rue voisine ferait croire à l'usager qu'il tient
+  l'adresse, et il partirait la chercher.
+- **Une panne n'est pas une absence** : elle se dit autrement (« indisponible
+  pour le moment »), leçon déjà payée deux fois sur Overpass.
+
+### Mesuré
+- 7 tests unitaires et 5 parcours Playwright, dont celui qui garde qu'un lieu
+  déclarant son adresse n'en montre **pas deux**.
 ## [1.59.0] — 2026-09-03 — RECHERCHE-8b
 
 ### Corrigé — « Castorama Ormesson » ne trouvait rien en production

@@ -3994,6 +3994,13 @@ filtre-poi {
 .poi-fiche-favori { border: 1px solid var(--bord-2); background: var(--fond); color: var(--texte-1); }
 .poi-fiche-boutons button:disabled { opacity: .6; cursor: default; }
 .poi-fiche-boutons button:focus-visible { outline: none; box-shadow: var(--focus); }
+/* L'ADRESSE POSTALE (ADRESSE-POI-1, 03/09). Armelin : « aucune information
+   sur l'adresse du lieu au format texte ». Elle se lit sous le nom, avant les
+   rubriques — c'est ce qu'on cherche d'abord quand on ouvre une fiche. */
+.poi-fiche-adresse {
+  margin: 6px 0 0; font: 400 12.5px/1.4 var(--police); color: var(--texte-2);
+}
+
 .poi-fiche-source {
   margin: 9px 0 0; font: 400 11px var(--police); color: var(--texte-3);
 }

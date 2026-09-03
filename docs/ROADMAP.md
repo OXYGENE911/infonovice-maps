@@ -577,6 +577,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       la GÉOLOCALISATION À L'OUVERTURE, qu'Armelin demande — elle attend sa
       décision explicite, car elle contredit la contrainte 4 et la page
       « Vie privée » telle qu'elle est écrite aujourd'hui.
+- [x] PR #206 — ADRESSE-POI-1 (03/09) : l'adresse postale des lieux qui n'en
+      déclarent pas, par géocodage inverse à l'ouverture de la fiche, et le
+      champ destination qui la porte. Retour d'Armelin du 03/09.
 - [x] PR #205 — GEO-1 (03/09) : chercher autour de soi SUR DEMANDE. Décision
       d'Armelin du 03/09, sa seconde option. Aucune dérogation : le
       consentement est explicite, ponctuel, et les deux pages publiques nomment
