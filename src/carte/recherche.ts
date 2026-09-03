@@ -161,14 +161,15 @@ export class RechercheAdresse extends HTMLElement {
             aria-controls="${this.#idListe}" aria-autocomplete="list"
             aria-label="Rechercher une adresse en France"
             placeholder="Rechercher une adresse…" autocomplete="off" spellcheck="false">
-          <ul id="${this.#idListe}" role="listbox" aria-label="Suggestions d’adresses" hidden></ul>
-          <p class="recherche-erreur" role="alert" hidden></p>
-          <!-- UNE NOTE N'EST PAS UNE ERREUR (RECHERCHE-2) : « zoomez pour
-               chercher par nom » informe, il n'échoue pas. La peindre en
-               rouge d'alerte ferait passer une règle de frugalité pour une
-               panne. -->
-          <p class="recherche-note" role="status" hidden></p>
-          <!-- CHERCHER AUTOUR DE SOI, SUR DEMANDE (GEO-1, 03/09).
+          <!-- CHERCHER AUTOUR DE SOI, SUR DEMANDE (GEO-1, 03/09 — replacé
+               par GEO-2 le même jour). Armelin, en 1.68 : « le clavier du
+               smartphone se lance et couvre le message […] il faudrait que le
+               message soit situé sous la barre de recherche pour être
+               exploitable. Toute fonction cachée à l'utilisateur est une
+               fonction inutilisable. » Le bloc vivait en BAS de la page — la
+               moitié d'écran que le clavier recouvre précisément. Il vit
+               désormais SOUS LE CHAMP, dans la moitié haute, que le clavier
+               ne peut pas atteindre.
                Armelin, la nuit du 03/09 : « pour la décision de géolocalisation
                automatique, on oublie pour le moment, ou alors on affiche un
                message explicite pendant la recherche pour demander le
@@ -189,6 +190,14 @@ export class RechercheAdresse extends HTMLElement {
             <button type="button" class="recherche-ici-oui">Utiliser ma position</button>
             <p class="recherche-ici-etat" role="status"></p>
           </div>
+          <ul id="${this.#idListe}" role="listbox" aria-label="Suggestions d’adresses" hidden></ul>
+          <p class="recherche-erreur" role="alert" hidden></p>
+          <!-- UNE NOTE N'EST PAS UNE ERREUR (RECHERCHE-2) : « zoomez pour
+               chercher par nom » informe, il n'échoue pas. La peindre en
+               rouge d'alerte ferait passer une règle de frugalité pour une
+               panne. -->
+          <p class="recherche-note" role="status" hidden></p>
+
         </div>`;
       const champ = this.querySelector('input');
       champ?.addEventListener('input', () => this.#planifier(champ.value));

@@ -111,7 +111,10 @@ body { font-family: var(--police); background: var(--fond); }
    bloc vit EN BAS de la page de recherche : c'est une offre, pas un péage —
    il ne doit pas s'interposer entre le champ et les suggestions. */
 .recherche-ici {
-  margin-top: auto; padding: 12px; border-radius: 12px;
+  /* SOUS LA BARRE, JAMAIS EN BAS (GEO-2, 03/09) : le bas de l'écran est la
+     moitié que le clavier du téléphone recouvre — le bloc y était invisible
+     au moment exact où il servait. */
+  margin: 10px 14px 0; padding: 12px; border-radius: 12px;
   border: 1px solid var(--bord-2); background: var(--fond-doux);
 }
 .recherche-ici-mot {

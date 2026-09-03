@@ -43,6 +43,20 @@ const bloc = (page: Page) => page.locator('.entete .recherche-ici');
 test('L’INVITATION PARAÎT, et elle DIT ce que la position devient', async ({ page }) => {
   await ouvrirLaRecherche(page);
   await expect(bloc(page)).toBeVisible();
+
+  /* ELLE VIT DANS LA MOITIÉ HAUTE DE L'ÉCRAN (GEO-2, 03/09). Armelin : « le
+     clavier du smartphone se lance et couvre le message […] Toute fonction
+     cachée à l'utilisateur est une fonction inutilisable. » Le bloc vivait en
+     bas — la moitié que le clavier recouvre précisément. On MESURE sa
+     position : un clavier occupe rarement plus de la moitié basse. */
+  const place = await bloc(page).evaluate((e) => {
+    const b = e.getBoundingClientRect();
+    const champ = document.querySelector('.entete .recherche input')!.getBoundingClientRect();
+    return { haut: b.top, sousLeChamp: b.top >= champ.bottom, moitie: window.innerHeight / 2 };
+  });
+  expect(place.sousLeChamp, 'l’invitation doit être SOUS la barre').toBe(true);
+  expect(place.haut, 'et dans la moitié haute, hors de portée du clavier')
+    .toBeLessThan(place.moitie);
   /* ELLE DIT À QUOI ÇA SERT — sans cela, on demande une permission sans dire
      pourquoi, ce qui est la façon la plus sûre de se la voir refuser. */
   await expect(bloc(page)).toContainText('trier les résultats par distance');
