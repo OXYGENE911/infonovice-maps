@@ -1,0 +1,7 @@
+# LES DEUX FICHIERS QUE TOUTES LES PR TOUCHENT (04/09). Chaque entrée
+# s'insère en tête : deux branches qui insèrent chacune la leur ne sont PAS
+# en conflit de sens — seulement de lignes. Le pilote « union » garde les
+# deux ; l'ordre des entrées se relit à la fusion suivante, et le CHANGELOG
+# est de toute façon relu à chaque livraison.
+docs/CHANGELOG.md merge=union
+docs/ROADMAP.md merge=union

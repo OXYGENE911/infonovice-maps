@@ -2289,6 +2289,20 @@ body.en-guidage fiche-borne, body.en-guidage fiche-lieu { display: none; }
 .fb-notice { color: var(--accent); text-decoration: underline; }
 .fb-notice:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
 .fb-plan:focus-visible { outline: none; box-shadow: var(--focus); }
+/* LE BOUTON FAVORI S'HARMONISE (FBORNE-2, 04/09). Armelin : « un bouton
+   rectangulaire alors que tous les boutons de cette page sont à bords
+   arrondis […] il est tout petit pour de gros doigts sur smartphone ». Il
+   n'avait AUCUN style : c'était le bouton nu du navigateur au milieu d'une
+   page dessinée. Mêmes bords, même taille que « Ajouter au plan » — la
+   famille des actions secondaires du cartouche. */
+.fb-favori {
+  padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  cursor: pointer; font: 600 13px var(--police); color: var(--texte-1);
+}
+.fb-favori:hover { background: var(--bleu-50); border-color: var(--accent); }
+.fb-favori:focus-visible { outline: none; box-shadow: var(--focus); }
+.fb-favori:disabled { opacity: .75; cursor: default; }
 
 /* La recherche de réseau dans le plan de recharge, même forme qu'ailleurs. */
 .recharge-reseau-recherche {

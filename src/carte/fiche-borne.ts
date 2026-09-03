@@ -305,7 +305,12 @@ export class FicheBorne extends HTMLElement {
     const favori = document.createElement('button');
     favori.type = 'button';
     favori.className = 'fb-favori';
-    favori.textContent = 'Ajouter aux favoris';
+    /* L'ÉTOILE DIT « FAVORI » (FBORNE-2, 04/09). Armelin : « le bouton est
+       tout gris, on dirait même pas un bouton […] la couleur grise ne fait
+       pas favoris. Soit le bouton est jaune, soit il y a un logo en étoile. »
+       L'étoile, donc — le jaune plein aurait crié plus fort que « Itinéraire »,
+       qui reste le geste premier de ce cartouche. */
+    favori.textContent = '⭐ Ajouter aux favoris';
     /* LE NOM PORTE L'ADRESSE, pour la même raison que le bouton « Itinéraire »
        plus bas : « SIGEIF » seul, dans une liste de favoris, ne se retrouve
        pas. */

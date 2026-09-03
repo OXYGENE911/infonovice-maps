@@ -646,8 +646,18 @@ test('ON GARDE UNE BORNE EN FAVORI, dans la liste qu’on choisit', async ({ pag
   await simulerPortail(page, FRANCE, DETAIL_TYPE);
   await ouvrirCartoucheBeaune(page);
 
-  const favori = page.locator('fiche-borne').getByRole('button', { name: 'Ajouter aux favoris' });
+  /* L'ÉTOILE FAIT PARTIE DU NOM (FBORNE-2, 04/09) : « la couleur grise ne
+     fait pas favoris — soit le bouton est jaune, soit il y a un logo en
+     étoile ». */
+  const favori = page.locator('fiche-borne').getByRole('button', { name: /Ajouter aux favoris/ });
   await expect(favori).toBeVisible();
+  await expect(favori).toContainText('⭐');
+  /* ET IL A LA TAILLE D'UN DOIGT : « il est tout petit pour de gros doigts
+     sur smartphone ». 40 px est le minimum tactile courant ; on mesure. */
+  const boite = await favori.boundingBox();
+  expect(boite!.height, 'trop petit pour un doigt').toBeGreaterThanOrEqual(32);
+  const rayon = await favori.evaluate((e) => getComputedStyle(e).borderRadius);
+  expect(rayon, 'les bords doivent être arrondis comme les voisins').not.toBe('0px');
   await favori.click();
   /* LA LISTE SE DEMANDE ICI, comme sur toutes les autres fiches : c'est le
      même geste, la même question, au même moment. */
