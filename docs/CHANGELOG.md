@@ -2,6 +2,22 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.61.0] — 2026-09-03 — RECHERCHE-8c
+
+### Corrigé — « Seine » était pris pour une commune
+- **Vu en production**, en repassant le jeu d'essai sur le site : « FnacDarty
+  Siège Ivry sur Seine » faisait reconnaître **« Seine »** comme commune — elle
+  ouvre « Seine-Port » — et l'on partait chercher « Fnac Darty Siège Ivry
+  sur » autour de Seine-Port, à 25 km de nulle part. La bonne lecture était
+  « Ivry sur Seine », trois mots.
+- **On essaie désormais la commune la plus LONGUE d'abord.** Un nom de commune
+  long est un signal plus fort : « Ivry sur Seine » ne peut guère être un
+  hasard, « Seine » si.
+- **Et cela coûte moins, pas plus** : on s'arrête au premier découpage reconnu,
+  donc l'ordre du plus long au plus court ne dépense des requêtes que là où le
+  court aurait été faux. Mesuré : la requête passe de 1 326 ms à **566 ms**,
+  l'appel Overpass parti sur un nom absurde ayant disparu.
+
 ## [1.60.0] — 2026-09-03 — ADRESSE-POI-1
 
 ### L'adresse postale des lieux qui n'en déclarent pas

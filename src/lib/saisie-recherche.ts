@@ -45,10 +45,11 @@ export function nu(texte: string): string {
 /**
  * Les découpages « nom + commune » à essayer — PURE.
  *
- * On rend les couples du plus probable au moins probable : la commune est en
- * FIN de phrase dans la langue courante (« Castorama Ormesson », « Leroy
- * Merlin Lognes », « Collège Albert Camus Plessis-Trévise »), et elle tient en
- * un à trois mots (« Ivry sur Seine », « Le Plessis-Trévise »).
+ * La commune est en FIN de phrase dans la langue courante (« Castorama
+ * Ormesson », « Leroy Merlin Lognes », « Collège Albert Camus
+ * Plessis-Trévise »), et elle tient en un à quatre mots (« Ivry sur Seine »,
+ * « Le Plessis-Trévise »). On rend les couples de la commune LA PLUS LONGUE à
+ * la plus courte : c'est l'ordre du plus probable au moins probable.
  *
  * IL FAUT QU'IL RESTE UN NOM. Un découpage qui prendrait toute la phrase pour
  * une commune ne laisserait rien à chercher.
@@ -58,10 +59,20 @@ export function decoupagesNomCommune(
 ): { nom: string; commune: string }[] {
   const mots = separerMotsColles(texte).trim().split(/\s+/).filter((m) => m !== '');
   const sortie: { nom: string; commune: string }[] = [];
-  /* QUATRE MOTS DE COMMUNE AU PLUS : « Le Plessis-Trévise » en fait deux,
-     « Ivry sur Seine » trois, « Saint-Germain en Laye » trois — quatre couvre
-     « La Chapelle Saint Mesmin » sans ouvrir la porte à n'importe quoi. */
-  for (let n = 1; n <= Math.min(4, mots.length - 1); n += 1) {
+  /* LA PLUS LONGUE D'ABORD, ET C'EST UNE CORRECTION (RECHERCHE-8c, 03/09).
+     VU EN PRODUCTION : « FnacDarty Siège Ivry sur Seine » faisait reconnaître
+     « Seine » comme commune — elle ouvre « Seine-Port » — et l'on partait
+     chercher « Fnac Darty Siège Ivry sur » autour de Seine-Port, à 25 km de
+     nulle part. La bonne lecture était « Ivry sur Seine », trois mots.
+     UN NOM DE COMMUNE PLUS LONG EST UN SIGNAL PLUS FORT : « Ivry sur Seine »
+     ne peut guère être un hasard, « Seine » si. On s'arrête au premier
+     découpage reconnu, donc essayer du plus long au plus court ne coûte des
+     requêtes que là où le court aurait été faux.
+
+     QUATRE MOTS AU PLUS : « Le Plessis-Trévise » en fait deux, « Ivry sur
+     Seine » trois, « Saint-Germain en Laye » trois — quatre couvre « La
+     Chapelle Saint Mesmin » sans ouvrir la porte à n'importe quoi. */
+  for (let n = Math.min(4, mots.length - 1); n >= 1; n -= 1) {
     const commune = mots.slice(mots.length - n).join(' ');
     const nom = mots.slice(0, mots.length - n).join(' ');
     /* UN MOT DE DEUX LETTRES NE NOMME PAS UNE COMMUNE, et « de » ou « la » en

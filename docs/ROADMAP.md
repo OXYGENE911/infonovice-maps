@@ -598,6 +598,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       passait 12/12 — il partait des coordonnées d'Armelin, pas de la vue par
       défaut. Les communes candidates entrent maintenant TOUTES dans la même
       requête Overpass.
+- [x] PR #208 — RECHERCHE-8c (03/09) : « Seine » était pris pour une commune
+      dans « Ivry sur Seine ». La commune la plus longue est essayée d'abord —
+      un signal plus fort, et une requête de moins.
 - [x] PR #182 — PONT-1 (02/09) : les passages limités en tonnage s'annoncent à
       mille mètres, quand la masse est déclarée. Zéro requête de plus — la
       clause entre dans le corridor existant. On AVERTIT, on n'évite pas : le
