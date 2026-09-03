@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
 import { ouvrirVolet } from './volets';
+import { allerA } from './planificateur';
 
 /* PROFIL DU VÉHICULE ET RAYON D'ACTION — éprouvés avec un véhicule RÉEL, la
    VinFast VF8 d'Armelin et ses relevés du 25/08/2026. Une fiche constructeur
