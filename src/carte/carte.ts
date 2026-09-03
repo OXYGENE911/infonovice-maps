@@ -3,6 +3,7 @@
 // ne fait que l'assemblage MapLibre.
 import { Map as CarteMapLibre, NavigationControl, GeolocateControl, ScaleControl, Marker, Popup, setWorkerUrl } from 'maplibre-gl';
 import { PanneauHistorique } from './panneau-historique';
+import { estSombre, themeCourant, garderTheme, LIBELLES_THEME, THEMES } from '../lib/theme';
 import { CARTOUCHES, imageCartouche, zonesEtirables } from './cartouche-route';
 import { refermerPanneaux } from './panneaux';
 import { VERSION, libelleVersion, forcerMiseAJour } from '../lib/version';
@@ -177,8 +178,13 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      sens). Décision documentée : on repassera au vectoriel si le besoin
      dépasse ce rendu. */
   const sombre = window.matchMedia('(prefers-color-scheme: dark)');
+  /* LE FILTRE DU CANEVAS PREND LA MÊME DÉCISION QUE LE CSS (THEME-1, 03/09) :
+     le choix de l'usager d'abord, le système ensuite. Deux décisions séparées
+     finiraient par diverger — carte claire sous interface sombre, l'écart
+     qu'on met des semaines à revoir. */
   const appliquerSombre = (o: OptionsStyle) => {
-    conteneur.classList.toggle('fond-sombre', sombre.matches && o.fond === 'plan');
+    conteneur.classList.toggle('fond-sombre',
+      estSombre(themeCourant(), sombre.matches) && o.fond === 'plan');
   };
 
   /* LE MENU DES RÉGLAGES — un seul point d'entrée en haut à droite. Les
@@ -258,6 +264,37 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     }
   };
   menu.ajouter('Affichage', selecteur);
+
+  /* LE THÈME JOUR / NUIT (THEME-1, 03/09). Armelin : « par défaut je suis en
+     carte mode nuit, mais je n'ai pas la possibilité de changer ce
+     paramétrage du navigateur en plein écran de l'application PWA ». Une PWA
+     installée n'a AUCUN réglage de navigateur sous la main : le choix doit
+     vivre ici. « Auto » reste le défaut — celui qui aime suivre son téléphone
+     continue de le suivre. */
+  const boiteTheme = document.createElement('div');
+  boiteTheme.className = 'reglages-theme';
+  boiteTheme.setAttribute('role', 'radiogroup');
+  boiteTheme.setAttribute('aria-label', 'Thème de l’application');
+  for (const th of THEMES) {
+    const l = document.createElement('label');
+    l.className = 'reglages-theme-choix';
+    const r = document.createElement('input');
+    r.type = 'radio'; r.name = 'theme'; r.value = th;
+    r.checked = themeCourant() === th;
+    r.addEventListener('change', () => { garderTheme(th); });
+    const mot = document.createElement('span');
+    mot.textContent = LIBELLES_THEME[th];
+    l.append(r, mot);
+    boiteTheme.append(l);
+  }
+  /* LA RESTAURATION EST ASYNCHRONE et peut arriver après la construction du
+     menu : les coches se recalent à chaque changement, d'où qu'il vienne. */
+  document.addEventListener('theme-change', () => {
+    boiteTheme.querySelectorAll('input').forEach((r) => {
+      r.checked = r.value === themeCourant();
+    });
+  });
+  menu.ajouter('Thème', boiteTheme);
 
 
   /* LES BORNES ET LES SERVICES SONT UNE PAGE DU PLANIFICATEUR.
@@ -476,6 +513,7 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   installerPanneaux(document);
   appliquerSombre(selecteur.options);
   sombre.addEventListener('change', () => appliquerSombre(selecteur.options));
+  document.addEventListener('theme-change', () => appliquerSombre(selecteur.options));
   /* LA POSITION GPS EST DIFFUSÉE AUX PANNEAUX QUI EN ONT BESOIN. Les anneaux
      d'autonomie suivaient jusqu'ici le CENTRE DE LA CARTE : dès qu'on faisait
      glisser la carte, le rayon d'action se déplaçait avec elle, ce qui n'a

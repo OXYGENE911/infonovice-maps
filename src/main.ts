@@ -1,5 +1,6 @@
 // Point d'entrée : la carte plein écran (PR #2). La page « en construction »
 // de la PR #1 est morte ici, comme prévu.
+import { restaurerTheme } from './lib/theme';
 import './styles/tokens.css';
 import './styles/carte.css';
 // Le pied de page de la carte partage la feuille des pages de texte.
@@ -9,6 +10,11 @@ import { creerCarte } from './carte/carte';
 import { EtatConnexion } from './carte/etat-connexion';
 
 registerSW({ immediate: true });
+
+/* LE THÈME CHOISI SE RESTAURE AVANT LE PREMIER RENDU (THEME-1, 03/09) :
+   restauré plus tard, l'écran s'ouvrirait dans un thème et sauterait dans
+   l'autre — le « flash » que toutes les applications à thème connaissent. */
+void restaurerTheme();
 
 // L'état de connexion et l'invite d'installation vivent dans l'en-tête :
 // ils concernent l'application entière, pas la carte.

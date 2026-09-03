@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.66.0] — 2026-09-03 — THEME-1
+
+### Le thème Jour / Nuit se choisit dans le menu
+- Armelin, en 1.60 : « par défaut je suis en carte mode nuit, mais je n'ai pas
+  la possibilité de changer ce paramétrage du navigateur en plein écran de
+  l'application PWA. Est-ce possible d'ajouter dans le menu la possibilité de
+  changer le thème Jour/Nuit ? »
+- **Il a raison sur le fond** : suivre le téléphone est le bon défaut, mais une
+  PWA installée n'a aucun réglage de navigateur sous la main. Le choix vit
+  désormais dans le menu : **Auto · Jour · Nuit**, « Auto » restant le défaut.
+- Les **17 blocs sombres** du CSS ont été transformés : le média est gardé par
+  `:not([data-theme="clair"])` et dupliqué sous `[data-theme="sombre"]` — un
+  choix bat le système dans les deux sens. Le choix se restaure **avant le
+  premier rendu** et survit au rechargement.
+- Le **canevas de la carte** — dont le mode nuit est un filtre JS — prend **la
+  même décision** que les feuilles, via une fonction pure partagée.
+- **Mesuré à la couleur calculée**, pas à la classe. Et la CI a attrapé une
+  course que le local ne voyait pas : l'écriture du choix est asynchrone, le
+  rechargement du parcours la battait sur machine lente — la leçon de MODE-1,
+  repayée avant d'être reconnue.
+
 ## [1.62.0] — 2026-09-03 — POPUP-1
 
 ### Corrigé — les fiches de recherche ne se fermaient jamais
