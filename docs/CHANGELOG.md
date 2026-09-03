@@ -62,6 +62,27 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - **La contre-épreuve a corrigé le test lui-même** : sans un second relevé
   GPS forcé, le parcours passait même sans le correctif — un verrou qui n'a
   jamais l'occasion de rabattre la carte ne se voit pas.
+## [1.74.0] — 2026-09-04 — RAIL-POI-1
+
+### La page de recherche vierge propose les lieux à proximité
+- Armelin, le 03/09 : « il faudrait mettre en place un rail coulissant de
+  catégories de POI sous la page de recherche vierge. Genre les restaurants à
+  proximité, les supermarchés, les pharmacies etc. En cliquant dessus on
+  obtient la liste des restaurants à proximité avec leur distance. »
+- **Un rail coulissant des quinze familles de la carte** — mêmes pastilles,
+  mêmes couleurs : deux listes de catégories qui divergent seraient deux
+  applications. Un appui liste les lieux nommés dans un rayon de 5 km,
+  **du plus proche au plus loin**, avec leur distance et leur adresse
+  postale quand OpenStreetMap la porte.
+- La mesure part **de la position si elle a été consentie** (l'invitation
+  GEO-1 reste le seul chemin), sinon du centre de la carte — et la phrase
+  d'état dit lequel, car une distance sans origine ne veut rien dire.
+- Dès la première lettre tapée, le rail s'efface : la place revient aux
+  suggestions.
+- Les distances sont à vol d'oiseau, comme celles des suggestions. La
+  distance PAR LA ROUTE selon le mode de locomotion demanderait quinze
+  calculs d'itinéraire par appui — les quotas publics sont un bien commun ;
+  la piste d'une estimation honnête est notée dans la feuille de route.
 
 ## [1.70.0] — 2026-09-03 — GEO-2
 

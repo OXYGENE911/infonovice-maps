@@ -4,6 +4,16 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
 États : [ ] à faire · [~] en cours · [x] fusionnée.
 
 ## Fondations
+- [ ] RAIL-DISTANCE-ROUTE — dire la distance par la route selon le mode de
+      locomotion dans les listes (demande du 03/09 : « avec leur distance en
+      voiture ou à pied suivant le mode configuré »). La v1 du rail affiche
+      le vol d'oiseau, comme les suggestions : quinze calculs d'itinéraire
+      par appui martèleraient l'API publique. PISTE à mesurer AVANT de
+      promettre : le facteur de détour (1,25, celui déjà posé pour le corridor)
+      appliqué au vol d'oiseau, affiché « ≈ par la route ».
+- [x] PR #222 — RAIL-POI-1 (04/09) : le rail des familles de lieux sous la
+      page de recherche vierge — un appui liste les lieux nommés à moins de
+      5 km, du plus proche au plus loin, avec distance et adresse.
 - [x] PR #1 — Scaffolding : Vite + TS + PWA + ESLint + Vitest + Playwright +
       GitHub Actions (CI + déploiement Pages) + CNAME maps.infonovice.fr +
       page « en construction »

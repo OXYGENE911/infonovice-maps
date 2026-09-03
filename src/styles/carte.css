@@ -134,6 +134,34 @@ body { font-family: var(--police); background: var(--fond); }
 }
 .recherche-ici-etat:empty { display: none; }
 
+/* LE RAIL DES FAMILLES (RAIL-POI-1, 04/09) — page pleine seulement, et
+   jamais quand l'attribut hidden le range : le sélecteur :not([hidden])
+   évite qu'un display:block ne ressuscite un élément caché. */
+.recherche-rail { display: none; }
+recherche-adresse.recherche-page .recherche-rail:not([hidden]) {
+  display: block; margin: 12px 14px 0;
+}
+.recherche-rail-titre {
+  margin: 0 0 8px; font: 650 11.5px var(--police); color: var(--texte-2);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.recherche-rail ul {
+  display: flex; gap: 8px; margin: 0; padding: 0 0 6px; list-style: none;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.recherche-rail button {
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 9px 13px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-1); font: 600 12.5px var(--police);
+}
+.recherche-rail button:hover { border-color: var(--accent); background: var(--bleu-50); }
+.recherche-rail button:focus-visible { outline: none; box-shadow: var(--focus); }
+.recherche-rail-etat {
+  margin: 8px 14px 0; font: 600 12px var(--police); color: var(--texte-2);
+}
+.recherche-rail-etat:empty { display: none; }
+
 /* ═══ LA PAGE DE RECHERCHE PLEIN ÉCRAN (RECHERCHE-7, 03/09) ═══
    Armelin, rapportant ses usagers : « la recherche s'affiche dans un tout
    petit rectangle et la complétion dépasse de la zone d'affichage, ce qui ne
