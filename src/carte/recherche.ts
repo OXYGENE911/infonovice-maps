@@ -6,8 +6,8 @@ import {
   chercherAdresses, communeNommee, repondALaSaisie, type ResultatAdresse,
 } from '../lib/adresse';
 import { dansEmprise, type Emprise } from '../lib/couverture';
-import { chercherParNom, sansLaCommune, LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
-import { chercherEtablissements } from '../lib/annuaire-education';
+import { LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
+import { chercherPartout } from '../lib/recherche-multi';
 import { analyser, decoder, departementDe } from '../lib/adresse-mots';
 import { communesParNom } from '../lib/commune';
 
@@ -289,74 +289,77 @@ export class RechercheAdresse extends HTMLElement {
         const centre = plausible && meilleur
           ? { lon: meilleur.lon, lat: meilleur.lat }
           : (vue === null ? null : { lon: vue.lon, lat: vue.lat });
-        /* LA COMMUNE SITUE, ELLE NE NOMME PAS (RECHERCHE-6, 03/09).
-           « INRAE beaucouzé » ne trouvait rien : OpenStreetMap connaît trois
-           objets « INRAE » à Beaucouzé, nommés « INRAE » et non « INRAE
-           beaucouzé ». Or la BAN vient de reconnaître Beaucouzé et la rend en
-           tête, comme COMMUNE — on s'en sert pour situer, et l'on cherche le
-           reste comme nom. C'est d'ailleurs ainsi qu'on parle : « le INRAE de
-           Beaucouzé » veut dire « le INRAE, à Beaucouzé ». */
-        const commune = this.#resultats.find((r) => r.type === 'municipality');
-        const aChercher = commune
-          ? sansLaCommune(texte, commune.libelle)
-          : texte;
-        if (centre === null) {
-          note.textContent = 'Impossible de situer la recherche : déplacez la carte'
-            + ' vers la zone qui vous intéresse.';
-          note.hidden = false;
-        } else {
+        /* IL N'EST PLUS OBLIGATOIRE DE SITUER LA RECHERCHE (RECHERCHE-8,
+           03/09). On refusait de chercher sans centre de carte — « déplacez la
+           carte vers la zone qui vous intéresse » — parce que les deux seules
+           sources d'alors, OpenStreetMap et l'annuaire des écoles, ne savent
+           chercher qu'AUTOUR d'un point. L'index de la Géoplateforme et
+           l'annuaire des entreprises cherchent dans TOUTE la France : on peut
+           enfin chercher un lieu qu'on n'a pas déjà sous les yeux, ce qui est
+           tout de même l'usage ordinaire d'une barre de recherche.
+           Le centre, quand on l'a, sert encore aux deux sources qui en ont
+           besoin — et à départager deux communes homonymes. */
+        {
           try {
-            /* DEUX SOURCES, UN SEUL TEMPS D'ATTENTE (ECOLES-1, 01/09).
-               OpenStreetMap n'indexe que l'ÉGALITÉ : il faut lui donner le nom
-               entier. L'annuaire de l'Éducation nationale accepte un nom
-               PARTIEL — « Albert Camus » y trouve « Collège Albert Camus »,
-               qu'OSM ne connaît pas (mesuré : soixante écoles autour du
-               Plessis-Trévise, aucune de ce nom). Les deux se complètent, on
-               les interroge donc EN MÊME TEMPS.
-               `allSettled` ET NON `all` : l'échec d'une source ne doit pas
-               emporter l'autre — Overpass tombe régulièrement, et une école
-               trouvée vaut mieux qu'une page vide. */
-            const [cotePlaces, coteEcoles] = await Promise.allSettled([
-              chercherParNom(aChercher, centre, this.#annulation.signal),
-              chercherEtablissements(texte, centre, this.#annulation.signal),
-            ]);
-            const lieux = cotePlaces.status === 'fulfilled' ? cotePlaces.value : [];
-            const ecoles = coteEcoles.status === 'fulfilled' ? coteEcoles.value : [];
-            const nommes = [
-              ...ecoles.map((e) => ({
-                lon: e.lon, lat: e.lat,
-                libelle: e.nom,
-                type: 'etablissement',
-                /* LA SOURCE SE DIT : savoir d'où vient une réponse, c'est
-                   pouvoir la contester. */
-                contexte: [e.type, e.commune].filter(Boolean).join(' · ')
-                  || 'Éducation nationale',
-              })),
-              ...lieux
-                .filter((l) => l.nom !== null)
-                .map((l) => ({
-                  lon: l.lon, lat: l.lat,
-                  libelle: l.nom as string,
-                  type: 'lieu',
-                  contexte: 'Lieu de la carte',
-                })),
-            ];
+            /* CINQ PISTES, UN SEUL TEMPS D'ATTENTE (RECHERCHE-8, 03/09).
+
+               LE MANDAT D'ARMELIN, la nuit du 03/09 : « faire fonctionner la
+               recherche […] parcours toutes les API libres du gouvernement
+               s'il le faut ». Aucune source ne résout ses douze requêtes
+               d'essai — la mesure est dans `scripts/mesure-recherche.mjs` — et
+               c'est le fait qui commande toute cette architecture : l'index
+               de la Géoplateforme tolère la faute mais ignore les commerces ;
+               l'annuaire des entreprises porte tous les commerces de France
+               avec leur adresse mais ne tolère rien ; OpenStreetMap ne répond
+               qu'à l'égalité ; l'annuaire de l'Éducation accepte un nom
+               partiel d'école. On les interroge donc TOUTES en même temps, et
+               une source en panne n'emporte pas les autres. */
+            /* ET L'ON MONTRE AU FIL DE L'EAU (RECHERCHE-8, 03/09). Les
+               sources ne vont pas à la même vitesse : 30 ms pour l'index de la
+               Géoplateforme, jusqu'à dix secondes pour la piste « enseigne +
+               commune » qui passe par Overpass. Attendre la plus lente pour
+               montrer la plus rapide ferait une barre de recherche vide dix
+               secondes durant. */
+            const adresses = [...this.#resultats];
+            const poser = (t: { lieux: { lon: number; lat: number;
+              libelle: string; contexte: string; source: string }[] }): void => {
+              const nommes = t.lieux.map((l) => ({
+                lon: l.lon, lat: l.lat,
+                libelle: l.libelle,
+                type: l.source === 'entreprise' ? 'etablissement' : 'lieu',
+                contexte: l.contexte,
+              }));
+              this.#resultats = nommes.length > 0 ? [...nommes, ...adresses] : [...adresses];
+              this.#actif = -1;
+              this.#afficher();
+            };
+            const trouve = await chercherPartout(texte, {
+              centre, signal: this.#annulation.signal, auFil: poser,
+            });
+            const nommes = trouve.lieux.map((l) => ({
+              lon: l.lon, lat: l.lat,
+              libelle: l.libelle,
+              type: l.source === 'entreprise' ? 'etablissement' : 'lieu',
+              /* LA SOURCE ET L'ADRESSE SE DISENT : savoir d'où vient une
+                 réponse, c'est pouvoir la contester — et l'adresse est ce
+                 qu'Armelin réclamait le 03/09 (« aucune information sur
+                 l'adresse du lieu au format texte »). */
+              contexte: l.contexte,
+            }));
             /* UNE PANNE N'EST PAS UNE ABSENCE, et il suffit d'UNE source en
-               défaut pour qu'on ne puisse plus rien affirmer. Si l'une a
-               échoué et que personne n'a rien trouvé, on dit la panne — dire
-               « aucun résultat » ferait porter à l'usager le doute d'un
-               service, et lui ferait croire que son lieu n'existe pas. */
-            const enPanne = cotePlaces.status === 'rejected'
-              ? cotePlaces.reason as Error
-              : (coteEcoles.status === 'rejected' ? coteEcoles.reason as Error : null);
-            if (enPanne !== null && nommes.length === 0) throw enPanne;
+               défaut pour qu'on ne puisse plus rien affirmer. */
+            if (trouve.panne !== null && nommes.length === 0) throw trouve.panne;
             /* LES LIEUX PASSENT DEVANT : la BAN a déjà dit ce qu'elle savait,
-               et un lieu nommé EXACTEMENT comme la saisie répond mieux qu'une
-               rue approchante. Les adresses restent dessous, jamais perdues. */
-            if (nommes.length > 0) this.#resultats = [...nommes, ...this.#resultats];
+               et un lieu nommé répond mieux qu'une rue approchante. Les
+               adresses restent dessous, jamais perdues. */
+            if (nommes.length > 0) this.#resultats = [...nommes, ...adresses];
             if (this.#resultats.length === 0) {
-              note.textContent = `Aucune adresse ni lieu nommé « ${texte.trim()} »`
-                + ' à moins de 25 km. Le nom doit être écrit en entier.';
+              /* ON DIT OÙ L'ON A CHERCHÉ quand on a reconnu une commune :
+                 sans cela, l'usager ne sait pas si l'on a compris sa phrase. */
+              note.textContent = trouve.commune
+                ? `Rien trouvé pour « ${texte.trim()} », y compris autour de `
+                  + `${trouve.commune.nom}.`
+                : `Aucune adresse ni lieu nommé « ${texte.trim()} ».`;
               note.hidden = false;
             }
           } catch (e) {

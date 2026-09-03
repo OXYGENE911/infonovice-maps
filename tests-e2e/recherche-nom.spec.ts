@@ -35,6 +35,11 @@ const TOUR = {
 async function decor(page: import('@playwright/test').Page, options: {
   adresses?: unknown[]; lieux?: unknown[]; expiration?: boolean;
   etablissements?: unknown[];
+  /* LES DEUX SOURCES DE RECHERCHE-8 (03/09), simulées comme les autres : la
+     CI ne doit ni dépendre d'un service public, ni le solliciter à chaque
+     poussée. Leur disponibilité RÉELLE se prouve par mesure, avec
+     `scripts/essai-douze-requetes.ts`. */
+  poisIgn?: unknown[]; entreprises?: unknown[];
 } = {}): Promise<{ ban: string[]; overpass: string[]; annuaire: string[] }> {
   const ban: string[] = [];
   const overpass: string[] = [];
@@ -53,6 +58,24 @@ async function decor(page: import('@playwright/test').Page, options: {
     });
   });
   await simulerTuiles(page);
+  /* APRÈS `simulerTuiles`, ET C'EST VOULU : les tuiles vivent aussi sur
+     data.geopf.fr, et Playwright donne la main à la route posée EN DERNIER.
+     Le motif est plus précis que celui des tuiles, mais l'ordre décide. */
+  /* L'EN-TÊTE CORS N'EST PAS DÉCORATIVE : sans elle, le navigateur refuse la
+     réponse simulée et le code voit « Failed to fetch » — une panne réseau qui
+     masque celle qu'on voulait mesurer. Payé une fois ici, en cherchant
+     pourquoi le parcours de l'expiration ne disait plus « pas eu le temps ». */
+  const cors = { 'Access-Control-Allow-Origin': '*' };
+  await page.route('**/data.geopf.fr/geocodage/**', (route) => route.fulfill({
+    headers: cors,
+    contentType: 'application/json',
+    body: JSON.stringify({ type: 'FeatureCollection', features: options.poisIgn ?? [] }),
+  }));
+  await page.route('**/recherche-entreprises.api.gouv.fr/**', (route) => route.fulfill({
+    headers: cors,
+    contentType: 'application/json',
+    body: JSON.stringify({ results: options.entreprises ?? [] }),
+  }));
   await page.route('**/api-adresse.data.gouv.fr/search/**', (route) => {
     ban.push(new URL(route.request().url()).searchParams.get('q') ?? '');
     return route.fulfill({
@@ -102,8 +125,16 @@ test('UN NOM SE TROUVE MÊME QUAND LA BAN A RÉPONDU À CÔTÉ', async ({ page }
   /* CE QUI PART COMPTE AUTANT : une ÉGALITÉ (l'index d'Overpass), jamais une
      expression régulière — mesurée expirée — et autour du point que la BAN
      vient de désigner, pas autour de la vue. */
+  /* UN SEUL APPEL À OVERPASS, et c'est une règle du projet : « ne JAMAIS
+     marteler les API publiques ». RECHERCHE-8 a failli en faire deux — un
+     autour de la vue, un autour de la commune — et ce compteur l'a vu. */
   expect(overpass).toHaveLength(1);
-  expect(overpass[0]).toContain('["name"="Tour Eiffel Paris"]');
+  /* ET IL CHERCHE « Tour Eiffel », PAS « Tour Eiffel Paris » (RECHERCHE-8).
+     La commune SITUE, elle ne NOMME pas : aucun objet d'OpenStreetMap ne
+     s'appelle « Tour Eiffel Paris », et l'égalité exacte sur cette chaîne ne
+     pouvait donc jamais aboutir. */
+  expect(overpass[0]).toContain('["name"="Tour Eiffel"]');
+  expect(overpass[0]).not.toContain('"Tour Eiffel Paris"');
   expect(overpass[0]).not.toContain('~');
   expect(overpass[0]).toContain('around:25000,48.85840,2.29450');
 });
@@ -146,7 +177,10 @@ test('SANS RIEN TROUVER, ON DIT CE QU’IL FAUT ÉCRIRE', async ({ page }) => {
 
   const note = barre(page).locator('.recherche-note');
   await expect(note).toBeVisible({ timeout: 10_000 });
-  await expect(note).toContainText('écrit en entier');
+  /* LE MESSAGE A CHANGÉ AVEC RECHERCHE-8 : « le nom doit être écrit en
+     entier » n'est plus vrai — l'index de la Géoplateforme tolère la faute et
+     le mot incomplet. On dit donc ce qu'on sait : rien trouvé. */
+  await expect(note).toContainText('Aucune adresse ni lieu');
 });
 
 const AVENUE_CAMUS = {
