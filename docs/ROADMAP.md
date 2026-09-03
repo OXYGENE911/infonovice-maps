@@ -577,6 +577,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       la GÉOLOCALISATION À L'OUVERTURE, qu'Armelin demande — elle attend sa
       décision explicite, car elle contredit la contrainte 4 et la page
       « Vie privée » telle qu'elle est écrite aujourd'hui.
+- [x] PR #205 — GEO-1 (03/09) : chercher autour de soi SUR DEMANDE. Décision
+      d'Armelin du 03/09, sa seconde option. Aucune dérogation : le
+      consentement est explicite, ponctuel, et les deux pages publiques nomment
+      désormais les TROIS cas où la position sort.
 - [x] PR #204 — RECHERCHE-8 (03/09) : la recherche multi-sources — index POI de la
       Géoplateforme (tolérant aux fautes), annuaire des entreprises de la DINUM
       (tous les commerces de France et leur adresse), et la piste « enseigne +

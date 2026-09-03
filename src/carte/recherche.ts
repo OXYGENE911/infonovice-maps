@@ -158,6 +158,27 @@ export class RechercheAdresse extends HTMLElement {
                rouge d'alerte ferait passer une règle de frugalité pour une
                panne. -->
           <p class="recherche-note" role="status" hidden></p>
+          <!-- CHERCHER AUTOUR DE SOI, SUR DEMANDE (GEO-1, 03/09).
+               Armelin, la nuit du 03/09 : « pour la décision de géolocalisation
+               automatique, on oublie pour le moment, ou alors on affiche un
+               message explicite pendant la recherche pour demander le
+               consentement de la personne à se localiser s'il souhaite
+               rechercher autour de lui ? »
+               C'EST LA BONNE VOIE, ET ELLE NE DEMANDE AUCUNE DÉROGATION. Une
+               géolocalisation À L'OUVERTURE prendrait la position sans que
+               personne n'ait rien demandé — la contrainte 4 l'interdit. Ici,
+               c'est un geste, précédé de la phrase qui dit à quoi il sert et
+               ce qu'il envoie. -->
+          <div class="recherche-ici" hidden>
+            <p class="recherche-ici-mot">Chercher autour de vous ? Votre
+              position servira à trier les résultats par distance et à chercher
+              les lieux proches. <strong>Elle part alors au service
+              d’OpenStreetMap France</strong> qui relève ces lieux — c’est le
+              seul moyen de chercher « autour de moi ». Elle n’est ni
+              enregistrée, ni transmise à personne d’autre.</p>
+            <button type="button" class="recherche-ici-oui">Utiliser ma position</button>
+            <p class="recherche-ici-etat" role="status"></p>
+          </div>
         </div>`;
       const champ = this.querySelector('input');
       champ?.addEventListener('input', () => this.#planifier(champ.value));
@@ -171,6 +192,9 @@ export class RechercheAdresse extends HTMLElement {
       champ?.addEventListener('input', () => { this.#ouvrirPage(); });
       this.querySelector('.recherche-retour')?.addEventListener('click', () => {
         this.#fermerPage();
+      });
+      this.querySelector('.recherche-ici-oui')?.addEventListener('click', () => {
+        this.#seLocaliser();
       });
     }
     // L'écouteur document suit le cycle de vie : posé à la connexion, retiré
@@ -393,11 +417,65 @@ export class RechercheAdresse extends HTMLElement {
     document.body.classList.add('recherche-ouverte');
     const retour = this.querySelector<HTMLElement>('.recherche-retour');
     if (retour) retour.hidden = false;
+    /* L'INVITATION NE PARAÎT QUE SI ELLE SERT (GEO-1, 03/09) : en page plein
+       écran, et seulement tant qu'on ne connaît pas déjà la position. La
+       reproposer à qui s'est déjà localisé serait redemander un consentement
+       déjà donné — une façon de le rendre insignifiant. */
+    const ici = this.querySelector<HTMLElement>('.recherche-ici');
+    if (ici) ici.hidden = positionConnue !== null;
+  }
+
+  /**
+   * Demande la position, une fois, parce qu'on l'a demandée.
+   *
+   * ON NE LA PREND JAMAIS D'OFFICE (contrainte 4 du projet, et page « Vie
+   * privée »). Ce bouton est le geste ; la phrase au-dessus dit à quoi la
+   * position sert ET où elle part. La demander sans le dire serait la prendre.
+   *
+   * ELLE NE SORT PAS DU NAVIGATEUR PAR NOUS : elle sert à trier les résultats
+   * par distance, ici même. Elle part en revanche au service d'OpenStreetMap
+   * France dans la clause `around:` qui cherche les lieux proches — c'est le
+   * seul moyen de chercher « autour de moi », et la page « À propos » le dit
+   * désormais en toutes lettres.
+   */
+  #seLocaliser(): void {
+    const etat = this.querySelector<HTMLElement>('.recherche-ici-etat');
+    const bouton = this.querySelector<HTMLButtonElement>('.recherche-ici-oui');
+    if (!('geolocation' in navigator)) {
+      if (etat) etat.textContent = 'Ce navigateur ne sait pas donner votre position.';
+      return;
+    }
+    if (bouton) bouton.disabled = true;
+    if (etat) etat.textContent = 'Recherche de votre position…';
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        poserPositionConnue({ lon: p.coords.longitude, lat: p.coords.latitude });
+        const bloc = this.querySelector<HTMLElement>('.recherche-ici');
+        if (bloc) bloc.hidden = true;
+        /* ON REFAIT LA RECHERCHE TOUT DE SUITE : sans cela, l'usager aurait
+           accepté pour rien et devrait retaper sa phrase. */
+        const champ = this.querySelector('input');
+        if (champ && champ.value.trim() !== '') void this.#chercher(champ.value);
+      },
+      (e) => {
+        if (bouton) bouton.disabled = false;
+        /* UN REFUS N'EST PAS UNE PANNE, et se dit autrement : l'usager qui a
+           dit non ne doit pas croire que l'application est cassée. */
+        if (etat) {
+          etat.textContent = e.code === e.PERMISSION_DENIED
+            ? 'Position refusée — la recherche continue sans elle.'
+            : 'Position indisponible pour le moment.';
+        }
+      },
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
+    );
   }
 
   /** Referme la page et rend la carte. */
   #fermerPage(): void {
     if (!this.#page) return;
+    const ici = this.querySelector<HTMLElement>('.recherche-ici');
+    if (ici) ici.hidden = true;
     this.#page = false;
     this.classList.remove('recherche-page');
     document.body.classList.remove('recherche-ouverte');
