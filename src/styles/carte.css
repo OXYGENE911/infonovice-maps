@@ -84,9 +84,13 @@ body { font-family: var(--police); background: var(--fond); }
 .recherche [role="option"]:hover,
 .recherche [role="option"][aria-selected="true"] { background: var(--bleu-50); }
 @media (prefers-color-scheme: dark) {
-  .recherche [role="option"]:hover,
-  .recherche [role="option"][aria-selected="true"] { background: #1A2634; }
+  :root:not([data-theme="clair"]) .recherche [role="option"]:hover,
+:root:not([data-theme="clair"]) .recherche [role="option"][aria-selected="true"] { background: #1A2634; }
 }
+
+  :root[data-theme="sombre"] .recherche [role="option"]:hover,
+:root[data-theme="sombre"] .recherche [role="option"][aria-selected="true"] { background: #1A2634; }
+
 .recherche .contexte { font-size: 11.5px; color: var(--texte-3); white-space: nowrap; }
 /* LA DISTANCE (RECHERCHE-7) : à droite, en chiffres alignés — c'est une
    colonne qu'on parcourt du regard, pas une phrase qu'on lit. */
@@ -227,8 +231,11 @@ body.recherche-ouverte .pied-carte { display: none; }
   font-size: 11.5px; line-height: 1.35; color: #96500A;
 }
 @media (prefers-color-scheme: dark) {
-  .recherche .approche { color: var(--ambre); }
+  :root:not([data-theme="clair"]) .recherche .approche { color: var(--ambre); }
 }
+
+  :root[data-theme="sombre"] .recherche .approche { color: var(--ambre); }
+
 .recherche .approche[hidden] { display: none; }
 .recherche-erreur {
   position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: var(--z-suggestions);
@@ -365,10 +372,15 @@ body.recherche-ouverte .pied-carte { display: none; }
 
 /* Mode sombre du fond Plan IGN : inversion calibrée, canevas seulement. */
 @media (prefers-color-scheme: dark) {
-  .fond-sombre .maplibregl-canvas {
+  :root:not([data-theme="clair"]) .fond-sombre .maplibregl-canvas {
     filter: invert(0.92) hue-rotate(180deg) saturate(0.65) brightness(0.92) contrast(0.94);
   }
 }
+
+  :root[data-theme="sombre"] .fond-sombre .maplibregl-canvas {
+    filter: invert(0.92) hue-rotate(180deg) saturate(0.65) brightness(0.92) contrast(0.94);
+  }
+
 
 /* Planificateur d'itinéraire. */
 .porte-iti { pointer-events: auto; margin: 10px 0 0 12px !important; }
@@ -457,8 +469,11 @@ body.recherche-ouverte .pied-carte { display: none; }
 }
 .iti-profil input:checked ~ .picto-menu { color: var(--accent); }
 @media (prefers-color-scheme: dark) {
-  .iti-profil input:checked ~ span { background: #14263A; }
+  :root:not([data-theme="clair"]) .iti-profil input:checked ~ span { background: #14263A; }
 }
+
+  :root[data-theme="sombre"] .iti-profil input:checked ~ span { background: #14263A; }
+
 .iti-profil input:focus-visible ~ span { box-shadow: var(--focus); }
 .iti-resultat { font: 650 15px var(--police); color: var(--texte-1); }
 .iti-erreur { font: 400 13px var(--police); color: #C0392B; }
@@ -956,8 +971,11 @@ etapes-itineraire { display: grid; gap: 7px; }
 .iti-hist-comparaison td { font-variant-numeric: tabular-nums; }
 .iti-hist-comparaison td[data-meilleur] { font-weight: 700; color: #1E7A46; }
 @media (prefers-color-scheme: dark) {
-  .iti-hist-comparaison td[data-meilleur] { color: #6BD79B; }
+  :root:not([data-theme="clair"]) .iti-hist-comparaison td[data-meilleur] { color: #6BD79B; }
 }
+
+  :root[data-theme="sombre"] .iti-hist-comparaison td[data-meilleur] { color: #6BD79B; }
+
 
 .bg-bilan-fermer {
   padding: 6px 12px; border-radius: 9px;
@@ -1078,6 +1096,25 @@ etat-connexion { display: contents; }
      la séparation est structurelle, il n'y a plus rien à arbitrer. */
   left: 12px !important; right: auto !important;
 }
+
+/* LE CHOIX DU THÈME (THEME-1, 03/09) : trois pastilles, comme les modes du
+   trajet — l'état coché se voit, pas seulement le point du radio. */
+.reglages-theme { display: flex; gap: 8px; }
+.reglages-theme-choix { flex: 1; position: relative; display: flex; }
+.reglages-theme-choix input { position: absolute; opacity: 0; width: 0; height: 0; }
+.reglages-theme-choix span {
+  flex: 1; text-align: center; padding: 8px 0; border-radius: 10px;
+  border: 1px solid var(--bord-2); font: 600 13px var(--police);
+  color: var(--texte-2); cursor: pointer;
+}
+.reglages-theme-choix input:checked ~ span {
+  background: var(--bleu-50); border-color: var(--accent); color: var(--accent);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="clair"]) .reglages-theme-choix input:checked ~ span { background: #14263A; }
+}
+:root[data-theme="sombre"] .reglages-theme-choix input:checked ~ span { background: #14263A; }
+.reglages-theme-choix input:focus-visible ~ span { outline: none; box-shadow: var(--focus); }
 
 /* ═══ FILTRES DES BORNES (PR #22) ═════════════════════════════════════════ */
 .poi-filtres {
@@ -1673,10 +1710,15 @@ fiche-borne:not([hidden]), fiche-lieu:not([hidden]) { z-index: var(--z-volet-ouv
 }
 
 @media (prefers-color-scheme: dark) {
-  .fb-acces-libre { background: #143529; color: #8EE0B4; }
-  .fb-acces-reserve { background: #3A2A0E; color: #F2C879; }
-  .fb-erreur { color: #F2A79A; }
+  :root:not([data-theme="clair"]) .fb-acces-libre { background: #143529; color: #8EE0B4; }
+  :root:not([data-theme="clair"]) .fb-acces-reserve { background: #3A2A0E; color: #F2C879; }
+  :root:not([data-theme="clair"]) .fb-erreur { color: #F2A79A; }
 }
+
+  :root[data-theme="sombre"] .fb-acces-libre { background: #143529; color: #8EE0B4; }
+  :root[data-theme="sombre"] .fb-acces-reserve { background: #3A2A0E; color: #F2C879; }
+  :root[data-theme="sombre"] .fb-erreur { color: #F2A79A; }
+
 
 /* ==========================================================================
    LE PLAN DE RECHARGE — réseaux préférés, et la main sur les arrêts
@@ -1741,9 +1783,13 @@ fiche-borne:not([hidden]), fiche-lieu:not([hidden]) { z-index: var(--z-volet-ouv
 }
 
 @media (prefers-color-scheme: dark) {
-  .recharge-toutes-liste li.est-retenue { background: #123227; }
-  .recharge-toutes-liste li.est-imposee { background: #0F2740; }
+  :root:not([data-theme="clair"]) .recharge-toutes-liste li.est-retenue { background: #123227; }
+  :root:not([data-theme="clair"]) .recharge-toutes-liste li.est-imposee { background: #0F2740; }
 }
+
+  :root[data-theme="sombre"] .recharge-toutes-liste li.est-retenue { background: #123227; }
+  :root[data-theme="sombre"] .recharge-toutes-liste li.est-imposee { background: #0F2740; }
+
 
 /* LE CATALOGUE DE VÉHICULES. Il vient EN TÊTE du formulaire parce qu'il le
    remplit : le placer après les champs qu'il écrase se lirait comme un
@@ -1849,8 +1895,11 @@ bandeau-guidage.bg-compact .bg-fleche svg { width: 30px; height: 30px; }
 .bg-trafic:empty { display: none; }
 bandeau-guidage.bg-compact .bg-trafic { display: none; }
 @media (prefers-color-scheme: dark) {
-  .bg-trafic { color: #F2A45C; }
+  :root:not([data-theme="clair"]) .bg-trafic { color: #F2A45C; }
 }
+
+  :root[data-theme="sombre"] .bg-trafic { color: #F2A45C; }
+
 
 .bg-alerte {
   margin: 8px 0 0; padding: 7px 9px; border-radius: 8px;
@@ -1998,8 +2047,11 @@ bandeau-guidage { --vitesse-bas: calc(100% + 18px + var(--echelle-hauteur, 26px)
 .iti-actions .iti-demarrer[hidden] { display: none; }
 
 @media (prefers-color-scheme: dark) {
-  .bg-alerte { background: #3A2A0E; color: #F2C879; }
+  :root:not([data-theme="clair"]) .bg-alerte { background: #3A2A0E; color: #F2C879; }
 }
+
+  :root[data-theme="sombre"] .bg-alerte { background: #3A2A0E; color: #F2C879; }
+
 
 /* Sur téléphone, le bandeau colle aux bords : chaque pixel de carte compte. */
 @media (max-width: 640px) {
@@ -2838,8 +2890,11 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
 .iti-routine:hover { background: var(--accent); color: var(--blanc); }
 .iti-routine:focus-visible { outline: none; box-shadow: var(--focus); }
 @media (prefers-color-scheme: dark) {
-  .iti-routine { background: #14263A; color: var(--bleu-100); }
+  :root:not([data-theme="clair"]) .iti-routine { background: #14263A; color: var(--bleu-100); }
 }
+
+  :root[data-theme="sombre"] .iti-routine { background: #14263A; color: var(--bleu-100); }
+
 /* `[hidden]` doit GAGNER sur le display:flex — le piège .iti-raccourcis,
    encore : l'attribut était posé et l'élément s'affichait quand même. */
 .favoris-habitudes[hidden] { display: none; }
@@ -2970,8 +3025,13 @@ summary .picto-menu {
 @media (prefers-color-scheme: dark) {
   /* En sombre, la carte est déjà basse : le voile suit la même retenue que
      le clair — franc sur téléphone (plus bas), léger au bureau. */
-  #carte::after { background: rgba(0, 0, 0, .28); }
+  :root:not([data-theme="clair"]) #carte::after { background: rgba(0, 0, 0, .28); }
 }
+
+  /* En sombre, la carte est déjà basse : le voile suit la même retenue que
+     le clair — franc sur téléphone (plus bas), léger au bureau. */
+  :root[data-theme="sombre"] #carte::after { background: rgba(0, 0, 0, .28); }
+
 
 /* UNE FENÊTRE NE SE TIRE PAS : la poignée de feuille disparaît. Et elle ne
    s'étirait pas non plus — dans un corps en grille, elle occupait 72 px de
@@ -2984,8 +3044,11 @@ summary .picto-menu {
      franc sans rien éteindre de ce qu'on regarde. */
   #carte::after { background: rgba(8, 24, 48, .34); }
   @media (prefers-color-scheme: dark) {
-    #carte::after { background: rgba(0, 0, 0, .5); }
+    :root:not([data-theme="clair"]) #carte::after { background: rgba(0, 0, 0, .5); }
   }
+
+    :root[data-theme="sombre"] #carte::after { background: rgba(0, 0, 0, .5); }
+
 
   /* LA PAGE : une fenêtre posée bas — le pouce garde ce qu'il avait — mais
      DÉTACHÉE des quatre bords, arrondie partout, et haute comme son seul
@@ -3470,7 +3533,8 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
   background: var(--bleu-50); color: var(--accent);
   font: 600 12.5px var(--police);
 }
-@media (prefers-color-scheme: dark) { .bg-bis-mot { background: #14263A; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="clair"]) .bg-bis-mot { background: #14263A; } }
+ :root[data-theme="sombre"] .bg-bis-mot { background: #14263A; }
 /* La bifurcation est faite de traits fins et longs : au trait commun, elle
    s'efface à côté de la boussole. Deux dixièmes suffisent (mesuré à 22 px). */
 .bg-bis .picto-menu { stroke-width: 2; }
@@ -3631,8 +3695,11 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
   border-color: var(--accent); color: var(--accent); background: var(--bleu-50);
 }
 @media (prefers-color-scheme: dark) {
-  .bg-voix[aria-pressed="true"] { background: #14263A; }
+  :root:not([data-theme="clair"]) .bg-voix[aria-pressed="true"] { background: #14263A; }
 }
+
+  :root[data-theme="sombre"] .bg-voix[aria-pressed="true"] { background: #14263A; }
+
 
 /* ==========================================================================
    ERGO-2 — LA BOUSSOLE PORTE SES POINTS CARDINAUX (Armelin, 30/08 : « ce
@@ -3672,9 +3739,13 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
 .iti-raccourci-travail .picto-fenetres { stroke-width: 2.2; }
 .iti-raccourci-favoris .picto-menu-plein { fill: #F5B301; stroke: #D99900; }
 @media (prefers-color-scheme: dark) {
-  .iti-raccourci-domicile .picto-mur { fill: #3A2A18; }
-  .iti-raccourci-travail .picto-mur { fill: #2E2E2B; }
+  :root:not([data-theme="clair"]) .iti-raccourci-domicile .picto-mur { fill: #3A2A18; }
+  :root:not([data-theme="clair"]) .iti-raccourci-travail .picto-mur { fill: #2E2E2B; }
 }
+
+  :root[data-theme="sombre"] .iti-raccourci-domicile .picto-mur { fill: #3A2A18; }
+  :root[data-theme="sombre"] .iti-raccourci-travail .picto-mur { fill: #2E2E2B; }
+
 
 /* ERGO-3 — LES AUTONOMIES PRENNENT LA COULEUR DE LEUR ANNEAU. C'est la
    légende qui manquait au rayon d'action : vert en ville, ambre sur route,
@@ -3935,10 +4006,15 @@ filtre-poi {
   cursor: pointer;
 }
 @media (prefers-color-scheme: dark) {
-  .poi-filtres-effacer { color: var(--ambre); }
-  .poi-rappel-tout { color: var(--ambre); }
-  .poi-rappel-bornes { color: var(--texte-1); }
+  :root:not([data-theme="clair"]) .poi-filtres-effacer { color: var(--ambre); }
+  :root:not([data-theme="clair"]) .poi-rappel-tout { color: var(--ambre); }
+  :root:not([data-theme="clair"]) .poi-rappel-bornes { color: var(--texte-1); }
 }
+
+  :root[data-theme="sombre"] .poi-filtres-effacer { color: var(--ambre); }
+  :root[data-theme="sombre"] .poi-rappel-tout { color: var(--ambre); }
+  :root[data-theme="sombre"] .poi-rappel-bornes { color: var(--texte-1); }
+
 
 .poi-filtres-effacer:hover { background: rgb(180 83 9 / 12%); }
 .poi-filtres-effacer:focus-visible { outline: none; box-shadow: var(--focus); }

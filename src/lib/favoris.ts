@@ -155,6 +155,7 @@ export const LEGENDES: Readonly<Record<string, { quoi: string; origine: string }
   'guidage-vocal': { quoi: 'Le guidage vocal, allumé ou éteint.', origine: 'Vos réglages.' },
   'curseur-vehicule': { quoi: 'La forme de votre repère pendant la navigation.', origine: 'Vos réglages.' },
   trafic: { quoi: 'L’affichage des événements routiers.', origine: 'Vos réglages.' },
+  theme: { quoi: 'Le thème choisi : auto, jour ou nuit.', origine: 'Vos réglages.' },
   'mode-deplacement': {
     quoi: 'Votre façon de partir : voiture, moto, vélo ou à pied.',
     origine: 'Vos réglages.',
