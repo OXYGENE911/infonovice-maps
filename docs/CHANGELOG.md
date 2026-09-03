@@ -2,6 +2,53 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.55.0] — 2026-09-03 — MODE-1
+
+### Quatre façons de partir, rangées là où on les cherche
+- Armelin, 03/09 : « "Je roule en deux-roue" devrait plutôt se situer dans
+  "Options du trajet" à côté de "Voiture" et "À pieds", et il faudrait ajouter
+  un bouton "Moto" et un bouton "Vélo". »
+- **Il a raison sur le rangement.** « Je roule en deux-roues » était une case à
+  cocher dans « Mon véhicule », un panneau qui parle de batterie, de
+  consommation et de masse. Ce n'est pas une propriété du véhicule qu'on
+  possède : c'est une réponse à « comment je pars aujourd'hui », et cette
+  question avait déjà son endroit.
+- **Voiture · Moto · Vélo · À pied**, en deux rangs de deux — à quatre de
+  front dans un volet de 320 pixels, « Voiture » se coupait.
+- **Personne ne perd son réglage** : qui avait coché la case retrouve « Moto »
+  au premier chargement, et le mode se garde ensuite d'une session à l'autre.
+
+### Le vélo, et ce qu'il ne peut pas être — remesuré le 03/09
+- **Aucun moteur public français n'a de profil vélo.** La Géoplateforme
+  répond, dans ses propres mots, sur ses **trois** ressources (`bdtopo-osrm`,
+  `bdtopo-pgr`, `bdtopo-valhalla`) : *« Parameter 'profile' is invalid: value
+  should be one of car,pedestrian »*. Un an après le constat de la PR #5, rien
+  n'a changé ; un moteur auto-hébergé serait un backend, que la contrainte 1
+  interdit.
+- **Le mode Vélo suit donc le réseau piéton** — chemins et pistes compris — et
+  **le dit sous le bouton** : il ignore les contresens cyclables et peut
+  emprunter des escaliers.
+- **La durée est refaite à 15 km/h.** Le moteur rend un temps de piéton :
+  quatre kilomètres font une heure à pied et un quart d'heure à vélo. La
+  distance vaut — c'est le même chemin — la durée non. Le chiffre est écrit à
+  côté, pour que l'estimation ne passe pas pour une mesure.
+
+### Le lien de partage porte le mode
+- Un trajet à vélo partagé se rouvrait « à pied » : même tracé, durée quatre
+  fois plus longue, et rien pour le signaler. Le fragment porte désormais le
+  mode.
+- **Les liens déjà partagés ouvrent le même trajet** : `car` et `pedestrian`
+  gardent leur graphie et leur sens.
+
+### Mesuré
+- Neuf parcours Playwright neufs et vingt tests unitaires : les quatre modes
+  sont là et **tiennent dans le volet sans être rognés** (mesure de
+  rectangles) ; « Moto » cite le décret et dit ce qu'il ne change pas ;
+  « Vélo » avoue le graphe piéton et rend 16 min là où le moteur en annonçait
+  60 ; le mode survit au rechargement ; « Mon véhicule » n'a plus la case ; un
+  lien « vélo » rouvre en vélo et un lien `car` en voiture.
+- La garde d'EXPORT-1 a fait son travail : la clé de préférence neuve ne
+  pouvait pas partir dans l'export sans sa légende.
 ## [1.54.0] — 2026-09-03 — FAVORIS-4
 
 ### On choisit sa liste au moment où l'on garde

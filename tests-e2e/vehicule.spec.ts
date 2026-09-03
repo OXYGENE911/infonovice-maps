@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
 import { ouvrirVolet } from './volets';
+import { allerA } from './planificateur';
 
 /* PROFIL DU VÉHICULE ET RAYON D'ACTION — éprouvés avec un véhicule RÉEL, la
    VinFast VF8 d'Armelin et ses relevés du 25/08/2026. Une fiche constructeur
@@ -418,56 +419,43 @@ test('à pleine charge, il ne s’excuse de rien', async ({ page }) => {
   await expect(page.locator('.veh-bilan-charge')).not.toContainText('pas à pleine');
 });
 
-/* LE MODE DEUX-ROUES (MOTO-1, 02/09).
+/* LE MODE DEUX-ROUES A DÉMÉNAGÉ (MODE-1, 03/09).
  *
- * Armelin : « ajouter un mode Moto avec l'interfile ». Il ne change NI le
- * tracé — le moteur d'itinéraire public n'a pas de profil moto — NI l'heure
- * d'arrivée : le temps qu'un motard gagne dépend de son allure entre les
- * files, donc d'un choix qui engage sa sécurité. Il allume l'annonce des
- * sections où la remontée est permise, avec les conditions du décret. */
+ * Armelin : « "Je roule en deux-roue" devrait plutôt se situer dans "Options
+ * du trajet" à côté de "Voiture" et "À pieds" ». La case a donc quitté ce
+ * panneau, et avec elle le parcours qui la cochait : ce qu'il vérifiait — la
+ * note qui cite le décret, le choix qui se garde, ce que le mode ne change
+ * pas — vit désormais dans `modes-deplacement.spec.ts`, au bon endroit.
+ *
+ * CE QUI RESTE PROPRE À CE FICHIER, ET QUI NE POUVAIT PAS DÉMÉNAGER : que le
+ * réglage déjà pris ne soit pas perdu. Déplacer un bouton en effaçant en
+ * silence ce que l'usager avait coché serait la pire façon de le déplacer. */
 
-test('LE MODE DEUX-ROUES SE COCHE, SE GARDE, et dit sur quoi il se fonde', async ({ page }) => {
+test('L’ANCIEN RÉGLAGE « deux-roues » REVIENT en bouton « Moto »', async ({ page }) => {
   await ouvrirVehicule(page);
 
-  const moto = page.getByRole('checkbox', { name: 'Je roule en deux-roues' });
-  await expect(moto).not.toBeChecked();
-
-  /* LA NOTE CITE LE TEXTE, pas une impression : une application qui parle
-     d'une manœuvre routière doit dire d'où elle tient sa règle. */
-  const note = page.locator('.veh-note-moto');
-  await expect(note).toContainText('décret n° 2025-33');
-  await expect(note).toContainText('70 km/h');
-
-  /* ET ELLE DIT CE QU'ELLE NE FAIT PAS. Sans cette phrase, cocher la case
-     laisserait croire à un itinéraire ou à une heure d'arrivée différents. */
-  await expect(note).toContainText('ne change ni l’itinéraire ni l’heure');
-
-  await moto.check();
-
-  /* ON ATTEND QUE LA BASE AIT PRIS. L'écriture est asynchrone et lancée sans
-     être attendue (`void ecrirePreference`) : recharger dans la
-     milliseconde qui suit le clic courserait l'écriture, et le parcours
-     échouerait sur une race, pas sur un défaut. */
-  await expect.poll(() => page.evaluate(() => new Promise<boolean>((ok) => {
-    const d = indexedDB.open('infonovice-maps', 2);
+  /* ON ÉCRIT LA FORME D'AVANT, telle que MOTO-1 la rangeait : la clé
+     `vehicule`, et `moto: true` dedans. C'est ce qu'ont dans leur navigateur
+     les usagers qui avaient coché la case. */
+  await page.evaluate(() => new Promise<void>((ok) => {
+    const d = indexedDB.open('infonovice-maps');
     d.onsuccess = () => {
-      const r = d.result.transaction('preferences', 'readonly')
-        .objectStore('preferences').get('vehicule');
-      r.onsuccess = () => ok(
-        (r.result as { vehicule?: { moto?: boolean } } | undefined)?.vehicule?.moto === true,
-      );
-      r.onerror = () => ok(false);
+      const tx = d.result.transaction('preferences', 'readwrite');
+      tx.objectStore('preferences').put({ vehicule: { moto: true } }, 'vehicule');
+      tx.oncomplete = () => ok();
+      tx.onerror = () => ok();
     };
-    d.onerror = () => ok(false);
-  })), { timeout: 10_000, message: 'le choix « deux-roues » n’a pas atteint la base' })
-    .toBe(true);
+    d.onerror = () => ok();
+  }));
 
-  /* LE CHOIX SURVIT AU RECHARGEMENT : c'est un fait sur le véhicule, pas un
-     réglage d'une session. */
   await page.reload();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
-  await ouvrirVolet(page, '.vehicule');
-  await expect(page.getByRole('checkbox', { name: 'Je roule en deux-roues' })).toBeChecked();
+  await allerA(page, 'options');
+  /* LE BOUTON « Moto » EST PRIS, sans que rien n'ait été recoché à la main —
+     et la note du décret paraît avec lui. */
+  await expect(page.locator('.iti-profil:has(input[value="moto"]) input'))
+    .toBeChecked({ timeout: 10_000 });
+  await expect(page.locator('.iti-note-moto')).toBeVisible();
 });
 
 /* LE CERCLE TIENT COMPTE DU FROID (RAYON-2, 02/09).

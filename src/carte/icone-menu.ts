@@ -20,6 +20,9 @@ export type NomPicto =
      notamment les icônes pour les options ». La page Options n'était que
      des mots : mode de déplacement, optimisation, évitements. */
   | 'pieton' | 'rapide' | 'court' | 'autoroute' | 'tunnel' | 'pont'
+  /* MODE-1 (03/09) — « il faudrait ajouter un bouton Moto et un bouton
+     Vélo » : quatre modes de déplacement, quatre dessins. */
+  | 'moto' | 'velo'
   /* BIS-1 (30/08) — l'itinéraire bis se demande d'une icône dans la barre. */
   | 'bis'
   /* ERGO-3 (30/08) — les raccourcis d'itinéraire passent au dessin :
@@ -95,6 +98,20 @@ const TRACES: Record<NomPicto, string> = {
   // courte qui reste lisible à vingt pixels.
   pieton: '<circle cx="12.6" cy="4.6" r="2"/>'
     + '<path d="M12.6 8v5.2M12.6 13.2 9.6 20M12.6 13.2 15.6 20M9.2 10.2l3.4-1.6 3.6 2.2"/>',
+  /* ---- MODE-1 : la moto et le vélo (03/09) ---- */
+  // Une moto de profil : petite roue avant, grande roue arrière, guidon haut.
+  // Ce qui la distingue du vélo à vingt pixels, c'est le carénage plein entre
+  // les roues — un cadre triangulaire se lirait « vélo ».
+  moto: '<circle cx="5.2" cy="16.8" r="3.4"/><circle cx="18.8" cy="16.8" r="3.4"/>'
+    + '<path d="M5.2 16.8h4.2l3-4.4h3.6l2.8 4.4M9.4 12.4 8 9.6h3.4"'
+    + ' style="stroke-linejoin:round"/><path d="M14.4 9.4h3.4l1 3"/>',
+  // Un vélo de profil : deux roues égales, le cadre en triangle, le guidon.
+  // Les roues sont plus grandes et le trait plus fin que sur la moto : c'est
+  // la différence qu'on voit d'abord.
+  velo: '<circle cx="5" cy="16.6" r="3.8"/><circle cx="19" cy="16.6" r="3.8"/>'
+    + '<path d="M5 16.6 9.4 9.2h6.2l3.4 7.4M9.4 16.6h5.6l-2.6-7.4"'
+    + ' style="stroke-linejoin:round"/><path d="M8.4 9.2h2.6"/>',
+
   // Un chronomètre : le temps, pas la vitesse — c'est « le plus RAPIDE ».
   rapide: '<circle cx="12" cy="13.6" r="7"/>'
     + '<path d="M12 9.8v3.8l2.6 1.8M10 2.8h4M12 2.8v2.2M18.6 6.4l1.4 1.4"/>',
