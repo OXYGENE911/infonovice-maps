@@ -51,6 +51,8 @@ import {
 } from './icone-lieu';
 import { rubriquesDe, lignesHoraires, etatOuverture } from '../lib/detail-lieu';
 import { brancherAjoutFavori } from './choix-liste';
+import { adresseDesTags, libelleDestination } from '../lib/adresse-lieu';
+import { adresseInverse } from '../lib/adresse';
 import type { PorteItineraire } from './fiche-borne';
 import {
   elargir, estCouverte, memoriser, type Emprise,
@@ -567,6 +569,43 @@ export class FiltrePoi extends HTMLElement {
       boite.append(type);
     }
 
+    /* L'ADRESSE DES LIEUX QUI N'EN DÉCLARENT PAS (ADRESSE-POI-1, 03/09).
+       Armelin : « il y a trop de POI sur lesquels je clique et il n'y a aucune
+       information sur l'adresse du lieu au format texte ».
+
+       LA FICHE EN MONTRAIT DÉJÀ UNE — la rubrique « Adresse » de
+       `detail-lieu.ts`, tirée des étiquettes `addr:*`. Le manque n'est donc
+       pas là : il est dans les lieux qui n'ont PAS ces étiquettes, et ils sont
+       le grand nombre. Pour ceux-là, on demande à la BAN, une fois, à
+       l'ouverture de la fiche — jamais avant : une fiche qu'on n'ouvre pas ne
+       coûte rien.
+
+       ET L'ON NE DOUBLE PAS LA LIGNE : quand les étiquettes portent l'adresse,
+       la rubrique suffit, et ajouter un second exemplaire ferait une fiche qui
+       se répète. */
+    const desTags = adresseDesTags(lieu.tags);
+    /* CE QU'ON GARDE POUR « Y ALLER » : le libellé de la destination doit
+       porter l'adresse, et elle peut arriver après le clic. */
+    let adresseConnue = desTags;
+    if (desTags === null) {
+      const adresse = document.createElement('p');
+      adresse.className = 'poi-fiche-adresse';
+      adresse.textContent = 'Recherche de l’adresse…';
+      boite.append(adresse);
+      void adresseInverse({ lon: lieu.lon, lat: lieu.lat })
+        .then((r) => {
+          adresseConnue = r?.libelle ?? null;
+          /* ON NE DEVINE PAS. Sans réponse, la fiche le DIT — inventer une rue
+             voisine ferait croire à l'usager qu'il tient l'adresse. Et l'on
+             dit d'OÙ elle vient : ce n'est pas la même chose de lire l'adresse
+             déclarée du commerce et l'adresse la plus proche du point. */
+          adresse.textContent = adresseConnue === null
+            ? 'Adresse inconnue de la Base Adresse Nationale'
+            : `Adresse la plus proche : ${adresseConnue}`;
+        })
+        .catch(() => { adresse.textContent = 'Adresse indisponible pour le moment'; });
+    }
+
     const rubriques = rubriquesDe(lieu.tags ?? {});
     if (rubriques.length > 0) {
       const dl = document.createElement('dl');
@@ -633,7 +672,16 @@ export class FiltrePoi extends HTMLElement {
        chemin, la même porte. Sans planificateur branché, le bouton ne
        paraît pas — un bouton qui ne fait rien est pire qu'un texte. */
     aller.addEventListener('click', () => {
-      this.#porte?.allerVers({ lon: lieu.lon, lat: lieu.lat }, nom);
+      /* LE CHAMP DESTINATION PORTE L'ADRESSE (ADRESSE-POI-1, 03/09).
+         Armelin : « le nom commercial du POI s'affiche dans le champ
+         destination et je n'ai toujours aucune idée de l'adresse du lieu ».
+         « Carrefour City » ne se dicte pas au téléphone ; « Carrefour City —
+         3 avenue Ardouin, 94420 Le Plessis-Trévise » se dicte. La fiche de
+         borne le faisait depuis le 26/08 ; les lieux, non. */
+      this.#porte?.allerVers(
+        { lon: lieu.lon, lat: lieu.lat },
+        libelleDestination(nom, adresseConnue),
+      );
     });
 
     const favori = document.createElement('button');
