@@ -151,6 +151,12 @@ export class RechercheAdresse extends HTMLElement {
                pouvoir en sortir autrement qu'au clavier. -->
           <button type="button" class="recherche-retour" hidden
             aria-label="Revenir à la carte">←</button>
+          <!-- LA MASCOTTE DE LA RECHERCHE (LOGO-1, 03/09) : le chien à la
+               boussole, choisi par Armelin pour les écrans de recherche.
+               Décorative (aria-hidden), et seulement en page pleine — dans la
+               barre, chaque pixel de large compte. -->
+          <img class="recherche-mascotte" src="/icones/compas-48.png"
+            alt="" aria-hidden="true" width="34" height="34" hidden>
           <input type="search" role="combobox" aria-expanded="false"
             aria-controls="${this.#idListe}" aria-autocomplete="list"
             aria-label="Rechercher une adresse en France"
@@ -421,6 +427,8 @@ export class RechercheAdresse extends HTMLElement {
     document.body.classList.add('recherche-ouverte');
     const retour = this.querySelector<HTMLElement>('.recherche-retour');
     if (retour) retour.hidden = false;
+    const mascotte = this.querySelector<HTMLElement>('.recherche-mascotte');
+    if (mascotte) mascotte.hidden = false;
     /* L'INVITATION NE PARAÎT QUE SI ELLE SERT (GEO-1, 03/09) : en page plein
        écran, et seulement tant qu'on ne connaît pas déjà la position. La
        reproposer à qui s'est déjà localisé serait redemander un consentement
@@ -480,6 +488,8 @@ export class RechercheAdresse extends HTMLElement {
     if (!this.#page) return;
     const ici = this.querySelector<HTMLElement>('.recherche-ici');
     if (ici) ici.hidden = true;
+    const mascotte = this.querySelector<HTMLElement>('.recherche-mascotte');
+    if (mascotte) mascotte.hidden = true;
     this.#page = false;
     this.classList.remove('recherche-page');
     document.body.classList.remove('recherche-ouverte');
