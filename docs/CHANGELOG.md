@@ -2,6 +2,25 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.71.0] — 2026-09-04 — DEST-1
+
+### La carte va vraiment à la destination, et la fiche se range
+- Armelin, en 1.68 : « je valide une adresse et la carte zoome brièvement et
+  dézoome aussitôt en restant sur ma position, sans aller sur le lieu
+  sélectionné » ; et « la fiche masque la destination — on devrait pouvoir la
+  réduire au niveau du pointeur et la faire réapparaître en recliquant ».
+- **La cause du zoom avorté** : le suivi GPS verrouille la caméra, et un
+  `flyTo` programmatique ne casse pas ce verrou — MapLibre ne le lève que sur
+  un geste de l'usager. Chaque relevé GPS rabattait la carte sur la position.
+  **Choisir une destination désarme désormais le suivi**, comme le font les
+  cartes du commerce — le bouton reste là pour le réarmer d'un geste.
+- **Le marqueur devient une poignée** : la fiche fermée à la croix se rouvre
+  en cliquant le point bleu, sans retaper l'adresse — gestes intacts,
+  « Y aller » compris. Et le marqueur le dit aux lecteurs d'écran.
+- **La contre-épreuve a corrigé le test lui-même** : sans un second relevé
+  GPS forcé, le parcours passait même sans le correctif — un verrou qui n'a
+  jamais l'occasion de rabattre la carte ne se voit pas.
+
 ## [1.70.0] — 2026-09-03 — GEO-2
 
 ### L'invitation à se localiser vit sous la barre, hors de portée du clavier

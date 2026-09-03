@@ -523,6 +523,15 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     positionOptions: { enableHighAccuracy: true },
     trackUserLocation: true,
   });
+  /* LE VERROU DE CAMÉRA DU SUIVI GPS, SUIVI À LA TRACE (DEST-1, 03/09).
+     En mode « verrouillé », chaque relevé GPS RECENTRE la carte — et un
+     `flyTo` programmatique ne casse pas ce verrou : MapLibre ne le lève que
+     sur un geste de l'usager (drag, molette). C'est la cause exacte du
+     retour d'Armelin : « la carte zoome brièvement et dézoome aussitôt en
+     restant sur ma position, sans aller sur le lieu sélectionné ». */
+  let suiviVerrouille = false;
+  geoloc.on('trackuserlocationstart', () => { suiviVerrouille = true; });
+  geoloc.on('trackuserlocationend', () => { suiviVerrouille = false; });
   geoloc.on('geolocate', (e: unknown) => {
     const p = (e as { coords?: { longitude?: number; latitude?: number } }).coords;
     if (typeof p?.longitude === 'number' && typeof p?.latitude === 'number') {
@@ -562,6 +571,10 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   recherche.pleinEcran = true;
   document.querySelector('.entete')?.appendChild(recherche);
   let marqueur: Marker | null = null;
+  /* LA DERNIÈRE DESTINATION CHOISIE : c'est elle que le marqueur rouvre.
+     Armelin : « on devrait pouvoir réduire la fenêtre au niveau du pointeur
+     et la faire réapparaître à la demande en recliquant sur le point ». */
+  let derniereDestination: { libelle: string; contexte: string; lon: number; lat: number } | null = null;
 
   /* UNE SEULE FICHE À LA FOIS SUR LA CARTE (POPUP-1, 03/09).
      Armelin, premier retour de la 1.60 : « si je relance dans la foulée une
@@ -597,8 +610,26 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   });
 
   recherche.surSelection = (r) => {
+    /* ON DÉSARME LE SUIVI AVANT DE VOLER (DEST-1) : verrouillé, chaque relevé
+       GPS rabattrait la carte sur la position, et le vol vers la destination
+       avorterait sous les yeux de l'usager — son retour exact. `trigger()` en
+       état verrouillé COUPE le suivi (le cycle du bouton de MapLibre) : c'est
+       ce que font les cartes du commerce quand on choisit une destination, et
+       le bouton reste là pour le réarmer d'un geste. */
+    if (suiviVerrouille) geoloc.trigger();
     marqueur?.remove();
     marqueur = new Marker({ color: '#2272C4' }).setLngLat([r.lon, r.lat]).addTo(carte);
+    /* LE MARQUEUR EST UNE POIGNÉE : la fiche fermée se rouvre en le cliquant.
+       Le marqueur est recréé à chaque sélection — l'écouteur aussi. */
+    derniereDestination = r;
+    const poignee = marqueur.getElement();
+    poignee.style.cursor = 'pointer';
+    poignee.setAttribute('role', 'button');
+    poignee.setAttribute('aria-label', `Rouvrir la fiche de ${r.libelle}`);
+    poignee.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (derniereDestination) montrerDestination(derniereDestination);
+    });
     carte.flyTo({ center: [r.lon, r.lat], zoom: r.type === 'municipality' ? 13 : 17 });
     montrerDestination(r);
   };

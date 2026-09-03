@@ -659,6 +659,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       À cadrer : où vit le geste (Copilot), et ce qu'on fait de l'écart
       mesuré (le montrer seulement, ou apprendre une correction de
       consommation à la MARGE-1 — jamais en silence).
+- [x] PR #219 — DEST-1 (04/09) : la carte va vraiment à la destination (le
+      suivi GPS se désarme au choix — son verrou rabattait chaque flyTo), et
+      le marqueur rouvre la fiche fermée.
 - [x] PR #182 — PONT-1 (02/09) : les passages limités en tonnage s'annoncent à
       mille mètres, quand la masse est déclarée. Zéro requête de plus — la
       clause entre dans le corridor existant. On AVERTIT, on n'évite pas : le
