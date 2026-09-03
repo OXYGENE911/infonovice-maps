@@ -64,7 +64,7 @@ async function decor(page: Page, options: {
       body: JSON.stringify({ type: 'FeatureCollection', features: options.adresses ?? [] }) });
   });
   await page.route('**overpass.openstreetmap.fr**', (route) => {
-    appels.push(`overpass:${decodeURIComponent(route.request().url()).slice(0, 200)}`);
+    appels.push(`overpass:${decodeURIComponent(route.request().url())}`);
     return route.fulfill({ headers: cors, contentType: 'application/json',
       body: JSON.stringify({ elements: [] }) });
   });
@@ -140,6 +140,35 @@ test('LA COMMUNE SITUE, ELLE NE NOMME PAS — un seul appel à Overpass', async 
   expect(versOverpass[0]).toContain('48.78480,2.53660');
   // ET LA BAN A ÉTÉ INTERROGÉE SUR LES COMMUNES, pas sur les rues.
   expect(appels.some((a) => a.includes('#municipality'))).toBe(true);
+});
+
+test('DEUX COMMUNES HOMONYMES sont interrogées TOUTES LES DEUX', async ({ page }) => {
+  /* LE DÉFAUT, VU EN PRODUCTION ET PAS EN TEST (RECHERCHE-8b, 03/09). Juste
+     après la mise en ligne de la v1.57.0, « Castorama Ormesson » ne rendait
+     aucun Castorama sur le site. Mon banc d'essai passait pourtant 12/12 —
+     parce que je lui donnais les coordonnées d'Armelin. L'usager qui ouvre
+     l'application regarde la France entière, et depuis ce centre-là c'est
+     Ormesson (77167) qui gagne au « plus proche », alors que le magasin est
+     près d'Ormesson-sur-Marne (94490).
+     ON NE PARIE PLUS : les deux communes entrent dans la MÊME requête. */
+  const { appels } = await decor(page, {
+    adresses: [
+      { type: 'Feature',
+        geometry: { type: 'Point', coordinates: [2.6519, 48.2456] },
+        properties: { label: 'Ormesson', city: 'Ormesson', type: 'municipality', postcode: '77167', score: 0.9 } },
+      { type: 'Feature',
+        geometry: { type: 'Point', coordinates: [2.5366, 48.7848] },
+        properties: { label: 'Ormesson-sur-Marne', city: 'Ormesson-sur-Marne', type: 'municipality', postcode: '94490', score: 0.8 } },
+    ],
+  });
+  await barre(page).getByRole('combobox').fill('Castorama Ormesson');
+  await expect(barre(page).locator('[role="option"]').first()).toBeVisible({ timeout: 10_000 });
+
+  const versOverpass = appels.filter((a) => a.startsWith('overpass:'));
+  /* TOUJOURS UN SEUL APPEL — l'union ne coûte pas une requête de plus. */
+  expect(versOverpass, 'un seul appel à Overpass').toHaveLength(1);
+  expect(versOverpass[0], 'la commune du 77 doit être interrogée').toContain('48.24560,2.65190');
+  expect(versOverpass[0], 'ET celle du 94 aussi').toContain('48.78480,2.53660');
 });
 
 test('ON PEUT CHERCHER UN LIEU QU’ON N’A PAS SOUS LES YEUX', async ({ page }) => {

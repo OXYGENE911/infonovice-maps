@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.59.0] — 2026-09-03 — RECHERCHE-8b
+
+### Corrigé — « Castorama Ormesson » ne trouvait rien en production
+- **Vu en production, pas en test.** Juste après la mise en ligne de la
+  v1.57.0, j'ai tapé « Castorama Ormesson » sur maps.infonovice.fr : aucun
+  Castorama. Le banc d'essai passait pourtant 12/12.
+- **Il passait pour une mauvaise raison** : je lui donnais les coordonnées
+  d'Armelin. L'usager qui ouvre l'application regarde la France entière —
+  centre (2,4 ; 46,6), zoom 5,4.
+- **« Ormesson » désigne DEUX communes** : Ormesson (77167) et
+  Ormesson-sur-Marne (94490). On les départageait « au plus proche de la
+  vue » ; depuis le centre de la France, c'est la mauvaise qui gagne, et le
+  magasin est près de l'autre.
+- **On ne parie plus.** Overpass accepte une union de clauses `around:` : on
+  interroge **toutes** les communes candidates dans **un seul** appel. La règle
+  « ne jamais marteler les API publiques » est respectée, et l'ambiguïté cesse
+  d'être un coup de dé.
+- **Le banc d'essai part désormais de la vue par défaut** — celle de
+  l'application qui s'ouvre. Un banc qui part d'un état privilégié ne mesure
+  pas ce que l'utilisateur vit. 12/12 dans ces conditions-là.
+
 ## [1.58.0] — 2026-09-03 — GEO-1
 
 ### Chercher autour de soi, sur demande — jamais d'office

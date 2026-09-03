@@ -335,7 +335,7 @@ async function chercherAutourDeLaCommune(
       commune: null,
     };
   }
-  const { nom, trouvee } = reconnue;
+  const { nom, trouvee, toutes } = reconnue;
   {
     /* DEUX FAÇONS DE CHERCHER AUTOUR D'ELLE, et les deux servent :
        l'annuaire par CODE POSTAL quand l'établissement y est déclaré, et
@@ -345,7 +345,11 @@ async function chercherAutourDeLaCommune(
       chercherEntreprises(nom, signal
         ? { codePostal: trouvee.codePostal, signal }
         : { codePostal: trouvee.codePostal }),
-      chercherParNom(nom, { lon: trouvee.lon, lat: trouvee.lat }, signal),
+      /* TOUTES LES COMMUNES HOMONYMES, EN UN SEUL APPEL (RECHERCHE-8b).
+         « Ormesson » en désigne deux, et depuis la vue France par défaut c'est
+         la mauvaise qui gagnait au « plus proche ». Overpass accepte une union
+         de clauses `around:` : on cesse de parier. */
+      chercherParNom(nom, toutes.map((c) => ({ lon: c.lon, lat: c.lat })), signal),
     ]);
     const sortie: Trouvaille[] = [];
     if (parCp.status === 'fulfilled') sortie.push(...parCp.value.map(deEntreprise));
@@ -365,14 +369,18 @@ async function chercherAutourDeLaCommune(
  */
 async function reconnaitreLaCommune(
   q: string, centre: PointGeo | null, signal?: AbortSignal,
-): Promise<{ nom: string; trouvee: CommuneReconnue } | null> {
+): Promise<{ nom: string; trouvee: CommuneReconnue; toutes: CommuneReconnue[] } | null> {
   for (const { nom, commune } of decoupagesNomCommune(q)) {
     const candidates = (await chercherCommune(commune, signal))
       /* LA BAN REND CE QU'ELLE PEUT, y compris « Tremblay-en-France » pour
          « France ». On ne garde que les communes que ces mots-là OUVRENT. */
       .filter((c) => communeCorrespond(commune, c.nom));
     const trouvee = communeLaPlusProche(candidates, centre);
-    if (trouvee !== null) return { nom, trouvee };
+    /* LA PLUS PROCHE SERT ENCORE À DEUX CHOSES : dire à l'usager où l'on a
+       cherché, et filtrer l'annuaire des entreprises par code postal — ce
+       filtre ne prend qu'une valeur. Mais elle ne décide plus SEULE de la
+       recherche géographique. */
+    if (trouvee !== null) return { nom, trouvee, toutes: candidates };
   }
   return null;
 }

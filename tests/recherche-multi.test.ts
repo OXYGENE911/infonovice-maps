@@ -9,6 +9,7 @@ import {
 } from '../src/lib/saisie-recherche';
 import { versEtablissements, urlEntreprises, estUneEnseigne } from '../src/lib/recherche-entreprises';
 import { versLieuxIgn, urlPoiIgn } from '../src/lib/recherche-poi-ign';
+import { urlNomLieu } from '../src/lib/recherche-lieux';
 
 /* LA RECHERCHE MULTI-SOURCES (RECHERCHE-8, 03/09).
  *
@@ -251,5 +252,47 @@ describe('les URL et les lectures défensives', () => {
     }));
     expect(versEtablissements({ results: [{ nom_complet: 'X', matching_etablissements: doubles } ] }))
       .toHaveLength(1);
+  });
+});
+
+/* LES COMMUNES HOMONYMES (RECHERCHE-8b, 03/09).
+ *
+ * LE DÉFAUT, VU EN PRODUCTION ET PAS EN TEST. Juste après la mise en ligne de
+ * la v1.57.0, j'ai tapé « Castorama Ormesson » sur maps.infonovice.fr : aucun
+ * Castorama. Mon banc d'essai passait pourtant 12/12 — parce que je lui
+ * donnais les coordonnées d'Armelin. L'usager qui ouvre l'application, lui,
+ * regarde la France entière.
+ *
+ * « Ormesson » DÉSIGNE DEUX COMMUNES : Ormesson (77167) et Ormesson-sur-Marne
+ * (94490). On départageait « au plus proche de la vue » ; depuis le centre de
+ * la France, c'est la mauvaise qui gagne, et le magasin est près de l'autre.
+ *
+ * ON NE PARIE PLUS : Overpass accepte une union de clauses `around:`, donc on
+ * interroge TOUTES les communes candidates en UN SEUL appel — la règle « ne
+ * jamais marteler les API publiques » est respectée, et l'ambiguïté cesse
+ * d'être un coup de dé. */
+
+describe('urlNomLieu avec plusieurs centres', () => {
+  const A = { lon: 2.6519, lat: 48.2456 };
+  const B = { lon: 2.5366, lat: 48.7848 };
+
+  it('INTERROGE TOUTES LES COMMUNES en une seule requête', () => {
+    const url = urlNomLieu('Castorama', [A, B]);
+    expect(url).not.toBeNull();
+    const q = decodeURIComponent(url as string);
+    expect(q).toContain('48.24560,2.65190');
+    expect(q).toContain('48.78480,2.53660');
+    // UNE SEULE URL, donc un seul appel : c'est tout l'intérêt de l'union.
+    expect(q.split('[out:json]')).toHaveLength(2);
+  });
+
+  it('GARDE LE COMPORTEMENT D’AVANT pour un centre unique', () => {
+    /* Les appelants qui ne connaissent qu'un point ne doivent rien changer. */
+    expect(decodeURIComponent(urlNomLieu('Castorama', A) as string))
+      .toBe(decodeURIComponent(urlNomLieu('Castorama', [A]) as string));
+  });
+
+  it('SANS AUCUN CENTRE, on ne fabrique pas de requête vide', () => {
+    expect(urlNomLieu('Castorama', [])).toBeNull();
   });
 });

@@ -151,14 +151,29 @@ const CLES_NOM: readonly string[] = ['name', 'brand', 'operator'];
  *
  * Rend `null` quand il n'y a rien à chercher : l'appelant ne part pas.
  */
-export function urlNomLieu(nom: string, centre: CentreRecherche): string | null {
+export function urlNomLieu(
+  nom: string, centre: CentreRecherche | CentreRecherche[],
+): string | null {
   const graphies = graphiesDe(nom);
   if (graphies.length === 0) return null;
-  const autour = `around:${RAYON_NOM_M},${centre.lat.toFixed(5)},${centre.lon.toFixed(5)}`;
-  const clauses = graphies
-    .flatMap((g) => CLES_NOM.map(
-      (cle) => `nwr["${cle}"="${echapperNom(g)}"](${autour});`,
-    ))
+  /* PLUSIEURS CENTRES DANS UNE SEULE REQUÊTE (RECHERCHE-8b, 03/09).
+     LE DÉFAUT, VU EN PRODUCTION et pas en test : « Castorama Ormesson » ne
+     rendait rien depuis la vue France par défaut. « Ormesson » désigne DEUX
+     communes — Ormesson (77167) et Ormesson-sur-Marne (94490) — et l'on
+     départageait « au plus proche de la vue ». Depuis le centre de la France,
+     c'est la mauvaise qui gagne, et le magasin est près de l'autre.
+     ON NE DEVINE PLUS : Overpass accepte une UNION de clauses `around:`, donc
+     on interroge toutes les communes candidates EN UN SEUL APPEL. La règle du
+     projet — « ne jamais marteler les API publiques » — est respectée, et
+     l'ambiguïté cesse d'être un pari. */
+  const centres = Array.isArray(centre) ? centre : [centre];
+  if (centres.length === 0) return null;
+  const clauses = centres
+    .map((c) => `around:${RAYON_NOM_M},${c.lat.toFixed(5)},${c.lon.toFixed(5)}`)
+    .flatMap((autour) => graphies
+      .flatMap((g) => CLES_NOM.map(
+        (cle) => `nwr["${cle}"="${echapperNom(g)}"](${autour});`,
+      )))
     .join('');
   const requete = `[out:json][timeout:25];(${clauses});out center tags ${PLAFOND_NOMS};`;
   return `https://overpass.openstreetmap.fr/api/interpreter?data=${encodeURIComponent(requete)}`;
@@ -186,7 +201,7 @@ export function aRenonce(brut: unknown): boolean {
  * une page HTML, qu'on traduit en français plutôt qu'en exception illisible.
  */
 export async function chercherParNom(
-  nom: string, centre: CentreRecherche, signal?: AbortSignal,
+  nom: string, centre: CentreRecherche | CentreRecherche[], signal?: AbortSignal,
 ): Promise<LieuCategorie[]> {
   const url = urlNomLieu(nom, centre);
   if (url === null) return [];
