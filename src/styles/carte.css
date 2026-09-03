@@ -376,6 +376,24 @@ body.recherche-ouverte .pied-carte { display: none; }
   font: 700 11px var(--police); color: var(--texte-3);
   text-transform: uppercase; letter-spacing: .07em; }
 .iti-profils, .iti-optimisations { display: flex; gap: 8px; }
+/* QUATRE MODES NE TIENNENT PAS SUR UNE LIGNE (MODE-1, 03/09). Le volet fait
+   320 pixels : à quatre de front, « Voiture » disposait de trente pixels après
+   le picto et son texte se coupait. Deux par deux, chaque bouton garde sa
+   largeur d'origine — et la rangée d'optimisation, qui n'a que deux entrées,
+   ne bouge pas. */
+.iti-profils { flex-wrap: wrap; }
+.iti-profils .iti-profil { flex: 1 1 calc(50% - 8px); }
+
+/* CE QUE LE MODE FAIT, ET CE QU'IL NE FAIT PAS. La note paraît sous les
+   boutons, au moment du choix — pas dans une page « À propos » que personne
+   n'ouvre avant de partir. Le garde `[hidden]` est global en tête de fichier
+   (leçon d'ERGO-6) ; `display` ne le contredit donc pas. */
+.iti-note-mode {
+  margin: 8px 0 0; padding: 8px 10px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  font: 400 11.5px/1.45 var(--police); color: var(--texte-2);
+}
+.iti-note-mode strong { color: var(--texte-1); font-weight: 650; }
 /* PIC-2 (29/08) — LES OPTIONS PORTENT LEURS PICTOS. La bascule s'écrit
    désormais en frère GÉNÉRAL (`~ span`) et non plus adjacent (`+ span`) :
    le picto s'est glissé entre la case et le libellé, et `+` ne franchit

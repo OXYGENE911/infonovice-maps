@@ -14,7 +14,7 @@ import { EtapesItineraire } from './etapes-itineraire';
 import {
   meriteUneAlternative, vautLaPeine, phraseAlternative,
 } from '../lib/detour';
-import { calculerItineraire, itineraireDirect, formaterDistance, formaterDuree, PROFILS, EVITEMENTS, OPTIMISATIONS, ErreurItineraire, MAX_ETAPES, type Profil, type Itineraire, type Eviter, type Optimisation } from '../lib/itineraire';
+import { calculerItineraire, itineraireDirect, formaterDistance, formaterDuree, EVITEMENTS, OPTIMISATIONS, ErreurItineraire, MAX_ETAPES, type Profil, type Itineraire, type Eviter, type Optimisation } from '../lib/itineraire';
 import { formaterCoordonnees, type PointGeo } from '../lib/coordonnees';
 import { lireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { listerFavoris } from '../lib/favoris';
@@ -22,7 +22,7 @@ import { adresseInverse, type ResultatAdresse } from '../lib/adresse';
 import { versGPX, versKML, telecharger } from '../lib/trace';
 import { versFragment, depuisFragment } from '../lib/partage-url';
 import { installerFeuilleBasse } from './feuille-basse';
-import { pictoMenu } from './icone-menu';
+import { pictoMenu, type NomPicto } from './icone-menu';
 import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
 import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
@@ -44,6 +44,10 @@ import {
   stationPasseFiltres,
 } from '../lib/index-bornes';
 import { chargerCommodites, TYPES_COMMODITE, ErreurCommodites } from '../lib/commodites';
+import {
+  MODES, TOUS_LES_MODES, PREF_MODE, VITESSE_VELO_KMH,
+  profilDe, estDeuxRoues, dureeVelo, versMode, type Mode,
+} from '../lib/modes-deplacement';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import { PREF_VEHICULE } from './panneau-vehicule';
 import { ErreurPoi, type FiltresBornes } from '../lib/poi';
@@ -64,6 +68,12 @@ import { meteoA } from '../lib/meteo';
 import type { FicheBorne } from './fiche-borne';
 import type { FicheLieu } from './fiche-lieu';
 import type { BandeauGuidage } from './bandeau-guidage';
+
+/* CHAQUE MODE SON DESSIN. Quatre libellés côte à côte se lisent mal en
+   diagonale ; quatre silhouettes se reconnaissent d'un coup d'œil. */
+const PICTO_MODE: Record<Mode, NomPicto> = {
+  voiture: 'vehicule', moto: 'moto', velo: 'velo', pied: 'pieton',
+};
 
 const SOURCE = 'itineraire';
 /* LES VARIANTES A/B/C — une seule source pour les trois : elles se
@@ -149,7 +159,13 @@ export class PanneauItineraire extends HTMLElement {
      coordonnées sans échanger les textes mentirait dans les champs. */
   #libelleDepart = '';
   #libelleArrivee = '';
-  #profil: Profil = 'car';
+  /* LE MODE, ET NON LE PROFIL DU MOTEUR (MODE-1, 03/09). Armelin : « "Je
+     roule en deux-roue" devrait plutôt se situer dans "Options du trajet" à
+     côté de "Voiture" et "À pieds", et il faudrait ajouter un bouton "Moto"
+     et un bouton "Vélo". » Le moteur public ne connaît que `car` et
+     `pedestrian` (remesuré le 03/09, sur les trois ressources) : les quatre
+     modes s'y ramènent, et `profilDe` est le seul endroit qui le sait. */
+  #mode: Mode = 'voiture';
   #eviter = new Set<Eviter>();
 
   /* L'OPTIMISATION — le cadrage des « profils de trajet » (mandat 28/08) :
@@ -163,7 +179,7 @@ export class PanneauItineraire extends HTMLElement {
       recalcul raté laisse les deux cohérents entre eux. Feuille de route,
       lien partagé et marqueurs se lisent ICI, jamais dans l'état vivant. */
   #calculPour: {
-    depart: PointGeo; arrivee: PointGeo; profil: Profil;
+    depart: PointGeo; arrivee: PointGeo; profil: Profil; mode: Mode;
     etapes: PointGeo[]; eviter: Eviter[]; optimisation: Optimisation;
   } | null = null;
   /* LA DESTINATION D'ORIGINE, gardée quand on se gare (PARK-1) : c'est vers
@@ -581,11 +597,29 @@ export class PanneauItineraire extends HTMLElement {
           <!-- ======================= OPTIONS ======================= -->
           <section class="vue" data-vue="options" hidden>
             <div class="iti-profils" role="radiogroup" aria-label="Mode de déplacement">
-              ${(Object.keys(PROFILS) as Profil[]).map((p) => `
-                <label class="iti-profil"><input type="radio" name="profil" value="${p}"
-                  ${p === this.#profil ? 'checked' : ''}
-                  >${pictoMenu(p === 'car' ? 'vehicule' : 'pieton')}<span>${PROFILS[p]}</span></label>`).join('')}
+              ${TOUS_LES_MODES.map((m) => `
+                <label class="iti-profil"><input type="radio" name="profil" value="${m}"
+                  ${m === this.#mode ? 'checked' : ''}
+                  >${pictoMenu(PICTO_MODE[m])}<span>${MODES[m]}</span></label>`).join('')}
             </div>
+            <!-- CE QUE CHAQUE MODE FAIT, ET CE QU'IL NE FAIT PAS. Deux modes
+                 sur quatre reposent sur une approximation, et le taire
+                 laisserait croire à des moteurs qu'on n'a pas. -->
+            <p class="iti-note-mode iti-note-moto" hidden>Depuis le décret
+              n° 2025-33 du 9 janvier 2025, la remontée d’interfile est permise
+              dans toute la France sur autoroute et route à chaussées séparées
+              limitées à 70 km/h ou plus, quand le trafic est bloqué sur toutes
+              les voies. L’application VOUS DIT où ces sections commencent ;
+              elle ne change ni l’itinéraire ni l’heure d’arrivée, et ne
+              suppose jamais que vous remonterez.</p>
+            <p class="iti-note-mode iti-note-velo" hidden>Aucun moteur public
+              français n’a de profil vélo — la Géoplateforme répond
+              « profile should be one of car,pedestrian », vérifié le
+              03/09/2026 sur ses trois moteurs. Le tracé suit donc le
+              <strong>réseau piéton</strong>, chemins et pistes compris : il
+              ignore les contresens cyclables et peut emprunter des escaliers.
+              La durée est estimée à ${VITESSE_VELO_KMH} km/h, une moyenne —
+              le relief et le vent pèsent davantage que le tracé.</p>
             <!-- L'OPTIMISATION : les deux seules que le moteur CONNAÎT.
                  « Économe » et « Sans péage » sont écartés avec la mesure
                  (aucun modèle de consommation, aucune contrainte de péage
@@ -806,9 +840,34 @@ export class PanneauItineraire extends HTMLElement {
         void this.#calculer();
       });
     });
+    /* LE MODE GARDÉ REVIENT, et la case « Je roule en deux-roues » de MOTO-1
+       vaut « Moto » tant qu'aucun mode n'a été choisi depuis : qui l'avait
+       cochée retrouve son réglage sans rien refaire (MODE-1, 03/09).
+
+       ON NE RECALCULE PAS ICI : à cet instant il n'y a ni départ ni arrivée.
+       On coche le bouton, on montre la note, et le premier calcul partira
+       avec le bon mode. */
+    void Promise.all([
+      lirePreference<unknown>(PREF_MODE),
+      lirePreference<unknown>(PREF_VEHICULE),
+    ]).then(([garde, memo]) => {
+      const mode = versMode(garde, estUneMoto(memo));
+      if (mode === this.#mode) { this.#direLeMode(); return; }
+      this.#mode = mode;
+      const r = this.querySelector<HTMLInputElement>(
+        `input[name="profil"][value="${mode}"]`);
+      if (r) r.checked = true;
+      this.#direLeMode();
+    }).catch(() => { this.#direLeMode(); });
+
     this.querySelectorAll('input[name="profil"]').forEach((r) => {
       r.addEventListener('change', () => {
-        this.#profil = (r as HTMLInputElement).value as Profil;
+        this.#mode = (r as HTMLInputElement).value as Mode;
+        this.#direLeMode();
+        /* LE MODE SE GARDE : c'était un fait durable avant MODE-1 (une case
+           dans « Mon véhicule »), il le reste. Un échec d'écriture ne doit
+           pas empêcher de calculer — on part quand même. */
+        void ecrirePreference(PREF_MODE, this.#mode).catch(() => { /* tant pis */ });
         void this.#calculer();
       });
     });
@@ -938,9 +997,10 @@ export class PanneauItineraire extends HTMLElement {
       if (!fin) return;
       this.#finPietonne = null;
       if (this.#guidage) this.#guidage.finApied = null;
-      this.#profil = 'pedestrian';
+      this.#mode = 'pied';
+      this.#direLeMode();
       const radio = this.querySelector<HTMLInputElement>(
-        'input[name="profil"][value="pedestrian"]',
+        'input[name="profil"][value="pied"]',
       );
       if (radio) radio.checked = true;
       this.#reprendreSuivi = true;
@@ -1072,14 +1132,15 @@ export class PanneauItineraire extends HTMLElement {
     if (partage) {
       this.#depart = partage.depart;
       this.#arrivee = partage.arrivee;
-      this.#profil = partage.profil;
+      this.#mode = partage.mode;
+      this.#direLeMode();
       etapes.points = partage.etapes;
       this.#eviter = new Set(partage.eviter);
       for (const v of partage.eviter) {
         const case_ = this.querySelector(`.iti-eviter input[value="${v}"]`);
         if (case_) (case_ as HTMLInputElement).checked = true;
       }
-      const radio = this.querySelector(`input[name="profil"][value="${partage.profil}"]`);
+      const radio = this.querySelector(`input[name="profil"][value="${partage.mode}"]`);
       if (radio) (radio as HTMLInputElement).checked = true;
       this.#optimisation = partage.optimisation;
       const opt = this.querySelector(
@@ -1092,8 +1153,22 @@ export class PanneauItineraire extends HTMLElement {
     }
   }
 
+  /**
+   * Montre la note du mode choisi, s'il en a une.
+   *
+   * DEUX MODES SUR QUATRE REPOSENT SUR UNE APPROXIMATION, et c'est au moment
+   * du choix qu'il faut le dire — pas dans une page « À propos » que personne
+   * n'ouvre avant de partir.
+   */
+  #direLeMode(): void {
+    const moto = this.querySelector<HTMLElement>('.iti-note-moto');
+    const velo = this.querySelector<HTMLElement>('.iti-note-velo');
+    if (moto) moto.hidden = this.#mode !== 'moto';
+    if (velo) velo.hidden = this.#mode !== 'velo';
+  }
+
   #nomTrajet(): string {
-    return `Itinéraire Infonovice Maps (${PROFILS[this.#profil]})`;
+    return `Itinéraire Infonovice Maps (${MODES[this.#mode]})`;
   }
 
   /**
@@ -2565,7 +2640,7 @@ export class PanneauItineraire extends HTMLElement {
          faut attendre quelques secondes mais il faut le savoir ») : le
          résumé annonce que les arrêts arrivent, au lieu d'un silence qu'on
          prend pour un oubli. */
-      resultat.textContent = (this.#profil === 'car'
+      resultat.textContent = (profilDe(this.#mode) === 'car'
         ? `${base} de route` + (this.#planEnCours
           ? ' — calcul des arrêts de recharge…' : ', hors recharge')
         : base) + heureArriveeReelle(iti.duree);
@@ -2815,7 +2890,7 @@ export class PanneauItineraire extends HTMLElement {
       /* LE PROFIL DÉCIDE DE L'ÉCART TOLÉRÉ (GUIDE-6, 02/09) : à pied, quatre-
          vingts mètres sont un pâté de maisons — c'est ce qui a empêché le
          recalcul quand Armelin a contourné une résidence fermée. */
-      aPied: this.#profil === 'pedestrian',
+      aPied: profilDe(this.#mode) === 'pedestrian',
       /* LA DESTINATION DEMANDÉE (PARK-1) : le tracé s'arrête sur la route,
          l'adresse est à côté — c'est autour d'ELLE qu'on cherche à se
          garer. */
@@ -2864,11 +2939,12 @@ export class PanneauItineraire extends HTMLElement {
            » dans « Mon véhicule ». Elles ne changent ni le tracé ni l'heure
            d'arrivée — elles disent où c'est permis, et à quelles conditions. */
         bandeau.interfiles = corridor.interfiles;
+        /* L'INTERFILE SUIT LE BOUTON « Moto » (MODE-1, 03/09), et non plus
+           une case de « Mon véhicule » : c'est une façon de partir, pas une
+           propriété du véhicule qu'on possède. */
+        bandeau.moto = estDeuxRoues(this.#mode);
         void lirePreference<unknown>(PREF_VEHICULE)
-          .then((memo) => {
-            bandeau.masseVehiculeKg = masseDeclaree(memo);
-            bandeau.moto = estUneMoto(memo);
-          })
+          .then((memo) => { bandeau.masseVehiculeKg = masseDeclaree(memo); })
           .catch(() => { /* sans profil lisible, on se tait */ });
         bandeau.reperesManquants = false;
       })
@@ -3796,7 +3872,7 @@ export class PanneauItineraire extends HTMLElement {
       corps.textContent = '';
       // Titre et résumé FIGÉS avec les étapes : l'impression décrira ce
       // trajet-là, quel que soit l'état du panneau au moment du clic.
-      const titre = `Itinéraire Infonovice Maps (${PROFILS[cliche.profil]})`;
+      const titre = `Itinéraire Infonovice Maps (${MODES[cliche.mode]})`;
       const resume = `${formaterDistance(iti.distance)} — ${formaterDuree(iti.duree)}`;
       const imprimer = document.createElement('button');
       imprimer.type = 'button';
@@ -4049,15 +4125,24 @@ export class PanneauItineraire extends HTMLElement {
     resultat.hidden = false;
     resultat.textContent = 'Calcul de l’itinéraire…';
     try {
-      const depart = this.#depart; const arrivee = this.#arrivee; const profil = this.#profil;
+      const depart = this.#depart; const arrivee = this.#arrivee;
+      const mode = this.#mode; const profil = profilDe(mode);
       const inter = (this.querySelector('etapes-itineraire') as EtapesItineraire).points;
       const eviter = [...this.#eviter];
       const optimisation = this.#optimisation;
-      const iti = await calculerItineraire(depart, arrivee, profil,
+      const brut = await calculerItineraire(depart, arrivee, profil,
         { etapes: inter, eviter, optimisation });
+      /* À VÉLO, LA DISTANCE VAUT ET LE TEMPS NON. Le moteur rend une durée de
+         PIÉTON sur un chemin de piéton : quatre kilomètres font une heure à
+         pied et un quart d'heure à vélo. On garde le tracé et la distance —
+         c'est le même chemin — et l'on refait la durée, une fois, ici : tout
+         ce qui suit (résumé, heure d'arrivée, guidage) lit le même chiffre.
+         La note sous les boutons dit que c'est une estimation. */
+      const iti = mode === 'velo'
+        ? { ...brut, duree: dureeVelo(brut.distance) } : brut;
       if (jeton !== this.#sequence) return;
       this.#dernier = iti;
-      this.#calculPour = { depart, arrivee, profil, etapes: inter, eviter, optimisation };
+      this.#calculPour = { depart, arrivee, profil, mode, etapes: inter, eviter, optimisation };
       /* ON APPREND la destination (routines, 29/08) — nom et point, rien
          d'autre : ni départ, ni tracé. Un lien rejoué s'apprend AUSSI (c'est
          un trajet voulu) — sans nom, sous ses coordonnées, et le premier

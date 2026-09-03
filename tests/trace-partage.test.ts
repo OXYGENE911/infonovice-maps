@@ -32,14 +32,17 @@ describe('versKML', () => {
 });
 
 describe('partage par URL', () => {
-  const P = { depart: { lon: 2.3522, lat: 48.8566 }, arrivee: { lon: 4.8357, lat: 45.764 }, profil: 'car' as const };
+  /* MODE-1 (03/09) : le lien porte désormais le MODE, pas le profil du moteur.
+   Le jeton `car` n'a pas changé — c'est la promesse faite aux liens déjà
+   partagés — et ces parcours-ci vérifient qu'il rouvre bien « Voiture ». */
+const P = { depart: { lon: 2.3522, lat: 48.8566 }, arrivee: { lon: 4.8357, lat: 45.764 }, mode: 'voiture' as const };
 
   it('l’aller-retour fragment → objet est exact à cinq décimales', () => {
     const relu = depuisFragment(versFragment(P));
     expect(relu).not.toBeNull();
     expect(relu?.depart.lon).toBeCloseTo(2.3522, 5);
     expect(relu?.arrivee.lat).toBeCloseTo(45.764, 5);
-    expect(relu?.profil).toBe('car');
+    expect(relu?.mode).toBe('voiture');
   });
 
   it('UN FRAGMENT FORGÉ REND NULL, jamais une exception', () => {

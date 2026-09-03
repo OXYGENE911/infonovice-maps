@@ -193,12 +193,14 @@ test('PIC-1 : chaque entrée de menu porte son picto — et le libellé reste en
      le libellé, ce qui aurait rompu un sélecteur de frère ADJACENT. */
   await allerA(page, 'options');
   const options = page.locator('.vue[data-vue="options"]');
-  await expect(options.locator('svg.picto-menu')).toHaveCount(7);
-  const voiture = options.locator('.iti-profil:has(input[value="car"])');
+  /* NEUF DEPUIS MODE-1 (03/09) : « Moto » et « Vélo » ont rejoint la rangée
+     des modes, chacun avec son dessin. */
+  await expect(options.locator('svg.picto-menu')).toHaveCount(9);
+  const voiture = options.locator('.iti-profil:has(input[value="voiture"])');
   await expect(voiture.locator('span')).toHaveText('Voiture');
   await expect(voiture.locator('span')).toHaveCSS('border-color', 'rgb(34, 114, 196)');
   // Décoché, le libellé reprend sa bordure ordinaire : l'état SE VOIT.
-  await page.locator('.iti-profil:has(input[value="pedestrian"])').click();
+  await page.locator('.iti-profil:has(input[value="pied"])').click();
   await expect(voiture.locator('span')).not.toHaveCSS('border-color', 'rgb(34, 114, 196)');
   await retour(page);
 

@@ -552,6 +552,15 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       l'heure) branchées ; Issy écartée (relevé d'avril 2025, tous pleins) et
       Paris n'expose pas d'occupation. Piège payé : Aix-Marseille horodate en
       heure de Paris sans le dire.
+- [x] PR #202 — MODE-1 (03/09) : quatre modes dans « Options du trajet » — Voiture,
+      Moto, Vélo, À pied — et « Je roule en deux-roues » quitte « Mon
+      véhicule ». LE VÉLO EST UNE APPROXIMATION ASSUMÉE, et c'est écrit sous
+      le bouton : la Géoplateforme répond toujours « value should be one of
+      car,pedestrian » sur ses trois ressources (remesuré le 03/09), donc le
+      tracé suit le graphe PIÉTON et la durée est refaite à 15 km/h. À rouvrir
+      le jour où un moteur souverain gratuit offrira un profil cyclable — les
+      aménagements cyclables existent en open data français, mais les AFFICHER
+      n'est pas les EMPRUNTER, et calculer dessus demanderait un backend.
 - [x] PR #201 — FAVORIS-4 (03/09) : choisir sa liste AU MOMENT où l'on garde, sur les
       quatre fiches — lieu, adresse, appui long, et **borne de recharge**, qui
       n'avait aucun bouton de favori. Les deux retours d'Armelin du 03/09. Le
