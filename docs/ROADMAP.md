@@ -604,6 +604,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       les deux portent exactement les mots cherchés. Piste : départager à
       mots égaux par la DISTANCE au repère (position connue, sinon vue), ce
       qui est déjà ce qu'on affiche à côté de chaque suggestion.
+- [x] PR #213 — THEME-1 (03/09) : Auto · Jour · Nuit dans le menu — une PWA
+      installée n'a aucun réglage de navigateur sous la main. 17 blocs sombres
+      transformés, le canevas prend la même décision que le CSS.
 - [x] PR #209 — POPUP-1 (03/09) : les fiches de recherche jamais fermées
       (capture FNAC DARTY / Disney Village), et « aucun résultat » posé huit
       pixels sous l'écran en page pleine. Premier retour de la 1.60.

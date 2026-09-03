@@ -56,6 +56,24 @@ test.describe('téléphone réglé en sombre', () => {
     await choisir(page, 'Jour');
     expect(await fondDe(page)).toBe('#ffffff');
 
+    /* ON ATTEND QUE L'ÉCRITURE AIT ATTERRI. `garderTheme` lance l'écriture
+       SANS l'attendre — le geste ne doit pas dépendre du stockage — et sur la
+       machine d'intégration, plus lente, le rechargement la battait : vert en
+       local, rouge en CI. C'est mot pour mot la leçon du mode de déplacement
+       (MODE-1), repayée ici avant d'être reconnue. */
+    await expect.poll(() => page.evaluate(() => new Promise((ok) => {
+      const d = indexedDB.open('infonovice-maps');
+      d.onsuccess = () => {
+        try {
+          const r = d.result.transaction('preferences', 'readonly')
+            .objectStore('preferences').get('theme');
+          r.onsuccess = () => ok(r.result);
+          r.onerror = () => ok('illisible');
+        } catch { ok('magasin absent'); }
+      };
+      d.onerror = () => ok('base illisible');
+    })), { timeout: 10_000 }).toBe('clair');
+
     await page.reload();
     await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
     await expect.poll(() => fondDe(page), { timeout: 10_000 }).toBe('#ffffff');
