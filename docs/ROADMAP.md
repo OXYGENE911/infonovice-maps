@@ -552,7 +552,7 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       l'heure) branchées ; Issy écartée (relevé d'avril 2025, tous pleins) et
       Paris n'expose pas d'occupation. Piège payé : Aix-Marseille horodate en
       heure de Paris sans le dire.
-- [ ] FAVORIS-4 (03/09) : choisir sa liste AU MOMENT où l'on garde, sur les
+- [x] PR #201 — FAVORIS-4 (03/09) : choisir sa liste AU MOMENT où l'on garde, sur les
       quatre fiches — lieu, adresse, appui long, et **borne de recharge**, qui
       n'avait aucun bouton de favori. Les deux retours d'Armelin du 03/09. Le
       stockage portait déjà les listes depuis FAVORIS-2 ; seule l'interface ne

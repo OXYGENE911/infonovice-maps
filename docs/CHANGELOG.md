@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [Non publié] — FAVORIS-4
+## [1.54.0] — 2026-09-03 — FAVORIS-4
 
 ### On choisit sa liste au moment où l'on garde
 - Armelin, 03/09, deux fois dans le même retour : « quand on clique sur un POI
