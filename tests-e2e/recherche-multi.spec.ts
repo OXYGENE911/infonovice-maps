@@ -219,3 +219,33 @@ test('ON PEUT CHERCHER UN LIEU QU’ON N’A PAS SOUS LES YEUX', async ({ page }
   await expect(barre(page).locator('.recherche-note'))
     .not.toContainText('déplacez la carte');
 });
+test('À MOTS ÉGAUX, LE PLUS PROCHE D’ABORD (RECHERCHE-9)', async ({ page }) => {
+  /* Armelin, en 1.68, capture à l'appui : « quand on tape "aéroport", les
+     premiers lieux affichés sont à plus de 5000 km de ma position ». Le
+     lointain était RÉEL — un « Aéroport » à Saint-Pierre-et-Miquelon — mais à
+     mots égaux, il n'a rien à faire devant celui d'à côté. */
+  await decor(page, {
+    poisIgn: [
+      { type: 'Feature', geometry: { type: 'Point', coordinates: [-56.179, 46.766] },
+        properties: { toponym: 'Aéroport', city: ['Saint-Pierre'], postcode: ['97500'] } },
+      { type: 'Feature', geometry: { type: 'Point', coordinates: [2.55, 46.7] },
+        properties: { toponym: 'Aéroport de Montluçon', city: ['Montluçon'], postcode: ['03100'] } },
+    ],
+  });
+  await barre(page).getByRole('combobox').fill('aéroport');
+  const options = barre(page).locator('[role="option"] .libelle');
+  await expect(options.first()).toContainText('Montluçon', { timeout: 10_000 });
+});
+
+test('« FNACDARTY » COLLÉ SE DÉCOLLE au dictionnaire d’enseignes (RECHERCHE-9)', async ({ page }) => {
+  /* « "FNACDARTY" renvoie aucun résultat alors que "FNAC DARTY" répond. » Un
+     tout-majuscules collé n'a aucun point de coupe lexical : on coupe après
+     l'enseigne connue, et c'est la requête DÉCOLLÉE qui part aux sources. */
+  const { appels } = await decor(page, {});
+  await barre(page).getByRole('combobox').fill('FNACDARTY');
+  await expect.poll(() => appels.filter((a) => a.startsWith('entreprises:')).length,
+    { timeout: 10_000 }).toBeGreaterThan(0);
+  const versEntreprises = appels.find((a) => a.startsWith('entreprises:'));
+  expect(versEntreprises, 'la requête envoyée doit être décollée').toContain('FNAC DARTY');
+  expect(versEntreprises).not.toContain('FNACDARTY');
+});

@@ -34,7 +34,7 @@ import { chercherPoiIgn, type LieuIgn } from './recherche-poi-ign';
 import { chercherEntreprises, type Etablissement } from './recherche-entreprises';
 import {
   chercherCommune, communeCorrespond, communeLaPlusProche, decoupagesNomCommune,
-  nu, separerMotsColles, type CommuneReconnue,
+  nu, separerMotsColles, variantesDecollees, type CommuneReconnue,
 } from './saisie-recherche';
 import { chercherParNom } from './recherche-lieux';
 import type { LieuCategorie } from './categories';
@@ -153,7 +153,16 @@ export function cleTrouvaille(t: Trouvaille): string {
  */
 export function fusionner(
   trouvailles: Trouvaille[], mots: string[] = [], plafond = 10,
+  repere: PointGeo | null = null,
 ): Trouvaille[] {
+  /* À MOTS ÉGAUX, LE PLUS PROCHE D'ABORD (RECHERCHE-9, 04/09). Armelin :
+     « quand on tape "aéroport", les premiers lieux affichés sont à plus de
+     5000 km de ma position ». Vrai, et vérifié : l'« Aéroport » de
+     Saint-Pierre-et-Miquelon (4285 km — la France est grande) sortait avant
+     Orly (16 km), parce que le tri ne connaissait que les mots et la source.
+     Une distance approchée en degrés suffit : on ORDONNE, on ne mesure pas. */
+  const d2 = (t: Trouvaille): number => repere === null ? 0
+    : (t.lon - repere.lon) ** 2 + (t.lat - repere.lat) ** 2;
   const vues = new Set<string>();
   return [...trouvailles]
     /* CE QU'ON A ÉCRIT PASSE DEVANT CE QU'ON N'A PAS ÉCRIT.
@@ -164,6 +173,7 @@ export function fusionner(
        mots CHERCHÉS que la réponse porte, la source ne départageant qu'à
        égalité. */
     .sort((a, b) => motsPortes(b, mots) - motsPortes(a, mots)
+      || d2(a) - d2(b)
       || RANG[a.source] - RANG[b.source])
     .filter((t) => {
       const c = cleTrouvaille(t);
@@ -228,7 +238,13 @@ export async function chercherPartout(
   const { centre, signal, auFil } = options;
   /* LES MOTS COLLÉS SE SÉPARENT AVANT TOUT : « FnacDarty » ne rend rien nulle
      part, « Fnac Darty » rend le siège d'Ivry. */
-  const q = separerMotsColles(texte).trim();
+  let q = separerMotsColles(texte).trim();
+  /* LE DÉCOLLAGE AU DICTIONNAIRE (RECHERCHE-9) : « FNACDARTY » n'a aucun
+     point de coupe lexical — tout-majuscules — mais commence par une enseigne
+     connue. La variante décollée REMPLACE la saisie pour les sources qui ne
+     tolèrent rien : chercher « FNACDARTY » ne rendra jamais rien. */
+  const decollee = variantesDecollees(q);
+  if (decollee.length > 0) q = decollee[0] as string;
 
   const paris: Promise<Trouvaille[]>[] = [
     chercherPoiIgn(q, signal).then((r) => r.map(deIgn)),
@@ -273,7 +289,7 @@ export async function chercherPartout(
     auFil(rendre());
   };
   const rendre = (): Resultat => ({
-    lieux: fusionner(lieux, motsCherches(q, commune)), panne, commune,
+    lieux: fusionner(lieux, motsCherches(q, commune), 10, centre), panne, commune,
   });
 
   const attentes = paris.map((p) => p.then(

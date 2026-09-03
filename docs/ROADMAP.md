@@ -659,6 +659,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       À cadrer : où vit le geste (Copilot), et ce qu'on fait de l'écart
       mesuré (le montrer seulement, ou apprendre une correction de
       consommation à la MARGE-1 — jamais en silence).
+- [x] PR #220 — RECHERCHE-9 (04/09) : le plus proche d'abord à mots égaux ;
+      latitude:null ne devient plus l'île Nulle ; FNACDARTY se décolle au
+      dictionnaire d'enseignes. RESTE OUVERT de ce retour : « à un caractère
+      près, l'adresse est introuvable » — la tolérance aux fautes de la BAN
+      est ce qu'elle est ; l'index IGN la porte pour les LIEUX, pas pour les
+      adresses. À mesurer avant de promettre.
 - [x] PR #219 — DEST-1 (04/09) : la carte va vraiment à la destination (le
       suivi GPS se désarme au choix — son verrou rabattait chaque flyTo), et
       le marqueur rouvre la fiche fermée.

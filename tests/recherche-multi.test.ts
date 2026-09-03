@@ -5,7 +5,7 @@ import {
 } from '../src/lib/recherche-multi';
 import {
   separerMotsColles, decoupagesNomCommune, communeCorrespond, communeLaPlusProche,
-  versCommunes, urlCommune,
+  versCommunes, urlCommune, variantesDecollees,
 } from '../src/lib/saisie-recherche';
 import { versEtablissements, urlEntreprises, estUneEnseigne } from '../src/lib/recherche-entreprises';
 import { versLieuxIgn, urlPoiIgn } from '../src/lib/recherche-poi-ign';
@@ -313,5 +313,54 @@ describe('urlNomLieu avec plusieurs centres', () => {
 
   it('SANS AUCUN CENTRE, on ne fabrique pas de requête vide', () => {
     expect(urlNomLieu('Castorama', [])).toBeNull();
+  });
+});
+/* RECHERCHE-9 (04/09) : trois retours d'Armelin en 1.68, trois causes. */
+
+describe('l’île Nulle et le classement par distance', () => {
+  const t = (libelle: string, lon: number, lat: number): Trouvaille =>
+    ({ lon, lat, libelle, contexte: '', adresse: '', source: 'ign' });
+
+  it('UN latitude:null NE DEVIENT PAS (0,0) — l’aérodrome de Persan à 5442 km', () => {
+    /* Vu sur la capture d'Armelin : SIRENE porte latitude:null pour l'ADP de
+       Persan, Number(null) vaut 0, et (0,0) est l'île Nulle, golfe de Guinée. */
+    expect(versEtablissements({ results: [{
+      nom_complet: 'ADP', matching_etablissements: [
+        { longitude: null, latitude: null, enseigne: 'ADP', adresse: 'PERSAN' },
+        { longitude: '0', latitude: '0', enseigne: 'ADP0', adresse: 'X' },
+        { longitude: '2.37', latitude: '48.74', enseigne: 'ORLY', adresse: 'ORLY' },
+      ],
+    }] }).map((e) => e.nom)).toEqual(['ORLY']);
+  });
+
+  it('À MOTS ÉGAUX, LE PLUS PROCHE D’ABORD — Orly avant Saint-Pierre-et-Miquelon', () => {
+    /* « Quand on tape "aéroport", les premiers lieux affichés sont à plus de
+       5000 km de ma position. » L'« Aéroport » lointain est RÉEL — c'est
+       Saint-Pierre-et-Miquelon, la France est grande — mais à mots égaux, il
+       n'a rien à faire devant Orly. */
+    const repere = { lon: 2.5762, lat: 48.8101 };
+    const liste = [
+      t('Aéroport', -56.179, 46.766),
+      t('Aéroport d’Orly', 2.379, 48.726),
+    ];
+    expect(fusionner(liste, ['aeroport'], 10, repere)[0]?.libelle).toBe('Aéroport d’Orly');
+    // Sans repère, l'ordre d'arrivée tient : on n'invente pas une distance.
+    expect(fusionner(liste, ['aeroport'], 10, null)[0]?.libelle).toBe('Aéroport');
+  });
+});
+
+describe('variantesDecollees — « FNACDARTY » se décolle au dictionnaire', () => {
+  it('COUPE APRÈS L’ENSEIGNE CONNUE, même en tout-majuscules', () => {
+    /* « "FNACDARTY" renvoie aucun résultat alors que "FNAC DARTY" répond des
+       adresses. » Un tout-majuscules collé n'a aucun point de coupe lexical —
+       la casse chameau de separerMotsColles n'y peut rien. */
+    expect(variantesDecollees('FNACDARTY')).toEqual(['FNAC DARTY']);
+    expect(variantesDecollees('CARREFOURMARKET')).toEqual(['CARREFOUR MARKET']);
+  });
+
+  it('NE COUPE PAS CE QU’ELLE NE CONNAÎT PAS — pas de chimères', () => {
+    expect(variantesDecollees('INRAE')).toEqual([]);
+    expect(variantesDecollees('Castorama')).toEqual([]);
+    expect(variantesDecollees('fna')).toEqual([]);
   });
 });
