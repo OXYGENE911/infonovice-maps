@@ -387,25 +387,49 @@ test('choisir une suggestion ne DÉCLENCHE PAS le bouton posé derrière', async
   const option = page.locator('.entete .recherche [role="option"]').first();
   await expect(option).toBeVisible();
 
-  /* LA SUGGESTION RECOUVRE LE BOUTON « Itinéraire » — c'est la condition du
-     fantôme, on la VÉRIFIE avant de cliquer : un test qui tape à côté ne
-     prouverait rien. */
+  /* CE QUI EST DERRIÈRE A CHANGÉ (RECHERCHE-7, 03/09), ET ON LE MESURE.
+     La liste s'ouvre désormais en PAGE PLEINE : sous le centre d'une
+     suggestion il n'y a plus le bouton « Itinéraire » mais le CANEVAS DE LA
+     CARTE. Mesuré le 03/09 en 360×780 : la suggestion occupe y 67→113, le
+     bouton y 30→68,5 — ils ne se frôlaient plus que sur un pixel et demi, et
+     l'ancienne visée (`min(hauteur/2, y du bouton + 5 - y de l'option)`)
+     tombait à y=35, c'est-à-dire DANS le champ de recherche. Le parcours
+     tapait à côté et ne prouvait plus rien : c'est exactement ce que son
+     propre commentaire interdisait.
+
+     CE QUE CE PARCOURS GARDE MAINTENANT. Le recouvrement d'origine n'existe
+     plus, et prétendre le contraire ferait un test qui rassure sans rien
+     mesurer. Ce qui reste vrai, et qui protège l'usager, c'est que la page de
+     recherche INTERCEPTE : au pixel où l'on touche, elle est au-dessus de la
+     carte, le toucher sélectionne, et le planificateur resté dessous ne
+     s'ouvre pas. On interroge donc la PILE au pixel exact — plus solide
+     qu'une arithmétique de boîtes qui bougera encore. */
   const boiteOption = (await option.boundingBox())!;
-  const iti = page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Itinéraire' });
-  const boiteIti = (await iti.boundingBox())!;
-  const recouvre = boiteOption.y < boiteIti.y + boiteIti.height
-    && boiteOption.y + boiteOption.height > boiteIti.y;
-  expect(recouvre, 'la suggestion ne recouvre pas le bouton : le test ne prouve rien').toBe(true);
+  const cible = { x: boiteOption.x + boiteOption.width / 2,
+    y: boiteOption.y + boiteOption.height / 2 };
+  const pile = await page.evaluate(({ x, y }) => document.elementsFromPoint(x, y)
+    .map((e) => `${e.tagName}.${String(e.className)}`), cible);
+  expect(pile[0], 'le point visé n’est pas la suggestion : le test ne prouve rien')
+    .toMatch(/libelle|^LI\./);
+  expect(pile.join(' '), 'rien derrière la suggestion : le fantôme n’aurait rien à frapper')
+    .toContain('CANVAS.maplibregl-canvas');
 
   // Un VRAI toucher : down puis up, au centre de la suggestion.
-  await page.mouse.click(boiteOption.x + boiteOption.width / 2,
-    boiteOption.y + Math.min(boiteOption.height / 2, boiteIti.y + 5 - boiteOption.y));
+  await page.mouse.click(cible.x, cible.y);
   // La sélection a eu lieu…
   await expect(page.locator('.entete .recherche input')).toHaveValue(/Sadi Carnot/);
-  // …et le planificateur, derrière, N'A PAS reçu le clic.
+  /* …et le planificateur, qui vivait DERRIÈRE la liste avant RECHERCHE-7,
+     n'a pas reçu le clic. C'est la moitié du garde-fou qui reste vérifiable
+     telle quelle.
+
+     ON NE VÉRIFIE PAS « aucune bulle » : choisir une adresse en ouvre une —
+     la fiche de destination — et c'est le résultat ATTENDU du geste. La
+     confondre avec un fantôme rendrait ce parcours faux dans l'autre sens. */
   await page.waitForTimeout(400);
   await expect(page.locator('.iti[open]'), 'le clic fantôme a ouvert le planificateur')
     .toHaveCount(0);
+  // Et le geste a bien abouti : la fiche du lieu choisi est là.
+  await expect(page.locator('.fiche-destination')).toBeVisible();
 });
 
 test('le bouton de contact des Professionnels se LIT — blanc sur bleu', async ({ page }) => {
