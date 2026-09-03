@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [Non publié] — RECHERCHE-7
+## [1.53.0] — 2026-09-03 — RECHERCHE-7
 
 ### La recherche s'ouvre en pleine page, et chaque résultat porte sa distance
 - Armelin, 03/09 : « il faut vraiment retravailler le module de recherche qui
