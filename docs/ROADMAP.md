@@ -633,6 +633,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #208 — RECHERCHE-8c (03/09) : « Seine » était pris pour une commune
       dans « Ivry sur Seine ». La commune la plus longue est essayée d'abord —
       un signal plus fort, et une requête de moins.
+- [x] PR #218 — GEO-2 (03/09) : l'invitation à se localiser remonte sous la
+      barre de recherche — elle vivait dans la moitié d'écran que le clavier
+      recouvre. La règle d'Armelin entre dans CLAUDE.md : « toute fonction
+      cachée à l'utilisateur est une fonction inutilisable ».
 - [ ] BADGE-1 — filtrer les bornes par badge de recharge (Plugsurfing,
       Chargemap…), demandé le 03/09 : « si je coche Plugsurfing et Chargemap,
       la carte devrait m'afficher tous les réseaux et bornes compatibles avec

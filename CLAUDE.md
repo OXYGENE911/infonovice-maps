@@ -69,6 +69,11 @@ bibliothèque interne `/src/lib/` réutilisable — pas de backend.
 - Après chaque merge : tag de version (semver) si fonctionnalité visible.
 
 ## Qualité
+- « Toute fonction cachée à l'utilisateur est une fonction inutilisable. »
+  (règle ajoutée par Armelin le 03/09/2026, après qu'un message de
+  consentement s'est retrouvé sous le clavier du téléphone : ce qui doit être
+  vu se place là où l'écran réel — clavier ouvert, volet déployé — le laisse
+  visible, et un parcours le MESURE.)
 - Lighthouse ≥ 90 sur Performance, Accessibilité, Best Practices, SEO
 - Accessibilité : navigation clavier complète, ARIA sur les contrôles carte,
   contrastes AA

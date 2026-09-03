@@ -2,6 +2,18 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.70.0] — 2026-09-03 — GEO-2
+
+### L'invitation à se localiser vit sous la barre, hors de portée du clavier
+- Armelin, en 1.68 : « le clavier du smartphone se lance et couvre le message
+  indiquant que l'on peut utiliser sa position […] il faudrait que le message
+  soit situé sous la barre de recherche pour être exploitable. »
+- Le bloc vivait en **bas** de la page — la moitié d'écran que le clavier
+  recouvre précisément. Il vit désormais **sous le champ**, dans la moitié
+  haute, que le clavier ne peut pas atteindre. Le parcours **mesure** sa
+  position, pas seulement sa présence.
+- **La règle qu'il demande entre dans CLAUDE.md** : « Toute fonction cachée à
+  l'utilisateur est une fonction inutilisable. »
 ## [1.69.0] — 2026-09-03 — LOGO-1
 
 ### La mascotte officielle entre dans l'application
