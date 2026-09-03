@@ -70,7 +70,13 @@ export default defineConfig({
   },
   plugins: [
     VitePWA({
-      registerType: 'autoUpdate',
+      /* « prompt » ET NON « autoUpdate » (MAJ-1, 03/09). Armelin : « j'ai des
+         testeurs qui ne savaient pas qu'il fallait rafraîchir l'application
+         pour la mettre à jour ». En autoUpdate, la page peut se RECHARGER
+         TOUTE SEULE quand la nouvelle version arrive — inacceptable en pleine
+         navigation. En prompt, l'application ANNONCE la version et l'usager
+         choisit son moment (voir main.ts et bandeau-maj.ts). */
+      registerType: 'prompt',
       // La page « en construction » n'a rien à mettre hors ligne d'utile,
       // mais le manifeste et le service worker font partie du socle : les
       // poser maintenant, c'est vérifier la chaîne PWA dès la CI de la PR #1
@@ -99,6 +105,14 @@ export default defineConfig({
         ],
       },
       workbox: {
+        /* AVEC « prompt », le worker n'active plus tout seul — c'est le but.
+           Mais SANS `clientsClaim`, le PREMIER worker ne prenait pas la main
+           avant la navigation suivante : la coquille hors ligne ne se
+           préparait qu'à la seconde visite, et deux parcours HORS LIGNE l'ont
+           vu. `clientsClaim` seul règle la PREMIÈRE installation ;
+           `skipWaiting: false` garde les MISES À JOUR derrière le bandeau. */
+        clientsClaim: true,
+        skipWaiting: false,
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         /* LES TUILES IGN, une route par couche : la table et ses motifs
            vivent dans src/lib/tuiles-en-cache.ts, où des tests unitaires les

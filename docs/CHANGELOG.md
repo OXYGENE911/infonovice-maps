@@ -2,6 +2,26 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.67.0] — 2026-09-03 — MAJ-1
+
+### La nouvelle version s'annonce, elle ne s'impose pas
+- Armelin, en 1.60 : « j'ai des testeurs qui ne savaient pas qu'il fallait
+  rafraîchir l'application pour la mettre à jour. Comment est-ce possible de
+  leur afficher une popup quelque part pour les prévenir ? »
+- **Deux moitiés au défaut** : le service worker ne vérifiait les mises à jour
+  qu'au chargement — une PWA qui reste ouverte n'apprenait jamais rien — et
+  quand il les voyait, il les appliquait en silence, la page pouvant se
+  recharger toute seule. Ces gens conduisent : un rechargement en pleine
+  navigation couperait le guidage.
+- **Désormais** : vérification toutes les trente minutes, et un **bandeau** en
+  bas — jamais une fenêtre par-dessus la carte — avec deux vraies portes :
+  « Mettre à jour » applique et recharge ; « Plus tard » referme sans revenir
+  hanter la session. Le bouton du menu reste disponible à tout moment.
+- **Attrapé par les parcours hors ligne** : en passant le worker en mode
+  « annonce », la coquille hors ligne ne se préparait plus qu'à la seconde
+  visite. `clientsClaim` règle la première installation ; les mises à jour,
+  elles, restent derrière le bandeau.
+- Le bandeau **ne recouvre pas l'attribution IGN** — mesuré.
 ## [1.66.0] — 2026-09-03 — THEME-1
 
 ### Le thème Jour / Nuit se choisit dans le menu
