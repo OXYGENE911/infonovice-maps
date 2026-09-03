@@ -577,6 +577,15 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       la GÉOLOCALISATION À L'OUVERTURE, qu'Armelin demande — elle attend sa
       décision explicite, car elle contredit la contrainte 4 et la page
       « Vie privée » telle qu'elle est écrite aujourd'hui.
+- [x] PR #204 — RECHERCHE-8 (03/09) : la recherche multi-sources — index POI de la
+      Géoplateforme (tolérant aux fautes), annuaire des entreprises de la DINUM
+      (tous les commerces de France et leur adresse), et la piste « enseigne +
+      commune » qui seule résout « Castorama Ormesson ». 12/12 des requêtes
+      d'Armelin, toutes au premier rang. RESTE OUVERT : la géolocalisation AU
+      CONSENTEMENT pendant la recherche — sa décision du 03/09, à livrer avec
+      sa phrase publique, car chercher autour de soi ENVOIE la position à
+      Overpass et la page « À propos » ne nomme aujourd'hui que deux cas où
+      elle sort.
 - [x] PR #182 — PONT-1 (02/09) : les passages limités en tonnage s'annoncent à
       mille mètres, quand la masse est déclarée. Zéro requête de plus — la
       clause entre dans le corridor existant. On AVERTIT, on n'évite pas : le

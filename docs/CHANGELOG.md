@@ -2,6 +2,64 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.57.0] — 2026-09-03 — RECHERCHE-8
+
+### La recherche interroge enfin toutes les API publiques utiles
+- Armelin, la nuit du 03/09 : « ton objectif pour cette nuit est de faire
+  fonctionner la recherche. Parcours toutes les API libres du gouvernement s'il
+  le faut […] je ne veux pas avoir à écrire les mots exacts dans la barre de
+  recherche mais avoir plus de souplesse même si les mots sont incomplets. »
+  Douze requêtes en jeu d'essai.
+- **Aucune source ne les résout toutes**, et c'est le fait qui commande toute
+  l'architecture. Mesuré le 03/09, les douze contre six sources
+  (`scripts/mesure-recherche.mjs`, qui se rejoue) :
+  - l'**index `poi` de la Géoplateforme** tolère la faute — « Tour Effeil » rend
+    la Tour Eiffel en 25 ms — mais ignore les commerces ;
+  - l'**annuaire des entreprises** (DINUM, sur SIRENE) porte **tous les
+    établissements de France avec leur adresse postale** — Leroy Merlin Lognes,
+    INRAE Beaucouzé, Fnac Darty Ivry — mais ne tolère rien ;
+  - **OpenStreetMap** ne répond qu'à l'égalité exacte, et seulement autour d'un
+    point ; l'**annuaire de l'Éducation** accepte un nom partiel d'école ; la
+    **BAN** ne connaît que des adresses.
+- **On les interroge donc toutes en même temps**, et une source en panne
+  n'emporte pas les autres.
+
+### Trois choses que la mesure a imposées
+- **« Castorama Ormesson » ne se résout par AUCUN texte** : le magasin est
+  déclaré au centre commercial Pincevent, 94430 Chennevières-sur-Marne — le mot
+  « Ormesson » n'est nulle part dans sa fiche. On reconnaît donc la commune
+  (BAN, `type=municipality`) et l'on cherche l'enseigne **autour d'elle**.
+- **Le classement compte les mots qu'on a écrits.** « INRAE Beaucouzé » rendait
+  l'INRAE en **sixième** position, derrière « Beaucouzé » trois fois : l'index
+  répondait sur la commune, ce qui est juste et ne sert à rien.
+- **La souplesse est dans le classement** : un mot incomplet (« Castor » ouvre
+  « Castorama ») ou à deux lettres près (« Effeil » vaut « Eiffel ») compte
+  comme trouvé.
+
+### Et l'on montre au fil de l'eau
+- Les sources ne vont pas à la même vitesse : 30 ms pour la Géoplateforme,
+  jusqu'à **dix secondes** pour la piste « enseigne + commune » qui passe par
+  Overpass. Attendre la plus lente pour montrer la plus rapide ferait une barre
+  de recherche vide dix secondes durant.
+
+### Corrigé aussi
+- **On peut chercher un lieu qu'on n'a pas sous les yeux.** L'application
+  refusait de chercher sans centre de carte — « déplacez la carte vers la zone
+  qui vous intéresse » —, ce qui n'est pas l'usage d'une barre de recherche.
+- **Un seul appel à Overpass par recherche.** La première version en faisait
+  deux, un autour de la vue et un autour de la commune : un compteur de
+  parcours l'a vu. « Ces quotas sont un bien commun. »
+- **Un nouveau test garde la CSP.** L'hôte neuf
+  `recherche-entreprises.api.gouv.fr` n'y était pas, et le navigateur bloque
+  alors la requête **avant** de l'émettre : aucun échec réseau ne paraît, et
+  l'application dit « Failed to fetch ». Ce défaut serait parti en production.
+
+### Mesuré
+- **12/12 des requêtes d'Armelin, toutes au premier rang**, contre les vrais
+  services : `npx vite-node scripts/essai-douze-requetes.ts`.
+- 29 tests unitaires et 5 parcours Playwright neufs, plus les 2 gardes de CSP.
+  Les parcours **simulent** les services : une CI qui rougit parce qu'Overpass
+  tousse ne dit rien sur le code.
 ## [1.56.0] — 2026-09-03 — FANTOME-1
 
 ### Corrigé — le doigt traversait la suggestion pour appuyer sur le bouton dessous
