@@ -148,3 +148,38 @@ test('LES CHAMPS DU PLANIFICATEUR NE PRENNENT PAS L’ÉCRAN', async ({ page }) 
   await expect(depart).not.toHaveClass(/recherche-page/);
   await expect(page.locator('body')).not.toHaveClass(/recherche-ouverte/);
 });
+test('« AUCUN RÉSULTAT » SE LIT DANS LA PAGE, pas après l’avoir quittée', async ({ page }) => {
+  /* ARMELIN, en 1.60 : « l'application ne trouve aucun résultat mais je n'ai
+     rien d'affiché dans la fenêtre en plein écran de recherche. Quand je
+     quitte l'écran de recherche, j'ai le message d'erreur qui s'affiche dans
+     un petit rectangle sur la carte. »
+     MESURÉ : la note gardait le `position: absolute` du mode barre — en page
+     pleine, elle se posait à y = 728 dans une fenêtre de 720. Elle était là,
+     écrite, HUIT PIXELS sous le bord. Ce parcours mesure donc sa position,
+     pas seulement sa présence : `toBeVisible` de Playwright juge un élément
+     hors écran « visible » dès qu'il a une boîte. */
+  await page.setViewportSize(MOBILE);
+  await ouvrirCarte(page);
+  const cors = { 'Access-Control-Allow-Origin': '*' };
+  for (const motif of ['**/api-adresse.data.gouv.fr/**', '**/data.geopf.fr/geocodage/**',
+    '**/recherche-entreprises.api.gouv.fr/**', '**overpass.openstreetmap.fr**',
+    '**/data.education.gouv.fr/**']) {
+    await page.route(motif, (route) => route.fulfill({
+      headers: cors, contentType: 'application/json',
+      body: JSON.stringify({ features: [], results: [], elements: [] }),
+    }));
+  }
+  const champ = barre(page).locator('input');
+  await champ.click();
+  await champ.fill('Fnacdarty');
+
+  const note = barre(page).locator('.recherche-note');
+  await expect(note).toBeVisible({ timeout: 10_000 });
+  await expect(note).toContainText('Aucune adresse ni lieu');
+  await expect(barre(page)).toHaveClass(/recherche-page/);
+  const dansLEcran = await note.evaluate((e) => {
+    const b = e.getBoundingClientRect();
+    return b.top >= 0 && b.bottom <= window.innerHeight && b.height > 0;
+  });
+  expect(dansLEcran, 'la note doit être DANS l’écran, pas huit pixels dessous').toBe(true);
+});

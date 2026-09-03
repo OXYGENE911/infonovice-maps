@@ -2,6 +2,35 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.62.0] — 2026-09-03 — POPUP-1
+
+### Corrigé — les fiches de recherche ne se fermaient jamais
+- Armelin, premier retour de la 1.60, capture à l'appui (FNAC DARTY et Disney
+  Village empilées) : « si je relance dans la foulée une autre requête, une
+  nouvelle fenêtre s'ouvre sur la carte et les anciennes fenêtres ne sont
+  jamais fermées. En pleine navigation, je peux croiser tous les gros
+  rectangles ouverts. »
+- **La cause** : chaque sélection créait une fiche sans rien retenir de la
+  précédente. Le MARQUEUR, lui, était bien remplacé — la fiche avait été
+  oubliée du même geste.
+- **La règle rejoint celle des volets** (« une seule surface à la fois ») :
+  poser une fiche ferme celles d'avant — recherche comme appui long — et **le
+  départ d'un itinéraire les efface toutes**, marqueur compris : on regarde la
+  route, plus la recherche.
+
+### Corrigé — « aucun résultat » s'affichait huit pixels sous l'écran
+- Armelin : « l'application ne trouve aucun résultat mais je n'ai rien
+  d'affiché dans la fenêtre en plein écran de recherche. Quand je quitte
+  l'écran, j'ai le message qui s'affiche dans un petit rectangle sur la
+  carte. »
+- **Mesuré** : la note gardait le `position: absolute; top: calc(100% + 8px) »
+  du mode barre — un tiroir qui s'ouvre SOUS la barre. En page pleine,
+  « 100% » vaut tout l'écran : la note se posait à **y = 728 dans une fenêtre
+  de 720**. Elle était là, écrite, invisible — et réapparaissait en refermant
+  la page, quand « 100% » redevenait la barre.
+- Le parcours qui la garde mesure sa **position**, pas sa présence :
+  `toBeVisible` juge un élément hors écran « visible » dès qu'il a une boîte.
+
 ## [1.61.0] — 2026-09-03 — RECHERCHE-8c
 
 ### Corrigé — « Seine » était pris pour une commune
