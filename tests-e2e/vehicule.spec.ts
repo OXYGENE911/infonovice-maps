@@ -278,6 +278,30 @@ test('les valeurs du catalogue restent MODIFIABLES — il propose, il ne verroui
   await expect(page.locator('.veh-bilan-lignes')).toContainText('150 km');
 });
 
+test('LE CATALOGUE PROPOSE 5 % SOUS LE WLTP DÉCLINÉ, et le DIT (MARGE-1)', async ({ page }) => {
+  /* Armelin, rapportant ses testeurs : « l'algorithme reste encore 5 % plus
+     optimiste que ce qu'ils constatent en réel […] par rapport aux
+     caractéristiques constructeurs chargées par défaut. Ils préfèrent tous
+     avoir un navigateur GPS pessimiste de 5 % qu'optimiste de 5 %. »
+     La marge s'applique À LA PROPOSITION — l'endroit exact qu'ils nomment —
+     jamais aux relevés que l'usager saisit lui-même : punir de 5 % celui qui
+     a mesuré serait punir l'exactitude (le parcours des relevés VF8, plus
+     haut, vérifie que 400 km saisis restent 400 km affichés). */
+  await ouvrirVehicule(page);
+  await page.locator('.veh-recherche').fill('spring');
+  await page.getByRole('button', { name: /^Choisir Dacia Spring/ }).first().click();
+
+  // La Spring 2021 annonce 230 km WLTP : autoroute = 230 × 0,63 ÷ 1,05 = 138.
+  const autoroute = page.getByLabel('Sur autoroute');
+  const propose = Number(await autoroute.inputValue());
+  expect(propose, 'la proposition doit porter la marge').toBeLessThan(145);
+  expect(propose).toBeGreaterThan(125);
+
+  // ET LA FICHE LE DIT : un chiffre corrigé en silence redevient inexpliqué.
+  await expect(page.locator('.veh-catalogue-detail'))
+    .toContainText('5 % de prudence');
+});
+
 test('le catalogue annonce d’où viennent ses chiffres', async ({ page }) => {
   /* Un formulaire pré-rempli sans provenance se lit comme une mesure. Le WLTP
      est un cycle de laboratoire, optimiste sur autoroute : le dire est la

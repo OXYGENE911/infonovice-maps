@@ -120,13 +120,17 @@ describe('autonomiesProposees', () => {
   };
 
   /* LE COEFFICIENT AUTOROUTE EST CALIBRÉ SUR UN RELEVÉ RÉEL : la VF 8
-     d'Armelin annonce 447 km WLTP et en fait 280 sur autoroute. Ce test
-     verrouille l'accord entre l'hypothèse écrite et le chiffre qu'elle
-     produit — sans quoi le commentaire et le code pourraient diverger. */
-  it('propose une autonoumie autoroutière conforme au relevé qui l’a calibrée', () => {
-    expect(autonomiesProposees(vf8).autoroute).toBe(Math.round(447 * PART_AUTOROUTE));
-    expect(autonomiesProposees(vf8).autoroute).toBeGreaterThan(270);
-    expect(autonomiesProposees(vf8).autoroute).toBeLessThan(290);
+     d'Armelin annonce 447 km WLTP et en fait 280 sur autoroute. DEPUIS
+     MARGE-1 (03/09), la proposition vise 5 % SOUS ce relevé — les testeurs
+     ont mesuré les valeurs par défaut « 5 % optimistes » et « préfèrent tous
+     un navigateur pessimiste de 5 % ». Ce test verrouille les deux à la
+     fois : le calibrage, ET la marge — si elle saute, le chiffre repasse
+     au-dessus de 270 et tombe ici. */
+  it('propose l’autoroute 5 % SOUS le relevé qui l’a calibrée — délibérément', () => {
+    expect(autonomiesProposees(vf8).autoroute)
+      .toBe(Math.round((447 * PART_AUTOROUTE) / 1.05));
+    expect(autonomiesProposees(vf8).autoroute).toBeGreaterThan(258);
+    expect(autonomiesProposees(vf8).autoroute).toBeLessThan(276);
   });
 
   /* L'ORDRE COMPTE : sur autoroute on va moins loin qu'en ville, où la
