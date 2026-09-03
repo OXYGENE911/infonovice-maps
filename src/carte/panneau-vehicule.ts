@@ -318,6 +318,11 @@ export class PanneauVehicule extends HTMLElement {
           modele.puissanceMoyenneKw
             ? `${modele.puissanceMoyenneKw} kW soutenus de 10 à 80 %` : null,
           `${modele.wltpKm} km WLTP constructeur (optimiste, surtout sur autoroute)`,
+          /* LA MARGE SE DIT (MARGE-1) : sans cette ligne, l'écart entre le
+             WLTP affiché et les champs pré-remplis se lirait comme une
+             erreur — le reproche d'Armelin du 31/08 sur un chiffre juste et
+             inexpliqué. */
+          'valeurs proposées avec 5 % de prudence — vos relevés les remplacent',
         ].filter(Boolean).join(' · ');
       }
       this.#refletChamps();

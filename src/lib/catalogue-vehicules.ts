@@ -93,6 +93,7 @@
  * autre. Chaque champ reste modifiable après application — le catalogue
  * remplit un formulaire, il ne le verrouille pas.
  */
+import { kmPrudents } from './prudence';
 import type { ClePrise } from './poi';
 
 export interface ModeleVehicule {
@@ -518,14 +519,21 @@ export function consommationDepuis(capaciteKwh: number, autonomieKm: number): nu
    mesuré doit le remplacer. */
 export const PART_AUTOROUTE = 0.63;
 
-/** Ce que le catalogue propose de pré-remplir, en kilomètres constatés. */
+/** Ce que le catalogue propose de pré-remplir, en kilomètres constatés.
+ *
+ * LA MARGE DE PRUDENCE S'APPLIQUE ICI (MARGE-1, 03/09) — voir lib/prudence.
+ * Les testeurs mesurent les valeurs constructeur 5 % optimistes et préfèrent
+ * l'inverse. La proposition est donc abaissée AVANT d'entrer dans les
+ * champs : l'usager la voit, peut la corriger par ses relevés — qui, eux, ne
+ * sont jamais touchés — et tout l'aval raconte la même voiture.
+ */
 export function autonomiesProposees(m: ModeleVehicule): {
   ville: number; route: number; autoroute: number;
 } {
   return {
     // En ville, la récupération au freinage fait souvent mieux que le WLTP.
-    ville: Math.round(m.wltpKm * 1.05),
-    route: Math.round(m.wltpKm * 0.85),
-    autoroute: Math.round(m.wltpKm * PART_AUTOROUTE),
+    ville: kmPrudents(m.wltpKm * 1.05),
+    route: kmPrudents(m.wltpKm * 0.85),
+    autoroute: kmPrudents(m.wltpKm * PART_AUTOROUTE),
   };
 }
