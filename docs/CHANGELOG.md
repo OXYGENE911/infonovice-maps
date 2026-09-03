@@ -2,6 +2,38 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.56.0] — 2026-09-03 — FANTOME-1
+
+### Corrigé — le doigt traversait la suggestion pour appuyer sur le bouton dessous
+- Armelin, 03/09, en version 1.52, **après l'avoir déjà signalé le 28/08** :
+  « mon doigt traverse la complétion pour aller cliquer sur le bouton situé en
+  dessous, qui est soit "Sur la carte", soit "Ma position" ou "travail" […]
+  parfois je dois m'y prendre à trois ou quatre fois pour cliquer au bon
+  endroit. Pour être sûr, je dois cliquer le plus à droite possible, là où il
+  n'y a pas de bouton en dessous. »
+- **Le recouvrement, mesuré le 03/09 en 390×844** : la première suggestion
+  occupe y 478→540 sur x 22→368, « Sur la carte » et « Ma position »
+  y 472→502 sur x 15→211. Ils se croisent sur la **bande haute et gauche** de
+  la suggestion — exactement là où le doigt se pose, et pas à droite.
+- **La cause.** Choisir refermait la liste PENDANT le `pointerdown`. À la
+  souris cela ne se voit pas : le `click` va à l'ancêtre commun du `mousedown`
+  et du `mouseup`. Au doigt, le `click` naît de la séquence tactile et vise ce
+  qui occupe les coordonnées **après** le `touchend` — donc le bouton qui vient
+  d'être découvert.
+- **Le clic qui suit la sélection est retiré** s'il tombe dans le rectangle
+  qu'occupait la liste, et pendant un tiers de seconde seulement. C'est
+  exactement le fantôme, et rien d'autre.
+
+### Et pourquoi il avait survécu à un parcours écrit exprès pour lui
+- Le garde-fou du 28/08 **cliquait à la souris**, et j'en avais conclu — noir
+  sur blanc dans le code — qu'« aucun correctif n'était nécessaire ». Le
+  commentaire est corrigé, et le vrai garde-fou **tape au doigt** :
+  `hasTouch`, 390×844, visée dans la zone de recouvrement mesurée, sur le
+  départ ET la destination.
+- **Un troisième parcours garde le remède du mal qu'il pourrait causer** :
+  après une sélection, « Sur la carte » doit rester atteignable au même
+  endroit. Une garde qui survivrait rendrait le bouton mort.
+
 ## [1.55.0] — 2026-09-03 — MODE-1
 
 ### Quatre façons de partir, rangées là où on les cherche

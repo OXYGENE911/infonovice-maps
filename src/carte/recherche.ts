@@ -473,9 +473,57 @@ export class RechercheAdresse extends HTMLElement {
     }
   }
 
+  /**
+   * Avale le clic fantôme que le tactile dispatche APRÈS la fermeture.
+   *
+   * LE DÉFAUT, SIGNALÉ DEUX FOIS (28/08 puis 03/09, en 1.52). Armelin : « mon
+   * doigt traverse la complétion pour aller cliquer sur le bouton situé en
+   * dessous […] parfois je dois m'y prendre à trois ou quatre fois ». Mesuré
+   * le 03/09 en 390×844 : la première suggestion occupe y 478→540, « Sur la
+   * carte » et « Ma position » y 472→502 — elles se recouvrent sur la bande
+   * haute, et c'est là que le doigt se pose.
+   *
+   * LA CAUSE. Choisir referme la liste PENDANT le `pointerdown`. À la souris
+   * cela ne se voit pas : le `click` va à l'ancêtre commun du `mousedown` et
+   * du `mouseup`. Au doigt, le `click` naît de la séquence tactile et vise ce
+   * qui occupe les coordonnées APRÈS le `touchend` — donc le bouton qui vient
+   * d'être découvert. C'est pourquoi mon parcours du 28/08, qui cliquait à la
+   * SOURIS, concluait à tort qu'aucun correctif n'était nécessaire.
+   *
+   * POURQUOI CETTE FORME-LÀ. Ne fermer qu'au `click` supposerait que le
+   * `click` arrive toujours — or `preventDefault()` sur `pointerdown` le
+   * supprime dans certains navigateurs, et la sélection ne partirait plus du
+   * tout. On ferme donc comme avant, et l'on RETIRE le clic suivant s'il
+   * tombe dans le rectangle que la liste occupait : c'est exactement le clic
+   * fantôme, et rien d'autre — un vrai second toucher au même pixel en moins
+   * d'un tiers de seconde serait un double-tap, qu'on ne veut pas davantage.
+   */
+  #avalerLeFantome(zone: DOMRect): void {
+    const fin = performance.now() + 350;
+    const avaler = (e: MouseEvent): void => {
+      document.removeEventListener('click', avaler, true);
+      if (performance.now() > fin) return;
+      const dedans = e.clientX >= zone.left && e.clientX <= zone.right
+        && e.clientY >= zone.top && e.clientY <= zone.bottom;
+      if (!dedans) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    /* EN CAPTURE : le fantôme doit être arrêté AVANT d'atteindre le bouton,
+       et un écouteur posé sur le bouton lui-même arriverait trop tard. */
+    document.addEventListener('click', avaler, true);
+    /* ET L'ÉCOUTEUR NE SURVIT PAS À SA RAISON D'ÊTRE : sans ce retrait, un
+       clic légitime bien plus tard trouverait encore la garde en place. */
+    setTimeout(() => { document.removeEventListener('click', avaler, true); }, 400);
+  }
+
   #choisir(i: number): void {
     const r = this.#resultats[i];
     if (!r) return;
+    /* LA ZONE À GARDER SE MESURE AVANT DE FERMER : après, la liste n'a plus
+       de rectangle. */
+    const liste = this.querySelector('ul[role="listbox"]');
+    if (liste) this.#avalerLeFantome(liste.getBoundingClientRect());
     const champ = this.querySelector('input') as HTMLInputElement;
     champ.value = r.libelle;
     /* CHOISIR REFERME LA PAGE : on a trouvé, on veut voir la carte. */
