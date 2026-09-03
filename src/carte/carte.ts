@@ -31,6 +31,7 @@ import { RechercheAdresse, poserEmpriseCourante, poserPositionConnue } from './r
 import { PanneauItineraire } from './panneau-itineraire';
 import { PanneauPoi } from './panneau-poi';
 import { FiltrePoi } from './filtre-poi';
+import { MesPoi } from './mes-poi';
 import { PanneauFavoris } from './panneau-favoris';
 import { PanneauTrafic } from './panneau-trafic';
 import { PanneauVehicule } from './panneau-vehicule';
@@ -385,6 +386,15 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     active: () => poi.bornesActives,
     toutAfficher: () => { poi.toutAfficher(); },
   };
+  /* LES FAVORIS SUR LA CARTE (MES-POI-1, 04/09) : l'émoji de leur liste,
+     visibles d'emblée — la puce « Mes POI » de l'entonnoir les range. */
+  const mesPoi = new MesPoi();
+  mesPoi.poser(carte, panneau);
+  filtrePoi.porteMesPoi = {
+    basculer: (visible) => { mesPoi.basculer(visible); },
+    active: () => mesPoi.visible(),
+  };
+  mesPoi.surVisibilite = (visible) => { filtrePoi.majMesPoi(visible); };
   poi.surCouchesChangees = (actives) => { filtrePoi.majBornes(actives.has('bornes')); };
   poi.surFiltresBornes = (resume) => { filtrePoi.majFiltresBornes(resume); };
   filtrePoi.majFiltresBornes(poi.resumeFiltres);

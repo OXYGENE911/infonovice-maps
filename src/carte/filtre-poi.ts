@@ -334,6 +334,19 @@ export class FiltrePoi extends HTMLElement {
   )}</span>${c.libelle}
             </button>`).join('')}
         </div>
+        <!-- LA PUCE « MES POI » (MES-POI-1, 04/09). Armelin : « ce serait
+             bien de voir apparaître les émojis en question sur la carte. Il
+             faudrait ajouter un filtre "Mes POIs" pour afficher ou masquer
+             ses propres POI. » Elle commande la couche des favoris — allumée
+             d'emblée : livrer la couche éteinte referait une fonction
+             cachée. PAS la classe .poi-famille : ce compte-là dénombre les
+             familles Overpass dans les parcours ; l'habit est partagé par la
+             CSS, pas par la classe. -->
+        <p class="poi-panneau-titre poi-titre-second">Mes lieux</p>
+        <button type="button" class="poi-mes-poi" aria-pressed="true"
+          style="--teinte:#E8A800">
+          <span class="poi-pastille" aria-hidden="true">⭐</span>Mes POI
+        </button>
         <!-- LE BOUTON RESTE, MAIS IL NE COMMANDE PLUS : la recherche suit la
              carte. Il sert à REDEMANDER une zone déjà couverte — après une
              panne du service, ou pour rafraîchir un quartier. -->
@@ -854,6 +867,26 @@ export class FiltrePoi extends HTMLElement {
     this.querySelector('.poi-rappel-tout')?.addEventListener('click', () => {
       this.#porteBornes?.toutAfficher();
     });
+  }
+
+  /* LA COUCHE DES FAVORIS SE COMMANDE D'ICI (MES-POI-1) : même délégation
+     que les bornes — la puce ne possède rien, elle actionne et reflète. */
+  #porteMesPoi: { basculer(visible: boolean): void; active(): boolean } | null = null;
+
+  set porteMesPoi(p: { basculer(visible: boolean): void; active(): boolean }) {
+    this.#porteMesPoi = p;
+    const puce = this.querySelector<HTMLButtonElement>('.poi-mes-poi');
+    if (!puce) return;
+    puce.setAttribute('aria-pressed', String(p.active()));
+    puce.addEventListener('click', () => {
+      this.#porteMesPoi?.basculer(!this.#porteMesPoi.active());
+    });
+  }
+
+  /** L'état de la couche des favoris — la puce le reflète. */
+  majMesPoi(visible: boolean): void {
+    this.querySelector('.poi-mes-poi')
+      ?.setAttribute('aria-pressed', String(visible));
   }
 
   /** L'état de la couche des bornes, dit par le volet — la puce le reflète. */

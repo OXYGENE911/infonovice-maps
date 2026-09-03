@@ -4,6 +4,10 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
 États : [ ] à faire · [~] en cours · [x] fusionnée.
 
 ## Fondations
+- [x] PR #223 — MES-POI-1 (04/09) : les favoris sur la carte avec l'émoji de
+      leur liste (disque cerclé de sa couleur), fiche au clic, puce « Mes
+      POI » dans l'entonnoir — visibles d'emblée, le choix survit au
+      rechargement.
 - [x] PR #1 — Scaffolding : Vite + TS + PWA + ESLint + Vitest + Playwright +
       GitHub Actions (CI + déploiement Pages) + CNAME maps.infonovice.fr +
       page « en construction »

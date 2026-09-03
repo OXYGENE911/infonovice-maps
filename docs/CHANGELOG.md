@@ -80,6 +80,27 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
      aux sources.
 - Vérifié sur les vrais services : « aéroport » ouvre sur Le Bourget et Orly,
   « FNACDARTY » rend les Fnac Darty.
+## [1.75.0] — 2026-09-04 — MES-POI-1
+
+### Les favoris paraissent sur la carte, avec l'émoji de leur liste
+- Armelin, le 03/09 : « lorsqu'on utilise la liste des favoris et qu'on
+  enregistre des POI avec un émoji, ce serait bien de voir apparaître les
+  émojis en question sur la carte. Il faudrait ajouter un filtre "Mes POIs"
+  pour afficher ou masquer ses propres POI. »
+- **Chaque favori porte l'émoji de sa liste**, dans un disque cerclé de sa
+  couleur — le même langage que les pastilles de familles. Les favoris
+  d'avant les listes et les identifiants orphelins d'un vieil import
+  replient sur « Lieux favoris » : aucun favori ne reste invisible, c'est
+  le défaut même qu'on corrige.
+- **Visibles d'emblée** : livrer la couche éteinte referait une fonction
+  cachée — la règle du projet dit ce qu'elle vaudrait. La puce « Mes POI »
+  de l'entonnoir les range, et le choix survit au rechargement.
+- Un appui ouvre la fiche du favori — nom, adresse d'origine, « Y aller » —
+  et retirer un favori l'efface de la carte à l'instant : elle ne ment
+  jamais.
+- **Rien ne sort du navigateur** : c'est la seule couche de la carte qui ne
+  coûte rien à personne — les favoris restent en IndexedDB, la couche les
+  dessine sur place.
 
 ## [1.71.0] — 2026-09-04 — DEST-1
 
