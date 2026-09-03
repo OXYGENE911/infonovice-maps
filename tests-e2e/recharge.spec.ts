@@ -1039,22 +1039,35 @@ test('une pastille d’arrêt SUR LA CARTE se clique, et sa fiche retire l’arr
   const corps = page.locator('.iti-recharge-corps');
   await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
 
-  /* LE CLIC TOMBE SUR LA PASTILLE : on projette la position de la borne dans
-     l'écran plutôt que de deviner des pixels. */
-  await page.waitForTimeout(900); // fitBounds en cours : on laisse la carte se poser
-  const point = await page.evaluate(() => {
-    const c = (window as unknown as {
-      __carte: { project(l: [number, number]): { x: number; y: number } };
-    }).__carte;
-    return c.project([3.6, 47.3]);
-  });
+  /* ON CLIQUE LÀ OÙ LA PASTILLE EST RÉELLEMENT DESSINÉE, PUIS ON RECOMMENCE
+     SI RIEN NE S'OUVRE (03/09).
+     CE PARCOURS A FLANCHÉ EN INTÉGRATION CONTINUE sur une branche qui ne
+     touchait que le découpage des noms de communes — et il repasse 5 fois sur
+     5 en local, sur le même code. Ce n'est donc pas la branche : c'est le
+     MOMENT. Il projetait une coordonnée théorique après une attente fixe de
+     900 ms, ce qui suppose que `fitBounds` a fini et que les pastilles sont
+     dessinées — deux paris.
+     C'EST LE MÊME REMÈDE QU'EN 02/09 pour `ouvrirCartoucheBeaune` : on demande
+     à MapLibre OÙ il a posé le point, et l'on rejoue le geste entier plutôt
+     que d'attendre plus longtemps un clic déjà perdu. */
   const canevas = await page.locator('#carte canvas.maplibregl-canvas').boundingBox();
-  await page.mouse.click(canevas!.x + point.x, canevas!.y + point.y);
-
-  /* LA FICHE S'OUVRE, et propose de retirer l'arrêt : cette borne est retenue
-     par le plan. */
   const fiche = page.locator('fiche-borne');
-  await expect(fiche).toBeVisible();
+  await expect(async () => {
+    const point = await page.evaluate(() => {
+      const c = (window as unknown as { __carte: {
+        project(l: [number, number]): { x: number; y: number };
+        queryRenderedFeatures(o: object): { geometry: { coordinates: [number, number] } }[];
+      } }).__carte;
+      const rendus = c.queryRenderedFeatures({ layers: ['poi-bornes'] });
+      const f = rendus[0];
+      return c.project(f ? f.geometry.coordinates : [3.6, 47.3]);
+    });
+    await page.mouse.click(canevas!.x + point.x, canevas!.y + point.y);
+    await expect(fiche).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
+
+  /* LA FICHE PROPOSE DE RETIRER L'ARRÊT : cette borne est retenue par le
+     plan. */
   await expect(fiche.locator('.fb-titre')).toContainText('Aire de Beaune');
   const retirer = fiche.getByRole('button', { name: 'Retirer cet arrêt du plan de recharge' });
   await expect(retirer).toBeVisible();

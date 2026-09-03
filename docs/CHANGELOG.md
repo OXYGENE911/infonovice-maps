@@ -2,6 +2,22 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.61.0] — 2026-09-03 — RECHERCHE-8c
+
+### Corrigé — « Seine » était pris pour une commune
+- **Vu en production**, en repassant le jeu d'essai sur le site : « FnacDarty
+  Siège Ivry sur Seine » faisait reconnaître **« Seine »** comme commune — elle
+  ouvre « Seine-Port » — et l'on partait chercher « Fnac Darty Siège Ivry
+  sur » autour de Seine-Port, à 25 km de nulle part. La bonne lecture était
+  « Ivry sur Seine », trois mots.
+- **On essaie désormais la commune la plus LONGUE d'abord.** Un nom de commune
+  long est un signal plus fort : « Ivry sur Seine » ne peut guère être un
+  hasard, « Seine » si.
+- **Et cela coûte moins, pas plus** : on s'arrête au premier découpage reconnu,
+  donc l'ordre du plus long au plus court ne dépense des requêtes que là où le
+  court aurait été faux. Mesuré : la requête passe de 1 326 ms à **566 ms**,
+  l'appel Overpass parti sur un nom absurde ayant disparu.
+
 ## [1.60.0] — 2026-09-03 — ADRESSE-POI-1
 
 ### L'adresse postale des lieux qui n'en déclarent pas
@@ -34,6 +50,17 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   l'adresse, et il partirait la chercher.
 - **Une panne n'est pas une absence** : elle se dit autrement (« indisponible
   pour le moment »), leçon déjà payée deux fois sur Overpass.
+
+### Corrigé au passage — un parcours qui flanchait au hasard
+- La CI de cette branche est tombée sur `recharge.spec.ts`, un parcours qui
+  clique une pastille de borne — **sans aucun rapport** avec le découpage des
+  noms de communes. Il repasse 5 fois sur 5 en local, sur le même code : ce
+  n'est pas la branche, c'est le **moment**.
+- Il projetait une coordonnée théorique après une attente fixe de 900 ms, ce
+  qui suppose que `fitBounds` a fini ET que les pastilles sont dessinées —
+  deux paris. **Même remède que le 02/09** pour le cartouche de Beaune : on
+  demande à MapLibre où il a posé le point, et l'on rejoue le geste entier
+  plutôt que d'attendre plus longtemps un clic déjà perdu.
 
 ### Mesuré
 - 7 tests unitaires et 5 parcours Playwright, dont celui qui garde qu'un lieu

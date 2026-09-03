@@ -50,6 +50,25 @@ describe('decoupagesNomCommune', () => {
     expect(d.map((x) => x.commune)).toContain('Ivry sur Seine');
   });
 
+  it('ESSAIE LA PLUS LONGUE D’ABORD — « Ivry sur Seine » avant « Seine »', () => {
+    /* VU EN PRODUCTION (RECHERCHE-8c, 03/09) : « FnacDarty Siège Ivry sur
+       Seine » faisait reconnaître « Seine » comme commune — elle ouvre
+       « Seine-Port » — et l'on partait chercher « Fnac Darty Siège Ivry sur »
+       autour de Seine-Port, à 25 km de nulle part. Un nom de commune plus long
+       est un signal plus fort : « Ivry sur Seine » ne peut guère être un
+       hasard, « Seine » si. */
+    const d = decoupagesNomCommune('Fnac Darty Siège Ivry sur Seine');
+    const rangIvry = d.findIndex((x) => x.commune === 'Ivry sur Seine');
+    const rangSeine = d.findIndex((x) => x.commune === 'Seine');
+    expect(rangIvry).toBeGreaterThanOrEqual(0);
+    expect(rangSeine).toBeGreaterThanOrEqual(0);
+    expect(rangIvry, '« Ivry sur Seine » doit passer avant « Seine »')
+      .toBeLessThan(rangSeine);
+    /* ET CE QU'IL RESTE À CHERCHER EST LE BON : « Fnac Darty Siège », pas
+       « Fnac Darty Siège Ivry sur ». */
+    expect(d[rangIvry]?.nom).toBe('Fnac Darty Siège');
+  });
+
   it('NE PREND JAMAIS TOUTE LA PHRASE pour une commune', () => {
     /* Il doit rester un nom à chercher : un découpage qui mange tout ne
        laisserait rien. */
