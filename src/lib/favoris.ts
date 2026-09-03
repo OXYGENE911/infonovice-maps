@@ -128,6 +128,10 @@ export const LEGENDES: Readonly<Record<string, { quoi: string; origine: string }
     quoi: 'Les listes dans lesquelles vous rangez vos favoris.',
     origine: 'Créées par vous.',
   },
+  'mes-poi-visibles': {
+    quoi: 'Si vos favoris s’affichent sur la carte (puce « Mes POI »).',
+    origine: 'Réglé par vous, dans le filtre des lieux (l’entonnoir).',
+  },
   'repere-domicile': {
     quoi: 'Votre domicile : coordonnées et adresse.',
     origine: 'Défini par vous, par appui long sur la carte ou depuis le volet.',
