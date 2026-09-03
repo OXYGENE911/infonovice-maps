@@ -2,6 +2,35 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.53.0] — 2026-09-03 — RECHERCHE-7
+
+### La recherche s'ouvre en pleine page, et chaque résultat porte sa distance
+- Armelin, 03/09 : « il faut vraiment retravailler le module de recherche qui
+  n'est pas opérationnelle », et « le moteur de recherche lié à la recherche
+  d'adresse est **le plus important de l'application** ».
+- **La liste tenait dans un bandeau de quelques centaines de pixels.** Dix
+  suggestions y entraient mal : on en voyait trois, on faisait défiler à
+  l'aveugle, et la carte derrière ne servait à rien pendant ce temps.
+- **Un clic dans le champ ouvre désormais une page pleine** : le champ monte
+  en tête, la liste occupe tout le reste, et une flèche « Retour » (ou Échap)
+  rend la carte. Choisir une suggestion referme la page.
+- **Chaque suggestion dit à quelle distance elle est** — depuis la position
+  connue si on s'est localisé, depuis le centre de la carte sinon. Sans ce
+  chiffre, « Carrefour » à 800 m et « Carrefour » à 40 km se ressemblent.
+- **Les champs du planificateur ne changent pas.** Ils vivent DANS un volet
+  déjà ouvert : les mettre en plein écran recouvrirait le formulaire qu'on est
+  en train de remplir.
+
+### Mesuré
+- Cinq parcours Playwright : la page couvre bien la fenêtre (412 px de large,
+  pas 274) ; les dix suggestions tiennent sans débordement ; chaque option
+  porte une distance et les distances croissent ; Échap rend la carte ; les
+  champs du planificateur restent en place.
+- **Le piège, encore lui** : `.entete` portait un `backdrop-filter`, ce qui en
+  faisait le bloc conteneur de tout `position: fixed` descendant — la page
+  « plein écran » s'ouvrait à 274 px de large. Troisième fois que cette
+  propriété coûte une mesure ; la règle neutralise l'en-tête pendant
+  l'ouverture.
 ## [1.52.0] — 2026-09-03 — RECHERCHE-6 et VEHIC-4
 
 ### Corrigé — on ne trouvait ni les enseignes ni les lieux nommés avec leur commune

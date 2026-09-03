@@ -552,6 +552,14 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       l'heure) branchées ; Issy écartée (relevé d'avril 2025, tous pleins) et
       Paris n'expose pas d'occupation. Piège payé : Aix-Marseille horodate en
       heure de Paris sans le dire.
+- [x] PR #200 — RECHERCHE-7 (03/09) : la recherche en pleine page, chaque résultat avec
+      sa distance. Armelin : « le moteur de recherche lié à la recherche
+      d'adresse est le plus important de l'application ». SUITES OUVERTES :
+      l'annuaire de l'administration (`api-lannuaire.service-public.fr`,
+      mesuré fonctionnel le 03/09) pour les mairies, préfectures et CAF ; et
+      la GÉOLOCALISATION À L'OUVERTURE, qu'Armelin demande — elle attend sa
+      décision explicite, car elle contredit la contrainte 4 et la page
+      « Vie privée » telle qu'elle est écrite aujourd'hui.
 - [x] PR #182 — PONT-1 (02/09) : les passages limités en tonnage s'annoncent à
       mille mètres, quand la masse est déclarée. Zéro requête de plus — la
       clause entre dans le corridor existant. On AVERTIT, on n'évite pas : le

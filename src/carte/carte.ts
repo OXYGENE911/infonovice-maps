@@ -26,7 +26,7 @@ import {
 } from './style-ign';
 import { SelecteurFonds } from './selecteur-fonds';
 import { installerPanneaux } from './panneaux';
-import { RechercheAdresse, poserEmpriseCourante } from './recherche';
+import { RechercheAdresse, poserEmpriseCourante, poserPositionConnue } from './recherche';
 import { PanneauItineraire } from './panneau-itineraire';
 import { PanneauPoi } from './panneau-poi';
 import { FiltrePoi } from './filtre-poi';
@@ -490,6 +490,10 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     if (typeof p?.longitude === 'number' && typeof p?.latitude === 'number') {
       const point = { lon: p.longitude, lat: p.latitude };
       vehicule.position = point;
+      /* ET LA RECHERCHE SAIT D'OÙ MESURER (RECHERCHE-7) : les distances des
+         suggestions se comptent depuis la position quand on la connaît. Rien
+         n'est demandé au GPS pour cela — on se sert de ce qu'on a. */
+      poserPositionConnue(point);
       /* LE PLANIFICATEUR AUSSI. Une position deja connue lui sert de depart
          par defaut : on dit ou l'on va, le reste se deduit. Rien n'est
          demande au GPS pour cela — on se sert de ce qu'on a. */
@@ -512,6 +516,12 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      quelque chose. Quatre gestes, tous DÉJÀ mesurés ailleurs dans
      l'application : y aller, garder, regarder, dicter. */
   const recherche = new RechercheAdresse();
+  /* SEULE LA BARRE DU HAUT PREND L'ÉCRAN (RECHERCHE-7, 03/09) : « sur Google
+     Maps, cela affiche une page de recherche en plein écran pour bénéficier de
+     toute la surface ». Les champs du planificateur, eux, vivent déjà dans une
+     feuille qui occupe l'écran — leur en superposer une seconde cacherait le
+     trajet qu'on compose. */
+  recherche.pleinEcran = true;
   document.querySelector('.entete')?.appendChild(recherche);
   let marqueur: Marker | null = null;
   recherche.surSelection = (r) => {

@@ -88,6 +88,86 @@ body { font-family: var(--police); background: var(--fond); }
   .recherche [role="option"][aria-selected="true"] { background: #1A2634; }
 }
 .recherche .contexte { font-size: 11.5px; color: var(--texte-3); white-space: nowrap; }
+/* LA DISTANCE (RECHERCHE-7) : à droite, en chiffres alignés — c'est une
+   colonne qu'on parcourt du regard, pas une phrase qu'on lit. */
+.recherche .distance {
+  margin-left: auto; font-variant-numeric: tabular-nums;
+  font: 600 12px var(--police); color: var(--texte-2); white-space: nowrap;
+}
+.recherche .distance:empty { display: none; }
+
+/* ═══ LA PAGE DE RECHERCHE PLEIN ÉCRAN (RECHERCHE-7, 03/09) ═══
+   Armelin, rapportant ses usagers : « la recherche s'affiche dans un tout
+   petit rectangle et la complétion dépasse de la zone d'affichage, ce qui ne
+   fait pas très pro ni très beau. Sur Google Maps, cela affiche une page de
+   recherche en plein écran […] la carte disparaît et on atterrit dans un vrai
+   module de recherche. »
+   LE DÉBORDEMENT N'ÉTAIT PAS UN DÉFAUT DE STYLE mais de SURFACE : dix
+   suggestions ne tiennent pas sous une barre de quarante pixels posée sur une
+   carte. On ne les rétrécit donc pas, on leur donne la page. */
+/* L'EN-TÊTE CESSE D'ÊTRE UN BLOC CONTENANT LE TEMPS DE LA PAGE.
+   `backdrop-filter` fait d'un élément le bloc contenant de ses descendants en
+   `position: fixed` — la page se serait donc ancrée sur l'en-tête, large de
+   deux cent soixante-quatorze pixels, au lieu de l'écran. MESURÉ par le
+   parcours avant d'être compris : 274 px là où l'on en attendait 412.
+   C'EST LA MÊME EMBUSCADE QUE `.maplibregl-ctrl` ET SON `transform`, payée le
+   02/09 sur le panneau des bornes. La note de ce jour-là disait « position
+   fixed inside a transformed ancestor » ; `backdrop-filter` a exactement le
+   même effet, et rien ne le laisse deviner à la lecture. */
+body.recherche-ouverte .entete {
+  position: static; backdrop-filter: none; background: none;
+  border: none; box-shadow: none; padding: 0; max-width: none;
+}
+
+recherche-adresse.recherche-page {
+  position: fixed; inset: 0; z-index: var(--z-modale);
+  background: var(--fond);
+  display: flex; flex-direction: column;
+}
+recherche-adresse.recherche-page .recherche {
+  display: flex; flex-direction: column; height: 100%; min-height: 0;
+}
+/* LA TÊTE : la flèche et le champ, côte à côte, ancrés en haut. */
+recherche-adresse.recherche-page .recherche-retour {
+  position: absolute; top: max(12px, var(--sur-encoche, 12px)); left: 12px;
+  width: 38px; height: 38px; border-radius: 10px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-1); font: 600 18px var(--police); line-height: 1;
+  cursor: pointer;
+}
+recherche-adresse.recherche-page .recherche-retour:hover {
+  background: var(--bleu-50); border-color: var(--accent);
+}
+recherche-adresse.recherche-page .recherche-retour:focus-visible {
+  outline: none; box-shadow: var(--focus);
+}
+recherche-adresse.recherche-page input {
+  margin: max(12px, var(--sur-encoche, 12px)) 12px 10px 60px;
+  width: auto; padding: 11px 14px; font-size: 16px;
+}
+/* SEIZE PIXELS, ET C'EST UNE RÈGLE DE TÉLÉPHONE : sous cette taille, iOS
+   zoome de lui-même sur le champ à la mise au point et l'on perd la page. */
+
+/* LA LISTE PREND TOUT LE RESTE, et défile SEULE : c'est elle qui manquait de
+   place, c'est elle qui la reçoit. */
+recherche-adresse.recherche-page ul {
+  position: static; flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  margin: 0; padding: 0 8px 12px; border: none; box-shadow: none;
+  border-radius: 0; background: transparent;
+}
+recherche-adresse.recherche-page ul[hidden] { display: none; }
+recherche-adresse.recherche-page [role="option"] {
+  padding: 13px 12px; font-size: 15px;
+  border-bottom: 1px solid var(--bord);
+}
+recherche-adresse.recherche-page [role="option"]:last-child { border-bottom: none; }
+recherche-adresse.recherche-page .recherche-note,
+recherche-adresse.recherche-page .recherche-erreur { margin: 0 14px 10px; }
+
+/* LA CARTE NE SE DÉTRUIT PAS, ELLE SE CACHE : MapLibre perdrait son contexte
+   WebGL et devrait tout recharger au retour — c'est la panne que CARTE-1 a
+   corrigée le 01/09. On la couvre, on ne la démonte pas. */
+body.recherche-ouverte .pied-carte { display: none; }
 /* LA NOTE (RECHERCHE-2) : le ton d'une explication, pas d'une alerte. */
 .recherche-note {
   position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: var(--z-suggestions);

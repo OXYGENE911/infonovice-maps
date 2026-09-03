@@ -43,6 +43,18 @@ export function poserEmpriseCourante(
   f: () => VueCarte | null,
 ): void { vueCourante = f; }
 
+/* LA DERNIÈRE POSITION CONNUE, quand l'usager a pressé « Me localiser »
+   (RECHERCHE-7, 03/09). Elle sert à DIRE LA DISTANCE de chaque suggestion —
+   « à 3,2 km » — ce qu'un usager d'Armelin demandait explicitement.
+   ELLE N'EST JAMAIS DEMANDÉE ICI : la barre se sert de ce qu'on lui donne, et
+   à défaut elle mesure depuis le centre de la carte EN LE DISANT. La
+   géolocalisation reste un geste (contrainte 4 du projet). */
+let positionConnue: { lon: number; lat: number } | null = null;
+
+export function poserPositionConnue(p: { lon: number; lat: number }): void {
+  positionConnue = p;
+}
+
 /* CE QUI RESSEMBLE À UNE ADRESSE NE VA PAS CHERCHER UN NOM. Un numéro en
    tête, c'est la Base Adresse Nationale qui répond — et Overpass n'a pas à
    être dérangé pour « 25 avenue du prophète ». */
@@ -106,6 +118,23 @@ export class RechercheAdresse extends HTMLElement {
     if (champ) champ.value = texte;
   }
 
+  /* LA PAGE DE RECHERCHE PLEIN ÉCRAN (RECHERCHE-7, 03/09).
+   *
+   * LE TERRAIN. Armelin, rapportant ses usagers : « quand on tape une adresse,
+   * la recherche s'affiche dans un tout petit rectangle et la complétion
+   * dépasse de la zone d'affichage, ce qui ne fait pas très pro ni très beau.
+   * Sur Google Maps, cela affiche une page de recherche en plein écran pour
+   * bénéficier de toute la surface. La carte disparaît et on atterrit dans un
+   * vrai module de recherche […] avec leur distance par rapport à ma position
+   * géographique. »
+   *
+   * SEULE LA BARRE DU HAUT LE FAIT. Les champs du planificateur vivent DÉJÀ
+   * dans une feuille qui occupe l'écran : leur en superposer une seconde
+   * cacherait le trajet qu'on est en train de composer. La carte pose donc la
+   * propriété sur la seule barre qui en a besoin.
+   */
+  pleinEcran = false;
+
   connectedCallback(): void {
     /* IDEMPOTENT : déplacer une ligne d'étape (insertBefore) déconnecte puis
        reconnecte le composant — reconstruire le DOM ici effaçait la saisie de
@@ -113,6 +142,11 @@ export class RechercheAdresse extends HTMLElement {
     if (!this.firstElementChild) {
       this.innerHTML = `
         <div class="recherche">
+          <!-- LA FLÈCHE DE RETOUR n'existe qu'en page plein écran : la CSS la
+               cache autrement. Sans elle, on entrerait dans la recherche sans
+               pouvoir en sortir autrement qu'au clavier. -->
+          <button type="button" class="recherche-retour" hidden
+            aria-label="Revenir à la carte">←</button>
           <input type="search" role="combobox" aria-expanded="false"
             aria-controls="${this.#idListe}" aria-autocomplete="list"
             aria-label="Rechercher une adresse en France"
@@ -128,6 +162,16 @@ export class RechercheAdresse extends HTMLElement {
       const champ = this.querySelector('input');
       champ?.addEventListener('input', () => this.#planifier(champ.value));
       champ?.addEventListener('keydown', (e) => this.#clavier(e));
+      /* ON N'OUVRE PAS LA PAGE AU FOCUS SEUL. Un champ qui prend l'écran
+         entier parce qu'on l'a effleuré au clavier surprendrait, et la
+         tabulation le traverserait en le déclenchant. C'est le GESTE de
+         chercher — un clic dans le champ, ou la première lettre — qui
+         l'ouvre. */
+      champ?.addEventListener('pointerdown', () => { this.#ouvrirPage(); });
+      champ?.addEventListener('input', () => { this.#ouvrirPage(); });
+      this.querySelector('.recherche-retour')?.addEventListener('click', () => {
+        this.#fermerPage();
+      });
     }
     // L'écouteur document suit le cycle de vie : posé à la connexion, retiré
     // à la déconnexion — sans quoi chaque ligne d'étape retirée le laissait
@@ -335,6 +379,49 @@ export class RechercheAdresse extends HTMLElement {
     }
   }
 
+  /** La page occupe-t-elle l'écran ? */
+  #page = false;
+
+  /** Ouvre la page de recherche — sans effet hors du mode plein écran. */
+  #ouvrirPage(): void {
+    if (!this.pleinEcran || this.#page) return;
+    this.#page = true;
+    this.classList.add('recherche-page');
+    document.body.classList.add('recherche-ouverte');
+    const retour = this.querySelector<HTMLElement>('.recherche-retour');
+    if (retour) retour.hidden = false;
+  }
+
+  /** Referme la page et rend la carte. */
+  #fermerPage(): void {
+    if (!this.#page) return;
+    this.#page = false;
+    this.classList.remove('recherche-page');
+    document.body.classList.remove('recherche-ouverte');
+    const retour = this.querySelector<HTMLElement>('.recherche-retour');
+    if (retour) retour.hidden = true;
+    this.#fermer();
+    /* LE FOCUS REVIENT À LA CARTE plutôt que de tomber sur le `<body>` : sans
+       cela, la tabulation repartirait du haut du document. */
+    (document.querySelector('#carte') as HTMLElement | null)?.focus?.();
+  }
+
+  /**
+   * La distance d'une suggestion au point de référence, en toutes lettres.
+   *
+   * DEPUIS LA POSITION QUAND ON LA CONNAÎT, sinon depuis le centre de la
+   * carte — et l'en-tête de la liste dit LEQUEL. Une distance sans origine ne
+   * veut rien dire, et l'inventer serait pire que de s'en passer.
+   */
+  #distance(r: { lon: number; lat: number }): string {
+    const depuis = positionConnue ?? vueCourante?.() ?? null;
+    if (depuis === null) return '';
+    const km = distanceKm(r, depuis);
+    if (km < 1) return `${Math.round(km * 1000)} m`;
+    if (km < 10) return `${km.toFixed(1).replace('.', ',')} km`;
+    return `${Math.round(km)} km`;
+  }
+
   #afficher(): void {
     const liste = this.querySelector('ul[role="listbox"]') as HTMLUListElement;
     const champ = this.querySelector('input') as HTMLInputElement;
@@ -342,6 +429,7 @@ export class RechercheAdresse extends HTMLElement {
       <li role="option" id="${this.#idListe}-option-${i}" aria-selected="${i === this.#actif}">
         <span class="libelle"></span><span class="contexte"></span>
         <span class="approche"${r.approche ? '' : ' hidden'}></span>
+        <span class="distance"></span>
       </li>`).join('');
     // textContent, jamais innerHTML : le libellé vient d'un service externe.
     this.#resultats.forEach((r, i) => {
@@ -352,6 +440,10 @@ export class RechercheAdresse extends HTMLElement {
       /* L'AVEU SE LIT DANS LA LISTE (ADRESSE-2) : un repli muet poserait
          l'usager au 23 en lui laissant croire qu'il est au 23 bis. */
       (li.querySelector('.approche') as HTMLElement).textContent = r.approche ?? '';
+      /* LA DISTANCE, DEMANDÉE PAR LES USAGERS (RECHERCHE-7) : « la complétion
+         affiche les 10 autres adresses potentielles avec leur distance par
+         rapport à ma position géographique ». */
+      (li.querySelector('.distance') as HTMLElement).textContent = this.#distance(r);
       li.addEventListener('pointerdown', (e) => { e.preventDefault(); this.#choisir(i); });
     });
     liste.hidden = this.#resultats.length === 0;
@@ -360,6 +452,8 @@ export class RechercheAdresse extends HTMLElement {
 
   #clavier(e: KeyboardEvent): void {
     if (this.#resultats.length === 0 && e.key !== 'Escape') return;
+    /* ÉCHAP DOIT SORTIR MÊME SANS RÉSULTAT : c'est le cas le plus fréquent
+       d'une page ouverte par erreur. */
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       const pas = e.key === 'ArrowDown' ? 1 : -1;
@@ -372,7 +466,10 @@ export class RechercheAdresse extends HTMLElement {
       e.preventDefault();
       this.#choisir(this.#actif);
     } else if (e.key === 'Escape') {
-      this.#fermer();
+      /* ÉCHAP SORT DE LA PAGE, pas seulement de la liste : sur une page qui
+         occupe l'écran, refermer la liste laisserait l'usager devant un champ
+         vide sans carte, et sans savoir comment revenir. */
+      if (this.#page) this.#fermerPage(); else this.#fermer();
     }
   }
 
@@ -381,6 +478,8 @@ export class RechercheAdresse extends HTMLElement {
     if (!r) return;
     const champ = this.querySelector('input') as HTMLInputElement;
     champ.value = r.libelle;
+    /* CHOISIR REFERME LA PAGE : on a trouvé, on veut voir la carte. */
+    this.#fermerPage();
     this.#fermer();
     this.#surSelection?.(r);
   }
