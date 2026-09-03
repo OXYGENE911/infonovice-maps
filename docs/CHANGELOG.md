@@ -2,6 +2,23 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.69.0] — 2026-09-03 — LOGO-1
+
+### La mascotte officielle entre dans l'application
+- Armelin a fourni un pack de trois visuels (03/09) : le chien **à la carte**
+  pour l'icône officielle, **au volant** pour la navigation, **à la boussole**
+  pour la recherche. Le chien à la carte devient l'icône PWA, le favicon et
+  l'apple-touch-icon ; la boussole veille sur la page de recherche plein
+  écran.
+- **Le principe « pas de binaire opaque » s'adapte** : la mascotte est une
+  œuvre, pas un dessin procédural. Les sources canoniques (1024 px) vivent
+  dans `/brand` avec leur provenance ; les déclinaisons en dérivent par
+  Lanczos + quantification 256 couleurs — l'illustration est en aplats, le
+  grain de génération ne mérite pas ses kilo-octets (512 px : 214 Ko → 38 Ko).
+  L'ancien générateur d'épingle refuse désormais de tourner, pour qu'un
+  `node` distrait n'écrase pas la mascotte.
+- **La maskable a sa zone sûre** : Android découpe en cercle — sans marge, les
+  oreilles du chien sautaient.
 ## [1.68.0] — 2026-09-03 — PICTO-2
 
 ### Les résultats de recherche portent la pastille de la carte
