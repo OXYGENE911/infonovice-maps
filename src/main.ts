@@ -1,6 +1,7 @@
 // Point d'entrée : la carte plein écran (PR #2). La page « en construction »
 // de la PR #1 est morte ici, comme prévu.
 import { restaurerTheme } from './lib/theme';
+import { BandeauMaj } from './carte/bandeau-maj';
 import './styles/tokens.css';
 import './styles/carte.css';
 // Le pied de page de la carte partage la feuille des pages de texte.
@@ -9,7 +10,28 @@ import { registerSW } from 'virtual:pwa-register';
 import { creerCarte } from './carte/carte';
 import { EtatConnexion } from './carte/etat-connexion';
 
-registerSW({ immediate: true });
+/* LA NOUVELLE VERSION S'ANNONCE, ELLE NE S'IMPOSE PAS (MAJ-1, 03/09).
+   Armelin : « j'ai des testeurs qui ne savaient pas qu'il fallait rafraîchir
+   l'application pour la mettre à jour. Comment est-ce possible de leur
+   afficher une popup quelque part pour les prévenir ? »
+   DEUX MOITIÉS AU DÉFAUT : le service worker ne VÉRIFIE les mises à jour
+   qu'au chargement de la page — une PWA qui reste ouverte n'apprend jamais
+   rien — et quand il les voyait, il ne le disait à personne. On vérifie donc
+   toutes les trente minutes, et l'on ANNONCE au lieu d'imposer : recharger
+   tout seul en pleine navigation couperait le guidage. */
+const appliquerMaj = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    document.dispatchEvent(new CustomEvent('maj-disponible', {
+      detail: { appliquer: () => { void appliquerMaj(true); } },
+    }));
+  },
+  onRegisteredSW(_url, inscription) {
+    if (!inscription) return;
+    setInterval(() => { void inscription.update().catch(() => { /* hors ligne : on réessaiera */ }); },
+      30 * 60 * 1000);
+  },
+});
 
 /* LE THÈME CHOISI SE RESTAURE AVANT LE PREMIER RENDU (THEME-1, 03/09) :
    restauré plus tard, l'écran s'ouvrirait dans un thème et sauterait dans
@@ -18,6 +40,7 @@ void restaurerTheme();
 
 // L'état de connexion et l'invite d'installation vivent dans l'en-tête :
 // ils concernent l'application entière, pas la carte.
+document.body.append(new BandeauMaj());
 const entete = document.querySelector<HTMLElement>('.entete');
 if (entete) {
   entete.appendChild(new EtatConnexion());
