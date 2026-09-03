@@ -187,8 +187,20 @@ recherche-adresse.recherche-page [role="option"] {
   border-bottom: 1px solid var(--bord);
 }
 recherche-adresse.recherche-page [role="option"]:last-child { border-bottom: none; }
+/* LA NOTE ET L'ERREUR ENTRENT DANS LE FLUX DE LA PAGE (POPUP-1, 03/09).
+   LE DÉFAUT, RAPPORTÉ PAR ARMELIN EN 1.60 : « l'application ne trouve aucun
+   résultat mais je n'ai rien d'affiché dans la fenêtre en plein écran de
+   recherche. Quand je quitte l'écran, j'ai le message d'erreur qui s'affiche
+   dans un petit rectangle sur la carte. »
+   MESURÉ : la note gardait son `position: absolute; top: calc(100% + 8px) »
+   du mode barre — un tiroir qui s'ouvre SOUS la barre. En page pleine,
+   « 100% » vaut tout l'écran : la note se posait à y = 728 dans une fenêtre
+   de 720, huit pixels sous le bord. Elle était là, écrite, invisible — et
+   réapparaissait en refermant la page, quand « 100% » redevenait la barre. */
 recherche-adresse.recherche-page .recherche-note,
-recherche-adresse.recherche-page .recherche-erreur { margin: 0 14px 10px; }
+recherche-adresse.recherche-page .recherche-erreur {
+  position: static; margin: 0 14px 10px; box-shadow: none;
+}
 
 /* LA CARTE NE SE DÉTRUIT PAS, ELLE SE CACHE : MapLibre perdrait son contexte
    WebGL et devrait tout recharger au retour — c'est la panne que CARTE-1 a

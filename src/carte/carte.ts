@@ -524,6 +524,40 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   recherche.pleinEcran = true;
   document.querySelector('.entete')?.appendChild(recherche);
   let marqueur: Marker | null = null;
+
+  /* UNE SEULE FICHE À LA FOIS SUR LA CARTE (POPUP-1, 03/09).
+     Armelin, premier retour de la 1.60 : « si je relance dans la foulée une
+     autre requête, une nouvelle fenêtre s'ouvre sur la carte et les anciennes
+     fenêtres ne sont jamais fermées. En pleine navigation, je peux croiser
+     tous les gros rectangles ouverts correspondant à une fenêtre de recherche
+     précédente. » Capture à l'appui : FNAC DARTY et Disney Village empilées.
+
+     LA CAUSE : chaque sélection créait `new Popup(...)` sans rien retenir de
+     la précédente. Le MARQUEUR, lui, était bien remplacé (`marqueur?.remove()`)
+     — la fiche avait juste été oubliée du même geste.
+
+     LA RÈGLE REJOINT CELLE DES VOLETS (« une seule surface à la fois »,
+     lib/panneaux) : poser une fiche ferme celles d'avant, et le départ d'un
+     itinéraire les efface toutes — on regarde la route, plus la recherche. */
+  const fiches = new Set<Popup>();
+  function poserFiche(p: Popup): void {
+    for (const autre of fiches) autre.remove();
+    fiches.clear();
+    fiches.add(p);
+    /* LA CROIX RESTE UN GESTE VALABLE : la fiche fermée à la main sort du
+       registre, sinon on garderait des fantômes à « fermer » plus tard. */
+    p.on('close', () => { fiches.delete(p); });
+  }
+  document.addEventListener('itineraire-lance', () => {
+    for (const p of fiches) p.remove();
+    fiches.clear();
+    /* LE MARQUEUR DE RECHERCHE S'EFFACE AUSSI : la destination est désormais
+       dessinée par le trajet lui-même — deux repères au même endroit se
+       liraient comme deux lieux. */
+    marqueur?.remove();
+    marqueur = null;
+  });
+
   recherche.surSelection = (r) => {
     marqueur?.remove();
     marqueur = new Marker({ color: '#2272C4' }).setLngLat([r.lon, r.lat]).addTo(carte);
@@ -548,6 +582,7 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
         + '<button type="button" class="pa-copier">Copier les coordonnées</button>'
         + '</div><p class="pa-photo-etat" role="status"></p></div>')
       .addTo(carte);
+    poserFiche(popup);
     const bloc = popup.getElement();
     // textContent, jamais innerHTML : le libellé vient d'un service externe.
     (bloc.querySelector('.pa-libelle') as HTMLElement).textContent = r.libelle;
@@ -636,6 +671,7 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
         + '<button type="button" class="pa-photo">Photos de rue</button>'
         + '<p class="pa-photo-etat" role="status"></p></div>')
       .addTo(carte);
+    poserFiche(popup);
     const bloc = popup.getElement();
     (bloc.querySelector('.pa-coords') as HTMLElement).textContent = coords;
     bloc.querySelector('.pa-copier')?.addEventListener('click', () => {

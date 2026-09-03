@@ -604,6 +604,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       les deux portent exactement les mots cherchés. Piste : départager à
       mots égaux par la DISTANCE au repère (position connue, sinon vue), ce
       qui est déjà ce qu'on affiche à côté de chaque suggestion.
+- [x] PR #209 — POPUP-1 (03/09) : les fiches de recherche jamais fermées
+      (capture FNAC DARTY / Disney Village), et « aucun résultat » posé huit
+      pixels sous l'écran en page pleine. Premier retour de la 1.60.
 - [x] PR #208 — RECHERCHE-8c (03/09) : « Seine » était pris pour une commune
       dans « Ivry sur Seine ». La commune la plus longue est essayée d'abord —
       un signal plus fort, et une requête de moins.

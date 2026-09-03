@@ -4111,6 +4111,12 @@ export class PanneauItineraire extends HTMLElement {
   }
 
   async #calculer(): Promise<void> {
+    /* LA CARTE APPREND QU'UN ITINÉRAIRE PART (POPUP-1, 03/09) : elle efface
+       alors les fiches d'adresse encore ouvertes — Armelin les croisait « en
+       pleine navigation », empilées au fil de ses recherches. Un événement de
+       document, comme `favori-ajoute` : le panneau n'a pas à connaître la
+       carte. */
+    document.dispatchEvent(new CustomEvent('itineraire-lance'));
     this.#majBoutons();
     if (!this.#carte || !this.#depart || !this.#arrivee) return;
     // JETON DE SÉQUENCE : cases à cocher et boutons ↑/↓ relancent des calculs
