@@ -604,6 +604,8 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       les deux portent exactement les mots cherchés. Piste : départager à
       mots égaux par la DISTANCE au repère (position connue, sinon vue), ce
       qui est déjà ce qu'on affiche à côté de chaque suggestion.
+- [x] PR #216 — PICTO-2 (03/09) : la pastille de la carte dans les résultats
+      de recherche, famille devinée au libellé — dans le doute, rien.
 - [x] PR #214 — MAJ-1 (03/09) : la nouvelle version s'annonce par un bandeau
       au lieu de s'appliquer en silence — vérification toutes les 30 min,
       « prompt » au lieu d'« autoUpdate » : recharger seul en pleine

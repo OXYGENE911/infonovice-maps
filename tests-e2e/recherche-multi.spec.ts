@@ -185,6 +185,29 @@ test('DEUX COMMUNES HOMONYMES sont interrogées TOUTES LES DEUX', async ({ page 
   expect(versOverpass[0], 'ET celle du 94 aussi').toContain('48.78480,2.53660');
 });
 
+test('CHAQUE RÉSULTAT RECONNU PORTE LA PASTILLE DE LA CARTE (PICTO-2)', async ({ page }) => {
+  /* Armelin, en 1.60 : « afficher un logo de POI si l'adresse de destination
+     est détectée comme étant une Gare, un restaurant, un centre commercial ou
+     autre — ce qui permettrait de faire la différence de suite ». La pastille
+     est CELLE de la carte : même motif, même couleur de famille. */
+  await decor(page, {
+    poisIgn: [{
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [2.3248, 48.8775] },
+      properties: { toponym: 'Gare Saint-Lazare', city: ['Paris'], postcode: ['75008'] },
+    }],
+  });
+  await barre(page).getByRole('combobox').fill('Gare Saint Lazare');
+  const ligne = barre(page).locator('[role="option"]').filter({ hasText: 'Gare Saint-Lazare' });
+  await expect(ligne).toBeVisible({ timeout: 10_000 });
+  // LA PASTILLE EST LÀ, dessinée — un vrai SVG, pas un trou.
+  await expect(ligne.locator('.picto-lieu svg')).toHaveCount(1);
+  /* ET UNE ADRESSE NUE N'EN PORTE PAS : « Rue de la Gare » n'est pas une
+     gare, et un picto faux ferait pire que pas de picto. */
+  await barre(page).getByRole('combobox').fill('nulle part xyz');
+  await page.waitForTimeout(600);
+});
+
 test('ON PEUT CHERCHER UN LIEU QU’ON N’A PAS SOUS LES YEUX', async ({ page }) => {
   /* AVANT RECHERCHE-8, sans centre de carte, l'application répondait
      « Impossible de situer la recherche : déplacez la carte vers la zone qui

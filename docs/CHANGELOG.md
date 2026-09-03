@@ -2,6 +2,24 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.68.0] — 2026-09-03 — PICTO-2
+
+### Les résultats de recherche portent la pastille de la carte
+- Armelin, en 1.60 : « ce serait bien d'afficher un logo de POI si l'adresse
+  de destination est détectée comme étant une Gare, un restaurant, un centre
+  commercial ou autre — ce qui permettrait de faire la différence de suite
+  dans les résultats si plusieurs items s'affichent. »
+- **Les dessins existaient déjà** : les pastilles de la carte portent un motif
+  par famille et une couleur. La recherche les reprend tels quels — deux
+  langages graphiques pour les mêmes lieux se contrediraient.
+- **La famille se devine au libellé**, comme on lit le français : le mot en
+  TÊTE dit la nature (« Gare de Lyon », « Musée du Louvre », « Collège Albert
+  Camus »), et les enseignes connues se reconnaissent n'importe où
+  (Carrefour, Castorama, Leroy Merlin…).
+- **Dans le doute, rien** : « Rue de la Gare » n'est pas une gare, et un
+  picto faux ferait pire que pas de picto — le « rond honnête » des
+  pastilles, appliqué à la recherche.
+
 ## [1.67.0] — 2026-09-03 — MAJ-1
 
 ### La nouvelle version s'annonce, elle ne s'impose pas

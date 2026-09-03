@@ -8,6 +8,10 @@ import {
 import { dansEmprise, type Emprise } from '../lib/couverture';
 import { LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
 import { chercherPartout } from '../lib/recherche-multi';
+import { familleDevinee } from '../lib/famille-devinee';
+import { MOTIF_DE_FAMILLE } from '../lib/pictos-lieux';
+import { CATEGORIES } from '../lib/categories';
+import { svgPastille } from './icone-lieu';
 import { analyser, decoder, departementDe } from '../lib/adresse-mots';
 import { communesParNom } from '../lib/commune';
 
@@ -508,6 +512,7 @@ export class RechercheAdresse extends HTMLElement {
     const champ = this.querySelector('input') as HTMLInputElement;
     liste.innerHTML = this.#resultats.map((r, i) => `
       <li role="option" id="${this.#idListe}-option-${i}" aria-selected="${i === this.#actif}">
+        <span class="picto-lieu" aria-hidden="true"></span>
         <span class="libelle"></span><span class="contexte"></span>
         <span class="approche"${r.approche ? '' : ' hidden'}></span>
         <span class="distance"></span>
@@ -517,6 +522,20 @@ export class RechercheAdresse extends HTMLElement {
       const li = liste.children[i];
       if (!li) return;
       (li.querySelector('.libelle') as HTMLElement).textContent = r.libelle;
+      /* LE DESSIN DU LIEU (PICTO-2, 03/09). Armelin : « ce serait bien
+         d'afficher un logo de POI si l'adresse de destination est détectée
+         comme étant une Gare, un restaurant, un centre commercial ou autre —
+         ce qui permettrait de faire la différence de suite ». La pastille est
+         CELLE DE LA CARTE — même motif, même couleur de famille : deux
+         langages graphiques pour les mêmes lieux se contrediraient.
+         Le markup est engendré depuis nos constantes ; rien d'externe n'y
+         entre — le libellé, lui, reste posé en textContent. */
+      const famille = familleDevinee(r.libelle);
+      const motif = famille ? MOTIF_DE_FAMILLE[famille] : undefined;
+      const teinte = famille ? CATEGORIES.find((c) => c.cle === famille)?.couleur : undefined;
+      const picto = li.querySelector('.picto-lieu') as HTMLElement;
+      if (motif && teinte) picto.innerHTML = svgPastille(motif, teinte, 20);
+      else picto.hidden = true;
       (li.querySelector('.contexte') as HTMLElement).textContent = r.type === 'municipality' ? 'Commune' : r.contexte;
       /* L'AVEU SE LIT DANS LA LISTE (ADRESSE-2) : un repli muet poserait
          l'usager au 23 en lui laissant croire qu'il est au 23 bis. */
