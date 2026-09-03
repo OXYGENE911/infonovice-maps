@@ -175,11 +175,31 @@
       escale chez nous.</p>
 
     <h2>Et la géolocalisation ?</h2>
-    <p>Elle ne se déclenche que si vous appuyez sur « Me localiser » ou si
-      vous démarrez un suivi de trajet, et votre navigateur vous demandera
-      confirmation. La position sert à centrer la carte et à vous suivre sur
-      l’itinéraire, dans le navigateur. Elle n’est <strong>pas
-      transmise</strong>.</p>
+    <p>Elle ne se déclenche <strong>que par un geste de votre part</strong> :
+      « Me localiser », le démarrage d’un suivi de trajet, ou le bouton
+      « Utiliser ma position » de la recherche. Votre navigateur vous
+      demandera confirmation. L’application ne prend
+      <strong>jamais</strong> votre position d’elle-même, ni à l’ouverture,
+      ni ensuite.</p>
+    <p><strong>Où elle va, et quand.</strong> Elle sert d’abord dans le
+      navigateur : centrer la carte, vous suivre sur l’itinéraire, trier les
+      résultats de recherche par distance. Mais il y a
+      <strong>trois cas où elle sort</strong>, et il faut les dire :</p>
+    <ul>
+      <li>quand vous <strong>calculez un itinéraire depuis votre
+        position</strong> — le point de départ va au service public qui
+        calcule la route ;</li>
+      <li>quand vous <strong>suivez un trajet</strong> — le corridor parcouru
+        sert à relever les panneaux et les événements de circulation ;</li>
+      <li>quand vous demandez à <strong>chercher autour de vous</strong> — le
+        point va au service d’OpenStreetMap France qui recense les lieux
+        proches.</li>
+    </ul>
+    <p>Dans les trois cas, c’est <strong>ce qui rend le service
+      possible</strong> : il n’y a pas d’autre façon de calculer une route
+      depuis chez soi ni de chercher « autour de moi ». Aucun de ces envois ne
+      nous parvient — nous n’avons aucun serveur pour les recevoir — et aucun
+      n’est accompagné d’un identifiant qui vous désigne.</p>
     <p>Elle n’est pas non plus enregistrée, à une exception près, et elle est
       importante : <strong>si vous demandez à garder un parcours à la fin d’un
       trajet suivi</strong>, les positions relevées pendant ce trajet sont

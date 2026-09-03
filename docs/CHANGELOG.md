@@ -2,6 +2,42 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.58.0] — 2026-09-03 — GEO-1
+
+### Chercher autour de soi, sur demande — jamais d'office
+- Armelin, la nuit du 03/09 : « pour la décision de géolocalisation
+  automatique, on oublie pour le moment, **ou alors on affiche un message
+  explicite pendant la recherche pour demander le consentement** de la
+  personne à se localiser s'il souhaite rechercher autour de lui ? »
+- **Sa seconde option est la bonne, et elle ne demande aucune dérogation.** Une
+  géolocalisation à l'ouverture prendrait la position sans que personne n'ait
+  rien demandé : la contrainte 4 l'interdit, et la page « Vie privée » promet
+  le contraire. Une géolocalisation **sur geste**, précédée de la phrase qui
+  dit à quoi elle sert et où elle part, est un consentement explicite.
+- **L'invitation ne paraît qu'en page de recherche**, et seulement tant qu'on
+  ne connaît pas déjà la position : la reproposer à qui vient d'accepter
+  rendrait le consentement insignifiant.
+- **Un refus n'est pas une panne** et se dit autrement : « Position refusée —
+  la recherche continue sans elle. » Le bouton redevient pressable.
+
+### Les pages publiques disent maintenant les TROIS cas
+- La page « Vie privée » affirmait, de la position : « Elle n'est **pas
+  transmise** ». C'était déjà une demi-vérité — calculer un itinéraire depuis
+  chez soi envoie ce point — et « chercher autour de moi » l'aurait rendue
+  franchement fausse. **C'est exactement la dérive que RGPD-1 avait corrigée
+  sur l'autre page** : une promesse écrite une fois, que le code dépasse
+  ensuite en silence.
+- Les deux pages nomment désormais les trois cas où la position sort :
+  itinéraire depuis sa position, suivi d'un trajet, recherche autour de soi —
+  et disent que le troisième **ne se produit que sur appui**.
+
+### Mesuré
+- Cinq parcours Playwright, dont celui qui compte : **rien ne part tant qu'on
+  n'a pas appuyé**. Il compte les appels à `getCurrentPosition` pendant une
+  recherche entière — une invitation qui déclencherait la demande du navigateur
+  en paraissant serait une géolocalisation d'office déguisée en consentement.
+- Un parcours neuf garde la page « Vie privée » contre le retour de
+  l'affirmation fausse.
 ## [1.57.0] — 2026-09-03 — RECHERCHE-8
 
 ### La recherche interroge enfin toutes les API publiques utiles

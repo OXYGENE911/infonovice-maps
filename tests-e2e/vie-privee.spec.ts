@@ -54,6 +54,24 @@ test('ELLE DÉCRIT LA CONTRIBUTION, y compris les 500 mètres coupés', async ({
   await expect(corps).toContainText('les 500 premiers et 500 derniers mètres');
 });
 
+test('ELLE DIT LES TROIS CAS OÙ LA POSITION SORT (GEO-1, 03/09)', async ({ page }) => {
+  /* LA PAGE AFFIRMAIT « Elle n'est PAS TRANSMISE ». C'était déjà une demi-
+     vérité — calculer un itinéraire depuis chez soi envoie ce point — et la
+     recherche « autour de moi » l'aurait rendue franchement fausse.
+     C'est exactement la dérive que RGPD-1 avait corrigée sur l'autre page :
+     une promesse écrite une fois, que le code dépasse ensuite en silence. */
+  const corps = page.locator('.page-corps');
+  await expect(corps, 'l’affirmation est devenue fausse')
+    .not.toContainText('pas transmise');
+  await expect(corps).toContainText('trois cas où elle sort');
+  await expect(corps).toContainText('calculez un itinéraire depuis votre');
+  await expect(corps).toContainText('suivez un trajet');
+  await expect(corps).toContainText('chercher autour de vous');
+  /* ET LA PROMESSE QUI TIENT, celle qui compte : rien ne part tout seul. */
+  await expect(corps).toContainText('que par un geste de votre part');
+  await expect(corps).toContainText('jamais');
+});
+
 test('ELLE NUANCE LA GÉOLOCALISATION au lieu de dire « jamais enregistrée »', async ({ page }) => {
   const corps = page.locator('.page-corps');
   /* L'ANCIENNE PHRASE — « Elle n'est ni enregistrée, ni transmise » — était
@@ -90,7 +108,15 @@ test('À PROPOS ne promet plus « aucune position envoyée » sans réserve', as
   await expect(corps).toContainText('Aucun serveur qui nous appartienne');
   /* LA RÉSERVE EST NOMMÉE, et elle dit QUAND la position part. */
   await expect(corps).toContainText('si vous calculez un itinéraire depuis');
-  await expect(corps).toContainText('votre position ou si vous suivez un trajet');
+  /* TROIS CAS DEPUIS GEO-1 (03/09), et le troisième est neuf : chercher
+     autour de soi envoie le point au service qui recense les lieux. */
+  await expect(corps).toContainText('votre position, si vous suivez un trajet');
+  await expect(corps).toContainText('chercher autour de vous');
+  /* ET CE QUI REND CE TROISIÈME CAS ACCEPTABLE : il ne se produit QUE sur un
+     geste. Sans cette phrase, la réserve ressemblerait à une géolocalisation
+     d'office, que la contrainte 4 interdit. */
+  await expect(corps).toContainText('Utiliser ma position');
+  await expect(corps).toContainText('ne prend jamais');
 });
 
 test('À PROPOS dit les DEUX gestes qui appellent la météo', async ({ page }) => {
