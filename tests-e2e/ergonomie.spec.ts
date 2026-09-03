@@ -362,15 +362,20 @@ test('à 320 px, le Menu est ENTIER, l’en-tête est bas, rien ne déborde', as
 });
 
 test('choisir une suggestion ne DÉCLENCHE PAS le bouton posé derrière', async ({ page }) => {
-  /* LE TOUCHER FANTÔME, CHERCHÉ ET NON REPRODUIT. Le mandat du 28/08
-     signale que « les suggestions et les éléments situés derrière peuvent
-     recevoir le même toucher ». Vérifié : le preventDefault() du
-     pointerdown de la sélection SUPPRIME déjà les événements souris de
-     compatibilité (spec Pointer Events), click compris — un correctif
-     supplémentaire a été écrit, SABOTÉ pour vérification, et le parcours
-     passait dans les deux cas : il n'a donc pas été gardé. Ce parcours
-     reste en GARDE-FOU : si la sélection changeait un jour de mécanisme,
-     le fantôme réapparaîtrait ici. */
+  /* CE COMMENTAIRE A ÉTÉ FAUX PENDANT SIX JOURS, ET IL A COÛTÉ CHER.
+     Il disait : « le toucher fantôme, cherché et non reproduit […] le
+     preventDefault() du pointerdown SUPPRIME déjà les événements souris de
+     compatibilité, click compris — un correctif supplémentaire a été écrit,
+     SABOTÉ pour vérification, et le parcours passait dans les deux cas ».
+     C'était une conclusion tirée d'un parcours qui cliquait à la SOURIS. À la
+     souris il n'y a pas de fantôme : le `click` va à l'ancêtre commun du
+     `mousedown` et du `mouseup`. AU DOIGT, il naît de la séquence tactile et
+     vise ce qui occupe les coordonnées après le `touchend`. Armelin l'a
+     resignalé le 03/09, en version 1.52 : « parfois je dois m'y prendre à
+     trois ou quatre fois ».
+     LE VRAI GARDE-FOU TAPE DONC AU DOIGT, dans `clic-fantome.spec.ts`.
+     Celui-ci garde ce qu'il sait garder : à la souris, la sélection porte et
+     ne réveille pas le planificateur. */
   await page.setViewportSize({ width: 360, height: 780 });
   await page.route('**/api-adresse.data.gouv.fr/search/**', (route) => route.fulfill({
     contentType: 'application/json',

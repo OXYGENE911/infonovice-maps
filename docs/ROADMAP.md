@@ -552,6 +552,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       l'heure) branchées ; Issy écartée (relevé d'avril 2025, tous pleins) et
       Paris n'expose pas d'occupation. Piège payé : Aix-Marseille horodate en
       heure de Paris sans le dire.
+- [x] PR #203 — FANTOME-1 (03/09) : le clic fantôme par transparence, signalé
+      deux fois. Le parcours du 28/08 cliquait à la SOURIS et concluait à tort
+      qu'aucun correctif n'était nécessaire ; le vrai garde-fou tape au DOIGT.
 - [x] PR #202 — MODE-1 (03/09) : quatre modes dans « Options du trajet » — Voiture,
       Moto, Vélo, À pied — et « Je roule en deux-roues » quitte « Mon
       véhicule ». LE VÉLO EST UNE APPROXIMATION ASSUMÉE, et c'est écrit sous
