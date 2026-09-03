@@ -131,7 +131,17 @@ test('LA COMMUNE SITUE, ELLE NE NOMME PAS — un seul appel à Overpass', async 
   await barre(page).getByRole('combobox').fill('Castorama Ormesson');
   await expect(barre(page).locator('[role="option"]').first()).toBeVisible({ timeout: 10_000 });
 
-  const versOverpass = appels.filter((a) => a.startsWith('overpass:'));
+  /* ON ATTEND QUE LA PISTE LENTE AIT TIRÉ. Les résultats arrivent AU FIL DE
+     L'EAU : la première option peut venir de l'index IGN pendant que la piste
+     « enseigne + commune » (BAN puis Overpass) travaille encore. Lire le
+     compteur à la première option le lisait parfois à ZÉRO sur la machine
+     d'intégration — un flake attrapé sur une PR qui ne changeait AUCUN code.
+     On attend le premier appel, puis un temps de calme prouve qu'il n'en part
+     pas un second. */
+  await expect.poll(() => appels.filter((x) => x.startsWith('overpass:')).length,
+    { timeout: 10_000 }).toBe(1);
+  await page.waitForTimeout(800);
+  const versOverpass = appels.filter((x) => x.startsWith('overpass:'));
   expect(versOverpass, 'un seul appel à Overpass par recherche').toHaveLength(1);
   /* IL CHERCHE « Castorama » SEUL, autour de la commune reconnue : aucun objet
      d'OpenStreetMap ne s'appelle « Castorama Ormesson ». */
@@ -164,7 +174,11 @@ test('DEUX COMMUNES HOMONYMES sont interrogées TOUTES LES DEUX', async ({ page 
   await barre(page).getByRole('combobox').fill('Castorama Ormesson');
   await expect(barre(page).locator('[role="option"]').first()).toBeVisible({ timeout: 10_000 });
 
-  const versOverpass = appels.filter((a) => a.startsWith('overpass:'));
+  // Même attente que plus haut : la piste lente doit avoir tiré.
+  await expect.poll(() => appels.filter((x) => x.startsWith('overpass:')).length,
+    { timeout: 10_000 }).toBe(1);
+  await page.waitForTimeout(800);
+  const versOverpass = appels.filter((x) => x.startsWith('overpass:'));
   /* TOUJOURS UN SEUL APPEL — l'union ne coûte pas une requête de plus. */
   expect(versOverpass, 'un seul appel à Overpass').toHaveLength(1);
   expect(versOverpass[0], 'la commune du 77 doit être interrogée').toContain('48.24560,2.65190');
