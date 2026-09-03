@@ -336,9 +336,14 @@ test('LA FICHE D’UN LIEU DIT CE QU’ON EN SAIT, et propose d’y aller', asyn
   await expect(fiche.getByRole('button', { name: /Itinéraire vers Le Bistrot/ })).toBeVisible();
   const favori = fiche.getByRole('button', { name: 'Ajouter aux favoris' });
   await favori.click();
+  /* LA LISTE SE CHOISIT (FAVORIS-4, 03/09) — c'est le retour d'Armelin du
+     03/09 : « on n'a pas la possibilité de choisir directement dans quelle
+     catégorie l'enregistrer ». */
+  await fiche.getByRole('button', { name: '🍽️ Restaurants' }).click();
   /* LE BOUTON DIT CE QU'IL A FAIT : sans cela, on ne sait pas si le clic a
      porté, et l'on presse deux fois. */
-  await expect(fiche.getByRole('button', { name: 'Ajouté aux favoris' })).toBeDisabled();
+  await expect(fiche.getByRole('button', { name: 'Ajouté aux favoris — Restaurants' }))
+    .toBeDisabled();
 });
 
 test.describe('en thème sombre', () => {

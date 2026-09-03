@@ -2,6 +2,50 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.54.0] — 2026-09-03 — FAVORIS-4
+
+### On choisit sa liste au moment où l'on garde
+- Armelin, 03/09, deux fois dans le même retour : « quand on clique sur un POI
+  et qu'on clique sur "Ajouter aux favoris", on n'a pas la possibilité de
+  choisir directement dans quelle catégorie l'enregistrer (Listes de
+  favoris) », et « quand on clique sur une borne de recharge, on peut y aller,
+  mais on ne peut pas l'ajouter en favoris dans une liste qu'on aurait créée
+  pour retrouver plus facilement ses bornes de recharge favorites ».
+- **Le défaut n'était pas dans le stockage.** `ajouterFavori(nom, point,
+  liste)` accepte une liste depuis FAVORIS-2 (31/08) ; seule l'interface ne la
+  demandait jamais, et tout tombait dans « Lieux favoris ». Ranger après coup
+  demande de retrouver ce qu'on vient d'ajouter : c'est le geste que personne
+  ne fait.
+- **Les listes paraissent maintenant sous le bouton**, dans la fiche elle-même
+  — pas dans une fenêtre par-dessus, qui aurait refermé la fiche qu'on
+  regarde. Un second clic referme la rangée : on a le droit de changer d'avis.
+- **Le bouton redit la liste choisie** — « Ajouté aux favoris — Restaurants ».
+  Sans le nom, on ne sait pas si le choix a porté, et on va vérifier.
+
+### Corrigé — le cartouche d'une borne n'avait AUCUN bouton de favori
+- Les fiches de lieu et d'adresse en avaient un depuis longtemps ; celle des
+  bornes, née pour répondre au « je ne peux pas y aller » du 26/08, était
+  restée dehors. Elle en a un, et il ne dépend pas du planificateur : garder
+  une borne est précisément ce qu'on fait **quand on ne part pas tout de
+  suite**.
+- La borne se garde **sous son adresse** : « Aire de Beaune » seul, dans une
+  liste de favoris, ne se retrouve pas.
+
+### Corrigé — le volet des favoris ne se mettait pas à jour
+- Un lieu gardé depuis une fiche n'apparaissait dans le volet qu'après
+  rechargement de la page. L'ajout s'annonce désormais sur le document et le
+  panneau écoute : aucune fiche n'a besoin de connaître le volet.
+
+### Mesuré
+- Six parcours Playwright neufs : la rangée ne paraît qu'au clic ; les trois
+  listes livrées y sont, dans l'ordre, le focus sur la première ; le lieu
+  arrive **vraiment** dans la liste choisie (vérifié dans le volet, pas sur le
+  libellé du bouton) ; un second clic referme sans rien garder ; une liste
+  créée par l'usager est proposée comme les autres ; **la rangée ne déborde pas
+  de sa fiche** — mesure de rectangles, pas relecture de CSS.
+- Un parcours de plus sur le cartouche d'une borne, et cinq parcours existants
+  mis à jour pour passer par le choix.
+- Cinq tests unitaires sur `demanderLaListe` et `libelleListe`.
 ## [1.53.0] — 2026-09-03 — RECHERCHE-7
 
 ### La recherche s'ouvre en pleine page, et chaque résultat porte sa distance

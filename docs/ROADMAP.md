@@ -552,6 +552,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       l'heure) branchées ; Issy écartée (relevé d'avril 2025, tous pleins) et
       Paris n'expose pas d'occupation. Piège payé : Aix-Marseille horodate en
       heure de Paris sans le dire.
+- [x] PR #201 — FAVORIS-4 (03/09) : choisir sa liste AU MOMENT où l'on garde, sur les
+      quatre fiches — lieu, adresse, appui long, et **borne de recharge**, qui
+      n'avait aucun bouton de favori. Les deux retours d'Armelin du 03/09. Le
+      stockage portait déjà les listes depuis FAVORIS-2 ; seule l'interface ne
+      les demandait jamais.
 - [x] PR #200 — RECHERCHE-7 (03/09) : la recherche en pleine page, chaque résultat avec
       sa distance. Armelin : « le moteur de recherche lié à la recherche
       d'adresse est le plus important de l'application ». SUITES OUVERTES :

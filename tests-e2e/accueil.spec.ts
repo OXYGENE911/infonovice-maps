@@ -1247,6 +1247,10 @@ test('FAVORIS : un favori se renomme, et son adresse reste en sous-titre', async
   await page.mouse.up();
   await expect(page.locator('.pa-libelle')).toContainText('8 Rue de la Paix', { timeout: 10_000 });
   await page.getByRole('button', { name: 'Ajouter aux favoris' }).click();
+  /* LA LISTE SE CHOISIT MAINTENANT (FAVORIS-4, 03/09) : trois listes sont
+     livrées, donc le bouton pose la question au lieu de tout verser dans
+     « Lieux favoris ». */
+  await page.locator('.choix-liste').getByRole('button', { name: '⭐ Lieux favoris' }).click();
   await expect(page.getByRole('button', { name: /Ajouté aux favoris/ })).toBeVisible();
 
   await ouvrirVolet(page, '.favoris');
@@ -1327,6 +1331,10 @@ test('FAVORIS : appui long → ajout, persistance, export JSON, retrait, import'
   await page.mouse.up();
   await expect(page.locator('.pa-libelle')).toContainText('8 Rue de la Paix', { timeout: 10_000 });
   await page.getByRole('button', { name: 'Ajouter aux favoris' }).click();
+  /* LA LISTE SE CHOISIT MAINTENANT (FAVORIS-4, 03/09) : trois listes sont
+     livrées, donc le bouton pose la question au lieu de tout verser dans
+     « Lieux favoris ». */
+  await page.locator('.choix-liste').getByRole('button', { name: '⭐ Lieux favoris' }).click();
   await expect(page.getByRole('button', { name: /Ajouté aux favoris/ })).toBeVisible();
 
   // Le volet Favoris le liste, avec la promesse en toutes lettres.
@@ -1426,6 +1434,10 @@ test('FAVORIS : le bouton d’ajout attend que l’adresse soit tranchée', asyn
   // L'adresse arrive : le bouton s'ouvre, et le favori porte L'ADRESSE.
   await expect(ajouter).toBeEnabled({ timeout: 10_000 });
   await ajouter.click();
+  /* LA LISTE SE CHOISIT MAINTENANT (FAVORIS-4, 03/09) : trois listes sont
+     livrées, donc le bouton pose la question au lieu de tout verser dans
+     « Lieux favoris ». */
+  await page.locator('.choix-liste').getByRole('button', { name: '⭐ Lieux favoris' }).click();
   await ouvrirVolet(page, '.favoris');
   await expect(page.locator('.favori-aller')).toHaveText('8 Rue de la Paix 75002 Paris');
 });
