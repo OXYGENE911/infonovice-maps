@@ -51,6 +51,17 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - **Une panne n'est pas une absence** : elle se dit autrement (« indisponible
   pour le moment »), leçon déjà payée deux fois sur Overpass.
 
+### Corrigé au passage — un parcours qui flanchait au hasard
+- La CI de cette branche est tombée sur `recharge.spec.ts`, un parcours qui
+  clique une pastille de borne — **sans aucun rapport** avec le découpage des
+  noms de communes. Il repasse 5 fois sur 5 en local, sur le même code : ce
+  n'est pas la branche, c'est le **moment**.
+- Il projetait une coordonnée théorique après une attente fixe de 900 ms, ce
+  qui suppose que `fitBounds` a fini ET que les pastilles sont dessinées —
+  deux paris. **Même remède que le 02/09** pour le cartouche de Beaune : on
+  demande à MapLibre où il a posé le point, et l'on rejoue le geste entier
+  plutôt que d'attendre plus longtemps un clic déjà perdu.
+
 ### Mesuré
 - 7 tests unitaires et 5 parcours Playwright, dont celui qui garde qu'un lieu
   déclarant son adresse n'en montre **pas deux**.
