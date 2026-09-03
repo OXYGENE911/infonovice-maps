@@ -2646,9 +2646,16 @@ export class PanneauItineraire extends HTMLElement {
         : base) + heureArriveeReelle(iti.duree);
       return;
     }
+    /* LA BATTERIE À L'ARRIVÉE SE DIT ICI, dans la première ligne qu'on lit
+       (BATTERIE-1, 03/09). Armelin, en 1.60 : « lorsqu'on planifie un
+       itinéraire, on m'indique qu'il n'est pas indiqué le pourcentage de
+       batterie à l'arrivée ». Le chiffre EXISTAIT — la page « Recharge » le
+       montre depuis toujours — mais il vivait à un volet de profondeur : un
+       chiffre qu'on doit aller chercher est un chiffre qu'on n'a pas. */
+    const batterie = ` avec ${Math.round(plan.socArrivee)} % de batterie`;
     if (plan.arrets.length === 0) {
       resultat.textContent = `${base} — aucun arrêt de recharge nécessaire`
-        + heureArriveeReelle(iti.duree);
+        + heureArriveeReelle(iti.duree) + batterie;
       return;
     }
     const charge = Math.round(plan.dureeRechargeMin);
@@ -2656,7 +2663,7 @@ export class PanneauItineraire extends HTMLElement {
     resultat.textContent = `${formaterDistance(iti.distance)} —`
       + ` ${formaterDuree(total)} au total`
       + ` (${formaterDuree(iti.duree)} de route + ${formaterDuree(charge * 60)} de charge)`
-      + heureArriveeReelle(total);
+      + heureArriveeReelle(total) + batterie;
   }
 
   /* ---- navigation entre les pages ---- */

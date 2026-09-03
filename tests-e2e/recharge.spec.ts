@@ -219,6 +219,14 @@ test('avec une borne bien placée, le plan sort avec ses chiffres', async ({ pag
 
   const corps = page.locator('.iti-recharge-corps');
   await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
+
+  /* LA BATTERIE À L'ARRIVÉE SE LIT DÈS LA PREMIÈRE LIGNE (BATTERIE-1, 03/09).
+     Armelin : « lorsqu'on planifie un itinéraire, on m'indique qu'il n'est
+     pas indiqué le pourcentage de batterie à l'arrivée ». Le chiffre existait
+     dans la page « Recharge » — un volet de profondeur trop loin : un chiffre
+     qu'on doit aller chercher est un chiffre qu'on n'a pas. */
+  await expect(page.locator('.iti-resultat'))
+    .toContainText(/avec \d+ % de batterie/, { timeout: 15_000 });
   // Le résumé porte les trois chiffres qui décident : arrêts, minutes, arrivée.
   await expect(corps).toContainText(/1 arrêt/);
   await expect(corps).toContainText(/min de charge/);
