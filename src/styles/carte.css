@@ -1085,6 +1085,11 @@ etat-connexion { display: contents; }
   border: 1px solid var(--bord); border-radius: var(--rayon);
   background: color-mix(in srgb, var(--fond) 96%, var(--accent) 4%);
   display: grid; gap: 7px;
+  /* LA COLONNE NE DÉPASSE JAMAIS SON CADRE (FILTRE-1, 03/09) : sans cette
+     borne, la piste implicite de la grille s'élargit au contenu le plus
+     large et TOUTES les lignes suivent — c'est ainsi qu'un seul sélecteur
+     trop large a poussé légende, cases et notes 12 px hors du panneau. */
+  grid-template-columns: minmax(0, 1fr);
 }
 .poi-filtres[hidden] { display: none; }
 .poi-filtres legend { font: 700 11px var(--police); color: var(--texte-3);
@@ -1095,6 +1100,19 @@ etat-connexion { display: contents; }
   font: 500 13px var(--police); color: var(--texte-1);
   padding: 5px 8px; border-radius: 8px; border: 1px solid var(--bord);
   background: var(--fond);
+  /* UN <select> NE PLIE PAS TOUT SEUL (FILTRE-1, 03/09). Armelin, en 1.60 :
+     « plusieurs rectangles sont décalés et débordent de l'affichage » — la
+     puissance minimale, la recherche de réseaux, le réseau à garder hors
+     ligne, la légende. MESURÉ à 360 px de large : TOUT débordait de 12 px,
+     uniformément. Le porteur était UN SEUL élément : le sélecteur du réseau à
+     télécharger, dont l'option la plus large (« Recharge rapide (50 kW et
+     plus) ») fixe une largeur insécable de 305 px. En flexbox, `min-width`
+     vaut `auto` : la ligne ne pouvait pas rétrécir sous lui, et le fieldset
+     en grille s'élargissait pour elle — emportant toutes ses sœurs.
+     `min-width: 0` rend le sélecteur pliable ; le navigateur tronque alors le
+     libellé de l'option élue, ce qui vaut mieux que douze pixels perdus par
+     TOUTES les lignes du panneau. */
+  min-width: 0;
 }
 .poi-filtre-ligne select:focus-visible { outline: none; box-shadow: var(--focus); }
 .poi-filtre-titre { margin: 4px 0 0; font: 700 11px var(--police); color: var(--texte-3);
