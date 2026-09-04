@@ -708,6 +708,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       (04/09, sur la version précédente). NON REPRODUIT sur la version
       courante — les parcours d'arrivée passent. Garde ouverte : à
       réessayer sur 1.75+ ; une capture de la console aiderait.
+- [x] PR #230 — BIS-2 (04/09) : le via du bis n'est plus une étape — injecté
+      à la requête, dissous au recalcul hors-route / se garer / effacer,
+      remplacé (jamais empilé) au bis suivant. (L'instruction [ ] BIS-2
+      posée par la PR #229 se retire au rebase.)
 - [x] PR #225 — MES-POI-1 (04/09) : les favoris sur la carte avec l'émoji de
       leur liste (disque cerclé de sa couleur), fiche au clic, puce « Mes
       POI » dans l'entonnoir — visibles d'emblée, le choix survit au
