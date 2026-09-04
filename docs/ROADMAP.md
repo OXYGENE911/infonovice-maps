@@ -669,6 +669,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #233 — RESEAU-2 (04/09) : taper un nom dans le filtre des bornes
       rend la liste des stations correspondantes (compte, huit plus proches,
       distances) — le choix allume la couche et vole vers la station.
+- [x] PR #235 — FLAKE-1 (04/09) : les deux parcours instables sous charge
+      (relief 3D, caches à la mise à jour) sont durcis — sondage au lieu de
+      lecture unique, navigation tolérée pendant le sondage.
 - [x] PR #234 — FAVSEL-1 (04/09) : le sélecteur de favoris du planificateur
       porte l'émoji de la liste (repli ⭐ pour les favoris d'avant), et le
       filtre matche aussi le nom de liste.
@@ -683,9 +686,6 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       la bande aveugle 30–50 m est fermée — trente secondes tenues au-delà
       de l'aimant valent un recalcul.
 - [x] PR #237 — AUDIT-2 (04/09) : l'audit CI fait trois essais espacés — le
-- [x] PR #235 — FLAKE-1 (04/09) : les deux parcours instables sous charge
-      (relief 3D, caches à la mise à jour) sont durcis — sondage au lieu de
-      lecture unique, navigation tolérée pendant le sondage.
 - [x] PR #231 — MAJ-2 (04/09) : « Mise à jour » n'est plus jamais un bouton
       mort — secours après 2,5 s (relecture de l'état réel du worker),
       dernier recours à 8 s. Cause : la course des déploiements rapprochés.
