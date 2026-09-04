@@ -7,6 +7,7 @@ import './styles/carte.css';
 // Le pied de page de la carte partage la feuille des pages de texte.
 import './styles/pages.css';
 import { registerSW } from 'virtual:pwa-register';
+import { preparerMaj } from './lib/maj-secours';
 import { creerCarte } from './carte/carte';
 import { EtatConnexion } from './carte/etat-connexion';
 
@@ -22,8 +23,21 @@ import { EtatConnexion } from './carte/etat-connexion';
 const appliquerMaj = registerSW({
   immediate: true,
   onNeedRefresh() {
+    /* LE GESTE EST SECOURU (MAJ-2, 04/09). Armelin : « quand je clique sur
+       "Mise à jour", il ne se passe absolument rien ». Entre l'annonce et le
+       clic, un nouveau déploiement peut remplacer le worker en attente : le
+       SKIP_WAITING du greffon part alors dans le vide. `preparerMaj` relit
+       l'état RÉEL après coup et finit toujours par recharger — voir
+       lib/maj-secours. */
     document.dispatchEvent(new CustomEvent('maj-disponible', {
-      detail: { appliquer: () => { void appliquerMaj(true); } },
+      detail: { appliquer: preparerMaj({
+        demarrer: () => { void appliquerMaj(true); },
+        inscription: () => navigator.serviceWorker.getRegistration(),
+        recharger: () => { window.location.reload(); },
+        surPriseDeControle: (f) => {
+          navigator.serviceWorker.addEventListener('controllerchange', f, { once: true });
+        },
+      }) },
     }));
   },
   onRegisteredSW(_url, inscription) {
