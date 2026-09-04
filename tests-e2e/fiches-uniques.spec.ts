@@ -46,7 +46,8 @@ async function ouvrir(page: Page): Promise<void> {
     }] }),
   }));
   for (const motif of ['**/data.geopf.fr/geocodage/**', '**/recherche-entreprises.api.gouv.fr/**',
-    '**overpass.openstreetmap.fr**', '**/data.education.gouv.fr/**']) {
+    '**overpass.openstreetmap.fr**', '**/data.education.gouv.fr/**',
+    '**/api-lannuaire.service-public.fr/**']) {
     await page.route(motif, (route) => route.fulfill({
       headers: cors, contentType: 'application/json',
       body: JSON.stringify({ features: [], results: [], elements: [] }),

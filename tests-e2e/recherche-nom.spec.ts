@@ -47,6 +47,10 @@ async function decor(page: import('@playwright/test').Page, options: {
   /* L'ANNUAIRE DE L'ÉDUCATION NATIONALE (ECOLES-1) : simulé comme les autres
      services publics — la CI ne doit ni en dépendre, ni le solliciter à
      chaque poussée. Sa disponibilité réelle est prouvée par mesure. */
+  await page.route('**/api-lannuaire.service-public.fr/**', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify({ results: [] }),
+    headers: { 'Access-Control-Allow-Origin': '*' },
+  }));
   await page.route('**/data.education.gouv.fr/**', (route) => {
     annuaire.push(decodeURIComponent(route.request().url()));
     return route.fulfill({

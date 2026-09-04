@@ -41,6 +41,7 @@ import type { LieuCategorie } from './categories';
 import {
   chercherEtablissements, type Etablissement as Ecole,
 } from './annuaire-education';
+import { chercherAdministrations, type Administration } from './annuaire-administration';
 
 /** Ce qu'une source rend, une fois ramené à la forme de la liste. */
 export interface Trouvaille extends PointGeo {
@@ -50,7 +51,7 @@ export interface Trouvaille extends PointGeo {
   /** L'adresse postale, quand la source la donne — sinon vide. */
   adresse: string;
   /** D'où vient la réponse : savoir cela, c'est pouvoir la contester. */
-  source: 'ign' | 'entreprise' | 'osm' | 'ecole';
+  source: 'ign' | 'entreprise' | 'osm' | 'ecole' | 'administration';
 }
 
 /* L'ORDRE DES SOURCES DANS LA LISTE, et il n'est pas arbitraire.
@@ -60,7 +61,7 @@ export interface Trouvaille extends PointGeo {
    elles portent l'adresse. OSM et les écoles ferment la marche : ils ne
    répondent qu'à l'égalité et n'ajoutent qu'au cas par cas. */
 const RANG: Record<Trouvaille['source'], number> = {
-  ign: 0, entreprise: 1, ecole: 2, osm: 3,
+  ign: 0, entreprise: 1, ecole: 2, administration: 3, osm: 4,
 };
 
 /* CE QUI NE PORTE PAS DE SENS DANS UNE RECHERCHE. On ne les compte pas dans
@@ -204,6 +205,15 @@ const deEcole = (e: Ecole): Trouvaille => ({
   source: 'ecole',
 });
 
+/* L'ANNUAIRE DE L'ADMINISTRATION (RECHERCHE-7, 04/09) : mairies,
+   préfectures, centres publics — la source qui porte « INRAE Beaucouzé »
+   quand aucune autre ne le connaît. */
+const deAdministration = (a: Administration): Trouvaille => ({
+  lon: a.lon, lat: a.lat, libelle: a.nom, adresse: '',
+  contexte: [a.codePostal, a.commune].filter(Boolean).join(' ') || 'Service public',
+  source: 'administration',
+});
+
 const deOsm = (l: LieuCategorie): Trouvaille => ({
   lon: l.lon, lat: l.lat, libelle: l.nom ?? '', adresse: '',
   contexte: 'Lieu de la carte', source: 'osm',
@@ -254,6 +264,11 @@ export async function chercherPartout(
   if (centre !== null) {
     paris.push(chercherEtablissements(q, centre, signal).then((r) => r.map(deEcole)));
   }
+  /* L'ANNUAIRE DE L'ADMINISTRATION, EN NATIONAL : « mairie du plessis
+     trevise » y vit dans le NOM même de la fiche — mesuré. Le second appel,
+     borné à la commune reconnue, part dans la piste « autour » comme celui
+     des entreprises. */
+  paris.push(chercherAdministrations(q, null, signal).then((r) => r.map(deAdministration)));
   /* LA PISTE « ENSEIGNE + COMMUNE », qui est la seule à résoudre « Castorama
      Ormesson ». Elle rend AUSSI la commune reconnue, et c'est pour cela
      qu'elle est à part : cette réponse-là appartient à CET appel.
@@ -357,7 +372,7 @@ async function chercherAutourDeLaCommune(
        l'annuaire par CODE POSTAL quand l'établissement y est déclaré, et
        OpenStreetMap par ÉGALITÉ DE MARQUE dans un rayon — c'est lui qui
        rattrape le Castorama déclaré dans la commune d'à côté. */
-    const [parCp, parCarte] = await Promise.allSettled([
+    const [parCp, parCarte, parAdmin] = await Promise.allSettled([
       chercherEntreprises(nom, signal
         ? { codePostal: trouvee.codePostal, signal }
         : { codePostal: trouvee.codePostal }),
@@ -366,9 +381,14 @@ async function chercherAutourDeLaCommune(
          la mauvaise qui gagnait au « plus proche ». Overpass accepte une union
          de clauses `around:` : on cesse de parier. */
       chercherParNom(nom, toutes.map((c) => ({ lon: c.lon, lat: c.lat })), signal),
+      /* LA MÊME COMMUNE SERT L'ADMINISTRATION : search(nom) AND
+         search(adresse, commune) — c'est la requête qui trouve le centre
+         INRAE d'Angers quand on écrit « Beaucouzé » (mesuré le 04/09). */
+      chercherAdministrations(nom, trouvee.nom, signal),
     ]);
     const sortie: Trouvaille[] = [];
     if (parCp.status === 'fulfilled') sortie.push(...parCp.value.map(deEntreprise));
+    if (parAdmin.status === 'fulfilled') sortie.push(...parAdmin.value.map(deAdministration));
     if (parCarte.status === 'fulfilled') {
       sortie.push(...parCarte.value.filter((l) => l.nom !== null).map(deOsm));
     }

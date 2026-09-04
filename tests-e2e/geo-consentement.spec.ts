@@ -26,7 +26,7 @@ async function ouvrirLaRecherche(page: Page): Promise<void> {
   for (const motif of [
     '**/api-adresse.data.gouv.fr/**', '**/data.geopf.fr/geocodage/**',
     '**/recherche-entreprises.api.gouv.fr/**', '**overpass.openstreetmap.fr**',
-    '**/data.education.gouv.fr/**',
+    '**/data.education.gouv.fr/**', '**/api-lannuaire.service-public.fr/**',
   ]) {
     await page.route(motif, (route) => route.fulfill({
       headers: cors, contentType: 'application/json',

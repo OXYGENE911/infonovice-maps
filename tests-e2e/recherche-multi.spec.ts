@@ -37,6 +37,7 @@ const ENTREPRISE_LEROY = {
 
 async function decor(page: Page, options: {
   poisIgn?: unknown[]; entreprises?: unknown[]; adresses?: unknown[];
+  administrations?: unknown[];
 } = {}): Promise<{ appels: string[] }> {
   const appels: string[] = [];
   const cors = { 'Access-Control-Allow-Origin': '*' };
@@ -71,6 +72,14 @@ async function decor(page: Page, options: {
   await page.route('**/data.education.gouv.fr/**', (route) => route.fulfill({
     headers: cors, contentType: 'application/json', body: JSON.stringify({ results: [] }),
   }));
+  /* L'ANNUAIRE DE L'ADMINISTRATION (RECHERCHE-7, 04/09) — le traceur note
+     la clause where : c'est elle qui prouve « nom AND commune ». */
+  await page.route('**/api-lannuaire.service-public.fr/**', (route) => {
+    const u = new URL(route.request().url());
+    appels.push(`admin:${u.searchParams.get('where') ?? ''}`);
+    return route.fulfill({ headers: cors, contentType: 'application/json',
+      body: JSON.stringify({ results: options.administrations ?? [] }) });
+  });
   await page.goto('/');
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
   return { appels };
@@ -248,4 +257,41 @@ test('« FNACDARTY » COLLÉ SE DÉCOLLE au dictionnaire d’enseignes (RECHERCH
   const versEntreprises = appels.find((a) => a.startsWith('entreprises:'));
   expect(versEntreprises, 'la requête envoyée doit être décollée').toContain('FNAC DARTY');
   expect(versEntreprises).not.toContain('FNACDARTY');
+});
+
+test('RECHERCHE-7 : « INRAE BEAUCOUZE » trouve le centre — l’annuaire de l’administration, borné à la commune', async ({ page }) => {
+  /* LA REQUÊTE N° 6 DU BANC D'ARMELIN, et le trou qu'aucune source ne
+     comblait : le centre s'appelle « … Pays de la Loire - Angers »,
+     Beaucouzé n'est que sa COMMUNE. Mesuré le 04/09 sur l'API réelle :
+     search(nom, "INRAE Beaucouze") rend zéro ; search(nom, "INRAE") AND
+     search(adresse, "beaucouze") rend le centre. Le connecteur prend donc
+     la commune reconnue À PART du nom. */
+  const { appels } = await decor(page, {
+    adresses: [{
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [-0.6146, 47.4794] },
+      properties: {
+        label: 'Beaucouzé', city: 'Beaucouzé',
+        type: 'municipality', postcode: '49070', score: 0.9,
+      },
+    }],
+    administrations: [{
+      nom: 'Centre de recherche INRAE - Pays de la Loire - Angers',
+      adresse: JSON.stringify([{
+        type_adresse: 'Adresse', code_postal: '49070', nom_commune: 'Beaucouzé',
+        longitude: '-0.6146', latitude: '47.4794',
+      }]),
+    }],
+  });
+  await barre(page).getByRole('combobox').fill('INRAE BEAUCOUZE');
+  await expect(options(page).filter({
+    hasText: 'Centre de recherche INRAE - Pays de la Loire - Angers',
+  })).toBeVisible({ timeout: 10_000 });
+  /* Le contexte situe — code postal et commune, lus dans la fiche. */
+  await expect(barre(page).locator('[role="option"]')
+    .filter({ hasText: 'INRAE' }).locator('.contexte')).toContainText('49070 Beaucouzé');
+  /* Et la clause mesurée est bien celle qui part : nom À PART, commune dans
+     l'adresse. */
+  await expect.poll(() => appels.some((a) => a.startsWith('admin:')
+    && a.includes('AND search(adresse')), { timeout: 10_000 }).toBe(true);
 });

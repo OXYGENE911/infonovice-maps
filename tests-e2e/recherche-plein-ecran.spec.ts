@@ -163,7 +163,7 @@ test('« AUCUN RÉSULTAT » SE LIT DANS LA PAGE, pas après l’avoir quittée',
   const cors = { 'Access-Control-Allow-Origin': '*' };
   for (const motif of ['**/api-adresse.data.gouv.fr/**', '**/data.geopf.fr/geocodage/**',
     '**/recherche-entreprises.api.gouv.fr/**', '**overpass.openstreetmap.fr**',
-    '**/data.education.gouv.fr/**']) {
+    '**/data.education.gouv.fr/**', '**/api-lannuaire.service-public.fr/**']) {
     await page.route(motif, (route) => route.fulfill({
       headers: cors, contentType: 'application/json',
       body: JSON.stringify({ features: [], results: [], elements: [] }),
