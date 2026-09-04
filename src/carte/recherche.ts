@@ -608,7 +608,30 @@ export class RechercheAdresse extends HTMLElement {
          affiche les 10 autres adresses potentielles avec leur distance par
          rapport à ma position géographique ». */
       (li.querySelector('.distance') as HTMLElement).textContent = this.#distance(r);
-      li.addEventListener('pointerdown', (e) => { e.preventDefault(); this.#choisir(i); });
+      /* CHOISIR AU RELÂCHER, PAS AU CONTACT (SCROLL-1, 04/09). Armelin :
+         « impossible de scroller dans cette fenêtre. Quand je touche l'écran
+         ça sélectionne directement la ligne où j'ai appuyé pour tenter de
+         scroller. » La sélection partait au pointerdown — le premier contact
+         du doigt, avant de savoir si le geste est un défilement. Désormais :
+         le contact retient sa position, le RELÂCHER choisit — s'il n'a pas
+         bougé de plus de dix pixels. Un vrai défilement tactile émet
+         pointercancel (le navigateur reprend le pointeur) : le relâcher
+         n'arrive jamais sur la ligne, rien n'est choisi. Le preventDefault
+         du contact reste : c'est lui qui garde la mise au point dans le
+         champ (leçon FANTOME-1). */
+      let contactY = Number.NaN;
+      /* `children[i]` est un Element : sa carte d'événements ignore les
+         PointerEvents — on nomme le type nous-mêmes. */
+      li.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        contactY = (e as PointerEvent).clientY;
+      });
+      li.addEventListener('pointerup', (e) => {
+        if (Number.isNaN(contactY)
+          || Math.abs((e as PointerEvent).clientY - contactY) > 10) return;
+        contactY = Number.NaN;
+        this.#choisir(i);
+      });
     });
     liste.hidden = this.#resultats.length === 0;
     champ.setAttribute('aria-expanded', String(!liste.hidden));

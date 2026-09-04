@@ -666,6 +666,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       par appui martèleraient l'API publique. PISTE à mesurer AVANT de
       promettre : le facteur de détour (1,25, celui déjà posé pour le corridor)
       appliqué au vol d'oiseau, affiché « ≈ par la route ».
+- [x] PR #228 — SCROLL-1 (04/09) : la liste de résultats se défile au doigt —
+      la sélection part au relâcher (seuil 10 px), plus au contact. Parcours
+      en vrais événements touch, contre-épreuve mordante.
 - [x] PR #227 — MASCOTTE-2 (04/09) : mascotte et favicon étaient en 404 en
       production (« !public/*.png » non récursif — les icônes n'entraient
       jamais au dépôt) ; un parcours vérifie chaque icône référencée. Et le

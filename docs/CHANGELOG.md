@@ -2,6 +2,21 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.77.0] — 2026-09-04 — SCROLL-1
+
+### Corrigé — la liste de résultats se laisse enfin faire défiler au doigt
+- Armelin, en 1.74 : « il est impossible de scroller dans cette fenêtre.
+  Quand je touche l'écran ça sélectionne directement la ligne où j'ai appuyé
+  pour tenter de scroller. »
+- **La sélection partait au premier contact du doigt** — avant de savoir si
+  le geste allait être un défilement. Elle part désormais au RELÂCHER, s'il
+  n'a pas bougé de plus de dix pixels ; un vrai défilement émet
+  `pointercancel` et ne choisit rien.
+- Contre-épreuve au doigt, et elle a mordu DEUX FOIS : un premier parcours
+  au geste synthétisé passait avec l'ancien code (ce geste-là scrolle sans
+  délivrer de pointerdown) ; le parcours final envoie de VRAIS événements
+  touch, et échoue sur l'ancien code comme il se doit.
+
 ## [1.76.0] — 2026-09-04 — MASCOTTE-2
 
 ### Corrigé — la mascotte et le favicon étaient en 404 en production
@@ -24,7 +39,6 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - Le chien à la boussole (192 px, même recette que les icônes) s'affiche au
   centre de la page vierge et s'efface devant la saisie comme devant les
   résultats du rail — trois sélecteurs CSS, pas une ligne de script.
-
 ## [1.75.0] — 2026-09-04 — MES-POI-1
 
 ### Les favoris paraissent sur la carte, avec l'émoji de leur liste
