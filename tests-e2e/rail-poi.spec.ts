@@ -117,3 +117,73 @@ test('OVERPASS EN PANNE : une phrase en français, jamais une liste morte', asyn
   await rail(page).getByRole('button', { name: /Restaurants/ }).click();
   await expect(etat(page)).toContainText('indisponible');
 });
+
+test('FILTRE-RAIL : « Ouvert maintenant » et les cuisines RÉELLEMENT présentes — et les masqués se disent', async ({ page }) => {
+  /* ARMELIN, 04/09 : « filtrer le type de cuisine recherché, Italien,
+     Chinois, Français, Burger… et sur les horaires d'ouverture afin de
+     n'afficher que les POIs encore ouverts autour de nous ».
+     TOUT SE FILTRE EN MÉMOIRE (les étiquettes OSM sont dans la réponse) et
+     LES PUCES NAISSENT DES RÉSULTATS : proposer « Italien » sans italien à
+     5 km promettrait du vide. L'horloge est FIXÉE : « ouvert » se juge à un
+     instant, pas au hasard de l'heure de la CI. */
+  await page.clock.install({ time: new Date('2026-09-02T10:00:00') }); // mercredi, 10 h
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+  const cors = { 'Access-Control-Allow-Origin': '*' };
+  for (const motif of [
+    '**/api-adresse.data.gouv.fr/**', '**/data.geopf.fr/geocodage/**',
+    '**/recherche-entreprises.api.gouv.fr/**', '**/data.education.gouv.fr/**',
+  ]) {
+    await page.route(motif, (route) => route.fulfill({
+      headers: cors, contentType: 'application/json',
+      body: JSON.stringify({ features: [], results: [], elements: [] }),
+    }));
+  }
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: cors, contentType: 'application/json',
+    body: JSON.stringify({ elements: [
+      { type: 'node', id: 1, lat: 46.601, lon: 2.4,
+        tags: { amenity: 'restaurant', name: 'Trattoria Roma', cuisine: 'italian',
+          opening_hours: 'Mo-Su 08:00-23:00' } },
+      { type: 'node', id: 2, lat: 46.603, lon: 2.4,
+        tags: { amenity: 'restaurant', name: 'Dragon d’Or', cuisine: 'chinese',
+          opening_hours: 'Mo-Su 01:00-02:00' } },
+      { type: 'node', id: 3, lat: 46.605, lon: 2.4,
+        tags: { amenity: 'restaurant', name: 'Chez Momo', cuisine: 'burger' } },
+    ] }),
+  }));
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await page.locator('.entete .recherche input').click();
+  await page.locator('.entete .recherche-rail').getByRole('button', { name: /Restaurants/ }).click();
+
+  const lignes = page.locator('.entete .recherche ul[role="listbox"] li');
+  await expect(lignes).toHaveCount(3);
+  /* Les puces : « Ouvert maintenant » + les cuisines PRÉSENTES, en français. */
+  const filtres = page.locator('.recherche-filtres');
+  await expect(filtres.getByRole('button', { name: 'Ouvert maintenant' })).toBeVisible();
+  await expect(filtres.getByRole('button', { name: 'Italienne' })).toBeVisible();
+  await expect(filtres.getByRole('button', { name: 'Chinoise' })).toBeVisible();
+
+  /* La ligne DIT la cuisine, traduite — la donnée OSM était là. */
+  await expect(lignes.filter({ hasText: 'Trattoria Roma' })).toContainText('Italienne');
+  await expect(lignes.filter({ hasText: 'Dragon d’Or' })).toContainText('Chinoise');
+
+  /* Cuisine : seul l'italien reste. */
+  await filtres.getByRole('button', { name: 'Italienne' }).click();
+  await expect(lignes).toHaveCount(1);
+  await expect(lignes.first()).toContainText('Trattoria Roma');
+  await filtres.getByRole('button', { name: 'Italienne' }).click();
+  await expect(lignes).toHaveCount(3);
+
+  /* Ouvert maintenant (mercredi 10 h) : la trattoria l'est ; le Dragon
+     (01:00-02:00) est fermé ; Chez Momo n'a pas d'horaires — MASQUÉ AUSSI,
+     et l'état LE DIT : un masquage muet passerait pour une absence. */
+  await filtres.getByRole('button', { name: 'Ouvert maintenant' }).click();
+  await expect(lignes).toHaveCount(1);
+  await expect(lignes.first()).toContainText('Trattoria Roma');
+  const etat = page.locator('.entete .recherche-rail-etat');
+  await expect(etat).toContainText('1 fermé');
+  await expect(etat).toContainText('1 sans horaires connus');
+  await expect(etat).toContainText('vol d’oiseau');
+});

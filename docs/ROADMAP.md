@@ -669,6 +669,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #233 — RESEAU-2 (04/09) : taper un nom dans le filtre des bornes
       rend la liste des stations correspondantes (compte, huit plus proches,
       distances) — le choix allume la couche et vole vers la station.
+- [x] PR #239 — FILTRE-RAIL (04/09) : puces de filtre sur la liste du rail —
+      « Ouvert maintenant » (masqués comptés, jamais évaporés), cuisines
+      réellement présentes, et la cuisine dite sur chaque ligne. En mémoire,
+      zéro requête de plus.
 - [x] PR #238 — BLANC-1 (04/09) : l'alerte « carte perdue » était enterrée
       (z-index 5, dans le contexte d'empilement du conteneur) — elle passe
       au niveau modale sur le body, mesuré à l'elementFromPoint ; et les
