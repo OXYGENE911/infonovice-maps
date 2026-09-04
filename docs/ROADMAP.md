@@ -356,10 +356,14 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
       · la fiche d'une borne sait « Ajouter au plan de recharge » et
         « Retirer cet arrêt du plan » — sur le corridor seulement : hors
         trajet, aucun bouton qui mènerait à un plan impossible.
-- [ ] Itinéraires alternatifs A/B/C (comme ABRP) — À ÉTUDIER D'ABORD : le
-      service public IGN n'expose PAS d'alternatives (getcapabilities du
-      21/08, PR #6). Pistes honnêtes : variantes par évitements, ou point de
-      passage décalé. Ne rien promettre avant la mesure.
+- [x] Itinéraires alternatifs A/B/C — l'étude était FAITE (27/08,
+      docs/etudes-mandat) et la fonction LIVRÉE : « Comparer trois
+      itinéraires (A, B, C) » dans le planificateur — variantes honnêtes
+      (rapide / sans autoroute), adoptables, avec plan de recharge et
+      comptage de feux. Reconfirmé par mesure le 04/09 :
+      optimization=shortest rend zéro (voie morte) ; sans-autoroute reste le
+      seul vrai choix (Paris→Lyon : 466 km / 4 h 46 contre 502 km / 7 h 50).
+      Cette ligne était un fossile ressuscité par le pilote union.
 - [ ] Accessibilité `role="application"` (déjà au chapitre « Limites
       connues ») — sa propre PR.
 - [x] Ménage Dependabot (PR #49) : ESLint 10.9, Vite 8.2.2 (mineures).
@@ -631,6 +635,17 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       barre de recherche — elle vivait dans la moitié d'écran que le clavier
       recouvre. La règle d'Armelin entre dans CLAUDE.md : « toute fonction
       cachée à l'utilisateur est une fonction inutilisable ».
+- [ ] VINFAST-1 — connecter la VF8 Plus d'Armelin pour lire le SOC réel
+      (proposé par lui le 04/09, sur le projet github.com/tahung9x/VF-DB).
+      VÉRIFIÉ le 04/09 : API NON OFFICIELLE (rétro-ingénierie de l'APK,
+      secret HMAC public « Vinfast@2025 »), Auth0 Europe en password grant,
+      télémétrie lecture seule dont VEHICLE_STATUS_HV_BATTERY_SOC. Un banc
+      d'essai local lui a été remis (identifiants jamais hors de sa
+      machine). VERDICT : IMPOSSIBLE dans le client libre (CORS + mot de
+      passe de compte-voiture côté client) ; PROLONGEMENT NATUREL de
+      SOC-EDIT en Maps Pro (connecteur serveur, tokens chiffrés). ATTEND :
+      son essai réel, puis sa décision — en sachant que VinFast peut couper
+      cette voie à toute mise à jour et que l'usage engage son compte.
 - [x] PR #244 — SOC-EDIT (04/09) : la section Batterie du Copilote —
       estimation interpolée sur les ancres du plan, correction saisie qui
       replanifie depuis la position, écart affiché, valeur écrite dans le

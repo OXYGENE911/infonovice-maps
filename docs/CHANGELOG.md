@@ -2,6 +2,20 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.91.1] — 2026-09-04 — DOCS-3
+
+### La feuille de route s'instruit et se répare
+- **VINFAST-1** : la proposition d'Armelin (connecter sa VF8 Plus pour lire
+  le SOC réel) est VÉRIFIÉE et instruite — API non officielle
+  (rétro-ingénierie), banc d'essai local remis, impossible dans le client
+  libre (CORS + mot de passe de compte-voiture côté client), prolongement
+  naturel de SOC-EDIT en Maps Pro. Attend son essai et sa décision.
+- **Le fossile « itinéraires A/B/C » se ferme** : l'étude était faite
+  (27/08) et la fonction livrée (« Comparer trois itinéraires ») — la ligne
+  avait ressuscité sous le pilote union. Reconfirmé par mesure le 04/09 :
+  `optimization=shortest` rend zéro ; sans-autoroute reste le seul vrai
+  choix.
+
 ## [1.91.0] — 2026-09-04 — RECHERCHE-7
 
 ### L'annuaire de l'administration entre dans la recherche — la sixième source
