@@ -37,7 +37,7 @@ const ENTREPRISE_LEROY = {
 
 async function decor(page: Page, options: {
   poisIgn?: unknown[]; entreprises?: unknown[]; adresses?: unknown[];
-  administrations?: unknown[];
+  administrations?: unknown[]; osm?: unknown[];
 } = {}): Promise<{ appels: string[] }> {
   const appels: string[] = [];
   const cors = { 'Access-Control-Allow-Origin': '*' };
@@ -67,7 +67,7 @@ async function decor(page: Page, options: {
   await page.route('**overpass.openstreetmap.fr**', (route) => {
     appels.push(`overpass:${decodeURIComponent(route.request().url())}`);
     return route.fulfill({ headers: cors, contentType: 'application/json',
-      body: JSON.stringify({ elements: [] }) });
+      body: JSON.stringify({ elements: options.osm ?? [] }) });
   });
   await page.route('**/data.education.gouv.fr/**', (route) => route.fulfill({
     headers: cors, contentType: 'application/json', body: JSON.stringify({ results: [] }),
@@ -244,6 +244,87 @@ test('À MOTS ÉGAUX, LE PLUS PROCHE D’ABORD (RECHERCHE-9)', async ({ page }) 
   await barre(page).getByRole('combobox').fill('aéroport');
   const options = barre(page).locator('[role="option"] .libelle');
   await expect(options.first()).toContainText('Montluçon', { timeout: 10_000 });
+});
+
+test('LE NOM EXACT PASSE DEVANT LE NOM QUI LE CONTIENT (RECHERCHE-10) — la Tour Eiffel avant la SCI', async ({ page }) => {
+  /* Mesuré sur le banc des douze requêtes en v1.91 : « Tour Effeil » rendait
+     « SCI 43 CLER TOUR EFFEIL » — une société de la rue Cler, à trois cents
+     mètres de la tour et de quelques mètres plus PRÈS du centre de la France
+     — devant la Tour Eiffel. Les deux portent les deux mots ; le tri ne
+     regardait plus que la distance. Depuis la vue France, c'est un tirage au
+     sort, et il tombait mal. */
+  await decor(page, {
+    poisIgn: [IGN_TOUR],
+    entreprises: [{
+      nom_complet: 'SCI 43 CLER TOUR EFFEIL',
+      matching_etablissements: [{
+        longitude: '2.305', latitude: '48.856',
+        adresse: '43 RUE CLER 75007 PARIS 7', libelle_commune: 'PARIS 7', code_postal: '75007',
+      }],
+    }],
+  });
+  await barre(page).getByRole('combobox').fill('Tour Effeil');
+  await expect(options(page).first()).toHaveText('Tour Eiffel', { timeout: 10_000 });
+  /* La société n'est pas cachée : elle est SECONDE. On classe, on ne censure pas. */
+  await expect(options(page).nth(1)).toContainText('SCI 43 CLER');
+});
+
+test('LA COMMUNE ÉCRITE EST LE REPÈRE (RECHERCHE-10) — « Castorama Ormesson » rend celui de Chennevières avant celui de Vitry', async ({ page }) => {
+  /* Mesuré en v1.91, coordonnées réelles : les Castorama de Vitry et d'Antony
+     passaient devant celui de Chennevières — le voisin d'Ormesson-sur-Marne
+     — parce qu'ils sont plus près du CENTRE DE LA FRANCE, d'où l'application
+     s'ouvre. L'usager avait écrit « Ormesson » ; le classement l'ignorait.
+     Les deux Ormesson servent de repères : le plus près de l'un ou de l'autre
+     gagne, et la ligne porte l'adresse OSM pour qu'on le voie. */
+  await decor(page, {
+    adresses: [
+      { type: 'Feature',
+        geometry: { type: 'Point', coordinates: [2.6519, 48.2456] },
+        properties: { label: 'Ormesson', city: 'Ormesson', type: 'municipality', postcode: '77167', score: 0.9 } },
+      { type: 'Feature',
+        geometry: { type: 'Point', coordinates: [2.5366, 48.7848] },
+        properties: { label: 'Ormesson-sur-Marne', city: 'Ormesson-sur-Marne', type: 'municipality', postcode: '94490', score: 0.8 } },
+    ],
+    osm: [
+      { type: 'node', id: 1, lat: 48.7792, lon: 2.4395,
+        tags: { shop: 'doityourself', name: 'Castorama',
+          'addr:street': 'Avenue Rouget de Lisle', 'addr:postcode': '94400', 'addr:city': 'Vitry-sur-Seine' } },
+      { type: 'node', id: 2, lat: 48.7961, lon: 2.5582,
+        tags: { shop: 'doityourself', name: 'Castorama',
+          'addr:street': 'Route de Provins', 'addr:postcode': '94430', 'addr:city': 'Chennevières-sur-Marne' } },
+    ],
+  });
+  await barre(page).getByRole('combobox').fill('Castorama Ormesson');
+  /* On ne compte que les Castorama : la BAN simulée rend aussi ses communes
+     en suggestions, et ce n'est pas elles qu'on juge ici. */
+  const castoramas = barre(page).locator('[role="option"]').filter({ hasText: 'Castorama' });
+  await expect(castoramas).toHaveCount(2, { timeout: 10_000 });
+  await expect(castoramas.first()).toContainText('Chennevières-sur-Marne');
+  await expect(castoramas.nth(1)).toContainText('Vitry-sur-Seine');
+});
+
+test('UN LIEU DE LA CARTE PORTE SON ADRESSE, et ses trois objets OSM font UNE ligne (RECHERCHE-10)', async ({ page }) => {
+  /* Le nœud du magasin, son bâtiment, son entrée : trois objets OSM nommés
+     pareil à cent mètres, que l'arrondi au millième de degré séparait une
+     fois sur deux — trois lignes identiques, sans adresse : le retour
+     d'Armelin (« aucune information sur l'adresse du lieu »). Ici, pas de
+     commune dans la phrase : Overpass cherche autour de la vue. */
+  await decor(page, {
+    osm: [
+      { type: 'node', id: 1, lat: 46.6, lon: 2.4,
+        tags: { shop: 'doityourself', name: 'Castorama',
+          'addr:housenumber': '4', 'addr:street': 'Rue des Halles',
+          'addr:postcode': '03000', 'addr:city': 'Moulins' } },
+      { type: 'way', id: 2, center: { lat: 46.6008, lon: 2.4012 },
+        tags: { building: 'retail', name: 'Castorama' } },
+      { type: 'node', id: 3, lat: 46.5995, lon: 2.399, tags: { entrance: 'main', name: 'Castorama' } },
+    ],
+  });
+  await barre(page).getByRole('combobox').fill('Castorama');
+  const lignes = barre(page).locator('[role="option"]');
+  await expect(lignes.first()).toContainText('Castorama', { timeout: 10_000 });
+  await expect(lignes).toHaveCount(1);
+  await expect(lignes.first()).toContainText('Rue des Halles');
 });
 
 test('« FNACDARTY » COLLÉ SE DÉCOLLE au dictionnaire d’enseignes (RECHERCHE-9)', async ({ page }) => {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   ecart, motRepond, motsUtiles, motsPortes, motsCherches, fusionner, cleTrouvaille,
+  bruit, palierDistance, memeLieu,
   type Trouvaille,
 } from '../src/lib/recherche-multi';
 import {
@@ -191,6 +192,109 @@ describe('le classement', () => {
 
   it('COMPTE LES MOTS PORTÉS, faute de frappe comprise', () => {
     expect(motsPortes(t('Tour Eiffel', 'ign'), ['tour', 'effeil'])).toBe(2);
+  });
+});
+
+/* RECHERCHE-10 (04/09) : le banc des douze requêtes passait 12/12 en v1.91,
+   mais LIRE les rangs disait autre chose — trois sociétés devant trois
+   monuments. Un banc qui compte les réussites sans lire les rangs certifie
+   une liste que l'usager ne reconnaît pas. */
+describe('le nom exact passe devant le nom qui le contient', () => {
+  const t = (
+    libelle: string, source: Trouvaille['source'], lon: number, lat: number, contexte = '',
+  ): Trouvaille => ({ lon, lat, libelle, contexte, adresse: contexte, source });
+  const VUE_FRANCE = { lon: 2.4, lat: 46.6 };
+
+  it('MESURE LE BRUIT : ce que le libellé porte en plus de ce qu’on a écrit', () => {
+    expect(bruit(t('Tour Eiffel', 'ign', 0, 0), ['tour', 'effeil'])).toBe(0);
+    expect(bruit(t('SCI 43 CLER TOUR EFFEIL', 'entreprise', 0, 0), ['tour', 'effeil'])).toBe(3);
+    /* Les vides ne comptent pas, ni la ponctuation : « Gare de Lyon » est
+       exactement « gare lyon », et la parenthèse n'est pas un mot. */
+    expect(bruit(t('Gare de Lyon', 'ign', 0, 0), ['gare', 'lyon'])).toBe(0);
+    expect(bruit(t('Palais Royal (Musée du Louvre)', 'ign', 0, 0), ['musee', 'louvre'])).toBe(2);
+    // Sans mot cherché, il n'y a rien à comparer : aucune peine.
+    expect(bruit(t('SCI 43 CLER TOUR EFFEIL', 'entreprise', 0, 0), [])).toBe(0);
+  });
+
+  it('LES PALIERS DE DISTANCE : ~5 km, ~30 km, ~100 km, ~500 km', () => {
+    expect(palierDistance(0)).toBe(0);
+    expect(palierDistance(0.01 ** 2)).toBe(0);
+    expect(palierDistance(0.2 ** 2)).toBe(1);
+    expect(palierDistance(0.5 ** 2)).toBe(2);
+    expect(palierDistance(2.3 ** 2)).toBe(3);
+    expect(palierDistance(58 ** 2)).toBe(4);
+  });
+
+  it('« TOUR EFFEIL » DEPUIS LA VUE FRANCE : la Tour Eiffel, pas la SCI de la rue Cler', () => {
+    /* Mesuré en v1.91 : la SCI, à trois cents mètres de la tour, était plus
+       PRÈS du centre de la France — de quelques mètres — et passait devant. */
+    const liste = [
+      t('SCI 43 CLER TOUR EFFEIL', 'entreprise', 2.305, 48.856, '43 RUE CLER 75007 PARIS 7'),
+      t('Tour Eiffel', 'ign', 2.2942, 48.8583, 'Paris 75007'),
+    ];
+    expect(fusionner(liste, ['tour', 'effeil'], 10, VUE_FRANCE).map((l) => l.libelle))
+      .toEqual(['Tour Eiffel', 'SCI 43 CLER TOUR EFFEIL']);
+  });
+
+  it('« STADE DE FRANCE » DEPUIS PARIS 16e : le stade à 12 km, pas le restaurant à 1 km', () => {
+    /* « SOC RESTAURANTS DU STADE FRANC », rue du Commandant-Guilbaud — le Parc
+       des Princes. Un kilomètre et douze kilomètres sont deux paliers ; deux
+       mots de bruit les compensent. */
+    const liste = [
+      t('SOC RESTAURANTS DU STADE FRANC', 'entreprise', 2.253, 48.841, '2 RUE DU COMMANDANT GUILBAUD 75016 PARIS'),
+      t('Stade de France', 'ign', 2.36, 48.924, 'Saint-Denis 93200'),
+    ];
+    expect(fusionner(liste, ['stade', 'france'], 10, { lon: 2.25, lat: 48.85 })[0]?.libelle)
+      .toBe('Stade de France');
+  });
+
+  it('MAIS LA PROXIMITÉ GARDE SON MOT : « gare lyon » depuis Lyon rend la Part-Dieu', () => {
+    /* Le nom exact est à Paris ; le bruit ne remonte pas un lieu à 400 km
+       devant celui d'à côté. Et Saint-Pierre-et-Miquelon reste à sa place. */
+    const liste = [
+      t('Gare de Lyon', 'ign', 2.373, 48.844, 'Paris 75012'),
+      t('Gare de Lyon-Part-Dieu', 'ign', 4.859, 45.760, 'Lyon 69003'),
+    ];
+    expect(fusionner(liste, ['gare', 'lyon'], 10, { lon: 4.85, lat: 45.75 })[0]?.libelle)
+      .toBe('Gare de Lyon-Part-Dieu');
+    expect(fusionner(liste, ['gare', 'lyon'], 10, { lon: 2.35, lat: 48.85 })[0]?.libelle)
+      .toBe('Gare de Lyon');
+    const aeroports = [
+      t('Aéroport', 'ign', -56.179, 46.766),
+      t('Aéroport d’Orly', 'ign', 2.379, 48.726),
+    ];
+    expect(fusionner(aeroports, ['aeroport'], 10, { lon: 2.5762, lat: 48.8101 })[0]?.libelle)
+      .toBe('Aéroport d’Orly');
+  });
+
+  it('LA COMMUNE ÉCRITE EST LE REPÈRE — « Castorama Ormesson » rend celui de Chennevières, pas celui de Vitry', () => {
+    /* Mesuré en v1.91 (coordonnées réelles) : les Castorama de Vitry et
+       d'Antony passaient devant celui de Chennevières, voisin d'Ormesson-
+       sur-Marne, parce qu'ils sont plus près du CENTRE DE LA FRANCE. Les deux
+       Ormesson (77 et 94) servent de repères à la fois : le plus près de l'un
+       OU de l'autre gagne. */
+    const liste = [
+      t('Castorama', 'osm', 2.4395, 48.7792), t('Castorama', 'osm', 2.2250, 48.7751),
+      t('Castorama', 'osm', 2.5582, 48.7961),
+    ];
+    expect(fusionner(liste, ['castorama'], 10, VUE_FRANCE)[0]?.lon).toBe(2.4395);
+    const ormessons = [{ lon: 2.6519, lat: 48.2456 }, { lon: 2.5366, lat: 48.7848 }];
+    expect(fusionner(liste, ['castorama'], 10, ormessons)[0]?.lon).toBe(2.5582);
+  });
+
+  it('DEUX OBJETS OSM DU MÊME LIEU font UNE ligne — deux magasins distincts en font deux', () => {
+    /* Le nœud du magasin, son bâtiment, son entrée : trois objets nommés
+       pareil à cent mètres, que l'arrondi au millième de degré séparait une
+       fois sur deux. */
+    const trois = [
+      t('Castorama', 'osm', 2.5500, 48.8000), t('Castorama', 'osm', 2.5512, 48.8008),
+      t('Castorama', 'osm', 2.5490, 48.7995),
+    ];
+    expect(fusionner(trois, ['castorama'], 10, VUE_FRANCE)).toHaveLength(1);
+    expect(memeLieu(trois[0] as Trouvaille, trois[1] as Trouvaille)).toBe(true);
+    const deux = [t('Castorama', 'osm', 2.55, 48.80), t('Castorama', 'osm', 2.58, 48.80)];
+    expect(fusionner(deux, ['castorama'], 10, VUE_FRANCE)).toHaveLength(2);
+    expect(memeLieu(deux[0] as Trouvaille, deux[1] as Trouvaille)).toBe(false);
   });
 });
 
