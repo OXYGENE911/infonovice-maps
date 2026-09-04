@@ -2,6 +2,21 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.74.1] — 2026-09-04 — CI-NODE-24
+
+### Corrigé — l'audit des dépendances tombait sur un point de terminaison retiré
+- La CI de la PR #222 a viré au rouge sur un code sain : le npm 10 embarqué
+  par Node 22 appelle l'ancien point d'audit de npmjs, dont le retrait a
+  commencé ce jour même (« This endpoint is being retired », 400). npm 11
+  parle au point « bulk ». Mesuré : même commit, audit rouge en npm 10,
+  vert en npm 11.
+- La CI et le déploiement passent à Node 24 — celui des postes de travail.
+- **Et l'aveu de procédure** : la fusion de la PR #222 est partie AVANT la
+  lecture du verdict, deux commandes enchaînées sans porte. Le code était
+  sain (toutes les étapes de tests avaient passé, la suite locale complète
+  aussi) — la règle reste violée, et la parade est la même que pour les
+  scripts : le verdict se lit AVANT le geste, jamais dans la même commande.
+
 ## [1.74.0] — 2026-09-04 — RAIL-POI-1
 
 ### La page de recherche vierge propose les lieux à proximité
