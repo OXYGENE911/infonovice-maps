@@ -2,6 +2,22 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.84.0] — 2026-09-04 — TEMPS-POI-1
+
+### La fiche d'un lieu donne le temps de trajet, par mode, à la demande
+- Armelin, 04/09 : « quand je clique sur un POI, ça devrait afficher le
+  temps de trajet de ma position jusqu'à ce POI si j'y allais en voiture, à
+  pied, vélo ou moto. Ça devrait faire partie des informations du POI en
+  plus de l'adresse et des horaires. »
+- Quatre boutons (🚗 🏍️ 🚲 🚶) entre l'adresse et les horaires. **Chaque
+  appui coûte une requête, aucune ne part d'office** — les quotas sont un
+  bien commun, et le parcours COMPTE les requêtes. Le moteur public ne
+  connaît que la voiture et le piéton : la moto partage la voiture, le vélo
+  se déduit du chemin piéton (la règle du planificateur, dite
+  « estimation ») — quatre modes, deux requêtes au plus, mises en cache.
+- **Sans position, pas de promesse** : l'appui renvoie au bouton « Me
+  localiser » — jamais une requête depuis un point inventé.
+
 ## [1.83.1] — 2026-09-04 — FLAKE-1
 
 ### Deux parcours instables sous charge sont durcis
@@ -83,22 +99,6 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   deux — localisé juste, jamais recalculé. Trente secondes tenues au-delà
   de l'aimant valent désormais un recalcul : un virage ou un échangeur ne
   durent pas trente secondes, une parallèle si.
-## [1.84.0] — 2026-09-04 — TEMPS-POI-1
-
-### La fiche d'un lieu donne le temps de trajet, par mode, à la demande
-- Armelin, 04/09 : « quand je clique sur un POI, ça devrait afficher le
-  temps de trajet de ma position jusqu'à ce POI si j'y allais en voiture, à
-  pied, vélo ou moto. Ça devrait faire partie des informations du POI en
-  plus de l'adresse et des horaires. »
-- Quatre boutons (🚗 🏍️ 🚲 🚶) entre l'adresse et les horaires. **Chaque
-  appui coûte une requête, aucune ne part d'office** — les quotas sont un
-  bien commun, et le parcours COMPTE les requêtes. Le moteur public ne
-  connaît que la voiture et le piéton : la moto partage la voiture, le vélo
-  se déduit du chemin piéton (la règle du planificateur, dite
-  « estimation ») — quatre modes, deux requêtes au plus, mises en cache.
-- **Sans position, pas de promesse** : l'appui renvoie au bouton « Me
-  localiser » — jamais une requête depuis un point inventé.
-
 ## [1.80.0] — 2026-09-04 — MAJ-2
 
 ### Corrigé — « Mise à jour » pouvait être un bouton mort
