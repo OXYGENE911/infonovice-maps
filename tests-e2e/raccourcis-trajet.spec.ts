@@ -136,3 +136,49 @@ test('un favori se propose aussi, sans qu’on retape son nom', async ({ page })
   // La boîte s'est refermée d'elle-même : le choix est fait, elle n'a plus rien à dire.
   await expect(page.locator('dialog.choix-favori')).not.toBeVisible();
 });
+
+test('FAVSEL-1 : chaque favori porte l’émoji de sa liste — et le filtre connaît la liste', async ({ page }) => {
+  /* ARMELIN, nuit du 04/09 : « je vois mes favoris apparaître mais juste
+     sous forme de texte. Ils n'ont même pas l'émoji correspondant à la
+     liste de favoris dans laquelle ils sont censés être. » Même repli que
+     la carte : un favori d'avant les listes retombe sur « Lieux favoris »
+     (⭐) — jamais une ligne nue. */
+  await ouvrirItineraire(page);
+  await page.evaluate(async () => {
+    const ouvrir = (): Promise<IDBDatabase> => new Promise((ok, non) => {
+      const d = indexedDB.open('infonovice-maps', 2);
+      d.onsuccess = () => ok(d.result);
+      d.onerror = () => non(d.error);
+    });
+    const db = await ouvrir();
+    await new Promise<void>((ok) => {
+      const t = db.transaction('favoris', 'readwrite');
+      t.objectStore('favoris').put({
+        id: 'fav-resto', nom: 'Chez Momo', lon: 2.36, lat: 48.86,
+        cree: '2026-09-01T08:00:00.000Z', liste: 'restaurants',
+      }, 'fav-resto');
+      t.objectStore('favoris').put({
+        id: 'fav-vieux', nom: 'Maison de Mamie', lon: 4.83, lat: 45.76,
+        cree: '2026-08-01T08:00:00.000Z',
+      }, 'fav-vieux');
+      t.oncomplete = () => ok();
+    });
+  });
+  await page.locator('.iti > summary').click();
+  await page.locator('.iti > summary').click();
+  await page.locator('[data-pour="arrivee"]')
+    .getByRole('button', { name: 'Choisir un favori comme arrivée' }).click();
+
+  const boite = page.locator('dialog.choix-favori');
+  await expect(boite.getByRole('button', { name: /Chez Momo/ })
+    .locator('.choix-favori-emoji')).toHaveText('🍽️');
+  /* Le favori d'avant les listes replie sur « Lieux favoris » — l'étoile. */
+  await expect(boite.getByRole('button', { name: /Maison de Mamie/ })
+    .locator('.choix-favori-emoji')).toHaveText('⭐');
+
+  /* Le filtre connaît la LISTE : « restaurants » est le mot que l'usager a
+     choisi pour ranger — il doit retrouver par lui. */
+  await boite.locator('.choix-favori-recherche').fill('restaurants');
+  await expect(boite.getByRole('button', { name: /Chez Momo/ })).toBeVisible();
+  await expect(boite.getByRole('button', { name: /Maison de Mamie/ })).toBeHidden();
+});

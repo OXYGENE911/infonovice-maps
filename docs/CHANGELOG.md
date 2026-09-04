@@ -2,6 +2,19 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.83.0] — 2026-09-04 — FAVSEL-1
+
+### Le sélecteur de favoris du planificateur porte l'émoji de la liste
+- Armelin, nuit du 04/09 : « quand je clique sur Favoris, je vois mes
+  favoris apparaître mais juste sous forme de texte. Ils n'ont même pas
+  l'émoji correspondant à la liste de favoris dans laquelle ils sont censés
+  être. »
+- Chaque ligne porte désormais **l'émoji de sa liste**, en première colonne
+  — même repli que la carte : un favori d'avant les listes ou une liste
+  effacée retombent sur « Lieux favoris » (⭐), jamais une ligne nue.
+- Et **le filtre connaît la liste** : taper « restaurants » rend les lieux
+  de cette liste — c'est le mot que l'usager a choisi pour ranger.
+
 ## [1.82.1] — 2026-09-04 — AUDIT-3
 
 ### Corrigé — une panne du registre npm n'est pas une vulnérabilité
@@ -12,7 +25,6 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   error ») : elle s'avertit en tête de run, elle ne bloque plus. **Une
   vraie vulnérabilité bloque toujours** — rien n'est assoupli sur le fond.
   Et un délai réseau d'une minute remplace les cinq de pendaison.
-
 ## [1.82.0] — 2026-09-04 — RESEAU-2
 
 ### Taper un nom de station rend une liste, pas un silence
@@ -76,7 +88,6 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   vaut toujours mieux qu'un bouton figé.
 - La logique est pure (dépendances injectées) et testée à sec : six
   scénarios, dont la course exacte de sa capture.
-
 ## [1.79.0] — 2026-09-04 — BIS-2
 
 ### Corrigé — l'itinéraire bis n'empile plus d'étapes
