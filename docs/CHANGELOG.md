@@ -2,6 +2,24 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.89.0] — 2026-09-04 — BADGE-1
+
+### Le filtre des badges arrive — en approximation d'itinérance, et il le dit
+- Les testeurs, en 1.60 : « si je coche Plugsurfing et Chargemap, la carte
+  devrait m'afficher tous les réseaux et bornes compatibles avec mes deux
+  badges. »
+- **Mesuré le 03/09 sur le schéma IRVE : aucun champ de compatibilité e-MSP
+  n'existe** — la couverture d'un badge est une donnée commerciale sans API
+  ouverte. Promettre « compatible Chargemap » serait inventer.
+- L'approximation, décidée par Armelin le 04/09 : une case **« Accessibles
+  en itinérance (badges) »** — jugée sur l'identifiant AFIREV
+  (`id_station_itinerance`), la seule donnée publique qui parle des badges.
+  Une station raccordée accepte la grande majorité d'entre eux, **et la
+  note du panneau dit exactement cette limite** : jamais un badge précis.
+- La règle est UNIQUE (carte par emprise, index national, plan de recharge
+  du trajet — via `stationPasseFiltres`), le rappel « Filtres actifs » la
+  nomme, « Tout afficher » la libère, et le choix survit au rechargement.
+
 ## [1.88.0] — 2026-09-04 — DESKTOP-1
 
 ### Corrigé — le volet des POI respirait mal sur grand écran

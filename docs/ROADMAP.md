@@ -637,19 +637,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       barre de recherche — elle vivait dans la moitié d'écran que le clavier
       recouvre. La règle d'Armelin entre dans CLAUDE.md : « toute fonction
       cachée à l'utilisateur est une fonction inutilisable ».
-- [ ] BADGE-1 — filtrer les bornes par badge de recharge (Plugsurfing,
-      Chargemap…), demandé le 03/09 : « si je coche Plugsurfing et Chargemap,
-      la carte devrait m'afficher tous les réseaux et bornes compatibles avec
-      mes deux badges ». MESURÉ ET BLOQUÉ EN L'ÉTAT : le schéma IRVE statique
-      (vérifié le 03/09 sur schema.data.gouv.fr) ne porte AUCUN champ de
-      compatibilité e-MSP — seulement paiement_acte / paiement_cb /
-      paiement_autre. La couverture d'un badge est une donnée COMMERCIALE de
-      l'opérateur de mobilité (Chargemap, Plugsurfing), sans API ouverte.
-      APPROXIMATION POSSIBLE, à décider par Armelin : le champ
-      id_station_itinerance dit qu'une station est raccordée à l'itinérance —
-      un filtre « bornes accessibles en itinérance » couvrirait la grande
-      majorité des badges, SANS pouvoir promettre un badge précis. Ce serait
-      écrit tel quel dans l'interface.
+- [x] PR #243 — BADGE-1 (04/09) : le filtre « Accessibles en itinérance
+      (badges) », l'approximation décidée par Armelin — identifiant AFIREV,
+      règle unique carte/index/trajet, limite écrite dans le panneau.
 - [ ] SOC-EDIT — corriger le taux de batterie pendant la navigation, demandé
       le 03/09 : « afficher dans Copilot le taux de batterie estimé à
       l'instant T et pouvoir renseigner à côté la valeur réelle pour que le

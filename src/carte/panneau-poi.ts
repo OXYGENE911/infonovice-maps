@@ -16,7 +16,7 @@ import { Popup } from 'maplibre-gl';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import { palierDe, libellePalier, PALIERS } from '../lib/puissance';
 import { poserIconesPuissance, nomIcone, eclairsSVG } from './icone-puissance';
-import {
+import { enItinerance,
   chargerCarburants, chargerBornes, chargerParkings, vueAChange,
   resumerFiltresBornes,
   RAYON_NOM_KM,
@@ -311,6 +311,17 @@ export class PanneauPoi extends HTMLElement {
               <option value="300">300 kW et plus</option>
             </select>
           </label>
+          <!-- L'APPROXIMATION DES BADGES (BADGE-1, décidée par Armelin le
+               04/09). Ses testeurs voulaient cocher LEURS badges ; le schéma
+               IRVE n'a aucun champ e-MSP (mesuré le 03/09). On filtre sur le
+               raccordement à l'itinérance, et LA NOTE DIT la limite — jamais
+               une promesse de badge précis. -->
+          <label class="poi-filtre-ligne"><input type="checkbox"
+            class="poi-itinerance"> Accessibles en itinérance (badges)</label>
+          <p class="poi-filtre-note">Une station raccordée à l’itinérance
+            accepte la grande majorité des badges (Chargemap, Plugsurfing…).
+            La donnée publique ne dit pas quels badges précisément — aucun
+            filtre ne peut le promettre.</p>
           <!-- LE NOM DE STATION CONTIENT… — « IZIVIA FAST a fait un
                partenariat avec McDonald pour mettre des bornes dans leur
                McDo. Ce serait bien de distinguer ces deux types de
@@ -422,8 +433,9 @@ export class PanneauPoi extends HTMLElement {
       if (select) select.value = '0';
       const champ = this.querySelector<HTMLInputElement>('.poi-reseau-recherche');
       if (champ) champ.value = '';
-      this.querySelectorAll<HTMLInputElement>('.poi-prise:checked, .poi-reseau:checked')
-        .forEach((case_) => { case_.checked = false; });
+      this.querySelectorAll<HTMLInputElement>(
+        '.poi-prise:checked, .poi-reseau:checked, .poi-itinerance:checked',
+      ).forEach((case_) => { case_.checked = false; });
       this.#rendreReseaux(this.#reseaux);
       this.#rendreStations();
       surFiltre();
@@ -433,6 +445,11 @@ export class PanneauPoi extends HTMLElement {
     this.querySelector<HTMLSelectElement>('.poi-puissance')?.addEventListener('change', (e) => {
       const v = Number((e.target as HTMLSelectElement).value);
       this.#filtres = { ...this.#filtres, puissanceMin: Number.isFinite(v) && v > 0 ? v : undefined };
+      surFiltre();
+    });
+    this.querySelector<HTMLInputElement>('.poi-itinerance')?.addEventListener('change', (e) => {
+      const coche = (e.target as HTMLInputElement).checked;
+      this.#filtres = { ...this.#filtres, itinerance: coche ? true : undefined };
       surFiltre();
     });
     /* LA RECHERCHE FAIT DEUX CHOSES, ET C'EST LA FUSION DEMANDÉE : elle
@@ -528,9 +545,12 @@ export class PanneauPoi extends HTMLElement {
         prises,
         reseaux: reseauxLus.filter((v): v is string => typeof v === 'string' && v.trim() !== ''),
         nom: nomLu,
+        itinerance: m['itinerance'] === true ? true : undefined,
       };
       const select = this.querySelector<HTMLSelectElement>('.poi-puissance');
       if (select) select.value = String(this.#filtres.puissanceMin ?? 0);
+      const caseIti = this.querySelector<HTMLInputElement>('.poi-itinerance');
+      if (caseIti) caseIti.checked = this.#filtres.itinerance === true;
       // Le nom gardé se rend au champ FUSIONNÉ (30/08) : il n'y en a plus qu'un.
       const champNom = this.querySelector<HTMLInputElement>('.poi-reseau-recherche');
       if (champNom && nomLu) champNom.value = nomLu;
@@ -982,9 +1002,14 @@ export class PanneauPoi extends HTMLElement {
         void this.#assurerReseauxNationaux();
         const c = await chargerBornes(bbox, controleur.signal, this.#filtresService());
         if (controleur !== this.#controleurs[couche]) return;
+        /* L'ITINÉRANCE SE JUGE ICI (BADGE-1) : la requête par emprise ne
+           sait pas filtrer ce champ côté service — la même règle que
+           l'index s'applique au retour, sur l'identifiant AFIREV. */
+        const gardes = this.#filtres.itinerance === true
+          ? c.elements.filter((p) => enItinerance(p.id)) : c.elements;
         this.#bornes = {
           type: 'FeatureCollection',
-          features: c.elements.map((p) => ({
+          features: gardes.map((p) => ({
             type: 'Feature',
             properties: {
               nom: p.nom, puissance: p.puissance, pdc: p.pdc, gratuit: p.gratuit,
