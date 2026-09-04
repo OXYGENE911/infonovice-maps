@@ -2,6 +2,18 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.83.1] — 2026-09-04 — FLAKE-1
+
+### Deux parcours instables sous charge sont durcis
+- Sous la charge d'une suite complète, deux parcours mordaient par
+  intermittence (verts isolés, deux échecs chacun le 04/09) : le relief 3D
+  lu UNE fois alors que la frame de rendu peut être en retard sur les
+  tuiles, et le sondage des caches détruit par le rechargement qu'il
+  surveille (« Execution context was destroyed »).
+- Le relief se SONDE désormais ; la navigation n'est plus un échec du
+  sondage des caches — on repolle sur la page d'après. Quinze passages
+  d'affilée sans un rouge.
+
 ## [1.83.0] — 2026-09-04 — FAVSEL-1
 
 ### Le sélecteur de favoris du planificateur porte l'émoji de la liste
