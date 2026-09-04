@@ -666,6 +666,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       par appui martèleraient l'API publique. PISTE à mesurer AVANT de
       promettre : le facteur de détour (1,25, celui déjà posé pour le corridor)
       appliqué au vol d'oiseau, affiché « ≈ par la route ».
+- [x] PR #232 — FERMEE-1 (04/09) : l'annonce d'une route coupée ou d'un
+      obstacle porte « Chercher un contournement » (le circuit du bis), et
+      la bande aveugle 30–50 m est fermée — trente secondes tenues au-delà
+      de l'aimant valent un recalcul.
 - [x] PR #231 — MAJ-2 (04/09) : « Mise à jour » n'est plus jamais un bouton
       mort — secours après 2,5 s (relecture de l'état réel du worker),
       dernier recours à 8 s. Cause : la course des déploiements rapprochés.
@@ -690,6 +694,15 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       (aimant SEUIL_AIMANT_M=30, recalcul hors-route >50 m/8 s) : localisé
       juste, jamais recalculé. Piste : au-delà de 30 m tenus 30 s, recalculer
       aussi — à mesurer sur trace réelle avant de régler.
+- [ ] BIS-2 — l'itinéraire bis empile des étapes (retour du 04/09 : « ça
+      rajoute automatiquement une étape supplémentaire dans la planification
+      et le GPS insiste pour me faire revenir dans tous les lieux où j'ai
+      cliqué sur Itinéraire bis »). CAUSE LUE DANS LE CODE : le point latéral
+      du bis est adopté comme étape ORDINAIRE (etapes.points = [via,
+      ...restantes]) — il apparaît dans la liste, survit aux recalculs et
+      s'empile à chaque appui. À FAIRE : des vias de déroutement séparés des
+      étapes de l'usager, dissous au premier recalcul hors-route et remplacés
+      (jamais empilés) à l'appui suivant.
 - [ ] RESEAU-2 — « je tape McDonald, il ne se passe rien » (3e signalement,
       04/09). REPRODUIT : le mécanisme répond (message + rappel « Bornes
       filtrées : nom McDonald ») mais au zoom France la couche bornes

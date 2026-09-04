@@ -340,7 +340,123 @@ test('le prochain événement trafic du corridor s’ANNONCE — et se tait derr
       longitude: 2.3522 + 2.4835 * 0.40, latitude: 48.8566 - 3.0926 * 0.40,
     });
   });
-  await expect(trafic).toBeEmpty({ timeout: 10_000 });
+  await expect(trafic.locator('.bg-trafic-mot')).toBeEmpty({ timeout: 10_000 });
+  /* Et des TRAVAUX n'offrent PAS de contournement : on ne propose pas six
+     kilomètres de détour pour un cône de chantier (FERMEE-1). */
+  await expect(page.locator('.bg-trafic-eviter')).toBeHidden();
+});
+
+test('FERMEE-1 : une route COUPÉE offre son contournement — même geste que le bis', async ({ page }) => {
+  /* ARMELIN, capture A4 : « le GPS m'affiche le message [route fermée] mais
+     me force quand même à entrer sur l'autoroute fermée ». Le moteur public
+     ne sait pas éviter une fermeture — mais l'application peut OFFRIR le
+     geste qui s'en écarte : le bis, mesuré. */
+  await page.route('**/www.bison-fute.gouv.fr/data/iteration/date.json',
+    (route) => route.fulfill({ contentType: 'application/json', body: '[1787353503716]' }));
+  await page.route('**/www1.bison-fute.gouv.fr/data/**/evenementsOL6.json',
+    (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      type: 'FeatureCollection',
+      features: [
+        { geometry: { type: 'Point', coordinates: [688781.7, 6793094.7] },
+          properties: { type: 'COUPURE', etat_evenement: 'EFFECTIF', urlcpc: '' } },
+      ],
+    }) }));
+  /* Le service d'itinéraire : un détour dès qu'on lui donne un point
+     intermédiaire — le contrat du bis. */
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    const avecEtape = /intermediates=/i.test(route.request().url());
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        geometry: avecEtape ? DETOUR : GEOMETRIE,
+        distance: avecEtape ? 430_000 : 390_000,
+        duration: avecEtape ? 15_000 : 13_000,
+      }),
+    });
+  });
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null,
+        speed: 24, heading: 135, ...c } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+
+  /* À 19 % du trajet, la coupure de 20 % est devant, à moins de dix
+     kilomètres : l'annonce ET le bouton. */
+  const eviter = page.locator('.bg-trafic-eviter');
+  await expect.poll(async () => {
+    await page.evaluate(() => {
+      (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+        longitude: 2.3522 + 2.4835 * 0.19, latitude: 48.8566 - 3.0926 * 0.19,
+      });
+    });
+    return page.locator('.bg-trafic-mot').textContent();
+  }, { timeout: 10_000 }).toContain('Route coupée dans');
+  await expect(eviter).toBeVisible();
+
+  /* Le bouton fait CE QUE LE BIS FAIT : il cherche une route qui s'écarte,
+     et dit où elle sort. */
+  await eviter.click();
+  await expect(page.locator('.bg-bis-mot')).toContainText('Itinéraire bis', { timeout: 15_000 });
+  await expect(page.locator('.bg-bis-mot')).toContainText('sortie dans');
+});
+
+test('FERMEE-1 : LONGER l’itinéraire sans être dessus finit par recalculer — la bande aveugle 30–50 m', async ({ page }) => {
+  test.setTimeout(120_000);
+  /* ARMELIN : « j'ai longé l'autoroute par une rue parallèle, le GPS me
+     localisait bien sur la route à côté mais a conservé le tracé sur
+     l'autoroute fermée ». MESURÉ : l'aimant lâche à 30 m, le hors-route
+     commence à 50 m — une parallèle à ~40 m vivait dans la bande aveugle,
+     localisée juste et jamais recalculée. Trente secondes tenues dans la
+     bande valent désormais un recalcul. */
+  const urls: string[] = [];
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    urls.push(route.request().url());
+    return route.fulfill({ contentType: 'application/json',
+      body: JSON.stringify({ geometry: GEOMETRIE, distance: 390_000, duration: 13_000 }) });
+  });
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null,
+        speed: 24, heading: 135, ...c } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  await ouvrirTrajet(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+
+  /* LE POINT PARALLÈLE, à ~40 m du tracé (calcul par la normale de la
+     diagonale, en mètres) : dans la bande — ni aimanté, ni hors-route. */
+  const lonP = 2.3522 + 2.4835 * 0.3 + 0.000472;
+  const latP = 48.8566 - 3.0926 * 0.3 + 0.000170;
+  /* On pousse le MÊME fixe encore et encore : l'écart DURE — c'est lui qui
+     déclenche, pas un point isolé. Plus de trente secondes de marche. */
+  await expect.poll(async () => {
+    await page.evaluate(([lo, la]) => {
+      (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+        longitude: lo, latitude: la });
+    }, [lonP, latP]);
+    return urls.some((u) => u.includes(`start=${lonP}`));
+  }, { timeout: 60_000, intervals: [700] }).toBe(true);
 });
 
 test('la FRISE du trajet : événements posés à leur kilomètre, curseur qui avance', async ({ page }) => {
@@ -1091,7 +1207,7 @@ test('NAV-4 : travaux et recharge s’annoncent à DIX kilomètres — et se lis
   // REPLIÉE, l'annonce lointaine se tait — même une fois les travaux connus.
   await expect.poll(async () => {
     await fixe();
-    return bandeau.locator('.bg-trafic').textContent();
+    return bandeau.locator('.bg-trafic-mot').textContent();
   }, { timeout: 10_000 }).toBe('');
 
   // DÉPLIÉE, elle revient : rangée, pas perdue.

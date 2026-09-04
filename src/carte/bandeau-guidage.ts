@@ -468,6 +468,20 @@ export class BandeauGuidage extends HTMLElement {
      attrapé par le parcours E2E avant d'être compris. */
   #dernierRecalculMs = Number.NEGATIVE_INFINITY;
 
+  /* L'ÉCART TENU DANS LA BANDE AVEUGLE (FERMEE-1) — depuis quand l'on
+     roule au-delà de l'aimant sans être hors-route. */
+  #ecartTenuDepuis: number | null = null;
+
+  /** Cherche une route qui s'écarte d'ici — bouton bis et contournement. */
+  #lancerBis(): void {
+    const c = this.#derniersCoords;
+    if (!c) { this.#direBis('Position inconnue : le bis attend un point GPS.'); return; }
+    this.#direBis('Recherche d’un itinéraire bis…');
+    document.dispatchEvent(new CustomEvent('itineraire-bis', {
+      detail: { lon: c.longitude, lat: c.latitude, cap: this.#capLisse },
+    }));
+  }
+
   /** La vue inclinée du suivi — un choix de l'usager, retenu pour la session. */
   #en3D = true;
   #surVisibilite = (): void => { void this.#prendreVerrou(); };
@@ -592,7 +606,8 @@ export class BandeauGuidage extends HTMLElement {
              décoratifs pour un lecteur d'écran (« 390 km / restants » lu
              en morceaux ne s'entend pas). Masquée À L'ŒIL SEULEMENT. -->
         <p class="bg-restant bg-lu-seulement" role="status"></p>
-        <p class="bg-trafic" role="status"></p>
+        <p class="bg-trafic" role="status"><span class="bg-trafic-mot"></span><button
+          type="button" class="bg-trafic-eviter" hidden>Chercher un contournement</button></p>
         <p class="bg-arret"></p>
         <p class="bg-alerte" role="alert" hidden></p>
         <!-- LE MOT DU BIS A SA PROPRE LIGNE, et ce n'est pas un détail :
@@ -856,14 +871,10 @@ export class BandeauGuidage extends HTMLElement {
       const b = this.querySelector<HTMLElement>('.bg-a-pied');
       if (b) b.hidden = true;
     });
-    this.querySelector('.bg-bis')?.addEventListener('click', () => {
-      const c = this.#derniersCoords;
-      if (!c) { this.#direBis('Position inconnue : le bis attend un point GPS.'); return; }
-      this.#direBis('Recherche d’un itinéraire bis…');
-      document.dispatchEvent(new CustomEvent('itineraire-bis', {
-        detail: { lon: c.longitude, lat: c.latitude, cap: this.#capLisse },
-      }));
-    });
+    this.querySelector('.bg-bis')?.addEventListener('click', () => { this.#lancerBis(); });
+    /* Le contournement d'une route bloquée est LE MÊME geste que le bis —
+       un second bouton sur le même circuit, jamais un second chemin. */
+    this.querySelector('.bg-trafic-eviter')?.addEventListener('click', () => { this.#lancerBis(); });
     /* La réponse revient par le document : le planificateur ne connaît pas
        la barre, et n'a pas à la connaître. */
     document.addEventListener('itineraire-bis-resultat', (e) => {
@@ -2517,6 +2528,27 @@ export class BandeauGuidage extends HTMLElement {
           return;
         }
       }
+      /* LA BANDE AVEUGLE 30–50 m (FERMEE-1, 04/09). Armelin longeait l'A4
+         fermée par la rue parallèle : localisé juste (l'aimant lâche à
+         30 m), jamais recalculé (le hors-route commence à 50 m). Sa capture
+         est le cas d'école, MESURÉ : la parallèle vit pile dans la bande.
+         TRENTE SECONDES au-delà de l'aimant : un virage large ou un
+         échangeur ne durent pas trente secondes — une parallèle, si. */
+      if (e.ecartM > SEUIL_AIMANT_M) {
+        const tenuDepuis = this.#ecartTenuDepuis ?? performance.now();
+        this.#ecartTenuDepuis = tenuDepuis;
+        if (performance.now() - tenuDepuis > 30_000
+          && performance.now() - this.#dernierRecalculMs > 15_000) {
+          this.#dernierRecalculMs = performance.now();
+          this.#ecartTenuDepuis = null;
+          this.#avancementMax = 0;
+          this.#alerte('Vous longez l’itinéraire sans être dessus — nouvel itinéraire depuis votre position…');
+          document.dispatchEvent(new CustomEvent('recalcul-hors-route', {
+            detail: { lon, lat },
+          }));
+          return;
+        }
+      } else this.#ecartTenuDepuis = null;
       this.#avancementMax = Math.max(this.#avancementMax, e.avancementM);
       this.#alerte('');
       /* LA VOIE NE SE REDIT PLUS ICI : elle porte l'écusson du cartouche et
@@ -2606,10 +2638,22 @@ export class BandeauGuidage extends HTMLElement {
     const prochainEvt = e.horsRoute ? undefined
       : this.#evenements.find((v) => v.avancementM > e.avancementM
         && v.avancementM - e.avancementM < portee);
-    trafic.textContent = prochainEvt
+    (trafic.querySelector('.bg-trafic-mot') as HTMLElement).textContent = prochainEvt
       ? `${prochainEvt.libelle} ${distanceEnMots(prochainEvt.avancementM - e.avancementM)}`
         + ' (Bison Futé)'
       : '';
+    /* LE CONTOURNEMENT SE PROPOSE QUAND L'ÉVÉNEMENT BLOQUE (FERMEE-1,
+       04/09). Armelin, capture A4 : « le GPS m'affiche le message mais me
+       force quand même à entrer sur l'autoroute fermée ». Le moteur public
+       ne connaît pas les fermetures — on ne peut pas les lui faire éviter ;
+       on peut OFFRIR le geste, et c'est exactement le bis : une route qui
+       s'écarte d'ici, mesurée. Coupures et obstacles seulement : proposer
+       de contourner un bouchon de 2 km ferait plus de détour que d'attente. */
+    const eviter = trafic.querySelector<HTMLButtonElement>('.bg-trafic-eviter');
+    if (eviter) {
+      eviter.hidden = !prochainEvt
+        || !['COUPURE', 'OBSTACLE'].includes(prochainEvt.type);
+    }
 
     /* LE PROCHAIN ARRÊT DE RECHARGE — ce qui manque le plus en électrique, et
        qu'aucune application de navigation généraliste ne porte. */
