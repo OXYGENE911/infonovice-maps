@@ -666,12 +666,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       par appui martèleraient l'API publique. PISTE à mesurer AVANT de
       promettre : le facteur de détour (1,25, celui déjà posé pour le corridor)
       appliqué au vol d'oiseau, affiché « ≈ par la route ».
-- [x] PR #230 — BIS-2 (04/09) : le via du bis n'est plus une étape — injecté
-      à la requête, dissous au recalcul hors-route / se garer / effacer,
-      remplacé (jamais empilé) au bis suivant.
 - [x] PR #231 — MAJ-2 (04/09) : « Mise à jour » n'est plus jamais un bouton
       mort — secours après 2,5 s (relecture de l'état réel du worker),
       dernier recours à 8 s. Cause : la course des déploiements rapprochés.
+- [x] PR #230 — BIS-2 (04/09) : le via du bis n'est plus une étape — injecté
+      à la requête, dissous au recalcul hors-route / se garer / effacer,
+      remplacé (jamais empilé) au bis suivant.
 - [x] PR #229 — DEST-2 (04/09) : la fiche destination gagne « Réduire au
       marqueur » (la croix efface tout), le marqueur passe au rouge, et
       l'adresse manquante se demande à la BAN — « Y aller » la porte.

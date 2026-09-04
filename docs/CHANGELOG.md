@@ -2,22 +2,6 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.79.0] — 2026-09-04 — BIS-2
-
-### Corrigé — l'itinéraire bis n'empile plus d'étapes
-- Armelin, en 1.74 : « quand je cliquais sur Itinéraire bis, ça rajoute
-  automatiquement une étape supplémentaire dans la planification et le GPS
-  insiste pour me faire revenir dans tous les lieux où j'ai cliqué sur le
-  bouton, au lieu de recalculer simplement un autre itinéraire. »
-- **Le point latéral du bis était adopté comme étape ordinaire** : visible
-  dans la liste du planificateur, survivant aux recalculs, empilé à chaque
-  appui. C'est un MOYEN de forcer la divergence, pas un lieu où aller.
-- Il vit désormais à part, injecté dans la requête au moment du calcul, et
-  **il se dissout** : au recalcul hors-route (on a quitté la route — il a
-  servi, ou ne rime plus à rien), quand on se gare, quand on efface. Un
-  nouveau bis le REMPLACE, jamais ne l'empile.
-- Contre-épreuve mordante : remettre le via dans les étapes fait échouer le
-  parcours sur la première assertion.
 ## [1.80.0] — 2026-09-04 — MAJ-2
 
 ### Corrigé — « Mise à jour » pouvait être un bouton mort
@@ -36,6 +20,22 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - La logique est pure (dépendances injectées) et testée à sec : six
   scénarios, dont la course exacte de sa capture.
 
+## [1.79.0] — 2026-09-04 — BIS-2
+
+### Corrigé — l'itinéraire bis n'empile plus d'étapes
+- Armelin, en 1.74 : « quand je cliquais sur Itinéraire bis, ça rajoute
+  automatiquement une étape supplémentaire dans la planification et le GPS
+  insiste pour me faire revenir dans tous les lieux où j'ai cliqué sur le
+  bouton, au lieu de recalculer simplement un autre itinéraire. »
+- **Le point latéral du bis était adopté comme étape ordinaire** : visible
+  dans la liste du planificateur, survivant aux recalculs, empilé à chaque
+  appui. C'est un MOYEN de forcer la divergence, pas un lieu où aller.
+- Il vit désormais à part, injecté dans la requête au moment du calcul, et
+  **il se dissout** : au recalcul hors-route (on a quitté la route — il a
+  servi, ou ne rime plus à rien), quand on se gare, quand on efface. Un
+  nouveau bis le REMPLACE, jamais ne l'empile.
+- Contre-épreuve mordante : remettre le via dans les étapes fait échouer le
+  parcours sur la première assertion.
 ## [1.78.0] — 2026-09-04 — DEST-2
 
 ### La fiche destination gagne ses deux gestes, et son marqueur dit qui il est
