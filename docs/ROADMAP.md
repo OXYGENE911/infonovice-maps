@@ -669,7 +669,7 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #233 — RESEAU-2 (04/09) : taper un nom dans le filtre des bornes
       rend la liste des stations correspondantes (compte, huit plus proches,
       distances) — le choix allume la couche et vole vers la station.
-- [x] PR #241 — AUDIT-3 (04/09) : une panne du registre npm s'avertit, elle
+- [x] PR #240 — AUDIT-3 (04/09) : une panne du registre npm s'avertit, elle
       ne bloque plus — une vraie vulnérabilité bloque toujours. Délai réseau
       d'une minute au lieu de cinq de pendaison.
 - [x] PR #236 — AUDIT-2 (04/09) : l'audit CI fait trois essais espacés — le
