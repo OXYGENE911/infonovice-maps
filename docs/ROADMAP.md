@@ -671,6 +671,7 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       la bande aveugle 30–50 m est fermée — trente secondes tenues au-delà
       de l'aimant valent un recalcul.
 - [x] PR #237 — AUDIT-2 (04/09) : l'audit CI fait trois essais espacés — le
+- [x] PR #236 — AUDIT-2 (04/09) : l'audit CI fait trois essais espacés — le
       registre npm rend des 503 par vagues depuis le retrait de l'ancien
       point ; deux CI perdues dans la nuit sur ce seul pas.
 - [x] PR #231 — MAJ-2 (04/09) : « Mise à jour » n'est plus jamais un bouton
