@@ -669,6 +669,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #233 — RESEAU-2 (04/09) : taper un nom dans le filtre des bornes
       rend la liste des stations correspondantes (compte, huit plus proches,
       distances) — le choix allume la couche et vole vers la station.
+- [x] PR #237 — TEMPS-POI-1 (04/09) : la fiche d'un lieu donne le temps de
+      trajet par mode (🚗 🏍️ 🚲 🚶), à la demande — une requête par appui,
+      deux au plus pour les quatre modes, zéro d'office. Reste ouvert : la
+      même rangée dans la fiche destination de la recherche.
 - [x] PR #235 — FLAKE-1 (04/09) : les deux parcours instables sous charge
       (relief 3D, caches à la mise à jour) sont durcis — sondage au lieu de
       lecture unique, navigation tolérée pendant le sondage.
@@ -738,6 +742,7 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       d'itinéraire par fiche ouverte : mesurer le coût réel avant de
       promettre (les quotas sont un bien commun) ; piste sobre : UN calcul
       dans le mode configuré, les autres sur demande.
+- [x] PR #236 — TEMPS-POI-1 (04/09) : la fiche d'un lieu donne le temps de
 - [ ] BLANC-1 — « à la fin du parcours, écran blanc, obligé de rafraîchir »
       (04/09, sur la version précédente). NON REPRODUIT sur la version
       courante — les parcours d'arrivée passent. Garde ouverte : à
