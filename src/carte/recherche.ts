@@ -15,6 +15,10 @@ import {
 } from '../lib/categories';
 import { adresseDesTags } from '../lib/adresse-lieu';
 import { etatOuverture, cuisineEnFrancais } from '../lib/detail-lieu';
+
+/** « italienne » → « Italienne » — le dictionnaire parle en adjectifs de
+    cuisine, l'affichage ouvre la phrase. */
+const majuscule = (m: string): string => m.charAt(0).toUpperCase() + m.slice(1);
 import { svgPastille } from './icone-lieu';
 import { analyser, decoder, departementDe } from '../lib/adresse-mots';
 import { communesParNom } from '../lib/commune';
@@ -829,7 +833,7 @@ export class RechercheAdresse extends HTMLElement {
     const cuisines = [...comptes.entries()].sort((x, y) => y[1] - x[1]).slice(0, 6);
     if (cuisines.length >= 2) {
       for (const [cle] of cuisines) {
-        barre.append(puce(cuisineEnFrancais(cle), this.#filtreCuisine === cle, () => {
+        barre.append(puce(majuscule(cuisineEnFrancais(cle)), this.#filtreCuisine === cle, () => {
           this.#filtreCuisine = this.#filtreCuisine === cle ? null : cle;
         }));
       }
@@ -863,9 +867,17 @@ export class RechercheAdresse extends HTMLElement {
     this.#resultats = gardes
       .map((l) => {
         const adresse = adresseDesTags(l.tags);
+        /* LA CUISINE SE DIT SUR LA LIGNE (04/09). Armelin : « ce serait
+           bien de pouvoir écrire également le type de restaurant —
+           Asiatique, Italien — vu que cette donnée est présente dans
+           OpenStreetMap ». La première cuisine déclarée, traduite, devant
+           l'adresse : c'est elle qui départage deux restaurants voisins. */
+        const cuisineBrute = (l.tags?.['cuisine'] ?? '').split(';')[0]?.trim() ?? '';
+        const cuisine = cuisineBrute === '' ? null : majuscule(cuisineEnFrancais(cuisineBrute));
         return {
           libelle: l.nom, type: 'lieu',
-          contexte: adresse ?? categorie.libelle,
+          contexte: [cuisine, adresse ?? categorie.libelle]
+            .filter((m): m is string => m !== null).join(' · '),
           lon: l.lon, lat: l.lat,
           ...(l.famille ? { famille: l.famille } : {}),
           ...(adresse === null ? { adresseInconnue: true } : {}),

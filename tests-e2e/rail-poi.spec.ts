@@ -162,14 +162,18 @@ test('FILTRE-RAIL : « Ouvert maintenant » et les cuisines RÉELLEMENT présent
   /* Les puces : « Ouvert maintenant » + les cuisines PRÉSENTES, en français. */
   const filtres = page.locator('.recherche-filtres');
   await expect(filtres.getByRole('button', { name: 'Ouvert maintenant' })).toBeVisible();
-  await expect(filtres.getByRole('button', { name: 'Italien' })).toBeVisible();
-  await expect(filtres.getByRole('button', { name: 'Chinois' })).toBeVisible();
+  await expect(filtres.getByRole('button', { name: 'Italienne' })).toBeVisible();
+  await expect(filtres.getByRole('button', { name: 'Chinoise' })).toBeVisible();
+
+  /* La ligne DIT la cuisine, traduite — la donnée OSM était là. */
+  await expect(lignes.filter({ hasText: 'Trattoria Roma' })).toContainText('Italienne');
+  await expect(lignes.filter({ hasText: 'Dragon d’Or' })).toContainText('Chinoise');
 
   /* Cuisine : seul l'italien reste. */
-  await filtres.getByRole('button', { name: 'Italien' }).click();
+  await filtres.getByRole('button', { name: 'Italienne' }).click();
   await expect(lignes).toHaveCount(1);
   await expect(lignes.first()).toContainText('Trattoria Roma');
-  await filtres.getByRole('button', { name: 'Italien' }).click();
+  await filtres.getByRole('button', { name: 'Italienne' }).click();
   await expect(lignes).toHaveCount(3);
 
   /* Ouvert maintenant (mercredi 10 h) : la trattoria l'est ; le Dragon
