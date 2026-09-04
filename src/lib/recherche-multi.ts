@@ -219,6 +219,12 @@ export function palierDistance(d2: number): number {
 export function fusionner(
   trouvailles: Trouvaille[], mots: string[] = [], plafond = 10,
   repere: PointGeo | PointGeo[] | null = null,
+  /* TOUT CE QUI A ÉTÉ ÉCRIT, commune comprise. Les mots CHERCHÉS excluent la
+     commune (elle situe, elle ne nomme pas) ; mais dans le libellé « Mairie -
+     Le Plessis-Trévise », « Plessis » et « Trévise » ne sont pas du bruit :
+     l'usager les a tapés. Mesuré le 04/09 : sans cette liste, la mairie de
+     Chennevières (« Mairie », bruit zéro) passait devant celle du Plessis. */
+  ecrits: string[] = mots,
 ): Trouvaille[] {
   /* À MOTS ÉGAUX, LE PLUS PROCHE D'ABORD (RECHERCHE-9, 04/09). Armelin :
      « quand on tape "aéroport", les premiers lieux affichés sont à plus de
@@ -243,7 +249,15 @@ export function fusionner(
     let n = notes.get(t);
     if (n === undefined) {
       const dd = d2(t);
-      n = [motsPortes(t, mots), palierDistance(dd) + Math.min(bruit(t, mots), 3), dd];
+      /* CE QUI PORTE TOUTE LA PHRASE, commune comprise, passe devant ce qui
+         n'en porte qu'une partie. Mesuré le 04/09 : « Mont Saint Michel »
+         fait reconnaître « Saint-Michel » comme commune, ne laisse que
+         « Mont » à chercher, et un lieu-dit « Mont » des Pyrénées valait
+         alors autant que ce qui s'appelle Mont-Saint-Michel. Un point de
+         plus, pas davantage : la commune seule (« Ormesson », « Beaucouzé »)
+         ne porte pas la phrase entière et reste où elle est. */
+      const toute = ecrits.length > mots.length && motsPortes(t, ecrits) === ecrits.length ? 1 : 0;
+      n = [motsPortes(t, mots) + toute, palierDistance(dd) + Math.min(bruit(t, ecrits), 3), dd];
       notes.set(t, n);
     }
     return n;
@@ -398,10 +412,17 @@ export async function chercherPartout(
     if (auFil === undefined || signal?.aborted === true) return;
     auFil(rendre());
   };
-  /* LE REPÈRE DU CLASSEMENT : la commune écrite quand il y en a une (toutes
-     ses homonymes), la vue sinon (RECHERCHE-10). */
+  /* LES REPÈRES DU CLASSEMENT : la commune écrite quand il y en a une (toutes
+     ses homonymes) ET la vue (RECHERCHE-10). La vue reste, et c'est un
+     garde-fou mesuré : « Mont Saint Michel » fait reconnaître « Saint-Michel »
+     (Aisne) comme commune — un repère faux, à 300 km du Mont. Le plus proche
+     de l'un OU de l'autre gagne ; un repère faux ne peut pas éloigner ce qui
+     est près de l'usager. */
   const rendre = (): Resultat => ({
-    lieux: fusionner(lieux, motsCherches(q, commune), 10, communes.length > 0 ? communes : centre),
+    lieux: fusionner(
+      lieux, motsCherches(q, commune), 10,
+      [...communes, ...(centre === null ? [] : [centre])], motsUtiles(q),
+    ),
     panne, commune,
   });
 

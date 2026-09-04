@@ -282,6 +282,49 @@ describe('le nom exact passe devant le nom qui le contient', () => {
     expect(fusionner(liste, ['castorama'], 10, ormessons)[0]?.lon).toBe(2.5582);
   });
 
+  it('LES MOTS DE LA COMMUNE NE SONT PAS DU BRUIT — « mairie plessis trevise » rend celle du Plessis', () => {
+    /* Mesuré le 04/09 sur le second banc : les mots CHERCHÉS excluent la
+       commune (elle situe), mais « Mairie - Le Plessis-Trévise » porte ces
+       mots-là parce que l'usager les a ÉCRITS. Comptés comme du bruit, la
+       « Mairie » de la commune d'à côté — un mot, bruit zéro — passait devant. */
+    const liste = [
+      t('Mairie', 'osm', 2.548, 48.776), t('Mairie', 'osm', 2.510, 48.813),
+      t('Mairie - Le Plessis-Trévise', 'administration', 2.5721, 48.8110, '94420 Le Plessis-Trévise'),
+    ];
+    const plessis = { lon: 2.5721, lat: 48.8110 };
+    expect(fusionner(liste, ['mairie'], 10, plessis, ['mairie', 'plessis', 'trevise'])[0]?.libelle)
+      .toBe('Mairie - Le Plessis-Trévise');
+    /* Et « Aéroport Orly » : « Aéroport de Paris-Orly » ne porte qu'un mot
+       de trop (Paris), « AEROPORTS DE PARIS (ADP) » en porte deux. */
+    const orly = [
+      t('AEROPORTS DE PARIS (ADP)', 'entreprise', 2.376, 48.742, '103 AEROGARE SUD 94310 ORLY'),
+      t('Aéroport de Paris-Orly', 'ign', 2.366, 48.729),
+    ];
+    expect(fusionner(orly, ['aeroport'], 10, { lon: 2.39, lat: 48.74 }, ['aeroport', 'orly'])[0]?.libelle)
+      .toBe('Aéroport de Paris-Orly');
+  });
+
+  it('CE QUI PORTE TOUTE LA PHRASE passe devant ce qui n’en porte qu’une partie — « Mont Saint Michel »', () => {
+    /* Mesuré le 04/09 : « Saint-Michel » est reconnue comme commune, il ne
+       reste que « Mont » à chercher, et un lieu-dit « Mont » des Pyrénées
+       valait autant que ce qui s'appelle Mont-Saint-Michel. Un point de plus
+       à qui porte les trois mots. Et la commune SEULE (« Ormesson ») ne
+       porte pas la phrase entière : elle reste derrière le Castorama. */
+    const ici = { lon: 2.5762, lat: 48.8101 };
+    const liste = [
+      t('Mont', 'osm', 0.953, 43.315),
+      t('Mont Saint-Michel', 'ign', -3.393, 48.397, 'Saint-Servais 22160'),
+    ];
+    expect(fusionner(liste, ['mont'], 10, ici, ['mont', 'saint', 'michel'])[0]?.libelle)
+      .toBe('Mont Saint-Michel');
+    const ormesson = [
+      t('Ormesson-sur-Marne', 'ign', 2.5366, 48.7848, 'Ormesson-sur-Marne 94490'),
+      t('Castorama', 'osm', 2.5582, 48.7961),
+    ];
+    expect(fusionner(ormesson, ['castorama'], 10, [{ lon: 2.5366, lat: 48.7848 }, ici],
+      ['castorama', 'ormesson'])[0]?.libelle).toBe('Castorama');
+  });
+
   it('DEUX OBJETS OSM DU MÊME LIEU font UNE ligne — deux magasins distincts en font deux', () => {
     /* Le nœud du magasin, son bâtiment, son entrée : trois objets nommés
        pareil à cent mètres, que l'arrondi au millième de degré séparait une

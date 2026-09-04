@@ -29,8 +29,27 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   du centre de la France d'où l'application s'ouvre. « Collège Albert Camus
   Plessis-Trévise » rendait de même un collège de l'Essonne devant celui du
   Plessis. Quand la phrase nomme une commune, « le plus proche » se mesure
-  depuis elle — depuis toutes ses homonymes, au plus près — et non depuis
-  la vue. Après : Chennevières et le Plessis au premier rang.
+  depuis elle — depuis toutes ses homonymes, au plus près — la vue restant
+  un repère à leurs côtés (garde-fou mesuré : « Mont Saint Michel » fait
+  reconnaître « Saint-Michel », Aisne, à 300 km du Mont). Après :
+  Chennevières et le Plessis au premier rang.
+- **Les mots de la commune ne sont pas du bruit.** Second banc, quatorze
+  requêtes du quotidien depuis le Val-de-Marne : « mairie plessis trevise »
+  rendait la « Mairie » de la commune d'à côté devant « Mairie - Le
+  Plessis-Trévise », parce que « Plessis » et « Trévise » — exclus des mots
+  cherchés, puisque la commune situe — étaient comptés comme du bruit dans
+  le nom. Le bruit se mesure sur TOUT ce qui a été écrit. Même remède pour
+  « Aéroport Orly » (l'aéroport passe devant « AÉROPORTS DE PARIS (ADP) »).
+- **Ce qui porte toute la phrase passe devant ce qui n'en porte qu'une
+  partie.** « Mont Saint Michel » fait reconnaître « Saint-Michel » comme
+  commune, ne laisse que « Mont » à chercher, et un lieu-dit « Mont » des
+  Pyrénées valait autant que ce qui s'appelle Mont-Saint-Michel. Un point
+  de plus à qui porte les trois mots — la commune seule n'y a pas droit.
+  Mesuré au passage : l'index `poi` de la Géoplateforme ne connaît PAS le
+  Mont-Saint-Michel (cinq collines homonymes, pas l'abbaye) ; c'est la BAN
+  qui le porte, en commune.
+  Le second banc reste hors dépôt (mesure) ; il a aussi révélé que « McDo »
+  ne rend rien — c'est le chantier suivant.
 - **Deux objets OSM du même lieu font UNE ligne** : le nœud du magasin et
   son bâtiment tombaient de part et d'autre d'un arrondi au millième de
   degré une fois sur deux. Même nom à trois cents mètres près = même lieu ;
