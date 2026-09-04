@@ -34,7 +34,7 @@ import { chercherPoiIgn, type LieuIgn } from './recherche-poi-ign';
 import { chercherEntreprises, type Etablissement } from './recherche-entreprises';
 import {
   chercherCommune, communeCorrespond, communeLaPlusProche, decoupagesNomCommune,
-  nu, separerMotsColles, variantesDecollees, type CommuneReconnue,
+  enseigneCanonique, nu, separerMotsColles, variantesDecollees, type CommuneReconnue,
 } from './saisie-recherche';
 import { chercherParNom } from './recherche-lieux';
 import type { LieuCategorie } from './categories';
@@ -370,6 +370,11 @@ export async function chercherPartout(
      tolèrent rien : chercher « FNACDARTY » ne rendra jamais rien. */
   const decollee = variantesDecollees(q);
   if (decollee.length > 0) q = decollee[0] as string;
+  /* LE SURNOM DEVIENT L'ENSEIGNE (RECHERCHE-11) : « McDo Chennevières »
+     rendait zéro partout — les sources ne connaissent que « McDonald's ».
+     Ici, AVANT la reconnaissance de commune et avant toutes les sources :
+     c'est la même phrase qui part partout. */
+  q = enseigneCanonique(q);
 
   const paris: Promise<Trouvaille[]>[] = [
     chercherPoiIgn(q, signal).then((r) => r.map(deIgn)),
