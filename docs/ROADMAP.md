@@ -637,13 +637,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       barre de recherche — elle vivait dans la moitié d'écran que le clavier
       recouvre. La règle d'Armelin entre dans CLAUDE.md : « toute fonction
       cachée à l'utilisateur est une fonction inutilisable ».
-- [x] PR #243 — BADGE-1 (04/09) : le filtre « Accessibles en itinérance
-      (badges) », l'approximation décidée par Armelin — identifiant AFIREV,
-      règle unique carte/index/trajet, limite écrite dans le panneau.
 - [x] PR #244 — SOC-EDIT (04/09) : la section Batterie du Copilote —
       estimation interpolée sur les ancres du plan, correction saisie qui
       replanifie depuis la position, écart affiché, valeur écrite dans le
       profil véhicule. Rien d'appris en silence.
+- [x] PR #243 — BADGE-1 (04/09) : le filtre « Accessibles en itinérance
+      (badges) », l'approximation décidée par Armelin — identifiant AFIREV,
+      règle unique carte/index/trajet, limite écrite dans le panneau.
 - [ ] RAIL-DISTANCE-ROUTE — dire la distance par la route selon le mode de
       locomotion dans les listes (demande du 03/09 : « avec leur distance en
       voiture ou à pied suivant le mode configuré »). La v1 du rail affiche
