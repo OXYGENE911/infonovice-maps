@@ -18,7 +18,8 @@ import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
  *
  * QUE LES DOUZE REQUÊTES ABOUTISSENT VRAIMENT se mesure à part, contre les
  * vrais services : `npx vite-node scripts/essai-douze-requetes.ts`. Mesuré le
- * 03/09 : 12/12, toutes au premier rang. */
+ * 04/09 (RECHERCHE-10) : 12/12, douze au premier rang — le 03/09, c'était
+ * 12/12 aussi, mais NEUF au premier rang, et le banc ne le comptait pas. */
 
 const IGN_TOUR = {
   type: 'Feature',
