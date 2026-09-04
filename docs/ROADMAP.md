@@ -669,6 +669,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #233 — RESEAU-2 (04/09) : taper un nom dans le filtre des bornes
       rend la liste des stations correspondantes (compte, huit plus proches,
       distances) — le choix allume la couche et vole vers la station.
+- [x] PR #238 — BLANC-1 (04/09) : l'alerte « carte perdue » était enterrée
+      (z-index 5, dans le contexte d'empilement du conteneur) — elle passe
+      au niveau modale sur le body, mesuré à l'elementFromPoint ; et les
+      exceptions muettes affichent un bandeau d'aveu avec Recharger.
 - [x] PR #237 — TEMPS-POI-1 (04/09) : la fiche d'un lieu donne le temps de
       trajet par mode (🚗 🏍️ 🚲 🚶), à la demande — une requête par appui,
       deux au plus pour les quatre modes, zéro d'office. Reste ouvert : la

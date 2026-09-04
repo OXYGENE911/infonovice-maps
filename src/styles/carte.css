@@ -1714,7 +1714,14 @@ fiche-borne:not([hidden]), fiche-lieu:not([hidden]) { z-index: var(--z-volet-ouv
    explique. Il laisse passer les clics nulle part : c'est une alerte, elle
    attend une décision. */
 .carte-perdue {
-  position: absolute; inset: 0; z-index: 5;
+  /* AU-DESSUS DE TOUT (BLANC-1, 04/09). Elle vivait à z-index 5 — le niveau
+     des cartouches — sous l'en-tête (20) et les bandeaux (30) : en guidage,
+     le canevas mort laissait un écran blanc et le message de survie était
+     ENTERRÉ sous l'interface. Armelin : « à la fin du parcours, écran
+     blanc, obligé de rafraîchir la page pour faire revenir la carte » — le
+     bouton « Recharger » existait, il était juste recouvert. Une alerte de
+     survie ne se fait recouvrir par rien. */
+  position: fixed; inset: 0; z-index: var(--z-modale);
   display: flex; flex-direction: column; gap: 14px;
   align-items: center; justify-content: center;
   padding: 24px; text-align: center;
@@ -1731,6 +1738,25 @@ fiche-borne:not([hidden]), fiche-lieu:not([hidden]) { z-index: var(--z-volet-ouv
   font: 600 14px var(--police); cursor: pointer;
 }
 .carte-perdue-recharger:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* LE BANDEAU D'UNE CASSE MUETTE (BLANC-1) — sous la modale, sur le reste. */
+.casse-bandeau {
+  position: fixed; left: 12px; right: 12px;
+  bottom: calc(var(--sur-barre-basse, 0px) + 12px);
+  z-index: calc(var(--z-modale) - 1);
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 12px;
+  background: rgba(20, 20, 22, .95); color: #F3EFE7;
+}
+.casse-bandeau p { margin: 0; font: 400 13px/1.4 var(--police); flex: 1 1 auto; }
+.casse-bandeau button {
+  padding: 7px 13px; border-radius: 9px; border: none; cursor: pointer;
+  background: var(--accent); color: var(--blanc); font: 600 13px var(--police);
+}
+.casse-bandeau .casse-fermer {
+  background: transparent; color: #B5BDC8; font-size: 15px; padding: 4px 8px;
+}
+.casse-bandeau button:focus-visible { outline: none; box-shadow: var(--focus); }
 .carte-perdue-version {
   margin: 0; font: 400 12px var(--police); color: #B5BDC8;
 }

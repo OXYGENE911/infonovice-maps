@@ -144,7 +144,12 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   versionPerdue.className = 'carte-perdue-version';
   versionPerdue.textContent = libelleVersion(VERSION);
   perdue.append(motPerdue, boutonPerdue, versionPerdue);
-  conteneur.appendChild(perdue);
+  /* SUR LE BODY, PAS DANS LE CONTENEUR (BLANC-1, 04/09) : #carte crée son
+     propre contexte d'empilement — un z-index de 1000 À L'INTÉRIEUR reste
+     sous l'en-tête, frère à 20. C'est ainsi que l'alerte s'est retrouvée
+     enterrée sous l'interface de guidage, et l'écran de fin de trajet est
+     resté blanc sans porte de sortie. */
+  document.body.appendChild(perdue);
 
   /* CLIQUER DANS LE VIDE REFERME (ERGO-4, 02/09). Un collègue d'Armelin :
      « ce n'est pas pratique de cliquer sur le même bouton pour fermer le menu

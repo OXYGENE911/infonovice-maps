@@ -2,6 +2,25 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.85.0] — 2026-09-04 — BLANC-1
+
+### L'écran blanc de fin de trajet a une explication — et l'alerte n'est plus enterrée
+- Armelin : « à la fin du parcours, écran blanc. Obligé de rafraîchir la
+  page pour faire revenir la carte. »
+- **L'alerte « carte perdue » existait depuis le 01/09** — le téléphone qui
+  reprend la mémoire graphique laisse un canevas blanc, et un message avec
+  « Recharger la carte » devait paraître. MESURÉ : elle vivait à z-index 5,
+  sous l'en-tête (20) et les bandeaux (30), ET dans le conteneur de la
+  carte, dont le contexte d'empilement la plafonnait de toute façon. En
+  guidage, l'écran restait blanc et le bouton de survie était enterré sous
+  l'interface. Elle vit désormais sur le body, au niveau de la modale —
+  rien au-dessus — et le parcours MESURE (elementFromPoint) qu'elle
+  recouvre jusqu'à la bande de l'en-tête.
+- **Et les casses muettes se disent** : une exception non rattrapée affiche
+  désormais un bandeau — « Quelque chose s'est cassé » — une fois, avec le
+  bouton Recharger et la croix. Un aveu, pas un pansement : si un défaut
+  laisse encore un écran figé, l'usager saura au moins qu'il y a eu casse.
+
 ## [1.84.0] — 2026-09-04 — TEMPS-POI-1
 
 ### La fiche d'un lieu donne le temps de trajet, par mode, à la demande
@@ -70,7 +89,6 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   cachée.
 - L'index arrive parfois APRÈS la frappe : les stations paraissent alors à
   son arrivée — celui qui a déjà tapé n'a pas à retaper.
-
 ## [1.81.1] — 2026-09-04 — AUDIT-2
 
 ### Corrigé — l'audit de la CI encaisse les pannes du registre npm
