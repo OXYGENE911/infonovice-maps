@@ -752,6 +752,7 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       dans le mode configuré, les autres sur demande.
 - [x] PR #236 — TEMPS-POI-1 (04/09) : la fiche d'un lieu donne le temps de
 - [x] PR #236 — TEMPS-POI-1 (04/09) : la fiche d'un lieu donne le temps de
+- [x] PR #237 — TEMPS-POI-1 (04/09) : la fiche d'un lieu donne le temps de
       trajet par mode (🚗 🏍️ 🚲 🚶), à la demande — une requête par appui,
       deux au plus pour les quatre modes, zéro d'office. Reste ouvert : la
       même rangée dans la fiche destination de la recherche.
