@@ -104,8 +104,17 @@ if (entete) {
   publierHauteur();
 }
 
+/* LA PAGE SE PEINT UNE FOIS AVANT QUE LA CARTE NE SE CONSTRUISE (PERF-1,
+   04/09). Mesuré : la coquille d'attente de la barre de recherche (index.html)
+   ne suffisait PAS à avancer le LCP dans Lighthouse — dans la trace observée,
+   le script de module s'exécute avant la première image, la coquille n'est
+   jamais peinte, et le plus grand texte reste celui que le script produit,
+   à 4 s. Deux `requestAnimationFrame` : la première image part avec le HTML
+   seul (en-tête, coquille), la construction commence à la suivante — un
+   trentième de seconde, contre une tâche longue de moins au démarrage. */
 const conteneur = document.getElementById('carte');
-if (conteneur) {
+const construire = (): void => {
+  if (!conteneur) return;
   creerCarte(conteneur);
 
   /* LA HAUTEUR DE L'ATTRIBUTION EST PUBLIÉE, ELLE AUSSI. Le pied de page se
@@ -169,4 +178,5 @@ if (conteneur) {
     });
     guetteur.observe(conteneur, { childList: true, subtree: true });
   }
-}
+};
+requestAnimationFrame(() => { requestAnimationFrame(construire); });

@@ -27,6 +27,46 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   RECHERCHE-8 — et la clause `brand` ne trouvait rien ; seuls les objets
   dont le NOM porte « Mc Donald's » répondaient, par chance. La particule
   « Mc » reste collée désormais.
+## [1.94.0] — 2026-09-04 — PERF-1
+
+### La barre de recherche existe avant le script — Lighthouse Performance, mesuré pour la première fois
+- **Lighthouse mobile en production, v1.92 : Performance 52, Accessibilité
+  100, Bonnes pratiques 96, SEO 100.** La règle du projet exige ≥ 90 sur
+  les quatre ; la 0.31.1 (26/08) n'avait mesuré que « trois axes ». Détail :
+  FCP 2,6 s, **LCP 5,0 s**, **TBT 1 240 ms**, Speed Index 3,9 s.
+- **Le plus grand élément peint est le texte « Rechercher une adresse… »**,
+  et il n'arrivait qu'à 5,0 s — 4,3 s de « render delay » — parce que la
+  barre naissait en JavaScript, après le téléchargement et l'exécution du
+  bundle entier. Une coquille inerte (`.recherche-attente`, `aria-hidden`,
+  `disabled`, hors tabulation) tient sa place depuis le HTML avec la
+  géométrie EXACTE de la vraie barre ; le composant la retire en se posant.
+  Un parcours E2E garde les deux promesses : elle existe sans script, et la
+  vraie barre coïncide au pixel (pas de saut de page).
+- **La coquille seule ne suffisait pas, et la mesure l'a dit** : dans la
+  trace que Lighthouse observe, le script de module s'exécute AVANT la
+  première image, la coquille n'est jamais peinte. La construction de la
+  carte est donc différée de deux `requestAnimationFrame` : la première
+  image part avec le HTML seul. Effet secondaire mesuré : la tâche longue
+  du démarrage passe de 1 195 ms à 432 ms au plus (elle se scinde).
+- **Mesure locale avant/après** (même poste, même émulation mobile, dist
+  servi par `vite preview`), en toute honnêteté :
+  · Lighthouse : Performance 68 → 67 (bruit de mesure ±4 sur cinq passes),
+    FCP 2,6 s → 2,6 s, **LCP 3,9 s → 3,8 s — inchangé dans l'attribution
+    de Lighthouse**, qui continue d'imputer le LCP au placeholder produit
+    par le script ; TBT 620 → 700 ms (bruit) ; CLS 0,005 → 0.
+  · Le navigateur, lui, le voit : `PerformanceObserver` (LCP), 4G lent +
+    CPU ×4, viewport Lighthouse : **LCP = FCP = 784 ms**, élément = la
+    coquille, aucun candidat postérieur. C'est la métrique que mesure
+    Chrome chez l'usager (web-vitals, CrUX), pas celle du laboratoire.
+  · Le score Lighthouse ≥ 90 n'est donc PAS atteint par cette PR ; la
+    marche suivante est la tâche longue (PERF-2, feuille de route).
+- **Ce que la mesure a aussi dit, et qui reste à faire (PERF-2, à la feuille
+  de route)** : UNE tâche longue de 1,2 s dans notre bundle au démarrage —
+  profil CPU ×4 : MapLibre ≈ 600 ms, notre code ≈ 450 ms, compilation
+  ≈ 500 ms. `creerCarte` construit dix-sept composants d'un seul tenant,
+  câblés entre eux. Les découper en tours d'horloge (et différer le
+  planificateur et le bandeau de guidage, 360 Ko de source, jusqu'au premier
+  appui) est un chantier à part.
 
 ## [1.92.0] — 2026-09-04 — RECHERCHE-10
 

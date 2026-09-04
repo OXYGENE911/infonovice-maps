@@ -82,6 +82,17 @@
   <header class="entete" role="banner">
     <span class="entete-marque">Infonovice <strong>Maps</strong></span>
     <span class="entete-note">Cartographie souveraine — IGN&nbsp;· BAN&nbsp;· zéro tracking</span>
+    <!-- LA BARRE DE RECHERCHE EXISTE AVANT LE SCRIPT (PERF-1, 04/09). Mesuré
+         par Lighthouse mobile en production : le plus grand élément peint
+         (LCP) est le texte « Rechercher une adresse… », et il n'arrivait
+         qu'à 5,0 s — 4,3 s de « render delay » — parce que la barre naissait
+         en JavaScript, après le téléchargement et l'exécution de tout le
+         bundle. Cette coquille a la géométrie exacte de la vraie barre ; le
+         composant la retire en se posant. Inerte : ni saisie, ni tabulation,
+         ni lecteur d'écran. -->
+    <div class="recherche-attente" aria-hidden="true">
+      <input type="search" placeholder="Rechercher une adresse…" disabled tabindex="-1">
+    </div>
   </header>
   <!-- LE REPÈRE PRINCIPAL ET L'APPLICATION SONT DEUX NŒUDS, et il le faut.
        `role="application"` est le bon choix pour une carte : il demande au
