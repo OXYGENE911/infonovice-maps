@@ -86,7 +86,11 @@ test('LE RELIEF SE DESSINE, et ses hauteurs viennent de l’IGN', async ({ page 
     (window as unknown as { __carte: { areTilesLoaded(): boolean } })
       .__carte.areTilesLoaded()), { timeout: 30_000 }).toBe(true);
 
-  const hauteurs = await page.evaluate(() => {
+  /* LE RENDU PEUT ÊTRE UNE IMAGE EN RETARD sur les tuiles (attrapé en CI
+     sous charge, deux fois le 04/09) : areTilesLoaded dit que les données
+     sont là, pas que la frame qui les dessine est passée. On SONDE le
+     calque au lieu de le lire une fois. */
+  const lireHauteurs = (): Promise<number[]> => page.evaluate(() => {
     const c = (window as unknown as { __carte: {
       queryRenderedFeatures(o?: object): { layer: { id: string };
         properties: Record<string, unknown> }[];
@@ -95,6 +99,9 @@ test('LE RELIEF SE DESSINE, et ses hauteurs viennent de l’IGN', async ({ page 
       .map((f) => Number(f.properties['hauteur']))
       .filter((h) => Number.isFinite(h) && h > 0);
   });
+  await expect.poll(async () => (await lireHauteurs()).length,
+    { timeout: 15_000 }).toBeGreaterThan(0);
+  const hauteurs = await lireHauteurs();
 
   expect(hauteurs.length,
     'aucun bâtiment avec hauteur dessiné — le calque 3D ne rend rien')

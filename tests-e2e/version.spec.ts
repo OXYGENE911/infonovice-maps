@@ -56,7 +56,11 @@ test('LE BOUTON VIDE VRAIMENT LES CACHES avant de recharger', async ({ page }) =
   await page.getByRole('button', { name: 'Mettre à jour l’application' }).click();
 
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 20_000 });
-  await expect.poll(() => page.evaluate(() => caches.has('temoin-version')),
-    { timeout: 10_000, message: 'le cache témoin a survécu à la mise à jour' })
+  /* LE RECHARGEMENT PEUT TOMBER PENDANT LE SONDAGE (attrapé en CI sous
+     charge, deux fois le 04/09) : « Execution context was destroyed ». La
+     navigation n'est pas un échec — on repolle sur la page d'après. */
+  await expect.poll(() => page.evaluate(() => caches.has('temoin-version'))
+    .catch(() => null),
+  { timeout: 15_000, message: 'le cache témoin a survécu à la mise à jour' })
     .toBe(false);
 });
