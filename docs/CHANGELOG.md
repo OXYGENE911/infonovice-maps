@@ -40,11 +40,15 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   cherchés, puisque la commune situe — étaient comptés comme du bruit dans
   le nom. Le bruit se mesure sur TOUT ce qui a été écrit. Même remède pour
   « Aéroport Orly » (l'aéroport passe devant « AÉROPORTS DE PARIS (ADP) »).
-- **Ce qui porte toute la phrase passe devant ce qui n'en porte qu'une
-  partie.** « Mont Saint Michel » fait reconnaître « Saint-Michel » comme
-  commune, ne laisse que « Mont » à chercher, et un lieu-dit « Mont » des
-  Pyrénées valait autant que ce qui s'appelle Mont-Saint-Michel. Un point
-  de plus à qui porte les trois mots — la commune seule n'y a pas droit.
+- **Ce qui porte toute la phrase dans son nom passe devant ce qui n'en
+  porte qu'une partie.** « Mont Saint Michel » fait reconnaître
+  « Saint-Michel » comme commune, ne laisse que « Mont » à chercher, et un
+  lieu-dit « Mont » des Pyrénées valait autant que ce qui s'appelle
+  Mont-Saint-Michel. Un point de plus à qui porte les trois mots dans son
+  NOM — la commune seule n'y a pas droit, et l'adresse ne compte pas
+  (mesuré dans l'heure : comptée, elle donnait le point à toute fiche
+  SIRENE de la commune, « LAURENT PICARD, avenue Ardouin » devant le
+  magasin « Picard »).
   Mesuré au passage : l'index `poi` de la Géoplateforme ne connaît PAS le
   Mont-Saint-Michel (cinq collines homonymes, pas l'abbaye) ; c'est la BAN
   qui le porte, en commune.

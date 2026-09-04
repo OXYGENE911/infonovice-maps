@@ -323,6 +323,15 @@ describe('le nom exact passe devant le nom qui le contient', () => {
     ];
     expect(fusionner(ormesson, ['castorama'], 10, [{ lon: 2.5366, lat: 48.7848 }, ici],
       ['castorama', 'ormesson'])[0]?.libelle).toBe('Castorama');
+    /* DANS LE NOM SEUL : l'adresse d'une fiche SIRENE porte toujours la
+       commune. Comptée, elle donnait le point à « LAURENT PICARD, avenue
+       Ardouin » devant le magasin « Picard », qui n'a pas d'adresse. */
+    const picard = [
+      t('LAURENT PICARD', 'entreprise', 2.571, 48.812, '7 T AVENUE ARDOUIN 94420 LE PLESSIS-TREVISE'),
+      t('Picard', 'osm', 2.573, 48.810),
+    ];
+    expect(fusionner(picard, ['picard'], 10, [{ lon: 2.5721, lat: 48.811 }, ici],
+      ['picard', 'plessis', 'trevise'])[0]?.libelle).toBe('Picard');
   });
 
   it('DEUX OBJETS OSM DU MÊME LIEU font UNE ligne — deux magasins distincts en font deux', () => {

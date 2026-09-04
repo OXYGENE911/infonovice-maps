@@ -249,14 +249,21 @@ export function fusionner(
     let n = notes.get(t);
     if (n === undefined) {
       const dd = d2(t);
-      /* CE QUI PORTE TOUTE LA PHRASE, commune comprise, passe devant ce qui
-         n'en porte qu'une partie. Mesuré le 04/09 : « Mont Saint Michel »
-         fait reconnaître « Saint-Michel » comme commune, ne laisse que
-         « Mont » à chercher, et un lieu-dit « Mont » des Pyrénées valait
-         alors autant que ce qui s'appelle Mont-Saint-Michel. Un point de
-         plus, pas davantage : la commune seule (« Ormesson », « Beaucouzé »)
-         ne porte pas la phrase entière et reste où elle est. */
-      const toute = ecrits.length > mots.length && motsPortes(t, ecrits) === ecrits.length ? 1 : 0;
+      /* CE QUI PORTE TOUTE LA PHRASE DANS SON NOM, commune comprise, passe
+         devant ce qui n'en porte qu'une partie. Mesuré le 04/09 : « Mont
+         Saint Michel » fait reconnaître « Saint-Michel » comme commune, ne
+         laisse que « Mont » à chercher, et un lieu-dit « Mont » des Pyrénées
+         valait alors autant que ce qui s'appelle Mont-Saint-Michel. Un point
+         de plus, pas davantage : la commune seule (« Ormesson »,
+         « Beaucouzé ») ne porte pas la phrase entière et reste où elle est.
+         DANS LE NOM SEUL, et c'est une correction mesurée dans l'heure :
+         compter l'adresse donnait le point à TOUTE fiche SIRENE de la commune
+         — « LAURENT PICARD, avenue Ardouin, LE PLESSIS-TRÉVISE » passait
+         devant le magasin « Picard » d'OpenStreetMap, qui n'a pas d'adresse
+         à faire valoir. */
+      const nomSeul: Trouvaille = { ...t, contexte: '', adresse: '' };
+      const toute = ecrits.length > mots.length
+        && motsPortes(nomSeul, ecrits) === ecrits.length ? 1 : 0;
       n = [motsPortes(t, mots) + toute, palierDistance(dd) + Math.min(bruit(t, ecrits), 3), dd];
       notes.set(t, n);
     }
