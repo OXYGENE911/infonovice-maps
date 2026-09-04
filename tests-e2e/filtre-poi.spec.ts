@@ -561,3 +561,95 @@ test('CLIQUER SUR UN POINT NE REFERME RIEN — le va-et-vient est préservé', a
   await expect(page.locator('details.reglages[open]'),
     'cliquer un point a refermé le menu — le va-et-vient est cassé').toHaveCount(1);
 });
+
+test.describe('TEMPS-POI-1', () => {
+  test.use({ permissions: ['geolocation'], geolocation: { longitude: 2.34, latitude: 48.85 } });
+
+  test('le temps de trajet se demande PAR MODE — jamais d’office, jamais sans position', async ({ page }) => {
+    /* ARMELIN, 04/09 : « quand je clique sur un POI, ça devrait afficher le
+       temps de trajet de ma position jusqu'à ce POI si j'y allais en
+       voiture, à pied, vélo ou moto ». QUATRE MODES, DEUX REQUÊTES AU PLUS,
+       ZÉRO D'OFFICE — les quotas sont un bien commun, et ce parcours COMPTE
+       les requêtes. */
+    const itineraires: string[] = [];
+    await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+      itineraires.push(route.request().url());
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+        geometry: { type: 'LineString', coordinates: [[2.34, 48.85], [2.3522, 48.8566]] },
+        distance: 5_200, duration: 780,
+      }) });
+    });
+    await ouvrirCarte(page);
+    await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      contentType: 'application/json',
+      body: JSON.stringify({ elements: [{
+        type: 'node', id: 1, lat: 48.8566, lon: 2.3522,
+        tags: { amenity: 'restaurant', name: 'Le Bistrot' },
+      }] }),
+    }));
+    await ouvrir(page);
+    await page.locator('.poi-famille[data-cle="restaurant"]').click();
+    await poser(page, 2.3522, 48.8566);
+    await expect(page.locator('.poi-filtre-etat')).toContainText('1 lieu', { timeout: 15_000 });
+    await page.locator('.poi-bulle').click();
+    await page.locator('#carte canvas.maplibregl-canvas').click({
+      position: await page.evaluate(() => {
+        const c = (window as unknown as { __carte: {
+          project(l: [number, number]): { x: number; y: number };
+        } }).__carte;
+        const q = c.project([2.3522, 48.8566]);
+        return { x: Math.round(q.x), y: Math.round(q.y) };
+      }),
+    });
+    await expect(page.locator('.poi-fiche')).toBeVisible({ timeout: 10_000 });
+
+    /* OUVRIR EST GRATUIT : aucune requête d'itinéraire n'est partie. */
+    expect(itineraires).toHaveLength(0);
+
+    /* SANS POSITION, PAS DE PROMESSE : le geste renvoie au bouton qui la
+       donne — jamais une requête depuis un point inventé. */
+    const etat = page.locator('.poi-fiche-temps-etat');
+    await page.getByRole('button', { name: 'Temps de trajet en voiture' }).click();
+    await expect(etat).toContainText('Me localiser');
+    expect(itineraires).toHaveLength(0);
+
+    /* On se localise (le bouton MapLibre), puis chaque mode répond. */
+    await page.locator('.maplibregl-ctrl-geolocate').click();
+
+    await expect.poll(async () => {
+      await page.getByRole('button', { name: 'Temps de trajet en voiture' }).click();
+      return etat.textContent();
+    }, { timeout: 10_000 }).toContain('en voiture');
+    await expect(etat).toContainText('13 min');
+    await expect(etat).toContainText('5,2 km');
+    expect(itineraires).toHaveLength(1);
+
+    /* LE SUIVI VERROUILLE LA CAMÉRA sur la position : chaque tique GPS
+       ramènerait la fiche sous les contrôles du coin. Un second appui coupe
+       le suivi (le cycle du bouton MapLibre — leçon DEST-1), puis on ramène
+       la vue sur le lieu, comme le ferait l'usager. */
+    await page.locator('.maplibregl-ctrl-geolocate').click();
+    await page.evaluate(() => {
+      (window as unknown as { __carte: { easeTo(o: object): void } })
+        .__carte.easeTo({ center: [2.3522, 48.8566], offset: [0, 120], duration: 0 });
+    });
+
+    /* La moto PARTAGE la voiture : même moteur, zéro requête de plus. */
+    await page.getByRole('button', { name: 'Temps de trajet à moto' }).click();
+    await expect(etat).toContainText('à moto');
+    expect(itineraires).toHaveLength(1);
+
+    /* Le vélo se déduit du chemin piéton — une seconde requête, et le mot
+       « estimation » se dit. */
+    await page.getByRole('button', { name: 'Temps de trajet à vélo' }).click();
+    await expect(etat).toContainText('à vélo');
+    await expect(etat).toContainText('estimation');
+    expect(itineraires).toHaveLength(2);
+
+    /* Et le piéton la réutilise. */
+    await page.getByRole('button', { name: 'Temps de trajet à pied' }).click();
+    await expect(etat).toContainText('à pied');
+    expect(itineraires).toHaveLength(2);
+  });
+});

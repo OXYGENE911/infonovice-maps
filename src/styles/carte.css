@@ -4255,6 +4255,23 @@ filtre-poi {
   margin: 6px 0 0; font: 400 12.5px/1.4 var(--police); color: var(--texte-2);
 }
 
+/* LE TEMPS DE TRAJET PAR MODE (TEMPS-POI-1, 04/09) — quatre boutons, une
+   réponse à la fois. */
+.poi-fiche-temps {
+  display: flex; align-items: center; gap: 6px; margin: 8px 0 0;
+}
+.poi-fiche-temps-mot { font: 650 12px var(--police); color: var(--texte-2); }
+.poi-fiche-temps-mode {
+  padding: 4px 9px; border-radius: 999px; cursor: pointer; font-size: 15px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux); line-height: 1;
+}
+.poi-fiche-temps-mode:hover { border-color: var(--accent); background: var(--bleu-50); }
+.poi-fiche-temps-mode:focus-visible { outline: none; box-shadow: var(--focus); }
+.poi-fiche-temps-etat {
+  display: block; margin: 6px 0 0; font: 600 12.5px var(--police); color: var(--texte-1);
+}
+.poi-fiche-temps-etat:empty { display: none; }
+
 .poi-fiche-source {
   margin: 9px 0 0; font: 400 11px var(--police); color: var(--texte-3);
 }

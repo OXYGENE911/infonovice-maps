@@ -62,6 +62,11 @@ export function poserPositionConnue(p: { lon: number; lat: number }): void {
   positionConnue = p;
 }
 
+/** La dernière position consentie — nulle tant qu'aucun geste ne l'a donnée. */
+export function positionConnueActuelle(): { lon: number; lat: number } | null {
+  return positionConnue;
+}
+
 /* CE QUI RESSEMBLE À UNE ADRESSE NE VA PAS CHERCHER UN NOM. Un numéro en
    tête, c'est la Base Adresse Nationale qui répond — et Overpass n'a pas à
    être dérangé pour « 25 avenue du prophète ». */

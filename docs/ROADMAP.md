@@ -738,6 +738,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       d'itinéraire par fiche ouverte : mesurer le coût réel avant de
       promettre (les quotas sont un bien commun) ; piste sobre : UN calcul
       dans le mode configuré, les autres sur demande.
+- [x] PR #236 — TEMPS-POI-1 (04/09) : la fiche d'un lieu donne le temps de
+      trajet par mode (🚗 🏍️ 🚲 🚶), à la demande — une requête par appui,
+      deux au plus pour les quatre modes, zéro d'office. Reste ouvert : la
+      même rangée dans la fiche destination de la recherche.
 - [ ] BLANC-1 — « à la fin du parcours, écran blanc, obligé de rafraîchir »
       (04/09, sur la version précédente). NON REPRODUIT sur la version
       courante — les parcours d'arrivée passent. Garde ouverte : à
