@@ -52,6 +52,38 @@ const appliquerMaj = registerSW({
    l'autre — le « flash » que toutes les applications à thème connaissent. */
 void restaurerTheme();
 
+/* LE FILET DES CASSES MUETTES (BLANC-1, 04/09). Une exception non rattrapée
+   peut laisser une page qui a l'air vivante et ne répond plus — et l'usager
+   conclut « écran blanc » sans qu'on sache jamais quoi. On ne répare rien
+   ici : on DIT qu'une casse a eu lieu, une fois, avec la porte de sortie.
+   Le message ne s'empile pas et n'efface rien — c'est un aveu, pas un
+   pansement. */
+let casseDite = false;
+const direLaCasse = (): void => {
+  if (casseDite) return;
+  casseDite = true;
+  const bandeau = document.createElement('div');
+  bandeau.className = 'casse-bandeau';
+  bandeau.setAttribute('role', 'alert');
+  const mot = document.createElement('p');
+  mot.textContent = 'Quelque chose s’est cassé dans l’application.'
+    + ' Si l’écran ne répond plus, rechargez :';
+  const bouton = document.createElement('button');
+  bouton.type = 'button';
+  bouton.textContent = 'Recharger';
+  bouton.addEventListener('click', () => { window.location.reload(); });
+  const fermer = document.createElement('button');
+  fermer.type = 'button';
+  fermer.className = 'casse-fermer';
+  fermer.textContent = '✕';
+  fermer.setAttribute('aria-label', 'Fermer cet avertissement');
+  fermer.addEventListener('click', () => { bandeau.remove(); });
+  bandeau.append(mot, bouton, fermer);
+  document.body.append(bandeau);
+};
+window.addEventListener('error', () => { direLaCasse(); });
+window.addEventListener('unhandledrejection', () => { direLaCasse(); });
+
 // L'état de connexion et l'invite d'installation vivent dans l'en-tête :
 // ils concernent l'application entière, pas la carte.
 document.body.append(new BandeauMaj());
