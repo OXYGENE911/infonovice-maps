@@ -574,3 +574,39 @@ test('ET IL DIT QUE LE NOM S’AJOUTE AUX AUTRES FILTRES', async ({ page }) => {
   await expect(cumul).toContainText('150 kW et plus');
   await expect(cumul).toContainText('TOUT à la fois');
 });
+
+test('RESEAU-2 : taper un nom rend la LISTE des stations — et le choix y vole', async ({ page }) => {
+  /* ARMELIN, quatrième signalement : « on voit en exemple écrit McDonald et
+     si je tape McDonald, il ne se passe absolument rien ». Reproduit : la
+     carte se filtrait, mais au zoom France la couche n'existe pas — rien ne
+     changeait à l'écran. La recherche rend désormais quelque chose qu'on
+     peut TOUCHER. */
+  await espionnerIrve(page);
+  await simulerIndexNational(page, [
+    { nom: 'IZIVIA chez McDonald’s Ormesson', reseau: 'Izivia', lon: 2.54, lat: 48.79 },
+    { nom: 'IZIVIA chez McDonald’s Lyon Sud', reseau: 'Izivia', lon: 4.82, lat: 45.7 },
+    { nom: 'Fastned Paris Nord', reseau: 'Fastned', lon: 2.36, lat: 48.92 },
+  ]);
+  await ouvrirBornes(page);
+
+  await page.locator('.poi-reseau-recherche').fill('McDonald');
+  const stations = page.locator('.poi-station');
+  await expect(stations).toHaveCount(2, { timeout: 10_000 });
+  /* Le compte se dit, et l'ordre est LA DISTANCE : Ormesson (proche de la
+     vue parisienne du parcours) avant Lyon. */
+  await expect(page.locator('.poi-stations-titre')).toContainText('2 stations');
+  await expect(stations.nth(0)).toContainText('Ormesson');
+  await expect(stations.nth(1)).toContainText('Lyon Sud');
+  await expect(stations.nth(0).locator('.poi-station-distance')).toContainText('km');
+
+  /* Le choix VOLE vers la station : le centre de la carte la rejoint. */
+  await stations.nth(0).click();
+  await expect.poll(() => page.evaluate(() => {
+    const c = (window as unknown as { __carte: { getCenter(): { lng: number; lat: number } } }).__carte;
+    return Math.abs(c.getCenter().lng - 2.54) < 0.01 && Math.abs(c.getCenter().lat - 48.79) < 0.01;
+  }), { timeout: 10_000 }).toBe(true);
+
+  /* Et un nom inconnu ne rend PAS de liste fantôme. */
+  await page.locator('.poi-reseau-recherche').fill('Zorglub');
+  await expect(page.locator('.poi-stations')).toBeHidden();
+});

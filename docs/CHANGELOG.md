@@ -2,6 +2,24 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.82.0] — 2026-09-04 — RESEAU-2
+
+### Taper un nom de station rend une liste, pas un silence
+- Armelin, quatrième signalement : « on voit en exemple écrit McDonald et si
+  je tape McDonald, il ne se passe absolument rien. »
+- **Reproduit le 04/09** : le mécanisme répondait — message honnête, rappel
+  « Bornes filtrées : nom McDonald », carte filtrée — mais au zoom France la
+  couche des bornes n'existe pas : rien ne changeait à l'écran. Une
+  recherche qui aboutit doit rendre quelque chose qu'on peut TOUCHER.
+- La frappe rend désormais **la liste des stations qui portent ce nom**
+  (l'index national est déjà en mémoire — c'est lui qui donne les réseaux),
+  le compte en tête, les huit plus proches d'abord, chacune avec sa
+  distance. **Le choix allume la couche des bornes et vole vers la
+  station** : rejoindre une station sans la voir referait une fonction
+  cachée.
+- L'index arrive parfois APRÈS la frappe : les stations paraissent alors à
+  son arrivée — celui qui a déjà tapé n'a pas à retaper.
+
 ## [1.81.1] — 2026-09-04 — AUDIT-2
 
 ### Corrigé — l'audit de la CI encaisse les pannes du registre npm
