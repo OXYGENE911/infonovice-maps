@@ -58,7 +58,15 @@ const ESSAIS: { q: string; attendu: RegExp }[] = [
   { q: 'FnacDarty Siège Ivry sur Seine', attendu: /fnac/i },
 ];
 
+/* ON COMPTE AUSSI LES PREMIERS RANGS (RECHERCHE-10, 04/09). Ce banc passait
+   12/12 en v1.91 — et LIRE les rangs disait autre chose : la Tour Eiffel
+   seconde derrière une SCI, le Stade de France quatrième derrière trois
+   restaurants, le Castorama d'Ormesson troisième. Un banc qui compte les
+   réussites sans lire les rangs certifie une liste que l'usager ne reconnaît
+   pas. Les coordonnées s'impriment pour la même raison : trois « Castorama —
+   Lieu de la carte » ne se distinguent que par elles. */
 let reussis = 0;
+let auPremierRang = 0;
 for (const { q, attendu } of ESSAIS) {
   const t0 = Date.now();
   let ligne = '';
@@ -68,11 +76,12 @@ for (const { q, attendu } of ESSAIS) {
     const gagnant = r.lieux.findIndex((l) => attendu.test(l.libelle));
     const ok = gagnant >= 0;
     if (ok) reussis += 1;
+    if (gagnant === 0) auPremierRang += 1;
     ligne = `${ok ? '  OK ' : 'ÉCHEC'}  ${String(ms).padStart(5)}ms  ${q}`
       + (ok ? `  → rang ${gagnant + 1}/${r.lieux.length}` : `  (${r.lieux.length} réponses)`);
     console.log(ligne);
     for (const l of r.lieux.slice(0, 3)) {
-      console.log(`         · [${l.source}] ${l.libelle} — ${l.contexte}`);
+      console.log(`         · [${l.source}] ${l.libelle} — ${l.contexte}  (${l.lon.toFixed(4)}, ${l.lat.toFixed(4)})`);
     }
     if (r.panne) console.log(`         ! une source en panne : ${r.panne.message}`);
     if (r.commune) console.log(`         ~ commune reconnue : ${r.commune.nom} ${r.commune.codePostal}`);
@@ -84,4 +93,4 @@ for (const { q, attendu } of ESSAIS) {
   await new Promise((r) => { setTimeout(r, 1000); });
 }
 
-console.log(`\n=== ${reussis}/${ESSAIS.length} requêtes résolues ===`);
+console.log(`\n=== ${reussis}/${ESSAIS.length} requêtes résolues, ${auPremierRang} au premier rang ===`);

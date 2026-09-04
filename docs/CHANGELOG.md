@@ -2,6 +2,72 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.92.0] — 2026-09-04 — RECHERCHE-10
+
+### Le nom exact passe devant le nom qui le contient
+- **Le banc des douze requêtes passait 12/12 en v1.91 — et LIRE les rangs
+  disait autre chose.** « Tour Effeil » rendait « SCI 43 CLER TOUR EFFEIL »
+  devant la Tour Eiffel ; « Gare Saint Lazare », une société d'aménagement
+  devant la gare ; « Stade de France », trois « SOC RESTAURANTS DU STADE
+  FRANC » devant le stade (4e rang). Cause mesurée : à mots égaux, seule la
+  distance au repère départageait, et depuis la vue France — à trois cents
+  kilomètres des deux — c'est un tirage au sort. Un banc qui compte les
+  réussites sans lire les rangs certifie une liste que l'usager ne
+  reconnaît pas.
+- **Le bruit du nom** : les mots du libellé que l'usager n'a PAS écrits.
+  « Tour Eiffel » n'en porte aucun, la SCI en porte trois. **Additionné à un
+  palier de distance** (~5 / 30 / 100 / 500 km) — et pas placé avant ni
+  après elle : depuis Lyon, « gare lyon » rend toujours la Part-Dieu (à
+  2 km, deux mots de bruit) avant la gare de Lyon de Paris (nom exact, à
+  400 km) ; depuis Paris 16e, « Stade de France » rend le stade (12 km)
+  avant le restaurant du Parc des Princes (1 km). Saint-Pierre-et-Miquelon
+  (RECHERCHE-9) reste à sa place.
+- **La commune écrite est le repère du classement.** Mesuré en v1.91 :
+  « Castorama Ormesson » rendait trois « Castorama — Lieu de la carte »
+  indiscernables, et le bon — celui de Chennevières, voisin
+  d'Ormesson-sur-Marne — en TROISIÈME, derrière Vitry et Antony, plus près
+  du centre de la France d'où l'application s'ouvre. « Collège Albert Camus
+  Plessis-Trévise » rendait de même un collège de l'Essonne devant celui du
+  Plessis. Quand la phrase nomme une commune, « le plus proche » se mesure
+  depuis elle — depuis toutes ses homonymes, au plus près — la vue restant
+  un repère à leurs côtés (garde-fou mesuré : « Mont Saint Michel » fait
+  reconnaître « Saint-Michel », Aisne, à 300 km du Mont). Après :
+  Chennevières et le Plessis au premier rang.
+- **Les mots de la commune ne sont pas du bruit.** Second banc, quatorze
+  requêtes du quotidien depuis le Val-de-Marne : « mairie plessis trevise »
+  rendait la « Mairie » de la commune d'à côté devant « Mairie - Le
+  Plessis-Trévise », parce que « Plessis » et « Trévise » — exclus des mots
+  cherchés, puisque la commune situe — étaient comptés comme du bruit dans
+  le nom. Le bruit se mesure sur TOUT ce qui a été écrit. Même remède pour
+  « Aéroport Orly » (l'aéroport passe devant « AÉROPORTS DE PARIS (ADP) »).
+- **Ce qui porte toute la phrase dans son nom passe devant ce qui n'en
+  porte qu'une partie.** « Mont Saint Michel » fait reconnaître
+  « Saint-Michel » comme commune, ne laisse que « Mont » à chercher, et un
+  lieu-dit « Mont » des Pyrénées valait autant que ce qui s'appelle
+  Mont-Saint-Michel. Un point de plus à qui porte les trois mots dans son
+  NOM — la commune seule n'y a pas droit, et l'adresse ne compte pas
+  (mesuré dans l'heure : comptée, elle donnait le point à toute fiche
+  SIRENE de la commune, « LAURENT PICARD, avenue Ardouin » devant le
+  magasin « Picard »).
+  Mesuré au passage : l'index `poi` de la Géoplateforme ne connaît PAS le
+  Mont-Saint-Michel (cinq collines homonymes, pas l'abbaye) ; c'est la BAN
+  qui le porte, en commune.
+  Le second banc reste hors dépôt (mesure) ; il a aussi révélé que « McDo »
+  ne rend rien — c'est le chantier suivant.
+- **Deux objets OSM du même lieu font UNE ligne** : le nœud du magasin et
+  son bâtiment tombaient de part et d'autre d'un arrondi au millième de
+  degré une fois sur deux. Même nom à trois cents mètres près = même lieu ;
+  deux tabacs à cinq cents mètres restent deux tabacs.
+- **Un lieu de la carte porte son adresse** quand OSM la connaît
+  (ADRESSE-POI-1 réutilisée), la commune à défaut, « Lieu de la carte » en
+  dernier recours — « aucune information sur l'adresse du lieu » était le
+  retour d'Armelin.
+- Mesure de contrôle avant/après sur le vrai code (`scripts/essai-douze-requetes.ts`)
+  consignée dans la PR. Bundle : 157,7 Ko gzippés hors MapLibre (budget 300).
+- La feuille de route ferme un fossile : « Accessibilité `role="application`
+  — sa propre PR » était résolu depuis la PR #48 (27/08), au chapitre
+  « Limites connues » même ; la ligne avait ressuscité sous le pilote union.
+
 ## [1.91.1] — 2026-09-04 — DOCS-3
 
 ### La feuille de route s'instruit et se répare

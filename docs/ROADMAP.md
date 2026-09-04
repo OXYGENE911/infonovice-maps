@@ -364,8 +364,11 @@ Triage consigné ici ; chaque ligne devient une PR ou une étude datée.
       optimization=shortest rend zéro (voie morte) ; sans-autoroute reste le
       seul vrai choix (Paris→Lyon : 466 km / 4 h 46 contre 502 km / 7 h 50).
       Cette ligne était un fossile ressuscité par le pilote union.
-- [ ] Accessibilité `role="application"` (déjà au chapitre « Limites
-      connues ») — sa propre PR.
+- [x] Accessibilité `role="application"` (déjà au chapitre « Limites
+      connues ») — sa propre PR. FERMÉ le 04/09 (RECHERCHE-10, ménage) :
+      c'était la PR #48 du 27/08, résolue au chapitre « Limites connues »
+      même — `<main>` garde le repère, le rôle vit sur `#carte`. Cette ligne
+      était un fossile ressuscité par le pilote union.
 - [x] Ménage Dependabot (PR #49) : ESLint 10.9, Vite 8.2.2 (mineures).
       TypeScript 7.0.2 ESSAYÉ ET ÉCARTÉ avec la preuve, le 27/08 : `tsc`
       lui-même passe sans une erreur, mais typescript-eslint REFUSE de
@@ -832,6 +835,19 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] RECHERCHE-10 (04/09) : le nom exact passe devant le nom qui le
+      contient. Le banc des douze requêtes passait 12/12 en v1.91, mais les
+      RANGS disaient « SCI 43 CLER TOUR EFFEIL » devant la Tour Eiffel, une
+      société d'aménagement devant la gare Saint-Lazare, trois restaurants
+      devant le Stade de France — à mots égaux, seule la distance au repère
+      tranchait, tirage au sort depuis la vue France. Le bruit du nom (les
+      mots qu'on n'a pas écrits) s'additionne à un palier de distance, sans
+      détrôner la proximité (« gare lyon » depuis Lyon rend la Part-Dieu ;
+      Saint-Pierre-et-Miquelon reste derrière Orly). Et LA COMMUNE ÉCRITE
+      DEVIENT LE REPÈRE : « Castorama Ormesson » rendait celui de
+      Chennevières en troisième derrière Vitry et Antony, plus près du
+      centre de la France. Deux objets OSM d'un même lieu font une ligne,
+      et la ligne porte l'adresse OSM.
 - [x] PR #246 — RECHERCHE-7 (04/09) : l'annuaire de l'administration devient
       la sixième source de recherche (national + borné à la commune reconnue,
       mesuré sur l'API réelle : c'est la clause qui comble « INRAE

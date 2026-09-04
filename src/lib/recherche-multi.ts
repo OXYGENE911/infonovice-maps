@@ -42,6 +42,7 @@ import {
   chercherEtablissements, type Etablissement as Ecole,
 } from './annuaire-education';
 import { chercherAdministrations, type Administration } from './annuaire-administration';
+import { adresseDesTags } from './adresse-lieu';
 
 /** Ce qu'une source rend, une fois ramené à la forme de la liste. */
 export interface Trouvaille extends PointGeo {
@@ -146,6 +147,69 @@ export function cleTrouvaille(t: Trouvaille): string {
 }
 
 /**
+ * Deux réponses désignent-elles le MÊME lieu ? — PURE. Même nom, à trois
+ * cents mètres près.
+ *
+ * LA CLÉ ARRONDIE NE SUFFISAIT PAS (RECHERCHE-10, 04/09). `cleTrouvaille`
+ * arrondit au millième de degré : deux objets OSM d'un même lieu — le nœud du
+ * magasin et son bâtiment, le lycée et son entrée — tombent de part et d'autre
+ * de la frontière d'arrondi une fois sur deux, et la liste les montre deux
+ * fois. Deux lignes identiques ne proposent rien de plus qu'une ; elles font
+ * douter des deux. Trois cents mètres, pas plus : deux tabacs du même nom à
+ * cinq cents mètres sont deux tabacs.
+ */
+export function memeLieu(a: Trouvaille, b: Trouvaille): boolean {
+  const nom = (s: string): string => nu(s).replace(/\s+/g, ' ').trim();
+  return nom(a.libelle) === nom(b.libelle)
+    && Math.abs(a.lon - b.lon) < 0.004 && Math.abs(a.lat - b.lat) < 0.003;
+}
+
+/** Les mots d'un texte, nus : sans accent, sans ponctuation, sans les vides — PURE. */
+function decouper(texte: string): string[] {
+  return nu(texte).replace(/[^\p{L}\p{N}]+/gu, ' ').split(' ')
+    .filter((m) => m.length >= 2 && !VIDES.has(m));
+}
+
+/**
+ * Les mots du LIBELLÉ que l'usager n'a pas écrits — PURE.
+ *
+ * C'EST CE QUI SÉPARE LE MONUMENT DE LA SOCIÉTÉ QUI PORTE SON NOM
+ * (RECHERCHE-10, 04/09). Mesuré sur le banc des douze requêtes en v1.91 :
+ * « Tour Effeil » rendait « SCI 43 CLER TOUR EFFEIL » DEVANT la Tour Eiffel,
+ * « Gare Saint Lazare » une société d'aménagement devant la gare, « Stade de
+ * France » trois « SOC RESTAURANTS DU STADE FRANC » devant le stade. Les deux
+ * portent tous les mots cherchés ; seule la distance au repère les
+ * départageait — et depuis la vue France, à trois cents kilomètres des deux,
+ * c'est un tirage au sort. « Tour Eiffel » ne porte RIEN de plus que ce qu'on
+ * a écrit ; « SCI 43 CLER TOUR EFFEIL » porte trois mots de plus. Ce surplus
+ * est le bruit.
+ */
+export function bruit(t: Trouvaille, mots: string[]): number {
+  if (mots.length === 0) return 0;
+  return decouper(t.libelle).filter((f) => !mots.some((m) => motRepond(m, f))).length;
+}
+
+/**
+ * La distance en PALIERS, pas au mètre — PURE. Reçoit le carré de la
+ * distance en degrés (celui du tri) ; rend 0 en deçà de ~5 km, puis 1, 2, 3,
+ * et 4 au-delà de ~500 km.
+ *
+ * POURQUOI DES PALIERS. Le bruit ne peut pas passer AVANT la distance :
+ * depuis Lyon, « gare lyon » doit rendre la Part-Dieu (deux mots de bruit, à
+ * 2 km) avant la gare de Lyon de Paris (aucun bruit, à 400 km) — et
+ * l'« Aéroport » de Saint-Pierre-et-Miquelon (RECHERCHE-9) ne doit pas
+ * revenir devant Orly. Il ne peut pas non plus passer APRÈS : depuis
+ * Paris 16e, « Stade de France » rendrait le restaurant du Parc des Princes
+ * (1 km) devant le stade (12 km). On ADDITIONNE donc un palier de distance et
+ * le bruit : au même ordre de grandeur d'éloignement, le nom exact gagne ; à
+ * un ordre de grandeur d'écart, le proche gagne.
+ */
+export function palierDistance(d2: number): number {
+  const d = Math.sqrt(d2);
+  return [0.05, 0.3, 1, 5].filter((seuil) => d >= seuil).length;
+}
+
+/**
  * Fusionne les réponses des sources — PURE.
  *
  * DEUX SOURCES RENDENT SOUVENT LE MÊME LIEU : la Géoplateforme et l'annuaire
@@ -154,32 +218,76 @@ export function cleTrouvaille(t: Trouvaille): string {
  */
 export function fusionner(
   trouvailles: Trouvaille[], mots: string[] = [], plafond = 10,
-  repere: PointGeo | null = null,
+  repere: PointGeo | PointGeo[] | null = null,
+  /* TOUT CE QUI A ÉTÉ ÉCRIT, commune comprise. Les mots CHERCHÉS excluent la
+     commune (elle situe, elle ne nomme pas) ; mais dans le libellé « Mairie -
+     Le Plessis-Trévise », « Plessis » et « Trévise » ne sont pas du bruit :
+     l'usager les a tapés. Mesuré le 04/09 : sans cette liste, la mairie de
+     Chennevières (« Mairie », bruit zéro) passait devant celle du Plessis. */
+  ecrits: string[] = mots,
 ): Trouvaille[] {
   /* À MOTS ÉGAUX, LE PLUS PROCHE D'ABORD (RECHERCHE-9, 04/09). Armelin :
      « quand on tape "aéroport", les premiers lieux affichés sont à plus de
      5000 km de ma position ». Vrai, et vérifié : l'« Aéroport » de
      Saint-Pierre-et-Miquelon (4285 km — la France est grande) sortait avant
      Orly (16 km), parce que le tri ne connaissait que les mots et la source.
-     Une distance approchée en degrés suffit : on ORDONNE, on ne mesure pas. */
-  const d2 = (t: Trouvaille): number => repere === null ? 0
-    : (t.lon - repere.lon) ** 2 + (t.lat - repere.lat) ** 2;
-  const vues = new Set<string>();
+     Une distance approchée en degrés suffit : on ORDONNE, on ne mesure pas.
+
+     PLUSIEURS REPÈRES À LA FOIS (RECHERCHE-10) : quand la phrase nomme une
+     commune, le proche se mesure DEPUIS ELLE — depuis toutes ses homonymes,
+     au plus près — et non depuis la vue. Mesuré en v1.91 : « Castorama
+     Ormesson » rendait les Castorama de Vitry et d'Antony devant celui de
+     Chennevières, parce que les deux premiers sont plus près du centre de la
+     France. L'usager avait écrit « Ormesson » ; la liste l'ignorait. */
+  const reperes = repere === null ? [] : [repere].flat();
+  const d2 = (t: Trouvaille): number => reperes.length === 0 ? 0
+    : Math.min(...reperes.map((r) => (t.lon - r.lon) ** 2 + (t.lat - r.lat) ** 2));
+  /* La note de chaque réponse, calculée UNE fois : les mots portés, la peine
+     (palier de distance + bruit du nom), le carré de la distance. */
+  const notes = new Map<Trouvaille, [number, number, number]>();
+  const noter = (t: Trouvaille): [number, number, number] => {
+    let n = notes.get(t);
+    if (n === undefined) {
+      const dd = d2(t);
+      /* CE QUI PORTE TOUTE LA PHRASE DANS SON NOM, commune comprise, passe
+         devant ce qui n'en porte qu'une partie. Mesuré le 04/09 : « Mont
+         Saint Michel » fait reconnaître « Saint-Michel » comme commune, ne
+         laisse que « Mont » à chercher, et un lieu-dit « Mont » des Pyrénées
+         valait alors autant que ce qui s'appelle Mont-Saint-Michel. Un point
+         de plus, pas davantage : la commune seule (« Ormesson »,
+         « Beaucouzé ») ne porte pas la phrase entière et reste où elle est.
+         DANS LE NOM SEUL, et c'est une correction mesurée dans l'heure :
+         compter l'adresse donnait le point à TOUTE fiche SIRENE de la commune
+         — « LAURENT PICARD, avenue Ardouin, LE PLESSIS-TRÉVISE » passait
+         devant le magasin « Picard » d'OpenStreetMap, qui n'a pas d'adresse
+         à faire valoir. */
+      const nomSeul: Trouvaille = { ...t, contexte: '', adresse: '' };
+      const toute = ecrits.length > mots.length
+        && motsPortes(nomSeul, ecrits) === ecrits.length ? 1 : 0;
+      n = [motsPortes(t, mots) + toute, palierDistance(dd) + Math.min(bruit(t, ecrits), 3), dd];
+      notes.set(t, n);
+    }
+    return n;
+  };
+  const gardees: Trouvaille[] = [];
   return [...trouvailles]
     /* CE QU'ON A ÉCRIT PASSE DEVANT CE QU'ON N'A PAS ÉCRIT.
        LE DÉFAUT QUE CE TRI FERME, mesuré le 03/09 : « INRAE BEAUCOUZE » rendait
        l'INRAE en SIXIÈME position, derrière « Beaucouzé », « Beaucouzé » encore
        et « Eglise, Beaucouzé » — l'index des lieux répondait sur la COMMUNE, ce
        qui est juste et ne sert à rien. On classe donc d'abord par le nombre de
-       mots CHERCHÉS que la réponse porte, la source ne départageant qu'à
-       égalité. */
-    .sort((a, b) => motsPortes(b, mots) - motsPortes(a, mots)
-      || d2(a) - d2(b)
-      || RANG[a.source] - RANG[b.source])
+       mots CHERCHÉS que la réponse porte ; puis par la peine — le nom exact
+       du voisinage avant le nom qui contient les mots (RECHERCHE-10) ; puis
+       par la distance fine ; la source ne départageant qu'à égalité. */
+    .sort((a, b) => {
+      const na = noter(a);
+      const nb = noter(b);
+      return nb[0] - na[0] || na[1] - nb[1] || na[2] - nb[2]
+        || RANG[a.source] - RANG[b.source];
+    })
     .filter((t) => {
-      const c = cleTrouvaille(t);
-      if (vues.has(c)) return false;
-      vues.add(c);
+      if (gardees.some((g) => memeLieu(g, t))) return false;
+      gardees.push(t);
       return true;
     })
     .slice(0, plafond);
@@ -214,10 +322,17 @@ const deAdministration = (a: Administration): Trouvaille => ({
   source: 'administration',
 });
 
-const deOsm = (l: LieuCategorie): Trouvaille => ({
-  lon: l.lon, lat: l.lat, libelle: l.nom ?? '', adresse: '',
-  contexte: 'Lieu de la carte', source: 'osm',
-});
+const deOsm = (l: LieuCategorie): Trouvaille => {
+  /* L'ADRESSE QUAND OSM LA PORTE (ADRESSE-POI-1, réutilisée en RECHERCHE-10) :
+     « Lieu de la carte » ne disait rien, et c'est le retour d'Armelin —
+     « aucune information sur l'adresse du lieu ». À défaut d'une adresse
+     entière, la commune ; à défaut de tout, l'aveu. */
+  const adresse = adresseDesTags(l.tags) ?? '';
+  return {
+    lon: l.lon, lat: l.lat, libelle: l.nom ?? '', adresse,
+    contexte: adresse || l.tags?.['addr:city'] || 'Lieu de la carte', source: 'osm',
+  };
+};
 
 /** Ce qu'on rend à l'appelante : les lieux, et l'aveu d'une source tombée. */
 export interface Resultat {
@@ -296,6 +411,7 @@ export async function chercherPartout(
   const lieux: Trouvaille[] = [];
   let panne: Error | null = null;
   let commune: CommuneReconnue | null = null;
+  let communes: CommuneReconnue[] = [];
 
   const dire = (): void => {
     /* UNE RECHERCHE ABANDONNÉE NE PARLE PLUS : sans ce garde, la frappe
@@ -303,8 +419,18 @@ export async function chercherPartout(
     if (auFil === undefined || signal?.aborted === true) return;
     auFil(rendre());
   };
+  /* LES REPÈRES DU CLASSEMENT : la commune écrite quand il y en a une (toutes
+     ses homonymes) ET la vue (RECHERCHE-10). La vue reste, et c'est un
+     garde-fou mesuré : « Mont Saint Michel » fait reconnaître « Saint-Michel »
+     (Aisne) comme commune — un repère faux, à 300 km du Mont. Le plus proche
+     de l'un OU de l'autre gagne ; un repère faux ne peut pas éloigner ce qui
+     est près de l'usager. */
   const rendre = (): Resultat => ({
-    lieux: fusionner(lieux, motsCherches(q, commune), 10, centre), panne, commune,
+    lieux: fusionner(
+      lieux, motsCherches(q, commune), 10,
+      [...communes, ...(centre === null ? [] : [centre])], motsUtiles(q),
+    ),
+    panne, commune,
   });
 
   const attentes = paris.map((p) => p.then(
@@ -312,7 +438,7 @@ export async function chercherPartout(
     (e: Error) => { if (panne === null) panne = e; },
   ));
   attentes.push(autour.then(
-    (r) => { lieux.push(...r.lieux); commune = r.commune; dire(); },
+    (r) => { lieux.push(...r.lieux); commune = r.commune; communes = r.communes; dire(); },
     /* CETTE PANNE-LÀ COMPTE AUTANT QUE LES AUTRES, et je l'avais d'abord
        avalée en silence. C'est par cette piste que passe désormais Overpass,
        et « un service qui expire ne dit pas CE LIEU N'EXISTE PAS » est une
@@ -353,17 +479,17 @@ export function motsCherches(q: string, commune: CommuneReconnue | null): string
  */
 async function chercherAutourDeLaCommune(
   q: string, centre: PointGeo | null, signal?: AbortSignal,
-): Promise<{ lieux: Trouvaille[]; commune: CommuneReconnue | null }> {
+): Promise<{ lieux: Trouvaille[]; commune: CommuneReconnue | null; communes: CommuneReconnue[] }> {
   const reconnue = await reconnaitreLaCommune(q, centre, signal);
   /* SANS COMMUNE RECONNUE, OVERPASS CHERCHE AUTOUR DE LA VUE, avec la phrase
      entière — c'est le comportement d'avant RECHERCHE-8, et il vaut toujours
      pour « Castorama » tapé quand on est déjà devant. */
   if (reconnue === null) {
-    if (centre === null) return { lieux: [], commune: null };
+    if (centre === null) return { lieux: [], commune: null, communes: [] };
     const lieux = await chercherParNom(q, centre, signal);
     return {
       lieux: lieux.filter((l) => l.nom !== null).map(deOsm),
-      commune: null,
+      commune: null, communes: [],
     };
   }
   const { nom, trouvee, toutes } = reconnue;
@@ -392,7 +518,9 @@ async function chercherAutourDeLaCommune(
     if (parCarte.status === 'fulfilled') {
       sortie.push(...parCarte.value.filter((l) => l.nom !== null).map(deOsm));
     }
-    return { lieux: sortie, commune: trouvee };
+    /* TOUTES LES HOMONYMES REPARTENT AVEC LA RÉPONSE : ce sont elles, et non
+       la vue, qui mesurent « le plus proche » dans le classement. */
+    return { lieux: sortie, commune: trouvee, communes: toutes };
   }
 }
 
