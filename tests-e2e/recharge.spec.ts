@@ -468,6 +468,77 @@ test('les PAUSES HUMAINES : la pause paie la charge, le profil famille trouve so
   expect(appelsOverpass, 'un réglage a rappelé Overpass').toBe(1);
 });
 
+test('SOC-EDIT : l’estimation s’affiche, la correction replanifie et l’écart se dit', async ({ page, context }) => {
+  /* ARMELIN, 03/09 : « afficher dans Copilot le taux de batterie estimé à
+     l'instant T et pouvoir renseigner à côté la valeur réelle pour que le
+     planificateur voie s'il surestime ». L'écart SE MONTRE, la correction
+     s'écrit dans le profil véhicule et REPLANIFIE depuis la position —
+     rien ne s'apprend en silence. */
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ longitude: 2.3522, latitude: 48.8566 });
+  const itineraires: string[] = [];
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    contentType: 'application/json', body: JSON.stringify({ elements: [] }),
+  }));
+  await page.route('**/www.bison-fute.gouv.fr/**', (route) => route.fulfill({
+    contentType: 'application/json', body: '[]',
+  }));
+  await simulerIndexBornes(page, [BEAUNE]);
+  await ouvrirRecharge(page);
+  await expect(page.locator('.iti-recharge-corps'))
+    .toContainText('Aire de Beaune', { timeout: 15_000 });
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    itineraires.push(route.request().url());
+    return route.fallback();
+  });
+
+  await retour(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
+  await page.locator('.bg-copilote-bouton').click();
+
+  const copilote = page.locator('.bg-copilote');
+  /* L'estimation se dit comme telle — jamais un relevé. */
+  await expect(copilote).toContainText('Batterie', { timeout: 15_000 });
+  await expect(copilote).toContainText(/Estimée maintenant : ~\d+ %/);
+  await expect(copilote).toContainText('une estimation, pas un relevé');
+
+  /* Une valeur impossible se refuse poliment. */
+  await copilote.getByRole('button', { name: 'Corriger le plan' }).click();
+  await expect(copilote.locator('.bg-copilote-soc-etat'))
+    .toContainText('entre 1 et 100');
+
+  /* La correction : l'écart se dit, et le trajet repart de la position. */
+  await copilote.locator('.bg-copilote-soc-champ').fill('42');
+  const avant = itineraires.length;
+  await copilote.getByRole('button', { name: 'Corriger le plan' }).click();
+  await expect(copilote.locator('.bg-copilote-soc-etat'))
+    .toContainText(/Plan recalculé depuis 42 % — l'estimation disait ~\d+ % \(écart [+-]?\d+ points?\)/);
+  await expect.poll(() => itineraires.length, { timeout: 15_000 })
+    .toBeGreaterThan(avant);
+  await expect(page.locator('[data-role="depart"] input'))
+    .toHaveValue('Reprise d’itinéraire', { timeout: 15_000 });
+
+  /* LA VÉRITÉ EST UNIQUE : le profil véhicule porte la correction. */
+  await expect.poll(() => page.evaluate(() => new Promise((ok) => {
+    const d = indexedDB.open('infonovice-maps');
+    d.onsuccess = () => {
+      try {
+        const r = d.result.transaction('preferences', 'readonly')
+          .objectStore('preferences').get('vehicule');
+        r.onsuccess = () => {
+          const m = (r.result ?? {}) as { vehicule?: { soc?: number } };
+          ok(m.vehicule?.soc ?? null);
+        };
+        r.onerror = () => ok('illisible');
+      } catch { ok('magasin absent'); }
+    };
+    d.onerror = () => ok('base illisible');
+  })), { timeout: 10_000 }).toBe(42);
+});
+
 test('le COPILOTE connaît le plan : l’arrêt, ses SOC prévus, ses commodités à la demande', async ({ page, context }) => {
   /* Le panneau du passager pendant un suivi AVEC plan de recharge : la carte
      d'arrêt porte le nom, la distance restante et les SOC prévus — déjà en
