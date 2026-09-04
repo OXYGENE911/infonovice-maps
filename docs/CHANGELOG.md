@@ -2,16 +2,6 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.82.1] — 2026-09-04 — AUDIT-3
-
-### Corrigé — une panne du registre npm n'est pas une vulnérabilité
-- Les trois essais d'AUDIT-2 sont tombés d'affilée sur une panne npm
-  prolongée (cinq minutes de pendaison chacun) : la file de fusions était
-  paralysée alors que TOUS les tests passaient.
-- La panne se reconnaît à son message (« audit endpoint returned an
-  error ») : elle s'avertit en tête de run, elle ne bloque plus. **Une
-  vraie vulnérabilité bloque toujours** — rien n'est assoupli sur le fond.
-  Et un délai réseau d'une minute remplace les cinq de pendaison.
 ## [1.83.0] — 2026-09-04 — FAVSEL-1
 
 ### Le sélecteur de favoris du planificateur porte l'émoji de la liste
@@ -25,6 +15,16 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - Et **le filtre connaît la liste** : taper « restaurants » rend les lieux
   de cette liste — c'est le mot que l'usager a choisi pour ranger.
 
+## [1.82.1] — 2026-09-04 — AUDIT-3
+
+### Corrigé — une panne du registre npm n'est pas une vulnérabilité
+- Les trois essais d'AUDIT-2 sont tombés d'affilée sur une panne npm
+  prolongée (cinq minutes de pendaison chacun) : la file de fusions était
+  paralysée alors que TOUS les tests passaient.
+- La panne se reconnaît à son message (« audit endpoint returned an
+  error ») : elle s'avertit en tête de run, elle ne bloque plus. **Une
+  vraie vulnérabilité bloque toujours** — rien n'est assoupli sur le fond.
+  Et un délai réseau d'une minute remplace les cinq de pendaison.
 ## [1.82.0] — 2026-09-04 — RESEAU-2
 
 ### Taper un nom de station rend une liste, pas un silence
