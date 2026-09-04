@@ -32,17 +32,27 @@ jobs:
       - name: Audit des dépendances
         # Bloquant à partir de « high » : un audit qui ne bloque jamais
         # n'est qu'un bruit de journal.
-        # TROIS ESSAIS ESPACÉS (04/09) : depuis le retrait de l'ancien point
-        # d'audit, le registre npm rend des 503 par vagues — deux CI vertes
-        # sur tout le reste ont été perdues sur ce seul pas dans la nuit.
-        # Un vrai problème de dépendances, lui, échoue trois fois pareil.
+        # MAIS UNE PANNE DU REGISTRE N'EST PAS UNE VULNÉRABILITÉ (AUDIT-3,
+        # 04/09) : trois essais (AUDIT-2) sont tombés d'affilée sur une
+        # panne npm prolongée — cinq minutes de pendaison chacun, et une
+        # file de fusions paralysée alors que TOUS les tests passaient. La
+        # panne se reconnaît à son message ; elle s'avertit, elle ne bloque
+        # pas. Une vraie vulnérabilité, elle, bloque toujours.
         run: |
           for essai in 1 2 3; do
-            npm audit --audit-level=high && exit 0
-            echo "audit indisponible (essai $essai)"
-            [ "$essai" -lt 3 ] && sleep 60
+            if SORTIE=$(npm audit --audit-level=high --fetch-timeout=60000 2>&1); then
+              echo "$SORTIE"
+              exit 0
+            fi
+            echo "$SORTIE"
+            if ! grep -q "audit endpoint returned an error" <<< "$SORTIE"; then
+              exit 1
+            fi
+            echo "registre indisponible (essai $essai)"
+            [ "$essai" -lt 3 ] && sleep 30
           done
-          exit 1
+          echo "::warning title=Audit non exécuté::registre npm en panne — l'audit repassera au prochain run"
+          exit 0
       - name: Budget du bundle (< 300 Ko gzippé hors MapLibre)
         run: |
           TOTAL=0
