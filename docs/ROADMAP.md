@@ -670,6 +670,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       production (« !public/*.png » non récursif — les icônes n'entraient
       jamais au dépôt) ; un parcours vérifie chaque icône référencée. Et le
       chien-boussole meuble la page de recherche vierge.
+- [x] PR #228 — SCROLL-1 (04/09) : la liste de résultats se défile au doigt —
+      la sélection part au relâcher (seuil 10 px), plus au contact. Parcours
+      en vrais événements touch, contre-épreuve mordante.
 - [x] PR #225 — MES-POI-1 (04/09) : les favoris sur la carte avec l'émoji de
       leur liste (disque cerclé de sa couleur), fiche au clic, puce « Mes
       POI » dans l'entonnoir — visibles d'emblée, le choix survit au
