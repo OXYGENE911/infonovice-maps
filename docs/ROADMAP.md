@@ -669,6 +669,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #233 — RESEAU-2 (04/09) : taper un nom dans le filtre des bornes
       rend la liste des stations correspondantes (compte, huit plus proches,
       distances) — le choix allume la couche et vole vers la station.
+- [x] PR #241 — DESKTOP-1 (04/09) : le volet des POI passe à 400 px sur
+      grand écran — « Bornes de recharge » tient sur sa ligne, mesuré,
+      contre-épreuve faite.
 - [x] PR #242 — RAIL-DISTANCE-ROUTE (04/09) : la mesure (8 paires, rapport
       route/vol d'oiseau de 1,21 à 2,33) REJETTE l'estimation au facteur ;
       la rangée temps/distance réelle des fiches s'étend à la fiche
