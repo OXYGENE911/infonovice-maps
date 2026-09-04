@@ -666,6 +666,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       par appui martèleraient l'API publique. PISTE à mesurer AVANT de
       promettre : le facteur de détour (1,25, celui déjà posé pour le corridor)
       appliqué au vol d'oiseau, affiché « ≈ par la route ».
+- [x] PR #226 — CI-NODE-24 (04/09) : l'audit npm tombait sur un point de
+      terminaison retiré (npm 10 / Node 22) — CI et déploiement passent à
+      Node 24. Fusion #222 partie avant verdict : faute consignée, porte
+      rétablie.
 - [x] PR #222 — RAIL-POI-1 (04/09) : le rail des familles de lieux sous la
       page de recherche vierge — un appui liste les lieux nommés à moins de
       5 km, du plus proche au plus loin, avec distance et adresse.
