@@ -2,6 +2,29 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.76.0] — 2026-09-04 — MASCOTTE-2
+
+### Corrigé — la mascotte et le favicon étaient en 404 en production
+- Armelin, en 1.74 : « j'ai un carré avec une image cassée […] tout à droite
+  de la barre de recherche ». C'était le chien à la boussole de LOGO-1 — et
+  le favicon de l'onglet était mort aussi.
+- **Le poste de travail les servait, la production jamais** : l'exception
+  « !public/*.png » du .gitignore n'était pas récursive, et les icônes de
+  public/icones/ n'entraient jamais au dépôt — git add les ignorait en
+  silence. Les sources canoniques de /brand étaient dans le même cas, alors
+  que la feuille de route les disait livrées.
+- Un parcours vérifie désormais que CHAQUE icône référencée — favicon,
+  apple-touch, mascottes, manifeste PWA — répond. Contre-épreuve faite : le
+  parcours vire au rouge dès qu'un fichier manque au dist.
+
+### Et le chien meuble la page de recherche vierge
+- Armelin : « ce serait bien de l'égayer avec un des logos de Chien en plein
+  milieu du vide blanc en attendant que l'utilisateur tape un texte et que
+  le logo disparaisse pour laisser apparaître les résultats ».
+- Le chien à la boussole (192 px, même recette que les icônes) s'affiche au
+  centre de la page vierge et s'efface devant la saisie comme devant les
+  résultats du rail — trois sélecteurs CSS, pas une ligne de script.
+
 ## [1.75.0] — 2026-09-04 — MES-POI-1
 
 ### Les favoris paraissent sur la carte, avec l'émoji de leur liste
@@ -23,7 +46,6 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - **Rien ne sort du navigateur** : c'est la seule couche de la carte qui ne
   coûte rien à personne — les favoris restent en IndexedDB, la couche les
   dessine sur place.
-
 ## [1.74.1] — 2026-09-04 — CI-NODE-24
 
 ### Corrigé — l'audit des dépendances tombait sur un point de terminaison retiré

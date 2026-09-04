@@ -12,5 +12,13 @@ test-results/
 
 # Sorties de Playwright MCP et captures de travail.
 .playwright-mcp/
+# LES PNG SONT IGNORÉS PAR DÉFAUT (captures de travail), SAUF ceux du site
+# et les sources de la mascotte. LE PIÈGE PAYÉ LE 04/09 : « !public/*.png »
+# n'était PAS récursif — les icônes de LOGO-1 dans public/icones/ ont été
+# silencieusement ignorées par git add : le poste les servait, la CI et la
+# production jamais (favicon et mascotte en 404, vus par Armelin). Un
+# parcours vérifie désormais que chaque icône référencée répond.
 *.png
 !public/*.png
+!public/**/*.png
+!brand/*.png
