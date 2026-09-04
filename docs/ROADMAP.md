@@ -700,6 +700,7 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #237 — AUDIT-2 (04/09) : l'audit CI fait trois essais espacés — le
 - [x] PR #240 — RAIL-DISTANCE-ROUTE (04/09) : la mesure (8 paires, rapport
 - [x] PR #241 — RAIL-DISTANCE-ROUTE (04/09) : la mesure (8 paires, rapport
+- [x] PR #242 — RAIL-DISTANCE-ROUTE (04/09) : la mesure (8 paires, rapport
       route/vol d'oiseau de 1,21 à 2,33) REJETTE l'estimation au facteur ;
       la rangée temps/distance réelle des fiches s'étend à la fiche
       destination (module partagé temps-trajet), et les listes disent
