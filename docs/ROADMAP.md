@@ -4,10 +4,6 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
 États : [ ] à faire · [~] en cours · [x] fusionnée.
 
 ## Fondations
-- [x] PR #225 — MES-POI-1 (04/09) : les favoris sur la carte avec l'émoji de
-      leur liste (disque cerclé de sa couleur), fiche au clic, puce « Mes
-      POI » dans l'entonnoir — visibles d'emblée, le choix survit au
-      rechargement.
 - [x] PR #1 — Scaffolding : Vite + TS + PWA + ESLint + Vitest + Playwright +
       GitHub Actions (CI + déploiement Pages) + CNAME maps.infonovice.fr +
       page « en construction »
@@ -686,6 +682,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       près, l'adresse est introuvable » — la tolérance aux fautes de la BAN
       est ce qu'elle est ; l'index IGN la porte pour les LIEUX, pas pour les
       adresses. À mesurer avant de promettre.
+- [x] PR #225 — MES-POI-1 (04/09) : les favoris sur la carte avec l'émoji de
+      leur liste (disque cerclé de sa couleur), fiche au clic, puce « Mes
+      POI » dans l'entonnoir — visibles d'emblée, le choix survit au
+      rechargement.
 - [x] PR #219 — DEST-1 (04/09) : la carte va vraiment à la destination (le
       suivi GPS se désarme au choix — son verrou rabattait chaque flyTo), et
       le marqueur rouvre la fiche fermée.
