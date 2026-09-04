@@ -59,6 +59,19 @@ test('L’ADRESSE MANQUANTE SE DEMANDE À LA BAN, et se dit pour ce qu’elle es
     .toContainText('Adresse la plus proche : 3 Rue des Halles 03000 Moulins');
 });
 
+test('LA FICHE DESTINATION PORTE LA RANGÉE DES MODES (RAIL-DISTANCE-ROUTE)', async ({ page }) => {
+  /* La mesure du 04/09 a rejeté l'estimation au facteur (rapport
+     route/vol d'oiseau de 1,21 à 2,33 sur huit paires) : ici c'est la MÊME
+     rangée que la fiche des lieux — du mesuré, une requête par appui. */
+  await choisirAuRail(page);
+  const fiche = page.locator('.fiche-destination');
+  await expect(fiche.getByRole('button', { name: 'Temps de trajet en voiture' })).toBeVisible();
+  await expect(fiche.getByRole('button', { name: 'Temps de trajet à pied' })).toBeVisible();
+  /* Sans position consentie : pas de promesse, la porte est nommée. */
+  await fiche.getByRole('button', { name: 'Temps de trajet en voiture' }).click();
+  await expect(page.locator('.poi-fiche-temps-etat')).toContainText('Me localiser');
+});
+
 test('RÉDUIRE GARDE LA POIGNÉE, LA CROIX EFFACE TOUT — les deux gestes existent', async ({ page }) => {
   await choisirAuRail(page);
 
