@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.86.0] — 2026-09-04 — FILTRE-RAIL
+
+### Les lieux à proximité se filtrent — cuisine, et « ouvert maintenant »
+- Armelin, 04/09 : « afficher un bouton de filtre dans la section des POIs à
+  proximité de la barre de recherche : filtrer le type de cuisine recherché,
+  Italien, Chinois, Français, Burger… et sur les horaires d'ouverture afin
+  de n'afficher que les POIs encore ouverts autour de nous. »
+- Des puces au-dessus de la liste du rail : **« Ouvert maintenant »**, et
+  **les cuisines réellement présentes** dans les résultats, comptées puis
+  traduites — proposer « Italienne » sans italien à 5 km promettrait du
+  vide. Tout se filtre EN MÉMOIRE : les étiquettes OSM sont déjà dans la
+  réponse, zéro requête de plus.
+- **Les masqués se disent** : « ouvert maintenant » ne conclut que sur des
+  horaires qu'on sait évaluer (la règle des fiches) — les fermés et les
+  sans-horaires sont comptés dans la phrase d'état, jamais évaporés.
+- **Chaque ligne dit sa cuisine** (remarque du 04/09 au réveil) :
+  « Italienne · 3 rue X » — la première cuisine déclarée dans OpenStreetMap,
+  traduite, devant l'adresse. C'est elle qui départage deux restaurants
+  voisins.
+- Et la distance de la liste s'assume : « à vol d'oiseau », écrit.
+
 ## [1.85.0] — 2026-09-04 — BLANC-1
 
 ### L'écran blanc de fin de trajet a une explication — et l'alerte n'est plus enterrée
@@ -89,27 +110,6 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   cachée.
 - L'index arrive parfois APRÈS la frappe : les stations paraissent alors à
   son arrivée — celui qui a déjà tapé n'a pas à retaper.
-## [1.86.0] — 2026-09-04 — FILTRE-RAIL
-
-### Les lieux à proximité se filtrent — cuisine, et « ouvert maintenant »
-- Armelin, 04/09 : « afficher un bouton de filtre dans la section des POIs à
-  proximité de la barre de recherche : filtrer le type de cuisine recherché,
-  Italien, Chinois, Français, Burger… et sur les horaires d'ouverture afin
-  de n'afficher que les POIs encore ouverts autour de nous. »
-- Des puces au-dessus de la liste du rail : **« Ouvert maintenant »**, et
-  **les cuisines réellement présentes** dans les résultats, comptées puis
-  traduites — proposer « Italienne » sans italien à 5 km promettrait du
-  vide. Tout se filtre EN MÉMOIRE : les étiquettes OSM sont déjà dans la
-  réponse, zéro requête de plus.
-- **Les masqués se disent** : « ouvert maintenant » ne conclut que sur des
-  horaires qu'on sait évaluer (la règle des fiches) — les fermés et les
-  sans-horaires sont comptés dans la phrase d'état, jamais évaporés.
-- **Chaque ligne dit sa cuisine** (remarque du 04/09 au réveil) :
-  « Italienne · 3 rue X » — la première cuisine déclarée dans OpenStreetMap,
-  traduite, devant l'adresse. C'est elle qui départage deux restaurants
-  voisins.
-- Et la distance de la liste s'assume : « à vol d'oiseau », écrit.
-
 ## [1.81.1] — 2026-09-04 — AUDIT-2
 
 ### Corrigé — l'audit de la CI encaisse les pannes du registre npm
