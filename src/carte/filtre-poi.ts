@@ -53,9 +53,7 @@ import { rubriquesDe, lignesHoraires, etatOuverture } from '../lib/detail-lieu';
 import { brancherAjoutFavori } from './choix-liste';
 import { adresseDesTags, libelleDestination } from '../lib/adresse-lieu';
 import { adresseInverse } from '../lib/adresse';
-import { positionConnueActuelle } from './recherche';
-import { calculerItineraire, formaterDuree, type Profil } from '../lib/itineraire';
-import { dureeVelo } from '../lib/modes-deplacement';
+import { brancherTempsTrajet } from './temps-trajet';
 import type { PorteItineraire } from './fiche-borne';
 import {
   elargir, estCouverte, memoriser, type Emprise,
@@ -622,73 +620,9 @@ export class FiltrePoi extends HTMLElement {
         .catch(() => { adresse.textContent = 'Adresse indisponible pour le moment'; });
     }
 
-    /* LE TEMPS DE TRAJET, PAR MODE, À LA DEMANDE (TEMPS-POI-1, 04/09).
-       Armelin : « ça devrait afficher le temps de trajet de ma position
-       jusqu'à ce POI si j'y allais en voiture, à pied, vélo ou moto. Ça
-       devrait faire partie des informations du POI en plus de l'adresse et
-       des horaires. »
-       QUATRE MODES, DEUX REQUÊTES AU PLUS, ZÉRO D'OFFICE : le moteur public
-       ne connaît que `car` et `pedestrian` — la moto partage la voiture, le
-       vélo se déduit du chemin piéton (dureeVelo, la règle du
-       planificateur). Chaque appui coûte UNE requête, mise en cache pour
-       les modes frères : ouvrir une fiche ne coûte rien, demander un temps
-       coûte ce qu'il vaut — les quotas sont un bien commun. */
-    const temps = document.createElement('p');
-    temps.className = 'poi-fiche-temps';
-    const tempsMot = document.createElement('span');
-    tempsMot.className = 'poi-fiche-temps-mot';
-    tempsMot.textContent = 'Temps de trajet :';
-    temps.append(tempsMot);
-    const reponses = new Map<Profil, Promise<{ duree: number; distance: number }>>();
-    const demander = (profil: Profil): Promise<{ duree: number; distance: number }> => {
-      const deja = reponses.get(profil);
-      if (deja) return deja;
-      const depuis = positionConnueActuelle();
-      if (!depuis) return Promise.reject(new Error('position inconnue'));
-      const promesse = calculerItineraire(depuis, { lon: lieu.lon, lat: lieu.lat }, profil)
-        .then((r) => ({ duree: r.duree, distance: r.distance }));
-      /* Un échec ne se met pas en cache : le réseau revient, la réponse
-         d'erreur ne doit pas lui survivre. */
-      promesse.catch(() => { reponses.delete(profil); });
-      reponses.set(profil, promesse);
-      return promesse;
-    };
-    const MODES: { icone: string; nom: string; profil: Profil;
-      duree: (r: { duree: number; distance: number }) => number }[] = [
-      { icone: '🚗', nom: 'en voiture', profil: 'car', duree: (r) => r.duree },
-      { icone: '🏍️', nom: 'à moto', profil: 'car', duree: (r) => r.duree },
-      { icone: '🚲', nom: 'à vélo', profil: 'pedestrian', duree: (r) => dureeVelo(r.distance) },
-      { icone: '🚶', nom: 'à pied', profil: 'pedestrian', duree: (r) => r.duree },
-    ];
-    const tempsEtat = document.createElement('span');
-    tempsEtat.className = 'poi-fiche-temps-etat';
-    tempsEtat.setAttribute('role', 'status');
-    for (const m of MODES) {
-      const bm = document.createElement('button');
-      bm.type = 'button';
-      bm.className = 'poi-fiche-temps-mode';
-      bm.textContent = m.icone;
-      bm.setAttribute('aria-label', `Temps de trajet ${m.nom}`);
-      bm.addEventListener('click', () => {
-        if (positionConnueActuelle() === null) {
-          /* PAS DE POSITION, PAS DE PROMESSE : le geste renvoie au bouton
-             qui la donne — jamais une requête depuis un point inventé. */
-          tempsEtat.textContent = 'Appuyez d’abord sur « Me localiser » (en haut à droite de la carte).';
-          return;
-        }
-        tempsEtat.textContent = `Calcul ${m.nom}…`;
-        demander(m.profil).then((r) => {
-          const km = r.distance / 1000;
-          const dist = km < 10 ? `${km.toFixed(1).replace('.', ',')} km` : `${Math.round(km)} km`;
-          tempsEtat.textContent = `${m.icone} ${formaterDuree(m.duree(r))} ${m.nom} (${dist})`
-            + (m.profil === 'pedestrian' && m.nom === 'à vélo' ? ' — estimation' : '');
-        }).catch(() => {
-          tempsEtat.textContent = 'Temps de trajet indisponible pour le moment.';
-        });
-      });
-      temps.append(bm);
-    }
-    boite.append(temps, tempsEtat);
+    /* LE TEMPS DE TRAJET PAR MODE — le module partagé des fiches
+       (TEMPS-POI-1, factorisé par RAIL-DISTANCE-ROUTE). */
+    brancherTempsTrajet(boite, { lon: lieu.lon, lat: lieu.lat });
 
     const rubriques = rubriquesDe(lieu.tags ?? {});
     if (rubriques.length > 0) {

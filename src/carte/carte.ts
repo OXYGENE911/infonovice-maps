@@ -31,6 +31,7 @@ import { RechercheAdresse, poserEmpriseCourante, poserPositionConnue } from './r
 import { PanneauItineraire } from './panneau-itineraire';
 import { PanneauPoi } from './panneau-poi';
 import { FiltrePoi } from './filtre-poi';
+import { brancherTempsTrajet } from './temps-trajet';
 
 /** Ce que la fiche destination doit savoir d'un lieu choisi. */
 interface DestinationChoisie {
@@ -706,6 +707,16 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     // textContent, jamais innerHTML : le libellé vient d'un service externe.
     (bloc.querySelector('.pa-libelle') as HTMLElement).textContent = r.libelle;
     (bloc.querySelector('.fd-contexte') as HTMLElement).textContent = r.contexte;
+    /* LA MÊME RANGÉE QUE LA FICHE DES LIEUX (RAIL-DISTANCE-ROUTE, 04/09).
+       Armelin demandait « la distance en voiture ou à pied suivant le mode »
+       dans les listes ; la mesure a rejeté l'estimation au facteur (rapport
+       route/vol d'oiseau de 1,21 à 2,33 sur huit paires — les sens uniques
+       et les fleuves ruinent toute constante, surtout en courte distance).
+       Ici, c'est du MESURÉ : une requête par appui, sur LE lieu qu'on
+       regarde. */
+    const conteneurFiche = bloc.querySelector('.fiche-destination') as HTMLElement;
+    brancherTempsTrajet(conteneurFiche, point);
+
     bloc.querySelector('.fd-reduire')?.addEventListener('click', () => {
       reductionEnCours = true;
       popup.remove();

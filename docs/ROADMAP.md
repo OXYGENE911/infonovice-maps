@@ -698,6 +698,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       la bande aveugle 30–50 m est fermée — trente secondes tenues au-delà
       de l'aimant valent un recalcul.
 - [x] PR #237 — AUDIT-2 (04/09) : l'audit CI fait trois essais espacés — le
+- [x] PR #240 — RAIL-DISTANCE-ROUTE (04/09) : la mesure (8 paires, rapport
+      route/vol d'oiseau de 1,21 à 2,33) REJETTE l'estimation au facteur ;
+      la rangée temps/distance réelle des fiches s'étend à la fiche
+      destination (module partagé temps-trajet), et les listes disent
+      « à vol d'oiseau ».
 - [x] PR #231 — MAJ-2 (04/09) : « Mise à jour » n'est plus jamais un bouton
       mort — secours après 2,5 s (relecture de l'état réel du worker),
       dernier recours à 8 s. Cause : la course des déploiements rapprochés.

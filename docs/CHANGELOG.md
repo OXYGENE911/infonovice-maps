@@ -41,6 +41,24 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   désormais un bandeau — « Quelque chose s'est cassé » — une fois, avec le
   bouton Recharger et la croix. Un aveu, pas un pansement : si un défaut
   laisse encore un écran figé, l'usager saura au moins qu'il y a eu casse.
+## [1.87.0] — 2026-09-04 — RAIL-DISTANCE-ROUTE
+
+### La distance par la route : mesurée, jamais estimée
+- La feuille de route portait la piste d'une estimation « ≈ vol d'oiseau
+  × 1,25 » pour dire la distance par la route dans les listes. **La mesure
+  l'a rejetée** : sur huit paires relevées le 04/09 (Paris intra-muros,
+  banlieues est, Nantes, Lille, Marseille, Toulouse), le rapport
+  route / vol d'oiseau va de **1,21 à 2,33** — les sens uniques et les
+  fleuves ruinent toute constante, et le pire frappe les COURTES distances,
+  l'usage même des listes « à proximité ». Un « ≈ » aurait menti là où il
+  servait le plus.
+- La réponse honnête : **la rangée « Temps de trajet » (🚗 🏍️ 🚲 🚶) de la
+  fiche des lieux s'étend à la fiche destination** — celle qui s'ouvre
+  depuis la recherche et le rail. Du MESURÉ, une requête par appui, sur LE
+  lieu qu'on regarde. Le module est partagé (`temps-trajet`) : un seul
+  habit, un seul comportement pour toutes les fiches.
+- Les listes, elles, disent désormais « à vol d'oiseau » en toutes lettres
+  (livré avec les filtres du rail).
 
 ## [1.84.0] — 2026-09-04 — TEMPS-POI-1
 
