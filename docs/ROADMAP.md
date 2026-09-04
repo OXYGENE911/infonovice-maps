@@ -835,14 +835,6 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
-- [x] RECHERCHE-11 (04/09) : le surnom devient l'enseigne. Second banc
-      (quatorze requêtes du quotidien) : « McDo Chennevières » rendait zéro
-      — Overpass compare à l'égalité (« McDonald's », apostrophe droite),
-      SIRENE ne connaît que « MCDONALD'S FRANCE » ; « Casto » rendait CASTOR
-      CLEAN, « Leclerc » des personnes. Dictionnaire de surnoms en tête de
-      phrase (McDo, Casto, Carrouf, Décat, Leclerc → E.Leclerc, Leroy →
-      Leroy Merlin), appliqué avant la commune et avant toutes les sources ;
-      « avenue du Général Leclerc » reste une adresse.
 - [x] PERF-1 (04/09) : Lighthouse Performance mesuré pour la première fois
       (mobile, production v1.92) : **52** / 100 / 96 / 100 — la règle exige
       ≥ 90 sur les quatre. Le LCP était le placeholder « Rechercher une
@@ -868,6 +860,14 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       par `import()`. Gain attendu : TBT 1 240 → < 500 ms. À mesurer, pas à
       promettre : Lighthouse avant/après sur le même poste. Cache GitHub
       Pages (10 min) : hors de portée, c'est l'hébergeur.
+- [x] RECHERCHE-11 (04/09) : le surnom devient l'enseigne. Second banc
+      (quatorze requêtes du quotidien) : « McDo Chennevières » rendait zéro
+      — Overpass compare à l'égalité (« McDonald's », apostrophe droite),
+      SIRENE ne connaît que « MCDONALD'S FRANCE » ; « Casto » rendait CASTOR
+      CLEAN, « Leclerc » des personnes. Dictionnaire de surnoms en tête de
+      phrase (McDo, Casto, Carrouf, Décat, Leclerc → E.Leclerc, Leroy →
+      Leroy Merlin), appliqué avant la commune et avant toutes les sources ;
+      « avenue du Général Leclerc » reste une adresse.
 - [x] RECHERCHE-10 (04/09) : le nom exact passe devant le nom qui le
       contient. Le banc des douze requêtes passait 12/12 en v1.91, mais les
       RANGS disaient « SCI 43 CLER TOUR EFFEIL » devant la Tour Eiffel, une
