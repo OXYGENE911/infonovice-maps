@@ -2577,8 +2577,13 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
 .choix-favori-item {
   width: 100%; text-align: left; padding: 9px 12px;
   border: 1px solid transparent; border-radius: 9px;
-  background: none; cursor: pointer; display: grid; gap: 1px;
+  background: none; cursor: pointer; display: grid; gap: 1px 10px;
+  /* L'ÉMOJI DE LA LISTE EN PREMIÈRE COLONNE (FAVSEL-1) : il enjambe le nom
+     et l'adresse — c'est la pastille de la liste, pas un mot de la ligne. */
+  grid-template-columns: auto 1fr;
 }
+.choix-favori-emoji { grid-row: 1 / -1; align-self: center; font-size: 17px; }
+.choix-favori-adresse { grid-column: 2; }
 .choix-favori-item:hover { background: var(--fond-doux); border-color: var(--bord-2); }
 .choix-favori-item:focus-visible { outline: none; box-shadow: var(--focus); }
 .choix-favori-nom { font: 600 13.5px var(--police); color: var(--texte-1); }

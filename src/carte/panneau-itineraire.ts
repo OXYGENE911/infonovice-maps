@@ -17,7 +17,8 @@ import {
 import { calculerItineraire, itineraireDirect, formaterDistance, formaterDuree, EVITEMENTS, OPTIMISATIONS, ErreurItineraire, MAX_ETAPES, type Profil, type Itineraire, type Eviter, type Optimisation } from '../lib/itineraire';
 import { formaterCoordonnees, type PointGeo } from '../lib/coordonnees';
 import { lireRepere, REPERES, type CleRepere } from '../lib/reperes';
-import { listerFavoris } from '../lib/favoris';
+import { listerFavoris, listerListes } from '../lib/favoris';
+import { listeDe } from '../lib/mes-poi-traits';
 import { adresseInverse, type ResultatAdresse } from '../lib/adresse';
 import { versGPX, versKML, telecharger } from '../lib/trace';
 import { versFragment, depuisFragment } from '../lib/partage-url';
@@ -3230,7 +3231,12 @@ export class PanneauItineraire extends HTMLElement {
       boite.setAttribute('aria-label', 'Choisir un lieu enregistré');
       this.append(boite);
     }
-    const favoris = await listerFavoris();
+    /* LES LISTES VOYAGENT AVEC LES FAVORIS (FAVSEL-1, 04/09). Armelin :
+       « ils n'ont même pas l'émoji correspondant à la liste de favoris dans
+       laquelle ils sont censés être ». Même repli que la carte (listeDe) :
+       un favori d'avant les listes ou une liste effacée retombent sur
+       « Lieux favoris » — jamais une ligne nue. */
+    const [favoris, listes] = await Promise.all([listerFavoris(), listerListes()]);
 
     boite.replaceChildren();
     const titre = document.createElement('p');
@@ -3256,12 +3262,22 @@ export class PanneauItineraire extends HTMLElement {
       const f = filtre.trim().toLowerCase();
       liste.replaceChildren();
       for (const favori of favoris) {
+        const liste_ = listeDe(favori, listes);
+        /* LE FILTRE CONNAÎT AUSSI LA LISTE : taper « restaurants » rend les
+           lieux de cette liste — c'est le mot que l'usager a choisi. */
         if (f && !favori.nom.toLowerCase().includes(f)
-          && !(favori.adresse ?? '').toLowerCase().includes(f)) continue;
+          && !(favori.adresse ?? '').toLowerCase().includes(f)
+          && !liste_.nom.toLowerCase().includes(f)) continue;
         const item = document.createElement('li');
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'choix-favori-item';
+        const emoji = document.createElement('span');
+        emoji.className = 'choix-favori-emoji';
+        emoji.textContent = liste_.emoji;
+        emoji.title = liste_.nom;
+        emoji.setAttribute('aria-hidden', 'true');
+        b.append(emoji);
         const nom = document.createElement('span');
         nom.className = 'choix-favori-nom';
         nom.textContent = favori.nom;

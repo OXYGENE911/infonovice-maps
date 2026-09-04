@@ -683,6 +683,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #231 — MAJ-2 (04/09) : « Mise à jour » n'est plus jamais un bouton
       mort — secours après 2,5 s (relecture de l'état réel du worker),
       dernier recours à 8 s. Cause : la course des déploiements rapprochés.
+- [x] PR #234 — FAVSEL-1 (04/09) : le sélecteur de favoris du planificateur
+      porte l'émoji de la liste (repli ⭐ pour les favoris d'avant), et le
+      filtre matche aussi le nom de liste.
 - [x] PR #230 — BIS-2 (04/09) : le via du bis n'est plus une étape — injecté
       à la requête, dissous au recalcul hors-route / se garer / effacer,
       remplacé (jamais empilé) au bis suivant.

@@ -76,6 +76,18 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   vaut toujours mieux qu'un bouton figé.
 - La logique est pure (dépendances injectées) et testée à sec : six
   scénarios, dont la course exacte de sa capture.
+## [1.83.0] — 2026-09-04 — FAVSEL-1
+
+### Le sélecteur de favoris du planificateur porte l'émoji de la liste
+- Armelin, nuit du 04/09 : « quand je clique sur Favoris, je vois mes
+  favoris apparaître mais juste sous forme de texte. Ils n'ont même pas
+  l'émoji correspondant à la liste de favoris dans laquelle ils sont censés
+  être. »
+- Chaque ligne porte désormais **l'émoji de sa liste**, en première colonne
+  — même repli que la carte : un favori d'avant les listes ou une liste
+  effacée retombent sur « Lieux favoris » (⭐), jamais une ligne nue.
+- Et **le filtre connaît la liste** : taper « restaurants » rend les lieux
+  de cette liste — c'est le mot que l'usager a choisi pour ranger.
 
 ## [1.79.0] — 2026-09-04 — BIS-2
 
