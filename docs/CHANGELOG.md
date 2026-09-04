@@ -18,6 +18,23 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   nouveau bis le REMPLACE, jamais ne l'empile.
 - Contre-épreuve mordante : remettre le via dans les étapes fait échouer le
   parcours sur la première assertion.
+## [1.80.0] — 2026-09-04 — MAJ-2
+
+### Corrigé — « Mise à jour » pouvait être un bouton mort
+- Armelin : « quand je clique sur "Mise à jour", il ne se passe absolument
+  rien et je dois cliquer sur "Plus tard" pour fermer cette fenêtre. »
+- **La course des livraisons rapprochées** : entre l'annonce et le clic, un
+  nouveau déploiement peut remplacer le worker en attente — le SKIP_WAITING
+  part alors dans le vide et le rechargement n'arrive jamais. Huit
+  livraisons le 04/09 : c'était le cas courant, pas l'exception.
+- Le clic est désormais SECOURU : après 2,5 s sans prise de contrôle, on
+  relit l'état réel (worker en attente → on lui redit ; remplaçant en cours
+  d'installation → on attend qu'il soit prêt ; plus rien → la version est
+  déjà active, on recharge). Et après 8 s, **dernier recours** : la page
+  recharge quoi qu'il arrive — au pire elle revient au même état, ce qui
+  vaut toujours mieux qu'un bouton figé.
+- La logique est pure (dépendances injectées) et testée à sec : six
+  scénarios, dont la course exacte de sa capture.
 
 ## [1.78.0] — 2026-09-04 — DEST-2
 
