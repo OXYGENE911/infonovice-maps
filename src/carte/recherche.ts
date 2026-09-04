@@ -10,7 +10,10 @@ import { LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
 import { chercherPartout } from '../lib/recherche-multi';
 import { familleDevinee } from '../lib/famille-devinee';
 import { MOTIF_DE_FAMILLE } from '../lib/pictos-lieux';
-import { CATEGORIES } from '../lib/categories';
+import {
+  CATEGORIES, chercherCategorie, ErreurCategories, empriseAutour,
+} from '../lib/categories';
+import { adresseDesTags } from '../lib/adresse-lieu';
 import { svgPastille } from './icone-lieu';
 import { analyser, decoder, departementDe } from '../lib/adresse-mots';
 import { communesParNom } from '../lib/commune';
@@ -88,6 +91,13 @@ function ressembleAUnNom(texte: string): boolean {
    kilomètres. Cinquante — la distance d'une ville à sa voisine, pas celle
    d'un département à l'autre. */
 const SEUIL_LOIN_KM = 50;
+
+/* LE RAYON DU RAIL (RAIL-POI-1) : cinq kilomètres — un quartier et sa
+   périphérie. Dix noierait la liste en ville ; deux rendrait la campagne
+   muette. Et QUINZE LIGNES au plus : au-delà, on ne choisit plus, on
+   feuillette — la recherche par nom fait mieux. */
+const RAYON_RAIL_KM = 5;
+const PLAFOND_RAIL = 15;
 
 /** Distance approchée entre deux points, en kilomètres — PURE. */
 function distanceKm(a: { lon: number; lat: number }, b: { lon: number; lat: number }): number {
@@ -190,6 +200,18 @@ export class RechercheAdresse extends HTMLElement {
             <button type="button" class="recherche-ici-oui">Utiliser ma position</button>
             <p class="recherche-ici-etat" role="status"></p>
           </div>
+          <!-- LE RAIL DES FAMILLES (RAIL-POI-1, 04/09). Armelin : « un rail
+               coulissant de catégories de POI sous la page de recherche
+               vierge — les restaurants, supermarchés, pharmacies à proximité
+               avec leur distance ». Il ne vit qu'en page pleine, tant que le
+               champ est vide : dès la première lettre, la place revient aux
+               suggestions. Les boutons sont engendrés depuis nos constantes
+               (#garnirRail) — rien d'externe n'entre dans ce innerHTML. -->
+          <nav class="recherche-rail" aria-label="Lieux à proximité" hidden>
+            <p class="recherche-rail-titre">À proximité</p>
+            <ul></ul>
+          </nav>
+          <p class="recherche-rail-etat" role="status"></p>
           <ul id="${this.#idListe}" role="listbox" aria-label="Suggestions d’adresses" hidden></ul>
           <p class="recherche-erreur" role="alert" hidden></p>
           <!-- UNE NOTE N'EST PAS UNE ERREUR (RECHERCHE-2) : « zoomez pour
@@ -214,6 +236,12 @@ export class RechercheAdresse extends HTMLElement {
       });
       this.querySelector('.recherche-ici-oui')?.addEventListener('click', () => {
         this.#seLocaliser();
+      });
+      this.#garnirRail();
+      /* TAPER REND LA PLACE AUX SUGGESTIONS : le rail sert la page vierge. */
+      champ?.addEventListener('input', () => {
+        const rail = this.querySelector<HTMLElement>('.recherche-rail');
+        if (rail) rail.hidden = !this.#page || champ.value.trim() !== '';
       });
     }
     // L'écouteur document suit le cycle de vie : posé à la connexion, retiré
@@ -444,6 +472,9 @@ export class RechercheAdresse extends HTMLElement {
        déjà donné — une façon de le rendre insignifiant. */
     const ici = this.querySelector<HTMLElement>('.recherche-ici');
     if (ici) ici.hidden = positionConnue !== null;
+    const rail = this.querySelector<HTMLElement>('.recherche-rail');
+    const champ = this.querySelector('input');
+    if (rail) rail.hidden = (champ?.value.trim() ?? '') !== '';
   }
 
   /**
@@ -497,6 +528,11 @@ export class RechercheAdresse extends HTMLElement {
     if (!this.#page) return;
     const ici = this.querySelector<HTMLElement>('.recherche-ici');
     if (ici) ici.hidden = true;
+    const rail = this.querySelector<HTMLElement>('.recherche-rail');
+    if (rail) rail.hidden = true;
+    const railEtat = this.querySelector<HTMLElement>('.recherche-rail-etat');
+    if (railEtat) railEtat.textContent = '';
+    this.#annulationRail?.abort();
     const mascotte = this.querySelector<HTMLElement>('.recherche-mascotte');
     if (mascotte) mascotte.hidden = true;
     this.#page = false;
@@ -549,7 +585,7 @@ export class RechercheAdresse extends HTMLElement {
          langages graphiques pour les mêmes lieux se contrediraient.
          Le markup est engendré depuis nos constantes ; rien d'externe n'y
          entre — le libellé, lui, reste posé en textContent. */
-      const famille = familleDevinee(r.libelle);
+      const famille = r.famille ?? familleDevinee(r.libelle);
       const motif = famille ? MOTIF_DE_FAMILLE[famille] : undefined;
       const teinte = famille ? CATEGORIES.find((c) => c.cle === famille)?.couleur : undefined;
       const picto = li.querySelector('.picto-lieu') as HTMLElement;
@@ -634,6 +670,80 @@ export class RechercheAdresse extends HTMLElement {
     /* ET L'ÉCOUTEUR NE SURVIT PAS À SA RAISON D'ÊTRE : sans ce retrait, un
        clic légitime bien plus tard trouverait encore la garde en place. */
     setTimeout(() => { document.removeEventListener('click', avaler, true); }, 400);
+  }
+
+  #annulationRail: AbortController | null = null;
+
+  /** Peuple le rail depuis les familles de la carte — mêmes pastilles. */
+  #garnirRail(): void {
+    const liste = this.querySelector('.recherche-rail ul');
+    if (!liste) return;
+    for (const c of CATEGORIES) {
+      const li = document.createElement('li');
+      const bouton = document.createElement('button');
+      bouton.type = 'button';
+      const motif = MOTIF_DE_FAMILLE[c.cle];
+      /* Le markup de la pastille vient de nos constantes — rien d'externe. */
+      if (motif) bouton.innerHTML = svgPastille(motif, c.couleur, 18);
+      bouton.append(c.libelle);
+      bouton.addEventListener('click', () => { void this.#chercherFamille(c.cle); });
+      li.append(bouton);
+      liste.append(li);
+    }
+  }
+
+  /**
+   * Les lieux d'une famille à proximité, du plus proche au plus loin.
+   *
+   * DEPUIS LA POSITION SI ELLE EST CONSENTIE, sinon depuis le centre de la
+   * carte — et la phrase d'état DIT lequel, comme pour les distances des
+   * suggestions. La requête part au même service Overpass que l'entonnoir
+   * de la carte, dans une emprise de cinq kilomètres de rayon : le rayon
+   * d'un quartier et de sa périphérie, pas celui d'un département.
+   */
+  async #chercherFamille(cle: string): Promise<void> {
+    const categorie = CATEGORIES.find((c) => c.cle === cle);
+    const depuis = positionConnue ?? vueCourante?.() ?? null;
+    const etat = this.querySelector<HTMLElement>('.recherche-rail-etat');
+    if (!categorie || depuis === null) return;
+    this.#annulationRail?.abort();
+    this.#annulationRail = new AbortController();
+    const origine = positionConnue !== null
+      ? 'votre position' : 'le centre de la carte';
+    if (etat) etat.textContent = `Recherche des lieux « ${categorie.libelle} » à proximité…`;
+    try {
+      const lieux = await chercherCategorie(
+        categorie, empriseAutour(depuis, RAYON_RAIL_KM), this.#annulationRail.signal,
+      );
+      /* LES LIEUX SANS NOM SONT ÉCARTÉS : une liste de « (sans nom) » ne
+         permet de choisir rien. La carte, elle, sait les montrer — le rail
+         est une LISTE, et une ligne de liste se lit. */
+      this.#resultats = lieux
+        .filter((l): l is typeof l & { nom: string } => l.nom !== null)
+        .map((l) => ({
+          libelle: l.nom, type: 'lieu',
+          contexte: adresseDesTags(l.tags) ?? categorie.libelle,
+          lon: l.lon, lat: l.lat,
+          ...(l.famille ? { famille: l.famille } : {}),
+        }))
+        .sort((x, y) => distanceKm(x, depuis) - distanceKm(y, depuis))
+        .slice(0, PLAFOND_RAIL);
+      this.#actif = -1;
+      this.#afficher();
+      if (etat) {
+        etat.textContent = this.#resultats.length === 0
+          ? `Aucun lieu nommé « ${categorie.libelle} » à moins de ${RAYON_RAIL_KM} km`
+            + ` — mesuré depuis ${origine}.`
+          : `${this.#resultats.length} lieux, du plus proche au plus loin`
+            + ` depuis ${origine}.`;
+      }
+    } catch (e) {
+      if (this.#annulationRail.signal.aborted) return;
+      if (etat) {
+        etat.textContent = e instanceof ErreurCategories
+          ? e.message : 'La recherche de lieux est indisponible pour le moment.';
+      }
+    }
   }
 
   #choisir(i: number): void {

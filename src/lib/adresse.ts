@@ -26,6 +26,11 @@ export interface ResultatAdresse extends PointGeo {
      poser quelqu'un au 23 en lui laissant croire qu'il est au 23 bis serait
      un mensonge de plus que le silence. */
   approche?: string | undefined;
+  /* LA FAMILLE, QUAND ON LA CONNAÎT DÉJÀ (RAIL-POI-1, 04/09). Les lieux du
+     rail arrivent avec leurs étiquettes OSM : deviner la famille sur le nom
+     (« Chez Momo » → rien) alors qu'elle est sue serait perdre la pastille
+     sur la moitié des lignes. */
+  famille?: string | undefined;
 }
 
 /* ==========================================================================

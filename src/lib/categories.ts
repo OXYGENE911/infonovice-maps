@@ -149,6 +149,25 @@ export function familleDe(tags: Record<string, string>): string | null {
 /** Au-delà, on tronque et on le DIT : une vue dense en centre-ville déborde vite. */
 export const PLAFOND_LIEUX = 100;
 
+/**
+ * L'emprise carrée d'un rayon donné autour d'un point — PURE (RAIL-POI-1).
+ *
+ * UN DEGRÉ DE LONGITUDE RÉTRÉCIT AVEC LA LATITUDE : à Lille, il vaut
+ * 30 % de moins qu'à l'équateur. Sans le cosinus, « 5 km autour de moi »
+ * en ferait 7 d'est en ouest — et la liste « à proximité » mentirait sur
+ * la moitié de ses résultats.
+ */
+export function empriseAutour(
+  p: { lon: number; lat: number }, rayonKm: number,
+): EmpriseVue {
+  const dLat = rayonKm / 111.32;
+  const dLon = rayonKm / (111.32 * Math.cos((p.lat * Math.PI) / 180));
+  return {
+    ouest: p.lon - dLon, est: p.lon + dLon,
+    sud: p.lat - dLat, nord: p.lat + dLat,
+  };
+}
+
 /** L'URL Overpass d'une catégorie dans une emprise. Pure, donc testable à sec. */
 export function urlCategorie(categorie: Categorie, vue: EmpriseVue): string {
   /* Overpass ordonne son emprise (sud, ouest, nord, est) — l'inverse partiel

@@ -659,6 +659,16 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       À cadrer : où vit le geste (Copilot), et ce qu'on fait de l'écart
       mesuré (le montrer seulement, ou apprendre une correction de
       consommation à la MARGE-1 — jamais en silence).
+- [ ] RAIL-DISTANCE-ROUTE — dire la distance par la route selon le mode de
+      locomotion dans les listes (demande du 03/09 : « avec leur distance en
+      voiture ou à pied suivant le mode configuré »). La v1 du rail affiche
+      le vol d'oiseau, comme les suggestions : quinze calculs d'itinéraire
+      par appui martèleraient l'API publique. PISTE à mesurer AVANT de
+      promettre : le facteur de détour (1,25, celui déjà posé pour le corridor)
+      appliqué au vol d'oiseau, affiché « ≈ par la route ».
+- [x] PR #222 — RAIL-POI-1 (04/09) : le rail des familles de lieux sous la
+      page de recherche vierge — un appui liste les lieux nommés à moins de
+      5 km, du plus proche au plus loin, avec distance et adresse.
 - [x] PR #221 — FBORNE-2 (04/09) : le bouton favoris des bornes s'harmonise
       (bords, taille tactile, étoile ⭐), et le changelog passe au pilote de
       fusion union — fini les rebases en chaîne.
