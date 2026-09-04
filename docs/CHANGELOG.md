@@ -111,6 +111,19 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   error ») : elle s'avertit en tête de run, elle ne bloque plus. **Une
   vraie vulnérabilité bloque toujours** — rien n'est assoupli sur le fond.
   Et un délai réseau d'une minute remplace les cinq de pendaison.
+## [1.88.0] — 2026-09-04 — DESKTOP-1
+
+### Corrigé — le volet des POI respirait mal sur grand écran
+- Armelin : « en mode desktop, le menu du filtre des POIs est très étriqué
+  alors que sur un écran d'ordinateur il y a plus de place que sur un
+  smartphone. La ligne borne de recharge est écrite sur deux lignes au lieu
+  d'une seule en version mobile. »
+- Le volet était taillé pour 360 px d'écran et gardait 300 px partout : à
+  cette largeur, « Bornes de recharge » + la roue + le badge ne tiennent
+  pas sur une ligne. À partir de 900 px d'écran, il passe à 400 px — et le
+  parcours MESURE la largeur réelle et la hauteur de la puce (une ligne :
+  32 px ; deux : 44 et plus). Contre-épreuve faite.
+
 ## [1.82.0] — 2026-09-04 — RESEAU-2
 
 ### Taper un nom de station rend une liste, pas un silence

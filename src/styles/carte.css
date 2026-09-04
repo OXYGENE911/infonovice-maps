@@ -4013,6 +4013,17 @@ filtre-poi {
    IL SE BORNE DONC PARTOUT, et se CENTRE sur mobile. */
 .poi-panneau {
   width: min(300px, calc(100vw - 24px));
+}
+/* SUR GRAND ÉCRAN, LE VOLET RESPIRE (DESKTOP-1, 04/09). Armelin : « en mode
+   desktop, le menu du filtre des POIs est très étriqué alors qu'il y a plus
+   de place que sur un smartphone — la ligne borne de recharge est écrite
+   sur deux lignes ». Le volet était taillé pour 360 px d'écran et gardait
+   cette taille partout : à 300 px de large, « Bornes de recharge » + la
+   roue + le badge ne tiennent pas sur une ligne. */
+@media (min-width: 900px) {
+  .poi-panneau { width: 400px; }
+}
+.poi-panneau {
   padding: 12px; border-radius: 14px;
   background: var(--fond); border: 1px solid var(--bord-2);
   box-shadow: var(--ombre-flottante);
