@@ -14,6 +14,7 @@ import {
   CATEGORIES, chercherCategorie, ErreurCategories, empriseAutour,
 } from '../lib/categories';
 import { adresseDesTags } from '../lib/adresse-lieu';
+import { etatOuverture, cuisineEnFrancais } from '../lib/detail-lieu';
 import { svgPastille } from './icone-lieu';
 import { analyser, decoder, departementDe } from '../lib/adresse-mots';
 import { communesParNom } from '../lib/commune';
@@ -216,6 +217,12 @@ export class RechercheAdresse extends HTMLElement {
             <p class="recherche-rail-titre">À proximité</p>
             <ul></ul>
           </nav>
+          <!-- LES FILTRES DU RAIL (FILTRE-RAIL, 04/09). Armelin : « filtrer
+               le type de cuisine recherché […] et sur les horaires afin de
+               n'afficher que les POIs encore ouverts ». Les puces naissent
+               DES RÉSULTATS (les cuisines réellement présentes) — jamais
+               d'une liste codée en dur qui promettrait du vide. -->
+          <div class="recherche-filtres" hidden></div>
           <p class="recherche-rail-etat" role="status"></p>
           <ul id="${this.#idListe}" role="listbox" aria-label="Suggestions d’adresses" hidden></ul>
           <p class="recherche-erreur" role="alert" hidden></p>
@@ -546,6 +553,9 @@ export class RechercheAdresse extends HTMLElement {
     if (rail) rail.hidden = true;
     const railEtat = this.querySelector<HTMLElement>('.recherche-rail-etat');
     if (railEtat) railEtat.textContent = '';
+    const filtres = this.querySelector<HTMLElement>('.recherche-filtres');
+    if (filtres) { filtres.hidden = true; filtres.replaceChildren(); }
+    this.#lieuxRail = [];
     this.#annulationRail?.abort();
     const mascotte = this.querySelector<HTMLElement>('.recherche-mascotte');
     if (mascotte) mascotte.hidden = true;
@@ -755,35 +765,127 @@ export class RechercheAdresse extends HTMLElement {
       /* LES LIEUX SANS NOM SONT ÉCARTÉS : une liste de « (sans nom) » ne
          permet de choisir rien. La carte, elle, sait les montrer — le rail
          est une LISTE, et une ligne de liste se lit. */
-      this.#resultats = lieux
+      this.#lieuxRail = lieux
         .filter((l): l is typeof l & { nom: string } => l.nom !== null)
-        .map((l) => {
-          const adresse = adresseDesTags(l.tags);
-          return {
-            libelle: l.nom, type: 'lieu',
-            contexte: adresse ?? categorie.libelle,
-            lon: l.lon, lat: l.lat,
-            ...(l.famille ? { famille: l.famille } : {}),
-            ...(adresse === null ? { adresseInconnue: true } : {}),
-          };
-        })
-        .sort((x, y) => distanceKm(x, depuis) - distanceKm(y, depuis))
-        .slice(0, PLAFOND_RAIL);
-      this.#actif = -1;
-      this.#afficher();
-      if (etat) {
-        etat.textContent = this.#resultats.length === 0
-          ? `Aucun lieu nommé « ${categorie.libelle} » à moins de ${RAYON_RAIL_KM} km`
-            + ` — mesuré depuis ${origine}.`
-          : `${this.#resultats.length} lieux, du plus proche au plus loin`
-            + ` depuis ${origine}.`;
-      }
+        .sort((x, y) => distanceKm(x, depuis) - distanceKm(y, depuis));
+      this.#railDepuis = depuis;
+      this.#railOrigine = origine;
+      this.#railCategorie = categorie;
+      this.#filtreOuvert = false;
+      this.#filtreCuisine = null;
+      this.#rendreFiltresRail();
+      this.#appliquerRail();
     } catch (e) {
       if (this.#annulationRail.signal.aborted) return;
       if (etat) {
         etat.textContent = e instanceof ErreurCategories
           ? e.message : 'La recherche de lieux est indisponible pour le moment.';
       }
+    }
+  }
+
+  /* CE QUE LE RAIL A TROUVÉ, AVANT FILTRAGE (FILTRE-RAIL, 04/09) : les
+     étiquettes restent — c'est en elles qu'on filtre, en mémoire, sans une
+     requête de plus. */
+  #lieuxRail: { nom: string; lon: number; lat: number; famille?: string | undefined;
+    tags?: Record<string, string> | undefined }[] = [];
+
+  #railDepuis: { lon: number; lat: number } | null = null;
+  #railOrigine = '';
+  #railCategorie: { libelle: string } | null = null;
+  #filtreOuvert = false;
+  #filtreCuisine: string | null = null;
+
+  /** Les puces de filtre, nées des résultats — jamais d'une liste en dur. */
+  #rendreFiltresRail(): void {
+    const barre = this.querySelector<HTMLElement>('.recherche-filtres');
+    if (!barre) return;
+    barre.replaceChildren();
+    if (this.#lieuxRail.length === 0) { barre.hidden = true; return; }
+    barre.hidden = false;
+
+    const puce = (libelle: string, presse: boolean, action: () => void): HTMLButtonElement => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'recherche-filtre';
+      b.textContent = libelle;
+      b.setAttribute('aria-pressed', String(presse));
+      b.addEventListener('click', () => { action(); this.#rendreFiltresRail(); this.#appliquerRail(); });
+      return b;
+    };
+    barre.append(puce('Ouvert maintenant', this.#filtreOuvert, () => {
+      this.#filtreOuvert = !this.#filtreOuvert;
+    }));
+
+    /* LES CUISINES PRÉSENTES, comptées puis traduites : proposer « Italien »
+       quand aucun italien n'existe à 5 km promettrait du vide. */
+    const comptes = new Map<string, number>();
+    for (const l of this.#lieuxRail) {
+      for (const c of (l.tags?.['cuisine'] ?? '').split(';')) {
+        const cle = c.trim().toLowerCase();
+        if (cle !== '') comptes.set(cle, (comptes.get(cle) ?? 0) + 1);
+      }
+    }
+    const cuisines = [...comptes.entries()].sort((x, y) => y[1] - x[1]).slice(0, 6);
+    if (cuisines.length >= 2) {
+      for (const [cle] of cuisines) {
+        barre.append(puce(cuisineEnFrancais(cle), this.#filtreCuisine === cle, () => {
+          this.#filtreCuisine = this.#filtreCuisine === cle ? null : cle;
+        }));
+      }
+    }
+  }
+
+  /** Applique les filtres du rail et rend la liste — et DIT ce qu'il masque. */
+  #appliquerRail(): void {
+    const etat = this.querySelector<HTMLElement>('.recherche-rail-etat');
+    const depuis = this.#railDepuis;
+    const categorie = this.#railCategorie;
+    if (!depuis || !categorie) return;
+    let fermes = 0;
+    let sansHoraires = 0;
+    const gardes = this.#lieuxRail.filter((l) => {
+      if (this.#filtreCuisine !== null) {
+        const siennes = (l.tags?.['cuisine'] ?? '').toLowerCase();
+        if (!siennes.split(';').map((c) => c.trim()).includes(this.#filtreCuisine)) return false;
+      }
+      if (this.#filtreOuvert) {
+        const brut = l.tags?.['opening_hours'] ?? '';
+        /* ON NE CONCLUT QUE SUR CE QU'ON SAIT ÉVALUER (règle FICHE-3) : un
+           lieu sans horaires n'est ni ouvert ni fermé — le filtre le masque,
+           et l'état LE DIT, sinon le masquage passerait pour une absence. */
+        const verdict = brut === '' ? null : etatOuverture(brut, new Date());
+        if (verdict === null) { sansHoraires += 1; return false; }
+        if (!verdict.ouvert) { fermes += 1; return false; }
+      }
+      return true;
+    });
+    this.#resultats = gardes
+      .map((l) => {
+        const adresse = adresseDesTags(l.tags);
+        return {
+          libelle: l.nom, type: 'lieu',
+          contexte: adresse ?? categorie.libelle,
+          lon: l.lon, lat: l.lat,
+          ...(l.famille ? { famille: l.famille } : {}),
+          ...(adresse === null ? { adresseInconnue: true } : {}),
+        };
+      })
+      .slice(0, PLAFOND_RAIL);
+    this.#actif = -1;
+    this.#afficher();
+    if (etat) {
+      const masques: string[] = [];
+      if (fermes > 0) masques.push(`${fermes} fermé${fermes > 1 ? 's' : ''}`);
+      if (sansHoraires > 0) masques.push(`${sansHoraires} sans horaires connus`);
+      etat.textContent = this.#resultats.length === 0
+        ? `Aucun lieu ne passe ces filtres à moins de ${RAYON_RAIL_KM} km`
+          + (masques.length > 0 ? ` (masqués : ${masques.join(', ')})` : '')
+          + ` — mesuré depuis ${this.#railOrigine}.`
+        : `${this.#resultats.length} lieu${this.#resultats.length > 1 ? 'x' : ''},`
+          + ` du plus proche au plus loin`
+          + ` depuis ${this.#railOrigine}, à vol d’oiseau`
+          + (masques.length > 0 ? ` — masqués : ${masques.join(', ')}` : '') + '.';
     }
   }
 

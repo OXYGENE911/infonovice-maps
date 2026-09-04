@@ -162,6 +162,22 @@ recherche-adresse.recherche-page .recherche-rail:not([hidden]) {
 }
 .recherche-rail-etat:empty { display: none; }
 
+/* LES FILTRES DU RAIL (FILTRE-RAIL, 04/09) — même habit que les familles. */
+recherche-adresse.recherche-page .recherche-filtres:not([hidden]) {
+  display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 14px 0;
+}
+.recherche-filtres { display: none; }
+.recherche-filtre {
+  padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-2); font: 600 12px var(--police);
+}
+.recherche-filtre[aria-pressed="true"] {
+  border-color: var(--accent); color: var(--texte-1); font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.recherche-filtre:focus-visible { outline: none; box-shadow: var(--focus); }
+
 /* LE CHIEN DE LA PAGE VIERGE (MASCOTTE-2, 04/09) : visible seulement en
    page pleine, champ vide (:placeholder-shown), liste cachée. L'ordre des
    frères dans le markup rend le sélecteur possible : input … ul … .vide. */
