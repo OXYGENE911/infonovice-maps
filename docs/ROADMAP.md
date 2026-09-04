@@ -659,6 +659,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       À cadrer : où vit le geste (Copilot), et ce qu'on fait de l'écart
       mesuré (le montrer seulement, ou apprendre une correction de
       consommation à la MARGE-1 — jamais en silence).
+- [x] PR #221 — FBORNE-2 (04/09) : le bouton favoris des bornes s'harmonise
+      (bords, taille tactile, étoile ⭐), et le changelog passe au pilote de
+      fusion union — fini les rebases en chaîne.
 - [x] PR #220 — RECHERCHE-9 (04/09) : le plus proche d'abord à mots égaux ;
       latitude:null ne devient plus l'île Nulle ; FNACDARTY se décolle au
       dictionnaire d'enseignes. RESTE OUVERT de ce retour : « à un caractère

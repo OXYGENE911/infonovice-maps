@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.73.0] — 2026-09-04 — FBORNE-2
+
+### Le bouton favoris des bornes ressemble enfin à un bouton
+- Armelin, en 1.68 : « un bouton rectangulaire alors que tous les boutons de
+  cette page sont à bords arrondis […] il est tout gris, on dirait même pas un
+  bouton, et il est tout petit pour de gros doigts sur smartphone. La couleur
+  grise ne fait pas favoris — soit le bouton est jaune, soit il y a un logo en
+  étoile. »
+- **Il n'avait aucun style** : c'était le bouton nu du navigateur au milieu
+  d'une page dessinée. Mêmes bords, même taille que « Ajouter au plan » —
+  et **l'étoile ⭐ dit « favori »**. Le jaune plein aurait crié plus fort que
+  « Itinéraire », qui reste le geste premier du cartouche.
+- Le parcours mesure la taille tactile et les bords arrondis, pas seulement la
+  présence.
+
+### Et les fusions cessent de se marcher dessus
+- `docs/CHANGELOG.md` et `docs/ROADMAP.md` passent au pilote de fusion
+  `union` : deux branches qui insèrent chacune leur entrée n'étaient pas en
+  conflit de sens, seulement de lignes — chaque fusion imposait pourtant un
+  rebase et 17 minutes de CI au suivant.
+
 ## [1.72.0] — 2026-09-04 — RECHERCHE-9
 
 ### Le plus proche d'abord, l'île Nulle fermée, et FNACDARTY décollé
