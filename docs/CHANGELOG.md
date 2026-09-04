@@ -21,6 +21,14 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   deux — localisé juste, jamais recalculé. Trente secondes tenues au-delà
   de l'aimant valent désormais un recalcul : un virage ou un échangeur ne
   durent pas trente secondes, une parallèle si.
+## [1.80.1] — 2026-09-04 — AUDIT-2
+
+### Corrigé — l'audit de la CI encaisse les pannes du registre npm
+- Depuis le retrait de l'ancien point d'audit, le registre npm rend des 503
+  par vagues : deux CI vertes sur tout le reste ont été perdues sur ce seul
+  pas dans la nuit du 04/09, à vingt-cinq minutes la relance.
+- L'étape fait désormais trois essais espacés d'une minute. Un vrai
+  problème de dépendances échoue trois fois pareil ; une vague de 503, non.
 
 ## [1.80.0] — 2026-09-04 — MAJ-2
 

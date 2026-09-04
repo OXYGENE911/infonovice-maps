@@ -32,7 +32,17 @@ jobs:
       - name: Audit des dépendances
         # Bloquant à partir de « high » : un audit qui ne bloque jamais
         # n'est qu'un bruit de journal.
-        run: npm audit --audit-level=high
+        # TROIS ESSAIS ESPACÉS (04/09) : depuis le retrait de l'ancien point
+        # d'audit, le registre npm rend des 503 par vagues — deux CI vertes
+        # sur tout le reste ont été perdues sur ce seul pas dans la nuit.
+        # Un vrai problème de dépendances, lui, échoue trois fois pareil.
+        run: |
+          for essai in 1 2 3; do
+            npm audit --audit-level=high && exit 0
+            echo "audit indisponible (essai $essai)"
+            [ "$essai" -lt 3 ] && sleep 60
+          done
+          exit 1
       - name: Budget du bundle (< 300 Ko gzippé hors MapLibre)
         run: |
           TOTAL=0
