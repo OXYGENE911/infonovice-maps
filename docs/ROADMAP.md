@@ -689,6 +689,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #236 — AUDIT-2 (04/09) : l'audit CI fait trois essais espacés — le
       registre npm rend des 503 par vagues depuis le retrait de l'ancien
       point ; deux CI perdues dans la nuit sur ce seul pas.
+- [x] PR #239 — FILTRE-RAIL (04/09) : puces de filtre sur la liste du rail —
+      « Ouvert maintenant » (masqués comptés, jamais évaporés), cuisines
+      réellement présentes, et la cuisine dite sur chaque ligne. En mémoire,
+      zéro requête de plus.
 - [x] PR #232 — FERMEE-1 (04/09) : l'annonce d'une route coupée ou d'un
       obstacle porte « Chercher un contournement » (le circuit du bis), et
       la bande aveugle 30–50 m est fermée — trente secondes tenues au-delà
