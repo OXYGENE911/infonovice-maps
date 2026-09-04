@@ -304,6 +304,35 @@ test('LA COMMUNE ÉCRITE EST LE REPÈRE (RECHERCHE-10) — « Castorama Ormesson
   await expect(castoramas.nth(1)).toContainText('Vitry-sur-Seine');
 });
 
+test('« McDo Chennevières » DEVIENT « McDonald’s » avant de partir vers les sources (RECHERCHE-11)', async ({ page }) => {
+  /* Mesuré le 04/09 sur le second banc : « McDo Chennevières » rendait
+     ZÉRO. Overpass ne répond qu'à l'égalité — la marque s'y écrit
+     « McDonald's », apostrophe droite — et SIRENE ne connaît que
+     « MCDONALD'S FRANCE ». Le parcours regarde CE QUI PART : la clause
+     Overpass et la requête à l'annuaire portent l'enseigne, pas le surnom. */
+  const { appels } = await decor(page, {
+    adresses: [{
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [2.5366, 48.7848] },
+      properties: { label: 'Chennevières-sur-Marne', city: 'Chennevières-sur-Marne',
+        type: 'municipality', postcode: '94430', score: 0.9 },
+    }],
+    osm: [{ type: 'node', id: 1, lat: 48.79, lon: 2.54,
+      tags: { amenity: 'fast_food', name: "Mc Donald's", brand: "McDonald's",
+        'addr:street': 'Route de Provins', 'addr:postcode': '94430', 'addr:city': 'Chennevières-sur-Marne' } }],
+  });
+  await barre(page).getByRole('combobox').fill('McDo Chennevières');
+  const lignes = barre(page).locator('[role="option"]').filter({ hasText: 'Donald' });
+  await expect(lignes.first()).toBeVisible({ timeout: 10_000 });
+  await expect.poll(() => appels.filter((x) => x.startsWith('overpass:')).length,
+    { timeout: 10_000 }).toBe(1);
+  const versOverpass = appels.find((x) => x.startsWith('overpass:')) ?? '';
+  expect(versOverpass).toContain(`["brand"="McDonald's"]`);
+  expect(versOverpass).not.toContain('McDo"');
+  expect(appels.some((a) => a.startsWith("entreprises:McDonald's@94430")),
+    'l’annuaire reçoit l’enseigne, bornée à la commune').toBe(true);
+});
+
 test('UN LIEU DE LA CARTE PORTE SON ADRESSE, et ses trois objets OSM font UNE ligne (RECHERCHE-10)', async ({ page }) => {
   /* Le nœud du magasin, son bâtiment, son entrée : trois objets OSM nommés
      pareil à cent mètres, que l'arrondi au millième de degré séparait une

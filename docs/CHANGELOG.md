@@ -2,6 +2,32 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.93.0] — 2026-09-04 — RECHERCHE-11
+
+### Le surnom devient l'enseigne — « McDo » trouve McDonald's
+- **Mesuré sur le second banc (quatorze requêtes du quotidien) :
+  « McDo Chennevières » rendait ZÉRO.** Overpass ne répond qu'à l'égalité —
+  la marque s'y écrit « McDonald's », apostrophe droite — et SIRENE ne
+  connaît que « MCDONALD'S FRANCE ». « Casto » rendait CASTOR CLEAN ;
+  « Leclerc Créteil », des personnes nommées Leclerc, l'hypermarché
+  s'appelant « E.Leclerc » dans OpenStreetMap (mesuré : « E.Leclerc
+  Créteil » rend les deux magasins).
+- **Un dictionnaire de surnoms, en tête de phrase seulement** : McDo,
+  Macdo, Mac Do, McDonald(s) → McDonald's ; Casto → Castorama ; Carrouf →
+  Carrefour ; Décat(h) → Décathlon ; Leclerc → E.Leclerc ; Leroy → Leroy
+  Merlin. La phrase déjà canonique (« Leroy Merlin Lognes ») ne bouge
+  pas ; « avenue du Général Leclerc » non plus — c'est une adresse.
+  Le remplacement se fait AVANT la reconnaissance de commune et avant
+  toutes les sources : la même phrase part partout.
+- Parcours E2E qui regarde ce qui PART (la clause Overpass porte
+  `"brand"="McDonald's"`, l'annuaire reçoit l'enseigne bornée à la
+  commune), et tests unitaires du dictionnaire.
+- **Attrapé par ce parcours** : `separerMotsColles` coupait « McDonald's »
+  en « Mc Donald's » — son commentaire promettait le contraire depuis
+  RECHERCHE-8 — et la clause `brand` ne trouvait rien ; seuls les objets
+  dont le NOM porte « Mc Donald's » répondaient, par chance. La particule
+  « Mc » reste collée désormais.
+
 ## [1.92.0] — 2026-09-04 — RECHERCHE-10
 
 ### Le nom exact passe devant le nom qui le contient

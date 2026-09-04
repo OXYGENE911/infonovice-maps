@@ -6,7 +6,7 @@ import {
 } from '../src/lib/recherche-multi';
 import {
   separerMotsColles, decoupagesNomCommune, communeCorrespond, communeLaPlusProche,
-  versCommunes, urlCommune, variantesDecollees,
+  versCommunes, urlCommune, variantesDecollees, enseigneCanonique,
 } from '../src/lib/saisie-recherche';
 import { versEtablissements, urlEntreprises, estUneEnseigne } from '../src/lib/recherche-entreprises';
 import { versLieuxIgn, urlPoiIgn } from '../src/lib/recherche-poi-ign';
@@ -37,6 +37,16 @@ describe('separerMotsColles', () => {
   it('NE COUPE PAS LES SIGLES — INRAE et SNCF restent entiers', () => {
     expect(separerMotsColles('INRAE')).toBe('INRAE');
     expect(separerMotsColles('SNCF Paris')).toBe('SNCF Paris');
+  });
+
+  it('« Mc » N’EST PAS UNE COUPE — McDonald’s reste entier (RECHERCHE-11)', () => {
+    /* Le commentaire le promettait ; la mesure a dit le contraire :
+       « McDonald's » partait vers Overpass en « Mc Donald's », et la clause
+       brand ne trouvait rien. Attrapé par le parcours E2E qui regarde ce qui
+       PART. « MacDo », lui, se coupe — et le dictionnaire connaît « mac do ». */
+    expect(separerMotsColles("McDonald's Chennevières")).toBe("McDonald's Chennevières");
+    expect(separerMotsColles('MacDo')).toBe('Mac Do');
+    expect(separerMotsColles('FnacDarty')).toBe('Fnac Darty');
   });
 });
 
@@ -502,6 +512,39 @@ describe('l’île Nulle et le classement par distance', () => {
     expect(fusionner(liste, ['aeroport'], 10, repere)[0]?.libelle).toBe('Aéroport d’Orly');
     // Sans repère, l'ordre d'arrivée tient : on n'invente pas une distance.
     expect(fusionner(liste, ['aeroport'], 10, null)[0]?.libelle).toBe('Aéroport');
+  });
+});
+
+/* RECHERCHE-11 (04/09) : « McDo Chennevières » rendait ZÉRO. Overpass ne
+   répond qu'à l'égalité (brand « McDonald's »), SIRENE ne connaît que
+   « MCDONALD'S FRANCE ». Le surnom est ce qu'on tape ; la graphie canonique
+   est ce que les sources savent. */
+describe('enseigneCanonique — le surnom devient l’enseigne', () => {
+  it('traduit les surnoms courants, accents et casse compris', () => {
+    expect(enseigneCanonique('McDo Chennevières')).toBe("McDonald's Chennevières");
+    expect(enseigneCanonique('mac do Créteil')).toBe("McDonald's Créteil");
+    expect(enseigneCanonique('MACDO')).toBe("McDonald's");
+    expect(enseigneCanonique('Casto Ormesson')).toBe('Castorama Ormesson');
+    expect(enseigneCanonique('Décat Villiers')).toBe('Décathlon Villiers');
+    expect(enseigneCanonique('carrouf')).toBe('Carrefour');
+    /* Mesuré : « Leclerc Créteil » rend des personnes nommées Leclerc ;
+       l'hypermarché s'appelle « E.Leclerc » dans OpenStreetMap. */
+    expect(enseigneCanonique('Leclerc Créteil')).toBe('E.Leclerc Créteil');
+  });
+  it('L’APOSTROPHE EST DROITE — c’est celle qu’Overpass compare', () => {
+    expect(enseigneCanonique('mcdo')).toBe("McDonald's");
+    expect(enseigneCanonique('mcdo')).not.toContain('’');
+  });
+  it('ne touche pas une phrase déjà canonique', () => {
+    expect(enseigneCanonique("McDonald's Chennevières")).toBe("McDonald's Chennevières");
+    expect(enseigneCanonique('Leroy Merlin Lognes')).toBe('Leroy Merlin Lognes');
+    expect(enseigneCanonique('E.Leclerc Créteil')).toBe('E.Leclerc Créteil');
+    expect(enseigneCanonique('Castorama Ormesson')).toBe('Castorama Ormesson');
+  });
+  it('EN TÊTE DE PHRASE SEULEMENT : « avenue du Général Leclerc » est une adresse', () => {
+    expect(enseigneCanonique('avenue du Général Leclerc')).toBe('avenue du Général Leclerc');
+    expect(enseigneCanonique('rue Leroy Créteil')).toBe('rue Leroy Créteil');
+    expect(enseigneCanonique('')).toBe('');
   });
 });
 

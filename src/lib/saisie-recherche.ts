@@ -27,7 +27,12 @@ import type { PointGeo } from './coordonnees';
  * « McDonald » ne doit pas devenir « Mc Donald ».
  */
 export function separerMotsColles(texte: string): string {
-  return texte.replace(/([a-zà-öø-ÿ])([A-ZÀ-ÖØ-Þ])/g, '$1 $2');
+  /* « Mc » N'EST PAS UNE COUPE (RECHERCHE-11, 04/09). Le commentaire
+     au-dessus le promettait déjà ; la mesure a dit le contraire :
+     « McDonald's » partait vers Overpass en « Mc Donald's », et la clause
+     `brand` ne trouvait rien — seuls les objets dont le NOM porte cette
+     graphie-là répondaient, par chance. La particule écossaise reste collée. */
+  return texte.replace(/(?<!\bM)([a-zà-öø-ÿ])([A-ZÀ-ÖØ-Þ])/g, '$1 $2');
 }
 
 /* LES ENSEIGNES QU'ON SAIT DÉCOLLER (RECHERCHE-9, 04/09). Armelin :
@@ -64,6 +69,48 @@ export function variantesDecollees(texte: string): string[] {
     }
   }
   return [];
+}
+
+/* LES SURNOMS D'ENSEIGNES (RECHERCHE-11, 04/09). MESURÉ sur le second banc :
+   « McDo Chennevières » rend ZÉRO. Overpass ne répond qu'à l'égalité — la
+   marque s'y écrit « McDonald's » — et SIRENE ne connaît que « MCDONALD'S
+   FRANCE ». « Casto » rend CASTOR CLEAN, « Leclerc » des personnes nommées
+   Leclerc quand l'hypermarché s'appelle « E.Leclerc ». Le surnom est ce que
+   les gens tapent ; la graphie canonique est ce que les sources savent.
+   EN TÊTE DE PHRASE SEULEMENT : « avenue du Général Leclerc » est une
+   adresse, pas une enseigne, et la toucher casserait la BAN. */
+/* L'APOSTROPHE EST DROITE, et ce n'est pas un détail : Overpass compare à
+   l'égalité, et la marque s'écrit « McDonald's » dans OpenStreetMap. */
+const MCDO = "McDonald's";
+const SURNOMS: readonly [string, string][] = [
+  ['mcdo', MCDO], ['macdo', MCDO], ['mac do', MCDO], ['mc do', MCDO],
+  ['mcdonald', MCDO], ['mcdonalds', MCDO], ['mc donald', MCDO], ['mc donalds', MCDO],
+  ['casto', 'Castorama'], ['carrouf', 'Carrefour'],
+  ['decat', 'Décathlon'], ['decath', 'Décathlon'],
+  ['leclerc', 'E.Leclerc'], ['leroy', 'Leroy Merlin'],
+];
+
+/** La forme sous laquelle un surnom se compare : nue, sans apostrophe. */
+const cleSurnom = (t: string): string => nu(t).replace(/[’']/g, '');
+
+/**
+ * Remplace le surnom d'enseigne en tête de phrase par sa graphie canonique —
+ * PURE. Rend la phrase telle quelle si elle n'en commence pas par un, ou si
+ * elle commence déjà par la graphie canonique (« Leroy Merlin Lognes »).
+ */
+export function enseigneCanonique(texte: string): string {
+  const mots = texte.trim().split(/\s+/).filter((m) => m !== '');
+  for (const n of [2, 1]) {
+    if (mots.length < n) continue;
+    const tete = cleSurnom(mots.slice(0, n).join(' '));
+    const trouve = SURNOMS.find(([surnom]) => surnom === tete);
+    if (trouve === undefined) continue;
+    const canon = trouve[1];
+    const largeur = canon.split(' ').length;
+    if (cleSurnom(mots.slice(0, largeur).join(' ')) === cleSurnom(canon)) return texte;
+    return [canon, ...mots.slice(n)].join(' ');
+  }
+  return texte;
 }
 
 /** Sans accents ni casse — la forme sous laquelle on compare. */
