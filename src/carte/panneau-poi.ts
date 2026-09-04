@@ -345,6 +345,12 @@ export class PanneauPoi extends HTMLElement {
             placeholder="Réseau ou nom de station (Fastned, McDonald…)"
             aria-label="Chercher un réseau ou un nom de station">
           <div class="poi-reseaux" role="group" aria-label="Filtrer par réseau"></div>
+          <!-- LES STATIONS QUI PORTENT LE NOM (RESEAU-2, 04/09) : la
+               recherche filtrait la carte, mais au zoom France la couche
+               n'existe pas — rien ne changeait à l'écran. Une recherche qui
+               aboutit doit rendre quelque chose qu'on peut TOUCHER. -->
+          <div class="poi-stations" role="group"
+            aria-label="Stations correspondantes" hidden></div>
           <p class="poi-filtre-note">Le compte est national : un réseau coché
             peut n’avoir aucune borne dans la vue courante. Les réseaux sont
             groupés par EXPLOITANT — c’est lui qui porte une identité stable,
@@ -419,6 +425,7 @@ export class PanneauPoi extends HTMLElement {
       this.querySelectorAll<HTMLInputElement>('.poi-prise:checked, .poi-reseau:checked')
         .forEach((case_) => { case_.checked = false; });
       this.#rendreReseaux(this.#reseaux);
+      this.#rendreStations();
       surFiltre();
     };
     this.querySelector<HTMLButtonElement>('.poi-filtres-effacer')
@@ -438,6 +445,7 @@ export class PanneauPoi extends HTMLElement {
     let minuteurNom: ReturnType<typeof setTimeout> | undefined;
     this.querySelector('.poi-reseau-recherche')?.addEventListener('input', (e) => {
       this.#rendreReseaux(this.#reseaux);
+      this.#rendreStations();
       const brut = (e.target as HTMLInputElement).value.trim();
       clearTimeout(minuteurNom);
       minuteurNom = setTimeout(() => {
@@ -542,6 +550,82 @@ export class PanneauPoi extends HTMLElement {
      beaucoup sont un hôtel isolé. Les réseaux DÉJÀ COCHÉS restent affichés
      même s'ils sortent du plafond — sinon un filtre actif deviendrait
      invisible, donc impossible à retirer. */
+  /* LES STATIONS QUI PORTENT LE NOM (RESEAU-2, 04/09). Armelin, quatrième
+     signalement : « je tape McDonald, il ne se passe rien ». REPRODUIT le
+     04/09 : le mécanisme répondait — message honnête, rappel « Bornes
+     filtrées : nom McDonald » — mais au zoom France la couche bornes
+     n'existe pas, et rien ne changeait À L'ÉCRAN. La recherche rend
+     désormais la liste des stations (l'index national est déjà en mémoire —
+     c'est lui qui donne les réseaux), triées du plus proche au plus loin,
+     et le choix VOLE vers la station en allumant la couche. */
+  #rendreStations(): void {
+    const boite = this.querySelector<HTMLElement>('.poi-stations');
+    if (!boite) return;
+    const q = (this.querySelector<HTMLInputElement>('.poi-reseau-recherche')?.value ?? '').trim();
+    if (q.length < 2 || this.#index.length === 0) {
+      boite.hidden = true;
+      boite.replaceChildren();
+      return;
+    }
+    const nu = (s: string): string => s.normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const cherche = nu(q);
+    const toutes = this.#index.filter((s) => nu(s.nom).includes(cherche)
+      || nu(s.reseau ?? '').includes(cherche));
+    if (toutes.length === 0) {
+      boite.hidden = true;
+      boite.replaceChildren();
+      return;
+    }
+    const centre = this.#carte?.getCenter();
+    /* En degrés carrés corrigés du cosinus : on ORDONNE, on ne mesure pas —
+       la même règle que le classement de la recherche (RECHERCHE-9). */
+    const d2 = (s: { lon: number; lat: number }): number => (centre
+      ? ((s.lon - centre.lng) * Math.cos((centre.lat * Math.PI) / 180)) ** 2
+        + (s.lat - centre.lat) ** 2 : 0);
+    const proches = [...toutes].sort((x, y) => d2(x) - d2(y)).slice(0, 8);
+    boite.hidden = false;
+    boite.replaceChildren();
+    const titre = document.createElement('p');
+    titre.className = 'poi-stations-titre';
+    titre.textContent = toutes.length === 1 ? '1 station porte ce nom :'
+      : `${toutes.length} stations portent ce nom — les plus proches :`;
+    boite.append(titre);
+    for (const s of proches) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'poi-station';
+      const nom = document.createElement('span');
+      nom.className = 'poi-station-nom';
+      nom.textContent = s.nom;
+      b.append(nom);
+      if (centre) {
+        const km = Math.hypot(
+          (s.lon - centre.lng) * 111.32 * Math.cos((centre.lat * Math.PI) / 180),
+          (s.lat - centre.lat) * 111.32,
+        );
+        const dist = document.createElement('span');
+        dist.className = 'poi-station-distance';
+        dist.textContent = km < 10
+          ? `${km.toFixed(1).replace('.', ',')} km` : `${Math.round(km)} km`;
+        b.append(dist);
+      }
+      if (s.reseau) {
+        const res = document.createElement('span');
+        res.className = 'poi-station-reseau';
+        res.textContent = s.reseau;
+        b.append(res);
+      }
+      b.addEventListener('click', () => {
+        /* LE CHOIX ALLUME LA COUCHE ET Y VOLE : rejoindre une station sans
+           la voir referait une fonction cachée. */
+        if (!this.#actives.has('bornes')) this.basculerBornes(true);
+        this.#carte?.easeTo({ center: [s.lon, s.lat], zoom: 14, duration: 600 });
+      });
+      boite.append(b);
+    }
+  }
+
   #rendreReseaux(reseaux: ReseauNational[]): void {
     const boite = this.querySelector('.poi-reseaux');
     if (!boite) return;
@@ -748,6 +832,9 @@ export class PanneauPoi extends HTMLElement {
       const { stations } = await indexNational(undefined, this.#etendue);
       this.#index = stations;
       this.#rendreReseaux(reseauxNationaux(stations));
+      /* L'INDEX ARRIVE APRÈS LA FRAPPE, souvent : celui qui a déjà tapé son
+         nom doit voir les stations paraître à ce moment-là (RESEAU-2). */
+      this.#rendreStations();
     } catch { /* confort de filtrage : son absence ne casse rien */ }
   }
 
@@ -791,6 +878,7 @@ export class PanneauPoi extends HTMLElement {
       if (controleur !== this.#controleurs.bornes) return;
       this.#index = stations;
       this.#rendreReseaux(reseauxNationaux(stations));
+      this.#rendreStations();
       this.#poserIndex();
       delete this.#erreurs.bornes;
       this.#etat();

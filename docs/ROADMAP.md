@@ -713,6 +713,17 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       n'existe pas — l'écran ne change pas. À FAIRE : taper un nom rend une
       LISTE de stations correspondantes (nationale), cliquable, qui zoome
       sur la station choisie.
+- [ ] FERMEE-1 — route fermée annoncée mais tracé conservé (04/09, capture
+      A4). DEUX CAUSES MESURÉES : le moteur public d'itinéraire ne connaît
+      pas les fermetures Bison Futé (annonces, pas graphe) — offrir un
+      bouton « Chercher un contournement » sur l'annonce, réutilisant le bis
+      de BIS-2 ; et la rue parallèle tombe dans la bande aveugle 30–50 m
+      (aimant SEUIL_AIMANT_M=30, recalcul hors-route >50 m/8 s) : localisé
+      juste, jamais recalculé. Piste : au-delà de 30 m tenus 30 s, recalculer
+      aussi — à mesurer sur trace réelle avant de régler.
+- [x] PR #233 — RESEAU-2 (04/09) : taper un nom dans le filtre des bornes
+      rend la liste des stations correspondantes (compte, huit plus proches,
+      distances) — le choix allume la couche et vole vers la station.
 - [ ] TEMPS-POI-1 — « afficher le temps de trajet de ma position jusqu'à ce
       POI en voiture, à pied, vélo ou moto » (04/09). QUATRE calculs
       d'itinéraire par fiche ouverte : mesurer le coût réel avant de

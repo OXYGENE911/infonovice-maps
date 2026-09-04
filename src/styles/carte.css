@@ -1539,6 +1539,26 @@ bandeau-maj[hidden] { display: none; }
    ne sert que de filet, et le corps du volet qu'on lit. Toute liste interne se
    contente de la hauteur qu'elle a. */
 .poi-reseaux { display: grid; gap: 5px; }
+
+/* LA LISTE DES STATIONS TROUVÉES (RESEAU-2, 04/09). */
+.poi-stations { display: grid; gap: 4px; margin-top: 8px; }
+.poi-stations[hidden] { display: none; }
+.poi-stations-titre {
+  margin: 0 0 2px; font: 650 12px var(--police); color: var(--texte-2);
+}
+.poi-station {
+  display: grid; grid-template-columns: 1fr auto; gap: 0 10px;
+  text-align: left; padding: 7px 10px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+}
+.poi-station:hover { border-color: var(--accent); background: var(--bleu-50); }
+.poi-station:focus-visible { outline: none; box-shadow: var(--focus); }
+.poi-station-nom { font: 600 12.5px var(--police); color: var(--texte-1); }
+.poi-station-distance {
+  font: 600 12px var(--police); color: var(--texte-2);
+  font-variant-numeric: tabular-nums; align-self: center;
+}
+.poi-station-reseau { grid-column: 1; font: 400 11.5px var(--police); color: var(--texte-2); }
 .poi-reseaux label { display: flex; align-items: center; gap: 8px;
   font: 400 12.5px var(--police); color: var(--texte-1); cursor: pointer; }
 .poi-reseaux input:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
