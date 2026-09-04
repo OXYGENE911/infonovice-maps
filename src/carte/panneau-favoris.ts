@@ -6,6 +6,7 @@
 // d'un libellé BAN (service externe) comme d'une saisie libre.
 import type { Map as CarteMapLibre } from 'maplibre-gl';
 import { AJOUT_FAVORI } from './choix-liste';
+import { CHANGEMENT_FAVORIS } from './mes-poi';
 import {
   listerFavoris, retirerFavori, renommerFavori, exporterDonnees, importerDonnees, ajouterFavori,
   listerListes, creerListe, effacerListe, rangerFavori,
@@ -452,6 +453,10 @@ export class PanneauFavoris extends HTMLElement {
   }
 
   async rafraichir(): Promise<void> {
+    /* LA CARTE ÉCOUTE (MES-POI-1) : tout chemin qui change les favoris —
+       retrait, rangement, renommage, import — passe ici. Sans ce cri, la
+       carte montrerait un favori supprimé, c'est-à-dire mentirait. */
+    document.dispatchEvent(new CustomEvent(CHANGEMENT_FAVORIS));
     await this.#rendreReperes();
     /* Les habitudes apprises : combien, et le bouton pour tout oublier. */
     const habitudes = await lireHabitudes();
