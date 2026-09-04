@@ -666,6 +666,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       par appui martèleraient l'API publique. PISTE à mesurer AVANT de
       promettre : le facteur de détour (1,25, celui déjà posé pour le corridor)
       appliqué au vol d'oiseau, affiché « ≈ par la route ».
+- [x] PR #225 — MES-POI-1 (04/09) : les favoris sur la carte avec l'émoji de
+      leur liste (disque cerclé de sa couleur), fiche au clic, puce « Mes
+      POI » dans l'entonnoir — visibles d'emblée, le choix survit au
+      rechargement.
 - [x] PR #226 — CI-NODE-24 (04/09) : l'audit npm tombait sur un point de
       terminaison retiré (npm 10 / Node 22) — CI et déploiement passent à
       Node 24. Fusion #222 partie avant verdict : faute consignée, porte
@@ -682,10 +686,6 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       près, l'adresse est introuvable » — la tolérance aux fautes de la BAN
       est ce qu'elle est ; l'index IGN la porte pour les LIEUX, pas pour les
       adresses. À mesurer avant de promettre.
-- [x] PR #225 — MES-POI-1 (04/09) : les favoris sur la carte avec l'émoji de
-      leur liste (disque cerclé de sa couleur), fiche au clic, puce « Mes
-      POI » dans l'entonnoir — visibles d'emblée, le choix survit au
-      rechargement.
 - [x] PR #219 — DEST-1 (04/09) : la carte va vraiment à la destination (le
       suivi GPS se désarme au choix — son verrou rabattait chaque flyTo), et
       le marqueur rouvre la fiche fermée.
