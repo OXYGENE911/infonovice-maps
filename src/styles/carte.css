@@ -2572,7 +2572,17 @@ dialog.choix-favori::backdrop { background: rgba(4, 20, 40, .45); }
   text-align: left;
 }
 .fd-actions button:focus-visible { outline: none; box-shadow: var(--focus); }
-.fd-actions .fd-aller {
+.fd-actions .fd-adresse {
+  margin: 2px 0 0; font: 400 12.5px/1.45 var(--police); color: var(--texte-2);
+}
+.fd-reduire {
+  padding: 8px 12px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  font: 600 13px var(--police); color: var(--texte-1);
+}
+.fd-reduire:hover { background: var(--bleu-50); border-color: var(--accent); }
+.fd-reduire:focus-visible { outline: none; box-shadow: var(--focus); }
+.fd-aller {
   border-color: var(--accent); background: var(--accent); color: var(--blanc);
 }
 .fd-actions .fd-aller:hover { background: var(--accent-vif); border-color: var(--accent-vif); }

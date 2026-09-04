@@ -31,6 +31,11 @@ export interface ResultatAdresse extends PointGeo {
      (« Chez Momo » → rien) alors qu'elle est sue serait perdre la pastille
      sur la moitié des lignes. */
   famille?: string | undefined;
+  /* L'AVEU D'ABSENCE (DEST-2, 04/09) : les lieux du rail sans étiquettes
+     addr:* portent leur famille en guise de contexte — pas une adresse. Le
+     dire permet à la fiche d'aller la demander à la BAN au lieu d'afficher
+     « Restaurants » comme si c'était une rue. */
+  adresseInconnue?: boolean | undefined;
 }
 
 /* ==========================================================================

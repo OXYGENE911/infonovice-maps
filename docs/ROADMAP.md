@@ -666,6 +666,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       par appui martèleraient l'API publique. PISTE à mesurer AVANT de
       promettre : le facteur de détour (1,25, celui déjà posé pour le corridor)
       appliqué au vol d'oiseau, affiché « ≈ par la route ».
+- [x] PR #229 — DEST-2 (04/09) : la fiche destination gagne « Réduire au
+      marqueur » (la croix efface tout), le marqueur passe au rouge, et
+      l'adresse manquante se demande à la BAN — « Y aller » la porte.
 - [x] PR #228 — SCROLL-1 (04/09) : la liste de résultats se défile au doigt —
       la sélection part au relâcher (seuil 10 px), plus au contact. Parcours
       en vrais événements touch, contre-épreuve mordante.
@@ -673,6 +676,38 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       production (« !public/*.png » non récursif — les icônes n'entraient
       jamais au dépôt) ; un parcours vérifie chaque icône référencée. Et le
       chien-boussole meuble la page de recherche vierge.
+- [ ] BIS-2 — l'itinéraire bis empile des étapes (retour du 04/09 : « ça
+      rajoute automatiquement une étape supplémentaire dans la planification
+      et le GPS insiste pour me faire revenir dans tous les lieux où j'ai
+      cliqué sur Itinéraire bis »). CAUSE LUE DANS LE CODE : le point latéral
+      du bis est adopté comme étape ORDINAIRE (etapes.points = [via,
+      ...restantes]) — il apparaît dans la liste, survit aux recalculs et
+      s'empile à chaque appui. À FAIRE : des vias de déroutement séparés des
+      étapes de l'usager, dissous au premier recalcul hors-route et remplacés
+      (jamais empilés) à l'appui suivant.
+- [ ] FERMEE-1 — route fermée annoncée mais tracé conservé (04/09, capture
+      A4). DEUX CAUSES MESURÉES : le moteur public d'itinéraire ne connaît
+      pas les fermetures Bison Futé (annonces, pas graphe) — offrir un
+      bouton « Chercher un contournement » sur l'annonce, réutilisant le bis
+      de BIS-2 ; et la rue parallèle tombe dans la bande aveugle 30–50 m
+      (aimant SEUIL_AIMANT_M=30, recalcul hors-route >50 m/8 s) : localisé
+      juste, jamais recalculé. Piste : au-delà de 30 m tenus 30 s, recalculer
+      aussi — à mesurer sur trace réelle avant de régler.
+- [ ] RESEAU-2 — « je tape McDonald, il ne se passe rien » (3e signalement,
+      04/09). REPRODUIT : le mécanisme répond (message + rappel « Bornes
+      filtrées : nom McDonald ») mais au zoom France la couche bornes
+      n'existe pas — l'écran ne change pas. À FAIRE : taper un nom rend une
+      LISTE de stations correspondantes (nationale), cliquable, qui zoome
+      sur la station choisie.
+- [ ] TEMPS-POI-1 — « afficher le temps de trajet de ma position jusqu'à ce
+      POI en voiture, à pied, vélo ou moto » (04/09). QUATRE calculs
+      d'itinéraire par fiche ouverte : mesurer le coût réel avant de
+      promettre (les quotas sont un bien commun) ; piste sobre : UN calcul
+      dans le mode configuré, les autres sur demande.
+- [ ] BLANC-1 — « à la fin du parcours, écran blanc, obligé de rafraîchir »
+      (04/09, sur la version précédente). NON REPRODUIT sur la version
+      courante — les parcours d'arrivée passent. Garde ouverte : à
+      réessayer sur 1.75+ ; une capture de la console aiderait.
 - [x] PR #225 — MES-POI-1 (04/09) : les favoris sur la carte avec l'émoji de
       leur liste (disque cerclé de sa couleur), fiche au clic, puce « Mes
       POI » dans l'entonnoir — visibles d'emblée, le choix survit au

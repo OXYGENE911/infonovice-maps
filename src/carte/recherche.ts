@@ -752,12 +752,16 @@ export class RechercheAdresse extends HTMLElement {
          est une LISTE, et une ligne de liste se lit. */
       this.#resultats = lieux
         .filter((l): l is typeof l & { nom: string } => l.nom !== null)
-        .map((l) => ({
-          libelle: l.nom, type: 'lieu',
-          contexte: adresseDesTags(l.tags) ?? categorie.libelle,
-          lon: l.lon, lat: l.lat,
-          ...(l.famille ? { famille: l.famille } : {}),
-        }))
+        .map((l) => {
+          const adresse = adresseDesTags(l.tags);
+          return {
+            libelle: l.nom, type: 'lieu',
+            contexte: adresse ?? categorie.libelle,
+            lon: l.lon, lat: l.lat,
+            ...(l.famille ? { famille: l.famille } : {}),
+            ...(adresse === null ? { adresseInconnue: true } : {}),
+          };
+        })
         .sort((x, y) => distanceKm(x, depuis) - distanceKm(y, depuis))
         .slice(0, PLAFOND_RAIL);
       this.#actif = -1;
