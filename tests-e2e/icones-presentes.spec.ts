@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
 
 /* CHAQUE ICÔNE RÉFÉRENCÉE DOIT RÉPONDRE (MASCOTTE-2, 04/09).
