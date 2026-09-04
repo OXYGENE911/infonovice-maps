@@ -36,6 +36,26 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   nouveau bis le REMPLACE, jamais ne l'empile.
 - Contre-épreuve mordante : remettre le via dans les étapes fait échouer le
   parcours sur la première assertion.
+## [1.81.0] — 2026-09-04 — FERMEE-1
+
+### Une route coupée offre son contournement — et longer l'itinéraire finit par recalculer
+- Armelin, capture A4 à l'appui : « le GPS m'affiche le message [route
+  fermée] mais me force quand même à entrer sur l'autoroute fermée. J'ai
+  longé l'autoroute par une rue parallèle, le GPS me localisait bien sur la
+  route à côté mais a conservé le tracé sur l'autoroute fermée. »
+- **Le moteur public ne sait pas éviter une fermeture** — aucun paramètre ne
+  le permet (mesuré les 21 et 28/08). Ce qu'on peut faire honnêtement :
+  OFFRIR le geste. L'annonce d'une route coupée ou d'un obstacle porte
+  désormais un bouton **« Chercher un contournement »** — le même circuit
+  que l'itinéraire bis : une route qui s'écarte d'ici, mesurée, jamais
+  promise. Les travaux et bouchons ne l'offrent pas : six kilomètres de
+  détour pour un cône de chantier seraient pires que l'attente.
+- **La bande aveugle 30–50 m est fermée.** L'aimant lâche à 30 m, le
+  hors-route commençait à 50 m : sa rue parallèle vivait pile entre les
+  deux — localisé juste, jamais recalculé. Trente secondes tenues au-delà
+  de l'aimant valent désormais un recalcul : un virage ou un échangeur ne
+  durent pas trente secondes, une parallèle si.
+
 ## [1.78.0] — 2026-09-04 — DEST-2
 
 ### La fiche destination gagne ses deux gestes, et son marqueur dit qui il est
