@@ -1228,6 +1228,84 @@ test('le bis trouve une route qui S’ÉCARTE, et dit où elle sort', async ({ p
   await expect(mot).toContainText('sortie dans');
 });
 
+test('BIS-2 : le via ne pose PAS d’étape, ne s’empile pas, et se dissout au recalcul', async ({ page }) => {
+  /* ARMELIN, 04/09 : « ça rajoute automatiquement une étape supplémentaire
+     dans la planification et le GPS insiste pour me faire revenir dans tous
+     les lieux où j'ai cliqué sur Itinéraire bis ». Le via était adopté comme
+     étape ORDINAIRE : visible dans la liste, survivant aux recalculs,
+     empilé à chaque appui. Ce parcours défend les trois contrats.
+
+     LE MOCK EST LE JUGE : une requête AVEC intermediates rend 430 km, sans
+     en rend 390 — la distance affichée dit par où le calcul est passé. Et
+     les fixes GPS sont POUSSÉS un à un (même harnais que le parcours
+     hors-route) : c'est la DURÉE de l'écart qui déclenche le recalcul. */
+  const urls: string[] = [];
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    const url = route.request().url();
+    urls.push(url);
+    const avecEtape = /intermediates=/i.test(url);
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        geometry: avecEtape ? DETOUR : GEOMETRIE,
+        distance: avecEtape ? 430_000 : 390_000,
+        duration: avecEtape ? 15_000 : 13_000,
+      }),
+    });
+  });
+  await page.addInitScript(() => {
+    let rappel: ((p: unknown) => void) | null = null;
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe = (c) => {
+      rappel?.({ coords: { accuracy: 5, altitude: null, altitudeAccuracy: null,
+        speed: 24, heading: 90, ...c } });
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        watchPosition: (ok: (p: unknown) => void) => { rappel = ok; return 1; },
+        clearWatch: () => { rappel = null; },
+        getCurrentPosition: (ok: (p: unknown) => void) => { rappel = ok; },
+      },
+    });
+  });
+  const fixe = (lon: number, lat: number): Promise<void> => page.evaluate(([lo, la]) => {
+    (window as unknown as { __pousserFixe: (c: object) => void }).__pousserFixe({
+      longitude: lo, latitude: la });
+  }, [lon, lat]);
+  await suivreEtDeplier(page);
+  await fixe(2.3522, 48.8566);
+
+  await page.getByRole('button', { name: 'Chercher un itinéraire bis' }).click();
+  await expect(page.locator('.bg-bis-mot')).toContainText('Itinéraire bis', { timeout: 15_000 });
+  /* Le trajet ADOPTÉ passe par le via : sa distance est celle du détour. */
+  await expect(page.locator('.iti-resultat')).toContainText('430', { timeout: 15_000 });
+  /* 1. Et AUCUNE étape n'apparaît dans le planificateur — le retour exact. */
+  await expect(page.locator('.etape-ligne')).toHaveCount(0);
+
+  /* 2. Un SECOND bis REMPLACE le premier : aucune requête ne porte jamais
+     DEUX points intermédiaires — ni « | » ni son encodage %7C. Avec ce
+     mock, le second bis ne peut pas diverger (même détour rendu) :
+     « repassent par ici » est une réponse honnête ; ce sont les REQUÊTES
+     qui se jugent. */
+  await fixe(2.3522, 48.8566);
+  await page.getByRole('button', { name: 'Chercher un itinéraire bis' }).click();
+  await expect(page.locator('.bg-bis-mot'))
+    .toContainText(/sortie dans|repassent par ici/, { timeout: 15_000 });
+  await expect(page.locator('.etape-ligne')).toHaveCount(0);
+  const empilees = urls.filter((u) => /intermediates=[^&]*(\||%7C)/i.test(u));
+  expect(empilees, 'un via, jamais une pile').toEqual([]);
+
+  /* 3. HORS-ROUTE, fixe après fixe : le via se dissout — le recalcul part
+     de la position et repart DROIT à l'arrivée, sans « revenir dans tous
+     les lieux où j'ai cliqué ». */
+  await expect.poll(async () => {
+    await fixe(1.6, 48.5);
+    return urls.some((u) => u.includes('start=1.6,48.5'));
+  }, { timeout: 30_000, intervals: [700] }).toBe(true);
+  const recalcs = urls.filter((u) => u.includes('start=1.6,48.5'));
+  expect(recalcs.every((u) => !/intermediates=/i.test(u)),
+    'le via doit être dissous du recalcul').toBe(true);
+});
+
 test('le bis REFUSE de proposer une route qui repasse par ici', async ({ page }) => {
   /* Le service rend le MÊME tracé quoi qu'on lui demande — le cas d'une
      route unique, une vallée, une île. Proposer ce « bis » enverrait

@@ -182,6 +182,17 @@ export class PanneauItineraire extends HTMLElement {
     depart: PointGeo; arrivee: PointGeo; profil: Profil; mode: Mode;
     etapes: PointGeo[]; eviter: Eviter[]; optimisation: Optimisation;
   } | null = null;
+  /* LE VIA DU BIS N'EST PAS UNE ÉTAPE (BIS-2, 04/09). Armelin : « ça rajoute
+     automatiquement une étape supplémentaire dans la planification et le GPS
+     insiste pour me faire revenir dans tous les lieux où j'ai cliqué sur
+     Itinéraire bis ». Le point latéral est un MOYEN de forcer la divergence,
+     pas un lieu où aller : rangé dans les étapes, il paraissait dans la
+     liste, survivait aux recalculs et s'empilait à chaque appui. Il vit donc
+     ICI, injecté dans la requête au moment du calcul, et il se dissout :
+     au recalcul hors-route (on a quitté la route, il a servi ou ne rime plus
+     à rien), quand on se gare, quand on efface — et un nouveau bis le
+     REMPLACE, jamais ne l'empile. */
+  #viaBis: PointGeo | null = null;
   /* LA DESTINATION D'ORIGINE, gardée quand on se gare (PARK-1) : c'est vers
      ELLE que la fin à pied ramène. */
   #finPietonne: { point: PointGeo; libelle: string } | null = null;
@@ -981,6 +992,7 @@ export class PanneauItineraire extends HTMLElement {
          sont derrière nous — les garder ferait faire demi-tour. */
       const etapes = this.querySelector('etapes-itineraire') as EtapesItineraire;
       etapes.points = [];
+      this.#viaBis = null;
       this.#reprendreSuivi = true;
       if (d.position) {
         this.#depart = d.position;
@@ -2772,6 +2784,9 @@ export class PanneauItineraire extends HTMLElement {
     const etapes = this.querySelector('etapes-itineraire') as EtapesItineraire;
     etapes.points = restantes;
 
+    /* LE VIA DU BIS SE DISSOUT (BIS-2) : on a quitté la route — le détour a
+       servi, ou n'a plus d'objet. Le garder ferait revenir au point latéral. */
+    this.#viaBis = null;
     this.#reprendreSuivi = true;
     this.#poser('depart', position, 'Reprise d’itinéraire');
   }
@@ -2852,7 +2867,10 @@ export class PanneauItineraire extends HTMLElement {
     const gagnant = candidats.find((c) => c.cle === choix.candidat.cle);
     if (!gagnant) { repondre('Aucun bis trouvé.'); return; }
     const etapes = this.querySelector('etapes-itineraire') as EtapesItineraire;
-    etapes.points = [gagnant.via, ...restantes];
+    /* REMPLACÉ, JAMAIS EMPILÉ (BIS-2) : le via précédent — s'il y en avait
+       un — meurt ici ; les étapes de l'usager, elles, restent les siennes. */
+    this.#viaBis = gagnant.via;
+    etapes.points = restantes;
     this.#reprendreSuivi = true;
     this.#poser('depart', position, 'Itinéraire bis');
     repondre(`Itinéraire bis : sortie dans ${formaterDistance(choix.divergenceM)}`
@@ -4143,8 +4161,12 @@ export class PanneauItineraire extends HTMLElement {
       const inter = (this.querySelector('etapes-itineraire') as EtapesItineraire).points;
       const eviter = [...this.#eviter];
       const optimisation = this.#optimisation;
+      /* Le via du bis entre dans la REQUÊTE, jamais dans le cliché : le
+         recalcul hors-route relit cliche.etapes, et un via qui y resterait
+         ferait « revenir dans tous les lieux où j'ai cliqué » (BIS-2). */
+      const viaBis = this.#viaBis;
       const brut = await calculerItineraire(depart, arrivee, profil,
-        { etapes: inter, eviter, optimisation });
+        { etapes: viaBis ? [viaBis, ...inter] : inter, eviter, optimisation });
       /* À VÉLO, LA DISTANCE VAUT ET LE TEMPS NON. Le moteur rend une durée de
          PIÉTON sur un chemin de piéton : quatre kilomètres font une heure à
          pied et un quart d'heure à vélo. On garde le tracé et la distance —
@@ -4283,6 +4305,7 @@ export class PanneauItineraire extends HTMLElement {
     clearTimeout(this.#minuteurPlanAuto);
     this.#planEnCours = false;
     this.#departA = null;
+    this.#viaBis = null;
     const heure = this.querySelector<HTMLInputElement>('.iti-heure');
     if (heure) heure.value = '';
     this.#marqueurs.forEach((m) => m.remove()); this.#marqueurs = [];

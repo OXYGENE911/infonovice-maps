@@ -666,6 +666,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       par appui martèleraient l'API publique. PISTE à mesurer AVANT de
       promettre : le facteur de détour (1,25, celui déjà posé pour le corridor)
       appliqué au vol d'oiseau, affiché « ≈ par la route ».
+- [x] PR #230 — BIS-2 (04/09) : le via du bis n'est plus une étape — injecté
+      à la requête, dissous au recalcul hors-route / se garer / effacer,
+      remplacé (jamais empilé) au bis suivant.
 - [x] PR #229 — DEST-2 (04/09) : la fiche destination gagne « Réduire au
       marqueur » (la croix efface tout), le marqueur passe au rouge, et
       l'adresse manquante se demande à la BAN — « Y aller » la porte.
@@ -676,15 +679,6 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       production (« !public/*.png » non récursif — les icônes n'entraient
       jamais au dépôt) ; un parcours vérifie chaque icône référencée. Et le
       chien-boussole meuble la page de recherche vierge.
-- [ ] BIS-2 — l'itinéraire bis empile des étapes (retour du 04/09 : « ça
-      rajoute automatiquement une étape supplémentaire dans la planification
-      et le GPS insiste pour me faire revenir dans tous les lieux où j'ai
-      cliqué sur Itinéraire bis »). CAUSE LUE DANS LE CODE : le point latéral
-      du bis est adopté comme étape ORDINAIRE (etapes.points = [via,
-      ...restantes]) — il apparaît dans la liste, survit aux recalculs et
-      s'empile à chaque appui. À FAIRE : des vias de déroutement séparés des
-      étapes de l'usager, dissous au premier recalcul hors-route et remplacés
-      (jamais empilés) à l'appui suivant.
 - [ ] FERMEE-1 — route fermée annoncée mais tracé conservé (04/09, capture
       A4). DEUX CAUSES MESURÉES : le moteur public d'itinéraire ne connaît
       pas les fermetures Bison Futé (annonces, pas graphe) — offrir un
