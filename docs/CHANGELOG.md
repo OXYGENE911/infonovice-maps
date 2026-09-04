@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.91.0] — 2026-09-04 — RECHERCHE-7
+
+### L'annuaire de l'administration entre dans la recherche — la sixième source
+- Le chantier qu'Armelin a dit « le plus important » (03/09) : « si un
+  utilisateur teste l'application et que ses 3 premières adresses ne
+  fonctionnent pas, c'est un utilisateur qui quitte sans jamais revenir. »
+  Des trois volets de son instruction, deux étaient livrés (la page plein
+  écran, la géolocalisation au consentement) — voici le troisième.
+- **api-lannuaire.service-public.fr** — Licence Ouverte, sans clé, CORS
+  ouvert : mairies, préfectures, centres publics. **Mesuré avant d'écrire
+  une ligne** : « mairie plessis trevise » y vit dans le NOM de la fiche ;
+  « INRAE Beaucouze » rend ZÉRO (le centre s'appelle « … Pays de la Loire -
+  Angers », Beaucouzé est sa commune) ; `search(nom) AND search(adresse,
+  commune)` rend le centre — la requête n° 6 du banc, enfin comblée.
+- Deux appels au plus, comme l'annuaire des entreprises : un national sur
+  la phrase, un borné à la commune reconnue. Les coordonnées vivent en
+  CHAÎNES dans une chaîne JSON : le vide se rejette avant conversion et
+  (0,0) après — la leçon de l'île Nulle, appliquée d'avance.
+- L'hôte entre dans la CSP dans le même commit (la leçon du
+  « Failed to fetch » silencieux), et dans les gabarits des dix parcours
+  qui énumèrent les sources.
+
 ## [1.90.1] — 2026-09-04 — DOCS-2
 
 ### Corrigé — la feuille de route ressuscitait ses chantiers fermés

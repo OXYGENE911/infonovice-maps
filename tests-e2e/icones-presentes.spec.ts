@@ -57,7 +57,7 @@ test('LE CHIEN MEUBLE LA PAGE VIERGE, et s’efface devant la saisie comme devan
   const cors = { 'Access-Control-Allow-Origin': '*' };
   for (const motif of [
     '**/api-adresse.data.gouv.fr/**', '**/data.geopf.fr/geocodage/**',
-    '**/recherche-entreprises.api.gouv.fr/**', '**/data.education.gouv.fr/**',
+    '**/recherche-entreprises.api.gouv.fr/**', '**/data.education.gouv.fr/**', '**/api-lannuaire.service-public.fr/**',
   ]) {
     await page.route(motif, (route) => route.fulfill({
       headers: cors, contentType: 'application/json',

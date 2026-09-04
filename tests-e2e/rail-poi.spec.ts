@@ -38,7 +38,7 @@ async function ouvrirLaPage(page: Page): Promise<void> {
   for (const motif of [
     '**/api-adresse.data.gouv.fr/**', '**/data.geopf.fr/geocodage/**',
     '**/recherche-entreprises.api.gouv.fr/**',
-    '**/data.education.gouv.fr/**',
+    '**/data.education.gouv.fr/**', '**/api-lannuaire.service-public.fr/**',
   ]) {
     await page.route(motif, (route) => route.fulfill({
       headers: cors, contentType: 'application/json',
@@ -132,7 +132,7 @@ test('FILTRE-RAIL : « Ouvert maintenant » et les cuisines RÉELLEMENT présent
   const cors = { 'Access-Control-Allow-Origin': '*' };
   for (const motif of [
     '**/api-adresse.data.gouv.fr/**', '**/data.geopf.fr/geocodage/**',
-    '**/recherche-entreprises.api.gouv.fr/**', '**/data.education.gouv.fr/**',
+    '**/recherche-entreprises.api.gouv.fr/**', '**/data.education.gouv.fr/**', '**/api-lannuaire.service-public.fr/**',
   ]) {
     await page.route(motif, (route) => route.fulfill({
       headers: cors, contentType: 'application/json',
