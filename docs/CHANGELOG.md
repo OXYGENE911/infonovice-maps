@@ -2,6 +2,30 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.78.0] — 2026-09-04 — DEST-2
+
+### La fiche destination gagne ses deux gestes, et son marqueur dit qui il est
+- Armelin, en 1.74 : « je ne peux pas réduire la fenêtre d'information du
+  POI. Je peux la fermer mais pas la réduire. Et quand je ferme la fenêtre,
+  un point de géolocalisation bleu apparaît à l'emplacement du POI mais ne
+  disparaît pas. »
+- DEST-1 avait fait de la croix une réduction MUETTE — le marqueur restait
+  en poignée sans que rien ne le dise, et il passait pour un fantôme.
+  Désormais : **« Réduire au marqueur »** garde la poignée (le marqueur
+  rouvre la fiche), **la croix efface tout**. « Y aller » réduit — c'est le
+  départ du trajet qui effacera.
+- **Le marqueur passe au rouge** : sa teinte bleue se lisait comme un point
+  de position — il est une destination, il en prend le pictogramme.
+
+### Et l'adresse manquante se demande à la BAN
+- Armelin, sur un restaurant du rail : « je ne vois aucune adresse
+  apparaître pour ce POI à part le bouton Y aller ».
+- Les lieux d'OpenStreetMap sans étiquettes addr:* n'avaient que leur
+  famille en guise de contexte. Même recette que les fiches de lieux
+  (ADRESSE-POI-1) : la BAN, une fois, à l'ouverture — « Adresse la plus
+  proche : … », car elle n'est pas « l'adresse déclarée ». Et « Y aller »
+  porte l'adresse trouvée dans le champ destination : elle se dicte.
+
 ## [1.77.0] — 2026-09-04 — SCROLL-1
 
 ### Corrigé — la liste de résultats se laisse enfin faire défiler au doigt
@@ -39,30 +63,6 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - Le chien à la boussole (192 px, même recette que les icônes) s'affiche au
   centre de la page vierge et s'efface devant la saisie comme devant les
   résultats du rail — trois sélecteurs CSS, pas une ligne de script.
-## [1.78.0] — 2026-09-04 — DEST-2
-
-### La fiche destination gagne ses deux gestes, et son marqueur dit qui il est
-- Armelin, en 1.74 : « je ne peux pas réduire la fenêtre d'information du
-  POI. Je peux la fermer mais pas la réduire. Et quand je ferme la fenêtre,
-  un point de géolocalisation bleu apparaît à l'emplacement du POI mais ne
-  disparaît pas. »
-- DEST-1 avait fait de la croix une réduction MUETTE — le marqueur restait
-  en poignée sans que rien ne le dise, et il passait pour un fantôme.
-  Désormais : **« Réduire au marqueur »** garde la poignée (le marqueur
-  rouvre la fiche), **la croix efface tout**. « Y aller » réduit — c'est le
-  départ du trajet qui effacera.
-- **Le marqueur passe au rouge** : sa teinte bleue se lisait comme un point
-  de position — il est une destination, il en prend le pictogramme.
-
-### Et l'adresse manquante se demande à la BAN
-- Armelin, sur un restaurant du rail : « je ne vois aucune adresse
-  apparaître pour ce POI à part le bouton Y aller ».
-- Les lieux d'OpenStreetMap sans étiquettes addr:* n'avaient que leur
-  famille en guise de contexte. Même recette que les fiches de lieux
-  (ADRESSE-POI-1) : la BAN, une fois, à l'ouverture — « Adresse la plus
-  proche : … », car elle n'est pas « l'adresse déclarée ». Et « Y aller »
-  porte l'adresse trouvée dans le champ destination : elle se dicte.
-
 ## [1.75.0] — 2026-09-04 — MES-POI-1
 
 ### Les favoris paraissent sur la carte, avec l'émoji de leur liste
