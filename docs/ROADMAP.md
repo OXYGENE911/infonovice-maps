@@ -637,18 +637,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       barre de recherche — elle vivait dans la moitié d'écran que le clavier
       recouvre. La règle d'Armelin entre dans CLAUDE.md : « toute fonction
       cachée à l'utilisateur est une fonction inutilisable ».
+- [x] PR #244 — SOC-EDIT (04/09) : la section Batterie du Copilote —
+      estimation interpolée sur les ancres du plan, correction saisie qui
+      replanifie depuis la position, écart affiché, valeur écrite dans le
+      profil véhicule. Rien d'appris en silence.
 - [x] PR #243 — BADGE-1 (04/09) : le filtre « Accessibles en itinérance
       (badges) », l'approximation décidée par Armelin — identifiant AFIREV,
       règle unique carte/index/trajet, limite écrite dans le panneau.
-- [ ] SOC-EDIT — corriger le taux de batterie pendant la navigation, demandé
-      le 03/09 : « afficher dans Copilot le taux de batterie estimé à
-      l'instant T et pouvoir renseigner à côté la valeur réelle pour que le
-      planificateur voie s'il surestime ». PERTINENT, et cohérent avec le
-      modèle : le SOC estimé existe déjà (bandeau-guidage) ; il manque le
-      champ de correction et le recalcul du plan depuis la valeur corrigée.
-      À cadrer : où vit le geste (Copilot), et ce qu'on fait de l'écart
-      mesuré (le montrer seulement, ou apprendre une correction de
-      consommation à la MARGE-1 — jamais en silence).
 - [ ] RAIL-DISTANCE-ROUTE — dire la distance par la route selon le mode de
       locomotion dans les listes (demande du 03/09 : « avec leur distance en
       voiture ou à pied suivant le mode configuré »). La v1 du rail affiche

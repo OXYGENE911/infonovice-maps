@@ -972,6 +972,25 @@ export class PanneauItineraire extends HTMLElement {
       void this.#recalculerDepuis({ lon: d.lon, lat: d.lat });
     });
     /* L'ITINÉRAIRE BIS (BIS-1, 30/08) — demandé par la barre, calculé ici. */
+    /* LA CORRECTION DE BATTERIE (SOC-EDIT, 04/09) : la valeur s'écrit LÀ
+       OÙ LE % VIT — le profil du véhicule — jamais dans un état parallèle,
+       puis le trajet se refait depuis la position par le chemin ordinaire
+       de la reprise. Le champ « Charge (SOC) » du volet véhicule montrera
+       la correction à sa prochaine ouverture : une seule vérité. */
+    document.addEventListener('soc-corrige', (e) => {
+      const d = (e as CustomEvent<{ pourcent: number; lon: number; lat: number }>).detail;
+      void (async () => {
+        const memo = await lirePreference<unknown>(PREF_VEHICULE);
+        const m = (memo ?? {}) as Record<string, unknown>;
+        const vehicule = {
+          ...((m['vehicule'] ?? {}) as Record<string, unknown>),
+          soc: d.pourcent,
+        };
+        await ecrirePreference(PREF_VEHICULE, { ...m, vehicule });
+        this.#socDepart = d.pourcent;
+        await this.#recalculerDepuis({ lon: d.lon, lat: d.lat });
+      })();
+    });
     document.addEventListener('itineraire-bis', (e) => {
       const d = (e as CustomEvent<{ lon: number; lat: number; cap: number | null }>).detail;
       void this.#itineraireBis({ lon: d.lon, lat: d.lat }, d.cap);
@@ -2924,6 +2943,11 @@ export class PanneauItineraire extends HTMLElement {
         destination: { ...cliche.arrivee, libelle: this.#libelleArrivee },
       } : {}),
       etapes,
+      /* LES DEUX BOUTS DU FIL DE BATTERIE (SOC-EDIT) — seulement quand un
+         plan existe : sans plan, pas de section Batterie au Copilote. */
+      ...(plan?.faisable
+        ? { socDepartTrajet: this.#socDepart, socFinal: plan.socArrivee }
+        : {}),
       arrets: plan?.faisable
         ? plan.arrets.map((a) => ({
           nom: a.borne.nom,

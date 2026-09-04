@@ -2,6 +2,23 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.90.0] — 2026-09-04 — SOC-EDIT
+
+### Le Copilote montre la batterie estimée — et se laisse corriger par le réel
+- Armelin, 03/09 : « afficher dans Copilot le taux de batterie estimé à
+  l'instant T et pouvoir renseigner à côté la valeur réelle pour que le
+  planificateur voie s'il surestime. »
+- La section **Batterie** du Copilote affiche « Estimée maintenant : ~54 % —
+  une estimation, pas un relevé » : l'interpolation suit les ancres du plan
+  (départ, arrivée/départ de chaque arrêt, arrivée finale), et se dit pour
+  ce qu'elle est.
+- **La correction** : on saisit le % affiché par le véhicule, et le plan se
+  refait depuis la position — par le chemin ordinaire de la reprise.
+  **L'écart s'affiche** (« l'estimation disait ~54 %, écart −7 points ») :
+  c'est toute la demande. **Rien ne s'apprend en silence** : la valeur
+  s'écrit dans le profil du véhicule — le champ « Charge (SOC) » la montre —
+  et la marge de prudence reste celle de MARGE-1.
+
 ## [1.89.0] — 2026-09-04 — BADGE-1
 
 ### Le filtre des badges arrive — en approximation d'itinérance, et il le dit

@@ -53,6 +53,7 @@ import { Marker, type GeoJSONSource } from 'maplibre-gl';
 import { imagePastille, cleImage, RAPPORT_PASTILLE } from './icone-lieu';
 import { chargerCommodites, ErreurCommodites } from '../lib/commodites';
 import { meteoA, phraseMeteo, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
+import { socEstimeA } from '../lib/arrets';
 import {
   profilItineraire, versTraceSVG, denivele, pointSurTrace, ErreurAltimetrie,
 } from '../lib/altimetrie';
@@ -103,6 +104,11 @@ export interface ArretAAnnoncer {
 
 export interface DemarrageGuidage extends OptionsGuidage {
   arrets: readonly ArretAAnnoncer[];
+  /* LES DEUX BOUTS DU FIL DE BATTERIE (SOC-EDIT, 04/09) : avec les SOC des
+     arrêts, ils suffisent à estimer le niveau à l'instant T. Absents quand
+     aucun plan n'existe — pas de véhicule électrique, pas de section. */
+  socDepartTrajet?: number;
+  socFinal?: number;
   /* LA DESTINATION DEMANDÉE (PARK-1, 31/08) — pas la fin du tracé : le tracé
      s'arrête SUR la route, la destination est l'adresse. C'est autour d'ELLE
      qu'on cherche les parkings, et son libellé nomme la fin à pied. */
@@ -2713,6 +2719,81 @@ export class BandeauGuidage extends HTMLElement {
       t.textContent = titre;
       corps.append(t);
     };
+
+    /* — La batterie (SOC-EDIT, 04/09). Armelin : « afficher dans Copilot
+       le taux de batterie estimé à l'instant T et pouvoir renseigner à côté
+       la valeur réelle pour que le planificateur voie s'il surestime ».
+       L'ESTIMATION SE DIT COMME TELLE ; la correction s'écrit dans le
+       profil du véhicule (une seule vérité) et REPLANIFIE depuis la
+       position ; l'écart S'AFFICHE — rien ne s'apprend en silence, la
+       prudence reste celle de MARGE-1. — */
+    if (typeof o.socDepartTrajet === 'number' && typeof o.socFinal === 'number') {
+      section('Batterie');
+      const estime = socEstimeA(
+        e.avancementM, o.socDepartTrajet, o.arrets, o.socFinal, o.distanceTotaleM,
+      );
+      const ligneSoc = document.createElement('p');
+      ligneSoc.className = 'bg-copilote-soc';
+      ligneSoc.textContent = `Estimée maintenant : ~${Math.round(estime)} %`
+        + ' — une estimation, pas un relevé.';
+      corps.append(ligneSoc);
+      const cleSoc = 'soc-correction';
+      const dejaSoc = memoire.get(cleSoc);
+      if (dejaSoc) corps.append(dejaSoc);
+      else {
+        const boite = document.createElement('div');
+        boite.className = 'bg-copilote-soc-correction';
+        boite.dataset['memoire'] = cleSoc;
+        const champ = document.createElement('input');
+        champ.type = 'number';
+        champ.min = '1';
+        champ.max = '100';
+        champ.inputMode = 'numeric';
+        champ.className = 'bg-copilote-soc-champ';
+        champ.placeholder = '% affiché par le véhicule';
+        champ.setAttribute('aria-label',
+          'Pourcentage réel de batterie affiché par le véhicule');
+        const corriger = document.createElement('button');
+        corriger.type = 'button';
+        corriger.className = 'bg-copilote-soc-corriger';
+        corriger.textContent = 'Corriger le plan';
+        const etatSoc = document.createElement('p');
+        etatSoc.className = 'bg-copilote-soc-etat';
+        etatSoc.setAttribute('role', 'status');
+        corriger.addEventListener('click', () => {
+          const v = Number(champ.value);
+          if (!(v >= 1 && v <= 100)) {
+            etatSoc.textContent = 'Un pourcentage entre 1 et 100.';
+            return;
+          }
+          const c = this.#derniersCoords;
+          const en = this.#etat;
+          const opts = this.#options;
+          if (!c || !en || !opts
+            || typeof opts.socDepartTrajet !== 'number'
+            || typeof opts.socFinal !== 'number') {
+            etatSoc.textContent = 'Position inconnue : la correction attend un point GPS.';
+            return;
+          }
+          const estimeIci = socEstimeA(
+            en.avancementM, opts.socDepartTrajet, opts.arrets, opts.socFinal,
+            opts.distanceTotaleM,
+          );
+          const ecart = Math.round(v - estimeIci);
+          /* L'ÉCART SE MONTRE — c'est toute la demande : « pour que le
+             planificateur voie s'il surestime ». */
+          etatSoc.textContent = `Plan recalculé depuis ${Math.round(v)} % —`
+            + ` l'estimation disait ~${Math.round(estimeIci)} %`
+            + ` (écart ${ecart >= 0 ? '+' : ''}${ecart}`
+            + ` point${Math.abs(ecart) > 1 ? 's' : ''}).`;
+          document.dispatchEvent(new CustomEvent('soc-corrige', {
+            detail: { pourcent: v, lon: c.longitude, lat: c.latitude },
+          }));
+        });
+        boite.append(champ, corriger, etatSoc);
+        corps.append(boite);
+      }
+    }
 
     // — Les recharges à venir —
     const restants = o.arrets.filter((a) => a.avancementM > e.avancementM);

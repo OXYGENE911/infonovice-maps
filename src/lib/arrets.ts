@@ -556,3 +556,36 @@ function planifierGlouton(o: OptionsPlan): PlanRecharge {
     + ' ce planificateur sait estimer honnêtement.',
   );
 }
+
+/**
+ * Le SOC estimé à un point du trajet — PURE (SOC-EDIT, 04/09).
+ *
+ * LES ANCRES SONT CELLES DU PLAN : le départ, puis pour chaque arrêt son
+ * arrivée et son départ (la recharge est un saut vertical au même
+ * kilomètre), puis l'arrivée finale. Entre deux ancres, la batterie descend
+ * LINÉAIREMENT en distance — approximation assumée : le plan lui-même
+ * calcule par tronçons, et le Copilote dit « ~ » et « estimation ».
+ */
+export function socEstimeA(
+  avancementM: number,
+  socDepart: number,
+  arrets: readonly { avancementM: number; socArrivee: number; socDepart: number }[],
+  socFinal: number,
+  distanceTotaleM: number,
+): number {
+  const borne = (x: number): number => Math.min(Math.max(x, 0), 1);
+  let posPrec = 0;
+  let socPrec = socDepart;
+  for (const a of arrets) {
+    if (avancementM <= a.avancementM) {
+      const part = a.avancementM === posPrec ? 1
+        : borne((avancementM - posPrec) / (a.avancementM - posPrec));
+      return socPrec + (a.socArrivee - socPrec) * part;
+    }
+    posPrec = a.avancementM;
+    socPrec = a.socDepart;
+  }
+  if (distanceTotaleM <= posPrec) return socFinal;
+  const part = borne((avancementM - posPrec) / (distanceTotaleM - posPrec));
+  return socPrec + (socFinal - socPrec) * part;
+}

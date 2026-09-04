@@ -2941,6 +2941,23 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
   margin: 10px 0 4px; font: 700 11px var(--police); color: var(--texte-3);
   text-transform: uppercase; letter-spacing: .07em;
 }
+
+/* LA SECTION BATTERIE DU COPILOTE (SOC-EDIT, 04/09). */
+.bg-copilote-soc { margin: 2px 0 6px; font: 600 13px var(--police); color: var(--texte-1); }
+.bg-copilote-soc-correction { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bg-copilote-soc-champ {
+  width: 130px; padding: 7px 10px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond);
+  font: 600 13px var(--police); color: var(--texte-1);
+}
+.bg-copilote-soc-corriger {
+  padding: 7px 12px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent);
+  color: var(--blanc); font: 650 12.5px var(--police);
+}
+.bg-copilote-soc-corriger:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-copilote-soc-etat { flex-basis: 100%; margin: 2px 0 0; font: 600 12px var(--police); color: var(--texte-2); }
+.bg-copilote-soc-etat:empty { display: none; }
 .bg-copilote-arret {
   padding: 8px 10px; margin: 4px 0; border: 1px solid var(--bord);
   border-radius: 10px; background: var(--fond-doux);
