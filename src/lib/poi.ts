@@ -80,6 +80,24 @@ export interface FiltresBornes {
      2 484 d'IZIVIA FAST), avec des graphies inconstantes — d'où une recherche
      par SOUS-CHAÎNE, jamais une égalité. */
   nom?: string | undefined;
+  /* L'APPROXIMATION DES BADGES (BADGE-1, décidée par Armelin le 04/09).
+     Ses testeurs : « si je coche Plugsurfing et Chargemap, la carte devrait
+     m'afficher les bornes compatibles avec mes deux badges ». MESURÉ le
+     03/09 sur le schéma IRVE : AUCUN champ de compatibilité e-MSP n'existe
+     — la couverture d'un badge est une donnée commerciale sans API ouverte.
+     Ce qu'on PEUT dire : `id_station_itinerance` (format AFIREV, FRxxx)
+     signale une station raccordée à l'itinérance — elle accepte la grande
+     majorité des badges. On filtre là-dessus, et l'interface dit exactement
+     cela, jamais plus. */
+  itinerance?: boolean | undefined;
+}
+
+/** Une station est-elle raccordée à l'itinérance ? — PURE.
+    L'identifiant AFIREV commence par FR ; les producteurs écrivent parfois
+    « Non concerné » ou du vide dans ce champ, qui ne sont pas des
+    raccordements. */
+export function enItinerance(id: string | null): boolean {
+  return id !== null && /^FR/i.test(id.trim());
 }
 
 export interface Charge<T> { elements: T[]; total: number; }
@@ -434,6 +452,7 @@ export function resumerFiltresBornes(f: FiltresBornes): string | null {
   if (typeof f.puissanceMin === 'number' && f.puissanceMin > 0) {
     bouts.push(`${f.puissanceMin} kW et plus`);
   }
+  if (f.itinerance === true) bouts.push('itinérance (badges)');
   const prises = f.prises ?? [];
   if (prises.length > 0) {
     const libelles = prises

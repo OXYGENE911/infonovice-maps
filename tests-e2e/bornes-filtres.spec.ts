@@ -610,3 +610,49 @@ test('RESEAU-2 : taper un nom rend la LISTE des stations — et le choix y vole'
   await page.locator('.poi-reseau-recherche').fill('Zorglub');
   await expect(page.locator('.poi-stations')).toBeHidden();
 });
+
+test('BADGE-1 : « accessibles en itinérance » filtre sur l’identifiant — et la note dit la limite', async ({ page }) => {
+  /* LES TESTEURS voulaient cocher LEURS badges (Plugsurfing, Chargemap) ;
+     le schéma IRVE n'a AUCUN champ e-MSP (mesuré le 03/09). L'approximation
+     décidée par Armelin le 04/09 : le raccordement à l'itinérance, avec la
+     limite écrite dans le panneau — jamais une promesse de badge précis. */
+  await page.route(IRVE, (route) => {
+    const url = route.request().url();
+    if (url.includes('/facets') || url.includes('/exports/json')) return route.fallback();
+    return route.fulfill({ contentType: 'application/json',
+      body: JSON.stringify({ total_count: 2, results: [
+        { point_geo: { lon: 2.35, lat: 48.856 }, nom_station: 'Raccordée',
+          puissance_nominale: 150, id_station_itinerance: 'FRIONE4101' },
+        { point_geo: { lon: 2.353, lat: 48.858 }, nom_station: 'Isolée',
+          puissance_nominale: 150, id_station_itinerance: 'Non concerné' },
+      ] }) });
+  });
+  await simulerIndexNational(page, []);
+  await ouvrirBornes(page);
+
+  const lire = async (): Promise<string[]> => page.evaluate(async () => {
+    const c = (window as unknown as {
+      __carte: { getSource(id: string): { getData(): unknown } | undefined };
+    }).__carte;
+    const d = await c.getSource('poi-bornes')?.getData() as GeoJSON.FeatureCollection | undefined;
+    return (d?.features ?? []).map((f) => String(f.properties?.['nom']));
+  });
+  await expect.poll(async () => (await lire()).length).toBe(2);
+
+  /* La note honnête est LÀ, dans le panneau — la règle du projet : une
+     approximation qui ne dit pas sa limite est un mensonge. */
+  await expect(page.locator('.poi-panneau')).toContainText('grande majorité des badges');
+  await expect(page.locator('.poi-panneau')).toContainText('aucun');
+
+  await page.locator('.poi-itinerance').check();
+  await expect.poll(async () => await lire()).toEqual(['Raccordée']);
+  /* Le rappel des filtres actifs le dit aussi. */
+  await expect(page.locator('.poi-rappel-texte')).toContainText('itinérance (badges)');
+
+  /* « Tout afficher » libère, et décoche — il vit sur la page des
+     familles de l'entonnoir : la flèche y ramène depuis les réglages. */
+  await page.locator('.poi-retour').click();
+  await page.locator('.poi-rappel-tout').click();
+  await expect.poll(async () => (await lire()).length).toBe(2);
+  await expect(page.locator('.poi-itinerance')).not.toBeChecked();
+});

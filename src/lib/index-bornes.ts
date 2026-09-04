@@ -34,7 +34,7 @@
  * réseau, celle-ci y ajoute les bornes.
  */
 import { lirePreference, ecrirePreference } from './stockage';
-import type { Bbox, ClePrise, FiltresBornes } from './poi';
+import { enItinerance, type Bbox, type ClePrise, type FiltresBornes } from './poi';
 
 /** Le seuil de l'index, en kW. Voir l'en-tête : c'est une décision. */
 export const SEUIL_RAPIDE = 50;
@@ -444,6 +444,9 @@ export function stationPasseFiltres(
   const nom = normaliserNom(filtres.nom ?? '');
 
   if (puissanceMin > 0 && s.puissance < puissanceMin) return false;
+  /* L'ITINÉRANCE (BADGE-1) : jugée sur l'identifiant AFIREV — la seule
+     donnée publique qui parle des badges, et elle ne nomme aucun badge. */
+  if (filtres.itinerance === true && !enItinerance(s.id)) return false;
   // OU entre les prises : un véhicule accepte l'une OU l'autre.
   if (prises.length > 0 && !prises.some((p) => s.prises.includes(p))) return false;
   if (reseaux.size > 0) {
