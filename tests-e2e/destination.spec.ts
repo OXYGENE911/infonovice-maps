@@ -86,12 +86,15 @@ test('LA CARTE VA À LA DESTINATION, même le suivi GPS enclenché', async ({ pa
   expect(Math.abs(centre.lon - DEST.lon), 'le suivi a repris la carte').toBeLessThan(0.05);
 });
 
-test('LA FICHE FERMÉE SE ROUVRE EN CLIQUANT LE MARQUEUR', async ({ page }) => {
+test('LA FICHE RÉDUITE SE ROUVRE EN CLIQUANT LE MARQUEUR', async ({ page }) => {
   await ouvrir(page);
   await choisirLyon(page);
 
-  // On la ferme : la carte se voit, le marqueur reste.
-  await page.locator('.maplibregl-popup-close-button').click();
+  /* ON LA RÉDUIT (DEST-2, 04/09) : le geste a désormais son bouton. La
+     croix, elle, EFFACE — Armelin : « un point bleu apparaît à l'emplacement
+     du POI mais ne disparaît pas » ; DEST-1 avait fait de la croix une
+     réduction muette, et le marqueur passait pour un fantôme. */
+  await page.getByRole('button', { name: 'Réduire au marqueur' }).click();
   await expect(page.locator('.fiche-destination')).toHaveCount(0);
   await expect(page.locator('.maplibregl-marker')).toHaveCount(1);
 

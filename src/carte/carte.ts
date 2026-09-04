@@ -31,6 +31,12 @@ import { RechercheAdresse, poserEmpriseCourante, poserPositionConnue } from './r
 import { PanneauItineraire } from './panneau-itineraire';
 import { PanneauPoi } from './panneau-poi';
 import { FiltrePoi } from './filtre-poi';
+
+/** Ce que la fiche destination doit savoir d'un lieu choisi. */
+interface DestinationChoisie {
+  libelle: string; contexte: string; lon: number; lat: number;
+  type?: string | undefined; adresseInconnue?: boolean | undefined;
+}
 import { MesPoi } from './mes-poi';
 import { PanneauFavoris } from './panneau-favoris';
 import { PanneauTrafic } from './panneau-trafic';
@@ -45,6 +51,7 @@ import { FicheLieu } from './fiche-lieu';
 import { BandeauGuidage } from './bandeau-guidage';
 import { chercherPhotos, plusProche, ErreurPhotos } from '../lib/panoramax';
 import { adresseInverse } from '../lib/adresse';
+import { libelleDestination } from '../lib/adresse-lieu';
 import { formaterCoordonnees } from '../lib/coordonnees';
 import { coder, ErreurAdresseMots } from '../lib/adresse-mots';
 import { communeDuPoint } from '../lib/commune';
@@ -584,7 +591,20 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   /* LA DERNIÈRE DESTINATION CHOISIE : c'est elle que le marqueur rouvre.
      Armelin : « on devrait pouvoir réduire la fenêtre au niveau du pointeur
      et la faire réapparaître à la demande en recliquant sur le point ». */
-  let derniereDestination: { libelle: string; contexte: string; lon: number; lat: number } | null = null;
+  let derniereDestination: DestinationChoisie | null = null;
+  /* RÉDUIRE N'EST PAS FERMER (DEST-2, 04/09). Armelin : « je ne peux pas
+     réduire la fenêtre […] et quand je ferme la fenêtre du POI sélectionné,
+     un point bleu apparaît à l'emplacement du POI mais ne disparaît pas ».
+     DEST-1 avait fait de la croix une réduction — le marqueur restait en
+     poignée — mais SANS le dire, et sans offrir l'autre geste. Désormais :
+     « Réduire » garde la poignée, la croix efface tout. Le drapeau dit
+     lequel des deux vient d'avoir lieu. */
+  let reductionEnCours = false;
+  function effacerMarqueur(): void {
+    marqueur?.remove();
+    marqueur = null;
+    derniereDestination = null;
+  }
 
   /* UNE SEULE FICHE À LA FOIS SUR LA CARTE (POPUP-1, 03/09).
      Armelin, premier retour de la 1.60 : « si je relance dans la foulée une
@@ -628,7 +648,11 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
        le bouton reste là pour le réarmer d'un geste. */
     if (suiviVerrouille) geoloc.trigger();
     marqueur?.remove();
-    marqueur = new Marker({ color: '#2272C4' }).setLngLat([r.lon, r.lat]).addTo(carte);
+    /* ROUGE, PAS BLEU (DEST-2). Armelin lit le marqueur comme « un point de
+       géolocalisation bleu » : la teinte #2272C4 se confondait avec le point
+       de position. Le rouge est le pictogramme universel de la destination —
+       et il ne ressemble à rien d'autre sur cette carte. */
+    marqueur = new Marker({ color: '#D9534F' }).setLngLat([r.lon, r.lat]).addTo(carte);
     /* LE MARQUEUR EST UNE POIGNÉE : la fiche fermée se rouvre en le cliquant.
        Le marqueur est recréé à chaque sélection — l'écouteur aussi. */
     derniereDestination = r;
@@ -645,7 +669,7 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   };
 
   /** La fiche compacte d'une adresse choisie dans la recherche. */
-  function montrerDestination(r: { libelle: string; contexte: string; lon: number; lat: number }): void {
+  function montrerDestination(r: DestinationChoisie): void {
     const point = { lon: r.lon, lat: r.lat };
     const coords = formaterCoordonnees(point);
     /* closeOnClick: false — même leçon que l'appui long (PR #10) : un
@@ -654,25 +678,67 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
       .setLngLat([r.lon, r.lat])
       .setHTML('<div class="popup-adresse fiche-destination">'
         + '<p class="pa-libelle"></p><p class="fd-contexte"></p>'
+        + '<p class="fd-adresse" hidden></p>'
         + '<div class="fd-actions">'
         + '<button type="button" class="fd-aller">Y aller</button>'
+        + '<button type="button" class="fd-reduire">Réduire au marqueur</button>'
         + '<button type="button" class="pa-favori">Ajouter aux favoris</button>'
         + '<button type="button" class="pa-photo">Photos de rue</button>'
         + '<button type="button" class="pa-copier">Copier les coordonnées</button>'
         + '</div><p class="pa-photo-etat" role="status"></p></div>')
       .addTo(carte);
     poserFiche(popup);
+    /* LA CROIX EFFACE TOUT, « RÉDUIRE » GARDE LA POIGNÉE (DEST-2). Le même
+       événement `close` arrive dans les deux cas — et aussi quand une autre
+       fiche remplace celle-ci ou qu'un itinéraire part : seuls la réduction
+       ET le remplacement gardent le marqueur, la croix seule l'efface. */
+    reductionEnCours = false;
+    popup.on('close', () => {
+      if (!reductionEnCours && fiches.size === 0) effacerMarqueur();
+      reductionEnCours = false;
+    });
     const bloc = popup.getElement();
     // textContent, jamais innerHTML : le libellé vient d'un service externe.
     (bloc.querySelector('.pa-libelle') as HTMLElement).textContent = r.libelle;
     (bloc.querySelector('.fd-contexte') as HTMLElement).textContent = r.contexte;
+    bloc.querySelector('.fd-reduire')?.addEventListener('click', () => {
+      reductionEnCours = true;
+      popup.remove();
+    });
+
+    /* L'ADRESSE MANQUANTE SE DEMANDE (DEST-2). Armelin, sur un restaurant du
+       rail : « je ne vois aucune adresse apparaître pour ce POI à part le
+       bouton Y aller ». Les lieux d'OpenStreetMap sans étiquettes addr:*
+       n'avaient que leur famille en contexte. Même recette que les fiches de
+       lieux (ADRESSE-POI-1) : la BAN, une fois, à l'ouverture — et l'on dit
+       d'où vient l'adresse, car « la plus proche du point » n'est pas
+       « l'adresse déclarée ». */
+    let adresseConnue: string | null = null;
+    if (r.adresseInconnue === true) {
+      const ligne = bloc.querySelector('.fd-adresse') as HTMLElement;
+      ligne.hidden = false;
+      ligne.textContent = 'Recherche de l’adresse…';
+      void adresseInverse(point)
+        .then((rep) => {
+          adresseConnue = rep?.libelle ?? null;
+          ligne.textContent = adresseConnue === null
+            ? 'Adresse inconnue de la Base Adresse Nationale'
+            : `Adresse la plus proche : ${adresseConnue}`;
+        })
+        .catch(() => { ligne.textContent = 'Adresse indisponible pour le moment'; });
+    }
 
     /* « Y ALLER » : le point d'entrée unique des autres composants — le volet
        s'ouvre, la destination porte son NOM, le départ se déduit de la
        position connue ou se demande en toutes lettres. La fiche se referme :
        elle a rempli son office. */
     bloc.querySelector('.fd-aller')?.addEventListener('click', () => {
-      panneau.allerVers(point, r.libelle);
+      /* Le champ destination porte l'adresse trouvée : « Mona Lisa —
+         3 rue X, 94350 Villiers-sur-Marne » se dicte, « Mona Lisa » non.
+         Et « Y aller » RÉDUIT (le marqueur reste) : c'est le départ du
+         trajet qui l'effacera — pas l'ouverture du planificateur. */
+      reductionEnCours = true;
+      panneau.allerVers(point, libelleDestination(r.libelle, adresseConnue));
       popup.remove();
     });
 
