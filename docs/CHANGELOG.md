@@ -2,6 +2,19 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.90.1] — 2026-09-04 — DOCS-2
+
+### Corrigé — la feuille de route ressuscitait ses chantiers fermés
+- Le pilote de fusion `union` garde les deux côtés d'un conflit — c'est son
+  office — mais un RETRAIT n'est pas une insertion : chaque instruction
+  fermée en la retirant sur sa branche revenait à la fusion. Huit doublons
+  périmés (RECHERCHE-9, RAIL-DISTANCE, FERMEE-1 ×2, BIS-2, RESEAU-2,
+  TEMPS-POI-1, BLANC-1) cohabitaient avec leurs entrées livrées.
+- Ils sont retirés — chacun seulement après vérification que son entrée
+  « livrée » existe. La leçon est consignée : sous `union`, on FERME un
+  chantier en le transformant en entrée livrée AU MÊME ENDROIT, on ne le
+  supprime pas.
+
 ## [1.90.0] — 2026-09-04 — SOC-EDIT
 
 ### Le Copilote montre la batterie estimée — et se laisse corriger par le réel
