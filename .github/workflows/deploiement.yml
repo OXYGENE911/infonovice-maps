@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: npm }
+        with: { node-version: 24, cache: npm }
       - run: npm ci
       # maps.infonovice.fr est en service (21/08/2026) : le site vit à la
       # racine du domaine, la base par défaut du dépôt. L'époque du sous-chemin

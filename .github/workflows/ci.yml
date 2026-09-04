@@ -12,7 +12,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: npm }
+        # NODE 24 (04/09/2026) : le npm 10 embarqué par Node 22 appelle
+        # l'ancien point d'audit de npmjs, en cours de retrait — la CI
+        # tombait en 400 « endpoint is being retired » sur un code sain.
+        # npm 11 (Node 24) parle au point « bulk ». Mesuré : même commit,
+        # audit rouge en 10, vert en 11.
+        with: { node-version: 24, cache: npm }
       - run: npm ci
       - name: Lint et typecheck
         run: npm run lint
