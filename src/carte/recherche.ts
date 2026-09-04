@@ -214,6 +214,15 @@ export class RechercheAdresse extends HTMLElement {
           <p class="recherche-rail-etat" role="status"></p>
           <ul id="${this.#idListe}" role="listbox" aria-label="Suggestions d’adresses" hidden></ul>
           <p class="recherche-erreur" role="alert" hidden></p>
+          <!-- LE CHIEN MEUBLE LA PAGE VIERGE (MASCOTTE-2, 04/09). Armelin :
+               « ce serait bien de l'égayer avec un des logos de Chien en
+               plein milieu du vide blanc en attendant que l'utilisateur tape
+               un texte ». Décoratif (aria-hidden) ; la CSS le montre
+               UNIQUEMENT en page pleine, champ vide, liste cachée —
+               :placeholder-shown fait tout, sans une ligne de script. -->
+          <div class="recherche-vide" aria-hidden="true">
+            <img src="/icones/compas-192.png" alt="" width="150" height="150">
+          </div>
           <!-- UNE NOTE N'EST PAS UNE ERREUR (RECHERCHE-2) : « zoomez pour
                chercher par nom » informe, il n'échoue pas. La peindre en
                rouge d'alerte ferait passer une règle de frugalité pour une

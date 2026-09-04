@@ -162,6 +162,17 @@ recherche-adresse.recherche-page .recherche-rail:not([hidden]) {
 }
 .recherche-rail-etat:empty { display: none; }
 
+/* LE CHIEN DE LA PAGE VIERGE (MASCOTTE-2, 04/09) : visible seulement en
+   page pleine, champ vide (:placeholder-shown), liste cachée. L'ordre des
+   frères dans le markup rend le sélecteur possible : input … ul … .vide. */
+.recherche-vide { display: none; }
+recherche-adresse.recherche-page input:placeholder-shown ~ .recherche-vide {
+  display: flex; justify-content: center; padding: 48px 0 24px;
+  opacity: .9;
+}
+recherche-adresse.recherche-page input:placeholder-shown
+  ~ ul[role="listbox"]:not([hidden]) ~ .recherche-vide { display: none; }
+
 /* ═══ LA PAGE DE RECHERCHE PLEIN ÉCRAN (RECHERCHE-7, 03/09) ═══
    Armelin, rapportant ses usagers : « la recherche s'affiche dans un tout
    petit rectangle et la complétion dépasse de la zone d'affichage, ce qui ne
