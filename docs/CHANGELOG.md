@@ -11,7 +11,10 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   indications plus grosses ». Pendant le suivi, l'en-tête entier, le rail du
   planificateur et le menu s'effacent ; le cartouche se pose sous l'encoche
   (mesuré : ≤ 24 px du haut contre ≈ 115 avant) ; instruction 19 → 23 px,
-  distance 16 → 21 px, flèche 44 → 58 px. Tout revient à l'arrêt du suivi.
+  distance 16 → 21 px, flèche 44 → 58 px ; la chaussée fléchée (voies)
+  grandit avec — 28 → 40 px de haut, flèches de voie 17 → 24 px (« les
+  flèches de positionnement sur la chaussée sont affichées trop
+  petites »). Tout revient à l'arrêt du suivi.
   Conséquence assumée : « Effacer » n'est plus atteignable en roulant — on
   arrête d'abord (croix rouge). Un parcours le garde.
 - **La flèche de virage n'arrive qu'à portée.** Sur le périphérique, « tourner
