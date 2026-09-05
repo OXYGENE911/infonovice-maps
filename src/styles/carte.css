@@ -4660,8 +4660,6 @@ filtre-poi {
 
 /* MAPS PRO — les trois portes (PRO-LIENS-1, 05/09) : menu, marque, bilan.
    Une ligne et un lien, jamais une fenêtre qui s'impose. */
-.reglages-pro { display: grid; gap: 6px; }
-.reglages-pro-mot { margin: 0; font: 400 13px/1.4 var(--police); color: var(--texte-2); }
-.reglages-pro-lien { font: 600 13px var(--police); color: var(--accent); text-decoration: underline; }
+.reglages-pro-lien { display: inline-block; margin-top: 6px; font: 600 13px var(--police); color: var(--accent); text-decoration: underline; }
 .bg-bilan-pro { margin: 10px 0 0; font: 400 13px/1.45 var(--police); color: var(--texte-2); }
 .bg-bilan-pro a { color: var(--accent); text-decoration: underline; }

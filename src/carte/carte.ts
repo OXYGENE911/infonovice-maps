@@ -587,24 +587,19 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   notePlus.textContent = 'Vide le cache et recharge la dernière version'
     + ' publiée. Vos favoris et votre historique ne sont pas touchés.';
   boiteVersion.append(motVersion, majVersion, notePlus);
-  /* MAPS PRO, UNE LIGNE ET UN LIEN (PRO-LIENS-1, 05/09). Armelin : « un lieu
-     dans le menu indiquant un bouton Maps Pro qui emmène vers la landing
-     page proposant les fonctionnalités à débloquer ». Une ligne, en bas,
-     près de la version — jamais une fenêtre qui s'impose : le client libre
-     reste entier, le Pro s'y annonce sans s'y imposer. */
-  /* UNE SEULE LIGNE : le menu est une fenêtre flottante qui doit tenir sous
-     62 % de l'écran (parcours feuilles-basses) ; la phrase d'explication
-     le faisait déborder de 19 px sur la machine d'intégration. Elle vit dans
-     le `title`, et sur /pro.html. */
-  const boitePro = document.createElement('div');
-  boitePro.className = 'reglages-pro';
+  /* MAPS PRO, UNE LIGNE DANS LA BOÎTE DE LA VERSION (PRO-LIENS-1, 05/09).
+     Armelin : « un lieu dans le menu indiquant un bouton Maps Pro qui emmène
+     vers la landing page ». Une section à part faisait déborder la fenêtre
+     du menu sous les polices de la CI (feuilles-basses : ≤ 62 % de l'écran ;
+     puis le sélecteur de fonds passait hors de portée du clic). La ligne vit
+     donc dans la boîte qui existe déjà, tout en bas, près de la version —
+     un lien, jamais une fenêtre qui s'impose. */
   const lienPro = document.createElement('a');
   lienPro.className = 'reglages-pro-lien';
   lienPro.href = '/pro.html';
   lienPro.title = 'Cercles, véhicule connecté, itinéraires partagés, flottes';
   lienPro.textContent = 'Découvrir Maps Pro';
-  boitePro.append(lienPro);
-  menu.ajouter('Maps Pro', boitePro);
+  boiteVersion.append(lienPro);
   menu.ajouter('Version', boiteVersion);
 
 

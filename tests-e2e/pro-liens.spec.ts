@@ -25,9 +25,8 @@ test('LA MARQUE ET LE MENU MÈNENT À /pro.html', async ({ page }) => {
   await expect(marque).toContainText('Infonovice');
 
   await ouvrirMenu(page);
-  /* Le menu range ses sections à plat (`.reglages-section` + étiquette) :
-     la ligne Maps Pro se lit dès l'ouverture, sans volet à déplier. */
-  await expect(page.locator('.reglages-etiquette').filter({ hasText: 'Maps Pro' })).toBeVisible();
+  /* La ligne vit dans la boîte de la version, tout en bas du menu : une
+     section à part faisait déborder la fenêtre sous les polices de la CI. */
   const lien = page.locator('.reglages-pro-lien');
   await expect(lien).toBeVisible();
   await expect(lien).toHaveAttribute('href', '/pro.html');
