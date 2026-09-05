@@ -835,6 +835,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] MESURE-1 (05/09) : volet « Mesurer » du menu — points au doigt, trait
+      pointillé, relevé flottant qui cumule à vol d'oiseau (et le dit),
+      annuler / effacer / terminer / Échap, zéro réseau. RESTE : distance
+      par la route (un appel d'itinéraire sur demande) ; étiquettes de
+      distance sur chaque segment (police du style à vérifier).
 - [x] RECHERCHE-NAV-1 (05/09) : loupe ronde en suivi, sous le fond de carte —
       la page de recherche plein écran rouverte au volant, le lieu choisi
       ajouté en étape, recalcul et suivi relancé sur le nouveau tracé. Le
@@ -852,11 +857,6 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] RETOURS-AMIS-1 (05/09) : batterie à l'arrivée dans la barre du suivi et le
       Copilote (quand un plan existe) ; message des repères manquants sans
       le mot de la panne.
-- [x] MESURE-1 (05/09) : volet « Mesurer » du menu — points au doigt, trait
-      pointillé, relevé flottant qui cumule à vol d'oiseau (et le dit),
-      annuler / effacer / terminer / Échap, zéro réseau. RESTE : distance
-      par la route (un appel d'itinéraire sur demande) ; étiquettes de
-      distance sur chaque segment (police du style à vérifier).
 - [x] FOND-NAV-1 (05/09) : bouton rond « fond de carte » dans la colonne de
       droite pendant le suivi ; le sélecteur du menu vient se poser dans une
       feuille flottante et retourne au menu ensuite — une seule préférence.
