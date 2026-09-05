@@ -3586,9 +3586,13 @@ body.en-guidage #carte .maplibregl-ctrl-bottom-left {
    texte, et rien ne s'enroule : `min-width: 0` est ce qui autorise une
    colonne de grille à devenir plus étroite que son contenu. */
 .bg-chiffres {
-  margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* TROIS OU QUATRE COLONNES : la batterie à l'arrivée s'ajoute quand un
+     plan la connaît (RETOURS-AMIS-1) — la rangée se partage, elle ne
+     s'enroule pas. */
+  margin: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
   gap: 10px; font-variant-numeric: tabular-nums;
 }
+.bg-chiffre-soc[hidden] { display: none; }
 .bg-chiffre {
   display: flex; flex-direction: column; line-height: 1.1; min-width: 0;
 }

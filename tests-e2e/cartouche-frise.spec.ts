@@ -5,7 +5,7 @@ import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
  *
  * LE TERRAIN. Armelin, après un essai à pied, capture à l'appui : « à l'aller,
  * le panneau d'indication du trajet affichait un message de fonction non
- * disponible "Repères OpenStreetMap indisponibles…". Quand ce message arrive,
+ * disponible « Limites de vitesse et ronds-points non relevés… ». Quand ce message arrive,
  * le panneau occupe une grande surface et masque la barre verticale de
  * visualisation du trajet. »
  *
@@ -105,8 +105,9 @@ test('L’AVEU DES REPÈRES NE PARAÎT QU’AU DÉPLIAGE', async ({ page }) => {
   // DÉPLIÉ : il est là, entier, à un geste de distance.
   await page.locator('.bg-deplier').click();
   await expect(aveu).toBeVisible({ timeout: 5_000 });
-  await expect(aveu).toContainText('Repères OpenStreetMap indisponibles');
-  await expect(aveu).toContainText('limite de vitesse');
+  await expect(aveu).toContainText('non relevés sur ce trajet');
+  await expect(aveu).toContainText('Limites de vitesse');
+  await expect(aveu).not.toContainText('indisponibles');
 });
 
 test('LE CARTOUCHE LAISSE SA COLONNE À LA FRISE DU TRAJET', async ({ page }) => {

@@ -504,6 +504,12 @@ test('SOC-EDIT : l’estimation s’affiche, la correction replanifie et l’éc
   await expect(copilote).toContainText('Batterie', { timeout: 15_000 });
   await expect(copilote).toContainText(/Estimée maintenant : ~\d+ %/);
   await expect(copilote).toContainText('une estimation, pas un relevé');
+  /* LA BATTERIE À L'ARRIVÉE (RETOURS-AMIS-1) : « présente pendant la
+     planification, elle disparaît pendant la navigation ». Elle vit désormais
+     dans la barre du bas ET dans le Copilote. */
+  await expect(copilote).toContainText(/À l’arrivée, selon le plan : ~\d+ %/);
+  await expect(page.locator('.bg-chiffre-soc')).toBeVisible();
+  await expect(page.locator('.bg-soc')).toContainText(/~\d+ %/);
 
   /* Une valeur impossible se refuse poliment. */
   await copilote.getByRole('button', { name: 'Corriger le plan' }).click();

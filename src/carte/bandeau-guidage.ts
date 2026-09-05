@@ -295,8 +295,11 @@ export class BandeauGuidage extends HTMLElement {
     if (!boite) return;
     boite.hidden = !this.#reperesManquants;
     boite.textContent = this.#reperesManquants
-      ? 'Repères OpenStreetMap indisponibles : ni limite de vitesse, ni'
-        + ' schéma de rond-point sur ce trajet.'
+      /* DIT SANS ALARMER (RETOURS-AMIS-1). L'ancien mot — « indisponibles » —
+         sonnait comme une panne ; c'est un relevé qui n'a pas abouti, et le
+         suivi vaut sans lui. On dit ce qui manque, calmement. */
+      ? 'Limites de vitesse et ronds-points non relevés sur ce trajet :'
+        + ' le guidage continue sans ces repères.'
       : '';
   }
 
@@ -627,6 +630,11 @@ export class BandeauGuidage extends HTMLElement {
               <span class="bg-chiffre"><b class="bg-km"></b><i>restants</i></span>
               <span class="bg-chiffre"><b class="bg-temps"></b><i>de route</i></span>
               <span class="bg-chiffre"><b class="bg-eta"></b><i>arrivée</i></span>
+              <!-- LA BATTERIE À L'ARRIVÉE (RETOURS-AMIS-1, 05/09) : « l'information
+                   est présente pendant la planification mais disparaît pendant
+                   la navigation ». Elle ne paraît qu'avec un plan de recharge —
+                   sans plan, pas de chiffre inventé. -->
+              <span class="bg-chiffre bg-chiffre-soc" hidden><b class="bg-soc"></b><i>à l’arrivée</i></span>
             </p>
           </button>
           <button type="button" class="bg-arreter" aria-label="Arrêter le suivi">
@@ -2875,6 +2883,19 @@ export class BandeauGuidage extends HTMLElement {
     (this.querySelector('.bg-temps') as HTMLElement).textContent =
       e.restantS > 0 ? formaterDuree(Math.round(e.restantS + chargeRestanteS)) : '—';
     (this.querySelector('.bg-eta') as HTMLElement).textContent = heure;
+    /* LA BATTERIE À L'ARRIVÉE, QUAND LE PLAN LA CONNAÎT (RETOURS-AMIS-1). Le
+       chiffre est celui du plan de recharge — une estimation, dite comme
+       telle par le tilde — et il se corrige par le Copilote (SOC-EDIT). */
+    const chiffreSoc = this.querySelector<HTMLElement>('.bg-chiffre-soc');
+    if (chiffreSoc) {
+      const socFin = o.socFinal;
+      if (typeof socFin === 'number' && Number.isFinite(socFin) && !e.horsRoute) {
+        (chiffreSoc.querySelector('.bg-soc') as HTMLElement).textContent = `~${Math.round(socFin)} %`;
+        chiffreSoc.hidden = false;
+      } else {
+        chiffreSoc.hidden = true;
+      }
+    }
     /* « Charges comprises » n'entre pas dans un chiffre : le mot vit sous
        l'heure, en petit, et seulement quand il est vrai. */
     const mentionEta = this.querySelector('.bg-eta')?.nextElementSibling;
@@ -3038,6 +3059,12 @@ export class BandeauGuidage extends HTMLElement {
       ligneSoc.textContent = `Estimée maintenant : ~${Math.round(estime)} %`
         + ' — une estimation, pas un relevé.';
       corps.append(ligneSoc);
+      /* ET À L'ARRIVÉE (RETOURS-AMIS-1) : c'est la question qu'on se pose au
+         volant, et le plan y répond déjà. */
+      const ligneFin = document.createElement('p');
+      ligneFin.className = 'bg-copilote-soc-arrivee';
+      ligneFin.textContent = `À l’arrivée, selon le plan : ~${Math.round(o.socFinal)} %.`;
+      corps.append(ligneFin);
       const cleSoc = 'soc-correction';
       const dejaSoc = memoire.get(cleSoc);
       if (dejaSoc) corps.append(dejaSoc);
