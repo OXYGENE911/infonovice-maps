@@ -835,6 +835,20 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] NAV-2 + FLECHE-1 + RETOUR-0409b (05/09) : plein écran de navigation
+      (en-tête, rail et menu effacés pendant le suivi ; cartouche sous
+      l'encoche, textes et flèche plus grands, bulle POI bornée) ; flèche de
+      virage seulement à portée (40 s de route, 500–1 500 m) avec la manœuvre
+      à venir en seconde ligne ; carte blanche cernée (deux calques
+      d'étiquettes sans source sur fond photo — corrigé et gardé ; chien de
+      garde étendu au style vide).
+- [ ] SENS-1 — SENS UNIQUE RÉCENT (avenue Michel-Bizot, 04/09) : la
+      Géoplateforme (BD TOPO) ne le sait pas encore, OSM oui (mesuré). À
+      faire côté libre : bouton « Signaler une erreur de carte » vers
+      l'espace collaboratif IGN (espacecollaboratif.ign.fr) et une note OSM à
+      la position, sans compte ni donnée envoyée d'office. Côté Pro : vérifier
+      le sens des tronçons du trajet contre OSM (corridor déjà interrogé) et
+      prévenir avant la manœuvre. Décision Armelin.
 - [x] RETOUR-0409 (05/09) : la feuille des parkings ne passe plus sous le
       disque de limitation (mesuré : 56 px à left 0 contre une feuille à
       8 px ; feuille à 72 px, parcours d'intersection des boîtes). Carte

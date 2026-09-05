@@ -33,6 +33,7 @@ import {
   partiAContresens, approcheManoeuvre, pointDuTrace, SEUIL_AIMANT_M,
   quitteLeTrace, FIXES_CONCORDANTS, ECART_DOUTE_M, type FixeEcart,
   type EtatGuidage,
+  manoeuvreImminente,
 } from '../lib/guidage';
 import { formaterDistance, formaterDuree } from '../lib/itineraire';
 import { chargerParkings, ErreurParkings, type Parking } from '../lib/parkings';
@@ -2421,8 +2422,18 @@ export class BandeauGuidage extends HTMLElement {
     /* LA FLÈCHE SUIT L'ÉTAPE — et disparaît hors route ou sans feuille :
        une flèche qui pointe au hasard est pire qu'aucune. */
     const fleche = this.querySelector('.bg-fleche') as HTMLElement;
+    /* LA FLÈCHE DE VIRAGE N'ARRIVE QU'À PORTÉE (FLECHE-1, 05/09). Armelin,
+       sur le périphérique : « tourner à droite dans 4 km […] j'ai croisé une
+       sortie pour l'A1 et j'ai cru qu'il fallait tourner ici en voyant la
+       flèche ». Loin de la manœuvre, la flèche est droite et le texte dit
+       « Continuez tout droit » ; la manœuvre à venir passe en seconde ligne
+       avec sa distance. La règle est pure (lib/guidage) : quarante secondes
+       de route, entre 500 et 1 500 m selon la vitesse. */
+    const imminente = !e.horsRoute && e.manoeuvre !== null
+      && manoeuvreImminente(e.manoeuvre.manoeuvre, e.jusquALaManoeuvreM,
+        typeof coords.speed === 'number' ? coords.speed : null);
     if (!e.horsRoute && e.manoeuvre) {
-      fleche.innerHTML = flecheManoeuvre(e.manoeuvre.manoeuvre);
+      fleche.innerHTML = flecheManoeuvre(imminente ? e.manoeuvre.manoeuvre : 'straight');
       fleche.hidden = false;
     } else {
       fleche.hidden = true;
@@ -2567,8 +2578,19 @@ export class BandeauGuidage extends HTMLElement {
          revenait à nommer la manœuvre déjà exécutée, avec la distance de
          la prochaine. « Le GPS confond sa gauche et sa droite » (Armelin,
          29/08) : il ne les confondait pas, il avait un tour de retard. */
-      instruction.textContent = e.manoeuvre ? e.manoeuvre.texte : 'Suivez l’itinéraire';
-      distance.textContent = e.manoeuvre ? distanceEnMots(e.jusquALaManoeuvreM) : '';
+      if (!e.manoeuvre) {
+        instruction.textContent = 'Suivez l’itinéraire';
+        distance.textContent = '';
+      } else if (imminente) {
+        instruction.textContent = e.manoeuvre.texte;
+        distance.textContent = distanceEnMots(e.jusquALaManoeuvreM);
+      } else {
+        /* LOIN DE LA MANŒUVRE : tout droit en grand, la suite en petit —
+           « Tournez à droite dans 4 km » se lit alors comme une suite, pas
+           comme un ordre (FLECHE-1). */
+        instruction.textContent = 'Continuez tout droit';
+        distance.textContent = `${e.manoeuvre.texte} ${distanceEnMots(e.jusquALaManoeuvreM)}`;
+      }
     }
 
     this.#annoncer(e);

@@ -2310,6 +2310,24 @@ body.en-guidage .entete etat-connexion .installer,
 body.en-guidage .pied-carte {
   display: none;
 }
+/* PLEIN ÉCRAN DE NAVIGATION (NAV-2, 05/09). Armelin, et ses testeurs : « il
+   serait préférable de faire apparaître les panneaux de direction tout en
+   haut de l'écran comme dans n'importe quelle application GPS. Cela
+   permettrait de gagner deux rangées afin d'afficher des indications plus
+   grosses […] La barre de recherche, le menu et le bouton Itinéraire
+   reviendraient à la normale qu'après la fin du trajet. » L'en-tête entier,
+   le rail du planificateur et le menu s'effacent donc le temps du suivi ; le
+   bandeau du bas porte déjà ce qui sert au volant (voix, 3D, orientation,
+   copilote, arrêt). `--hauteur-entete` est MESURÉE (main.ts) : à zéro, tout
+   ce qui se calait sous l'en-tête remonte de lui-même. */
+body.en-guidage .entete,
+body.en-guidage #carte .maplibregl-ctrl-top-left,
+body.en-guidage #carte .maplibregl-ctrl-top-right {
+  display: none;
+}
+/* Une bulle de lieu ouverte en roulant reste sous le cartouche : bornée en
+   hauteur et défilante, sa croix ne passe plus derrière le panneau. */
+body.en-guidage .maplibregl-popup-content { max-height: 48vh; overflow-y: auto; }
 /* Les volets sont refermés par le code au démarrage ; leurs boutons restent,
    simplement effacés — on les retrouve du regard sans qu'ils appellent l'œil. */
 body.en-guidage #carte .maplibregl-ctrl-top-left summary,
@@ -3420,7 +3438,9 @@ summary .picto-menu {
   position: fixed; z-index: calc(var(--z-cartouche) + 1);
   /* EN HAUT À GAUCHE, SOUS LA PASTILLE DU RAIL : elle reste atteignable —
      on peut vouloir rouvrir le planificateur en roulant. */
-  top: calc(var(--hauteur-entete, 45px) + 58px); left: 12px;
+  /* TOUT EN HAUT (NAV-2, 05/09) : l'en-tête et le rail s'effacent pendant le
+     suivi, le cartouche prend leur place — sous l'encoche, et c'est tout. */
+  top: calc(var(--sur-encoche, 0px) + 10px); left: 12px;
   /* IL VA JUSQU'AU BORD DROIT (TERRAIN-1, 30/08). Armelin, au volant : « le
      téléphone est posé loin des yeux du conducteur, il faut que les
      informations soient visibles ». Un panneau de 300 px sur un écran de 400
@@ -3453,15 +3473,18 @@ summary .picto-menu {
    exception — une distance grise sur fond bleu serait une faute de lecture
    autant que de règlement. */
 .bg-cartouche .bg-fleche { color: var(--panneau-encre); }
-.bg-cartouche .bg-fleche svg { width: 44px; height: 44px; }
+.bg-cartouche .bg-fleche svg { width: 58px; height: 58px; }
 .bg-cartouche-texte { flex: 1 1 auto; min-width: 0; }
 .bg-cartouche .bg-instruction {
   /* PLUS GROS DE TROIS POINTS ET DEMI : mesuré sur la capture d'Armelin, à
      bout de bras sur un support de pare-brise. */
-  margin: 0; font: 700 19px/1.2 var(--police); color: var(--panneau-encre);
+  /* ET ENCORE PLUS GROS (NAV-2, 05/09) : « le nombre de kilomètres restant
+     avant une instruction est affiché trop petit, tout comme les flèches ».
+     Les deux rangées gagnées en haut se dépensent ici. */
+  margin: 0; font: 700 23px/1.15 var(--police); color: var(--panneau-encre);
 }
 .bg-cartouche .bg-distance {
-  margin: 3px 0 0; font: 700 16px var(--police); color: var(--panneau-encre);
+  margin: 4px 0 0; font: 700 21px var(--police); color: var(--panneau-encre);
   font-variant-numeric: tabular-nums;
   /* La distance est une donnée SECONDE sur un panneau : elle s'efface un peu
      sans changer d'encre — l'opacité garde le rapport de contraste au fond. */

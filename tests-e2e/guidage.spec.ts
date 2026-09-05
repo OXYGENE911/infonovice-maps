@@ -106,7 +106,10 @@ test('le bouton « Démarrer » lance le suivi, instructions comprises', async (
      l'instruction du DÉBUT d'étape et la longueur qui suit.
      ET DEUX VOIES, QUI NE SONT PAS LA MÊME : le cartouche annonce celle où
      l'on VA (A7), la barre du bas nomme celle où l'on EST (A6). */
-  await expect(bandeau.locator('.bg-instruction'))
+  /* À 200 km de la manœuvre, le cartouche dit « Continuez tout droit » en
+     grand et « Tournez à droite dans 200 km » en seconde ligne (FLECHE-1) :
+     on lit le cartouche entier. */
+  await expect(bandeau.locator('.bg-cartouche'))
     .toContainText('Tournez à droite', { timeout: 15_000 });
   await expect(bandeau.locator('.bg-cartouche')).toBeVisible();
   await expect(bandeau.locator('.bg-ecusson'), 'l’écusson porte la voie VISÉE')
@@ -140,7 +143,10 @@ test('quitter la route se DIT, l’instruction ne continue pas comme si de rien'
   await ouvrirTrajet(page);
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   const bandeau = page.locator('bandeau-guidage');
-  await expect(bandeau.locator('.bg-instruction'))
+  /* À 200 km de la manœuvre, le cartouche dit « Continuez tout droit » en
+     grand et « Tournez à droite dans 200 km » en seconde ligne (FLECHE-1) :
+     on lit le cartouche entier. */
+  await expect(bandeau.locator('.bg-cartouche'))
     .toContainText('Tournez à droite', { timeout: 15_000 });
 
   // Cinquante kilomètres à l'ouest du tracé : on n'est plus dessus.
@@ -1043,11 +1049,15 @@ test('effacer le trajet arrête le suivi — il ne compte pas les kilomètres d�
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
 
-  /* Le suivi a refermé le planificateur : on le rouvre pour atteindre
-     « Effacer », comme le ferait un usager qui renonce à son trajet. */
+  /* EN SUIVI, LE PLANIFICATEUR N'EST PLUS ATTEIGNABLE (NAV-2, 05/09) : le
+     rail s'efface avec l'en-tête et le menu, à la demande d'Armelin — celui
+     qui renonce à son trajet en roulant presse la croix rouge. « Effacer »
+     vient ensuite, et il ne compte alors aucun kilomètre fantôme. */
+  await expect(page.locator('.maplibregl-ctrl-top-left')).toBeHidden();
+  await page.locator('.bg-arreter').click();
+  await expect(page.locator('bandeau-guidage')).toBeHidden();
   await page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Itinéraire' }).click();
   await page.getByRole('button', { name: 'Effacer' }).click();
-  await expect(page.locator('bandeau-guidage')).toBeHidden();
   await expect(page.locator('.iti-demarrer')).toBeHidden();
 });
 

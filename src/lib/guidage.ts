@@ -18,7 +18,7 @@
  * TOUT SE CALCULE ICI, À SEC. Le module ne connaît ni MapLibre, ni le DOM, ni
  * la géolocalisation : il reçoit une position et rend des nombres.
  */
-import type { EtapeRoute } from './feuille-de-route';
+import type { EtapeRoute, Manoeuvre } from './feuille-de-route';
 import { situerSurLeTrace, distanceM } from './le-long-du-trajet';
 
 /** Au-delà de cet écart au tracé, on ne prétend plus suivre l'itinéraire. */
@@ -367,4 +367,32 @@ function capSegment(a: readonly [number, number], b: readonly [number, number]):
   const dx = (b[0] - a[0]) * mLon;
   const dy = (b[1] - a[1]) * 111_320;
   return ((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
+}
+
+/**
+ * Faut-il DÉJÀ montrer la flèche de la manœuvre ? — PURE (FLECHE-1, 05/09).
+ *
+ * ARMELIN, sur le périphérique : « l'instruction indiquait de tourner à
+ * droite dans 4 km. Entre temps, j'ai croisé une sortie pour l'A1 et j'ai
+ * cru qu'il fallait tourner ici en voyant la flèche à droite. Je n'ai pas vu
+ * de suite l'indication de 4 km. » Une flèche de virage montrée à quatre
+ * kilomètres est lue comme un ordre immédiat : c'est la distance, en petit,
+ * qui devrait la relativiser — et au volant, on lit la flèche, pas le
+ * chiffre.
+ *
+ * LA RÈGLE : tant que la manœuvre est loin, le cartouche dit « Continuez tout
+ * droit » avec une flèche droite, et la manœuvre à venir passe en seconde
+ * ligne avec sa distance. La flèche de virage ne paraît qu'à portée — une
+ * portée qui suit la vitesse : quarante secondes de route, entre 500 m (en
+ * ville, à l'arrêt, ou vitesse inconnue) et 1 500 m (autoroute). À 130 km/h,
+ * 1 440 m ; à 50 km/h, 560 m. Tout droit, l'arrivée et le giratoire (qui a
+ * son propre schéma) se montrent toujours.
+ */
+export function manoeuvreImminente(
+  manoeuvre: Manoeuvre, distanceM: number, vitesseMs: number | null,
+): boolean {
+  if (manoeuvre === 'straight' || manoeuvre === 'arrivee' || manoeuvre === 'rond-point') return true;
+  const v = vitesseMs !== null && Number.isFinite(vitesseMs) && vitesseMs > 0 ? vitesseMs : null;
+  const portee = v === null ? 500 : Math.min(1500, Math.max(500, v * 40));
+  return distanceM <= portee;
 }

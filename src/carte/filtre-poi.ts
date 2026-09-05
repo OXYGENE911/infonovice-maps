@@ -1014,8 +1014,17 @@ export class FiltrePoi extends HTMLElement {
            qui l'emmène ensuite hors écran, puisqu'elle suit son point. En
            ramenant le point sous le centre, la fiche a la place de s'ouvrir
            vers le haut et la croix reste sous le doigt. */
+        /* EN ROULANT, LE POINT DESCEND PLUS BAS (NAV-2, 05/09) : Armelin a
+           ouvert une banque pendant le suivi, et la fiche — horaires,
+           téléphone, site, trois boutons — montait sous le cartouche
+           d'instruction ; la croix de fermeture s'y cachait. Trente pour
+           cent de l'écran sous le centre, et la bulle plafonnée (CSS) :
+           elle s'ouvre entre le cartouche et le bandeau. */
+        const enGuidage = document.body.classList.contains('en-guidage');
         carte.easeTo({
-          center: [lieu.lon, lieu.lat], offset: [0, 120], duration: 350,
+          center: [lieu.lon, lieu.lat],
+          offset: [0, enGuidage ? Math.round(carte.getContainer().clientHeight * 0.3) : 120],
+          duration: 350,
         });
       });
       carte.on('mouseenter', COUCHE, () => { carte.getCanvas().style.cursor = 'pointer'; });

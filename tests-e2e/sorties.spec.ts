@@ -120,7 +120,7 @@ test('à défaut de villes, le NOM de la sortie fait l’affaire', async ({ page
 
 test('RIEN dans OpenStreetMap : le panneau reste celui d’avant', async ({ page }) => {
   await suivre(page, {});
-  await expect(page.locator('.bg-instruction')).toContainText('Tournez à droite');
+  await expect(page.locator('.bg-cartouche')).toContainText('Tournez à droite');
   await expect(page.locator('.bg-sortie')).toBeHidden();
   await expect(page.locator('.bg-destination')).toBeHidden();
 });
