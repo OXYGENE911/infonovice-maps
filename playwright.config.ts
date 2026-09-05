@@ -20,7 +20,13 @@ export default defineConfig({
      `exactOptionalPropertyTypes`, qui distingue « clé absente » de « clé
      valant undefined », et refuse la seconde. */
   ...(process.env.CI ? { workers: 1 } : {}),
-  use: { baseURL: 'http://localhost:4173' },
+  /* LA TRACE D'UN ÉCHEC SE GARDE SUR LA CI (05/09) : « le sélecteur de fonds
+     bascule en satellite » a rougi trois fois ce jour, sur trois branches,
+     toujours vert en local et au rerun — « waiting for element to be
+     visible, enabled and stable » sans qu'on sache ce qui bougeait. Sans
+     trace, on relance et on ne sait pas ; avec, on lit. Hors CI, rien ne
+     change. */
+  use: { baseURL: 'http://localhost:4173', ...(process.env.CI ? { trace: 'retain-on-failure' as const } : {}) },
   webServer: {
     command: 'npm run preview',
     url: 'http://localhost:4173',

@@ -482,6 +482,15 @@ export class RechercheAdresse extends HTMLElement {
   #page = false;
 
   /** Ouvre la page de recherche — sans effet hors du mode plein écran. */
+  /**
+   * Ouvre la page plein écran depuis un autre composant — la loupe du suivi
+   * (RECHERCHE-NAV-1, 05/09) — et donne le clavier au champ.
+   */
+  ouvrirPage(): void {
+    this.#ouvrirPage();
+    this.querySelector('input')?.focus();
+  }
+
   #ouvrirPage(): void {
     if (!this.pleinEcran || this.#page) return;
     this.#page = true;

@@ -792,7 +792,42 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     marqueur = null;
   });
 
+  /* LA LOUPE DU SUIVI (RECHERCHE-NAV-1, 05/09). Des amis d'Armelin : « en
+     mode navigation, il n'y a pas de bouton rond loupe permettant de chercher
+     une adresse, une borne, une station ou un restaurant et de l'ajouter en
+     étape ». NAV-2 efface l'en-tête — et la barre avec. Un bouton rond de la
+     colonne de droite rouvre la MÊME page de recherche plein écran (le
+     composant ne bouge pas : la CSS rend l'en-tête visible le temps de la
+     page) ; le lieu choisi devient une ÉTAPE du trajet en cours, et le suivi
+     repart sur le nouveau tracé. Le bouton n'existe qu'en suivi (CSS). */
+  const porteRechercheNav = document.createElement('div');
+  porteRechercheNav.className = 'maplibregl-ctrl porte-recherche-nav';
+  const boutonRechercheNav = document.createElement('button');
+  boutonRechercheNav.type = 'button';
+  boutonRechercheNav.className = 'recherche-nav';
+  boutonRechercheNav.setAttribute('aria-label', 'Chercher une étape');
+  boutonRechercheNav.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none"'
+    + ' stroke="currentColor" stroke-width="2.4" stroke-linecap="round">'
+    + '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></svg>';
+  porteRechercheNav.appendChild(boutonRechercheNav);
+  boutonRechercheNav.addEventListener('click', (e) => {
+    e.stopPropagation();   // le « clic extérieur » de panneaux.ts n'a rien à refermer ici
+    rangerFonds();
+    recherche.ouvrirPage();
+  });
+  carte.addControl({ onAdd: () => porteRechercheNav, onRemove: () => porteRechercheNav.remove() }, 'bottom-right');
+
   recherche.surSelection = (r) => {
+    /* EN SUIVI, LE LIEU CHOISI EST UNE ÉTAPE (RECHERCHE-NAV-1) — pas une
+       destination à regarder : on roule, on veut y passer. Le planificateur
+       l'ajoute et relance le suivi sur le nouveau tracé, comme « Y aller »
+       sur une aire. */
+    if (document.body.classList.contains('en-guidage')) {
+      document.dispatchEvent(new CustomEvent('lieu-etape', {
+        detail: { lon: r.lon, lat: r.lat, nom: r.libelle },
+      }));
+      return;
+    }
     /* ON DÉSARME LE SUIVI AVANT DE VOLER (DEST-1) : verrouillé, chaque relevé
        GPS rabattrait la carte sur la position, et le vol vers la destination
        avorterait sous les yeux de l'usager — son retour exact. `trigger()` en

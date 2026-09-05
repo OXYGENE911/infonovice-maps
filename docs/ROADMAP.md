@@ -835,6 +835,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] RECHERCHE-NAV-1 (05/09) : loupe ronde en suivi, sous le fond de carte —
+      la page de recherche plein écran rouverte au volant, le lieu choisi
+      ajouté en étape, recalcul et suivi relancé sur le nouveau tracé. Le
+      « Y aller » des aires relance désormais le suivi lui aussi (il ne le
+      faisait pas). RESTE : ordonner l'étape par avancement sur le tracé
+      quand d'autres étapes sont encore devant (elle s'ajoute en dernier).
 - [x] MOTORISATION-1 (05/09) : choix Électrique / Thermique ou hybride en tête
       de « Mon véhicule ». Thermique = champs électriques retirés, aucun
       arrêt de recharge (la page le dit), pas de batterie à l'arrivée, pas
