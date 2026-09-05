@@ -587,6 +587,19 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   notePlus.textContent = 'Vide le cache et recharge la dernière version'
     + ' publiée. Vos favoris et votre historique ne sont pas touchés.';
   boiteVersion.append(motVersion, majVersion, notePlus);
+  /* MAPS PRO, UNE LIGNE DANS LA BOÎTE DE LA VERSION (PRO-LIENS-1, 05/09).
+     Armelin : « un lieu dans le menu indiquant un bouton Maps Pro qui emmène
+     vers la landing page ». Une section à part faisait déborder la fenêtre
+     du menu sous les polices de la CI (feuilles-basses : ≤ 62 % de l'écran ;
+     puis le sélecteur de fonds passait hors de portée du clic). La ligne vit
+     donc dans la boîte qui existe déjà, tout en bas, près de la version —
+     un lien, jamais une fenêtre qui s'impose. */
+  const lienPro = document.createElement('a');
+  lienPro.className = 'reglages-pro-lien';
+  lienPro.href = '/pro.html';
+  lienPro.title = 'Cercles, véhicule connecté, itinéraires partagés, flottes';
+  lienPro.textContent = 'Découvrir Maps Pro';
+  boiteVersion.append(lienPro);
   menu.ajouter('Version', boiteVersion);
 
 

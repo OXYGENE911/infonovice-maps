@@ -54,6 +54,7 @@ export default defineConfig({
         'offre-flottes': resolve(__dirname, 'offre-flottes.html'),
         'vie-privee': resolve(__dirname, 'vie-privee.html'),
         'mentions-legales': resolve(__dirname, 'mentions-legales.html'),
+        pro: resolve(__dirname, 'pro.html'),
       },
       output: {
         // MapLibre pèse ~230 Ko gzippé à lui seul : il vit dans son propre
@@ -157,7 +158,7 @@ export default defineConfig({
            ses motifs à `pathname + search`, pas au seul chemin. Le « (^|/) »
            de tête laisse passer une base autre que la racine. */
         navigateFallbackDenylist: [
-          /(^|\/)(a-propos|offre-flottes|vie-privee|mentions-legales)\.html(\?|$)/,
+          /(^|\/)(a-propos|offre-flottes|vie-privee|mentions-legales|pro)\.html(\?|$)/,
         ],
       },
     }),

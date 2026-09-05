@@ -16,10 +16,10 @@ const SITEMAP = lire('public/sitemap.xml');
 const BASE = 'https://maps.infonovice.fr/';
 
 describe('pages HTML', () => {
-  test('le dépôt sert bien les cinq pages attendues', () => {
+  test('le dépôt sert bien les six pages attendues', () => {
     expect(PAGES.sort()).toEqual(
       ['a-propos.html', 'index.html', 'mentions-legales.html', 'offre-flottes.html',
-        'vie-privee.html'],
+        'pro.html', 'vie-privee.html'],
     );
   });
 

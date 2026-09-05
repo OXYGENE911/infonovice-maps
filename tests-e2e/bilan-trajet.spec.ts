@@ -125,6 +125,9 @@ test('« ENREGISTRER CE PARCOURS » GARDE, ET SEULEMENT SI ON LE DEMANDE', async
   await rouler(page, 2.36740, 12);
   await rouler(page, 2.36781, 0);
   await expect(page.locator('.bg-bilan')).toBeVisible({ timeout: 10_000 });
+  /* MAPS PRO EN FIN DE TRAJET (PRO-LIENS-1) : une ligne, un lien, dans le
+     bilan qu'on lit déjà — jamais une fenêtre de plus. */
+  await expect(page.locator('.bg-bilan-pro a')).toHaveAttribute('href', '/pro.html');
 
   const memoire = async (): Promise<string> => page.evaluate(async () =>
     new Promise<string>((res) => {

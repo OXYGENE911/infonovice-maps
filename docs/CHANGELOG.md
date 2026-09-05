@@ -2,6 +2,25 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.96.0] — 2026-09-05 — PRO-LIENS-1
+
+### Trois portes vers Maps Pro, et une adresse stable
+- Armelin (05/09) : « un lieu dans le menu indiquant un bouton Maps Pro »,
+  « pouvoir cliquer sur le logo Infonovice Maps en haut à gauche », et en fin
+  de trajet « Le trajet vous a plu ? Débloquez d'autres fonctionnalités ».
+  Livré tel quel : une entrée « Maps Pro » dans le menu, près de la version ;
+  la marque de l'en-tête devient un lien ; une ligne dans le bilan de fin de
+  trajet. Une ligne et un lien à chaque fois — jamais une fenêtre qui
+  s'impose : le client libre reste entier.
+- **`/pro.html`, l'adresse stable** : une vraie page, lisible sans script,
+  qui présente Maps Pro et conduit vers le site Pro (hébergement provisoire
+  aujourd'hui, pro.maps.infonovice.fr demain). La destination change en une
+  ligne dans cette page, jamais dans l'application.
+- Sur la « page blanche en fin de parcours » : le bilan existait déjà à
+  l'arrivée ; la page blanche vue hier était le canevas qui ne se dessinait
+  plus (traité en 1.94.1 et 1.95.0), pas une absence d'écran de fin. Les deux
+  ne se confondent pas ; la ligne Maps Pro ne prétend pas la soigner.
+
 ## [1.95.0] — 2026-09-05 — NAV-2 · FLECHE-1 · RETOUR-0409b
 
 ### Le plein écran de navigation, la flèche à portée, et la carte blanche cernée
