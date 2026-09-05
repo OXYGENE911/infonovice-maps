@@ -1,42 +1,59 @@
-/* <outils-menu> — le volet « Outils » du menu : mesurer, météo d'une ville.
+/* <outils-menu> — le volet « Outils » du menu : une grille de tuiles.
  *
- * UN SEUL VOLET POUR PLUSIEURS OUTILS (METEO-VILLE-1, 05/09/2026). Le menu est
- * une fenêtre haute comme son contenu, et chaque rangée compte sur un
- * téléphone : le garde-fou de feuilles-basses (≤ 62 % de l'écran) a déjà
- * refusé une section de plus. Les outils partagent donc UNE rangée, et se
- * déplient ensemble. Ce fichier ne sait rien de ce que font les outils : il
- * les range. */
-import { pictoMenu } from './icone-menu';
+ * OUTILS-2 (06/09/2026). Armelin : « l'icône d'outils devrait plutôt
+ * représenter une clé à molette […] cliquer sur Outils et afficher uniquement
+ * des icônes représentant chaque outil — une règle pour les mesures, un
+ * soleil avec des nuages pour la météo. Lorsqu'on clique sur une icône, la
+ * page se lance en entier. » Avant : les outils dépliaient leurs formulaires
+ * l'un sous l'autre dans le volet, et il fallait défiler.
+ *
+ * UN SEUL VOLET POUR TOUS (METEO-VILLE-1) : le menu est une fenêtre haute
+ * comme son contenu, et chaque rangée compte (garde-fou de feuilles-basses).
+ * Ce fichier ne sait rien de ce que font les outils : il pose leurs tuiles et
+ * appelle leur action. */
+import { pictoMenu, type NomPicto } from './icone-menu';
+
+export interface Outil {
+  /** Identifiant stable, porté en `data-outil` pour la CSS et les parcours. */
+  cle: string;
+  libelle: string;
+  picto: NomPicto;
+  action: () => void;
+}
 
 export class OutilsMenu extends HTMLElement {
   connectedCallback(): void { this.#construire(); }
 
   /* CONSTRUIT À LA DEMANDE, PAS SEULEMENT À LA CONNEXION : la carte range les
-     outils AVANT que le menu ne soit posé dans le document — le volet doit
-     donc exister dès le premier `ajouter`. Mesuré : sans cela, le démarrage
-     levait « volet introuvable » et la page restait sans menu. */
+     outils AVANT que le menu ne soit posé dans le document. */
   #construire(): void {
     if (this.firstElementChild) return;
     this.innerHTML = `
       <details class="outils">
-        <summary aria-label="Outils : mesurer une distance, météo d’une ville">${pictoMenu('mesure')}Outils</summary>
+        <summary aria-label="Outils : mesurer, météo, signal GPS, partager ma position">${pictoMenu('cle')}Outils</summary>
         <fieldset>
           <legend>Outils</legend>
+          <div class="outils-grille" role="group" aria-label="Outils"></div>
         </fieldset>
       </details>`;
   }
 
-  /** Range un outil dans le volet, à la suite des autres. */
-  ajouter(outil: HTMLElement): void {
+  /** Pose la tuile d'un outil ; le clic replie le volet et lance l'action. */
+  ajouter(outil: Outil): void {
     this.#construire();
-    const boite = this.querySelector('fieldset');
-    if (!boite) throw new Error('outils-menu : volet introuvable après construction');
-    if (boite.children.length > 1) {
-      const trait = document.createElement('hr');
-      trait.className = 'outils-trait';
-      boite.appendChild(trait);
-    }
-    boite.appendChild(outil);
+    const grille = this.querySelector('.outils-grille');
+    if (!grille) throw new Error('outils-menu : grille introuvable après construction');
+    const tuile = document.createElement('button');
+    tuile.type = 'button';
+    tuile.className = 'outils-tuile';
+    tuile.dataset['outil'] = outil.cle;
+    tuile.innerHTML = `${pictoMenu(outil.picto)}<span>${outil.libelle}</span>`;
+    tuile.addEventListener('click', () => {
+      const volet = this.querySelector<HTMLDetailsElement>('details.outils');
+      if (volet) volet.open = false;
+      outil.action();
+    });
+    grille.appendChild(tuile);
   }
 }
 

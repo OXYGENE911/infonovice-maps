@@ -61,7 +61,10 @@ async function preparer(page: Page, meteo: { statut: number; corps: object }): P
 async function choisirLyon(page: Page): Promise<void> {
   await ouvrirMenu(page);
   await page.locator('.reglages-corps .outils summary').click();
-  const champ = page.locator('outil-meteo input');
+  // OUTILS-2 : la tuile ouvre la page plein écran, le champ y vit.
+  await page.locator('.outils-tuile[data-outil="meteo"]').click();
+  await expect(page.locator('page-outil')).toBeVisible();
+  const champ = page.locator('page-outil outil-meteo input');
   await expect(champ).toBeVisible();
   await champ.fill('lyon');
   const option = page.locator('outil-meteo [role="option"]').first();
