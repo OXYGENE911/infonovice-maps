@@ -835,6 +835,31 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] PERF-1 (04/09) : Lighthouse Performance mesuré pour la première fois
+      (mobile, production v1.92) : **52** / 100 / 96 / 100 — la règle exige
+      ≥ 90 sur les quatre. Le LCP était le placeholder « Rechercher une
+      adresse… » à 5,0 s (4,3 s de render delay : la barre naissait en JS).
+      Une coquille inerte dans le HTML tient sa place, géométrie exacte,
+      retirée par le composant ; parcours E2E sans script + coïncidence au
+      pixel. La carte se construit après la première image (deux rAF).
+      RÉSULTAT HONNÊTE : le navigateur mesure LCP = FCP (PerformanceObserver,
+      4G lent, CPU ×4 : 784 ms, élément = coquille) ; Lighthouse, lui, ne
+      change pas d'attribution (LCP 3,9 → 3,8 s, score 68 → 67, bruit) ;
+      la tâche longue passe de 1 195 à 432 ms au plus. Le ≥ 90 reste devant.
+- [ ] PERF-2 — LA TÂCHE LONGUE DU DÉMARRAGE. Mesuré le 04/09 (profil CPU ×4
+      sur le dist cartographié) : une tâche de 1,2 s dans notre bundle ;
+      MapLibre ≈ 600 ms, notre code ≈ 450 ms (points chauds :
+      `panneau-itineraire #allerA` au montage, `panneau-poi #majNoteEtendue`,
+      les mesures `getBoundingClientRect` de main.ts — reflows forcés),
+      compilation ≈ 500 ms ; DOM de 1 695 éléments à l'ouverture ; 90 Ko de
+      JS inutilisés au premier écran (57 % du bundle). `creerCarte` construit
+      dix-sept composants d'un seul tenant, câblés entre eux (panneau ↔ poi
+      ↔ fiche ↔ guidage). PISTE : découper en tours d'horloge (`setTimeout`
+      entre phases : carte, puis rail, puis panneaux) et différer le
+      planificateur + bandeau de guidage (360 Ko de source) au premier appui
+      par `import()`. Gain attendu : TBT 1 240 → < 500 ms. À mesurer, pas à
+      promettre : Lighthouse avant/après sur le même poste. Cache GitHub
+      Pages (10 min) : hors de portée, c'est l'hébergeur.
 - [x] RECHERCHE-11 (04/09) : le surnom devient l'enseigne. Second banc
       (quatorze requêtes du quotidien) : « McDo Chennevières » rendait zéro
       — Overpass compare à l'égalité (« McDonald's », apostrophe droite),

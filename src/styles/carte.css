@@ -59,8 +59,13 @@ body { font-family: var(--police); background: var(--fond); }
 .entete-marque strong { color: var(--accent); font-weight: 750; }
 .entete-note { font-size: 11.5px; color: var(--texte-3); }
 .entete recherche-adresse { flex: 1; min-width: 200px; }
+/* LA COQUILLE D'ATTENTE (PERF-1) a la géométrie EXACTE de la barre — même
+   place dans l'en-tête, mêmes règles de champ — sinon le remplacement
+   ferait sauter la page (CLS). Elle vit dans index.html et meurt quand le
+   composant se pose. */
+.entete .recherche-attente { flex: 1; min-width: 200px; }
 .recherche { position: relative; }
-.recherche input {
+.recherche input, .recherche-attente input {
   width: 100%; min-width: 220px;
   padding: 8px 12px; border-radius: 10px;
   border: 1px solid var(--bord-2); background: var(--fond);
@@ -357,8 +362,10 @@ body.recherche-ouverte .pied-carte { display: none; }
     flex-wrap: nowrap; align-items: center;
   }
   .entete-marque { font-size: 13px; white-space: nowrap; }
-  .entete recherche-adresse { min-width: 0; }
-  .recherche input { min-width: 0; padding: 7px 10px; font-size: 13.5px; }
+  /* La coquille d'attente (PERF-1) suit les MÊMES règles mobiles, sinon
+     elle fait 220 px là où la barre en fait 139 — mesuré au pixel. */
+  .entete recherche-adresse, .entete .recherche-attente { min-width: 0; }
+  .recherche input, .recherche-attente input { min-width: 0; padding: 7px 10px; font-size: 13.5px; }
   /* Le rail « Itinéraire » se cale sous l'en-tête réduit : la variable
      --hauteur-entete est MESURÉE par main.ts, rien à recalibrer ici. */
 }

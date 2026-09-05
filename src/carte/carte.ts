@@ -592,7 +592,16 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      feuille qui occupe l'écran — leur en superposer une seconde cacherait le
      trajet qu'on compose. */
   recherche.pleinEcran = true;
-  document.querySelector('.entete')?.appendChild(recherche);
+  /* LA COQUILLE D'ATTENTE MEURT ICI (PERF-1, 04/09) : elle tenait la place
+     de la barre depuis le HTML, pour que le premier grand texte de la page
+     paraisse avant le script. Le vrai composant prend SA PLACE DANS L'ORDRE
+     — pas la fin de l'en-tête : mesuré au pixel par le parcours E2E, la barre
+     ajoutée en dernier tombait sur une autre ligne du flex que la coquille
+     (l'état de connexion s'intercale) et faisait 81 px de plus. Jamais deux
+     barres, jamais aucune, et la même géométrie. */
+  const attente = document.querySelector('.entete .recherche-attente');
+  if (attente) attente.replaceWith(recherche);
+  else document.querySelector('.entete')?.appendChild(recherche);
   let marqueur: Marker | null = null;
   /* LA DERNIÈRE DESTINATION CHOISIE : c'est elle que le marqueur rouvre.
      Armelin : « on devrait pouvoir réduire la fenêtre au niveau du pointeur
