@@ -31,12 +31,25 @@ export type Consommations = Record<CleContexte, number>;
    trop axé véhicule électrique, les arrêts recharge automatiques sont
    discriminants pour les thermiques ». Absente (profils enregistrés avant),
    elle vaut « électrique » : personne ne perd son plan de recharge. */
-export type Motorisation = 'electrique' | 'thermique';
+export type Motorisation = 'electrique' | 'hybride-rechargeable' | 'thermique';
+
+/** Lit une motorisation enregistrée — l'inconnu vaut électrique (profils d'avant). */
+export function motorisationDe(v: unknown): Motorisation {
+  return v === 'thermique' || v === 'hybride-rechargeable' ? v : 'electrique';
+}
 
 export interface Vehicule {
   nom: string;
-  /** Électrique par défaut ; « thermique » couvre aussi l'hybride. */
+  /** Électrique par défaut ; « thermique » couvre l'hybride simple, l'hybride
+   *  rechargeable a les deux : batterie ET réservoir (THERMIQUE-2). */
   motorisation?: Motorisation;
+  /* LE CARBURANT (THERMIQUE-2, 06/09) — ce qu'il faut pour planifier les
+     pleins : lequel, combien le réservoir contient, ce que la voiture boit,
+     et la jauge au départ. Zéro vaut « non déclaré ». */
+  carburant?: string;
+  reservoirL?: number;
+  consommationL100?: number;
+  jaugePourcent?: number;
   /** Capacité BRUTE annoncée par le constructeur, en kWh. */
   capaciteNominale: number;
   /** State of Charge Energy : la santé de la batterie, en % de sa capacité d'origine. */
@@ -229,7 +242,10 @@ export function estUneMoto(memoire: unknown): boolean {
 export function estThermique(memoire: unknown): boolean {
   const m = (memoire ?? {}) as Record<string, unknown>;
   const brut = (m['vehicule'] ?? {}) as Record<string, unknown>;
-  return brut['motorisation'] === 'thermique';
+  /* L'HYBRIDE RECHARGEABLE ROULE AU CARBURANT SUR LA ROUTE (THERMIQUE-2) :
+     sa batterie fait la ville, pas le Paris–Lyon. Aucun arrêt de recharge
+     ne lui est imposé ; ses pleins se planifient comme ceux d'un thermique. */
+  return brut['motorisation'] === 'thermique' || brut['motorisation'] === 'hybride-rechargeable';
 }
 
 export function masseDeclaree(memoire: unknown): number | null {

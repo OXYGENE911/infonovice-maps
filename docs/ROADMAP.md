@@ -835,6 +835,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] THERMIQUE-2 (06/09) : trois motorisations (électrique, hybride
+      rechargeable, thermique), carburant / réservoir / consommation / jauge,
+      autonomie carburant au bilan, pleins planifiés sur la page « Arrêts de
+      recharge » (lib/carburant pur : réserve 40 km, pause 2 h, la moins
+      chère de la fenêtre, prix du jour open data). RESTE : filtre par
+      enseigne (apparier prix-carburants aux stations OSM qui portent
+      brand) ; pastilles des pleins sur la carte ; jauge pendant le suivi.
 - [x] OUTILS-2 (06/09) : volet « Outils » redessiné — clé à molette, grille
       de tuiles, page plein écran par outil (page-outil.ts). Météo dans sa
       page (plus de débordement latéral), Signal GPS (précision qualifiée ;
@@ -874,10 +881,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [ ] RETOURS-AMIS — LE RESTE, trié le 05/09 (suggestions des amis d'Armelin) :
       · MOTORISATION-1 (livré — PR #257) : choix électrique / thermique-hybride
         dans « Mon véhicule » ; thermique = aucun plan de recharge, mention
-        claire. THERMIQUE-2 (décision) : autonomie et consommation
-        thermiques, arrêts carburant toutes les 2 h, filtre des enseignes de
-        stations (Total, Shell, BP, Avia…) comme les réseaux de bornes, prix
-        du carburant avant la station (open data prix-carburants déjà là).
+        claire. THERMIQUE-2 (livré le 06/09) : autonomie et consommation
+        thermiques, pleins toutes les 2 h et avant la réserve, prix du jour ;
+        reste le filtre des enseignes (l'open data des prix n'en a pas).
       · FOND-NAV-1 (livré, 1.99.0) : bouton rond « fonds de carte » au-dessus de la
         boussole pendant le suivi — le menu étant effacé (NAV-2).
       · RECHERCHE-NAV-1 (PR #258) : loupe ronde en suivi pour chercher une

@@ -531,43 +531,74 @@ test('THERMIQUE OU HYBRIDE : les champs électriques se retirent, le choix se ga
   await expect(page.getByRole('radio', { name: 'Électrique' })).toBeChecked();
   await expect(page.getByLabel('Batterie')).toBeVisible();
 
-  await page.getByRole('radio', { name: 'Thermique ou hybride' }).check();
+  await page.getByRole('radio', { name: 'Thermique', exact: true }).check();
   await expect(page.getByLabel('Batterie')).toBeHidden();
   await expect(page.getByLabel('Chercher un véhicule')).toBeHidden();
   await expect(page.locator('.veh-thermique-note')).toBeVisible();
-  await expect(page.locator('.veh-thermique-note')).toContainText('aucun arrêt de recharge');
+  await expect(page.locator('.veh-thermique-note')).toContainText('les pleins remplacent les arrêts de recharge');
   // Le repère de navigation et le nom, eux, restent : ils ne sont pas électriques.
   await expect(page.getByLabel('Nom du véhicule')).toBeVisible();
+  // LE CARBURANT (THERMIQUE-2) : réservoir, consommation, jauge — et l'autonomie se dit.
+  await expect(page.locator('.veh-bilan')).toContainText('Renseignez le réservoir');
+  await page.locator('.veh-carburant-choix').selectOption('gazole');
+  await page.getByLabel('Réservoir').fill('50');
+  await page.getByLabel('Consommation').fill('6.5');
+  await page.getByLabel('Jauge au départ').fill('50');
+  await expect(page.locator('.veh-bilan-carburant')).toContainText('~385 km');
 
   // LE CHOIX SE GARDE (IndexedDB), comme tout le profil.
   await page.reload();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
   await ouvrirVolet(page, '.vehicule');
-  await expect(page.getByRole('radio', { name: 'Thermique ou hybride' })).toBeChecked();
+  await expect(page.getByRole('radio', { name: 'Thermique', exact: true })).toBeChecked();
   await expect(page.getByLabel('Batterie')).toBeHidden();
+  await expect(page.getByLabel('Réservoir')).toHaveValue('50');
 
-  // UN TRAJET : la page « Arrêts de recharge » explique, la barre du suivi se tait.
-  const TRACE: [number, number][] = Array.from({ length: 21 }, (_, i) => [2.3522 + i * 0.0014, 48.8566]);
+  // UN PARIS–LYON : la page « Arrêts de recharge » planifie les PLEINS, la barre du suivi se tait.
+  const TRACE: [number, number][] = [[2.3522, 48.8566], [4.8357, 45.7640]];
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
     if (/resource=bdtopo-pgr/.test(route.request().url())) {
       return route.fulfill({ contentType: 'application/json', body: '{"portions":[]}' });
     }
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
-      geometry: { type: 'LineString', coordinates: TRACE }, distance: 2_050, duration: 240,
+      geometry: { type: 'LineString', coordinates: TRACE }, distance: 391_000, duration: 21_600,
     }) });
   });
+  /* LA LIGNE DROITE PARIS–LYON FAIT 391 KM À VOL D'OISEAU : le tracé simulé
+     est un segment, et l'avancement se mesure LE LONG DU TRACÉ — la distance
+     annoncée doit donc être la même, sans quoi les fenêtres du plan et les
+     stations ne parlent pas des mêmes kilomètres (payé une fois). Six heures
+     pour 391 km : une pause toutes les ~130 km. Trois stations : à 30 %
+     (117 km, 1,72), à la moitié (196 km, 1,65 — la moins chère), à 80 %
+     (313 km, 1,80) : trois pauses, une par fenêtre. */
+  const sur = (t: number) => ({ lon: 2.3522 + (4.8357 - 2.3522) * t, lat: 48.8566 + (45.7640 - 48.8566) * t });
+  await page.route('**/data.economie.gouv.fr/**', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify({ total_count: 3, results: [
+      { geom: sur(0.3), adresse: 'Aire de la Réserve', ville: 'Auxerre', gazole_prix: 1.72, sp95_prix: 1.85 },
+      { geom: sur(1 / 2), adresse: 'Aire de Beaune-Tailly', ville: 'Beaune', gazole_prix: 1.65 },
+      { geom: sur(0.8), adresse: 'Aire de Mâcon-Saint-Albain', ville: 'Mâcon', gazole_prix: 1.80 },
+    ] }),
+  }));
   await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
     contentType: 'application/json', body: '{"elements":[]}',
   }));
   await page.route('**/www.bison-fute.gouv.fr/**', (route) => route.fulfill({
     contentType: 'application/json', body: '[]',
   }));
-  await page.goto(`/#iti=${TRACE[0]![0]},${TRACE[0]![1]};${TRACE[20]![0]},${TRACE[20]![1]};car`);
+  await page.goto(`/#iti=${TRACE[0]![0]},${TRACE[0]![1]};${TRACE[1]![0]},${TRACE[1]![1]};car`);
   await page.reload();
   await expect(page.locator('.iti-resultat')).toContainText('km', { timeout: 15_000 });
   await allerA(page, 'recharge');
-  await expect(page.locator('.iti-recharge-corps')).toContainText('thermique ou hybride');
-  await expect(page.locator('.iti-recharge-corps')).toContainText('aucun arrêt de recharge');
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps.locator('.carburant-titre')).toContainText('Arrêts carburant — Gazole', { timeout: 15_000 });
+  await expect(corps.locator('.carburant-liste li')).toHaveCount(3);
+  await expect(corps.locator('.carburant-liste li').nth(0)).toContainText('Auxerre');
+  await expect(corps.locator('.carburant-liste li').nth(0)).toContainText('1,720 €/L');
+  await expect(corps.locator('.carburant-liste li').nth(0)).toContainText('pause des deux heures');
+  await expect(corps.locator('.carburant-liste li').nth(1)).toContainText('Beaune');
+  await expect(corps.locator('.carburant-liste li').nth(2)).toContainText('Mâcon');
+  await expect(corps.locator('.carburant-moins-chere')).toContainText('Beaune');
+  await expect(corps).toContainText('enseigne');
 
   await retour(page);
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();

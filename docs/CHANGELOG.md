@@ -2,6 +2,35 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.106.0] — 2026-09-06 — THERMIQUE-2
+
+### Les pleins d'un thermique, planifiés comme les recharges d'un électrique
+- Des amis d'Armelin : « pour un thermique, des arrêts stations-service
+  seulement, toutes les deux heures, avec le prix à la pompe avant la
+  station ». « Mon véhicule » a maintenant trois motorisations —
+  **Électrique, Hybride rechargeable, Thermique** — et, pour les deux
+  dernières, le carburant (gazole, SP95, SP98, E10, E85, GPLc), le
+  réservoir, la consommation réelle et la jauge au départ. Le bilan dit
+  l'autonomie carburant (« ~385 km : 50 L à 50 %, 6,5 L/100 km »).
+- La page « Arrêts de recharge » planifie les **pleins** : stations à moins
+  de 3 km de la route avec les **prix du jour** (open data prix-carburants),
+  un arrêt avant la réserve de 40 km et à chaque pause de deux heures quand
+  une station s'y prête, **la moins chère de chaque fenêtre**, le plein
+  chiffré en litres et en euros, le total, l'autonomie à l'arrivée, et la
+  station la moins chère du trajet. Sans station avant la limite : le plan
+  le dit, il n'invente rien.
+- **Hybride rechargeable** (question d'Armelin) : la batterie fait la ville,
+  le réservoir fait la route — aucun arrêt de recharge n'est imposé, les
+  pleins se planifient comme pour un thermique, et la batterie reste
+  renseignable pour le rayon d'action.
+- Dit en clair : l'open data des prix ne porte pas l'enseigne — le filtre
+  par enseigne (Total, Shell…) viendra avec l'appariement aux stations
+  OpenStreetMap. Pas de suivi de jauge pendant la navigation.
+- Tests : plan pur (pause → la moins chère de la fenêtre, réserve, refus
+  dit, pause sans station qui ne bloque rien), profil lu d'IndexedDB ;
+  parcours E2E Paris–Lyon avec trois stations simulées : deux pleins,
+  Auxerre puis Mâcon, Beaune la moins chère.
+
 ## [1.105.0] — 2026-09-06 — OUTILS-2
 
 ### Le volet « Outils » redessiné : une clé à molette, des tuiles, des pages plein écran
