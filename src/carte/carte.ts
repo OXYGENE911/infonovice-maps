@@ -225,7 +225,12 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     if (!muette.hidden) return;
     let style: unknown;
     try { style = carte.getStyle(); } catch { style = undefined; }
-    if (style === undefined) {
+    /* UN STYLE SANS AUCUN CALQUE VAUT UN STYLE PERDU (RETOUR-0409b) : c'est
+       l'état qu'une reprise de contexte WebGL ratée laisse derrière elle —
+       MapLibre repose le style, et si ce qui suit casse, il ne reste rien à
+       dessiner, sans un événement pour le dire. */
+    const calques = (style as { layers?: unknown[] } | undefined)?.layers;
+    if (style === undefined || (Array.isArray(calques) && calques.length === 0)) {
       motMuette.textContent = 'La carte a perdu son style et ne se dessine plus.'
         + ' Votre itinéraire est conservé.';
       muette.hidden = false;

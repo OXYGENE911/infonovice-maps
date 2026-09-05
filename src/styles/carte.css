@@ -2310,6 +2310,24 @@ body.en-guidage .entete etat-connexion .installer,
 body.en-guidage .pied-carte {
   display: none;
 }
+/* PLEIN ÉCRAN DE NAVIGATION (NAV-2, 05/09). Armelin, et ses testeurs : « il
+   serait préférable de faire apparaître les panneaux de direction tout en
+   haut de l'écran comme dans n'importe quelle application GPS. Cela
+   permettrait de gagner deux rangées afin d'afficher des indications plus
+   grosses […] La barre de recherche, le menu et le bouton Itinéraire
+   reviendraient à la normale qu'après la fin du trajet. » L'en-tête entier,
+   le rail du planificateur et le menu s'effacent donc le temps du suivi ; le
+   bandeau du bas porte déjà ce qui sert au volant (voix, 3D, orientation,
+   copilote, arrêt). `--hauteur-entete` est MESURÉE (main.ts) : à zéro, tout
+   ce qui se calait sous l'en-tête remonte de lui-même. */
+body.en-guidage .entete,
+body.en-guidage #carte .maplibregl-ctrl-top-left,
+body.en-guidage #carte .maplibregl-ctrl-top-right {
+  display: none;
+}
+/* Une bulle de lieu ouverte en roulant reste sous le cartouche : bornée en
+   hauteur et défilante, sa croix ne passe plus derrière le panneau. */
+body.en-guidage .maplibregl-popup-content { max-height: 48vh; overflow-y: auto; }
 /* Les volets sont refermés par le code au démarrage ; leurs boutons restent,
    simplement effacés — on les retrouve du regard sans qu'ils appellent l'œil. */
 body.en-guidage #carte .maplibregl-ctrl-top-left summary,
@@ -2953,6 +2971,10 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
 
 /* LA SECTION BATTERIE DU COPILOTE (SOC-EDIT, 04/09). */
 .bg-copilote-soc { margin: 2px 0 6px; font: 600 13px var(--police); color: var(--texte-1); }
+/* Les liens de signalement du copilote (SENS-1) : lisibles, soulignés,
+   ouverts dans un onglet — on quitte l'application le temps d'écrire. */
+.bg-copilote-signaler { margin: 4px 0 8px; font: 400 13px/1.45 var(--police); color: var(--texte-2); }
+.bg-copilote-signaler a { color: var(--accent); text-decoration: underline; }
 .bg-copilote-soc-correction { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .bg-copilote-soc-champ {
   width: 130px; padding: 7px 10px; border-radius: 9px;
@@ -3420,7 +3442,9 @@ summary .picto-menu {
   position: fixed; z-index: calc(var(--z-cartouche) + 1);
   /* EN HAUT À GAUCHE, SOUS LA PASTILLE DU RAIL : elle reste atteignable —
      on peut vouloir rouvrir le planificateur en roulant. */
-  top: calc(var(--hauteur-entete, 45px) + 58px); left: 12px;
+  /* TOUT EN HAUT (NAV-2, 05/09) : l'en-tête et le rail s'effacent pendant le
+     suivi, le cartouche prend leur place — sous l'encoche, et c'est tout. */
+  top: calc(var(--sur-encoche, 0px) + 10px); left: 12px;
   /* IL VA JUSQU'AU BORD DROIT (TERRAIN-1, 30/08). Armelin, au volant : « le
      téléphone est posé loin des yeux du conducteur, il faut que les
      informations soient visibles ». Un panneau de 300 px sur un écran de 400
@@ -3453,15 +3477,18 @@ summary .picto-menu {
    exception — une distance grise sur fond bleu serait une faute de lecture
    autant que de règlement. */
 .bg-cartouche .bg-fleche { color: var(--panneau-encre); }
-.bg-cartouche .bg-fleche svg { width: 44px; height: 44px; }
+.bg-cartouche .bg-fleche svg { width: 58px; height: 58px; }
 .bg-cartouche-texte { flex: 1 1 auto; min-width: 0; }
 .bg-cartouche .bg-instruction {
   /* PLUS GROS DE TROIS POINTS ET DEMI : mesuré sur la capture d'Armelin, à
      bout de bras sur un support de pare-brise. */
-  margin: 0; font: 700 19px/1.2 var(--police); color: var(--panneau-encre);
+  /* ET ENCORE PLUS GROS (NAV-2, 05/09) : « le nombre de kilomètres restant
+     avant une instruction est affiché trop petit, tout comme les flèches ».
+     Les deux rangées gagnées en haut se dépensent ici. */
+  margin: 0; font: 700 23px/1.15 var(--police); color: var(--panneau-encre);
 }
 .bg-cartouche .bg-distance {
-  margin: 3px 0 0; font: 700 16px var(--police); color: var(--panneau-encre);
+  margin: 4px 0 0; font: 700 21px var(--police); color: var(--panneau-encre);
   font-variant-numeric: tabular-nums;
   /* La distance est une donnée SECONDE sur un panneau : elle s'efface un peu
      sans changer d'encre — l'opacité garde le rapport de contraste au fond. */
@@ -3768,8 +3795,12 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
   flex-basis: 100%; order: 9; margin: 4px 0 0;
   /* SOUS LE TEXTE, pas sous la flèche : la chaussée est large de 48 px de
      moins, ce qui la cale à l'aplomb de l'instruction qu'elle précise. */
-  margin-left: 48px; max-width: 132px;
-  display: flex; gap: 3px; align-items: flex-end; height: 18px;
+  /* PLUS GRANDE AVEC LE CARTOUCHE (NAV-2, 05/09) : « les flèches de
+     positionnement sur la chaussée sont affichées trop petites » — à
+     l'aplomb d'une flèche de manœuvre de 58 px, une chaussée de 18 px se
+     perdait. Le retrait suit la flèche (58 + 10 de blanc). */
+  margin-left: 68px; max-width: 200px;
+  display: flex; gap: 4px; align-items: flex-end; height: 26px;
 }
 .bg-chaussee[hidden] { display: none; }
 /* LES BARRES SANS FLÈCHES ONT ÉTÉ RETIRÉES (TERRAIN-1, 30/08). Armelin, au
@@ -3780,14 +3811,14 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
    les autres ne dit pas « mettez-vous à droite », il ne dit rien. Ne reste
    que la chaussée FLÉCHÉE d'AFFECT-1, qui se lit sans mode d'emploi. */
 .bg-file {
-  flex: 1 1 0; height: 9px; border-radius: 2px;
+  flex: 1 1 0; height: 12px; border-radius: 3px;
   background: var(--panneau-encre); opacity: .3;
 }
 /* LA VOIE CONSEILLÉE : pleine, plus haute, à l'encre franche du panneau.
    Tant qu'on DÉDUIT le côté, une seule est éclairée — en éclairer deux
    laisserait croire à une affectation que la donnée ne portait pas. */
 .bg-file[data-conseillee="oui"] {
-  height: 18px; opacity: 1;
+  height: 26px; opacity: 1;
 }
 
 /* ==========================================================================
@@ -3795,22 +3826,22 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
    par voie »). Quand `turn:lanes` existe, chaque file porte SES flèches et
    plusieurs peuvent être en clair : ce n'est plus une déduction.
    ========================================================================== */
-.bg-chaussee:has(.bg-file-fleches) { height: 28px; max-width: 186px; }
+.bg-chaussee:has(.bg-file-fleches) { height: 40px; max-width: 270px; }
 /* .45 ET NON .35 : mesuré à l'écran sur fond bleu autoroutier, les voies
    éteintes disparaissaient — or elles font le SENS de l'image, qui est « il
    y en a quatre, et c'est la dernière ». */
 .bg-file-fleches {
-  height: 28px; opacity: .45; border-radius: 3px;
+  height: 40px; opacity: .45; border-radius: 4px;
   display: flex; align-items: center; justify-content: center; gap: 1px;
   background: none;
 }
 .bg-file-fleches[data-conseillee="oui"] {
-  height: 28px; opacity: 1;
+  height: 40px; opacity: 1;
   background: color-mix(in srgb, var(--panneau-encre) 16%, transparent);
 }
 .bg-file-fleches svg {
-  width: 17px; height: 19px; flex: 0 0 auto;
-  fill: none; stroke: var(--panneau-encre); stroke-width: 1.7;
+  width: 24px; height: 27px; flex: 0 0 auto;
+  fill: none; stroke: var(--panneau-encre); stroke-width: 2.1;
   stroke-linecap: round; stroke-linejoin: round;
 }
 

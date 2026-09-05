@@ -2,6 +2,59 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.95.0] — 2026-09-05 — NAV-2 · FLECHE-1 · RETOUR-0409b
+
+### Le plein écran de navigation, la flèche à portée, et la carte blanche cernée
+- **Le cartouche prend le haut de l'écran.** Armelin et ses testeurs : « faire
+  apparaître les panneaux de direction tout en haut de l'écran comme dans
+  n'importe quelle application GPS […] gagner deux rangées afin d'afficher des
+  indications plus grosses ». Pendant le suivi, l'en-tête entier, le rail du
+  planificateur et le menu s'effacent ; le cartouche se pose sous l'encoche
+  (mesuré : ≤ 24 px du haut contre ≈ 115 avant) ; instruction 19 → 23 px,
+  distance 16 → 21 px, flèche 44 → 58 px ; la chaussée fléchée (voies)
+  grandit avec — 28 → 40 px de haut, flèches de voie 17 → 24 px (« les
+  flèches de positionnement sur la chaussée sont affichées trop
+  petites »). Tout revient à l'arrêt du suivi.
+  Conséquence assumée : « Effacer » n'est plus atteignable en roulant — on
+  arrête d'abord (croix rouge). Un parcours le garde.
+- **La flèche de virage n'arrive qu'à portée.** Sur le périphérique, « tourner
+  à droite dans 4 km » avec une flèche à droite a fait prendre une sortie
+  pour l'A1. Règle pure (`manoeuvreImminente`) : quarante secondes de route,
+  entre 500 m (ville, arrêt, vitesse inconnue) et 1 500 m (autoroute). Loin
+  de la manœuvre : « Continuez tout droit » en grand, flèche droite, et la
+  manœuvre à venir en seconde ligne avec sa distance. Tout droit, arrivée et
+  giratoire se montrent toujours. Trois tests unitaires, un parcours E2E ;
+  les parcours qui lisaient « Tournez à droite » à 200 km lisent maintenant
+  le cartouche entier.
+- **La bulle d'un lieu ouverte en roulant reste sous le cartouche** :
+  point recadré à 30 % sous le centre pendant le suivi, bulle plafonnée à
+  48 % de l'écran et défilante — la croix ne passe plus derrière le panneau
+  (le retour « Banques et DAB, place Félix-Éboué »).
+- **La carte blanche, cernée.** Armelin a précisé : fond photo, relief 3D,
+  « Se garer » pressé, puis la croix rouge. Rejoué dans un harnais avec ces
+  quatre conditions : pas de canevas blanc, mais DEUX ERREURS RÉELLES à
+  chaque remise du style sur fond photo — `layers.odonyme-abrege: missing
+  required property "source"` (et `odonyme-desabrege`) : deux calques de
+  noms de rues n'entraient jamais sur le fond photo, en silence. Or c'est
+  exactement le chemin que MapLibre rejoue à une reprise de contexte WebGL
+  sur téléphone (après une longue navigation, GPU chargé par la photo et
+  les bâtiments 3D) : le voile se cache à la reprise, la remise du style
+  bute, il ne reste rien à dessiner. Corrigé (source ajoutée, test unitaire
+  qui exige une source sur chaque calque d'étiquette) ; et le chien de garde
+  de 1.94.1 traite désormais un style SANS AUCUN CALQUE comme un style perdu.
+  Cause non prouvée sur l'appareil, chaîne plausible fermée : on le dit tel
+  quel.
+- **Avenue du Général-Michel-Bizot, sens unique récent** : mesuré sur
+  OpenStreetMap le 05/09, la voie porte déjà `oneway=yes` sur plusieurs
+  tronçons ; l'itinéraire vient de la Géoplateforme (BD TOPO), mise à jour
+  par campagnes. Ce n'est pas une erreur de code : c'est une donnée en
+  retard chez le producteur. **Livré côté libre (SENS-1)** : le Copilote gagne une section
+  « Carte » avec deux liens à la position courante — une note
+  OpenStreetMap (sans compte) et cartes.gouv.fr (l'outil de signalement
+  de l'IGN). Aucune donnée envoyée d'office : l'usager écrit et envoie.
+  Reste en Pro : la vérification du sens des tronçons du trajet contre
+  OSM.
+
 ## [1.94.1] — 2026-09-05 — RETOUR-0409
 
 ### Deux retours d'Armelin sur la v1.93, captures à l'appui

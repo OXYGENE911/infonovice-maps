@@ -136,7 +136,7 @@ test('LA SECONDE REQUÊTE EN PANNE NE CASSE RIEN : le suivi continue', async ({ 
      son échec doit être bénin, jamais fatal. */
   await suivre(page, { voiesEnPanne: true });
   await expect(page.locator('.bg-chaussee')).toBeHidden();
-  await expect(page.locator('.bg-instruction')).toContainText('Tournez à droite');
+  await expect(page.locator('.bg-cartouche')).toContainText('Tournez à droite');
   await expect(page.locator('.bg-cartouche')).toBeVisible();
 });
 

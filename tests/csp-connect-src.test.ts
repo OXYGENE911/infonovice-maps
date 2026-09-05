@@ -69,6 +69,10 @@ const NON_APPELES = new Set([
      l'historique d'un monument vit chez le ministère, on ne le télécharge
      pas. Et l'attribution IGN exigée par la Géoplateforme est un lien. */
   'www.pop.culture.gouv.fr', 'www.ign.fr',
+  /* Le signalement d'une erreur de carte (SENS-1, 05/09) S'OUVRE dans un
+     onglet : une note OSM et le visualiseur cartes.gouv.fr, centrés sur la
+     position. On n'y envoie rien — c'est l'usager qui écrit là-bas. */
+  'cartes.gouv.fr',
 ]);
 
 describe('la CSP et le code disent la même chose', () => {

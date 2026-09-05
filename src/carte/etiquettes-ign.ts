@@ -813,6 +813,7 @@ export const CALQUES_TOPONYMES: LayerSpecification[] = [
     {
       "id": "odonyme-abrege",
       "type": "symbol",
+      "source": "etiquettes-ign",
       "source-layer": "toponyme_routier_odonyme_lin",
       "minzoom": 15,
       "maxzoom": 17,
@@ -833,6 +834,7 @@ export const CALQUES_TOPONYMES: LayerSpecification[] = [
     {
       "id": "odonyme-desabrege",
       "type": "symbol",
+      "source": "etiquettes-ign",
       "source-layer": "toponyme_routier_odonyme_lin",
       "minzoom": 17,
       "layout": {
