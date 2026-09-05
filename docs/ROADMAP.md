@@ -835,6 +835,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] METEO-VILLE-1 (05/09) : météo d'une ville dans le volet « Outils » du
+      menu — vingt-quatre heures en frise, sept jours en lignes, heures du
+      lieu, Open-Meteo (dérogation publique). Mesurer et Météo partagent le
+      volet : une seule rangée dans le menu.
 - [x] MESURE-1 (05/09) : volet « Mesurer » du menu — points au doigt, trait
       pointillé, relevé flottant qui cumule à vol d'oiseau (et le dit),
       annuler / effacer / terminer / Échap, zéro réseau. RESTE : distance

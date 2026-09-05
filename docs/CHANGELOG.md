@@ -2,6 +2,22 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.104.0] — 2026-09-05 — METEO-VILLE-1
+
+### La météo d'une ville, heure par heure puis sur sept jours
+- Des amis d'Armelin (05/09) : « des outils dans le menu : la météo d'une
+  ville au choix, heure par heure, et sur 7 jours ». Dans le volet
+  « Outils » du menu, un champ (la même recherche que partout) ; la ville
+  choisie pose son bulletin : vingt-quatre heures en frise (heure, symbole,
+  température, pluie quand il y en a), sept jours en lignes (jour, symbole,
+  min / max, pluie). Heures du LIEU, comme la météo d'arrivée. Source dite :
+  Open-Meteo, la dérogation publique du 22/08.
+- Mesurer et Météo partagent le volet « Outils » : le menu ne prend pas une
+  rangée de plus (garde-fou de feuilles-basses).
+- Tests : URL (journées, sept jours, fuseau), frise qui commence à l'heure
+  courante du lieu, jours nommés, réponse incomplète refusée ; parcours E2E
+  avec service simulé, bulletin puis panne dite en français.
+
 ## [1.103.0] — 2026-09-05 — MESURE-1
 
 ### Mesurer une distance sur la carte, point après point

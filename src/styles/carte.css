@@ -4797,8 +4797,12 @@ body.en-guidage.recherche-ouverte .entete recherche-adresse.recherche-page { dis
    pose les points en bas. Le curseur devient une croix : la carte est une
    règle le temps de la mesure.
    ========================================================================== */
-.mesure fieldset { display: grid; gap: 8px; }
-.mesure-mot { margin: 0; font: 400 12px var(--police); color: var(--texte-3); line-height: 1.45; }
+.outils fieldset { display: grid; gap: 8px; }
+.outils-titre { margin: 0; font: 700 11px var(--police); color: var(--texte-3);
+  text-transform: uppercase; letter-spacing: .08em; }
+.outils-mot { margin: 0; font: 400 12px var(--police); color: var(--texte-3); line-height: 1.45; }
+.outils-trait { width: 100%; margin: 4px 0; border: 0; border-top: 1px solid var(--bord); }
+outil-mesure, outil-meteo { display: grid; gap: 8px; }
 .mesure-demarrer {
   padding: 8px 12px; border-radius: 10px; border: 1px solid var(--accent);
   background: var(--accent); color: var(--blanc); font: 600 13.5px var(--police); cursor: pointer;
@@ -4825,3 +4829,36 @@ body.mesure-active #carte .maplibregl-canvas-container { cursor: crosshair; }
 .mesure-actions button:disabled { opacity: .5; cursor: default; }
 .mesure-actions .mesure-terminer { background: var(--accent); color: var(--blanc); border-color: var(--accent); }
 .mesure-actions button:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* ==========================================================================
+   MÉTÉO D'UNE VILLE (METEO-VILLE-1, 05/09). Une frise de vingt-quatre heures
+   qui défile de côté, puis sept lignes : les chiffres alignés, le symbole
+   comme repère, la pluie seulement quand il y en a.
+   ========================================================================== */
+.meteo-ville-champ recherche-adresse { display: block; }
+.meteo-ville-champ input { width: 100%; box-sizing: border-box; }
+.meteo-ville-corps { font: 400 12.5px var(--police); color: var(--texte-2); line-height: 1.4; }
+.meteo-ville-corps:empty { display: none; }
+.meteo-ville-lieu { margin: 0 0 6px; font: 600 13px var(--police); color: var(--texte-1); }
+.meteo-ville-heures {
+  list-style: none; margin: 0; padding: 0 0 6px; display: flex; gap: 4px;
+  overflow-x: auto; scroll-snap-type: x proximity;
+}
+.meteo-ville-heures li {
+  flex: 0 0 46px; display: grid; justify-items: center; gap: 2px; padding: 6px 2px;
+  border: 1px solid var(--bord); border-radius: 10px; background: var(--fond-doux);
+  scroll-snap-align: start; font-variant-numeric: tabular-nums;
+}
+.meteo-ville-heures .mv-h { font: 600 11px var(--police); color: var(--texte-3); }
+.meteo-ville-heures .mv-s { font-size: 16px; line-height: 1.1; }
+.meteo-ville-heures .mv-t { font: 700 13px var(--police); color: var(--texte-1); }
+.meteo-ville-heures .mv-p { font: 500 10px var(--police); color: var(--accent); min-height: 12px; }
+.meteo-ville-jours { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 3px; }
+.meteo-ville-jours li {
+  display: grid; grid-template-columns: 1fr 22px auto 52px; align-items: center; gap: 8px;
+  padding: 4px 0; border-top: 1px solid var(--bord); font-variant-numeric: tabular-nums;
+}
+.meteo-ville-jours .mv-j { font: 500 12.5px var(--police); color: var(--texte-1); text-transform: capitalize; }
+.meteo-ville-jours .mv-s { font-size: 15px; text-align: center; }
+.meteo-ville-jours .mv-t { font: 600 12.5px var(--police); color: var(--texte-1); white-space: nowrap; }
+.meteo-ville-jours .mv-p { font: 500 11px var(--police); color: var(--accent); text-align: right; }

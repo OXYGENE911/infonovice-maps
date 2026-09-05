@@ -14,7 +14,6 @@
  *
  * AUCUN RÉSEAU : tout se calcule ici. */
 import type { Map as CarteMapLibre, GeoJSONSource } from 'maplibre-gl';
-import { pictoMenu } from './icone-menu';
 import { refermerPanneaux } from './panneaux';
 import { bilanMesure, geojsonMesure, type PointMesure } from '../lib/mesure';
 
@@ -31,16 +30,13 @@ export class OutilMesure extends HTMLElement {
 
   connectedCallback(): void {
     if (this.firstElementChild) return;
+    /* SANS VOLET À LUI (METEO-VILLE-1) : l'outil se range dans le volet
+       « Outils » du menu, avec la météo d'une ville — une rangée pour tous. */
     this.innerHTML = `
-      <details class="mesure">
-        <summary aria-label="Mesurer une distance">${pictoMenu('mesure')}Mesurer</summary>
-        <fieldset>
-          <legend>Mesurer une distance</legend>
-          <p class="mesure-mot">Posez des points sur la carte : la distance à vol
-            d’oiseau se cumule de point en point. Rien ne part sur le réseau.</p>
-          <button type="button" class="mesure-demarrer">Commencer la mesure</button>
-        </fieldset>
-      </details>`;
+      <p class="outils-titre">Mesurer une distance</p>
+      <p class="outils-mot">Posez des points sur la carte : la distance à vol
+        d’oiseau se cumule de point en point. Rien ne part sur le réseau.</p>
+      <button type="button" class="mesure-demarrer">Commencer la mesure</button>`;
     this.querySelector('.mesure-demarrer')?.addEventListener('click', () => { this.demarrer(); });
 
     /* LE RELEVÉ VIT SUR LE BODY : #carte crée son contexte d'empilement
@@ -98,7 +94,7 @@ export class OutilMesure extends HTMLElement {
     /* LE MENU SE REFERME : la carte doit être libre pour poser les points,
        et le relevé dit tout de suite quoi faire. */
     refermerPanneaux(document);
-    const volet = this.querySelector<HTMLDetailsElement>('details.mesure');
+    const volet = this.closest<HTMLDetailsElement>('details');
     if (volet) volet.open = false;
     if (this.#releve) this.#releve.hidden = false;
     this.#poser();
