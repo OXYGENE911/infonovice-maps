@@ -433,3 +433,40 @@ test('UN RELEVÉ PÉRIMÉ NE S’AFFICHE PAS — le cas d’Issy', async ({ page
   await expect(page.locator('.bg-parkings-etat'))
     .toContainText('pas les places libres');
 });
+
+test('LA FEUILLE DES PARKINGS NE PASSE PAS SOUS LE DISQUE DE LIMITATION (RETOUR-0409)', async ({ page }) => {
+  /* Armelin, capture à l'appui : « quand la liste des suggestions de parkings
+     apparaît, la liste est masquée par le panneau de vitesse dans les
+     derniers résultats ». Le disque de limitation (56 px, left: 0, 68 px
+     au-dessus du repère) recouvrait le coin bas-gauche de la feuille, qui
+     partait de 8 px. On MESURE les boîtes sur un écran de téléphone : aucune
+     intersection, ni avec la limitation, ni avec la vitesse. */
+  await page.setViewportSize({ width: 390, height: 844 });
+  await suivre(page);
+  await rouler(page, 2.3600, 48.8500);
+  const feuille = page.locator('.bg-parkings');
+  await expect(feuille).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.bg-parkings-liste li')).toHaveCount(2, { timeout: 15_000 });
+  /* Le disque de limitation ne paraît qu'avec un relevé de vitesse connu :
+     on le MONTRE — c'est sa géométrie qu'on juge, pas la donnée. */
+  await page.evaluate(() => {
+    const d = document.querySelector<HTMLElement>('.bg-limite-vitesse');
+    if (d) { d.hidden = false; d.querySelector('.bg-limite-nombre')!.textContent = '50'; }
+    const v = document.querySelector<HTMLElement>('.bg-vitesse');
+    if (v) v.hidden = false;
+  });
+  const boite = async (sel: string) => {
+    const b = await page.locator(sel).boundingBox();
+    expect(b, `${sel} doit avoir une boîte`).not.toBeNull();
+    return b as { x: number; y: number; width: number; height: number };
+  };
+  const f = await boite('.bg-parkings');
+  for (const sel of ['.bg-limite-vitesse', '.bg-vitesse']) {
+    const d = await boite(sel);
+    const seCroisent = d.x < f.x + f.width && d.x + d.width > f.x
+      && d.y < f.y + f.height && d.y + d.height > f.y;
+    expect(seCroisent, `${sel} ne doit pas recouvrir la feuille des parkings`).toBe(false);
+  }
+  /* Et la feuille garde une largeur utile : un nom et le bouton « Se garer ». */
+  expect(f.width).toBeGreaterThan(280);
+});

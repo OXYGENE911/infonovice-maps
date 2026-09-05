@@ -185,6 +185,65 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      fond. Rien de plus à faire ici que d'effacer le message. */
   carte.on('webglcontextrestored', () => { perdue.hidden = true; });
 
+  /* LA CARTE QUI SE TAIT SANS PRÉVENIR (RETOUR-0409). Armelin, capture à
+     l'appui : « à la fin d'un trajet, j'ai une page blanche qui s'affiche.
+     Impossible de faire revenir la carte, il faut rafraîchir la fenêtre ».
+     BLANC-1 ne couvrait que la perte de contexte WebGL — canevas NOIR,
+     événement `webglcontextlost`, voile ci-dessus. Ici le canevas est BLANC,
+     l'interface vit, aucune exception (le filet de main.ts n'a rien vu),
+     aucun événement — et rien ne le disait. LA CAUSE N'EST PAS REPRODUITE ;
+     ce qu'on peut faire sans elle, c'est REGARDER : toutes les cinq secondes,
+     le style est-il encore là ? les tuiles arrivent-elles encore ? Un style
+     disparu se dit tout de suite ; des tuiles qui n'arrivent plus depuis
+     quarante-cinq secondes EN LIGNE se disent aussi — en bandeau refermable,
+     pas en voile : un réseau lent n'est pas une casse, et c'est l'usager qui
+     tranche. La porte de sortie est celle de partout : recharger,
+     l'itinéraire vivant dans l'adresse. */
+  const muette = document.createElement('div');
+  muette.className = 'carte-muette';
+  muette.hidden = true;
+  muette.setAttribute('role', 'alert');
+  const motMuette = document.createElement('p');
+  const boutonMuette = document.createElement('button');
+  boutonMuette.type = 'button';
+  boutonMuette.className = 'carte-muette-recharger';
+  boutonMuette.textContent = 'Recharger la carte';
+  boutonMuette.addEventListener('click', () => {
+    boutonMuette.disabled = true;
+    void forcerMiseAJour().finally(() => { window.location.reload(); });
+  });
+  const fermerMuette = document.createElement('button');
+  fermerMuette.type = 'button';
+  fermerMuette.className = 'carte-muette-fermer';
+  fermerMuette.textContent = '✕';
+  fermerMuette.setAttribute('aria-label', 'Fermer cet avertissement');
+  fermerMuette.addEventListener('click', () => { muette.hidden = true; });
+  muette.append(motMuette, boutonMuette, fermerMuette);
+  document.body.appendChild(muette);
+  let tuilesMuettesDepuis: number | null = null;
+  const surveiller = (): void => {
+    if (!muette.hidden) return;
+    let style: unknown;
+    try { style = carte.getStyle(); } catch { style = undefined; }
+    if (style === undefined) {
+      motMuette.textContent = 'La carte a perdu son style et ne se dessine plus.'
+        + ' Votre itinéraire est conservé.';
+      muette.hidden = false;
+      return;
+    }
+    if (navigator.onLine && !carte.areTilesLoaded()) {
+      tuilesMuettesDepuis ??= Date.now();
+      if (Date.now() - tuilesMuettesDepuis >= 45_000) {
+        motMuette.textContent = 'La carte ne reçoit plus ses tuiles depuis 45 secondes.'
+          + ' Si elle reste blanche, rechargez : votre itinéraire est conservé.';
+        muette.hidden = false;
+      }
+    } else {
+      tuilesMuettesDepuis = null;
+    }
+  };
+  window.setInterval(surveiller, 5_000);
+
   /* LE MODE SOMBRE DU FOND PLAN est un filtre CSS sur le canevas — le
      vectoriel ferait mieux, mais il exigerait glyphes et sprites hébergés ;
      le filtre inversé bien réglé rend le Plan IGN parfaitement lisible de
