@@ -78,6 +78,23 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   « Limites de vitesse et ronds-points non relevés sur ce trajet : le
   guidage continue sans ces repères » — ce qui manque, calmement, et ce qui
   tient.
+## [1.102.0] — 2026-09-05 — RECHERCHE-NAV-1
+
+### La loupe du suivi : chercher un lieu en roulant, l'ajouter en étape
+- Des amis d'Armelin (05/09) : « en mode navigation, il n'y a pas de bouton
+  rond loupe permettant de chercher une adresse, une borne, une station ou
+  un restaurant et de l'ajouter en étape ». Un bouton rond dans la colonne
+  de droite, sous le fond de carte, rouvre la MÊME page de recherche plein
+  écran (adresses BAN, lieux OSM, rail « À proximité », distances depuis la
+  position). Le lieu choisi devient une **étape** du trajet en cours, le
+  trajet se recalcule et le suivi repart sur le nouveau tracé. Hors suivi,
+  le bouton n'existe pas : la barre du haut suffit.
+- **Corrigé en passant** : « Y aller » sur une aire (AIRES-1) recalculait
+  le trajet mais le bandeau continuait de suivre l'ancien tracé — le suivi
+  repart désormais, et l'accueil du planificateur ne s'ouvre plus au volant.
+- Tests : parcours E2E — bouton absent hors suivi, présent en suivi, page
+  ouverte, suggestion choisie = requête d'itinéraire avec l'étape, suivi
+  toujours actif, page refermée.
 
 ## [1.99.0] — 2026-09-05 — FOND-NAV-1
 
