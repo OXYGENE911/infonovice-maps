@@ -57,6 +57,20 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - Non retenu, à décider : la recherche vocale (micro). L'API Web Speech de
   Chrome envoie la voix aux serveurs de Google — interdit par la contrainte 3 ;
   Firefox ne la propose pas. Possible hors ligne dans l'application native.
+## [1.107.0] — 2026-09-06 — MENU-GRAPH-1
+
+### Un menu moins « formulaire », et une corbeille pour les trajets habituels
+- Armelin : « dans le menu, ça fait trop formulaire […] un logo de soleil
+  jaune pour le jour et un logo jaune en forme de lune pour la nuit ; le
+  logo du chien avec un volant à côté de Découvrir Maps Pro ». Fait : soleil
+  et lune jaunes (et un demi-disque pour Auto) devant les mots du thème, le
+  chien au volant devant le lien Maps Pro. Les mots restent : les pictos sont
+  décoratifs, le libellé porte le sens.
+- « Trajets habituels » : **une corbeille à côté de chaque trajet** l'oublie
+  d'un geste, sans passer par « Tout oublier » ; l'oubli est écrit
+  (IndexedDB) et le trajet ne revient qu'avec trois nouveaux calculs.
+- Tests : couleur du soleil mesurée, chien présent ; corbeille qui oublie un
+  seul trajet et tient au rechargement.
 
 ## [1.104.0] — 2026-09-05 — METEO-VILLE-1
 

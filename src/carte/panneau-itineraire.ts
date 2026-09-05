@@ -27,7 +27,7 @@ import { pictoMenu, type NomPicto } from './icone-menu';
 import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
 import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
-import { apprendreTrajet, lireHabitudes, suggerer } from '../lib/routines';
+import { apprendreTrajet, lireHabitudes, oublierHabitude, suggerer } from '../lib/routines';
 import {
   profilCarburant, planifierCarburant, euros, prixLitre, LIBELLE_PRIX, LIBELLES_CARBURANT,
   type StationCarburant,
@@ -3283,6 +3283,8 @@ export class PanneauItineraire extends HTMLElement {
       routines.replaceChildren();
       const suggestions = suggerer(await lireHabitudes(), reperesLus, new Date());
       for (const sug of suggestions) {
+        const ligne = document.createElement('span');
+        ligne.className = 'iti-routine-ligne';
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'iti-routine';
@@ -3292,7 +3294,20 @@ export class PanneauItineraire extends HTMLElement {
         b.addEventListener('click', () => {
           this.allerVers({ lon: sug.point.lon, lat: sug.point.lat }, sug.nom);
         });
-        routines.append(b);
+        /* LA CORBEILLE (MENU-GRAPH-1, 06/09) : Armelin — « une petite corbeille
+           à côté pour proposer de supprimer un trajet enregistré ». Une
+           habitude oubliée ne revient qu'avec trois nouveaux trajets. */
+        const oublier = document.createElement('button');
+        oublier.type = 'button';
+        oublier.className = 'iti-routine-oublier';
+        oublier.innerHTML = pictoMenu('corbeille');
+        oublier.setAttribute('aria-label', `Oublier le trajet habituel vers ${sug.nom}`);
+        oublier.title = 'Oublier ce trajet';
+        oublier.addEventListener('click', () => {
+          void oublierHabitude(sug.point).then(() => this.#majRaccourcis());
+        });
+        ligne.append(b, oublier);
+        routines.append(ligne);
       }
       /* LA LIGNE DU BOUTON PARAÎT AVEC LES SUGGESTIONS, la liste reste
          repliée : c'est l'inverse d'avant, où la liste s'ouvrait d'office et

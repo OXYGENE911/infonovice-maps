@@ -849,6 +849,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       Partager ma position (lien #lieu=, BAN, partage ou copie). REFUS
       documenté : recherche vocale (Web Speech = serveurs Google) — décision
       d'Armelin attendue ; natif possible.
+- [x] MENU-GRAPH-1 (06/09) : soleil / lune jaunes et demi-disque devant les
+      thèmes, chien au volant devant « Découvrir Maps Pro », corbeille par
+      trajet habituel (oublierHabitude). RESTE (graphisme du menu) : pictos
+      colorés sur les autres sections, à mesurer contre la hauteur du menu.
 - [x] METEO-VILLE-1 (05/09) : météo d'une ville dans le volet « Outils » du
       menu — vingt-quatre heures en frise, sept jours en lignes, heures du
       lieu, Open-Meteo (dérogation publique). Mesurer et Météo partagent le

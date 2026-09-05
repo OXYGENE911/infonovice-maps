@@ -100,6 +100,9 @@ test('trois trajets font une habitude — visible, proposée, et EFFAÇABLE d’
   const routine = page.locator('.iti-routine');
   await expect(routine).toHaveCount(1);
   await expect(routine).toContainText('4,8357');
+  // LA CORBEILLE EST LÀ (MENU-GRAPH-1), à côté de chaque trajet habituel.
+  await expect(page.locator('.iti-routine-oublier')).toHaveCount(1);
+  await expect(page.locator('.iti-routine-oublier')).toHaveAttribute('aria-label', /Oublier le trajet habituel/);
 
   /* ET TOUT S'OUBLIE D'UN BOUTON — une routine qu'on ne peut ni voir ni
      effacer serait un mouchard. Le volet Favoris compte, puis efface. */
@@ -109,4 +112,49 @@ test('trois trajets font une habitude — visible, proposée, et EFFAÇABLE d’
   await page.getByRole('button', { name: 'Tout oublier' }).click();
   await expect(page.locator('.favoris-etat')).toContainText('Habitudes de trajet oubliées');
   await expect(page.locator('.favoris-habitudes')).toBeHidden();
+});
+
+test('LA CORBEILLE OUBLIE UN SEUL TRAJET HABITUEL, et il ne revient pas au rechargement', async ({ page }) => {
+  /* MENU-GRAPH-1 (06/09). Armelin : « une petite corbeille à côté pour
+     proposer de supprimer un trajet enregistré ». L'habitude se construit
+     comme dans le parcours précédent (trois trajets), puis s'oublie d'un
+     geste — SANS passer par « Tout oublier ». */
+  await page.clock.install({ time: MARDI_MATIN });
+  for (let i = 0; i < 3; i += 1) {
+    await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
+    await page.reload();
+    await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+    await expect.poll(() => page.evaluate(async () => {
+      const ouvrir = (): Promise<IDBDatabase> => new Promise((ok, non) => {
+        const d = indexedDB.open('infonovice-maps', 2);
+        d.onsuccess = () => ok(d.result);
+        d.onerror = () => non(d.error);
+      });
+      const db = await ouvrir();
+      return new Promise<number>((ok) => {
+        const t = db.transaction('preferences', 'readonly');
+        const r = t.objectStore('preferences').get('routines-trajets');
+        r.onsuccess = () => {
+          const v = r.result as { matin?: number }[] | undefined;
+          ok(Array.isArray(v) ? (v[0]?.matin ?? 0) : 0);
+        };
+      });
+    }), { timeout: 10_000 }).toBe(i + 1);
+  }
+  await page.goto('/');
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await page.locator('.iti > summary').click();
+  await expect(page.locator('.iti-routine')).toHaveCount(1);
+  // La liste est repliée par défaut : on l'ouvre, comme l'usager.
+  await page.locator('.iti-routines-ouvrir').click();
+  await expect(page.locator('.iti-routine')).toBeVisible();
+  await page.locator('.iti-routine-oublier').click();
+  await expect(page.locator('.iti-routine')).toHaveCount(0);
+  await expect(page.locator('.iti-routines-ligne')).toBeHidden();
+  // Et l'oubli est écrit : au rechargement, rien ne revient.
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await page.locator('.iti > summary').click();
+  await expect(page.locator('.iti-routines-ligne')).toBeHidden();
 });

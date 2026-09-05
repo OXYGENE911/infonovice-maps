@@ -90,6 +90,15 @@ export async function oublierHabitudes(): Promise<void> {
   await ecrirePreference(PREF_ROUTINES, []);
 }
 
+/** Oublie UNE destination habituelle (MENU-GRAPH-1, 06/09) — Armelin : « une
+ *  petite corbeille à côté pour supprimer un trajet enregistré ». La clé est
+ *  celle de l'apprentissage : même point, même habitude. */
+export async function oublierHabitude(point: PointGeo): Promise<void> {
+  const cle = cleDe(point);
+  const restantes = (await lireHabitudes()).filter((h) => cleDe(h) !== cle);
+  await ecrirePreference(PREF_ROUTINES, restantes);
+}
+
 export interface Suggestion {
   nom: string;
   point: PointGeo;
