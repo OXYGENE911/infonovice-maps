@@ -852,12 +852,6 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] RETOURS-AMIS-1 (05/09) : batterie à l'arrivée dans la barre du suivi et le
       Copilote (quand un plan existe) ; message des repères manquants sans
       le mot de la panne.
-- [x] RECHERCHE-NAV-1 (05/09) : loupe ronde en suivi, sous le fond de carte —
-      la page de recherche plein écran rouverte au volant, le lieu choisi
-      ajouté en étape, recalcul et suivi relancé sur le nouveau tracé. Le
-      « Y aller » des aires relance désormais le suivi lui aussi (il ne le
-      faisait pas). RESTE : ordonner l'étape par avancement sur le tracé
-      quand d'autres étapes sont encore devant (elle s'ajoute en dernier).
 - [x] FOND-NAV-1 (05/09) : bouton rond « fond de carte » dans la colonne de
       droite pendant le suivi ; le sélecteur du menu vient se poser dans une
       feuille flottante et retourne au menu ensuite — une seule préférence.
