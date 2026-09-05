@@ -4663,3 +4663,67 @@ filtre-poi {
 .reglages-pro-lien { display: inline-block; margin-top: 6px; font: 600 13px var(--police); color: var(--accent); text-decoration: underline; }
 .bg-bilan-pro { margin: 10px 0 0; font: 400 13px/1.45 var(--police); color: var(--texte-2); }
 .bg-bilan-pro a { color: var(--accent); text-decoration: underline; }
+
+/* ==========================================================================
+   L'AIRE D'AUTOROUTE À VENIR (AIRES-1, 05/09). Armelin : « un petit panneau
+   bleu à droite, sous le panneau de direction ». La pastille est carrée,
+   bleue comme la signalisation d'autoroute, posée sous le cartouche et à
+   gauche de la frise du trajet (right: 36px, comme le cartouche). La feuille
+   reprend le panneau bleu — fond bleu, inscriptions et listel blancs.
+   ========================================================================== */
+.bg-aire-p {
+  position: fixed; right: 36px;
+  /* Sous le cartouche : sa hauteur est MESURÉE (--cartouche-hauteur, main
+     du bandeau), pas devinée — un panneau de voies l'allonge. */
+  top: calc(var(--sur-encoche, 0px) + 10px + var(--cartouche-hauteur, 96px) + 10px);
+  z-index: calc(var(--z-cartouche) + 1);
+  width: 56px; height: 56px; border-radius: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  border: 0; cursor: pointer; pointer-events: auto;
+  background: var(--panneau-bleu); color: #FFFFFF;
+  box-shadow: inset 0 0 0 3px var(--panneau-bleu), inset 0 0 0 4.5px #FFFFFF, var(--ombre-flottante);
+}
+.bg-aire-p[hidden] { display: none; }
+.bg-aire-p:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-aire-p-picto { font-size: 22px; line-height: 1; }
+.bg-aire-p-dist { font: 700 11px var(--police); font-variant-numeric: tabular-nums; }
+
+.bg-aire {
+  position: fixed; right: 36px;
+  top: calc(var(--sur-encoche, 0px) + 10px + var(--cartouche-hauteur, 96px) + 10px + 56px + 8px);
+  z-index: calc(var(--z-cartouche) + 1);
+  width: min(340px, calc(100vw - 48px));
+  padding: 10px 12px 12px; border-radius: 10px; border: 0;
+  background: var(--panneau-bleu); color: #FFFFFF;
+  box-shadow: inset 0 0 0 3px var(--panneau-bleu), inset 0 0 0 4.5px #FFFFFF, var(--ombre-flottante);
+  pointer-events: auto;
+}
+.bg-aire[hidden] { display: none; }
+.bg-aire-tete { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bg-aire-type { margin: 0; font: 600 12px var(--police); opacity: .85; }
+.bg-aire-fermer {
+  border: 0; background: transparent; color: #FFFFFF; font-size: 16px; cursor: pointer; padding: 2px 6px;
+}
+.bg-aire-fermer:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-aire-nom { margin: 2px 0 0; font: 800 20px/1.15 var(--police); }
+.bg-aire-ou { margin: 4px 0 8px; font: 700 16px var(--police); font-variant-numeric: tabular-nums; }
+.bg-aire-pictos { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+/* Chaque pictogramme est un petit panneau blanc à bord bleu, comme sur les
+   vrais panneaux d'aire (cf. capture d'Armelin). */
+.bg-aire-picto {
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 7px 3px 5px; border-radius: 5px;
+  background: #FFFFFF; color: #0B2A5B; border: 2px solid #0B2A5B;
+  font: 600 12px var(--police);
+}
+.bg-aire-picto-signe { font-size: 16px; line-height: 1; }
+.bg-aire-recharge { margin: 8px 0 0; font: 600 13px/1.35 var(--police); }
+.bg-aire-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.bg-aire-actions button {
+  border: 2px solid #FFFFFF; background: transparent; color: #FFFFFF;
+  border-radius: 8px; padding: 6px 10px; font: 700 14px var(--police); cursor: pointer;
+}
+.bg-aire-actions button:disabled { opacity: .35; cursor: default; }
+.bg-aire-actions button:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-aire-rang { font: 700 13px var(--police); font-variant-numeric: tabular-nums; }
+.bg-aire-aller { margin-left: auto; background: #FFFFFF !important; color: #0B2A5B !important; }

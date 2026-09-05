@@ -2,6 +2,44 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.97.0] — 2026-09-05 — AIRES-1
+
+### L'aire d'autoroute à venir — un panneau bleu, comme sur le bas-côté
+- Armelin : « un petit panneau bleu à droite, sous le panneau de direction,
+  indiquant les aires de repos à venir et leurs commodités sous forme de
+  pictogrammes […] le nom de l'aire, sa distance restante en direct et le
+  temps restant […] le nom du gestionnaire de réseau de bornes […] une
+  pastille carrée qui se déplie automatiquement quelques kilomètres avant
+  l'aire et se referme une fois l'aire dépassée […] une flèche Haut ou Bas
+  pour l'aire suivante, un bouton "Y aller" pour l'ajouter en étape. »
+  Livré tel quel : pastille carrée bleue sous le cartouche (sa hauteur est
+  mesurée, la pastille ne le recouvre jamais), distance de la prochaine aire
+  sur la pastille ; panneau bleu à inscriptions blanches : type et
+  gestionnaire, nom, « dans 4,2 km · 3 min » (à la vitesse courante, à la
+  moyenne du trajet à l'arrêt), pictogrammes en petits panneaux blancs
+  (carburant et marques, recharge et réseaux, restauration, café, boutique,
+  toilettes, douches, pique-nique, jeux, hôtel), rang « 1 / 4 », flèches,
+  « Y aller ». Ouverture seule à 5 km, fermeture seule une fois l'aire
+  dépassée de 300 m — et jamais de retour pour une aire que l'usager a
+  refermée.
+- **Mesuré avant d'écrire** (A6 Auxerre–Beaune, 78 objets) : les aires
+  sont des surfaces `highway=services|rest_area` (les nœuds sans nom sont
+  des refuges de nationale, écartés) ; `toilets=yes` est sur l'aire 55 fois
+  sur 78 ; le reste est un semis de nœuds dans l'enceinte — carburant avec
+  sa marque, café, boutique, bornes avec `network`/`operator`, jeux, tables,
+  hôtel ; et deux aires se font face de part et d'autre : celle de l'autre
+  chaussée est à GAUCHE du sens de marche. On ne garde que la droite.
+- **Zéro requête de plus pour les aires** : elles voyagent dans le relevé de
+  corridor qui part déjà au démarrage. Les commodités font UNE requête par
+  trajet, autour des seules aires retenues, à la première ouverture. Les
+  réseaux de recharge viennent d'OSM ET de l'index IRVE local — TOUS,
+  préférences ou non : « quitte à m'arrêter, je préfère savoir ».
+- Dix tests unitaires (côté du tracé, repli surface/nœud, commodités,
+  réseaux, pictos, distances) ; deux parcours E2E (ouverture à 5 km, aire
+  d'en face écartée de la requête, parcours des suivantes, fermeture à la
+  main sans retour, fermeture seule au dépassement, « Y aller » qui
+  recalcule le trajet avec l'aire en étape).
+
 ## [1.96.0] — 2026-09-05 — PRO-LIENS-1
 
 ### Trois portes vers Maps Pro, et une adresse stable

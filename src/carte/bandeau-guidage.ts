@@ -30,6 +30,11 @@ import {
 } from '../lib/orientation';
 import { liensSignalement } from '../lib/signalement';
 import {
+  airesDevant, requeteCommodites, versCommodites, reseauxIrve, pictosAire, tempsJusquA,
+  distanceCourte, dureeCourte, ANNONCE_AIRE_M, type Aire, type Commodites,
+} from '../lib/aires';
+import { indexNational } from '../lib/index-bornes';
+import {
   etatGuidage, distanceEnMots, heureArriveeEstimee, type OptionsGuidage,
   partiAContresens, approcheManoeuvre, pointDuTrace, SEUIL_AIMANT_M,
   quitteLeTrace, FIXES_CONCORDANTS, ECART_DOUTE_M, type FixeEcart,
@@ -344,6 +349,25 @@ export class BandeauGuidage extends HTMLElement {
     if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
   }
 
+  /* ---- les aires d'autoroute (AIRES-1) ---- */
+  #aires: readonly Aire[] = [];
+  /** null : commodités pas encore relevées ; vide : relevé fait, rien trouvé. */
+  #commodites: Map<string, Commodites> | null = null;
+  #commoditesEnCours = false;
+  #commoditesEnPanne = false;
+  #aireIndex = 0;
+  /** Qui a ouvert la feuille : l'approche (elle se referme seule) ou l'usager. */
+  #aireOuvertePar: 'auto' | 'usager' | null = null;
+  #aireAutoOuverteId: string | null = null;
+  #aireRefermeeId: string | null = null;
+
+  set aires(a: readonly Aire[]) {
+    this.#aires = a;
+    this.#commodites = null;
+    this.#commoditesEnPanne = false;
+    if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+  }
+
   set destinations(d: readonly DestinationBretelle[]) {
     this.#destinations = d;
     if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
@@ -636,6 +660,37 @@ export class BandeauGuidage extends HTMLElement {
           <ul class="bg-parkings-liste"></ul>
           <p class="bg-parkings-etat" role="status"></p>
         </div>
+        <!-- L'AIRE D'AUTOROUTE À VENIR (AIRES-1, 05/09). Armelin : « un petit
+             panneau bleu à droite, sous le panneau de direction, indiquant les
+             aires de repos à venir et leurs commodités sous forme de
+             pictogrammes […] le nom de l'aire, sa distance restante en direct
+             et le temps restant […] le gestionnaire de réseau de bornes ». Une
+             pastille carrée qui se déplie d'elle-même cinq kilomètres avant
+             l'aire, se referme une fois l'aire dépassée, et se rouvre d'un
+             appui. Flèches pour parcourir les suivantes, « Y aller » pour en
+             faire une étape. TOUS les réseaux de recharge, préférences ou
+             non : « quitte à m'arrêter, je préfère savoir ». -->
+        <button type="button" class="bg-aire-p" hidden aria-expanded="false"
+          aria-label="Prochaine aire d’autoroute">
+          <span class="bg-aire-p-picto" aria-hidden="true">☕</span>
+          <span class="bg-aire-p-dist"></span>
+        </button>
+        <section class="bg-aire" hidden role="region" aria-label="Prochaine aire d’autoroute">
+          <div class="bg-aire-tete">
+            <p class="bg-aire-type"></p>
+            <button type="button" class="bg-aire-fermer" aria-label="Refermer le panneau des aires">✕</button>
+          </div>
+          <p class="bg-aire-nom"></p>
+          <p class="bg-aire-ou"></p>
+          <ul class="bg-aire-pictos" aria-label="Commodités"></ul>
+          <p class="bg-aire-recharge" role="status"></p>
+          <div class="bg-aire-actions">
+            <button type="button" class="bg-aire-prec" aria-label="Aire précédente">▲</button>
+            <span class="bg-aire-rang"></span>
+            <button type="button" class="bg-aire-suiv" aria-label="Aire suivante">▼</button>
+            <button type="button" class="bg-aire-aller">Y aller</button>
+          </div>
+        </section>
         <!-- FINIR À PIED (point 9) : une fois garé, la fin du trajet se fait
              logiquement à pied — on le PROPOSE, on ne l'impose pas. -->
         <button type="button" class="bg-a-pied" hidden></button>
@@ -836,6 +891,58 @@ export class BandeauGuidage extends HTMLElement {
     this.#publierHauteur = publierHauteur;
 
     this.querySelector('.bg-arreter')?.addEventListener('click', () => { this.arreter(); });
+    /* LA HAUTEUR DU CARTOUCHE EST PUBLIÉE (AIRES-1) : la pastille des aires se
+       pose dessous, et un panneau de voies l'allonge — on mesure, on ne
+       devine pas, comme l'en-tête et l'attribution dans main.ts. */
+    const cartouche = this.querySelector<HTMLElement>('.bg-cartouche');
+    if (cartouche) {
+      const publier = (): void => {
+        const h = cartouche.hidden ? 0 : Math.round(cartouche.getBoundingClientRect().height);
+        document.documentElement.style.setProperty('--cartouche-hauteur', `${h}px`);
+      };
+      new ResizeObserver(publier).observe(cartouche);
+      publier();
+    }
+    /* La pastille des aires ouvre et referme ; ce que l'usager ouvre, il le
+       referme (AIRES-1). */
+    this.querySelector('.bg-aire-p')?.addEventListener('click', () => {
+      if (this.#aireOuvertePar !== null) {
+        this.#aireRefermeeId = this.#aireAutoOuverteId;
+        this.#aireOuvertePar = null;
+      } else {
+        this.#aireOuvertePar = 'usager';
+      }
+      if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+    });
+    this.querySelector('.bg-aire-fermer')?.addEventListener('click', () => {
+      this.#aireRefermeeId = this.#aireAutoOuverteId;
+      this.#aireOuvertePar = null;
+      if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+    });
+    this.querySelector('.bg-aire-prec')?.addEventListener('click', () => {
+      this.#aireIndex = Math.max(0, this.#aireIndex - 1);
+      if (this.#aireOuvertePar === 'auto') this.#aireOuvertePar = 'usager';
+      if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+    });
+    this.querySelector('.bg-aire-suiv')?.addEventListener('click', () => {
+      this.#aireIndex += 1;
+      if (this.#aireOuvertePar === 'auto') this.#aireOuvertePar = 'usager';
+      if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+    });
+    this.querySelector('.bg-aire-aller')?.addEventListener('click', (ev) => {
+      const b = ev.currentTarget as HTMLButtonElement;
+      const lon = Number(b.dataset['lon']);
+      const lat = Number(b.dataset['lat']);
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
+      /* L'ÉTAPE SE DEMANDE AU PLANIFICATEUR, qui seul recalcule : le bandeau
+         ne connaît pas le trajet, il le suit. Même chemin que la correction de
+         batterie (SOC-EDIT). */
+      document.dispatchEvent(new CustomEvent('aire-etape', {
+        detail: { lon, lat, nom: b.dataset['nom'] ?? '' },
+      }));
+      this.#aireOuvertePar = null;
+      if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+    });
     /* LE BOUTON NE PARAÎT QUE SI L'APPAREIL SAIT PARLER : proposer une voix
        qui n'existe pas est une promesse qu'on ne tient pas. */
     const bVoix = this.querySelector<HTMLButtonElement>('.bg-voix');
@@ -1471,6 +1578,139 @@ export class BandeauGuidage extends HTMLElement {
    * UNE FOIS PAR PASSAGE : `#tonnagesDits` retient ceux qu'on a nommés. Une
    * alerte répétée à chaque fixe cesse d'alerter.
    */
+  /** La pastille et la feuille de l'aire à venir, à chaque fixe (AIRES-1). */
+  #majAire(e: EtatGuidage): void {
+    const pilule = this.querySelector<HTMLElement>('.bg-aire-p');
+    const feuille = this.querySelector<HTMLElement>('.bg-aire');
+    if (!pilule || !feuille) return;
+    const devant = airesDevant(this.#aires, e.avancementM);
+    if (e.horsRoute || devant.length === 0) {
+      pilule.hidden = true;
+      feuille.hidden = true;
+      this.#aireOuvertePar = null;
+      return;
+    }
+    pilule.hidden = false;
+    if (this.#aireIndex >= devant.length) this.#aireIndex = 0;
+    const prochaine = devant[0]!;
+    const distProchaine = prochaine.avancementM - e.avancementM;
+    (pilule.querySelector('.bg-aire-p-dist') as HTMLElement).textContent = distanceCourte(distProchaine);
+    /* ELLE S'OUVRE SEULE À CINQ KILOMÈTRES — une fois par aire, et jamais
+       si l'usager a refermé celle-là : un panneau qui revient est un
+       harcèlement. */
+    if (this.#aireOuvertePar === null && distProchaine <= ANNONCE_AIRE_M
+      && this.#aireAutoOuverteId !== prochaine.id && this.#aireRefermeeId !== prochaine.id) {
+      this.#aireAutoOuverteId = prochaine.id;
+      this.#aireIndex = 0;
+      this.#aireOuvertePar = 'auto';
+    }
+    /* ET SE REFERME SEULE UNE FOIS L'AIRE DÉPASSÉE — si c'est elle qui s'était
+       ouverte. Ce que l'usager a ouvert, il le referme. */
+    if (this.#aireOuvertePar === 'auto' && this.#aireAutoOuverteId !== null
+      && !devant.some((a) => a.id === this.#aireAutoOuverteId)) {
+      this.#aireOuvertePar = null;
+    }
+    const ouverte = this.#aireOuvertePar !== null;
+    feuille.hidden = !ouverte;
+    pilule.setAttribute('aria-expanded', String(ouverte));
+    if (ouverte) {
+      this.#rendreAire(devant, e);
+      void this.#chargerCommodites();
+    }
+  }
+
+  #rendreAire(devant: readonly Aire[], e: EtatGuidage): void {
+    const a = devant[this.#aireIndex] ?? devant[0]!;
+    const o = this.#options;
+    const q = <T extends HTMLElement>(sel: string): T => this.querySelector(sel) as T;
+    q('.bg-aire-type').textContent = a.type === 'services'
+      ? `Aire de service${a.operateur ? ' · ' + a.operateur : ''}` : 'Aire de repos';
+    q('.bg-aire-nom').textContent = a.nom;
+    const dist = a.avancementM - e.avancementM;
+    const vitesse = typeof this.#derniersCoords?.speed === 'number' ? this.#derniersCoords.speed : null;
+    const moyenne = o && o.dureeTotaleS > 0 ? o.distanceTotaleM / o.dureeTotaleS : 25;
+    q('.bg-aire-ou').textContent = `dans ${distanceCourte(dist)} · ${dureeCourte(tempsJusquA(dist, vitesse, moyenne))}`;
+    const c = this.#commodites?.get(a.id);
+    const pictos = q<HTMLUListElement>('.bg-aire-pictos');
+    pictos.replaceChildren();
+    const DESSINS: Record<string, string> = {
+      carburant: '⛽', recharge: '⚡', restauration: '🍴', cafe: '☕', boutique: '🛒',
+      toilettes: '🚻', douche: '🚿', 'pique-nique': '🌳', jeux: '🧸', hotel: '🛏',
+    };
+    const liste = c ? pictosAire(a, c) : (a.toilettes === true ? [{ cle: 'toilettes', libelle: 'Toilettes' }] : []);
+    for (const pct of liste) {
+      const li = document.createElement('li');
+      li.className = 'bg-aire-picto';
+      li.dataset['cle'] = pct.cle;
+      li.title = pct.libelle;
+      const sym = document.createElement('span');
+      sym.className = 'bg-aire-picto-signe';
+      sym.setAttribute('aria-hidden', 'true');
+      sym.textContent = DESSINS[pct.cle] ?? '•';
+      const mot = document.createElement('span');
+      mot.className = 'bg-aire-picto-mot';
+      mot.textContent = pct.libelle;
+      li.append(sym, mot);
+      pictos.append(li);
+    }
+    const recharge = q('.bg-aire-recharge');
+    if (this.#commodites === null) {
+      recharge.textContent = this.#commoditesEnPanne
+        ? 'Commodités : relevé indisponible pour le moment.' : 'Commodités : relevé en cours…';
+    } else if (c && c.recharge.length > 0) {
+      recharge.textContent = `Recharge : ${c.recharge.join(', ')}`;
+    } else {
+      recharge.textContent = liste.length === 0
+        ? 'Aucune commodité relevée sur cette aire.' : 'Pas de borne de recharge relevée.';
+    }
+    q('.bg-aire-rang').textContent = `${this.#aireIndex + 1} / ${devant.length}`;
+    q<HTMLButtonElement>('.bg-aire-prec').disabled = this.#aireIndex === 0;
+    q<HTMLButtonElement>('.bg-aire-suiv').disabled = this.#aireIndex >= devant.length - 1;
+    const aller = q<HTMLButtonElement>('.bg-aire-aller');
+    aller.dataset['lon'] = String(a.lon);
+    aller.dataset['lat'] = String(a.lat);
+    aller.dataset['nom'] = a.nom;
+  }
+
+  /** Les commodités de TOUTES les aires du trajet — UNE requête par trajet. */
+  async #chargerCommodites(): Promise<void> {
+    if (this.#commodites !== null || this.#commoditesEnCours || this.#commoditesEnPanne) return;
+    const aires = this.#aires;
+    const requete = requeteCommodites(aires);
+    if (requete === null) { this.#commodites = new Map(); return; }
+    this.#commoditesEnCours = true;
+    try {
+      const r = await fetch('https://overpass.openstreetmap.fr/api/interpreter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `data=${encodeURIComponent(requete)}`,
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!r.ok) throw new Error(`Overpass ${r.status}`);
+      const brut = JSON.parse(await r.text()) as { elements?: unknown[] };
+      const carte = versCommodites(Array.isArray(brut.elements) ? brut.elements : [], aires);
+      /* L'INDEX IRVE COMPLÈTE LES RÉSEAUX : l'open data officiel connaît des
+         bornes qu'OSM n'a pas encore, et c'est lui qui nomme le réseau. En
+         panne, on garde ce qu'OSM a dit. */
+      try {
+        const { stations } = await indexNational();
+        for (const a of aires) {
+          const c = carte.get(a.id);
+          if (!c) continue;
+          for (const reseau of reseauxIrve(a, stations)) {
+            if (!c.recharge.some((x) => x.toLowerCase() === reseau.toLowerCase())) c.recharge.push(reseau);
+          }
+        }
+      } catch { /* sans index, les réseaux d'OSM suffisent */ }
+      if (this.#aires === aires) this.#commodites = carte;
+    } catch {
+      this.#commoditesEnPanne = true;
+    } finally {
+      this.#commoditesEnCours = false;
+      if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+    }
+  }
+
   #majTonnage(e: EtatGuidage): void {
     if (this.#masseKg === null || e.horsRoute) return;
     const interdits = tonnagesInterdits(this.#tonnages, this.#masseKg);
@@ -2611,6 +2851,7 @@ export class BandeauGuidage extends HTMLElement {
        plus tard par la ligne ci-dessus — vu à l'écran, pas déduit. */
     this.#majGiratoire(e);
     this.#majParking(e);
+    this.#majAire(e);
     this.#majTonnage(e);
     this.#majInterfile(e);
     this.#majArrivee(e);
