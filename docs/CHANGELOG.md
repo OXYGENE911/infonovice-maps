@@ -92,24 +92,6 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   se refermant, ou à l'arrêt du suivi. Hors suivi, le bouton n'existe pas :
   le menu suffit. Parcours E2E : déménagement et retour du sélecteur, fond
   photo appliqué, préférence conservée.
-## [1.100.0] — 2026-09-05 — MOTORISATION-1
-
-### Électrique ou thermique : l'application ne présume plus la motorisation
-- Des amis d'Armelin (05/09) : « le site est trop axé véhicule électrique,
-  les arrêts recharge automatiques sont discriminants pour les thermiques ».
-  « Mon véhicule » s'ouvre désormais sur un choix **Électrique / Thermique
-  ou hybride**. En thermique : la batterie, le catalogue, les autonomies et
-  les anneaux se retirent du panneau ; le planificateur ne place AUCUN arrêt
-  de recharge et la page « Arrêts de recharge » dit pourquoi ; la barre du
-  suivi n'affiche pas de batterie à l'arrivée ; la comparaison des variantes
-  ne compte plus de recharge. Le repère de navigation et le nom du véhicule
-  restent. Un profil enregistré avant, sans le champ, reste électrique :
-  personne ne perd son plan.
-- Dit en clair dans le panneau : « Les arrêts carburant et le prix à la
-  pompe ne sont pas encore proposés » (THERMIQUE-2, à décider).
-- Tests : lecteur `estThermique` (profil ancien, casse, types) ; parcours
-  E2E — champs retirés, choix gardé au rechargement, page « Arrêts de
-  recharge » explicite, pas de chiffre batterie en suivi.
 
 ## [1.97.0] — 2026-09-05 — AIRES-1
 
