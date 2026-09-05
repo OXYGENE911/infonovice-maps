@@ -29,6 +29,16 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Tests bout-en-bout
         run: npm run e2e
+      - name: Traces des parcours en échec
+        # Publiées SEULEMENT quand un parcours rougit : `npx playwright
+        # show-trace trace.zip` montre ce que le runner voyait.
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traces-playwright
+          path: test-results/**/trace.zip
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Audit des dépendances
         # Bloquant à partir de « high » : un audit qui ne bloque jamais
         # n'est qu'un bruit de journal.

@@ -19,6 +19,9 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - Tests : parcours E2E — bouton absent hors suivi, présent en suivi, page
   ouverte, suggestion choisie = requête d'itinéraire avec l'étape, suivi
   toujours actif, page refermée.
+- CI : la trace Playwright d'un parcours en échec est conservée et publiée
+  en artefact (« le sélecteur de fonds bascule en satellite » a rougi trois
+  fois ce jour sur la CI, jamais en local, sans cause lisible).
 
 ## [1.101.0] — 2026-09-05 — MOTORISATION-1
 
