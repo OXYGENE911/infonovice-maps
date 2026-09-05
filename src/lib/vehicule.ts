@@ -27,8 +27,16 @@ export const CONTEXTES: readonly {
 
 export type Consommations = Record<CleContexte, number>;
 
+/* LA MOTORISATION (MOTORISATION-1, 05/09). Des amis d'Armelin : « le site est
+   trop axé véhicule électrique, les arrêts recharge automatiques sont
+   discriminants pour les thermiques ». Absente (profils enregistrés avant),
+   elle vaut « électrique » : personne ne perd son plan de recharge. */
+export type Motorisation = 'electrique' | 'thermique';
+
 export interface Vehicule {
   nom: string;
+  /** Électrique par défaut ; « thermique » couvre aussi l'hybride. */
+  motorisation?: Motorisation;
   /** Capacité BRUTE annoncée par le constructeur, en kWh. */
   capaciteNominale: number;
   /** State of Charge Energy : la santé de la batterie, en % de sa capacité d'origine. */
@@ -213,6 +221,17 @@ export function estUneMoto(memoire: unknown): boolean {
    demanderait une batterie et une consommation renseignées, et une moto
    thermique n'en a pas — l'usager qui coche « je roule en deux-roues »
    n'aurait alors rien vu paraître. */
+/**
+ * Le véhicule enregistré roule-t-il au carburant ? Un lecteur unique pour le
+ * planificateur (aucun plan de recharge), le panneau du véhicule et le
+ * bandeau : un profil d'avant MOTORISATION-1, sans le champ, reste électrique.
+ */
+export function estThermique(memoire: unknown): boolean {
+  const m = (memoire ?? {}) as Record<string, unknown>;
+  const brut = (m['vehicule'] ?? {}) as Record<string, unknown>;
+  return brut['motorisation'] === 'thermique';
+}
+
 export function masseDeclaree(memoire: unknown): number | null {
   const m = (memoire ?? {}) as Record<string, unknown>;
   const brut = (m['vehicule'] ?? {}) as Record<string, unknown>;

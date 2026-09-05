@@ -7,7 +7,7 @@
 // itinéraire et le repose à chaque `style.load` — sans cela, basculer en
 // satellite effacerait silencieusement le trajet qu'on vient de calculer.
 import type { Map as CarteMapLibre, GeoJSONSource } from 'maplibre-gl';
-import { masseDeclaree, estUneMoto } from '../lib/vehicule';
+import { estThermique, masseDeclaree, estUneMoto } from '../lib/vehicule';
 import { Marker } from 'maplibre-gl';
 import { RechercheAdresse } from './recherche';
 import { EtapesItineraire } from './etapes-itineraire';
@@ -1311,6 +1311,10 @@ export class PanneauItineraire extends HTMLElement {
     profilConditions: ProfilConditions;
   } | null> {
     const memo = await lirePreference<unknown>(PREF_VEHICULE);
+    /* THERMIQUE OU HYBRIDE = PAS DE PROFIL ÉLECTRIQUE (MOTORISATION-1) : ni
+       plan de recharge, ni batterie à l'arrivée, ni recharge dans la
+       comparaison des variantes. La page « Arrêts de recharge » le dit. */
+    if (estThermique(memo)) return null;
     const m = (memo ?? {}) as Record<string, unknown>;
     const brut = (m['vehicule'] ?? {}) as Record<string, unknown>;
     const nombre = (x: unknown): number =>
@@ -1356,8 +1360,12 @@ export class PanneauItineraire extends HTMLElement {
       /* En automatique, PAS de véhicule = pas de plan, en silence : le
          message d'invite n'a de sens que quand on OUVRE la page. */
       if (!auto) {
-        corps.textContent = 'Renseignez d’abord votre véhicule (panneau « Véhicule ») :'
-          + ' batterie, santé et autonomie constatée.';
+        corps.textContent = estThermique(await lirePreference<unknown>(PREF_VEHICULE))
+          ? 'Véhicule thermique ou hybride déclaré dans « Mon véhicule » : aucun'
+            + ' arrêt de recharge à planifier. Les arrêts carburant ne sont pas'
+            + ' encore proposés.'
+          : 'Renseignez d’abord votre véhicule (panneau « Véhicule ») :'
+            + ' batterie, santé et autonomie constatée.';
       }
       this.#rechargePour = null;   // réessayable une fois le profil rempli
       return;
