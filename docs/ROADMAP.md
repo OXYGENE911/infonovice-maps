@@ -835,13 +835,6 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
-- [x] OUTILS-2 (06/09) : volet « Outils » redessiné — clé à molette, grille
-      de tuiles, page plein écran par outil (page-outil.ts). Météo dans sa
-      page (plus de débordement latéral), Signal GPS (précision qualifiée ;
-      la liste des satellites est HORS DE PORTÉE du web — Android natif),
-      Partager ma position (lien #lieu=, BAN, partage ou copie). REFUS
-      documenté : recherche vocale (Web Speech = serveurs Google) — décision
-      d'Armelin attendue ; natif possible.
 - [x] THERMIQUE-2 (06/09) : trois motorisations (électrique, hybride
       rechargeable, thermique), carburant / réservoir / consommation / jauge,
       autonomie carburant au bilan, pleins planifiés sur la page « Arrêts de
@@ -849,6 +842,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       chère de la fenêtre, prix du jour open data). RESTE : filtre par
       enseigne (apparier prix-carburants aux stations OSM qui portent
       brand) ; pastilles des pleins sur la carte ; jauge pendant le suivi.
+- [x] OUTILS-2 (06/09) : volet « Outils » redessiné — clé à molette, grille
+      de tuiles, page plein écran par outil (page-outil.ts). Météo dans sa
+      page (plus de débordement latéral), Signal GPS (précision qualifiée ;
+      la liste des satellites est HORS DE PORTÉE du web — Android natif),
+      Partager ma position (lien #lieu=, BAN, partage ou copie). REFUS
+      documenté : recherche vocale (Web Speech = serveurs Google) — décision
+      d'Armelin attendue ; natif possible.
 - [x] METEO-VILLE-1 (05/09) : météo d'une ville dans le volet « Outils » du
       menu — vingt-quatre heures en frise, sept jours en lignes, heures du
       lieu, Open-Meteo (dérogation publique). Mesurer et Météo partagent le
