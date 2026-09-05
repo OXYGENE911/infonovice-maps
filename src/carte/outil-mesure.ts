@@ -29,15 +29,10 @@ export class OutilMesure extends HTMLElement {
   #releve: HTMLElement | null = null;
 
   connectedCallback(): void {
-    if (this.firstElementChild) return;
-    /* SANS VOLET À LUI (METEO-VILLE-1) : l'outil se range dans le volet
-       « Outils » du menu, avec la météo d'une ville — une rangée pour tous. */
-    this.innerHTML = `
-      <p class="outils-titre">Mesurer une distance</p>
-      <p class="outils-mot">Posez des points sur la carte : la distance à vol
-        d’oiseau se cumule de point en point. Rien ne part sur le réseau.</p>
-      <button type="button" class="mesure-demarrer">Commencer la mesure</button>`;
-    this.querySelector('.mesure-demarrer')?.addEventListener('click', () => { this.demarrer(); });
+    if (this.#releve) return;
+    /* SANS FORMULAIRE (OUTILS-2, 06/09) : l'outil est une TUILE du volet
+       « Outils » (outils-menu.ts) dont l'action appelle `demarrer()` ; cet
+       élément ne rend rien lui-même, il porte le relevé et le dessin. */
 
     /* LE RELEVÉ VIT SUR LE BODY : #carte crée son contexte d'empilement
        (leçon BLANC-1), et le menu se referme au départ de la mesure. */
