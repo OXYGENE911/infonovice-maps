@@ -42,6 +42,7 @@ interface DestinationChoisie {
 import { MesPoi } from './mes-poi';
 import { PanneauFavoris } from './panneau-favoris';
 import { PanneauTrafic } from './panneau-trafic';
+import { OutilMesure } from './outil-mesure';
 import { PanneauVehicule } from './panneau-vehicule';
 import { MenuReglages } from './menu-reglages';
 import { brancherAjoutFavori } from './choix-liste';
@@ -473,6 +474,16 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   trafic.carte = carte;
   menu.ajouter('', trafic);
 
+  /* MESURER UNE DISTANCE (MESURE-1, 05/09). Des amis d'Armelin : « des
+     outils dans le menu : mesurer une distance A→B, un parcours dessiné point
+     à point ». Un volet du menu, un relevé flottant, des points au doigt :
+     tout se calcule ici, rien ne part. Sans étiquette de section : le menu
+     est une fenêtre haute comme son contenu, et chaque rangée compte sur un
+     téléphone (le garde-fou de feuilles-basses le mesure). */
+  const mesure = new OutilMesure();
+  mesure.carte = carte;
+  menu.ajouter('', mesure);
+
   /* LE FILTRE DES LIEUX, À MÊME LA CARTE (POI-2, 30/08). Armelin : « ce
      serait bien d'afficher quelque part sur la carte une icône pour afficher
      les POI comme un filtre […] que l'utilisateur puisse configurer
@@ -647,7 +658,6 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   notePlus.className = 'reglages-version-note';
   notePlus.textContent = 'Vide le cache et recharge la dernière version'
     + ' publiée. Vos favoris et votre historique ne sont pas touchés.';
-  boiteVersion.append(motVersion, majVersion, notePlus);
   /* MAPS PRO, UNE LIGNE DANS LA BOÎTE DE LA VERSION (PRO-LIENS-1, 05/09).
      Armelin : « un lieu dans le menu indiquant un bouton Maps Pro qui emmène
      vers la landing page ». Une section à part faisait déborder la fenêtre
@@ -660,7 +670,14 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   lienPro.href = '/pro.html';
   lienPro.title = 'Cercles, véhicule connecté, itinéraires partagés, flottes';
   lienPro.textContent = 'Découvrir Maps Pro';
-  boiteVersion.append(lienPro);
+  /* VERSION ET LIEN PRO SUR LA MÊME RANGÉE (MESURE-1, 05/09) : le menu est
+     une fenêtre haute comme son contenu, et le volet « Mesurer » lui a coûté
+     une rangée. Mesuré : 160 px pour cette boîte, 524 px pour le menu sur un
+     écran de 844 — un pixel au-dessus du garde-fou de feuilles-basses. */
+  const teteVersion = document.createElement('div');
+  teteVersion.className = 'reglages-version-tete';
+  teteVersion.append(motVersion, lienPro);
+  boiteVersion.append(teteVersion, majVersion, notePlus);
   menu.ajouter('Version', boiteVersion);
 
 

@@ -58,6 +58,25 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   « Limites de vitesse et ronds-points non relevés sur ce trajet : le
   guidage continue sans ces repères » — ce qui manque, calmement, et ce qui
   tient.
+## [1.103.0] — 2026-09-05 — MESURE-1
+
+### Mesurer une distance sur la carte, point après point
+- Des amis d'Armelin (05/09) : « des outils dans le menu : mesurer une
+  distance A→B, et un parcours dessiné point à point ». Un volet « Mesurer »
+  dans le menu ; « Commencer la mesure » referme le menu et pose un relevé
+  flottant en haut de la carte, visible AVANT le premier geste (« Touchez la
+  carte pour poser le premier point »). Chaque touche pose un point, le trait
+  pointillé se dessine, le relevé cumule — « 3 points · 2,23 km à vol
+  d’oiseau · dernier segment 1,11 km ». « Annuler le dernier point »,
+  « Effacer », « Terminer » ; Échap termine aussi. Rien ne part sur le
+  réseau : tout se calcule dans le navigateur.
+- Dit en clair : « à vol d'oiseau » — une distance de carte n'est pas une
+  distance de route.
+- Le menu ne grossit pas pour autant : version et lien Maps Pro partagent
+  une rangée (mesuré sur 844 px d'écran : 524 px avec la rangée en plus,
+  489 px après — le garde-fou de feuilles-basses est à 523).
+- Tests : calcul pur (formats, cumul, Paris–Lyon 391 km, dessin) ; parcours
+  E2E au doigt sur téléphone, avec le garde-fou de hauteur du menu.
 
 ## [1.99.0] — 2026-09-05 — FOND-NAV-1
 
