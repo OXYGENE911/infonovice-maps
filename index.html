@@ -80,7 +80,11 @@
 <body>
   <a class="evitement" href="#carte">Aller à la carte</a>
   <header class="entete" role="banner">
-    <span class="entete-marque">Infonovice <strong>Maps</strong></span>
+    <!-- LA MARQUE MÈNE À MAPS PRO (PRO-LIENS-1, 05/09). Armelin : « pouvoir
+         cliquer sur le logo Infonovice Maps en haut à gauche pour aller sur
+         la landing page ». Un lien, pas un script : il marche avant le
+         bundle et sans lui. -->
+    <a class="entete-marque" href="/pro.html" title="Infonovice Maps et Maps Pro">Infonovice <strong>Maps</strong></a>
     <span class="entete-note">Cartographie souveraine — IGN&nbsp;· BAN&nbsp;· zéro tracking</span>
     <!-- LA BARRE DE RECHERCHE EXISTE AVANT LE SCRIPT (PERF-1, 04/09). Mesuré
          par Lighthouse mobile en production : le plus grand élément peint

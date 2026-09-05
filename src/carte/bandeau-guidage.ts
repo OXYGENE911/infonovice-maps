@@ -658,6 +658,15 @@ export class BandeauGuidage extends HTMLElement {
             <button type="button" class="bg-bilan-fermer">Fermer</button>
           </div>
           <p class="bg-bilan-garde" role="status" hidden></p>
+          <!-- MAPS PRO EN FIN DE TRAJET (PRO-LIENS-1, 05/09). Armelin : « quand
+               on ferme un trajet, proposer d'aller sur la landing page avec un
+               message du genre "Le trajet vous a plu ? Débloquez d'autres
+               fonctionnalités" ». Une ligne dans le bilan qu'on lit déjà,
+               pas une fenêtre de plus : le geste d'enregistrer reste le
+               premier. -->
+          <p class="bg-bilan-pro">Le trajet vous a plu ?
+            <a href="/pro.html">Découvrez Maps Pro</a> — cercles, véhicule
+            connecté, itinéraires partagés.</p>
         </section>
         <!-- CE QUI SE DÉPLIE. « Soit l'utilisateur scrolle la barre vers le
              haut pour afficher les options cachées, soit il appuie une fois

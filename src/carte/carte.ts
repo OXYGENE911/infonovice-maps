@@ -587,6 +587,22 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   notePlus.textContent = 'Vide le cache et recharge la dernière version'
     + ' publiée. Vos favoris et votre historique ne sont pas touchés.';
   boiteVersion.append(motVersion, majVersion, notePlus);
+  /* MAPS PRO, UNE LIGNE ET UN LIEN (PRO-LIENS-1, 05/09). Armelin : « un lieu
+     dans le menu indiquant un bouton Maps Pro qui emmène vers la landing
+     page proposant les fonctionnalités à débloquer ». Une ligne, en bas,
+     près de la version — jamais une fenêtre qui s'impose : le client libre
+     reste entier, le Pro s'y annonce sans s'y imposer. */
+  const boitePro = document.createElement('div');
+  boitePro.className = 'reglages-pro';
+  const motPro = document.createElement('p');
+  motPro.className = 'reglages-pro-mot';
+  motPro.textContent = 'Cercles, véhicule connecté, itinéraires partagés, flottes.';
+  const lienPro = document.createElement('a');
+  lienPro.className = 'reglages-pro-lien';
+  lienPro.href = '/pro.html';
+  lienPro.textContent = 'Découvrir Maps Pro';
+  boitePro.append(motPro, lienPro);
+  menu.ajouter('Maps Pro', boitePro);
   menu.ajouter('Version', boiteVersion);
 
 

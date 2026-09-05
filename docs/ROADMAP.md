@@ -835,6 +835,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] PRO-LIENS-1 (05/09) : trois portes vers Maps Pro — entrée de menu,
+      marque de l'en-tête cliquable, ligne dans le bilan de fin de trajet —
+      toutes vers /pro.html, page passerelle lisible sans script dont la
+      destination (site Pro) se change en une ligne.
 - [x] NAV-2 + FLECHE-1 + RETOUR-0409b (05/09) : plein écran de navigation
       (en-tête, rail et menu effacés pendant le suivi ; cartouche sous
       l'encoche, textes et flèche plus grands, bulle POI bornée) ; flèche de
