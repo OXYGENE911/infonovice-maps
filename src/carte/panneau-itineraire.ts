@@ -1467,16 +1467,22 @@ export class PanneauItineraire extends HTMLElement {
          la même page — l'endroit où l'on cherche « où s'arrêter ». */
       if (estThermique(memo)) {
         const carbu = profilCarburant(memo);
+        /* LA COURSE ENTRE LE PLAN AUTOMATIQUE ET L'OUVERTURE DE LA PAGE (CI du
+           06/09, corps vide) : l'appel automatique pose `#rechargePour` puis
+           ATTEND IndexedDB ; si l'usager ouvre la page pendant cette attente,
+           son appel voit le jeton et repart sans rien écrire — et l'appel
+           automatique, lui, se taisait. Il ne se tait plus : le plan des
+           pleins s'écrit dans tous les cas (la page électrique fait pareil),
+           et l'invite se montre dès que la page est celle qu'on regarde. */
         if (!carbu) {
-          if (!auto) {
+          if (!auto || this.#vue === 'recharge') {
             corps.textContent = 'Véhicule thermique ou hybride : renseignez le carburant,'
               + ' le réservoir et la consommation dans « Mon véhicule » pour planifier les pleins.';
           }
           this.#rechargePour = null;
           return;
         }
-        if (!auto) await this.#planifierCarburant(iti, corps, carbu);
-        else this.#rechargePour = null;
+        await this.#planifierCarburant(iti, corps, carbu);
         return;
       }
       /* En automatique, PAS de véhicule = pas de plan, en silence : le
