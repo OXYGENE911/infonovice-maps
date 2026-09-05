@@ -15,7 +15,7 @@
 export type NomPicto =
   | 'recharge' | 'monuments' | 'feuille' | 'partage'
   | 'vehicule' | 'couches' | 'options'
-  | 'itineraire' | 'favoris' | 'fonds' | 'trafic'
+  | 'itineraire' | 'favoris' | 'fonds' | 'trafic' | 'mesure'
   /* PIC-2 (29/08) — « poursuivre les autres améliorations graphiques […]
      notamment les icônes pour les options ». La page Options n'était que
      des mots : mode de déplacement, optimisation, évitements. */
@@ -89,6 +89,8 @@ const TRACES: Record<NomPicto, string> = {
   itineraire: '<path d="M12 21s-6.8-5.4-6.8-11A6.8 6.8 0 0 1 12 3.4 6.8 6.8 0 0 1 18.8 10c0 5.6-6.8 11-6.8 11Z"/>'
     + '<circle cx="12" cy="10" r="2.4"/>',
   favoris: '<path d="m12 3.6 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.6-4.8 2.6.9-5.4L4.2 9.3l5.4-.8Z"/>',
+  /* La règle graduée (MESURE-1) : une lame en diagonale, quatre graduations. */
+  mesure: '<path d="m3 17 14-14 4 4L7 21Z"/><path d="m5.4 14.6 1.6 1.6M8.1 11.9l1.6 1.6M10.8 9.2l1.6 1.6M13.5 6.5l1.6 1.6"/>',
   fonds: '<path d="m12 3 8 4.5-8 4.5-8-4.5ZM4 12.4 12 17l8-4.6M4 16.6 12 21l8-4.4"/>',
   trafic: '<path d="M10.4 4.6 3.2 17.4A1.8 1.8 0 0 0 4.8 20h14.4a1.8 1.8 0 0 0 1.6-2.6L13.6 4.6a1.85 1.85 0 0 0-3.2 0Z"/>'
     + '<path d="M12 9.5v4.4M12 16.7v.2"/>',
