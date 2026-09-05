@@ -3795,8 +3795,12 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
   flex-basis: 100%; order: 9; margin: 4px 0 0;
   /* SOUS LE TEXTE, pas sous la flèche : la chaussée est large de 48 px de
      moins, ce qui la cale à l'aplomb de l'instruction qu'elle précise. */
-  margin-left: 48px; max-width: 132px;
-  display: flex; gap: 3px; align-items: flex-end; height: 18px;
+  /* PLUS GRANDE AVEC LE CARTOUCHE (NAV-2, 05/09) : « les flèches de
+     positionnement sur la chaussée sont affichées trop petites » — à
+     l'aplomb d'une flèche de manœuvre de 58 px, une chaussée de 18 px se
+     perdait. Le retrait suit la flèche (58 + 10 de blanc). */
+  margin-left: 68px; max-width: 200px;
+  display: flex; gap: 4px; align-items: flex-end; height: 26px;
 }
 .bg-chaussee[hidden] { display: none; }
 /* LES BARRES SANS FLÈCHES ONT ÉTÉ RETIRÉES (TERRAIN-1, 30/08). Armelin, au
@@ -3807,14 +3811,14 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
    les autres ne dit pas « mettez-vous à droite », il ne dit rien. Ne reste
    que la chaussée FLÉCHÉE d'AFFECT-1, qui se lit sans mode d'emploi. */
 .bg-file {
-  flex: 1 1 0; height: 9px; border-radius: 2px;
+  flex: 1 1 0; height: 12px; border-radius: 3px;
   background: var(--panneau-encre); opacity: .3;
 }
 /* LA VOIE CONSEILLÉE : pleine, plus haute, à l'encre franche du panneau.
    Tant qu'on DÉDUIT le côté, une seule est éclairée — en éclairer deux
    laisserait croire à une affectation que la donnée ne portait pas. */
 .bg-file[data-conseillee="oui"] {
-  height: 18px; opacity: 1;
+  height: 26px; opacity: 1;
 }
 
 /* ==========================================================================
@@ -3822,22 +3826,22 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
    par voie »). Quand `turn:lanes` existe, chaque file porte SES flèches et
    plusieurs peuvent être en clair : ce n'est plus une déduction.
    ========================================================================== */
-.bg-chaussee:has(.bg-file-fleches) { height: 28px; max-width: 186px; }
+.bg-chaussee:has(.bg-file-fleches) { height: 40px; max-width: 270px; }
 /* .45 ET NON .35 : mesuré à l'écran sur fond bleu autoroutier, les voies
    éteintes disparaissaient — or elles font le SENS de l'image, qui est « il
    y en a quatre, et c'est la dernière ». */
 .bg-file-fleches {
-  height: 28px; opacity: .45; border-radius: 3px;
+  height: 40px; opacity: .45; border-radius: 4px;
   display: flex; align-items: center; justify-content: center; gap: 1px;
   background: none;
 }
 .bg-file-fleches[data-conseillee="oui"] {
-  height: 28px; opacity: 1;
+  height: 40px; opacity: 1;
   background: color-mix(in srgb, var(--panneau-encre) 16%, transparent);
 }
 .bg-file-fleches svg {
-  width: 17px; height: 19px; flex: 0 0 auto;
-  fill: none; stroke: var(--panneau-encre); stroke-width: 1.7;
+  width: 24px; height: 27px; flex: 0 0 auto;
+  fill: none; stroke: var(--panneau-encre); stroke-width: 2.1;
   stroke-linecap: round; stroke-linejoin: round;
 }
 
