@@ -6,6 +6,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import {
   urlMeteo, versMeteo, phraseMeteo, libelleTemps, symboleTemps,
   heureArrivee, formaterHeure, meteoA, ECART_MAX_MINUTES, ErreurMeteo,
+  urlPrevisions, versPrevisions,
 } from '../src/lib/meteo';
 
 const REPONSE = {
@@ -161,5 +162,58 @@ describe('meteoA (fetch simulé)', () => {
     vi.stubGlobal('fetch', g);
     await expect(meteoA(4.8, 45.7, new Date('2026-08-22T10:00:00Z'))).resolves.toBeTruthy();
     expect(g).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('le bulletin d’une ville (METEO-VILLE-1)', () => {
+  const heures = Array.from({ length: 48 }, (_, i) => {
+    const j = 22 + Math.floor(i / 24); const h = i % 24;
+    return `2026-08-${j}T${String(h).padStart(2, '0')}:00`;
+  });
+  const PREVISIONS = {
+    utc_offset_seconds: 7200,
+    hourly: {
+      time: heures,
+      temperature_2m: heures.map((_, i) => 15 + (i % 24) / 2),
+      precipitation: heures.map((_, i) => (i === 16 ? 1.2 : 0)),
+      weather_code: heures.map((_, i) => (i === 16 ? 61 : 1)),
+      wind_speed_10m: heures.map(() => 9),
+    },
+    daily: {
+      time: ['2026-08-22', '2026-08-23', '2026-08-24', '2026-08-25', '2026-08-26', '2026-08-27', '2026-08-28'],
+      weather_code: [1, 61, 3, 0, 0, 95, 2],
+      temperature_2m_max: [24, 21, 22, 26, 27, 23, 22],
+      temperature_2m_min: [14, 13, 12, 14, 15, 16, 13],
+      precipitation_sum: [0, 4.2, 0, 0, 0, 12.5, 0.1],
+      wind_speed_10m_max: [18, 30, 12, 10, 11, 45, 20],
+    },
+  };
+  test('l’URL demande aussi les journées, sur sept jours, dans le fuseau du lieu', () => {
+    const u = new URL(urlPrevisions(4.8357, 45.764));
+    expect(u.searchParams.get('daily')).toContain('temperature_2m_max');
+    expect(u.searchParams.get('forecast_days')).toBe('7');
+    expect(u.searchParams.get('timezone')).toBe('auto');
+    expect(u.searchParams.get('hourly')).toContain('weather_code');
+  });
+  test('vingt-quatre heures À PARTIR DE MAINTENANT, dans l’heure du lieu', () => {
+    // 14 h 20 à Paris (UTC+2) = 12 h 20 UTC : la frise commence à 14 h.
+    const p = versPrevisions(PREVISIONS, new Date('2026-08-22T12:20:00Z'));
+    expect(p.heures).toHaveLength(24);
+    expect(p.heures[0]!.heure).toBe('14 h');
+    expect(p.heures[0]!.temperature).toBe(22);
+    expect(p.heures[2]!).toMatchObject({ heure: '16 h', pluie: 1.2, code: 61 });
+    expect(p.heures[23]!.heure).toBe('13 h');
+    expect(p.decalageLieu).toBe(7200);
+  });
+  test('sept jours nommés : aujourd’hui, demain, puis le jour et sa date', () => {
+    const p = versPrevisions(PREVISIONS, new Date('2026-08-22T12:20:00Z'));
+    expect(p.jours.map((j) => j.jour)).toEqual([
+      'aujourd’hui', 'demain', 'lundi 24', 'mardi 25', 'mercredi 26', 'jeudi 27', 'vendredi 28',
+    ]);
+    expect(p.jours[1]!).toMatchObject({ min: 13, max: 21, pluie: 4.2, code: 61, ventKmh: 30 });
+  });
+  test('refuse une réponse sans journées, en français', () => {
+    expect(() => versPrevisions({ hourly: PREVISIONS.hourly }, new Date()))
+      .toThrow(/prévision exploitable/);
   });
 });

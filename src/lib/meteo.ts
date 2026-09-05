@@ -211,15 +211,21 @@ export function formaterHeure(arrivee: Date, decalageLieu = 0, maintenant?: Date
 export async function meteoA(
   lon: number, lat: number, vise: Date, signal?: AbortSignal,
 ): Promise<Meteo> {
+  return versMeteo(await lireJson(urlMeteo(lon, lat), signal), vise);
+}
+
+/** Un appel au service, deux essais, huit secondes : la politique commune à
+ *  la météo d'arrivée et au bulletin d'une ville. */
+async function lireJson(url: string, signal?: AbortSignal): Promise<unknown> {
   let derniere: unknown;
   for (let essai = 0; essai < 2; essai += 1) {
     try {
-      const r = await fetch(urlMeteo(lon, lat), {
+      const r = await fetch(url, {
         signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(DELAI_MS)])
           : AbortSignal.timeout(DELAI_MS),
         headers: { Accept: 'application/json' },
       });
-      if (r.ok) return versMeteo(await r.json(), vise);
+      if (r.ok) return await r.json();
       // Même politique que les autres services : seuls les 5xx se rejouent.
       if (r.status >= 500) throw new Error(`service ${r.status}`);
       throw new ErreurMeteo(`La météo est indisponible (réponse ${r.status}).`);
@@ -234,4 +240,118 @@ export async function meteoA(
     'La météo est momentanément indisponible. Réessayez dans un instant.',
     { cause: derniere },
   );
+}
+
+/* LE BULLETIN D'UNE VILLE (METEO-VILLE-1, 05/09/2026). Des amis d'Armelin :
+   « la météo d'une ville au choix, heure par heure, et sur 7 jours ». Même
+   service, même dérogation publique, une requête de plus (`daily`). */
+export interface PrevisionHeure {
+  /** « 14 h », dans l'heure du LIEU. */
+  heure: string;
+  temperature: number;
+  pluie: number;
+  ventKmh: number;
+  code: number;
+}
+export interface PrevisionJour {
+  /** « aujourd’hui », « demain », puis « lundi 7 ». */
+  jour: string;
+  min: number;
+  max: number;
+  pluie: number;
+  ventKmh: number;
+  code: number;
+}
+export interface Previsions {
+  heures: PrevisionHeure[];
+  jours: PrevisionJour[];
+  decalageLieu: number;
+}
+
+export function urlPrevisions(lon: number, lat: number): string {
+  const q = new URLSearchParams({
+    latitude: lat.toFixed(4),
+    longitude: lon.toFixed(4),
+    hourly: 'temperature_2m,precipitation,weather_code,wind_speed_10m',
+    daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max',
+    timezone: 'auto',
+    forecast_days: '7',
+  });
+  return `${SERVICE}?${q.toString()}`;
+}
+
+interface ReponsePrevisions extends ReponseMeteo {
+  daily?: {
+    time?: unknown;
+    weather_code?: unknown;
+    temperature_2m_max?: unknown;
+    temperature_2m_min?: unknown;
+    precipitation_sum?: unknown;
+    wind_speed_10m_max?: unknown;
+  };
+}
+
+/** Vingt-quatre heures à partir de MAINTENANT (heure du lieu), puis sept
+ *  jours — PURE. Le fuseau du lieu fait foi, comme pour la météo d'arrivée. */
+export function versPrevisions(brut: unknown, maintenant: Date): Previsions {
+  const r = brut as ReponsePrevisions;
+  const h = r?.hourly;
+  const d = r?.daily;
+  const heuresBrutes = h?.time;
+  const joursBruts = d?.time;
+  if (!Array.isArray(heuresBrutes) || heuresBrutes.length === 0
+    || !Array.isArray(joursBruts) || joursBruts.length === 0) {
+    throw new ErreurMeteo('Le service météo n’a pas rendu de prévision exploitable.');
+  }
+  const decalageLieu = Number.isFinite(Number(r?.utc_offset_seconds))
+    ? Number(r.utc_offset_seconds) : 0;
+  const nombres = (v: unknown): number[] => (Array.isArray(v) ? v.map(Number) : []);
+  const ou0 = (v: number | undefined): number => (Number.isFinite(v) ? (v as number) : 0);
+
+  const t = nombres(h?.temperature_2m);
+  const p = nombres(h?.precipitation);
+  const c = nombres(h?.weather_code);
+  const w = nombres(h?.wind_speed_10m);
+  /* La première case qui n'est pas déjà passée de plus d'une demi-heure :
+     à 14 h 20, la frise commence à 14 h. */
+  const seuil = maintenant.getTime() - 30 * 60_000;
+  let debut = heuresBrutes.findIndex((b) =>
+    typeof b === 'string' && Date.parse(`${b}Z`) - decalageLieu * 1000 >= seuil);
+  if (debut < 0) debut = Math.max(0, heuresBrutes.length - 24);
+  const heures: PrevisionHeure[] = [];
+  for (let i = debut; i < heuresBrutes.length && heures.length < 24; i += 1) {
+    const b = heuresBrutes[i];
+    if (typeof b !== 'string' || !Number.isFinite(t[i]) || !Number.isFinite(c[i])) continue;
+    heures.push({
+      heure: `${Number(b.slice(11, 13))} h`,
+      temperature: t[i] as number, pluie: ou0(p[i]), ventKmh: ou0(w[i]), code: c[i] as number,
+    });
+  }
+
+  const cj = nombres(d?.weather_code);
+  const tmax = nombres(d?.temperature_2m_max);
+  const tmin = nombres(d?.temperature_2m_min);
+  const pj = nombres(d?.precipitation_sum);
+  const wj = nombres(d?.wind_speed_10m_max);
+  const jours: PrevisionJour[] = [];
+  for (let i = 0; i < joursBruts.length && jours.length < 7; i += 1) {
+    const b = joursBruts[i];
+    if (typeof b !== 'string' || !Number.isFinite(tmax[i]) || !Number.isFinite(tmin[i])
+      || !Number.isFinite(cj[i])) continue;
+    const date = new Date(`${b}T00:00:00Z`);
+    const jour = i === 0 ? 'aujourd’hui' : i === 1 ? 'demain'
+      : `${JOURS[date.getUTCDay()]} ${date.getUTCDate()}`;
+    jours.push({ jour, min: tmin[i] as number, max: tmax[i] as number,
+      pluie: ou0(pj[i]), ventKmh: ou0(wj[i]), code: cj[i] as number });
+  }
+  if (heures.length === 0 || jours.length === 0) {
+    throw new ErreurMeteo('Le service météo n’a pas rendu de prévision exploitable.');
+  }
+  return { heures, jours, decalageLieu };
+}
+
+export async function previsionsA(
+  lon: number, lat: number, signal?: AbortSignal, maintenant = new Date(),
+): Promise<Previsions> {
+  return versPrevisions(await lireJson(urlPrevisions(lon, lat), signal), maintenant);
 }

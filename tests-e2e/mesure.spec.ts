@@ -31,7 +31,7 @@ test('MESURER : le volet du menu lance la mesure, chaque touche pose un point, l
   test.info().annotations.push({ type: 'menu', description: `${Math.round(corps.height)} px pour ${VUE.height} px d’écran` });
   expect(corps.height, 'le menu a grossi jusqu’à déborder').toBeLessThan(VUE.height * 0.62);
 
-  await page.locator('.reglages-corps .mesure summary').click();
+  await page.locator('.reglages-corps .outils summary').click();
   const releve = page.locator('.mesure-releve');
   await expect(releve).toBeHidden();
   await page.getByRole('button', { name: 'Commencer la mesure' }).click();
