@@ -1763,7 +1763,9 @@ fiche-borne:not([hidden]), fiche-lieu:not([hidden]) { z-index: var(--z-volet-ouv
 .carte-perdue-recharger:focus-visible { outline: none; box-shadow: var(--focus); }
 
 /* LE BANDEAU D'UNE CASSE MUETTE (BLANC-1) — sous la modale, sur le reste. */
-.casse-bandeau {
+/* LE BANDEAU « CARTE MUETTE » (RETOUR-0409) partage l'habit du bandeau de
+   casse : même place, même geste — recharger ou fermer. */
+.casse-bandeau, .carte-muette {
   position: fixed; left: 12px; right: 12px;
   bottom: calc(var(--sur-barre-basse, 0px) + 12px);
   z-index: calc(var(--z-modale) - 1);
@@ -1771,15 +1773,15 @@ fiche-borne:not([hidden]), fiche-lieu:not([hidden]) { z-index: var(--z-volet-ouv
   padding: 10px 14px; border-radius: 12px;
   background: rgba(20, 20, 22, .95); color: #F3EFE7;
 }
-.casse-bandeau p { margin: 0; font: 400 13px/1.4 var(--police); flex: 1 1 auto; }
-.casse-bandeau button {
+.casse-bandeau p, .carte-muette p { margin: 0; font: 400 13px/1.4 var(--police); flex: 1 1 auto; }
+.casse-bandeau button, .carte-muette button {
   padding: 7px 13px; border-radius: 9px; border: none; cursor: pointer;
   background: var(--accent); color: var(--blanc); font: 600 13px var(--police);
 }
-.casse-bandeau .casse-fermer {
+.casse-bandeau .casse-fermer, .carte-muette .carte-muette-fermer {
   background: transparent; color: #B5BDC8; font-size: 15px; padding: 4px 8px;
 }
-.casse-bandeau button:focus-visible { outline: none; box-shadow: var(--focus); }
+.casse-bandeau button:focus-visible, .carte-muette button:focus-visible { outline: none; box-shadow: var(--focus); }
 .carte-perdue-version {
   margin: 0; font: 400 12px var(--police); color: #B5BDC8;
 }
@@ -4525,7 +4527,17 @@ filtre-poi {
    désalignée au premier changement de la barre d'échelle — c'est arrivé, et
    c'est pour cela que ce repère existe. */
 .bg-parkings {
-  position: absolute; right: 8px; left: 8px;
+  /* À DROITE DES DISQUES, PAS DESSUS (RETOUR-0409). Armelin, capture à
+     l'appui : « la liste est masquée par le panneau de vitesse dans les
+     derniers résultats ». Le disque de limitation (56 px, à left: 0, posé
+     68 px au-dessus du repère) recouvrait le coin bas-gauche de la feuille,
+     qui partait de 8 px. La feuille commence donc après la colonne des
+     disques — 72 px, soit 56 + 16 de blanc — que la limite soit affichée
+     ou non : une feuille qui sauterait de gauche à droite au gré des
+     tronçons serait pire. Sur grand écran, `margin-left: auto` la range à
+     droite comme avant. Mesuré par le parcours parking.spec (aucun
+     chevauchement des boîtes). */
+  position: absolute; right: 8px; left: 72px;
   bottom: calc(var(--vitesse-bas) + 63px);
   max-width: 420px; margin-left: auto;
   background: var(--fond); border: 1px solid var(--bord-2);

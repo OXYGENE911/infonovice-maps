@@ -232,7 +232,14 @@ test('LE COLLÈGE INTROUVABLE DANS OSM SE TROUVE DANS L’ANNUAIRE', async ({ pa
   expect(annuaire).toHaveLength(1);
   expect(annuaire[0]).toContain('search(nom_etablissement');
   expect(annuaire[0]).toContain('48.80510');
-  expect(overpass).toHaveLength(1);
+  /* ON ATTEND QUE LA PISTE LENTE AIT TIRÉ (RETOUR-0409). La ligne du
+     collège paraît dès l'annuaire ; l'appel Overpass, lui, passe d'abord
+     par la reconnaissance de commune à la BAN. Lu au moment de la première
+     option, le compteur valait parfois ZÉRO sur la machine d'intégration —
+     le même flake que recherche-multi.spec avait déjà fermé avec un poll. */
+  await expect.poll(() => overpass.length, { timeout: 10_000 }).toBe(1);
+  await page.waitForTimeout(500);
+  expect(overpass, 'un seul appel à Overpass').toHaveLength(1);
 });
 
 test('L’ÉCHEC D’UNE SOURCE N’EMPORTE PAS L’AUTRE', async ({ page }) => {

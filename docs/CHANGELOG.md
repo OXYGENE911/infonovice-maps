@@ -2,6 +2,36 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.94.1] — 2026-09-05 — RETOUR-0409
+
+### Deux retours d'Armelin sur la v1.93, captures à l'appui
+- **La feuille des parkings passait sous le disque de limitation.** « Quand
+  la liste des suggestions de parkings apparaît, la liste est masquée par le
+  panneau de vitesse dans les derniers résultats. » Cause mesurée dans la
+  CSS : le disque de limitation (56 px, `left: 0`, 68 px au-dessus du repère)
+  recouvrait le coin bas-gauche de la feuille, qui partait de 8 px. La
+  feuille commence désormais après la colonne des disques (72 px), que la
+  limite soit affichée ou non — une feuille qui sauterait au gré des
+  tronçons serait pire. Parcours E2E sur écran de téléphone : aucune
+  intersection des boîtes (contre-épreuve : il rougit sur l'ancienne CSS).
+- **La carte blanche en fin de trajet, sans porte de sortie.** « J'ai une
+  page blanche qui s'affiche. Impossible de faire revenir la carte, il faut
+  rafraîchir la fenêtre. » BLANC-1 (04/09) ne couvrait que la perte de
+  contexte WebGL — canevas NOIR, événement `webglcontextlost`, voile avec
+  bouton. Ici le canevas est BLANC, l'interface vit, le filet des exceptions
+  n'a rien vu, aucun événement. **La cause n'est pas reproduite** (le
+  bandeau montrait « 14 m restants » et « à 165 m du trajet » à l'arrêt, sur
+  fond photo). Ce qui est livré sans elle : un chien de garde qui REGARDE
+  toutes les cinq secondes — style disparu (`getStyle()` vide, ce que
+  MapLibre fait à la perte de contexte) : bandeau immédiat ; tuiles qui
+  n'arrivent plus depuis 45 s EN LIGNE : bandeau aussi. Un bandeau
+  refermable, pas un voile : un réseau lent n'est pas une casse, l'usager
+  tranche. Le bouton « Recharger la carte » vide le cache et recharge,
+  l'itinéraire vivant dans l'adresse. Deux parcours E2E (le bandeau paraît,
+  se ferme, recharge).
+- Question posée à Armelin pour reproduire : fond photo ? relief 3D ?
+  « Se garer » ou « Finir à pied » venaient-ils d'être pressés ?
+
 ## [1.94.0] — 2026-09-04 — PERF-1
 
 ### La barre de recherche existe avant le script — Lighthouse Performance, mesuré pour la première fois

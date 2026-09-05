@@ -835,6 +835,14 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] RETOUR-0409 (05/09) : la feuille des parkings ne passe plus sous le
+      disque de limitation (mesuré : 56 px à left 0 contre une feuille à
+      8 px ; feuille à 72 px, parcours d'intersection des boîtes). Carte
+      BLANCHE en fin de trajet : cause NON reproduite (canevas blanc, DOM
+      vivant, ni exception ni `webglcontextlost`) ; chien de garde toutes les
+      5 s — style disparu ou tuiles muettes 45 s en ligne — bandeau
+      refermable + « Recharger la carte ». À reprendre avec les conditions
+      exactes d'Armelin (fond photo ? relief 3D ? geste précédent ?).
 - [x] PERF-1 (04/09) : Lighthouse Performance mesuré pour la première fois
       (mobile, production v1.92) : **52** / 100 / 96 / 100 — la règle exige
       ≥ 90 sur les quatre. Le LCP était le placeholder « Rechercher une
