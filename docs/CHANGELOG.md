@@ -2,6 +2,33 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.105.0] — 2026-09-06 — OUTILS-2
+
+### Le volet « Outils » redessiné : une clé à molette, des tuiles, des pages plein écran
+- Armelin, après essai de la 1.104 : « l'écran est complètement éclaté et je
+  dois scroller sur ma droite pour voir la météo » ; « quand on clique sur
+  Outils, tous les autres outils restent affichés, on doit scroller » ;
+  « l'icône devrait être une clé à molette ; afficher uniquement des icônes
+  — une règle, un soleil avec des nuages — et lancer la page en entier ».
+  Fait : clé à molette, grille de quatre tuiles (Mesurer, Météo, Signal
+  GPS, Ma position), et une page plein écran par outil — flèche de retour,
+  Échap, aucun défilement latéral (mesuré par le parcours).
+- **Météo** : le bulletin vit dans sa page — vingt-quatre heures en grille
+  qui s'enroule, sept jours en lignes avec le temps en mots.
+- **Signal GPS** (nouveau) : précision qualifiée (excellente / bonne /
+  moyenne / faible), position, altitude, vitesse, cap, âge du relevé, nombre
+  de relevés — mis à jour en direct, arrêté en refermant. Dit en clair : la
+  liste des satellites n'est PAS accessible à une application web (l'API
+  Geolocation ne l'expose pas) ; elle viendra avec l'application Android
+  native. Armelin demandait « tous les satellites captés » : voilà ce que le
+  web sait donner, et pourquoi pas plus.
+- **Ma position** (nouveau) : un lien `#lieu=` vers l'endroit où l'on est,
+  demandé au geste, nommé par la BAN, partagé par le téléphone ou copié.
+  Rien ne part sans l'usager.
+- Non retenu, à décider : la recherche vocale (micro). L'API Web Speech de
+  Chrome envoie la voix aux serveurs de Google — interdit par la contrainte 3 ;
+  Firefox ne la propose pas. Possible hors ligne dans l'application native.
+
 ## [1.104.0] — 2026-09-05 — METEO-VILLE-1
 
 ### La météo d'une ville, heure par heure puis sur sept jours

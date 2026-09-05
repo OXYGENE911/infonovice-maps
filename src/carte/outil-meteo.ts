@@ -1,13 +1,15 @@
 /* <outil-meteo> — la météo d'une ville, heure par heure puis sur sept jours.
  *
- * METEO-VILLE-1 (05/09/2026). Des amis d'Armelin : « des outils dans le menu :
- * la météo d'une ville au choix, heure par heure, et sur 7 jours ». On tape
- * une ville (la même recherche que partout : BAN), et le bulletin se pose
- * sous le champ : vingt-quatre heures en frise, sept jours en lignes.
+ * METEO-VILLE-1 (05/09/2026) : « la météo d'une ville au choix, heure par
+ * heure, et sur 7 jours ». OUTILS-2 (06/09) : le bulletin vit désormais dans
+ * une PAGE PLEIN ÉCRAN (page-outil) — dans le volet du menu, la frise des
+ * heures débordait de côté (« l'écran est complètement éclaté et je dois
+ * scroller sur ma droite ») ; ici les heures se posent en grille qui
+ * s'enroule, jamais de défilement horizontal.
  *
  * LA SOURCE EST DITE : Open-Meteo, la dérogation publique du 22/08 (page
- * « À propos ») — aucune autre n'entre ici. Rien d'autre ne part : la ville
- * choisie va au service météo, et c'est tout. */
+ * « À propos »). Rien d'autre ne part : la ville choisie va au service météo,
+ * et c'est tout. */
 import { RechercheAdresse } from './recherche';
 import type { ResultatAdresse } from '../lib/adresse';
 import {
@@ -22,9 +24,8 @@ export class OutilMeteo extends HTMLElement {
   connectedCallback(): void {
     if (this.firstElementChild) return;
     this.innerHTML = `
-      <p class="outils-titre">Météo d’une ville</p>
-      <p class="outils-mot">Heure par heure sur vingt-quatre heures, puis sept
-        jours. Prévisions Open-Meteo (voir « À propos »).</p>
+      <p class="outils-mot">Tapez une ville : vingt-quatre heures en grille, puis
+        sept jours. Prévisions Open-Meteo (voir « À propos »).</p>
       <div class="meteo-ville-champ"></div>
       <div class="meteo-ville-corps" role="status"></div>`;
     const champ = new RechercheAdresse();
@@ -35,6 +36,11 @@ export class OutilMeteo extends HTMLElement {
       saisie.setAttribute('aria-label', 'Ville dont on veut la météo');
     }
     champ.surSelection = (r: ResultatAdresse) => { void this.#charger(r); };
+  }
+
+  /** À l'ouverture de la page : le clavier va au champ. */
+  preparer(): void {
+    this.querySelector<HTMLInputElement>('input')?.focus();
   }
 
   async #charger(r: ResultatAdresse): Promise<void> {
@@ -64,6 +70,10 @@ export class OutilMeteo extends HTMLElement {
     lieu.textContent = `Météo à ${libelle}`;
     corps.appendChild(lieu);
 
+    const titreHeures = document.createElement('p');
+    titreHeures.className = 'outils-titre';
+    titreHeures.textContent = 'Les vingt-quatre prochaines heures';
+    corps.appendChild(titreHeures);
     const heures = document.createElement('ol');
     heures.className = 'meteo-ville-heures';
     heures.setAttribute('aria-label', 'Prévisions heure par heure');
@@ -80,6 +90,10 @@ export class OutilMeteo extends HTMLElement {
     }
     corps.appendChild(heures);
 
+    const titreJours = document.createElement('p');
+    titreJours.className = 'outils-titre';
+    titreJours.textContent = 'Les sept prochains jours';
+    corps.appendChild(titreJours);
     const jours = document.createElement('ol');
     jours.className = 'meteo-ville-jours';
     jours.setAttribute('aria-label', 'Prévisions sur sept jours');
@@ -90,6 +104,7 @@ export class OutilMeteo extends HTMLElement {
         + `${libelleTemps(j.code)}` + (j.pluie >= 0.2 ? `, ${mm(j.pluie)} de pluie` : ''));
       li.innerHTML = `<span class="mv-j">${j.jour}</span>`
         + `<span class="mv-s" aria-hidden="true">${symboleTemps(j.code)}</span>`
+        + `<span class="mv-l">${libelleTemps(j.code)}</span>`
         + `<span class="mv-t">${Math.round(j.min)} / ${Math.round(j.max)} °C</span>`
         + `<span class="mv-p">${j.pluie >= 0.2 ? mm(j.pluie) : ''}</span>`;
       jours.appendChild(li);

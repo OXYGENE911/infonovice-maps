@@ -16,6 +16,7 @@ export type NomPicto =
   | 'recharge' | 'monuments' | 'feuille' | 'partage'
   | 'vehicule' | 'couches' | 'options'
   | 'itineraire' | 'favoris' | 'fonds' | 'trafic' | 'mesure'
+  | 'cle' | 'meteo' | 'satellite' | 'partage-position'
   /* PIC-2 (29/08) — « poursuivre les autres améliorations graphiques […]
      notamment les icônes pour les options ». La page Options n'était que
      des mots : mode de déplacement, optimisation, évitements. */
@@ -91,6 +92,12 @@ const TRACES: Record<NomPicto, string> = {
   favoris: '<path d="m12 3.6 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.6-4.8 2.6.9-5.4L4.2 9.3l5.4-.8Z"/>',
   /* La règle graduée (MESURE-1) : une lame en diagonale, quatre graduations. */
   mesure: '<path d="m3 17 14-14 4 4L7 21Z"/><path d="m5.4 14.6 1.6 1.6M8.1 11.9l1.6 1.6M10.8 9.2l1.6 1.6M13.5 6.5l1.6 1.6"/>',
+  /* OUTILS-2 (06/09) : la clé à molette du volet Outils, le soleil-nuage de
+     la météo, le satellite du signal GPS, l'épingle rayonnante du partage. */
+  cle: '<path d="M14.2 6.3a4 4 0 0 1 5.2-1.1l-2.6 2.6 1.4 1.4 2.6-2.6a4 4 0 0 1-5.4 5.2L7 20.2a1.6 1.6 0 0 1-2.3 0l-1-1a1.6 1.6 0 0 1 0-2.3Z"/>',
+  meteo: '<circle cx="8" cy="9" r="3.4"/><path d="M8 2.6v1.6M8 13.8v1.6M1.6 9h1.6M3.5 4.5l1.1 1.1M3.5 13.5l1.1-1.1"/><path d="M11.5 20.5h7.6a3 3 0 0 0 .4-6 4.6 4.6 0 0 0-8.8-1.2 3.6 3.6 0 0 0 .8 7.2Z"/>',
+  satellite: '<path d="m9.5 4.5 3.2 3.2-4 4-3.2-3.2ZM12.3 12.3l3.2 3.2-4 4-3.2-3.2ZM8.7 11.7l3.6 3.6M4.2 16.6a4.6 4.6 0 0 0 3.2 3.2M2.6 19a7.4 7.4 0 0 0 2.4 2.4M16 8l4.5-4.5"/>',
+  'partage-position': '<path d="M12 21s-6-5.2-6-10a6 6 0 0 1 12 0c0 4.8-6 10-6 10Z"/><circle cx="12" cy="11" r="2.2"/><path d="M2.8 8.6A9.6 9.6 0 0 1 5 5M21.2 8.6A9.6 9.6 0 0 0 19 5"/>',
   fonds: '<path d="m12 3 8 4.5-8 4.5-8-4.5ZM4 12.4 12 17l8-4.6M4 16.6 12 21l8-4.4"/>',
   trafic: '<path d="M10.4 4.6 3.2 17.4A1.8 1.8 0 0 0 4.8 20h14.4a1.8 1.8 0 0 0 1.6-2.6L13.6 4.6a1.85 1.85 0 0 0-3.2 0Z"/>'
     + '<path d="M12 9.5v4.4M12 16.7v.2"/>',

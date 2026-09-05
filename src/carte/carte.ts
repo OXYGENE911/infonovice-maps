@@ -45,6 +45,9 @@ import { PanneauTrafic } from './panneau-trafic';
 import { OutilMesure } from './outil-mesure';
 import { OutilMeteo } from './outil-meteo';
 import { OutilsMenu } from './outils-menu';
+import { PageOutil } from './page-outil';
+import { OutilSignal } from './outil-signal';
+import { OutilPartage } from './outil-partage';
 import { PanneauVehicule } from './panneau-vehicule';
 import { MenuReglages } from './menu-reglages';
 import { brancherAjoutFavori } from './choix-liste';
@@ -482,14 +485,35 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      tout se calcule ici, rien ne part. Sans étiquette de section : le menu
      est une fenêtre haute comme son contenu, et chaque rangée compte sur un
      téléphone (le garde-fou de feuilles-basses le mesure). */
+  /* DES TUILES, ET DES PAGES PLEIN ÉCRAN (OUTILS-2, 06/09). Armelin : « une
+     clé à molette […] cliquer sur Outils et afficher uniquement des icônes
+     […] cliquer sur une icône lance la page en entier ». La page vit sur le
+     body (contexte d'empilement de #carte, leçon BLANC-1) ; chaque outil lui
+     confie son contenu. Mesurer reste sur la carte : la carte EST l'outil. */
   const outils = new OutilsMenu();
   menu.ajouter('', outils);
+  const pageOutil = new PageOutil();
+  document.body.appendChild(pageOutil);
   const mesure = new OutilMesure();
   mesure.carte = carte;
-  outils.ajouter(mesure);
-  /* LA MÉTÉO D'UNE VILLE (METEO-VILLE-1, 05/09) : « heure par heure, et sur
-     7 jours » — même volet, même rangée. */
-  outils.ajouter(new OutilMeteo());
+  document.body.appendChild(mesure);
+  const meteoVille = new OutilMeteo();
+  const signal = new OutilSignal();
+  const partage = new OutilPartage();
+  outils.ajouter({ cle: 'mesure', libelle: 'Mesurer', picto: 'mesure', action: () => { mesure.demarrer(); } });
+  outils.ajouter({ cle: 'meteo', libelle: 'Météo', picto: 'meteo', action: () => {
+    pageOutil.ouvrir('Météo d’une ville', meteoVille);
+    meteoVille.preparer();
+  } });
+  outils.ajouter({ cle: 'signal', libelle: 'Signal GPS', picto: 'satellite', action: () => {
+    pageOutil.ouvrir('Signal GPS', signal);
+    signal.demarrer();
+  } });
+  outils.ajouter({ cle: 'partage', libelle: 'Ma position', picto: 'partage-position', action: () => {
+    pageOutil.ouvrir('Partager ma position', partage);
+  } });
+  /* Le relevé GPS s'arrête avec la page : rien ne tourne dans le dos. */
+  pageOutil.addEventListener('page-fermee', () => { signal.arreter(); });
 
   /* LE FILTRE DES LIEUX, À MÊME LA CARTE (POI-2, 30/08). Armelin : « ce
      serait bien d'afficher quelque part sur la carte une icône pour afficher

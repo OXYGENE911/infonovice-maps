@@ -34,7 +34,7 @@ test('MESURER : le volet du menu lance la mesure, chaque touche pose un point, l
   await page.locator('.reglages-corps .outils summary').click();
   const releve = page.locator('.mesure-releve');
   await expect(releve).toBeHidden();
-  await page.getByRole('button', { name: 'Commencer la mesure' }).click();
+  await page.locator('.outils-tuile[data-outil="mesure"]').click();
 
   // LE MENU S'EST REFERMÉ, LE RELEVÉ DIT QUOI FAIRE — avant tout geste.
   await expect(page.locator('body')).toHaveClass(/mesure-active/);
