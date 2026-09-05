@@ -977,6 +977,14 @@ export class PanneauItineraire extends HTMLElement {
        puis le trajet se refait depuis la position par le chemin ordinaire
        de la reprise. Le champ « Charge (SOC) » du volet véhicule montrera
        la correction à sa prochaine ouverture : une seule vérité. */
+    /* « Y ALLER » DEPUIS LE PANNEAU DES AIRES (AIRES-1, 05/09) : l'aire
+       devient une étape du trajet en cours, et le trajet se recalcule — le
+       même chemin que le détour par un lieu. */
+    document.addEventListener('aire-etape', (e) => {
+      const d = (e as CustomEvent<{ lon: number; lat: number; nom: string }>).detail;
+      if (!d || !Number.isFinite(d.lon) || !Number.isFinite(d.lat)) return;
+      this.detourParLieu({ lon: d.lon, lat: d.lat, titre: d.nom } as unknown as Monument);
+    });
     document.addEventListener('soc-corrige', (e) => {
       const d = (e as CustomEvent<{ pourcent: number; lon: number; lat: number }>).detail;
       void (async () => {
@@ -2989,6 +2997,9 @@ export class PanneauItineraire extends HTMLElement {
            » dans « Mon véhicule ». Elles ne changent ni le tracé ni l'heure
            d'arrivée — elles disent où c'est permis, et à quelles conditions. */
         bandeau.interfiles = corridor.interfiles;
+        /* LES AIRES D'AUTOROUTE À VENIR (AIRES-1, 05/09) : mêmes objets OSM,
+           même relevé — la pastille et le panneau bleu vivent dans le bandeau. */
+        bandeau.aires = corridor.aires;
         /* L'INTERFILE SUIT LE BOUTON « Moto » (MODE-1, 03/09), et non plus
            une case de « Mon véhicule » : c'est une façon de partir, pas une
            propriété du véhicule qu'on possède. */

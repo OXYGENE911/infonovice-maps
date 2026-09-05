@@ -31,6 +31,7 @@ import {
 } from './troncons';
 import { versAffectations, type AffectationTrajet } from './affectation';
 import { versInterfiles, type SectionInterfile } from './interfile';
+import { fragmentAires, versAires, type Aire } from './aires';
 
 export interface Corridor {
   limites: LimiteTrajet[];
@@ -44,6 +45,11 @@ export interface Corridor {
      dans la MÊME réponse : les chemins sont déjà là, avec leurs tags — on ne
      lisait simplement pas `lanes` ni `oneway`. Zéro requête de plus. */
   interfiles: SectionInterfile[];
+  /* LES AIRES D'AUTOROUTE À VENIR (AIRES-1, 05/09) : surfaces `services` et
+     `rest_area` à droite du tracé, dans la MÊME réponse — zéro requête de
+     plus vers un service tenu par des bénévoles. Leurs commodités, elles,
+     font une seconde requête, autour des seules aires retenues. */
+  aires: Aire[];
 }
 
 /* L'ÉCART TOLÉRÉ EN SIMPLIFIANT LE TRACÉ, en mètres. Huit : bien SOUS le plus
@@ -101,6 +107,7 @@ export function requeteCorridor(paquet: readonly [number, number][]): string {
        de Charente. Une clause de plus dans une requête qui part déjà, c'est
        zéro requête de plus pour un service tenu par des bénévoles. */
     + `way(around:${RAYON_TONNAGE_M},${points})["maxweight"];`
+    + fragmentAires(points)
     + ');out geom tags;'
     + 'node(w.anneaux)->.bords;way(bn.bords)[highway];out geom tags;';
 }
@@ -124,6 +131,7 @@ export function versCorridor(brut: unknown, trace: readonly [number, number][]):
     affectations: versAffectations(liste, trace),
     tonnages: versTonnages(brut, trace as [number, number][]),
     interfiles: versInterfiles(brut, trace as [number, number][]),
+    aires: versAires(liste, trace),
   };
 }
 
@@ -131,6 +139,7 @@ export function versCorridor(brut: unknown, trace: readonly [number, number][]):
 export const CORRIDOR_VIDE: Corridor = {
   limites: [], sorties: [], destinations: [], giratoires: [], affectations: [],
   tonnages: [], interfiles: [],
+  aires: [],
 };
 
 /**

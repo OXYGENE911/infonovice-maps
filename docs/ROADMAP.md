@@ -835,6 +835,15 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] AIRES-1 (05/09) : l'aire d'autoroute à venir — pastille bleue sous le
+      cartouche, panneau bleu (nom, gestionnaire, distance et temps en direct,
+      pictogrammes des commodités, réseaux de recharge TOUS confondus),
+      ouverture seule à 5 km et fermeture seule au dépassement, flèches pour
+      les suivantes, « Y aller » = étape. Aires dans le relevé de corridor
+      (zéro requête de plus), commodités en une requête par trajet, côté
+      droit du tracé seulement (mesuré : l'aire d'en face est à gauche).
+      RESTE : pictogrammes SVG dessinés (émojis pour l'instant) ; la voix
+      pourrait dire « aire dans 2 km » sur demande.
 - [x] PRO-LIENS-1 (05/09) : trois portes vers Maps Pro — entrée de menu,
       marque de l'en-tête cliquable, ligne dans le bilan de fin de trajet —
       toutes vers /pro.html, page passerelle lisible sans script dont la
