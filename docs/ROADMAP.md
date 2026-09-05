@@ -835,6 +835,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] MESURE-2 (06/09) : tronçons listés sous le total, « Fermer la surface »
+      (aire sphérique, périmètre, polygone teinté), « Rouvrir le tracé ».
+      RESTE : distance par la route sur demande ; étiquettes sur la carte.
 - [x] MENU-GRAPH-1 (06/09) : soleil / lune jaunes et demi-disque devant les
       thèmes, chien au volant devant « Découvrir Maps Pro », corbeille par
       trajet habituel (oublierHabitude). RESTE (graphisme du menu) : pictos
@@ -846,9 +849,6 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       chère de la fenêtre, prix du jour open data). RESTE : filtre par
       enseigne (apparier prix-carburants aux stations OSM qui portent
       brand) ; pastilles des pleins sur la carte ; jauge pendant le suivi.
-- [x] MESURE-2 (06/09) : tronçons listés sous le total, « Fermer la surface »
-      (aire sphérique, périmètre, polygone teinté), « Rouvrir le tracé ».
-      RESTE : distance par la route sur demande ; étiquettes sur la carte.
 - [x] OUTILS-2 (06/09) : volet « Outils » redessiné — clé à molette, grille
       de tuiles, page plein écran par outil (page-outil.ts). Météo dans sa
       page (plus de débordement latéral), Signal GPS (précision qualifiée ;
