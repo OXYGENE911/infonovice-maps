@@ -45,6 +45,22 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   dit, pause sans station qui ne bloque rien), profil lu d'IndexedDB ;
   parcours E2E Paris–Lyon avec trois stations simulées : deux pleins,
   Auxerre puis Mâcon, Beaune la moins chère.
+## [1.108.0] — 2026-09-06 — MESURE-2
+
+### Mesurer : les tronçons un à un, et la surface d'une figure fermée
+- Armelin : « quand on ajoute plusieurs tronçons, afficher en dessous la
+  distance entre chaque tronçon ; un bouton pour relier le premier point et
+  le dernier afin de sceller une surface et afficher sa superficie et son
+  périmètre ». Fait : la liste des tronçons sous le total (« 1 → 2 :
+  1,11 km »), et **« Fermer la surface »** dès trois points — la figure se
+  boucle, se teinte, et le relevé dit « surface 45 ha · périmètre 3,2 km »
+  (m², hectares ou km² selon la taille) ; « Rouvrir le tracé » redit la
+  longueur.
+- L'aire est celle de la sphère (formule de Chamberlain & Duquette) : un
+  carré d'un centième de degré fait 1,236 km², vérifié par le test.
+- Tests : tronçons, aire (sens de parcours indifférent), périmètre,
+  formats, bilan fermé / ouvert, polygone dessiné ; parcours E2E : trois
+  points, tronçons listés, surface et périmètre, retour au tracé.
 
 ## [1.105.0] — 2026-09-06 — OUTILS-2
 

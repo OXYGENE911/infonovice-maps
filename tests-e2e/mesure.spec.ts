@@ -56,6 +56,23 @@ test('MESURER : le volet du menu lance la mesure, chaque touche pose un point, l
   await page.mouse.click(200, 530);
   await expect(releve).toContainText(/3 points/);
   await expect(releve).toContainText('dernier segment');
+  // LES TRONÇONS SOUS LE TOTAL (MESURE-2) : un par segment.
+  await expect(releve.locator('.mesure-segments li')).toHaveCount(2);
+  await expect(releve.locator('.mesure-segments li').first()).toContainText(/^1 → 2 : \d/);
+
+  // FERMER LA SURFACE (MESURE-2) : trois points font un triangle — surface,
+  // périmètre, le retour listé, et un polygone dans la source.
+  const fermer = releve.getByRole('button', { name: 'Fermer la surface' });
+  await expect(fermer).toBeEnabled();
+  await fermer.click();
+  await expect(releve).toContainText(/surface \d/);
+  await expect(releve).toContainText(/périmètre \d/);
+  await expect(releve.locator('.mesure-segment-retour')).toContainText('3 → 1');
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as Fenetre).__carte.querySourceFeatures('mesure')
+      .some((f) => (f as { geometry: { type: string } }).geometry.type === 'Polygon'))).toBe(true);
+  await releve.getByRole('button', { name: 'Rouvrir le tracé' }).click();
+  await expect(releve).toContainText('à vol d’oiseau');
   await page.getByRole('button', { name: 'Annuler le dernier point' }).click();
   await expect(releve).toContainText(/2 points/);
   await page.getByRole('button', { name: 'Effacer' }).click();

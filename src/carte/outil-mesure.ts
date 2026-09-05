@@ -15,17 +15,19 @@
  * AUCUN RÉSEAU : tout se calcule ici. */
 import type { Map as CarteMapLibre, GeoJSONSource } from 'maplibre-gl';
 import { refermerPanneaux } from './panneaux';
-import { bilanMesure, geojsonMesure, type PointMesure } from '../lib/mesure';
+import { bilanMesure, geojsonMesure, formaterDistance, type PointMesure } from '../lib/mesure';
 
 const SOURCE = 'mesure';
 const TRAIT = 'mesure-trait';
 const POINTS = 'mesure-points';
+const SURFACE = 'mesure-surface';
 const ACCENT = '#2272C4';
 
 export class OutilMesure extends HTMLElement {
   #carte: CarteMapLibre | null = null;
   #points: PointMesure[] = [];
   #actif = false;
+  #ferme = false;
   #releve: HTMLElement | null = null;
 
   connectedCallback(): void {
@@ -43,11 +45,21 @@ export class OutilMesure extends HTMLElement {
     releve.setAttribute('aria-label', 'Mesure en cours');
     releve.innerHTML = `
       <p class="mesure-texte"></p>
+      <ol class="mesure-segments" aria-label="Distance de chaque tronçon"></ol>
       <div class="mesure-actions">
         <button type="button" class="mesure-annuler">Annuler le dernier point</button>
+        <button type="button" class="mesure-fermer" aria-pressed="false">Fermer la surface</button>
         <button type="button" class="mesure-effacer">Effacer</button>
         <button type="button" class="mesure-terminer">Terminer</button>
       </div>`;
+    /* FERMER LA SURFACE (MESURE-2, 06/09) : Armelin — « un bouton pour relier
+       le premier point et le dernier afin de sceller une surface à calculer
+       et afficher sa superficie et son périmètre ». Un pressoir : fermée, la
+       figure dit sa surface ; rouverte, elle redit sa longueur. */
+    releve.querySelector('.mesure-fermer')?.addEventListener('click', () => {
+      this.#ferme = !this.#ferme;
+      this.#poser();
+    });
     releve.querySelector('.mesure-annuler')?.addEventListener('click', () => {
       this.#points.pop();
       this.#poser();
@@ -100,23 +112,48 @@ export class OutilMesure extends HTMLElement {
     if (!this.#actif) return;
     this.#actif = false;
     this.#points = [];
+    this.#ferme = false;
     document.body.classList.remove('mesure-active');
     if (this.#releve) this.#releve.hidden = true;
     this.#poser();
   }
 
   #poser(): void {
-    const bilan = bilanMesure(this.#points);
+    const bilan = bilanMesure(this.#points, this.#ferme);
     const texte = this.#releve?.querySelector<HTMLElement>('.mesure-texte');
     if (texte) texte.textContent = bilan.texte;
     const annuler = this.#releve?.querySelector<HTMLButtonElement>('.mesure-annuler');
     if (annuler) annuler.disabled = bilan.nb === 0;
     const effacer = this.#releve?.querySelector<HTMLButtonElement>('.mesure-effacer');
     if (effacer) effacer.disabled = bilan.nb === 0;
+    /* LES TRONÇONS SOUS LE TOTAL (MESURE-2) : « afficher en dessous la
+       distance entre chaque tronçon ». Fermée, la figure ajoute le retour. */
+    const segments = this.#releve?.querySelector<HTMLElement>('.mesure-segments');
+    if (segments) {
+      segments.replaceChildren();
+      bilan.segmentsM.forEach((m, i) => {
+        const li = document.createElement('li');
+        li.textContent = `${i + 1} → ${i + 2} : ${formaterDistance(m)}`;
+        segments.appendChild(li);
+      });
+      if (bilan.surfaceM2 !== null && bilan.perimetreM !== null) {
+        const li = document.createElement('li');
+        li.className = 'mesure-segment-retour';
+        li.textContent = `${bilan.nb} → 1 : ${formaterDistance(bilan.perimetreM - bilan.totalM)} (retour)`;
+        segments.appendChild(li);
+      }
+      segments.hidden = segments.children.length === 0;
+    }
+    const fermer = this.#releve?.querySelector<HTMLButtonElement>('.mesure-fermer');
+    if (fermer) {
+      fermer.disabled = bilan.nb < 3;
+      fermer.setAttribute('aria-pressed', String(this.#ferme && bilan.nb >= 3));
+      fermer.textContent = this.#ferme && bilan.nb >= 3 ? 'Rouvrir le tracé' : 'Fermer la surface';
+    }
 
     const carte = this.#carte;
     if (!carte) return;
-    const donnees = geojsonMesure(this.#points);
+    const donnees = geojsonMesure(this.#points, this.#ferme);
     /* ON TENTE, ET L'ON NE DIFFÈRE QUE SUR L'ÉCHEC RÉEL — le contrat des
        anneaux du véhicule et du tracé d'itinéraire. */
     try {
@@ -130,6 +167,10 @@ export class OutilMesure extends HTMLElement {
       }
       throw e;
     }
+    carte.addLayer({
+      id: SURFACE, type: 'fill', source: SOURCE, filter: ['==', ['geometry-type'], 'Polygon'],
+      paint: { 'fill-color': ACCENT, 'fill-opacity': 0.16 },
+    });
     carte.addLayer({
       id: TRAIT, type: 'line', source: SOURCE, filter: ['==', ['geometry-type'], 'LineString'],
       paint: { 'line-color': ACCENT, 'line-width': 3, 'line-dasharray': [2, 1.5] },
