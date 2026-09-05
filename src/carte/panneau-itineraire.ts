@@ -27,7 +27,7 @@ import { pictoMenu, type NomPicto } from './icone-menu';
 import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
 import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
-import { apprendreTrajet, lireHabitudes, suggerer } from '../lib/routines';
+import { apprendreTrajet, lireHabitudes, oublierHabitude, suggerer } from '../lib/routines';
 import {
   profilCarburant, planifierCarburant, euros, prixLitre, LIBELLE_PRIX, LIBELLES_CARBURANT,
   type StationCarburant,
@@ -1467,16 +1467,22 @@ export class PanneauItineraire extends HTMLElement {
          la même page — l'endroit où l'on cherche « où s'arrêter ». */
       if (estThermique(memo)) {
         const carbu = profilCarburant(memo);
+        /* LA COURSE ENTRE LE PLAN AUTOMATIQUE ET L'OUVERTURE DE LA PAGE (CI du
+           06/09, corps vide) : l'appel automatique pose `#rechargePour` puis
+           ATTEND IndexedDB ; si l'usager ouvre la page pendant cette attente,
+           son appel voit le jeton et repart sans rien écrire — et l'appel
+           automatique, lui, se taisait. Il ne se tait plus : le plan des
+           pleins s'écrit dans tous les cas (la page électrique fait pareil),
+           et l'invite se montre dès que la page est celle qu'on regarde. */
         if (!carbu) {
-          if (!auto) {
+          if (!auto || this.#vue === 'recharge') {
             corps.textContent = 'Véhicule thermique ou hybride : renseignez le carburant,'
               + ' le réservoir et la consommation dans « Mon véhicule » pour planifier les pleins.';
           }
           this.#rechargePour = null;
           return;
         }
-        if (!auto) await this.#planifierCarburant(iti, corps, carbu);
-        else this.#rechargePour = null;
+        await this.#planifierCarburant(iti, corps, carbu);
         return;
       }
       /* En automatique, PAS de véhicule = pas de plan, en silence : le
@@ -3283,6 +3289,8 @@ export class PanneauItineraire extends HTMLElement {
       routines.replaceChildren();
       const suggestions = suggerer(await lireHabitudes(), reperesLus, new Date());
       for (const sug of suggestions) {
+        const ligne = document.createElement('span');
+        ligne.className = 'iti-routine-ligne';
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'iti-routine';
@@ -3292,7 +3300,20 @@ export class PanneauItineraire extends HTMLElement {
         b.addEventListener('click', () => {
           this.allerVers({ lon: sug.point.lon, lat: sug.point.lat }, sug.nom);
         });
-        routines.append(b);
+        /* LA CORBEILLE (MENU-GRAPH-1, 06/09) : Armelin — « une petite corbeille
+           à côté pour proposer de supprimer un trajet enregistré ». Une
+           habitude oubliée ne revient qu'avec trois nouveaux trajets. */
+        const oublier = document.createElement('button');
+        oublier.type = 'button';
+        oublier.className = 'iti-routine-oublier';
+        oublier.innerHTML = pictoMenu('corbeille');
+        oublier.setAttribute('aria-label', `Oublier le trajet habituel vers ${sug.nom}`);
+        oublier.title = 'Oublier ce trajet';
+        oublier.addEventListener('click', () => {
+          void oublierHabitude(sug.point).then(() => this.#majRaccourcis());
+        });
+        ligne.append(b, oublier);
+        routines.append(ligne);
       }
       /* LA LIGNE DU BOUTON PARAÎT AVEC LES SUGGESTIONS, la liste reste
          repliée : c'est l'inverse d'avant, où la liste s'ouvrait d'office et

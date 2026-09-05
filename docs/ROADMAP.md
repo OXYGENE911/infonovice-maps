@@ -835,6 +835,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] MENU-GRAPH-1 (06/09) : soleil / lune jaunes et demi-disque devant les
+      thèmes, chien au volant devant « Découvrir Maps Pro », corbeille par
+      trajet habituel (oublierHabitude). RESTE (graphisme du menu) : pictos
+      colorés sur les autres sections, à mesurer contre la hauteur du menu.
 - [x] THERMIQUE-2 (06/09) : trois motorisations (électrique, hybride
       rechargeable, thermique), carburant / réservoir / consommation / jauge,
       autonomie carburant au bilan, pleins planifiés sur la page « Arrêts de

@@ -1183,10 +1183,15 @@ etat-connexion { display: contents; }
 .reglages-theme-choix { flex: 1; position: relative; display: flex; }
 .reglages-theme-choix input { position: absolute; opacity: 0; width: 0; height: 0; }
 .reglages-theme-choix span {
-  flex: 1; text-align: center; padding: 8px 0; border-radius: 10px;
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 0; border-radius: 10px;
   border: 1px solid var(--bord-2); font: 600 13px var(--police);
   color: var(--texte-2); cursor: pointer;
 }
+/* JAUNE, COMME UN SOLEIL ET UNE LUNE (MENU-GRAPH-1) ; l'auto reste sobre. */
+.reglages-theme-choix .picto-menu { width: 17px; height: 17px; }
+.reglages-theme-choix .picto-soleil, .reglages-theme-choix .picto-lune { color: #F2B200; }
+.reglages-theme-choix .picto-lune { fill: #F2B200; }
 .reglages-theme-choix input:checked ~ span {
   background: var(--bleu-50); border-color: var(--accent); color: var(--accent);
 }
@@ -3145,6 +3150,18 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
 .cible-annuler:focus-visible { outline: none; box-shadow: var(--focus); }
 
 .iti-routines { display: flex; flex-wrap: wrap; gap: 6px; }
+.iti-routine-ligne { display: inline-flex; align-items: stretch; }
+.iti-routine-ligne .iti-routine { border-radius: 999px 0 0 999px; border-right: none; }
+.iti-routine-oublier {
+  display: inline-flex; align-items: center; padding: 0 8px; border-radius: 0 999px 999px 0;
+  border: 1px solid var(--accent); background: var(--bleu-50); color: var(--bleu-700); cursor: pointer;
+}
+.iti-routine-oublier .picto-menu { width: 15px; height: 15px; }
+.iti-routine-oublier:hover { background: #D9534F; border-color: #D9534F; color: var(--blanc); }
+.iti-routine-oublier:focus-visible { outline: none; box-shadow: var(--focus); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="clair"]) .iti-routine-oublier { background: #14263A; color: var(--bleu-100); }
+}
 .iti-routine {
   padding: 6px 12px; border-radius: 999px;
   border: 1px solid var(--accent); background: var(--bleu-50);
@@ -4691,6 +4708,7 @@ filtre-poi {
 
 /* MAPS PRO — les trois portes (PRO-LIENS-1, 05/09) : menu, marque, bilan.
    Une ligne et un lien, jamais une fenêtre qui s'impose. */
+.reglages-pro-chien { width: 22px; height: 22px; vertical-align: -6px; margin-right: 6px; border-radius: 6px; }
 .reglages-pro-lien { display: inline-block; font: 600 13px var(--police); color: var(--accent); text-decoration: underline; }
 .bg-bilan-pro { margin: 10px 0 0; font: 400 13px/1.45 var(--police); color: var(--texte-2); }
 .bg-bilan-pro a { color: var(--accent); text-decoration: underline; }

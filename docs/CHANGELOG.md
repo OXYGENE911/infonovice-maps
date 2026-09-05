@@ -2,6 +2,21 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.107.0] — 2026-09-06 — MENU-GRAPH-1
+
+### Un menu moins « formulaire », et une corbeille pour les trajets habituels
+- Armelin : « dans le menu, ça fait trop formulaire […] un logo de soleil
+  jaune pour le jour et un logo jaune en forme de lune pour la nuit ; le
+  logo du chien avec un volant à côté de Découvrir Maps Pro ». Fait : soleil
+  et lune jaunes (et un demi-disque pour Auto) devant les mots du thème, le
+  chien au volant devant le lien Maps Pro. Les mots restent : les pictos sont
+  décoratifs, le libellé porte le sens.
+- « Trajets habituels » : **une corbeille à côté de chaque trajet** l'oublie
+  d'un geste, sans passer par « Tout oublier » ; l'oubli est écrit
+  (IndexedDB) et le trajet ne revient qu'avec trois nouveaux calculs.
+- Tests : couleur du soleil mesurée, chien présent ; corbeille qui oublie un
+  seul trajet et tient au rechargement.
+
 ## [1.106.0] — 2026-09-06 — THERMIQUE-2
 
 ### Les pleins d'un thermique, planifiés comme les recharges d'un électrique

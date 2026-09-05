@@ -427,7 +427,12 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
     r.checked = themeCourant() === th;
     r.addEventListener('change', () => { garderTheme(th); });
     const mot = document.createElement('span');
-    mot.textContent = LIBELLES_THEME[th];
+    /* UN SOLEIL JAUNE, UNE LUNE JAUNE (MENU-GRAPH-1, 06/09). Armelin : « dans
+       le menu, ça fait trop formulaire […] un logo de soleil jaune pour le
+       jour et un logo jaune en forme de lune pour la nuit ». Le mot reste :
+       le picto est décoratif, le libellé porte le sens. */
+    const PICTO_THEME = { auto: 'theme-auto', clair: 'soleil', sombre: 'lune' } as const;
+    mot.innerHTML = `${pictoMenu(PICTO_THEME[th])}${LIBELLES_THEME[th]}`;
     l.append(r, mot);
     boiteTheme.append(l);
   }
@@ -700,7 +705,15 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   lienPro.className = 'reglages-pro-lien';
   lienPro.href = '/pro.html';
   lienPro.title = 'Cercles, véhicule connecté, itinéraires partagés, flottes';
-  lienPro.textContent = 'Découvrir Maps Pro';
+  /* LE CHIEN AU VOLANT (MENU-GRAPH-1) : Armelin — « ajouter le logo du chien
+     avec un volant à côté de la ligne Découvrir Maps Pro ». Décoratif. */
+  const chien = document.createElement('img');
+  chien.className = 'reglages-pro-chien';
+  chien.src = '/icones/volant-48.png';
+  chien.alt = '';
+  chien.width = 22; chien.height = 22;
+  chien.setAttribute('aria-hidden', 'true');
+  lienPro.append(chien, document.createTextNode('Découvrir Maps Pro'));
   /* VERSION ET LIEN PRO SUR LA MÊME RANGÉE (MESURE-1, 05/09) : le menu est
      une fenêtre haute comme son contenu, et le volet « Mesurer » lui a coûté
      une rangée. Mesuré : 160 px pour cette boîte, 524 px pour le menu sur un
