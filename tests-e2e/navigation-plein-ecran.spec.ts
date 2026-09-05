@@ -106,3 +106,18 @@ test('LA FLÈCHE DE VIRAGE N’ARRIVE QU’À PORTÉE : tout droit à 1,9 km, à
   await expect(instruction).toContainText('Tournez à droite', { timeout: 15_000 });
   await expect(distance).not.toContainText('Tournez');
 });
+
+test('LE COPILOTE SAIT SIGNALER UNE ERREUR DE CARTE à la position courante (SENS-1)', async ({ page }) => {
+  /* Avenue Michel-Bizot passée en sens unique : OSM le savait, la BD TOPO
+     non. Deux liens, centrés sur la position, rien d'envoyé d'office. */
+  await suivre(page);
+  await rouler(page, TRACE[2]![0], TRACE[2]![1]);
+  // Le bouton du copilote vit dans la barre DÉPLIÉE (NAV-3).
+  await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
+  await page.locator('.bg-copilote-bouton').click();
+  const liens = page.locator('.bg-copilote-signaler a');
+  await expect(liens).toHaveCount(2, { timeout: 10_000 });
+  await expect(liens.nth(0)).toHaveAttribute('href', /openstreetmap\.org\/note\/new#map=18\/48\.85000\/2\.3428/);
+  await expect(liens.nth(1)).toHaveAttribute('href', /cartes\.gouv\.fr\/cartes\?c=2\.3428/);
+  await expect(liens.nth(0)).toHaveAttribute('target', '_blank');
+});

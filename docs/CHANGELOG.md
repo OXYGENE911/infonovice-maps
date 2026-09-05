@@ -45,10 +45,12 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   OpenStreetMap le 05/09, la voie porte déjà `oneway=yes` sur plusieurs
   tronçons ; l'itinéraire vient de la Géoplateforme (BD TOPO), mise à jour
   par campagnes. Ce n'est pas une erreur de code : c'est une donnée en
-  retard chez le producteur. Piste instruite à la feuille de route (SENS-1) :
-  un bouton « Signaler une erreur de carte » vers l'espace collaboratif IGN
-  et une note OSM, et, en Pro, la vérification du sens des tronçons du
-  trajet contre OSM.
+  retard chez le producteur. **Livré côté libre (SENS-1)** : le Copilote gagne une section
+  « Carte » avec deux liens à la position courante — une note
+  OpenStreetMap (sans compte) et cartes.gouv.fr (l'outil de signalement
+  de l'IGN). Aucune donnée envoyée d'office : l'usager écrit et envoie.
+  Reste en Pro : la vérification du sens des tronçons du trajet contre
+  OSM.
 
 ## [1.94.1] — 2026-09-05 — RETOUR-0409
 

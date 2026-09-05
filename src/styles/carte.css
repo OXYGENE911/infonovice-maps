@@ -2971,6 +2971,10 @@ dialog.recevoir-favoris::backdrop { background: rgba(4, 20, 40, .45); }
 
 /* LA SECTION BATTERIE DU COPILOTE (SOC-EDIT, 04/09). */
 .bg-copilote-soc { margin: 2px 0 6px; font: 600 13px var(--police); color: var(--texte-1); }
+/* Les liens de signalement du copilote (SENS-1) : lisibles, soulignés,
+   ouverts dans un onglet — on quitte l'application le temps d'écrire. */
+.bg-copilote-signaler { margin: 4px 0 8px; font: 400 13px/1.45 var(--police); color: var(--texte-2); }
+.bg-copilote-signaler a { color: var(--accent); text-decoration: underline; }
 .bg-copilote-soc-correction { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .bg-copilote-soc-champ {
   width: 130px; padding: 7px 10px; border-radius: 9px;
