@@ -2,6 +2,23 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.100.0] — 2026-09-05 — RETOURS-AMIS-1
+
+### Retours des amis d'Armelin — première fournée
+- **La batterie à l'arrivée pendant le suivi.** « L'information est
+  présente pendant la planification, mais disparaît pendant la navigation ;
+  dans le Copilote non plus. » Un quatrième chiffre dans la barre du bas —
+  « ~62 % à l'arrivée » — et une ligne « À l'arrivée, selon le plan » dans
+  la section Batterie du Copilote. Il ne paraît qu'avec un plan de recharge :
+  sans plan, aucun chiffre inventé. La rangée des chiffres se partage en
+  trois ou quatre colonnes au lieu de s'enrouler.
+- **Le message des repères manquants ne parle plus de panne.** « Repères
+  OpenStreetMap indisponibles : ni limite de vitesse, ni schéma de
+  rond-point » sonnait comme un défaut technique. Il dit maintenant
+  « Limites de vitesse et ronds-points non relevés sur ce trajet : le
+  guidage continue sans ces repères » — ce qui manque, calmement, et ce qui
+  tient.
+
 ## [1.99.0] — 2026-09-05 — FOND-NAV-1
 
 ### Le fond de carte reste à portée pendant le suivi

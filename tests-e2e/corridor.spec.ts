@@ -152,7 +152,7 @@ test('UNE EXPIRATION NE SE LIT PAS « route sans repères »', async ({ page }) 
   });
   await deplier(page);
   await expect(page.locator('.bg-reperes')).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator('.bg-reperes')).toContainText('indisponibles');
+  await expect(page.locator('.bg-reperes')).toContainText('non relevés');
 });
 
 test('LE SUIVI VAUT TOUJOURS SANS LES REPÈRES', async ({ page }) => {

@@ -835,9 +835,37 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] RETOURS-AMIS-1 (05/09) : batterie à l'arrivée dans la barre du suivi et le
+      Copilote (quand un plan existe) ; message des repères manquants sans
+      le mot de la panne.
 - [x] FOND-NAV-1 (05/09) : bouton rond « fond de carte » dans la colonne de
       droite pendant le suivi ; le sélecteur du menu vient se poser dans une
       feuille flottante et retourne au menu ensuite — une seule préférence.
+- [ ] RETOURS-AMIS — LE RESTE, trié le 05/09 (suggestions des amis d'Armelin) :
+      · MOTORISATION-1 (livré — PR #257) : choix électrique / thermique-hybride
+        dans « Mon véhicule » ; thermique = aucun plan de recharge, mention
+        claire. THERMIQUE-2 (décision) : autonomie et consommation
+        thermiques, arrêts carburant toutes les 2 h, filtre des enseignes de
+        stations (Total, Shell, BP, Avia…) comme les réseaux de bornes, prix
+        du carburant avant la station (open data prix-carburants déjà là).
+      · FOND-NAV-1 (livré, 1.99.0) : bouton rond « fonds de carte » au-dessus de la
+        boussole pendant le suivi — le menu étant effacé (NAV-2).
+      · RECHERCHE-NAV-1 (PR #258) : loupe ronde en suivi pour chercher une
+        adresse, une borne, une station, un restaurant et l'ajouter en étape.
+      · MESURE-1 (ce jour) : outil « Mesurer » — distance A→B et parcours
+        dessiné point à point, sans réseau.
+      · METEO-VILLE-1 : météo d'une ville au choix (heure par heure, 7 jours)
+        — Open-Meteo, dérogation déjà publique.
+      · FAVORIS-4 : gestion des favoris en page pleine (cartouches domicile /
+        travail qui débordent, deux défilements, menus de déplacement
+        multiples) — ergonomie à revoir, chantier UX à part.
+      · RANDO-1 (étude) : sentiers, topographie, altimétrie, points de
+        passage et retour sur ses pas — un autre produit ou un mode.
+      · TC-1 (étude) : transports en commun (PAN transport.data.gouv.fr,
+        navitia/PRIM IDF avec clé) — hors client libre sans clé.
+      · Comparaison CoMaps / OsmAnd : docs/etudes-comaps-osmand.md.
+      · Voix réservée au Pro : NON recommandé — la voix est une fonction de
+        sécurité, elle reste libre.
 - [x] AIRES-1 (05/09) : l'aire d'autoroute à venir — pastille bleue sous le
       cartouche, panneau bleu (nom, gestionnaire, distance et temps en direct,
       pictogrammes des commodités, réseaux de recharge TOUS confondus),
