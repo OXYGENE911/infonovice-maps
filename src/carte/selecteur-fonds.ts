@@ -31,7 +31,11 @@ export class SelecteurFonds extends HTMLElement {
   #rendre(): void {
     const { fond, cadastre, relief3d } = this.#options;
     this.innerHTML = `
-      <details class="fonds">
+      <!-- DÉPLIÉ D'OFFICE quand l'attribut « deplie » est posé (FOND-NAV-1) : la
+           feuille du suivi accueille ce sélecteur sans son sommaire, et un
+           nouveau rendu — le déplacement dans le DOM rejoue connectedCallback —
+           le rendait replié, donc invisible. -->
+      <details class="fonds"${this.hasAttribute('deplie') ? ' open' : ''}>
         <summary aria-label="Choisir le fond de carte">${pictoMenu('fonds')}Fonds</summary>
         <fieldset>
           <legend>Fond de carte</legend>

@@ -7,6 +7,7 @@ import { estSombre, themeCourant, garderTheme, LIBELLES_THEME, THEMES } from '..
 import { CARTOUCHES, imageCartouche, zonesEtirables } from './cartouche-route';
 import { refermerPanneaux } from './panneaux';
 import { VERSION, libelleVersion, forcerMiseAJour } from '../lib/version';
+import { pictoMenu } from './icone-menu';
 import 'maplibre-gl/dist/maplibre-gl.css';
 // LE WORKER DE MAPLIBRE DOIT ÊTRE ÉMIS PAR LE BUILD. MapLibre 6 le charge en
 // module séparé, résolu PAR DÉFAUT relativement à son propre fichier — dans
@@ -343,6 +344,65 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   };
   menu.ajouter('Affichage', selecteur);
 
+  /* LE FOND DE CARTE PENDANT LE SUIVI (FOND-NAV-1, 05/09). Les amis
+     d'Armelin : « en mode navigation, il n'y a pas de petite pastille ronde
+     permettant de gérer les fonds de carte, car cette option n'est disponible
+     que dans le menu, masqué pendant la navigation. Un bouton dédié au-dessus
+     de la boussole. » NAV-2 efface le menu en suivi — et avec lui le
+     sélecteur. Un bouton rond de la colonne de droite ouvre une feuille où le
+     MÊME sélecteur vient se poser (déplacé, pas dupliqué : une seule vérité
+     sur le fond, une seule préférence), et le rend au menu en se refermant.
+     Le bouton n'existe qu'en suivi (CSS) : hors suivi, le menu suffit. */
+  const nidSelecteur = selecteur.parentElement;
+  const porteFondsNav = document.createElement('div');
+  porteFondsNav.className = 'maplibregl-ctrl porte-fonds-nav';
+  const boutonFondsNav = document.createElement('button');
+  boutonFondsNav.type = 'button';
+  boutonFondsNav.className = 'fonds-nav';
+  boutonFondsNav.setAttribute('aria-label', 'Fond de carte');
+  boutonFondsNav.setAttribute('aria-expanded', 'false');
+  boutonFondsNav.innerHTML = pictoMenu('fonds');
+  porteFondsNav.appendChild(boutonFondsNav);
+  const feuilleFonds = document.createElement('div');
+  feuilleFonds.className = 'fonds-nav-feuille';
+  feuilleFonds.hidden = true;
+  feuilleFonds.setAttribute('role', 'dialog');
+  feuilleFonds.setAttribute('aria-label', 'Fond de carte');
+  const fermerFonds = document.createElement('button');
+  fermerFonds.type = 'button';
+  fermerFonds.className = 'fonds-nav-fermer';
+  fermerFonds.textContent = 'Fermer';
+  feuilleFonds.appendChild(fermerFonds);
+  /* SUR LE BODY : #carte crée son contexte d'empilement (leçon BLANC-1). */
+  document.body.appendChild(feuilleFonds);
+  const rangerFonds = (): void => {
+    if (feuilleFonds.hidden) return;
+    feuilleFonds.hidden = true;
+    boutonFondsNav.setAttribute('aria-expanded', 'false');
+    selecteur.removeAttribute('deplie');
+    nidSelecteur?.appendChild(selecteur);
+  };
+  boutonFondsNav.addEventListener('click', (e) => {
+    /* LE CLIC S'ARRÊTE ICI : le « clic extérieur qui referme » (panneaux.ts)
+       écoute le document et refermait le volet qu'on venait d'ouvrir —
+       mesuré : details.open repassait à faux dans la même frappe. */
+    e.stopPropagation();
+    if (!feuilleFonds.hidden) { rangerFonds(); return; }
+    /* L'ATTRIBUT AVANT LE DÉPLACEMENT : déplacer un composant rejoue son
+       connectedCallback, qui RE-REND le volet — replié. Mesuré : `open` posé
+       après coup repassait à faux. Le sélecteur lit l'attribut au rendu. */
+    selecteur.setAttribute('deplie', '');
+    feuilleFonds.insertBefore(selecteur, fermerFonds);
+    const volet = selecteur.querySelector<HTMLDetailsElement>('details.fonds');
+    if (volet) volet.open = true;
+    feuilleFonds.hidden = false;
+    boutonFondsNav.setAttribute('aria-expanded', 'true');
+  });
+  /* Et les clics DANS la feuille ne referment rien non plus. */
+  feuilleFonds.addEventListener('click', (e) => { e.stopPropagation(); });
+  fermerFonds.addEventListener('click', rangerFonds);
+  carte.addControl({ onAdd: () => porteFondsNav, onRemove: () => porteFondsNav.remove() }, 'bottom-right');
+
   /* LE THÈME JOUR / NUIT (THEME-1, 03/09). Armelin : « par défaut je suis en
      carte mode nuit, mais je n'ai pas la possibilité de changer ce
      paramétrage du navigateur en plein écran de l'application PWA ». Une PWA
@@ -523,6 +583,7 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      longtemps, donc celle qui convient à trois lignes qu'on lit d'un coup. */
   const guidage = new BandeauGuidage();
   guidage.carte = carte;
+  guidage.addEventListener('guidage-arrete', rangerFonds);
   conteneur.appendChild(guidage);
   panneau.guidage = guidage;
 
