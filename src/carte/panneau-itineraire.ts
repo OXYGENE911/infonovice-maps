@@ -980,7 +980,9 @@ export class PanneauItineraire extends HTMLElement {
     /* « Y ALLER » DEPUIS LE PANNEAU DES AIRES (AIRES-1, 05/09) : l'aire
        devient une étape du trajet en cours, et le trajet se recalcule — le
        même chemin que le détour par un lieu. */
-    document.addEventListener('aire-etape', (e) => {
+    /* ET LA RECHERCHE DU SUIVI (RECHERCHE-NAV-1) emprunte le même chemin :
+       un lieu, une étape, un recalcul, le suivi qui repart. */
+    for (const nom of ['aire-etape', 'lieu-etape']) document.addEventListener(nom, (e) => {
       const d = (e as CustomEvent<{ lon: number; lat: number; nom: string }>).detail;
       if (!d || !Number.isFinite(d.lon) || !Number.isFinite(d.lat)) return;
       this.detourParLieu({ lon: d.lon, lat: d.lat, titre: d.nom } as unknown as Monument);
@@ -2420,8 +2422,15 @@ export class PanneauItineraire extends HTMLElement {
     const etapes = this.querySelector('etapes-itineraire') as EtapesItineraire;
     if (etapes.points.length >= MAX_ETAPES) return false;
     etapes.points = [...etapes.points, { lon: lieu.lon, lat: lieu.lat }];
+    /* EN SUIVI, LE SUIVI REPART SUR LE NOUVEAU TRACÉ (RECHERCHE-NAV-1,
+       05/09). Sans ce drapeau, « Y aller » (AIRES-1) recalculait le trajet
+       pendant que le bandeau continuait de suivre l'ANCIEN tracé — le
+       parcours des aires ne regardait que la requête partie. Et l'accueil du
+       planificateur ne s'ouvre pas au volant : NAV-2 l'a effacé. */
+    const enSuivi = this.#guidage?.actif === true;
+    if (enSuivi) this.#reprendreSuivi = true;
     void this.#calculer();
-    this.#allerA('accueil');
+    if (!enSuivi) this.#allerA('accueil');
     return true;
   }
 

@@ -4755,17 +4755,24 @@ filtre-poi {
    remplace le reste du temps), et une feuille flottante qui accueille le
    sélecteur du menu le temps du choix.
    ========================================================================== */
-.porte-fonds-nav { display: none; }
-body.en-guidage #carte .porte-fonds-nav { display: block; }
-.fonds-nav {
+.porte-fonds-nav, .porte-recherche-nav { display: none; }
+body.en-guidage #carte .porte-fonds-nav,
+body.en-guidage #carte .porte-recherche-nav { display: block; }
+/* LA LOUPE DU SUIVI (RECHERCHE-NAV-1) : même rond, même colonne. La page de
+   recherche vit dans l'en-tête, que NAV-2 efface : le temps de la page, on le
+   rend visible — la page plein écran (position fixed, z-modale) couvre tout,
+   le reste de l'en-tête ne se voit pas. */
+body.en-guidage.recherche-ouverte .entete { display: block; }
+body.en-guidage.recherche-ouverte .entete recherche-adresse.recherche-page { display: flex; }
+.fonds-nav, .recherche-nav {
   width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--bord-2);
   background: var(--fond); color: var(--texte-1); cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   box-shadow: var(--ombre-m);
 }
-.fonds-nav svg { width: 22px; height: 22px; }
+.fonds-nav svg, .recherche-nav svg { width: 22px; height: 22px; }
 .fonds-nav[aria-expanded="true"] { background: var(--accent); color: var(--blanc); border-color: var(--accent); }
-.fonds-nav:focus-visible { outline: none; box-shadow: var(--focus); }
+.fonds-nav:focus-visible, .recherche-nav:focus-visible { outline: none; box-shadow: var(--focus); }
 .fonds-nav-feuille {
   position: fixed; right: 12px;
   bottom: calc(var(--hauteur-bandeau, 120px) + 24px);
