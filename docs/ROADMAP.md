@@ -835,6 +835,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] FOND-NAV-1 (05/09) : bouton rond « fond de carte » dans la colonne de
+      droite pendant le suivi ; le sélecteur du menu vient se poser dans une
+      feuille flottante et retourne au menu ensuite — une seule préférence.
 - [x] AIRES-1 (05/09) : l'aire d'autoroute à venir — pastille bleue sous le
       cartouche, panneau bleu (nom, gestionnaire, distance et temps en direct,
       pictogrammes des commodités, réseaux de recharge TOUS confondus),
