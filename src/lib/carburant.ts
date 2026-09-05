@@ -70,6 +70,8 @@ export interface StationCarburant {
   prixL: number;
   avancementM: number;
   ecartM: number;
+  /** L'enseigne, appariée à OpenStreetMap (ENSEIGNES-1) — `null` : inconnue. */
+  enseigne?: string | null;
 }
 
 export interface OptionsPlanCarburant {
@@ -83,6 +85,9 @@ export interface OptionsPlanCarburant {
   reserveKm?: number;
   /** Fenêtre avant la limite où l'on cherche la station la moins chère, en km. Défaut : 80. */
   fenetreKm?: number;
+  /** Enseignes acceptées (ENSEIGNES-1) ; vide ou absent = toutes. Une station
+   *  d'enseigne inconnue est écartée dès qu'on filtre : on a demandé Total. */
+  enseignes?: ReadonlySet<string>;
 }
 
 export interface ArretCarburant {
@@ -114,7 +119,10 @@ export function planifierCarburant(o: OptionsPlanCarburant): PlanCarburant {
   const { reservoirL, consommationL100, jaugePourcent } = o.profil;
   const pleinKm = autonomieCarburantKm(reservoirL, consommationL100, 100);
   const autonomieDepartKm = autonomieCarburantKm(reservoirL, consommationL100, jaugePourcent);
-  const stations = [...o.stations].sort((a, b) => a.avancementM - b.avancementM);
+  const retenues = o.enseignes && o.enseignes.size > 0
+    ? o.stations.filter((s) => s.enseigne && o.enseignes!.has(s.enseigne))
+    : o.stations;
+  const stations = [...retenues].sort((a, b) => a.avancementM - b.avancementM);
   const moinsChere = stations.reduce<StationCarburant | null>(
     (m, s) => (m === null || s.prixL < m.prixL ? s : m), null,
   );

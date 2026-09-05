@@ -2,6 +2,26 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.109.0] — 2026-09-06 — ENSEIGNES-1
+
+### Les pleins par enseigne — Total, Leclerc, Shell… comme les réseaux de bornes
+- Des amis d'Armelin : « filtrer les stations par enseigne (Total, Shell,
+  BP, Avia…) comme les réseaux de bornes ». L'open data des prix n'a pas
+  d'enseigne ; OpenStreetMap l'a. Une requête Overpass par plan (stations à
+  3 km d'un tracé simplifié à 500 m), et chaque station de prix prend
+  l'enseigne de sa voisine OSM à moins de 150 m — sans voisine, elle reste
+  « inconnue », et le plan le dit.
+- Sur la page des pleins : l'enseigne devant chaque arrêt, un volet
+  « Enseignes préférées » avec les enseignes du trajet et leur nombre ;
+  cochées, le plan se refait aussitôt, sans nouvel appel, en n'acceptant que
+  celles-là (l'inconnue s'écarte : on a demandé Total). Le choix se garde
+  d'un trajet à l'autre. Si OpenStreetMap ne répond pas, le plan reste et le
+  dit.
+- Tests : requête (une seule, tracé simplifié), lecture brand / operator /
+  name et centre des chemins, appariement à 150 m, filtre du plan ; parcours
+  E2E Paris–Lyon : TotalEnergies à Auxerre, E.Leclerc à Beaune, Mâcon
+  inconnue ; cocher TotalEnergies ne garde qu'Auxerre.
+
 ## [1.108.0] — 2026-09-06 — MESURE-2
 
 ### Mesurer : les tronçons un à un, et la surface d'une figure fermée
