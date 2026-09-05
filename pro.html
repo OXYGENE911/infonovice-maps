@@ -10,20 +10,39 @@
        l'application connaît (menu, marque, fin de trajet), pendant que la
        destination réelle peut déménager — aujourd'hui l'hébergement
        provisoire, demain pro.maps.infonovice.fr. Une seule ligne à changer
-       ici, aucune dans l'application. Lisible sans JavaScript ; la
-       redirection est un <meta refresh>, et le lien reste si elle ne part pas. -->
+       ici, aucune dans l'application. Lisible sans JavaScript, indexable,
+       et sans redirection automatique : c'est le lien qu'on suit. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self';
     img-src 'self' data:; style-src 'self'; script-src 'none';
     base-uri 'self'; form-action 'none'">
-  <meta http-equiv="refresh" content="4;url=https://maps-pro-web.aasimane.workers.dev/">
   <meta name="description" content="Maps Pro : cercles, véhicule connecté,
     itinéraires partagés et flottes — le pendant payant d'Infonovice Maps,
     qui reste libre et gratuit.">
-  <meta name="robots" content="noindex">
   <meta name="theme-color" content="#0F1B2D">
   <title>Maps Pro — Infonovice Maps</title>
   <link rel="canonical" href="https://maps.infonovice.fr/pro.html">
   <link rel="icon" href="/icones/icone-192.png" type="image/png">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Infonovice Maps">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:url" content="https://maps.infonovice.fr/pro.html">
+  <meta property="og:title" content="Maps Pro — Infonovice Maps">
+  <meta property="og:description" content="Cercles, véhicule connecté, cortège, itinéraires partagés et flottes : le pendant payant d'Infonovice Maps, qui reste libre et gratuit.">
+  <meta property="og:image" content="https://maps.infonovice.fr/partage-social.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Maps Pro — Infonovice Maps",
+    "url": "https://maps.infonovice.fr/pro.html",
+    "inLanguage": "fr-FR",
+    "description": "Cercles, véhicule connecté, cortège, itinéraires partagés et flottes : le pendant payant d'Infonovice Maps, qui reste libre et gratuit.",
+    "isPartOf": { "@type": "WebSite", "name": "Infonovice Maps", "url": "https://maps.infonovice.fr/" }
+  }
+  </script>
   <link rel="stylesheet" href="/src/styles/tokens.css">
   <link rel="stylesheet" href="/src/styles/pages.css">
 </head>
@@ -44,8 +63,9 @@
       itinéraires partagés, et une offre pour les flottes.</p>
     <p class="page-action"><a href="https://maps-pro-web.aasimane.workers.dev/">Découvrir
       Maps Pro</a></p>
-    <p class="page-note">Vous allez y être conduit dans quelques secondes. Si
-      rien ne se passe, le lien ci-dessus y mène.</p>
+    <p class="page-note">Le site Maps Pro est servi par Infonovice, à part du
+      client libre : rien de ce que vous faites ici ne l’atteint sans votre
+      geste.</p>
   </main>
 </body>
 </html>
