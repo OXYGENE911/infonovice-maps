@@ -886,7 +886,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
         passage et retour sur ses pas — un autre produit ou un mode.
       · TC-1 (étude) : transports en commun (PAN transport.data.gouv.fr,
         navitia/PRIM IDF avec clé) — hors client libre sans clé.
-      · Comparaison CoMaps / OsmAnd : docs/etudes-comaps-osmand.md.
+      · Comparaison CoMaps / OsmAnd : docs/etudes-comaps-osmand.md (écrite
+        le 05/09 : hors-ligne dit clairement, export GPX, courbes IGN,
+        couloir de tuiles à emprunter ; greffons et sécurité payante, non).
       · Voix réservée au Pro : NON recommandé — la voix est une fonction de
         sécurité, elle reste libre.
 - [x] AIRES-1 (05/09) : l'aire d'autoroute à venir — pastille bleue sous le
