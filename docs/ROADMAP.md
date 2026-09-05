@@ -835,6 +835,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] METEO-VILLE-1 (05/09) : météo d'une ville dans le volet « Outils » du
+      menu — vingt-quatre heures en frise, sept jours en lignes, heures du
+      lieu, Open-Meteo (dérogation publique). Mesurer et Météo partagent le
+      volet : une seule rangée dans le menu.
 - [x] MESURE-1 (05/09) : volet « Mesurer » du menu — points au doigt, trait
       pointillé, relevé flottant qui cumule à vol d'oiseau (et le dit),
       annuler / effacer / terminer / Échap, zéro réseau. RESTE : distance
@@ -882,7 +886,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
         passage et retour sur ses pas — un autre produit ou un mode.
       · TC-1 (étude) : transports en commun (PAN transport.data.gouv.fr,
         navitia/PRIM IDF avec clé) — hors client libre sans clé.
-      · Comparaison CoMaps / OsmAnd : docs/etudes-comaps-osmand.md.
+      · Comparaison CoMaps / OsmAnd : docs/etudes-comaps-osmand.md (écrite
+        le 05/09 : hors-ligne dit clairement, export GPX, courbes IGN,
+        couloir de tuiles à emprunter ; greffons et sécurité payante, non).
       · Voix réservée au Pro : NON recommandé — la voix est une fonction de
         sécurité, elle reste libre.
 - [x] AIRES-1 (05/09) : l'aire d'autoroute à venir — pastille bleue sous le

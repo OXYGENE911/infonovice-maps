@@ -43,6 +43,8 @@ import { MesPoi } from './mes-poi';
 import { PanneauFavoris } from './panneau-favoris';
 import { PanneauTrafic } from './panneau-trafic';
 import { OutilMesure } from './outil-mesure';
+import { OutilMeteo } from './outil-meteo';
+import { OutilsMenu } from './outils-menu';
 import { PanneauVehicule } from './panneau-vehicule';
 import { MenuReglages } from './menu-reglages';
 import { brancherAjoutFavori } from './choix-liste';
@@ -480,9 +482,14 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      tout se calcule ici, rien ne part. Sans étiquette de section : le menu
      est une fenêtre haute comme son contenu, et chaque rangée compte sur un
      téléphone (le garde-fou de feuilles-basses le mesure). */
+  const outils = new OutilsMenu();
+  menu.ajouter('', outils);
   const mesure = new OutilMesure();
   mesure.carte = carte;
-  menu.ajouter('', mesure);
+  outils.ajouter(mesure);
+  /* LA MÉTÉO D'UNE VILLE (METEO-VILLE-1, 05/09) : « heure par heure, et sur
+     7 jours » — même volet, même rangée. */
+  outils.ajouter(new OutilMeteo());
 
   /* LE FILTRE DES LIEUX, À MÊME LA CARTE (POI-2, 30/08). Armelin : « ce
      serait bien d'afficher quelque part sur la carte une icône pour afficher
