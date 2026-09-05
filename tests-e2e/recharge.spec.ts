@@ -510,6 +510,11 @@ test('SOC-EDIT : l’estimation s’affiche, la correction replanifie et l’éc
   await expect(copilote).toContainText(/À l’arrivée, selon le plan : ~\d+ %/);
   await expect(page.locator('.bg-chiffre-soc')).toBeVisible();
   await expect(page.locator('.bg-soc')).toContainText(/~\d+ %/);
+  // QUATRE CHIFFRES, UNE SEULE LIGNE : la rangée se partage, elle ne s'enroule pas.
+  const lignes = await page.locator('.bg-chiffre').evaluateAll(
+    (els) => new Set(els.filter((e) => !(e as HTMLElement).hidden)
+      .map((e) => Math.round(e.getBoundingClientRect().y))).size);
+  expect(lignes, 'les quatre chiffres s’enroulent').toBe(1);
 
   /* Une valeur impossible se refuse poliment. */
   await copilote.getByRole('button', { name: 'Corriger le plan' }).click();
