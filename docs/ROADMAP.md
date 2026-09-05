@@ -885,6 +885,14 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       · Comparaison CoMaps / OsmAnd : docs/etudes-comaps-osmand.md.
       · Voix réservée au Pro : NON recommandé — la voix est une fonction de
         sécurité, elle reste libre.
+- [x] MOTORISATION-1 (05/09) : choix Électrique / Thermique ou hybride en tête
+      de « Mon véhicule ». Thermique = champs électriques retirés, aucun
+      arrêt de recharge (la page le dit), pas de batterie à l'arrivée, pas
+      de recharge dans la comparaison. Profil ancien sans le champ =
+      électrique. RESTE (THERMIQUE-2, décision d'Armelin) : autonomie et
+      consommation thermiques, arrêts carburant toutes les 2 h, filtre des
+      enseignes de stations comme les réseaux de bornes, prix à la pompe
+      (open data prix-carburants déjà là).
 - [x] AIRES-1 (05/09) : l'aire d'autoroute à venir — pastille bleue sous le
       cartouche, panneau bleu (nom, gestionnaire, distance et temps en direct,
       pictogrammes des commodités, réseaux de recharge TOUS confondus),
