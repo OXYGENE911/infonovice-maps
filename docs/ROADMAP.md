@@ -835,22 +835,22 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
-- [x] FOND-NAV-1 (05/09) : bouton rond « fond de carte » dans la colonne de
-      droite pendant le suivi ; le sélecteur du menu vient se poser dans une
-      feuille flottante et retourne au menu ensuite — une seule préférence.
 - [x] RETOURS-AMIS-1 (05/09) : batterie à l'arrivée dans la barre du suivi et le
       Copilote (quand un plan existe) ; message des repères manquants sans
       le mot de la panne.
+- [x] FOND-NAV-1 (05/09) : bouton rond « fond de carte » dans la colonne de
+      droite pendant le suivi ; le sélecteur du menu vient se poser dans une
+      feuille flottante et retourne au menu ensuite — une seule préférence.
 - [ ] RETOURS-AMIS — LE RESTE, trié le 05/09 (suggestions des amis d'Armelin) :
-      · MOTORISATION-1 (à faire ce jour) : choix électrique / thermique-hybride
+      · MOTORISATION-1 (livré — PR #257) : choix électrique / thermique-hybride
         dans « Mon véhicule » ; thermique = aucun plan de recharge, mention
         claire. THERMIQUE-2 (décision) : autonomie et consommation
         thermiques, arrêts carburant toutes les 2 h, filtre des enseignes de
         stations (Total, Shell, BP, Avia…) comme les réseaux de bornes, prix
         du carburant avant la station (open data prix-carburants déjà là).
-      · FOND-NAV-1 (ce jour) : bouton rond « fonds de carte » au-dessus de la
+      · FOND-NAV-1 (livré, 1.99.0) : bouton rond « fonds de carte » au-dessus de la
         boussole pendant le suivi — le menu étant effacé (NAV-2).
-      · RECHERCHE-NAV-1 (ce jour) : loupe ronde en suivi pour chercher une
+      · RECHERCHE-NAV-1 (PR #258) : loupe ronde en suivi pour chercher une
         adresse, une borne, une station, un restaurant et l'ajouter en étape.
       · MESURE-1 (ce jour) : outil « Mesurer » — distance A→B et parcours
         dessiné point à point, sans réseau.

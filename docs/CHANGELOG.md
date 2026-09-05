@@ -2,20 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.99.0] — 2026-09-05 — FOND-NAV-1
-
-### Le fond de carte reste à portée pendant le suivi
-- Les amis d'Armelin : « en mode navigation, il n'y a pas de petite pastille
-  ronde permettant de gérer les fonds de carte, car cette option n'est
-  disponible que dans le menu, masqué pendant la navigation. » Depuis NAV-2,
-  le menu s'efface en suivi — et le sélecteur de fonds avec lui.
-- **Un bouton rond dans la colonne de droite, seulement en suivi**, ouvre
-  une feuille où le MÊME sélecteur vient se poser — déplacé, pas dupliqué :
-  une seule vérité sur le fond, une seule préférence — et le rend au menu en
-  se refermant, ou à l'arrêt du suivi. Hors suivi, le bouton n'existe pas :
-  le menu suffit. Parcours E2E : déménagement et retour du sélecteur, fond
-  photo appliqué, préférence conservée.
-## [1.98.0] — 2026-09-05 — RETOURS-AMIS-1
+## [1.100.0] — 2026-09-05 — RETOURS-AMIS-1
 
 ### Retours des amis d'Armelin — première fournée
 - **La batterie à l'arrivée pendant le suivi.** « L'information est
@@ -31,6 +18,20 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   « Limites de vitesse et ronds-points non relevés sur ce trajet : le
   guidage continue sans ces repères » — ce qui manque, calmement, et ce qui
   tient.
+
+## [1.99.0] — 2026-09-05 — FOND-NAV-1
+
+### Le fond de carte reste à portée pendant le suivi
+- Les amis d'Armelin : « en mode navigation, il n'y a pas de petite pastille
+  ronde permettant de gérer les fonds de carte, car cette option n'est
+  disponible que dans le menu, masqué pendant la navigation. » Depuis NAV-2,
+  le menu s'efface en suivi — et le sélecteur de fonds avec lui.
+- **Un bouton rond dans la colonne de droite, seulement en suivi**, ouvre
+  une feuille où le MÊME sélecteur vient se poser — déplacé, pas dupliqué :
+  une seule vérité sur le fond, une seule préférence — et le rend au menu en
+  se refermant, ou à l'arrêt du suivi. Hors suivi, le bouton n'existe pas :
+  le menu suffit. Parcours E2E : déménagement et retour du sélecteur, fond
+  photo appliqué, préférence conservée.
 
 ## [1.97.0] — 2026-09-05 — AIRES-1
 
