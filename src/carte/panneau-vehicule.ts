@@ -15,8 +15,11 @@ import type { Map as CarteMapLibre, GeoJSONSource } from 'maplibre-gl';
 import { lirePreference, ecrirePreference } from '../lib/stockage';
 import {
   autonomies, consommationsDepuisEssais, capaciteReelle, facteursDAffichage,
-  CONTEXTES, RESERVE_ANNEAUX, type Vehicule, type CleContexte,
+  CONTEXTES, RESERVE_ANNEAUX, motorisationDe, type Vehicule, type CleContexte,
 } from '../lib/vehicule';
+import {
+  CARBURANTS, LIBELLES_CARBURANT, autonomieCarburantKm, carburantValide,
+} from '../lib/carburant';
 import { meteoA } from '../lib/meteo';
 import { collectionAnneaux, rayonAffichable } from '../lib/cercle';
 import {
@@ -128,14 +131,38 @@ export class PanneauVehicule extends HTMLElement {
               <span>Électrique</span>
             </label>
             <label class="veh-moteur">
+              <input type="radio" name="veh-motorisation" value="hybride-rechargeable">
+              <span>Hybride rechargeable</span>
+            </label>
+            <label class="veh-moteur">
               <input type="radio" name="veh-motorisation" value="thermique">
-              <span>Thermique ou hybride</span>
+              <span>Thermique</span>
             </label>
           </div>
-          <p class="veh-thermique-note">Véhicule thermique ou hybride : aucun
-            arrêt de recharge ne sera planifié et le pourcentage de batterie
-            n’apparaîtra pas pendant le suivi. Les arrêts carburant et le prix
-            à la pompe ne sont pas encore proposés.</p>
+          <p class="veh-thermique-note">Sur la route, les pleins remplacent les
+            arrêts de recharge : le planificateur propose les stations les
+            moins chères (prix du jour, open data) avant la réserve et à
+            chaque pause de deux heures. Pas de pourcentage de batterie pendant
+            le suivi.</p>
+          <p class="veh-hybride-note">Hybride rechargeable : la batterie fait la
+            ville, le réservoir fait la route — aucun arrêt de recharge n’est
+            imposé, les pleins se planifient comme pour un thermique. La
+            batterie reste renseignable ci-dessous pour le rayon d’action.</p>
+
+          <!-- LE CARBURANT (THERMIQUE-2, 06/09) : quatre choses que tout
+               conducteur sait de sa voiture — pas de fiche constructeur. -->
+          <div class="veh-carburant">
+            <label class="veh-ligne">Carburant
+              <span><select class="veh-carburant-choix" aria-label="Carburant">
+                ${CARBURANTS.map((c) => `<option value="${c}">${LIBELLES_CARBURANT[c]}</option>`).join('')}
+              </select></span>
+            </label>
+            ${champ('reservoirL', 'Réservoir', 'L')}
+            ${champ('consommationL100', 'Consommation', 'L/100 km', '0.1')}
+            ${champ('jaugePourcent', 'Jauge au départ', '%', '5')}
+            <p class="veh-note">La consommation réelle, celle de l’ordinateur de
+              bord sur route ; la jauge à la louche suffit.</p>
+          </div>
 
           <div class="veh-electrique">
 
@@ -293,7 +320,8 @@ export class PanneauVehicule extends HTMLElement {
           this.#essais[cle.slice(6) as CleContexte] = nombre;
         } else if (cle === 'capaciteNominale' || cle === 'soce' || cle === 'soc'
           || cle === 'puissanceMaxKw' || cle === 'masseKg'
-          || cle === 'puissanceFroidKw' || cle === 'puissanceChaudKw') {
+          || cle === 'puissanceFroidKw' || cle === 'puissanceChaudKw'
+          || cle === 'reservoirL' || cle === 'consommationL100' || cle === 'jaugePourcent') {
           this.#vehicule[cle] = nombre;
         }
         this.#recalculer();
@@ -374,10 +402,18 @@ export class PanneauVehicule extends HTMLElement {
       r.addEventListener('change', () => {
         if (!r.checked) return;
         this.#touche = true;
-        this.#vehicule.motorisation = r.value === 'thermique' ? 'thermique' : 'electrique';
+        this.#vehicule.motorisation = motorisationDe(r.value);
         this.#enregistrer();
         this.#refleterMotorisation();
+        this.#bilan();
       });
+    });
+    this.querySelector<HTMLSelectElement>('.veh-carburant-choix')?.addEventListener('change', (e) => {
+      this.#touche = true;
+      const v = (e.target as HTMLSelectElement).value;
+      if (carburantValide(v)) this.#vehicule.carburant = v;
+      this.#enregistrer();
+      this.#bilan();
     });
 
     this.#installerCatalogue();
@@ -388,11 +424,17 @@ export class PanneauVehicule extends HTMLElement {
   /** La motorisation choisie se voit : radio cochée, champs électriques
    *  retirés en thermique, anneaux effacés — ou reposés au retour. */
   #refleterMotorisation(): void {
-    const thermique = this.#vehicule.motorisation === 'thermique';
+    const moteur = this.#vehicule.motorisation ?? 'electrique';
+    const thermique = moteur === 'thermique';
+    const hybride = moteur === 'hybride-rechargeable';
     this.querySelectorAll<HTMLInputElement>('input[name="veh-motorisation"]').forEach((r) => {
-      r.checked = (r.value === 'thermique') === thermique;
+      r.checked = r.value === moteur;
     });
-    this.querySelector('.veh-corps')?.classList.toggle('veh-thermique', thermique);
+    const corps = this.querySelector('.veh-corps');
+    corps?.classList.toggle('veh-thermique', thermique);
+    corps?.classList.toggle('veh-hybride', hybride);
+    const choix = this.querySelector<HTMLSelectElement>('.veh-carburant-choix');
+    if (choix && carburantValide(this.#vehicule.carburant)) choix.value = this.#vehicule.carburant;
     /* En thermique, #poser trace une collection vide : les anneaux d'un
        véhicule sans batterie s'effacent ; au retour à l'électrique, ils
        reviennent si la case est cochée. */
@@ -420,7 +462,8 @@ export class PanneauVehicule extends HTMLElement {
       const valeur = cle.startsWith('essai-')
         ? this.#essais[cle.slice(6) as CleContexte]
         : this.#vehicule[cle as 'capaciteNominale' | 'soce' | 'soc' | 'puissanceMaxKw'
-          | 'masseKg' | 'puissanceFroidKw' | 'puissanceChaudKw'] ?? 0;
+          | 'masseKg' | 'puissanceFroidKw' | 'puissanceChaudKw'
+          | 'reservoirL' | 'consommationL100' | 'jaugePourcent'] ?? 0;
       /* ON N'ÉCRASE PAS UN CHAMP AVEC UN ZÉRO : le catalogue ne connaît pas
          l'état de charge du jour, et l'effacer à chaque changement de modèle
          obligerait à le ressaisir sans raison. */
@@ -555,7 +598,11 @@ export class PanneauVehicule extends HTMLElement {
     this.#vehicule = {
       nom: typeof v['nom'] === 'string' ? v['nom'] : '',
       // Absente (profil d'avant MOTORISATION-1) : électrique, rien ne change.
-      motorisation: v['motorisation'] === 'thermique' ? 'thermique' : 'electrique',
+      motorisation: motorisationDe(v['motorisation']),
+      carburant: carburantValide(v['carburant']) ? v['carburant'] : 'gazole',
+      reservoirL: nombre(v['reservoirL']),
+      consommationL100: nombre(v['consommationL100']),
+      jaugePourcent: nombre(v['jaugePourcent']),
       capaciteNominale: nombre(v['capaciteNominale']),
       soce: nombre(v['soce'], 100),
       soc: nombre(v['soc'], 80),
@@ -587,6 +634,22 @@ export class PanneauVehicule extends HTMLElement {
     const boite = this.querySelector<HTMLElement>('.veh-bilan');
     if (!boite) return;
     boite.textContent = '';
+    /* L'AUTONOMIE CARBURANT D'ABORD (THERMIQUE-2) : pour un thermique, c'est
+       tout le bilan ; pour un hybride rechargeable, elle précède la batterie. */
+    const moteur = this.#vehicule.motorisation ?? 'electrique';
+    if (moteur !== 'electrique') {
+      const carbu = document.createElement('p');
+      carbu.className = 'veh-bilan-carburant';
+      const { reservoirL = 0, consommationL100 = 0, jaugePourcent = 0 } = this.#vehicule;
+      const jauge = jaugePourcent > 0 ? jaugePourcent : 100;
+      const km = autonomieCarburantKm(reservoirL, consommationL100, jauge);
+      carbu.textContent = km > 0
+        ? `Autonomie carburant : ~${Math.round(km)} km (${reservoirL} L à ${jauge} %,`
+          + ` ${String(consommationL100).replace('.', ',')} L/100 km).`
+        : 'Renseignez le réservoir et la consommation pour planifier les pleins.';
+      boite.appendChild(carbu);
+      if (moteur === 'thermique') return;
+    }
 
     const capacite = capaciteReelle(this.#vehicule);
     if (capacite <= 0) {

@@ -28,6 +28,12 @@ import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
 import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
 import { apprendreTrajet, lireHabitudes, suggerer } from '../lib/routines';
+import {
+  profilCarburant, planifierCarburant, euros, prixLitre, LIBELLE_PRIX, LIBELLES_CARBURANT,
+  type StationCarburant,
+} from '../lib/carburant';
+import { chercherLeLongDuTrajet } from '../lib/le-long-du-trajet';
+import type { PoiCarburant } from '../lib/poi';
 import { profilItineraire, denivele } from '../lib/altimetrie';
 import { chargerGrille, estimerPeages } from '../lib/peages-tarifs';
 import { pointLateral, choisirBis, traceDevant } from '../lib/bis';
@@ -1351,6 +1357,102 @@ export class PanneauItineraire extends HTMLElement {
     };
   }
 
+  /**
+   * Les pleins d'un thermique ou d'un hybride rechargeable (THERMIQUE-2).
+   *
+   * LES STATIONS SONT CELLES DU TRAJET, avec les PRIX DU JOUR (open data
+   * prix-carburants, le relevé le long du trajet de lib/le-long-du-trajet) ;
+   * le plan est PUR (lib/carburant) : réserve de 40 km, pause toutes les deux
+   * heures quand une station s'y prête, la moins chère de chaque fenêtre.
+   * L'ENSEIGNE MANQUE À L'OPEN DATA : on le dit, on ne l'invente pas.
+   */
+  async #planifierCarburant(
+    iti: Itineraire, corps: HTMLElement, carbu: NonNullable<ReturnType<typeof profilCarburant>>,
+  ): Promise<void> {
+    corps.replaceChildren(this.#attente('Relevé des stations et de leurs prix le long du trajet…'));
+    this.#annulationRecharge?.abort();
+    const annulation = new AbortController();
+    this.#annulationRecharge = annulation;
+    let stations: StationCarburant[] = [];
+    let releveEnPanne = false;
+    try {
+      const trouvees = await chercherLeLongDuTrajet(iti.geometrie, 'carburants', 3_000, annulation.signal);
+      const libelle = LIBELLE_PRIX[carbu.carburant];
+      for (const t of trouvees) {
+        const poi = t.poi as PoiCarburant;
+        const prix = poi.prix.find(([l]) => l === libelle)?.[1];
+        if (prix === undefined) continue;
+        stations.push({ lon: poi.lon, lat: poi.lat, adresse: poi.adresse, ville: poi.ville,
+          prixL: prix, avancementM: t.avancement, ecartM: t.ecart });
+      }
+    } catch {
+      if (annulation.signal.aborted) return;
+      releveEnPanne = true;
+      stations = [];
+    }
+    if (this.#dernier !== iti || annulation.signal.aborted) return;
+    const plan = planifierCarburant({
+      distanceM: iti.distance, dureeS: iti.duree, profil: carbu, stations,
+    });
+    corps.replaceChildren();
+    const titre = document.createElement('p');
+    titre.className = 'recharge-resume carburant-titre';
+    titre.textContent = `Arrêts carburant — ${LIBELLES_CARBURANT[carbu.carburant]}, ~${
+      Math.round(plan.autonomieDepartKm)} km d’autonomie au départ (${carbu.reservoirL} L à ${
+      carbu.jaugePourcent} %, ${String(carbu.consommationL100).replace('.', ',')} L/100 km).`;
+    corps.appendChild(titre);
+    if (releveEnPanne) {
+      const panne = document.createElement('p');
+      panne.className = 'recharge-refus';
+      panne.textContent = 'Les prix des carburants sont indisponibles pour le moment :'
+        + ' le plan ci-dessous ne connaît aucune station.';
+      corps.appendChild(panne);
+    }
+    if (!plan.faisable) {
+      const refus = document.createElement('p');
+      refus.className = 'recharge-refus';
+      refus.textContent = plan.motif ?? 'Trajet impossible sans station relevée.';
+      corps.appendChild(refus);
+    }
+    const resume = document.createElement('p');
+    resume.className = 'recharge-resume';
+    resume.textContent = plan.arrets.length === 0
+      ? (plan.faisable
+        ? `Aucun plein nécessaire : ~${Math.round(plan.autonomieArriveeKm)} km restants à l’arrivée.`
+        : 'Aucun plein possible avant la panne sèche.')
+      : `${plan.arrets.length} plein${plan.arrets.length > 1 ? 's' : ''} pour ${euros(plan.coutTotalEur)}`
+        + ` environ, ~${Math.round(plan.autonomieArriveeKm)} km restants à l’arrivée.`;
+    corps.appendChild(resume);
+    if (plan.arrets.length > 0) {
+      const liste = document.createElement('ol');
+      liste.className = 'recharge-liste carburant-liste';
+      for (const a of plan.arrets) {
+        const item = document.createElement('li');
+        const ou = [a.station.adresse, a.station.ville].filter(Boolean).join(', ');
+        item.textContent = `km ${Math.round(a.avancementM / 1000)} — ${ou || 'station'} · ${
+          prixLitre(a.station.prixL)} · plein ~${Math.round(a.litres)} L (${euros(a.coutEur)})`
+          + (a.motif === 'pause' ? ' · pause des deux heures' : ' · réserve atteinte');
+        liste.appendChild(item);
+      }
+      corps.appendChild(liste);
+    }
+    if (plan.moinsChere) {
+      const eco = document.createElement('p');
+      eco.className = 'carburant-moins-chere';
+      eco.textContent = `Station la moins chère du trajet : ${[plan.moinsChere.adresse, plan.moinsChere.ville]
+        .filter(Boolean).join(', ')} au km ${Math.round(plan.moinsChere.avancementM / 1000)}, ${
+        prixLitre(plan.moinsChere.prixL)}.`;
+      corps.appendChild(eco);
+    }
+    const note = document.createElement('p');
+    note.className = 'recharge-note carburant-note';
+    note.textContent = 'Prix du jour (open data prix-carburants), stations à moins de 3 km de la route,'
+      + ' réserve de 40 km gardée. L’enseigne des stations n’est pas dans cet open data :'
+      + ' le filtre par enseigne viendra avec l’appariement aux stations OpenStreetMap.';
+    corps.appendChild(note);
+    this.#rechargePour = iti;
+  }
+
   async #planifierRecharge(auto = false): Promise<void> {
     const corps = this.querySelector('.iti-recharge-corps') as HTMLElement;
     const iti = this.#dernier;
@@ -1359,15 +1461,29 @@ export class PanneauItineraire extends HTMLElement {
 
     const profil = await this.#lireVehicule();
     if (!profil) {
+      const memo = await lirePreference<unknown>(PREF_VEHICULE);
+      /* LES PLEINS À LA PLACE DES RECHARGES (THERMIQUE-2, 06/09) : un
+         thermique ou un hybride rechargeable planifie ses stations ici, sur
+         la même page — l'endroit où l'on cherche « où s'arrêter ». */
+      if (estThermique(memo)) {
+        const carbu = profilCarburant(memo);
+        if (!carbu) {
+          if (!auto) {
+            corps.textContent = 'Véhicule thermique ou hybride : renseignez le carburant,'
+              + ' le réservoir et la consommation dans « Mon véhicule » pour planifier les pleins.';
+          }
+          this.#rechargePour = null;
+          return;
+        }
+        if (!auto) await this.#planifierCarburant(iti, corps, carbu);
+        else this.#rechargePour = null;
+        return;
+      }
       /* En automatique, PAS de véhicule = pas de plan, en silence : le
          message d'invite n'a de sens que quand on OUVRE la page. */
       if (!auto) {
-        corps.textContent = estThermique(await lirePreference<unknown>(PREF_VEHICULE))
-          ? 'Véhicule thermique ou hybride déclaré dans « Mon véhicule » : aucun'
-            + ' arrêt de recharge à planifier. Les arrêts carburant ne sont pas'
-            + ' encore proposés.'
-          : 'Renseignez d’abord votre véhicule (panneau « Véhicule ») :'
-            + ' batterie, santé et autonomie constatée.';
+        corps.textContent = 'Renseignez d’abord votre véhicule (panneau « Véhicule ») :'
+          + ' batterie, santé et autonomie constatée.';
       }
       this.#rechargePour = null;   // réessayable une fois le profil rempli
       return;

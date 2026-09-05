@@ -842,6 +842,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       Partager ma position (lien #lieu=, BAN, partage ou copie). REFUS
       documenté : recherche vocale (Web Speech = serveurs Google) — décision
       d'Armelin attendue ; natif possible.
+- [x] THERMIQUE-2 (06/09) : trois motorisations (électrique, hybride
+      rechargeable, thermique), carburant / réservoir / consommation / jauge,
+      autonomie carburant au bilan, pleins planifiés sur la page « Arrêts de
+      recharge » (lib/carburant pur : réserve 40 km, pause 2 h, la moins
+      chère de la fenêtre, prix du jour open data). RESTE : filtre par
+      enseigne (apparier prix-carburants aux stations OSM qui portent
+      brand) ; pastilles des pleins sur la carte ; jauge pendant le suivi.
 - [x] METEO-VILLE-1 (05/09) : météo d'une ville dans le volet « Outils » du
       menu — vingt-quatre heures en frise, sept jours en lignes, heures du
       lieu, Open-Meteo (dérogation publique). Mesurer et Météo partagent le
@@ -874,10 +881,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [ ] RETOURS-AMIS — LE RESTE, trié le 05/09 (suggestions des amis d'Armelin) :
       · MOTORISATION-1 (livré — PR #257) : choix électrique / thermique-hybride
         dans « Mon véhicule » ; thermique = aucun plan de recharge, mention
-        claire. THERMIQUE-2 (décision) : autonomie et consommation
-        thermiques, arrêts carburant toutes les 2 h, filtre des enseignes de
-        stations (Total, Shell, BP, Avia…) comme les réseaux de bornes, prix
-        du carburant avant la station (open data prix-carburants déjà là).
+        claire. THERMIQUE-2 (livré le 06/09) : autonomie et consommation
+        thermiques, pleins toutes les 2 h et avant la réserve, prix du jour ;
+        reste le filtre des enseignes (l'open data des prix n'en a pas).
       · FOND-NAV-1 (livré, 1.99.0) : bouton rond « fonds de carte » au-dessus de la
         boussole pendant le suivi — le menu étant effacé (NAV-2).
       · RECHERCHE-NAV-1 (PR #258) : loupe ronde en suivi pour chercher une

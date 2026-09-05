@@ -266,6 +266,8 @@ describe('la motorisation (MOTORISATION-1)', () => {
   });
   test('« thermique » se lit, et rien d’autre ne le vaut', () => {
     expect(estThermique({ vehicule: { motorisation: 'thermique' } })).toBe(true);
+    // L'hybride rechargeable roule au carburant sur la route (THERMIQUE-2).
+    expect(estThermique({ vehicule: { motorisation: 'hybride-rechargeable' } })).toBe(true);
     expect(estThermique({ vehicule: { motorisation: 'Thermique' } })).toBe(false);
     expect(estThermique({ vehicule: { motorisation: true } })).toBe(false);
     expect(estThermique('thermique')).toBe(false);

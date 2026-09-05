@@ -1317,6 +1317,15 @@ bandeau-maj[hidden] { display: none; }
   font: 400 12px var(--police); color: var(--texte-2); line-height: 1.45; }
 .veh-corps.veh-thermique .veh-thermique-note { display: block; }
 .veh-corps.veh-thermique .veh-electrique { display: none; }
+/* HYBRIDE RECHARGEABLE (THERMIQUE-2) : la note, le carburant ET la batterie. */
+.veh-hybride-note { display: none; margin: 0; font: 400 12px var(--police); color: var(--texte-2); line-height: 1.45; }
+.veh-corps.veh-hybride .veh-hybride-note { display: block; }
+.veh-corps.veh-hybride .veh-thermique-note { display: none; }
+.veh-carburant { display: none; }
+.veh-corps.veh-thermique .veh-carburant, .veh-corps.veh-hybride .veh-carburant { display: grid; gap: 7px; }
+.veh-carburant-choix { font: 500 13px var(--police); color: var(--texte-1); padding: 5px 7px;
+  border-radius: 8px; border: 1px solid var(--bord); background: var(--fond); }
+.veh-bilan-carburant { margin: 0 0 4px; font: 600 13px var(--police); color: var(--texte-1); }
 .veh-electrique { display: contents; }
 .veh-bascule { display: flex; align-items: center; gap: 9px; margin-top: 6px;
   padding-top: 9px; border-top: 1px solid var(--bord);
@@ -4929,3 +4938,8 @@ body.mesure-active #carte .maplibregl-canvas-container { cursor: crosshair; }
   font: 500 13px var(--police); text-transform: none; letter-spacing: 0; }
 .partage-position-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .partage-position-actions button[hidden] { display: none; }
+
+/* LES PLEINS (THERMIQUE-2) : même page, même liste que les recharges. */
+.carburant-liste li { line-height: 1.45; }
+.carburant-moins-chere { margin: 8px 0 0; font: 600 12.5px var(--police); color: var(--texte-1); }
+.carburant-note { margin: 8px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); line-height: 1.45; }
