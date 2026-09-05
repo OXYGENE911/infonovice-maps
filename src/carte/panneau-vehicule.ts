@@ -34,7 +34,7 @@ const SOURCE = 'rayon-action';
    n'a rien saisi, aucun anneau ne se dessine, et le panneau le dit. Inventer
    une « voiture moyenne » afficherait un rayon crédible et faux. */
 const VIDE: Vehicule = {
-  nom: '', capaciteNominale: 0, soce: 100, soc: 80,
+  nom: '', motorisation: 'electrique', capaciteNominale: 0, soce: 100, soc: 80,
   consommations: { ville: 0, route: 0, autoroute: 0 },
   puissanceMaxKw: 0,
 };
@@ -113,9 +113,31 @@ export class PanneauVehicule extends HTMLElement {
 
     this.innerHTML = `
       <details class="vehicule" open>
-        <summary aria-label="Mon véhicule électrique">Véhicule</summary>
+        <summary aria-label="Mon véhicule">Véhicule</summary>
         <fieldset class="veh-corps">
-          <legend>Mon véhicule électrique</legend>
+          <legend>Mon véhicule</legend>
+
+          <!-- LA MOTORISATION D'ABORD (MOTORISATION-1, 05/09). Des amis
+               d'Armelin : « le site est trop axé véhicule électrique ». En
+               thermique ou hybride, la batterie, le catalogue, les
+               autonomies et les anneaux se retirent, et le planificateur ne
+               place AUCUN arrêt de recharge — il le dit. -->
+          <div class="veh-motorisation" role="radiogroup" aria-label="Motorisation">
+            <label class="veh-moteur">
+              <input type="radio" name="veh-motorisation" value="electrique" checked>
+              <span>Électrique</span>
+            </label>
+            <label class="veh-moteur">
+              <input type="radio" name="veh-motorisation" value="thermique">
+              <span>Thermique ou hybride</span>
+            </label>
+          </div>
+          <p class="veh-thermique-note">Véhicule thermique ou hybride : aucun
+            arrêt de recharge ne sera planifié et le pourcentage de batterie
+            n’apparaîtra pas pendant le suivi. Les arrêts carburant et le prix
+            à la pompe ne sont pas encore proposés.</p>
+
+          <div class="veh-electrique">
 
           <!-- LE CATALOGUE PRÉ-REMPLIT, IL NE VERROUILLE PAS. Saisir cinq
                chiffres avant de pouvoir se servir du planificateur est un
@@ -184,6 +206,8 @@ export class PanneauVehicule extends HTMLElement {
                personnalisation du repère […] si l'utilisateur ne scrolle pas
                tout en bas, impossible de savoir que l'option existe ». Un
                réglage qu'on ne trouve pas n'existe pas. -->
+          </div>
+
           <p class="veh-titre">Mon repère pendant la navigation</p>
           <div class="veh-curseurs" role="radiogroup" aria-label="Forme du repère">
             ${FORMES.map((f) => `
@@ -198,6 +222,7 @@ export class PanneauVehicule extends HTMLElement {
             <span><input type="text" class="veh-nom" placeholder="VinFast VF8"
               aria-label="Nom du véhicule"></span>
           </label>
+          <div class="veh-electrique">
           ${champ('capaciteNominale', 'Batterie', 'kWh', '0.1')}
           ${champ('soce', 'Santé (SOCE)', '%')}
           ${champ('soc', 'Charge (SOC)', '%')}
@@ -248,6 +273,7 @@ export class PanneauVehicule extends HTMLElement {
             <span class="veh-anneaux-reserve"></span></p>
 
           <div class="veh-bilan" role="status"></div>
+          </div>
         </fieldset>
       </details>`;
 
@@ -344,9 +370,33 @@ export class PanneauVehicule extends HTMLElement {
       this.#poser();
     });
 
+    this.querySelectorAll<HTMLInputElement>('input[name="veh-motorisation"]').forEach((r) => {
+      r.addEventListener('change', () => {
+        if (!r.checked) return;
+        this.#touche = true;
+        this.#vehicule.motorisation = r.value === 'thermique' ? 'thermique' : 'electrique';
+        this.#enregistrer();
+        this.#refleterMotorisation();
+      });
+    });
+
     this.#installerCatalogue();
     this.#installerCurseur();
     void this.#restaurer();
+  }
+
+  /** La motorisation choisie se voit : radio cochée, champs électriques
+   *  retirés en thermique, anneaux effacés — ou reposés au retour. */
+  #refleterMotorisation(): void {
+    const thermique = this.#vehicule.motorisation === 'thermique';
+    this.querySelectorAll<HTMLInputElement>('input[name="veh-motorisation"]').forEach((r) => {
+      r.checked = (r.value === 'thermique') === thermique;
+    });
+    this.querySelector('.veh-corps')?.classList.toggle('veh-thermique', thermique);
+    /* En thermique, #poser trace une collection vide : les anneaux d'un
+       véhicule sans batterie s'effacent ; au retour à l'électrique, ils
+       reviennent si la case est cochée. */
+    this.#poser();
   }
 
   /* Les consommations se DÉDUISENT des relevés — un seul endroit où la vérité
@@ -504,6 +554,8 @@ export class PanneauVehicule extends HTMLElement {
        unitaire les nomme pour que l'oubli ne se refasse pas. */
     this.#vehicule = {
       nom: typeof v['nom'] === 'string' ? v['nom'] : '',
+      // Absente (profil d'avant MOTORISATION-1) : électrique, rien ne change.
+      motorisation: v['motorisation'] === 'thermique' ? 'thermique' : 'electrique',
       capaciteNominale: nombre(v['capaciteNominale']),
       soce: nombre(v['soce'], 100),
       soc: nombre(v['soc'], 80),
@@ -524,6 +576,7 @@ export class PanneauVehicule extends HTMLElement {
     this.#actif = m['anneaux'] === true;
 
     this.#refletChamps();
+    this.#refleterMotorisation();
     const bascule = this.querySelector<HTMLInputElement>('.veh-anneaux');
     if (bascule) bascule.checked = this.#actif;
 
@@ -662,7 +715,7 @@ export class PanneauVehicule extends HTMLElement {
           String(Math.round(this.#celsius)).replace('-', '−')} °C relevés dehors`)
         + '.';
     }
-    const donnees = this.#actif && this.#position
+    const donnees = this.#actif && this.#position && this.#vehicule.motorisation !== 'thermique'
       ? collectionAnneaux(this.#position.lon, this.#position.lat,
         /* LE CERCLE SE RÉTRÉCIT DU DÉTOUR ROUTIER (RAYON-1, 02/09) : une
            autonomie se dépense sur des routes, un cercle se mesure à vol

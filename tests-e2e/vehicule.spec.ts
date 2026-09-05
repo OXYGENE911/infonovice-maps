@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
 import { ouvrirVolet } from './volets';
-import { allerA } from './planificateur';
+import { allerA, retour } from './planificateur';
 
 /* PROFIL DU VÉHICULE ET RAYON D'ACTION — éprouvés avec un véhicule RÉEL, la
    VinFast VF8 d'Armelin et ses relevés du 25/08/2026. Une fiche constructeur
@@ -518,4 +518,59 @@ test('PAR GRAND FROID, LES ANNEAUX RÉTRÉCISSENT — et le disent', async ({ pa
   const note = page.locator('.veh-anneaux-reserve');
   await expect(note).toContainText('10 % de batterie en réserve');
   await expect(note).toContainText('−5 °C');
+});
+
+test('THERMIQUE OU HYBRIDE : les champs électriques se retirent, le choix se garde, et aucun arrêt de recharge n’est planifié', async ({ page }) => {
+  /* MOTORISATION-1 (05/09). Des amis d'Armelin : « le site est trop axé
+     véhicule électrique, les arrêts recharge automatiques sont discriminants
+     pour les thermiques ». Le contrat : un choix en tête du panneau, la
+     batterie et le catalogue qui s'effacent, la page « Arrêts de recharge »
+     qui DIT pourquoi elle ne planifie rien, et pas de batterie à l'arrivée
+     dans la barre du suivi. */
+  await ouvrirVehicule(page);
+  await expect(page.getByRole('radio', { name: 'Électrique' })).toBeChecked();
+  await expect(page.getByLabel('Batterie')).toBeVisible();
+
+  await page.getByRole('radio', { name: 'Thermique ou hybride' }).check();
+  await expect(page.getByLabel('Batterie')).toBeHidden();
+  await expect(page.getByLabel('Chercher un véhicule')).toBeHidden();
+  await expect(page.locator('.veh-thermique-note')).toBeVisible();
+  await expect(page.locator('.veh-thermique-note')).toContainText('aucun arrêt de recharge');
+  // Le repère de navigation et le nom, eux, restent : ils ne sont pas électriques.
+  await expect(page.getByLabel('Nom du véhicule')).toBeVisible();
+
+  // LE CHOIX SE GARDE (IndexedDB), comme tout le profil.
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await ouvrirVolet(page, '.vehicule');
+  await expect(page.getByRole('radio', { name: 'Thermique ou hybride' })).toBeChecked();
+  await expect(page.getByLabel('Batterie')).toBeHidden();
+
+  // UN TRAJET : la page « Arrêts de recharge » explique, la barre du suivi se tait.
+  const TRACE: [number, number][] = Array.from({ length: 21 }, (_, i) => [2.3522 + i * 0.0014, 48.8566]);
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    if (/resource=bdtopo-pgr/.test(route.request().url())) {
+      return route.fulfill({ contentType: 'application/json', body: '{"portions":[]}' });
+    }
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: TRACE }, distance: 2_050, duration: 240,
+    }) });
+  });
+  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
+    contentType: 'application/json', body: '{"elements":[]}',
+  }));
+  await page.route('**/www.bison-fute.gouv.fr/**', (route) => route.fulfill({
+    contentType: 'application/json', body: '[]',
+  }));
+  await page.goto(`/#iti=${TRACE[0]![0]},${TRACE[0]![1]};${TRACE[20]![0]},${TRACE[20]![1]};car`);
+  await page.reload();
+  await expect(page.locator('.iti-resultat')).toContainText('km', { timeout: 15_000 });
+  await allerA(page, 'recharge');
+  await expect(page.locator('.iti-recharge-corps')).toContainText('thermique ou hybride');
+  await expect(page.locator('.iti-recharge-corps')).toContainText('aucun arrêt de recharge');
+
+  await retour(page);
+  await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
+  await expect(page.locator('.bg-chiffres')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.bg-chiffre-soc')).toBeHidden();
 });

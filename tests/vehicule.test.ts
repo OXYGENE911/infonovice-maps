@@ -6,7 +6,7 @@
 // 87,7 kWh nominaux, SOCE 94 %, 436 km annoncés à 100 % après dégradation,
 // ~400 km en ville, ~280 km sur autoroute à 130 km/h l'été.
 import { describe, expect, test } from 'vitest';
-import { capaciteReelle, energieDisponible, autonomies, consommationsDepuisEssais, facteursDAffichage, CONTEXTES, type Vehicule, masseDeclaree, energieUtilisable, RESERVE_ANNEAUX } from '../src/lib/vehicule';
+import { capaciteReelle, energieDisponible, autonomies, consommationsDepuisEssais, facteursDAffichage, CONTEXTES, type Vehicule, masseDeclaree, energieUtilisable, RESERVE_ANNEAUX, estThermique } from '../src/lib/vehicule';
 
 const VF8: Vehicule = {
   nom: 'VinFast VF8',
@@ -254,5 +254,20 @@ describe('autonomies — réserve et température', () => {
     /* −5 °C : vingt-cinq degrés sous la référence, soit +30 % de
        consommation dans le modèle — l'autonomie tombe donc à 1/1,3. */
     expect(gel.autoroute).toBeCloseTo(doux.autoroute / 1.3, 1);
+  });
+});
+
+describe('la motorisation (MOTORISATION-1)', () => {
+  test('un profil d’avant, sans le champ, reste électrique : personne ne perd son plan', () => {
+    expect(estThermique(undefined)).toBe(false);
+    expect(estThermique({})).toBe(false);
+    expect(estThermique({ vehicule: { capaciteNominale: 87.7 } })).toBe(false);
+    expect(estThermique({ vehicule: { motorisation: 'electrique' } })).toBe(false);
+  });
+  test('« thermique » se lit, et rien d’autre ne le vaut', () => {
+    expect(estThermique({ vehicule: { motorisation: 'thermique' } })).toBe(true);
+    expect(estThermique({ vehicule: { motorisation: 'Thermique' } })).toBe(false);
+    expect(estThermique({ vehicule: { motorisation: true } })).toBe(false);
+    expect(estThermique('thermique')).toBe(false);
   });
 });

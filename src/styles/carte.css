@@ -1301,6 +1301,23 @@ bandeau-maj[hidden] { display: none; }
   text-transform: uppercase; letter-spacing: .08em; }
 .veh-note, .veh-bilan-reserve { margin: 2px 0 0;
   font: 400 11.5px var(--police); color: var(--texte-3); line-height: 1.45; }
+.veh-motorisation { display: flex; gap: 6px; }
+.veh-moteur {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px 8px; border: 1px solid var(--bord); border-radius: 999px;
+  font: 500 13px var(--police); color: var(--texte-1); cursor: pointer;
+}
+.veh-moteur input { margin: 0; accent-color: var(--accent); }
+.veh-moteur:has(input:checked) { border-color: var(--accent); color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--fond)); }
+.veh-moteur:has(input:focus-visible) { box-shadow: var(--focus); }
+/* THERMIQUE (MOTORISATION-1) : les champs électriques se retirent, la note
+   prend leur place — la grille ne laisse pas de trou. */
+.veh-thermique-note { display: none; margin: 0;
+  font: 400 12px var(--police); color: var(--texte-2); line-height: 1.45; }
+.veh-corps.veh-thermique .veh-thermique-note { display: block; }
+.veh-corps.veh-thermique .veh-electrique { display: none; }
+.veh-electrique { display: contents; }
 .veh-bascule { display: flex; align-items: center; gap: 9px; margin-top: 6px;
   padding-top: 9px; border-top: 1px solid var(--bord);
   font: 400 14px var(--police); color: var(--texte-1); cursor: pointer; }
