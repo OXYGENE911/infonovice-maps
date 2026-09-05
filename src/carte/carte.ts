@@ -592,16 +592,18 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      page proposant les fonctionnalités à débloquer ». Une ligne, en bas,
      près de la version — jamais une fenêtre qui s'impose : le client libre
      reste entier, le Pro s'y annonce sans s'y imposer. */
+  /* UNE SEULE LIGNE : le menu est une fenêtre flottante qui doit tenir sous
+     62 % de l'écran (parcours feuilles-basses) ; la phrase d'explication
+     le faisait déborder de 19 px sur la machine d'intégration. Elle vit dans
+     le `title`, et sur /pro.html. */
   const boitePro = document.createElement('div');
   boitePro.className = 'reglages-pro';
-  const motPro = document.createElement('p');
-  motPro.className = 'reglages-pro-mot';
-  motPro.textContent = 'Cercles, véhicule connecté, itinéraires partagés, flottes.';
   const lienPro = document.createElement('a');
   lienPro.className = 'reglages-pro-lien';
   lienPro.href = '/pro.html';
+  lienPro.title = 'Cercles, véhicule connecté, itinéraires partagés, flottes';
   lienPro.textContent = 'Découvrir Maps Pro';
-  boitePro.append(motPro, lienPro);
+  boitePro.append(lienPro);
   menu.ajouter('Maps Pro', boitePro);
   menu.ajouter('Version', boiteVersion);
 
