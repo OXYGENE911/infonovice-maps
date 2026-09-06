@@ -64,6 +64,8 @@ test('EN SUIVI, LA LOUPE ROUVRE LA RECHERCHE ET LE LIEU CHOISI DEVIENT UNE ÉTAP
   await expect(barre).toBeVisible();
   const champ = barre.locator('input');
   await expect(champ).toBeFocused();
+  // LA POSITION EST DÉJÀ CONNUE (RETOURS-0609) : pas de nouvelle invite à se localiser.
+  await expect(barre.locator('.recherche-ici')).toBeHidden();
   await champ.fill('gare de lyon');
   const option = barre.locator('[role="option"]').first();
   await expect(option).toContainText('Gare de Lyon', { timeout: 10_000 });

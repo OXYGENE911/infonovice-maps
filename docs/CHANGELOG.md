@@ -2,6 +2,37 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.112.0] — 2026-09-06 — RETOURS-0609
+
+### Retours d'Armelin du 6 septembre — le suivi, sur téléphone
+- **Se garer** : en choisissant un parking, le trajet ÉTAIT recalculé vers
+  lui — mais le nouveau tracé fait moins de 1,2 km, et la liste des parkings
+  se rouvrait d'elle-même : « je revenais au menu de suggestions ». Le
+  planificateur dit désormais que la destination est le parking, et la liste
+  se tait.
+- **Finir à pied, avant l'arrivée** : un bouton « Je me gare ici : finir à
+  pied » dans la feuille des parkings, et un piéton dans la barre dépliée —
+  pour qui se gare lui-même. La proposition à l'arrivée reste.
+- **La loupe ne redemande plus la position** : le suivi la connaît, la
+  recherche aussi.
+- **À pied, pas de parking** : la proposition de se garer ne paraît plus en
+  profil piéton.
+- **L'écran blanc à la croix rouge** (Huawei Pura 70 Ultra, Chrome) : le
+  canevas ne se redessinait pas quand l'en-tête et les rails revenaient ; la
+  carte est redimensionnée et redessinée à l'arrêt du suivi, deux fois.
+- **Trois chiffres au repos, quatre une fois la barre dépliée** : en portrait,
+  la batterie ou la réserve à l'arrivée attend qu'on ouvre la barre.
+- **La feuille des fonds à sa taille** en suivi : le choix des fonds était
+  positionné en absolu et n'entrait pas dans la hauteur de la feuille — on
+  défilait dans un timbre-poste.
+- **Une étape ajoutée en roulant garde le plan** : le suivi repartait avant
+  que le plan de recharge ne soit refait, et la frise perdait ses arrêts, la
+  barre sa batterie à l'arrivée. Le planificateur pousse maintenant le plan
+  refait dans le suivi, sans le redémarrer.
+- Tests : parking (liste qui ne se rouvre pas ; « Je me gare ici »), recherche
+  en suivi (pas d'invite), feuille des fonds mesurée, quatrième chiffre
+  replié / déplié (recharge, véhicule), mesure des lignes par largeur.
+
 ## [1.111.0] — 2026-09-06 — JAUGE-SUIVI-1
 
 ### La réserve à l'arrivée pendant le suivi, pour un thermique aussi

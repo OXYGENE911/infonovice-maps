@@ -75,7 +75,7 @@ import { svgCommodite } from './icone-commodite';
 import { meteoA } from '../lib/meteo';
 import type { FicheBorne } from './fiche-borne';
 import type { FicheLieu } from './fiche-lieu';
-import type { BandeauGuidage } from './bandeau-guidage';
+import type { BandeauGuidage, ArretAAnnoncer } from './bandeau-guidage';
 
 /* CHAQUE MODE SON DESSIN. Quatre libellés côte à côte se lisent mal en
    diagonale ; quatre silhouettes se reconnaissent d'un coup d'œil. */
@@ -1061,7 +1061,11 @@ export class PanneauItineraire extends HTMLElement {
        destination d'origine reprend sa place. */
     document.addEventListener('finir-a-pied', (e) => {
       const d = (e as CustomEvent<{ lon: number; lat: number }>).detail;
-      const fin = this.#finPietonne;
+      /* SANS « SE GARER » PRÉALABLE (RETOURS-0609) — on s'est garé soi-même —
+         la destination à pied est celle du trajet en cours. */
+      const cliche = this.#calculPour;
+      const fin = this.#finPietonne
+        ?? (cliche ? { point: cliche.arrivee, libelle: this.#libelleArrivee } : null);
       if (!fin) return;
       this.#finPietonne = null;
       if (this.#guidage) this.#guidage.finApied = null;
@@ -3211,6 +3215,9 @@ export class PanneauItineraire extends HTMLElement {
          vingts mètres sont un pâté de maisons — c'est ce qui a empêché le
          recalcul quand Armelin a contourné une résidence fermée. */
       aPied: profilDe(this.#mode) === 'pedestrian',
+      /* La destination est le parking choisi : pas de liste de parkings
+         autour du parking (RETOURS-0609). */
+      sansParkings: this.#finPietonne !== null,
       /* LA DESTINATION DEMANDÉE (PARK-1) : le tracé s'arrête sur la route,
          l'adresse est à côté — c'est autour d'ELLE qu'on cherche à se
          garer. */
@@ -3228,18 +3235,7 @@ export class PanneauItineraire extends HTMLElement {
       ...(!plan?.faisable && this.#planCarburant?.faisable
         ? { autonomieFinaleKm: this.#planCarburant.autonomieArriveeKm }
         : {}),
-      arrets: plan?.faisable
-        ? plan.arrets.map((a) => ({
-          nom: a.borne.nom,
-          reseau: a.borne.reseau ?? null,
-          avancementM: a.borne.avancementM,
-          dureeMin: a.dureeMin,
-          lon: a.borne.lon,
-          lat: a.borne.lat,
-          socArrivee: a.socArrivee,
-          socDepart: a.socDepart,
-        }))
-        : [],
+      arrets: plan?.faisable ? this.#arretsAAnnoncer(plan) : [],
     });
     this.#majBoutonDemarrer();
     /* LES LIMITES CARTOGRAPHIÉES ARRIVENT APRÈS : « Démarrer » ne doit pas
@@ -3859,11 +3855,33 @@ export class PanneauItineraire extends HTMLElement {
     return volet;
   }
 
+  /** Les arrêts du plan tels que le bandeau les annonce et les dessine. */
+  #arretsAAnnoncer(plan: PlanRecharge): ArretAAnnoncer[] {
+    return plan.arrets.map((a) => ({
+      nom: a.borne.nom,
+      reseau: a.borne.reseau ?? null,
+      avancementM: a.borne.avancementM,
+      dureeMin: a.dureeMin,
+      lon: a.borne.lon,
+      lat: a.borne.lat,
+      socArrivee: a.socArrivee,
+      socDepart: a.socDepart,
+    }));
+  }
+
   #afficherRecharge(plan: PlanRecharge): void {
     const corps = this.querySelector('.iti-recharge-corps') as HTMLElement;
     corps.replaceChildren();
     // Le résumé du haut apprend le temps de charge : voir `#majResume`.
     this.#planCourant = plan;
+    /* LE SUIVI DÉJÀ PARTI REÇOIT LE PLAN (RETOURS-0609) : une étape ajoutée
+       en roulant recalcule le trajet et relance le suivi AVANT ce plan — sans
+       cette poussée, la frise et la batterie à l'arrivée restaient vides. */
+    if (this.#guidage?.actif && plan.faisable) {
+      this.#guidage.majPlan({
+        socDepartTrajet: this.#socDepart, socFinal: plan.socArrivee, arrets: this.#arretsAAnnoncer(plan),
+      });
+    }
     /* LE BOUTON DE RECALCUL NE PARAÎT QUE S'IL A QUELQUE CHOSE À FAIRE :
        tant qu'aucun arrêt n'a été ajouté à la main, le plan EST celui du
        calcul, et proposer de le refaire n'aurait aucun sens. */
