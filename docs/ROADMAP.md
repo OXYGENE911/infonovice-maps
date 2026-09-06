@@ -839,6 +839,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       du README et de la charte ; « À propos » nomme GitHub, Cloudflare et
       Google Trust Services (Cloud Act). Discours : cartographie française et
       open source, API françaises ou européennes de préférence.
+- [ ] FICHE-SOUS-ENTETE (vu le 06/09 sur la CI) : une fiche de destination
+      ouverte après « voler vers » peut se poser SOUS l'en-tête fixe — sa croix
+      devient incliquable (le parcours fiches-uniques l'a montré quand le
+      bandeau de l'en-tête s'est allongé ; corrigé en raccourcissant le
+      bandeau). Le vrai remède : centrer sous l'en-tête (`flyTo` avec
+      `padding.top` = hauteur de l'en-tête) et le mesurer par un parcours.
 - [x] GRAPH-2 (06/09) : chien au volant en grand devant « Découvrir Maps Pro »
       (40 px) et sur le bilan du trajet (104 px, à gauche des chiffres).
 - [x] RECHARGE-MODE-1 (06/09) : recharges et pleins planifiés en voiture
