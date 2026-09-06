@@ -1591,11 +1591,17 @@ export class PanneauItineraire extends HTMLElement {
       this.#retirerBornesTrajet();
       this.#planEnCours = false;
       this.#majResume();
-      if (!auto) {
+      /* LA MÊME COURSE QUE POUR LES PLEINS (CI du 06/09, corps vide) : l'appel
+         automatique arrivait le premier, posait le jeton et se taisait ; celui
+         de l'ouverture de la page voyait le jeton et repartait. Le message
+         s'écrit dès que la page est celle qu'on regarde, et le jeton se rend —
+         relire ce garde ne coûte aucun appel. */
+      if (!auto || this.#vue === 'recharge') {
         corps.textContent = 'Les arrêts de recharge et les pleins se planifient en voiture'
           + ' seulement. À pied, à vélo ou à moto, le trajet se fait sans plan — changez le'
           + ' mode dans « Options du trajet » si vous êtes au volant.';
       }
+      this.#rechargePour = null;
       return;
     }
 
