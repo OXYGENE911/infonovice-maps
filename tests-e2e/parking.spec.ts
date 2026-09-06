@@ -214,6 +214,18 @@ test('UNE FOIS GARÉ, « Finir à pied » bascule le profil piéton', async ({ p
   await expect.poll(() => urls.some((u) =>
     u.includes('profile=pedestrian') && u.includes('2.368')), { timeout: 15_000 })
     .toBe(true);
+
+  /* LE MODE EMPRUNTÉ SE REND (MODE-RETOUR-1, 06/09). Armelin : « si je quitte
+     la navigation, le profil reste en piéton au lieu de revenir en voiture ».
+     La barre dépliée dit « À pied » ; la croix rend « Voiture ». */
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('attente-chien')).toBeHidden({ timeout: 15_000 });
+  const deplier = page.getByRole('button', { name: 'Afficher les commandes du suivi' });
+  if ((await deplier.getAttribute('aria-expanded')) !== 'true') await deplier.click();
+  await expect(page.locator('.bg-mode')).toHaveText('Mode : À pied');
+  await page.locator('.bg-arreter').click();
+  await expect(page.locator('bandeau-guidage')).toBeHidden();
+  await expect(page.locator('input[name="profil"][value="voiture"]')).toBeChecked();
 });
 
 test('L’ARRIVÉE ATTEND D’ÊTRE VRAIE — et dit le côté de la chaussée', async ({ page }) => {

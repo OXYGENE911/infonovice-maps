@@ -123,6 +123,8 @@ export interface DemarrageGuidage extends OptionsGuidage {
   /** Vrai quand la destination EST déjà le parking choisi (RETOURS-0609) : on
    *  ne propose pas de se garer à côté du parking où l'on va. */
   sansParkings?: boolean;
+  /** « Voiture », « À pied »… — dit dans la barre dépliée (MODE-RETOUR-1). */
+  modeLibelle?: string;
   /* LA DESTINATION DEMANDÉE (PARK-1, 31/08) — pas la fin du tracé : le tracé
      s'arrête SUR la route, la destination est l'adresse. C'est autour d'ELLE
      qu'on cherche les parkings, et son libellé nomme la fin à pied. */
@@ -653,6 +655,10 @@ export class BandeauGuidage extends HTMLElement {
              décoratifs pour un lecteur d'écran (« 390 km / restants » lu
              en morceaux ne s'entend pas). Masquée À L'ŒIL SEULEMENT. -->
         <p class="bg-restant bg-lu-seulement" role="status"></p>
+        <!-- LE MODE, BARRE DÉPLIÉE (MODE-RETOUR-1) : « afficher un message dans la
+             barre de navigation quand on l'a dépliée en indiquant le mode dans
+             lequel on est ». -->
+        <p class="bg-mode" role="status" hidden></p>
         <p class="bg-trafic" role="status"><span class="bg-trafic-mot"></span><button
           type="button" class="bg-trafic-eviter" hidden>Chercher un contournement</button></p>
         <p class="bg-arret"></p>
@@ -1178,6 +1184,11 @@ export class BandeauGuidage extends HTMLElement {
       return false;
     }
     this.#options = o;
+    const modeLigne = this.querySelector<HTMLElement>('.bg-mode');
+    if (modeLigne) {
+      modeLigne.textContent = o.modeLibelle ? `Mode : ${o.modeLibelle}` : '';
+      modeLigne.hidden = !o.modeLibelle;
+    }
     /* Le piéton de la barre (RETOURS-0609) : seulement quand on n'est pas déjà à pied. */
     const pieton = this.querySelector<HTMLElement>('.bg-a-pied-icone');
     if (pieton) pieton.hidden = o.aPied === true;
@@ -2090,6 +2101,11 @@ export class BandeauGuidage extends HTMLElement {
   }
 
   arreter(): void {
+    /* L'ÉVÉNEMENT NE PART QUE SI LE SUIVI TOURNAIT (MODE-RETOUR-1) : demarrer()
+       commence par arreter(), et le planificateur écoute « guidage-arrete »
+       pour rendre le mode emprunté — un faux arrêt lui rendrait la voiture
+       au moment même où l'on part à pied. */
+    const tournait = this.#veille !== null;
     this.#arriveDit = false;
     /* LE BILAN NE SURVIT PAS AU SUIVI : gardé, il mêlerait le trajet suivant
        au précédent. Il reste À L'ÉCRAN si l'arrivée vient de l'afficher —
@@ -2145,7 +2161,7 @@ export class BandeauGuidage extends HTMLElement {
     void this.#verrouEcran?.release().catch(() => { /* déjà tombé : rien à faire */ });
     this.#verrouEcran = null;
     document.body.classList.remove('en-guidage');
-    this.dispatchEvent(new CustomEvent('guidage-arrete', { bubbles: true }));
+    if (tournait) this.dispatchEvent(new CustomEvent('guidage-arrete', { bubbles: true }));
   }
 
   /* ---- la caméra appartient à l'usager ---- */

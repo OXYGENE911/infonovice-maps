@@ -2,6 +2,24 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.118.0] — 2026-09-06 — ATTENTE-1 · MODE-RETOUR-1
+
+### Le chien au volant pendant les calculs, et le mode qui revient à la fin
+- Armelin, trois fois : « on a l'impression que l'application a planté »
+  — au recalcul à pied, au « Démarrer le suivi » d'un long trajet (3 à 8 s),
+  au calcul automatique des arrêts de recharge. Un **chien au volant plein
+  écran** avec une phrase dessous couvre désormais ces trois attentes
+  (« Recalcul du trajet à pied… », « Préparation du suivi… », « Calcul des
+  arrêts de recharge… », « Relevé des stations… ») et disparaît quand c'est
+  prêt. Le calcul synchrone des arrêts laisse le navigateur peindre avant de
+  commencer : le chien paraît vraiment, il n'attend pas la fin.
+- **Le mode emprunté se rend** : « finir à pied » passait en piéton et y
+  restait après l'arrêt du suivi. À la croix, le mode d'avant revient
+  (voiture, moto, vélo), et la barre dépliée dit le mode courant
+  (« Mode : À pied »).
+- Tests : chien visible pendant une feuille de route simulée lente, caché au
+  départ ; « À pied » dans la barre, « Voiture » coché après la croix.
+
 ## [1.117.0] — 2026-09-06 — AUDIT-1
 
 ### Premiers correctifs de l'audit Codex du 6 septembre (volet Maps)

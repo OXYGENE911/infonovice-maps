@@ -28,6 +28,7 @@ import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
 import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
 import { apprendreTrajet, lireHabitudes, oublierHabitude, suggerer } from '../lib/routines';
+import { attenteChien, laisserPeindre } from './attente-chien';
 import {
   profilCarburant, planifierCarburant, pastillesPleins, euros, prixLitre, LIBELLE_PRIX, LIBELLES_CARBURANT,
   type StationCarburant, type PlanCarburant,
@@ -174,6 +175,12 @@ export class PanneauItineraire extends HTMLElement {
      `pedestrian` (remesuré le 03/09, sur les trois ressources) : les quatre
      modes s'y ramènent, et `profilDe` est le seul endroit qui le sait. */
   #mode: Mode = 'voiture';
+  /* LE MODE D'AVANT « FINIR À PIED » (MODE-RETOUR-1, 06/09). Armelin : « si
+     je quitte la navigation, le profil reste en piéton au lieu de revenir en
+     voiture […] je ne comprenais pas pourquoi je n'avais pas le bon
+     profil ». Le piéton de fin de trajet est un emprunt : à l'arrêt du suivi,
+     on rend le mode qu'on avait. */
+  #modeAvantPied: Mode | null = null;
   #eviter = new Set<Eviter>();
 
   /* L'OPTIMISATION — le cadrage des « profils de trajet » (mandat 28/08) :
@@ -377,6 +384,7 @@ export class PanneauItineraire extends HTMLElement {
         + ' Choisissez votre départ : « Ma position », un lieu enregistré,'
         + ' ou une adresse.';
       erreur.hidden = false;
+      attenteChien().effacer();
       this.querySelector<HTMLInputElement>('[data-role="depart"] input')?.focus();
     }
   }
@@ -389,7 +397,20 @@ export class PanneauItineraire extends HTMLElement {
   set guidage(b: BandeauGuidage) {
     this.#guidage = b;
     // Le bandeau se referme aussi de lui-même : le bouton doit le savoir.
-    b.addEventListener('guidage-arrete', () => { this.#majBoutonDemarrer(); });
+    b.addEventListener('guidage-arrete', () => {
+      this.#majBoutonDemarrer();
+      attenteChien().effacer();
+      const avant = this.#modeAvantPied;
+      if (avant !== null) {
+        this.#modeAvantPied = null;
+        this.#finPietonne = null;
+        this.#mode = avant;
+        const radio = this.querySelector<HTMLInputElement>(`input[name="profil"][value="${avant}"]`);
+        if (radio) radio.checked = true;
+        this.#direLeMode();
+        void ecrirePreference(PREF_MODE, avant).catch(() => { /* tant pis */ });
+      }
+    });
     this.#majBoutonDemarrer();
   }
 
@@ -1070,6 +1091,10 @@ export class PanneauItineraire extends HTMLElement {
       if (!fin) return;
       this.#finPietonne = null;
       if (this.#guidage) this.#guidage.finApied = null;
+      if (this.#modeAvantPied === null) this.#modeAvantPied = this.#mode;
+      /* LE CHIEN PENDANT LE RECALCUL (ATTENTE-1) : « rien n'est affiché à
+         l'écran, on a l'impression que l'application a planté ». */
+      attenteChien().montrer('Recalcul du trajet à pied…');
       this.#mode = 'pied';
       this.#direLeMode();
       const radio = this.querySelector<HTMLInputElement>(
@@ -1167,7 +1192,7 @@ export class PanneauItineraire extends HTMLElement {
     /* LE PROFIL DE PAUSE RELÈVE LES ENVIRONS — un appel, puis le rejouage
        local, comme les conditions. Son échec est BÉNIN et DIT. */
     this.querySelector('.recharge-recalculer')?.addEventListener('click', () => {
-      this.#refairePlan();
+      void this.#refairePlan();
     });
     this.querySelector('.recharge-pause-profil')?.addEventListener('change', () => {
       void this.#enregistrerReglages();
@@ -1186,7 +1211,7 @@ export class PanneauItineraire extends HTMLElement {
            le chargement de l'index pour un calcul qui prend une milliseconde.
            Tant qu'aucune borne n'a été trouvée, en revanche, il faut bien
            lancer la recherche. */
-        if (this.#bornesTrajet.length > 0) { this.#refairePlan(); return; }
+        if (this.#bornesTrajet.length > 0) { void this.#refairePlan(); return; }
         this.#rechargePour = null;
         void this.#planifierRecharge();
       });
@@ -1395,6 +1420,7 @@ export class PanneauItineraire extends HTMLElement {
     iti: Itineraire, corps: HTMLElement, carbu: NonNullable<ReturnType<typeof profilCarburant>>,
   ): Promise<void> {
     corps.replaceChildren(this.#attente('Relevé des stations et de leurs prix le long du trajet…'));
+    attenteChien().montrer('Relevé des stations et de leurs prix…');
     this.#annulationRecharge?.abort();
     const annulation = new AbortController();
     this.#annulationRecharge = annulation;
@@ -1416,6 +1442,7 @@ export class PanneauItineraire extends HTMLElement {
       chercherLeLongDuTrajet(iti.geometrie, 'carburants', 3_000, annulation.signal),
       chargerEnseignes(trace, annulation.signal),
     ]);
+    attenteChien().cacher();
     if (this.#dernier !== iti || annulation.signal.aborted) return;
     if (prix.status === 'fulfilled') {
       const libelle = LIBELLE_PRIX[carbu.carburant];
@@ -1591,6 +1618,7 @@ export class PanneauItineraire extends HTMLElement {
       this.#bornesTrajet = [];
       this.#retirerBornesTrajet();
       this.#planEnCours = false;
+      attenteChien().cacher();
       this.#majResume();
       /* LA MÊME COURSE QUE POUR LES PLEINS (CI du 06/09, corps vide) : l'appel
          automatique arrivait le premier, posait le jeton et se taisait ; celui
@@ -1645,6 +1673,9 @@ export class PanneauItineraire extends HTMLElement {
     }
     this.#planEnCours = true;
     this.#majResume();
+    /* ATTENTE-1 : « un calcul automatique se lance et fige l'écran quelques
+       secondes » — le chien, plein écran, le temps du relevé et du calcul. */
+    attenteChien().montrer('Calcul des arrêts de recharge…');
 
     /* LES RÉSEAUX PRÉFÉRÉS S'HÉRITENT DU FILTRE CARTE (retour d'Armelin du
        29/08 : « à chaque nouveau trajet, il faut encore recocher les
@@ -1694,11 +1725,12 @@ export class PanneauItineraire extends HTMLElement {
       this.#bornesTrajet = stationsDuTrajet(
         stations, iti.geometrie.coordinates as [number, number][], 10_000,
       );
-      this.#refairePlan();
+      void this.#refairePlan();
     } catch (e) {
       if (annulation.signal.aborted) return;
       this.#rechargePour = null;
       this.#planEnCours = false;
+      attenteChien().cacher();
       this.#majResume();
       corps.textContent = e instanceof ErreurIndex || e instanceof ErreurPoi
         ? e.message : 'Recherche des bornes indisponible pour le moment.';
@@ -1829,12 +1861,12 @@ export class PanneauItineraire extends HTMLElement {
     if (!cle || !iti) {
       this.#agrements = null;
       this.#agrementsPour = null;
-      this.#refairePlan();
+      void this.#refairePlan();
       return;
     }
     if (this.#agrementsPour && this.#agrementsPour.iti === iti
       && this.#agrementsPour.profil === cle) {
-      this.#refairePlan();
+      void this.#refairePlan();
       return;
     }
     const profil = PROFILS_PAUSE.find((x) => x.cle === cle);
@@ -1854,7 +1886,7 @@ export class PanneauItineraire extends HTMLElement {
           ? `Aucune ${profil.agrement} à ${'500'} m d'une borne de ce trajet — le plan reste inchangé.`
           : `${agrements.size} borne${agrements.size > 1 ? 's' : ''} du trajet avec ${profil.agrement} à moins de 500 m.`;
       }
-      this.#refairePlan();
+      void this.#refairePlan();
     } catch (e) {
       if (annulation.signal.aborted) return;
       this.#agrements = null;
@@ -1863,7 +1895,7 @@ export class PanneauItineraire extends HTMLElement {
         etat.textContent = (e instanceof ErreurPauses ? e.message
           : 'Le relevé des environs est indisponible.') + ' Le plan sort sans ce critère.';
       }
-      this.#refairePlan();
+      void this.#refairePlan();
     }
   }
 
@@ -1874,7 +1906,8 @@ export class PanneauItineraire extends HTMLElement {
    * doit pas relancer une recherche réseau. Tout le calcul est local
    * (lib/arrets.ts), et les bornes sont déjà en mémoire.
    */
-  #refairePlan(): void {
+  async #refairePlan(): Promise<void> {
+    await laisserPeindre();
     const iti = this.#dernier;
     const v = this.#vehiculeCourant;
     if (!iti || !v) return;
@@ -2176,7 +2209,7 @@ export class PanneauItineraire extends HTMLElement {
     this.#ecartees.add(cle);
     this.#imposees.delete(cle);
     this.#courtoisie.delete(cle);
-    this.#refairePlan();
+    void this.#refairePlan();
   }
 
   /**
@@ -2190,7 +2223,7 @@ export class PanneauItineraire extends HTMLElement {
   #insererCourtoisie(cle: string): void {
     const plan = this.#planCourant;
     const trouvee = this.#bornesTrajet.find((t) => this.#cleDe(t) === cle);
-    if (!plan?.faisable || !trouvee) { this.#refairePlan(); return; }
+    if (!plan?.faisable || !trouvee) { void this.#refairePlan(); return; }
     if (plan.arrets.some((a) => cleBorne(a.borne) === cle)) return;
 
     const precedent = [...plan.arrets]
@@ -3216,6 +3249,10 @@ export class PanneauItineraire extends HTMLElement {
 
     const bouton = this.querySelector<HTMLButtonElement>('.iti-demarrer');
     if (bouton) { bouton.disabled = true; bouton.textContent = 'Préparation…'; }
+    /* ATTENTE-1 : la feuille de route se charge (3 à 8 s mesurées par Armelin
+       sur un long trajet) — le chien le dit, plein écran, jusqu'au départ. */
+    const attente = attenteChien();
+    attente.montrer(relance ? 'Nouveau tracé : le suivi repart…' : 'Préparation du suivi…');
     /* LE CLICHÉ DU CALCUL RÉUSSI, jamais l'état vivant des champs : entre-temps
        l'usager a pu changer d'adresse sans que le recalcul aboutisse, et le
        suivi doit décrire le trajet TRACÉ. Même règle que la feuille de route.
@@ -3233,7 +3270,7 @@ export class PanneauItineraire extends HTMLElement {
     }
     if (bouton) bouton.disabled = false;
     // L'usager a pu effacer le trajet pendant le chargement de la feuille.
-    if (this.#dernier !== iti) { this.#majBoutonDemarrer(); return; }
+    if (this.#dernier !== iti) { this.#majBoutonDemarrer(); attente.effacer(); return; }
 
     const plan = this.#planCourant;
     bandeau.demarrer({
@@ -3247,6 +3284,8 @@ export class PanneauItineraire extends HTMLElement {
       /* La destination est le parking choisi : pas de liste de parkings
          autour du parking (RETOURS-0609). */
       sansParkings: this.#finPietonne !== null,
+      /* LE MODE, DIT DANS LA BARRE DÉPLIÉE (MODE-RETOUR-1). */
+      modeLibelle: ({ voiture: 'Voiture', moto: 'Moto', velo: 'Vélo', pied: 'À pied' } as const)[this.#mode],
       /* LA DESTINATION DEMANDÉE (PARK-1) : le tracé s'arrête sur la route,
          l'adresse est à côté — c'est autour d'ELLE qu'on cherche à se
          garer. */
@@ -3267,6 +3306,7 @@ export class PanneauItineraire extends HTMLElement {
       arrets: plan?.faisable ? this.#arretsAAnnoncer(plan) : [],
     });
     this.#majBoutonDemarrer();
+    attente.effacer();
     /* LES LIMITES CARTOGRAPHIÉES ARRIVENT APRÈS : « Démarrer » ne doit pas
        attendre les vingt secondes qu'Overpass peut prendre. Un appel, dont
        l'échec est bénin — le panneau de limite n'apparaît pas, et le suivi
@@ -3669,6 +3709,7 @@ export class PanneauItineraire extends HTMLElement {
     if (!('geolocation' in navigator)) {
       erreur.textContent = 'Ce navigateur ne sait pas donner votre position.';
       erreur.hidden = false;
+      attenteChien().effacer();
       return;
     }
     bouton.disabled = true;
@@ -3690,6 +3731,7 @@ export class PanneauItineraire extends HTMLElement {
       erreur.textContent = 'Position indisponible. Autorisez la géolocalisation,'
         + ' ou saisissez votre point de départ.';
       erreur.hidden = false;
+      attenteChien().effacer();
     } finally {
       bouton.disabled = false;
       bouton.textContent = avant;
@@ -3917,6 +3959,7 @@ export class PanneauItineraire extends HTMLElement {
     const recalculer = this.querySelector<HTMLElement>('.recharge-recalculer');
     if (recalculer) recalculer.hidden = this.#courtoisie.size === 0;
     this.#planEnCours = false;
+    attenteChien().cacher();
     this.#majResume();
     /* LA CARTE PASSE EN MODE TRAJET : les bornes nationales s'effacent, seules
        restent celles du corridor et les arrêts du plan. Même sur un REFUS —
@@ -4042,7 +4085,7 @@ export class PanneauItineraire extends HTMLElement {
           const cle = cleBorne(a.borne);
           this.#ecartees.add(cle);
           this.#imposees.delete(cle);
-          this.#refairePlan();
+          void this.#refairePlan();
         });
         item.append(aller, reseau, detail, retirer, voir, sortie);
         liste.append(item);
@@ -4154,7 +4197,7 @@ export class PanneauItineraire extends HTMLElement {
       case_.checked = coches.has(r.nom);
       case_.addEventListener('change', () => {
         if (case_.checked) coches.add(r.nom); else coches.delete(r.nom);
-        this.#refairePlan();
+        void this.#refairePlan();
       });
       const texte = document.createElement('span');
       texte.textContent = ` ${r.nom} (${r.nombre})`;
@@ -4238,7 +4281,7 @@ export class PanneauItineraire extends HTMLElement {
         if (impose || this.#courtoisie.has(cle)) {
           this.#imposees.delete(cle);
           this.#courtoisie.delete(cle);
-          this.#refairePlan();
+          void this.#refairePlan();
           return;
         }
         this.basculerArret(cle, 'imposer');
@@ -4254,7 +4297,7 @@ export class PanneauItineraire extends HTMLElement {
       moins.addEventListener('click', () => {
         if (ecarte) this.#ecartees.delete(cle);
         else { this.#ecartees.add(cle); this.#imposees.delete(cle); }
-        this.#refairePlan();
+        void this.#refairePlan();
       });
 
       item.append(nom, detail, plus, moins);
@@ -4623,6 +4666,7 @@ export class PanneauItineraire extends HTMLElement {
       erreur.textContent = e instanceof ErreurItineraire
         ? e.message : 'Calcul impossible pour le moment.';
       erreur.hidden = false;
+      attenteChien().effacer();
     }
   }
 
@@ -4690,6 +4734,7 @@ export class PanneauItineraire extends HTMLElement {
     this.#libelleDepart = ''; this.#libelleArrivee = '';
     clearTimeout(this.#minuteurPlanAuto);
     this.#planEnCours = false;
+    attenteChien().cacher();
     this.#departA = null;
     this.#viaBis = null;
     const heure = this.querySelector<HTMLInputElement>('.iti-heure');
