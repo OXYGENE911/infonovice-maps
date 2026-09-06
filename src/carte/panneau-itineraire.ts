@@ -1599,9 +1599,11 @@ export class PanneauItineraire extends HTMLElement {
         await this.#planifierCarburant(iti, corps, carbu);
         return;
       }
-      /* En automatique, PAS de véhicule = pas de plan, en silence : le
-         message d'invite n'a de sens que quand on OUVRE la page. */
-      if (!auto) {
+      /* En automatique, PAS de véhicule = pas de plan, en silence — SAUF si la
+         page est déjà celle qu'on regarde (CI du 06/09, corps vide) : l'appel
+         automatique arrivait le premier, posait le jeton, et celui de
+         l'ouverture repartait sans rien écrire. */
+      if (!auto || this.#vue === 'recharge') {
         corps.textContent = 'Renseignez d’abord votre véhicule (panneau « Véhicule ») :'
           + ' batterie, santé et autonomie constatée.';
       }
