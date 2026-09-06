@@ -4968,3 +4968,7 @@ body.mesure-active #carte .maplibregl-canvas-container { cursor: crosshair; }
 .carburant-liste li { line-height: 1.45; }
 .carburant-moins-chere { margin: 8px 0 0; font: 600 12.5px var(--police); color: var(--texte-1); }
 .carburant-note { margin: 8px 0 0; font: 400 11.5px var(--police); color: var(--texte-3); line-height: 1.45; }
+
+/* LA BULLE D'UN PLEIN (PLEINS-CARTE-1) : enseigne, prix, plein estimé. */
+.plein-bulle .maplibregl-popup-content { font: 500 13px var(--police); color: var(--texte-1);
+  padding: 10px 26px 10px 12px; border-radius: 12px; }

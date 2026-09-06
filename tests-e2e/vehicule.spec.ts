@@ -607,6 +607,17 @@ test('THERMIQUE OU HYBRIDE : les champs électriques se retirent, le choix se ga
   await expect(corps.locator('.carburant-liste li').nth(1)).toContainText('Beaune');
   await expect(corps.locator('.carburant-liste li').nth(2)).toContainText('Mâcon');
   await expect(corps.locator('.carburant-moins-chere')).toContainText('Beaune');
+  // ET SUR LA CARTE (PLEINS-CARTE-1) : trois pastilles de plein, la pilule dit le prix.
+  type Fenetre = { __carte: { querySourceFeatures(id: string): { properties: Record<string, unknown> }[] } };
+  await expect.poll(() => page.evaluate(() => {
+    const c = (window as unknown as Fenetre).__carte;
+    const vus = new Map<string, string>();
+    for (const f of c.querySourceFeatures('iti-arrets')) {
+      if (f.properties['type'] === 'carburant') vus.set(String(f.properties['rang']), String(f.properties['duree']));
+    }
+    return [...vus.entries()].sort();
+  }), { timeout: 10_000 }).toEqual([['1', '1,720 €/L'], ['2', '1,650 €/L'], ['3', '1,800 €/L']]);
+
   // LES ENSEIGNES (ENSEIGNES-1) : appariées à OSM, listées, et le filtre refait le plan.
   await expect(corps.locator('.carburant-liste li').nth(0)).toContainText('TotalEnergies');
   await expect(corps.locator('.carburant-liste li').nth(1)).toContainText('E.Leclerc');
@@ -618,6 +629,12 @@ test('THERMIQUE OU HYBRIDE : les champs électriques se retirent, le choix se ga
   await expect(corps.locator('.carburant-liste li')).toHaveCount(1);
   await expect(corps.locator('.carburant-liste li').first()).toContainText('Auxerre');
   await expect(corps.locator('.carburant-enseignes summary')).toContainText('1 retenue sur 2');
+  // La carte suit le filtre : une seule pastille.
+  await expect.poll(() => page.evaluate(() => {
+    const c = (window as unknown as Fenetre).__carte;
+    return new Set(c.querySourceFeatures('iti-arrets').filter((f) => f.properties['type'] === 'carburant')
+      .map((f) => String(f.properties['rang']))).size;
+  }), { timeout: 10_000 }).toBe(1);
 
   await retour(page);
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();

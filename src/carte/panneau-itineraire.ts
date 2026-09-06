@@ -8,7 +8,7 @@
 // satellite effacerait silencieusement le trajet qu'on vient de calculer.
 import type { Map as CarteMapLibre, GeoJSONSource } from 'maplibre-gl';
 import { estThermique, masseDeclaree, estUneMoto } from '../lib/vehicule';
-import { Marker } from 'maplibre-gl';
+import { Marker, Popup } from 'maplibre-gl';
 import { RechercheAdresse } from './recherche';
 import { EtapesItineraire } from './etapes-itineraire';
 import {
@@ -29,7 +29,7 @@ import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
 import { apprendreTrajet, lireHabitudes, oublierHabitude, suggerer } from '../lib/routines';
 import {
-  profilCarburant, planifierCarburant, euros, prixLitre, LIBELLE_PRIX, LIBELLES_CARBURANT,
+  profilCarburant, planifierCarburant, pastillesPleins, euros, prixLitre, LIBELLE_PRIX, LIBELLES_CARBURANT,
   type StationCarburant,
 } from '../lib/carburant';
 import { chercherLeLongDuTrajet } from '../lib/le-long-du-trajet';
@@ -434,6 +434,15 @@ export class PanneauItineraire extends HTMLElement {
         if (!f || f.geometry.type !== 'Point') return;
         const p = f.properties ?? {};
         const [lon, lat] = f.geometry.coordinates as [number, number];
+        /* UN PLEIN N'EST PAS UNE BORNE (PLEINS-CARTE-1) : sa pastille ouvre une
+           bulle — enseigne, adresse, prix, plein estimé — pas la fiche IRVE. */
+        if (p['type'] === 'carburant') {
+          new Popup({ closeButton: true, maxWidth: '260px', className: 'plein-bulle' })
+            .setLngLat([lon!, lat!])
+            .setText(`${String(p['nom'])} — ${String(p['duree'])}, plein ~${String(p['litres'])} L (${String(p['cout'])})`)
+            .addTo(c);
+          return;
+        }
         this.#fiche?.ouvrir({
           id: typeof p['id'] === 'string' && p['id'] ? p['id'] : null,
           lon: lon!, lat: lat!,
@@ -1480,6 +1489,15 @@ export class PanneauItineraire extends HTMLElement {
       corps.appendChild(eco);
     }
     corps.appendChild(this.#voletEnseignes(iti, corps, carbu, releveEnPanne));
+    /* ET SUR LA CARTE (PLEINS-CARTE-1) : les pastilles des pleins, numérotées,
+       le prix du litre dans la pilule. Sans plein : les couches se retirent. */
+    if (this.#carte) {
+      if (plan.arrets.length > 0) {
+        this.#poserCouchesArrets(this.#carte, { type: 'FeatureCollection', features: [] }, pastillesPleins(plan));
+      } else {
+        this.#retirerBornesTrajet();
+      }
+    }
     const note = document.createElement('p');
     note.className = 'recharge-note carburant-note';
     note.textContent = 'Prix du jour (open data prix-carburants), stations à moins de 3 km de la route,'
@@ -1930,6 +1948,20 @@ export class PanneauItineraire extends HTMLElement {
       })),
     };
 
+    this.#poserCouchesArrets(carte, corridor, pastilles);
+    this.#modeTrajetPose = true;
+    this.#couchesBornes?.masquerBornesNationales(true);
+  }
+
+  /** Retire les couches du mode trajet et rend la carte aux bornes nationales. */
+  /**
+   * Pose (ou remplace) les deux couches du trajet : le corridor des bornes et
+   * les pastilles numérotées des arrêts — recharges OU pleins (PLEINS-CARTE-1) :
+   * les mêmes ronds, la même pilule, une seule source `iti-arrets`.
+   */
+  #poserCouchesArrets(
+    carte: CarteMapLibre, corridor: GeoJSON.FeatureCollection, pastilles: GeoJSON.FeatureCollection,
+  ): void {
     try {
       const srcCorridor = carte.getSource(SOURCE_CORRIDOR) as GeoJSONSource | undefined;
       const srcArrets = carte.getSource(SOURCE_ARRETS) as GeoJSONSource | undefined;
@@ -2011,10 +2043,8 @@ export class PanneauItineraire extends HTMLElement {
       throw e;
     }
     this.#modeTrajetPose = true;
-    this.#couchesBornes?.masquerBornesNationales(true);
   }
 
-  /** Retire les couches du mode trajet et rend la carte aux bornes nationales. */
   #retirerBornesTrajet(): void {
     const carte = this.#carte;
     if (this.#modeTrajetPose && carte) {

@@ -184,3 +184,24 @@ export function planifierCarburant(o: OptionsPlanCarburant): PlanCarburant {
 
 export const euros = (v: number): string => `${v.toFixed(v >= 100 ? 0 : 2).replace('.', ',')} €`;
 export const prixLitre = (v: number): string => `${v.toFixed(3).replace('.', ',')} €/L`;
+
+/* LES PLEINS SUR LA CARTE (PLEINS-CARTE-1, 06/09/2026) : les mêmes pastilles
+   numérotées que les arrêts de recharge, avec le prix du litre dans la pilule
+   à la place de la durée — c'est le chiffre qui décide d'un plein. */
+export function pastillesPleins(plan: PlanCarburant): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: plan.arrets.map((a, i) => ({
+      type: 'Feature',
+      properties: {
+        type: 'carburant',
+        nom: [a.station.enseigne, a.station.adresse, a.station.ville].filter(Boolean).join(', ') || 'Station',
+        rang: String(i + 1),
+        duree: prixLitre(a.station.prixL),
+        litres: Math.round(a.litres),
+        cout: euros(a.coutEur),
+      },
+      geometry: { type: 'Point', coordinates: [a.station.lon, a.station.lat] },
+    })),
+  };
+}

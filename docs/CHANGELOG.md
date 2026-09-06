@@ -2,6 +2,19 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.110.0] — 2026-09-06 — PLEINS-CARTE-1
+
+### Les pleins sur la carte, comme les recharges
+- Les arrêts carburant du plan se posent sur la carte : les mêmes pastilles
+  numérotées que les arrêts de recharge, avec **le prix du litre dans la
+  pilule** à la place de la durée — c'est le chiffre qui décide d'un plein.
+  Cocher ou décocher une enseigne redessine la carte avec le plan. Toucher
+  une pastille ouvre une bulle : enseigne, adresse, prix, plein estimé en
+  litres et en euros.
+- Tests : pastilles pures (rang, prix, enseigne dans le nom) ; parcours E2E
+  Paris–Lyon : trois pastilles « 1,720 / 1,650 / 1,800 €/L », une seule
+  après le filtre TotalEnergies.
+
 ## [1.109.0] — 2026-09-06 — ENSEIGNES-1
 
 ### Les pleins par enseigne — Total, Leclerc, Shell… comme les réseaux de bornes
