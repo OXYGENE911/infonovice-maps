@@ -2,6 +2,16 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.111.0] — 2026-09-06 — JAUGE-SUIVI-1
+
+### La réserve à l'arrivée pendant le suivi, pour un thermique aussi
+- Le quatrième chiffre de la barre du suivi — « ~62 % à l'arrivée » pour un
+  électrique — dit désormais, pour un thermique ou un hybride rechargeable,
+  **« ~180 km à l'arrivée »** : l'autonomie carburant restante selon le plan
+  des pleins. Le Copilote gagne une section « Carburant » qui le redit, en
+  estimation, pas en relevé de jauge (le navigateur ne lit pas la voiture).
+- Test : parcours E2E thermique — le chiffre est visible et en kilomètres.
+
 ## [1.110.0] — 2026-09-06 — PLEINS-CARTE-1
 
 ### Les pleins sur la carte, comme les recharges

@@ -30,7 +30,7 @@ import { PREF_FILTRES } from './panneau-poi';
 import { apprendreTrajet, lireHabitudes, oublierHabitude, suggerer } from '../lib/routines';
 import {
   profilCarburant, planifierCarburant, pastillesPleins, euros, prixLitre, LIBELLE_PRIX, LIBELLES_CARBURANT,
-  type StationCarburant,
+  type StationCarburant, type PlanCarburant,
 } from '../lib/carburant';
 import { chercherLeLongDuTrajet } from '../lib/le-long-du-trajet';
 import type { PoiCarburant } from '../lib/poi';
@@ -291,6 +291,8 @@ export class PanneauItineraire extends HTMLElement {
      à leur enseigne, et les enseignes que l'usager retient — gardées d'un
      trajet à l'autre (préférence `carburant-enseignes`). */
   #stationsCarburant: StationCarburant[] = [];
+  /** Le dernier plan des pleins — le suivi en lit l'autonomie à l'arrivée. */
+  #planCarburant: PlanCarburant | null = null;
   #enseignesPreferees = new Set<string>();
   #enseignesLues = false;
   #enseignesEnPanne = false;
@@ -938,6 +940,7 @@ export class PanneauItineraire extends HTMLElement {
       /* LE PLAN DE RECHARGE REPART : il décrivait l'autre trajet, et ses
          bornes ne sont plus sur la route. Même raisonnement qu'au recalcul. */
       this.#planCourant = null;
+      this.#planCarburant = null;
       this.#bornesTrajet = [];
       this.#imposees.clear();
       this.#ecartees.clear();
@@ -1438,6 +1441,7 @@ export class PanneauItineraire extends HTMLElement {
       distanceM: iti.distance, dureeS: iti.duree, profil: carbu, stations,
       enseignes: this.#enseignesPreferees,
     });
+    this.#planCarburant = plan;
     corps.replaceChildren();
     const titre = document.createElement('p');
     titre.className = 'recharge-resume carburant-titre';
@@ -3217,6 +3221,11 @@ export class PanneauItineraire extends HTMLElement {
       ...(plan?.faisable
         ? { socDepartTrajet: this.#socDepart, socFinal: plan.socArrivee }
         : {}),
+      /* LA JAUGE D'UN THERMIQUE (JAUGE-SUIVI-1) : sans plan de recharge, le
+         plan des pleins donne l'autonomie à l'arrivée — même chiffre, en km. */
+      ...(!plan?.faisable && this.#planCarburant?.faisable
+        ? { autonomieFinaleKm: this.#planCarburant.autonomieArriveeKm }
+        : {}),
       arrets: plan?.faisable
         ? plan.arrets.map((a) => ({
           nom: a.borne.nom,
@@ -4529,6 +4538,7 @@ export class PanneauItineraire extends HTMLElement {
         void this.#demarrerSuivi(true);
       }
       this.#planCourant = null;
+      this.#planCarburant = null;
       this.#bornesTrajet = [];
       this.#imposees.clear();
       this.#ecartees.clear();

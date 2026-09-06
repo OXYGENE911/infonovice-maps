@@ -639,5 +639,7 @@ test('THERMIQUE OU HYBRIDE : les champs électriques se retirent, le choix se ga
   await retour(page);
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();
   await expect(page.locator('.bg-chiffres')).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('.bg-chiffre-soc')).toBeHidden();
+  // LA JAUGE D'UN THERMIQUE (JAUGE-SUIVI-1) : le quatrième chiffre dit les km de réserve à l'arrivée.
+  await expect(page.locator('.bg-chiffre-soc')).toBeVisible();
+  await expect(page.locator('.bg-soc')).toContainText(/^~\d+ km$/);
 });

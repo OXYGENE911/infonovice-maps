@@ -116,6 +116,9 @@ export interface DemarrageGuidage extends OptionsGuidage {
      aucun plan n'existe — pas de véhicule électrique, pas de section. */
   socDepartTrajet?: number;
   socFinal?: number;
+  /** L'autonomie carburant restante à l'arrivée, en km, selon le plan des
+   *  pleins (JAUGE-SUIVI-1) — pour un thermique ou un hybride rechargeable. */
+  autonomieFinaleKm?: number;
   /* LA DESTINATION DEMANDÉE (PARK-1, 31/08) — pas la fin du tracé : le tracé
      s'arrête SUR la route, la destination est l'adresse. C'est autour d'ELLE
      qu'on cherche les parkings, et son libellé nomme la fin à pied. */
@@ -2889,8 +2892,14 @@ export class BandeauGuidage extends HTMLElement {
     const chiffreSoc = this.querySelector<HTMLElement>('.bg-chiffre-soc');
     if (chiffreSoc) {
       const socFin = o.socFinal;
+      const kmFin = o.autonomieFinaleKm;
       if (typeof socFin === 'number' && Number.isFinite(socFin) && !e.horsRoute) {
         (chiffreSoc.querySelector('.bg-soc') as HTMLElement).textContent = `~${Math.round(socFin)} %`;
+        chiffreSoc.hidden = false;
+      } else if (typeof kmFin === 'number' && Number.isFinite(kmFin) && !e.horsRoute) {
+        /* LA JAUGE D'UN THERMIQUE (JAUGE-SUIVI-1) : le même chiffre, en
+           kilomètres de réserve à l'arrivée selon le plan des pleins. */
+        (chiffreSoc.querySelector('.bg-soc') as HTMLElement).textContent = `~${Math.round(kmFin)} km`;
         chiffreSoc.hidden = false;
       } else {
         chiffreSoc.hidden = true;
@@ -3049,6 +3058,16 @@ export class BandeauGuidage extends HTMLElement {
        profil du véhicule (une seule vérité) et REPLANIFIE depuis la
        position ; l'écart S'AFFICHE — rien ne s'apprend en silence, la
        prudence reste celle de MARGE-1. — */
+    if (typeof o.autonomieFinaleKm === 'number' && typeof o.socFinal !== 'number') {
+      /* LE CARBURANT AU COPILOTE (JAUGE-SUIVI-1) : ce que le plan des pleins
+         promet à l'arrivée — une estimation, dite comme telle. */
+      section('Carburant');
+      const ligneCarbu = document.createElement('p');
+      ligneCarbu.className = 'bg-copilote-carburant-arrivee';
+      ligneCarbu.textContent = `Autonomie à l’arrivée, selon le plan des pleins : ~${
+        Math.round(o.autonomieFinaleKm)} km — une estimation, pas un relevé de jauge.`;
+      corps.append(ligneCarbu);
+    }
     if (typeof o.socDepartTrajet === 'number' && typeof o.socFinal === 'number') {
       section('Batterie');
       const estime = socEstimeA(
