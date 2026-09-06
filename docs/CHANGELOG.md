@@ -2,6 +2,20 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.123.0] — 2026-09-06 — SEARCH-1
+
+### Deux commerces homonymes à deux cents mètres restent deux résultats
+- Audit Codex (06/09) : le dédoublonnage de la recherche assimilait deux
+  lieux de même nom dans un rectangle de trois cents mètres — deux
+  « Carrefour City » à deux numéros de la même rue n'en faisaient plus qu'un.
+  Quand les deux réponses portent un numéro de voie, c'est l'adresse qui
+  tranche : deux numéros, ou deux noms de voie, sont deux établissements ; le
+  même magasin vu par l'annuaire des entreprises (« 12 RUE DE RIVOLI 75001
+  PARIS ») et par OpenStreetMap (« 12 Rue de Rivoli, 75001 Paris ») reste une
+  ligne. Sans numéro, les trois cents mètres tranchent comme avant.
+- Tests : le scénario de l'audit, même numéro autre voie, annuaire contre OSM,
+  lecture des adresses (bis, 7B, boulevard abrégé, sans numéro).
+
 ## [1.122.0] — 2026-09-06 — FICHE-SOUS-ENTETE
 
 ### La fiche d'une adresse cherchée se pose sous l'en-tête, pas dessous
