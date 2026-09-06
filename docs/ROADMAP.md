@@ -835,10 +835,14 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] JAUGE-SUIVI-1 (06/09) : « ~180 km à l'arrivée » dans la barre du suivi et
+      section « Carburant » du Copilote, selon le plan des pleins. RESTE : les
+      annonces vocales des pleins (« station dans 2 km ») — le bandeau ne parle
+      encore que de recharges.
 - [x] PLEINS-CARTE-1 (06/09) : les pleins sur la carte — pastilles numérotées,
       prix du litre dans la pilule, bulle au toucher (enseigne, adresse, prix,
-      plein estimé). RESTE : jauge carburant pendant le suivi ; « Y aller »
-      vers une station hors plan.
+      plein estimé). RESTE : « Y aller » vers une station hors plan (la jauge :
+      JAUGE-SUIVI-1).
 - [x] ENSEIGNES-1 (06/09) : enseignes des stations lues sur OpenStreetMap
       (une requête par plan, appariement à 150 m), volet « Enseignes
       préférées » sur la page des pleins, filtre gardé d'un trajet à l'autre.
