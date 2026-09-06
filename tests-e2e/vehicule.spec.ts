@@ -579,9 +579,18 @@ test('THERMIQUE OU HYBRIDE : les champs électriques se retirent, le choix se ga
       { geom: sur(0.8), adresse: 'Aire de Mâcon-Saint-Albain', ville: 'Mâcon', gazole_prix: 1.80 },
     ] }),
   }));
-  await page.route('**overpass.openstreetmap.fr**', (route) => route.fulfill({
-    contentType: 'application/json', body: '{"elements":[]}',
-  }));
+  /* LES ENSEIGNES VIENNENT D'OPENSTREETMAP (ENSEIGNES-1) : TotalEnergies à
+     Auxerre, E.Leclerc à Beaune ; Mâcon n'a pas de voisine — inconnue. */
+  await page.route('**overpass.openstreetmap.fr**', (route) => {
+    const corps = decodeURIComponent(route.request().postData() ?? route.request().url());
+    if (/"amenity"="fuel"/.test(corps)) {
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ elements: [
+        { type: 'node', id: 1, lat: sur(0.3).lat + 0.0003, lon: sur(0.3).lon, tags: { amenity: 'fuel', brand: 'TotalEnergies' } },
+        { type: 'way', id: 2, center: { lat: sur(0.5).lat, lon: sur(0.5).lon + 0.0004 }, tags: { amenity: 'fuel', brand: 'E.Leclerc' } },
+      ] }) });
+    }
+    return route.fulfill({ contentType: 'application/json', body: '{"elements":[]}' });
+  });
   await page.route('**/www.bison-fute.gouv.fr/**', (route) => route.fulfill({
     contentType: 'application/json', body: '[]',
   }));
@@ -598,7 +607,17 @@ test('THERMIQUE OU HYBRIDE : les champs électriques se retirent, le choix se ga
   await expect(corps.locator('.carburant-liste li').nth(1)).toContainText('Beaune');
   await expect(corps.locator('.carburant-liste li').nth(2)).toContainText('Mâcon');
   await expect(corps.locator('.carburant-moins-chere')).toContainText('Beaune');
-  await expect(corps).toContainText('enseigne');
+  // LES ENSEIGNES (ENSEIGNES-1) : appariées à OSM, listées, et le filtre refait le plan.
+  await expect(corps.locator('.carburant-liste li').nth(0)).toContainText('TotalEnergies');
+  await expect(corps.locator('.carburant-liste li').nth(1)).toContainText('E.Leclerc');
+  const enseignes = corps.locator('.carburant-enseignes');
+  await expect(enseignes.locator('summary')).toContainText('toutes (2 sur ce trajet)');
+  await enseignes.locator('summary').click();
+  await enseignes.getByRole('checkbox', { name: /TotalEnergies/ }).check();
+  // Seul TotalEnergies compte : Auxerre reste, Beaune (Leclerc) et Mâcon (inconnue) s'écartent.
+  await expect(corps.locator('.carburant-liste li')).toHaveCount(1);
+  await expect(corps.locator('.carburant-liste li').first()).toContainText('Auxerre');
+  await expect(corps.locator('.carburant-enseignes summary')).toContainText('1 retenue sur 2');
 
   await retour(page);
   await page.getByRole('button', { name: 'Démarrer le suivi' }).click();

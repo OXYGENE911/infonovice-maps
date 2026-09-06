@@ -835,6 +835,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] ENSEIGNES-1 (06/09) : enseignes des stations lues sur OpenStreetMap
+      (une requête par plan, appariement à 150 m), volet « Enseignes
+      préférées » sur la page des pleins, filtre gardé d'un trajet à l'autre.
+      RESTE : pastilles des pleins sur la carte ; jauge pendant le suivi.
 - [x] MESURE-2 (06/09) : tronçons listés sous le total, « Fermer la surface »
       (aire sphérique, périmètre, polygone teinté), « Rouvrir le tracé ».
       RESTE : distance par la route sur demande ; étiquettes sur la carte.
@@ -890,7 +894,7 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
         dans « Mon véhicule » ; thermique = aucun plan de recharge, mention
         claire. THERMIQUE-2 (livré le 06/09) : autonomie et consommation
         thermiques, pleins toutes les 2 h et avant la réserve, prix du jour ;
-        reste le filtre des enseignes (l'open data des prix n'en a pas).
+        ENSEIGNES-1 (06/09) : le filtre des enseignes, via OpenStreetMap.
       · FOND-NAV-1 (livré, 1.99.0) : bouton rond « fonds de carte » au-dessus de la
         boussole pendant le suivi — le menu étant effacé (NAV-2).
       · RECHERCHE-NAV-1 (PR #258) : loupe ronde en suivi pour chercher une

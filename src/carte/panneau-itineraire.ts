@@ -34,6 +34,7 @@ import {
 } from '../lib/carburant';
 import { chercherLeLongDuTrajet } from '../lib/le-long-du-trajet';
 import type { PoiCarburant } from '../lib/poi';
+import { chargerEnseignes, apparierEnseignes, enseignesDuTrajet } from '../lib/enseignes';
 import { profilItineraire, denivele } from '../lib/altimetrie';
 import { chargerGrille, estimerPeages } from '../lib/peages-tarifs';
 import { pointLateral, choisirBis, traceDevant } from '../lib/bis';
@@ -253,7 +254,7 @@ export class PanneauItineraire extends HTMLElement {
      imposer un arrêt refermait la liste d'où l'on venait de le choisir, et il
      fallait la rouvrir pour le suivant. Un réglage qui se referme à chaque
      usage est un réglage qu'on cesse d'utiliser. */
-  #voletsOuverts: { reseaux: boolean; toutes: boolean } = { reseaux: false, toutes: false };
+  #voletsOuverts: { reseaux: boolean; toutes: boolean; enseignes: boolean } = { reseaux: false, toutes: false, enseignes: false };
   /** Le profil véhicule du dernier plan, pour rejouer sans relire IndexedDB. */
   #vehiculeCourant: { capaciteKwh: number; consommationKwh100: number; puissanceMaxKw: number;
     puissanceMoyenneKw?: number } | null = null;
@@ -286,6 +287,13 @@ export class PanneauItineraire extends HTMLElement {
 
   /** Vrai pendant le calcul automatique — le résumé le dit. */
   #planEnCours = false;
+  /* LES PLEINS (THERMIQUE-2, ENSEIGNES-1) : les stations du trajet, appariées
+     à leur enseigne, et les enseignes que l'usager retient — gardées d'un
+     trajet à l'autre (préférence `carburant-enseignes`). */
+  #stationsCarburant: StationCarburant[] = [];
+  #enseignesPreferees = new Set<string>();
+  #enseignesLues = false;
+  #enseignesEnPanne = false;
 
   /** Les réseaux préférés ont-ils été hérités du filtre carte pour CE trajet ? */
   #reseauxHerites = false;
@@ -1375,24 +1383,51 @@ export class PanneauItineraire extends HTMLElement {
     this.#annulationRecharge = annulation;
     let stations: StationCarburant[] = [];
     let releveEnPanne = false;
-    try {
-      const trouvees = await chercherLeLongDuTrajet(iti.geometrie, 'carburants', 3_000, annulation.signal);
-      const libelle = LIBELLE_PRIX[carbu.carburant];
-      for (const t of trouvees) {
-        const poi = t.poi as PoiCarburant;
-        const prix = poi.prix.find(([l]) => l === libelle)?.[1];
-        if (prix === undefined) continue;
-        stations.push({ lon: poi.lon, lat: poi.lat, adresse: poi.adresse, ville: poi.ville,
-          prixL: prix, avancementM: t.avancement, ecartM: t.ecart });
+    /* LES ENSEIGNES RETENUES SE LISENT UNE FOIS, d'un trajet à l'autre. */
+    if (!this.#enseignesLues) {
+      this.#enseignesLues = true;
+      const memo = await lirePreference<unknown>('carburant-enseignes');
+      if (Array.isArray(memo)) {
+        this.#enseignesPreferees = new Set(memo.filter((x): x is string => typeof x === 'string'));
       }
-    } catch {
-      if (annulation.signal.aborted) return;
-      releveEnPanne = true;
-      stations = [];
     }
+    const trace = iti.geometrie.coordinates as [number, number][];
+    /* DEUX RELEVÉS EN PARALLÈLE : les prix (open data) et les enseignes
+       (OpenStreetMap). L'enseigne est un confort : sa panne ne prive pas du
+       plan — les stations restent, « enseigne inconnue ». */
+    const [prix, osm] = await Promise.allSettled([
+      chercherLeLongDuTrajet(iti.geometrie, 'carburants', 3_000, annulation.signal),
+      chargerEnseignes(trace, annulation.signal),
+    ]);
     if (this.#dernier !== iti || annulation.signal.aborted) return;
+    if (prix.status === 'fulfilled') {
+      const libelle = LIBELLE_PRIX[carbu.carburant];
+      for (const t of prix.value) {
+        const poi = t.poi as PoiCarburant;
+        const p = poi.prix.find(([l]) => l === libelle)?.[1];
+        if (p === undefined) continue;
+        stations.push({ lon: poi.lon, lat: poi.lat, adresse: poi.adresse, ville: poi.ville,
+          prixL: p, avancementM: t.avancement, ecartM: t.ecart, enseigne: null });
+      }
+    } else {
+      releveEnPanne = true;
+    }
+    this.#enseignesEnPanne = osm.status !== 'fulfilled';
+    if (osm.status === 'fulfilled') stations = apparierEnseignes(stations, osm.value);
+    this.#stationsCarburant = stations;
+    this.#rendrePlanCarburant(iti, corps, carbu, releveEnPanne);
+  }
+
+  /** Le plan des pleins, à partir des stations déjà relevées — rejoué à chaque
+   *  case d'enseigne cochée ou décochée, sans nouvel appel. */
+  #rendrePlanCarburant(
+    iti: Itineraire, corps: HTMLElement, carbu: NonNullable<ReturnType<typeof profilCarburant>>,
+    releveEnPanne: boolean,
+  ): void {
+    const stations = this.#stationsCarburant;
     const plan = planifierCarburant({
       distanceM: iti.distance, dureeS: iti.duree, profil: carbu, stations,
+      enseignes: this.#enseignesPreferees,
     });
     corps.replaceChildren();
     const titre = document.createElement('p');
@@ -1428,7 +1463,7 @@ export class PanneauItineraire extends HTMLElement {
       liste.className = 'recharge-liste carburant-liste';
       for (const a of plan.arrets) {
         const item = document.createElement('li');
-        const ou = [a.station.adresse, a.station.ville].filter(Boolean).join(', ');
+        const ou = [a.station.enseigne, a.station.adresse, a.station.ville].filter(Boolean).join(', ');
         item.textContent = `km ${Math.round(a.avancementM / 1000)} — ${ou || 'station'} · ${
           prixLitre(a.station.prixL)} · plein ~${Math.round(a.litres)} L (${euros(a.coutEur)})`
           + (a.motif === 'pause' ? ' · pause des deux heures' : ' · réserve atteinte');
@@ -1439,18 +1474,75 @@ export class PanneauItineraire extends HTMLElement {
     if (plan.moinsChere) {
       const eco = document.createElement('p');
       eco.className = 'carburant-moins-chere';
-      eco.textContent = `Station la moins chère du trajet : ${[plan.moinsChere.adresse, plan.moinsChere.ville]
+      eco.textContent = `Station la moins chère du trajet : ${[plan.moinsChere.enseigne, plan.moinsChere.adresse, plan.moinsChere.ville]
         .filter(Boolean).join(', ')} au km ${Math.round(plan.moinsChere.avancementM / 1000)}, ${
         prixLitre(plan.moinsChere.prixL)}.`;
       corps.appendChild(eco);
     }
+    corps.appendChild(this.#voletEnseignes(iti, corps, carbu, releveEnPanne));
     const note = document.createElement('p');
     note.className = 'recharge-note carburant-note';
     note.textContent = 'Prix du jour (open data prix-carburants), stations à moins de 3 km de la route,'
-      + ' réserve de 40 km gardée. L’enseigne des stations n’est pas dans cet open data :'
-      + ' le filtre par enseigne viendra avec l’appariement aux stations OpenStreetMap.';
+      + ' réserve de 40 km gardée. Enseignes lues sur OpenStreetMap (station à moins de 150 m) ;'
+      + (this.#enseignesEnPanne ? ' OpenStreetMap n’a pas répondu : enseignes inconnues cette fois.'
+        : ' sans voisine, l’enseigne reste inconnue.');
     corps.appendChild(note);
     this.#rechargePour = iti;
+  }
+
+  /**
+   * Les enseignes retenues (ENSEIGNES-1) — « comme les réseaux de bornes ».
+   * Sans case cochée, toutes ; cochées, seules celles-là, et l'inconnue s'écarte.
+   * Le choix se garde d'un trajet à l'autre.
+   */
+  #voletEnseignes(
+    iti: Itineraire, corps: HTMLElement, carbu: NonNullable<ReturnType<typeof profilCarburant>>,
+    releveEnPanne: boolean,
+  ): HTMLElement {
+    const volet = document.createElement('details');
+    volet.className = 'recharge-reseaux carburant-enseignes';
+    volet.open = this.#voletsOuverts.enseignes === true;
+    volet.addEventListener('toggle', () => { this.#voletsOuverts.enseignes = volet.open; });
+    const enseignes = enseignesDuTrajet(this.#stationsCarburant);
+    const titre = document.createElement('summary');
+    titre.textContent = this.#enseignesPreferees.size === 0
+      ? `Enseignes préférées — toutes (${enseignes.length} sur ce trajet)`
+      : `Enseignes préférées — ${this.#enseignesPreferees.size} retenue${this.#enseignesPreferees.size > 1 ? 's' : ''} sur ${enseignes.length}`;
+    volet.append(titre);
+    const boite = document.createElement('div');
+    boite.className = 'recharge-reseaux-corps';
+    boite.setAttribute('role', 'group');
+    boite.setAttribute('aria-label', 'Enseignes retenues pour ce trajet');
+    /* Une enseigne cochée hier mais absente de ce trajet reste visible, sinon
+       elle serait impossible à décocher. */
+    const montrees = [
+      ...enseignes,
+      ...[...this.#enseignesPreferees].filter((n) => !enseignes.some((e) => e.nom === n))
+        .map((nom) => ({ nom, nombre: 0 })),
+    ];
+    for (const e of montrees) {
+      const etiquette = document.createElement('label');
+      const case_ = document.createElement('input');
+      case_.type = 'checkbox';
+      case_.checked = this.#enseignesPreferees.has(e.nom);
+      case_.addEventListener('change', () => {
+        if (case_.checked) this.#enseignesPreferees.add(e.nom); else this.#enseignesPreferees.delete(e.nom);
+        void ecrirePreference('carburant-enseignes', [...this.#enseignesPreferees]);
+        this.#rendrePlanCarburant(iti, corps, carbu, releveEnPanne);
+      });
+      const texte = document.createElement('span');
+      texte.textContent = e.nombre > 0 ? ` ${e.nom} (${e.nombre})` : ` ${e.nom} (aucune sur ce trajet)`;
+      etiquette.append(case_, texte);
+      boite.append(etiquette);
+    }
+    const note = document.createElement('p');
+    note.className = 'recharge-note';
+    note.textContent = enseignes.length === 0
+      ? 'Aucune enseigne connue sur ce trajet.'
+      : 'Sans case cochée, toutes les enseignes sont acceptées ; cochées, les stations d’enseigne inconnue sont écartées.';
+    boite.append(note);
+    volet.append(boite);
+    return volet;
   }
 
   async #planifierRecharge(auto = false): Promise<void> {
@@ -4423,7 +4515,7 @@ export class PanneauItineraire extends HTMLElement {
       const etatPause = this.querySelector<HTMLElement>('.recharge-pause-etat');
       if (etatPause) etatPause.textContent = '';
       this.#rechercheReseau = '';
-      this.#voletsOuverts = { reseaux: false, toutes: false };
+      this.#voletsOuverts = { reseaux: false, toutes: false, enseignes: false };
       this.#majResume();
       (this.querySelector('.iti-actions') as HTMLElement).hidden = false;
       (this.querySelector('.iti-menu:not(.iti-menu-toujours)') as HTMLElement).hidden = false;
