@@ -213,6 +213,35 @@ test('un trajet sans borne à portée est REFUSÉ, avec le kilomètre exact', as
   await expect(corps, 'un refus sans kilomètre ne sert à personne').toContainText(/\d+\s*km/);
 });
 
+test('À PIED, À VÉLO OU À MOTO, PAS DE PLAN : la voiture seule planifie (RECHARGE-MODE-1)', async ({ page }) => {
+  /* Armelin (06/09) : « en profil piéton avec une voiture électrique déclarée,
+     un parcours d'arrêt aux bornes se calcule et s'affiche ». Le plan existe en
+     voiture ; on passe à pied : il disparaît, la page le dit, le résumé du
+     trajet ne promet plus de batterie à l'arrivée. */
+  await simulerIndexBornes(page, [BEAUNE]);
+  await ouvrirRecharge(page);
+  const corps = page.locator('.iti-recharge-corps');
+  await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
+  await expect(page.locator('.iti-resultat')).toContainText(/avec \d+ % de batterie/, { timeout: 15_000 });
+
+  await retour(page);
+  await allerA(page, 'options');
+  await page.locator('.iti-profil:has(input[value="pied"])').click();
+  await expect(page.locator('.iti-resultat')).not.toContainText(/avec \d+ % de batterie/, { timeout: 15_000 });
+  await retour(page);
+  await allerA(page, 'recharge');
+  await expect(corps).toContainText('en voiture seulement', { timeout: 15_000 });
+  await expect(corps.locator('.recharge-liste')).toHaveCount(0);
+
+  // Retour en voiture : le plan revient.
+  await retour(page);
+  await allerA(page, 'options');
+  await page.locator('.iti-profil:has(input[value="voiture"])').click();
+  await retour(page);
+  await allerA(page, 'recharge');
+  await expect(corps).toContainText('Aire de Beaune', { timeout: 15_000 });
+});
+
 test('avec une borne bien placée, le plan sort avec ses chiffres', async ({ page }) => {
   await simulerIndexBornes(page, [BEAUNE]);
   await ouvrirRecharge(page);
