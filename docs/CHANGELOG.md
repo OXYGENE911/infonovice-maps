@@ -2,6 +2,19 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.122.0] — 2026-09-06 — FICHE-SOUS-ENTETE
+
+### La fiche d'une adresse cherchée se pose sous l'en-tête, pas dessous
+- Sur un écran bas (720 px), la fiche ouverte par une recherche montait
+  depuis le point centré et son haut — la croix — passait sous l'en-tête
+  flottant, que MapLibre ne connaît pas : mesuré à 36 px de haut de fiche
+  pour 69 px de bas d'en-tête. Le vol de la recherche pose désormais le point
+  plus bas, d'autant que l'en-tête est haut (mesuré à l'instant, parce qu'il
+  s'enroule selon l'écran).
+- Test : la carte ARRÊTÉE (un `poll` réussissait à mi-vol), haut de fiche
+  sous le bas d'en-tête, et ce qui est sous le doigt à la croix est bien la
+  croix.
+
 ## [1.121.0] — 2026-09-06 — PROCHAIN-PLEIN-1
 
 ### Le prochain plein, en vert, dans la barre dépliée

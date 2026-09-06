@@ -835,6 +835,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] FICHE-SOUS-ENTETE (06/09) : le vol de la recherche pose le point sous
+      l'en-tête (décalage mesuré sur lui) ; parcours : carte arrêtée, haut de
+      fiche sous le bas d'en-tête, croix vraiment sous le doigt.
 - [x] PROCHAIN-PLEIN-1 (06/09) : le prochain plein du plan (enseigne ou
       adresse, ville, prix du litre) dans la phrase verte de la barre dépliée ;
       poussé au suivi quand le filtre des enseignes refait le plan.
@@ -938,12 +941,6 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] FOND-NAV-1 (05/09) : bouton rond « fond de carte » dans la colonne de
       droite pendant le suivi ; le sélecteur du menu vient se poser dans une
       feuille flottante et retourne au menu ensuite — une seule préférence.
-- [ ] FICHE-SOUS-ENTETE (vu le 06/09 sur la CI) : une fiche de destination
-      ouverte après « voler vers » peut se poser SOUS l'en-tête fixe — sa croix
-      devient incliquable (le parcours fiches-uniques l'a montré quand le
-      bandeau de l'en-tête s'est allongé ; corrigé en raccourcissant le
-      bandeau). Le vrai remède : centrer sous l'en-tête (`flyTo` avec
-      `padding.top` = hauteur de l'en-tête) et le mesurer par un parcours.
 - [ ] RETOURS-AMIS — LE RESTE, trié le 05/09 (suggestions des amis d'Armelin) :
       · MOTORISATION-1 (livré — PR #257) : choix électrique / thermique-hybride
         dans « Mon véhicule » ; thermique = aucun plan de recharge, mention

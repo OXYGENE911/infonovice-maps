@@ -129,3 +129,29 @@ test('LA CROIX FERME ENCORE, et ne laisse pas de fantôme derrière elle', async
   await chercher(page, 'disney village', 'Disney Village');
   await expect(page.locator('.maplibregl-popup')).toHaveCount(1);
 });
+
+test('LA FICHE SE POSE SOUS L’EN-TÊTE — sa croix reste cliquable (FICHE-SOUS-ENTETE)', async ({ page }) => {
+  /* Vu sur la CI le 06/09 : la fiche monte depuis le point centré par le
+     « voler vers » de la recherche ; sur un écran bas (720 px), son haut —
+     et la croix qui y vit — passait SOUS l'en-tête fixe, qui recouvre la
+     carte sans que MapLibre le sache. Le contrat : une fois le vol fini, le
+     haut de la fiche est sous le bas de l'en-tête, et la croix ferme. */
+  await ouvrir(page);
+  await chercher(page, 'fnac darty', 'Fnac Darty Ivry');
+  /* ON MESURE LA CARTE ARRÊTÉE : pendant le vol, la fiche suit le point et
+     passe par des positions où tout va bien — un `poll` réussissait à mi-
+     course, puis la croix finissait sous l'en-tête (payé le 06/09). */
+  type Fenetre = { __carte: { isMoving(): boolean } };
+  await page.waitForFunction(() => !(window as unknown as Fenetre).__carte.isMoving(), null, { timeout: 15_000 });
+  const e = (await page.locator('.entete').boundingBox())!;
+  const f = (await page.locator('.maplibregl-popup-content').boundingBox())!;
+  expect(Math.round(f.y - (e.y + e.height)), `haut de la fiche à ${Math.round(f.y)} px, bas de l’en-tête à ${Math.round(e.y + e.height)} px`)
+    .toBeGreaterThanOrEqual(0);
+  const croix = page.locator('.maplibregl-popup-close-button');
+  const boite = (await croix.boundingBox())!;
+  // Ce qui est SOUS le doigt, à la croix, doit être la croix — pas l'en-tête.
+  const dessus = await page.evaluate(([x, y]) => document.elementFromPoint(x!, y!)?.className ?? '', [boite.x + boite.width / 2, boite.y + boite.height / 2]);
+  expect(dessus, 'la croix est recouverte').toContain('maplibregl-popup-close-button');
+  await croix.click();
+  await expect(page.locator('.maplibregl-popup')).toHaveCount(0);
+});
