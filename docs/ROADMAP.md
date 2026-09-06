@@ -835,6 +835,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] ATTENTE-1 · MODE-RETOUR-1 (06/09) : chien au volant plein écran pendant
+      la préparation du suivi, le recalcul à pied et le calcul des arrêts ;
+      mode rendu à l'arrêt du suivi ; « Mode : … » dans la barre dépliée.
 - [x] AUDIT-1 (06/09) : distance de classement en km équivalents (SEARCH-2),
       noms accessibles des champs et de la carte. RESTE de l'audit Codex,
       volet Maps : SEARCH-1 — deux commerces homonymes proches fusionnés
