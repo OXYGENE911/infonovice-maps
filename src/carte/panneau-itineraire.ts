@@ -30,7 +30,7 @@ import { PREF_FILTRES } from './panneau-poi';
 import { apprendreTrajet, lireHabitudes, oublierHabitude, suggerer } from '../lib/routines';
 import { attenteChien, laisserPeindre } from './attente-chien';
 import {
-  profilCarburant, planifierCarburant, pastillesPleins, euros, prixLitre, LIBELLE_PRIX, LIBELLES_CARBURANT,
+  profilCarburant, planifierCarburant, pastillesPleins, pleinsAAnnoncer, euros, prixLitre, LIBELLE_PRIX, LIBELLES_CARBURANT,
   type StationCarburant, type PlanCarburant,
 } from '../lib/carburant';
 import { chercherLeLongDuTrajet } from '../lib/le-long-du-trajet';
@@ -1474,6 +1474,17 @@ export class PanneauItineraire extends HTMLElement {
       enseignes: this.#enseignesPreferees,
     });
     this.#planCarburant = plan;
+    /* LE SUIVI DÉJÀ PARTI REÇOIT LES PLEINS (PROCHAIN-PLEIN-1) : une enseigne
+       cochée en roulant refait le plan — la barre dépliée doit dire le
+       nouveau prochain plein et la nouvelle réserve à l'arrivée, sans
+       redémarrer. Un thermique n'a pas d'arrêt de recharge : `arrets` vide. */
+    if (this.#guidage?.actif) {
+      this.#guidage.majPlan({
+        arrets: [],
+        pleins: pleinsAAnnoncer(plan),
+        ...(plan.faisable ? { autonomieFinaleKm: plan.autonomieArriveeKm } : {}),
+      });
+    }
     corps.replaceChildren();
     const titre = document.createElement('p');
     titre.className = 'recharge-resume carburant-titre';
@@ -3309,6 +3320,10 @@ export class PanneauItineraire extends HTMLElement {
       ...(!plan?.faisable && this.#planCarburant?.faisable
         ? { autonomieFinaleKm: this.#planCarburant.autonomieArriveeKm }
         : {}),
+      /* LES PLEINS, EN VERT DANS LA BARRE DÉPLIÉE (PROCHAIN-PLEIN-1) : la
+         phrase « Prochain arrêt » vaut pour un thermique comme pour une
+         électrique. */
+      pleins: !plan?.faisable && this.#planCarburant ? pleinsAAnnoncer(this.#planCarburant) : [],
       arrets: plan?.faisable ? this.#arretsAAnnoncer(plan) : [],
     });
     this.#majBoutonDemarrer();

@@ -188,6 +188,19 @@ export const prixLitre = (v: number): string => `${v.toFixed(3).replace('.', ','
 /* LES PLEINS SUR LA CARTE (PLEINS-CARTE-1, 06/09/2026) : les mêmes pastilles
    numérotées que les arrêts de recharge, avec le prix du litre dans la pilule
    à la place de la durée — c'est le chiffre qui décide d'un plein. */
+/** Les pleins tels que la barre du suivi les annonce en vert (PROCHAIN-PLEIN-1,
+ *  06/09) : « Plein : TotalEnergies, Auxerre — 1,720 €/L », situés sur le
+ *  tracé. L'enseigne quand OSM la connaît, l'adresse sinon ; la ville
+ *  toujours ; le prix, parce que c'est lui qui a choisi la station. PURE. */
+export function pleinsAAnnoncer(plan: PlanCarburant): { nom: string; avancementM: number }[] {
+  if (!plan.faisable) return [];
+  return plan.arrets.map((a) => ({
+    nom: `${[a.station.enseigne ?? a.station.adresse, a.station.ville].filter(Boolean).join(', ') || 'Station'} — ${
+      prixLitre(a.station.prixL)}`,
+    avancementM: a.avancementM,
+  }));
+}
+
 export function pastillesPleins(plan: PlanCarburant): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',

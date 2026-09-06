@@ -2,6 +2,18 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.121.0] — 2026-09-06 — PROCHAIN-PLEIN-1
+
+### Le prochain plein, en vert, dans la barre dépliée
+- La phrase verte de la barre du suivi (BARRE-2) annonçait la prochaine
+  recharge ou étape ; un thermique n'y voyait rien. Elle dit désormais aussi
+  le prochain plein du plan : **« Prochain arrêt — Plein : TotalEnergies,
+  Auxerre — 1,720 €/L : dans 117 km · 1 h 48 »**. Une enseigne cochée en
+  roulant refait le plan et pousse le nouveau prochain plein (et la réserve à
+  l'arrivée) dans la barre, sans redémarrer le suivi.
+- Tests : `pleinsAAnnoncer` (noms, prix, plan infaisable muet) ; le parcours
+  thermique Paris–Lyon lit la phrase verte après avoir déplié la barre.
+
 ## [1.120.0] — 2026-09-06 — ZOOM-MOTS-1
 
 ### « Zoom 12 » ne veut rien dire : on parle avec la barre d'échelle

@@ -128,6 +128,10 @@ export interface DemarrageGuidage extends OptionsGuidage {
   /** Les étapes intermédiaires, situées sur le tracé (BARRE-2) : le prochain
    *  arrêt annoncé en vert est la plus proche d'elles ou des recharges. */
   escales?: readonly { nom: string; avancementM: number }[];
+  /** Les pleins planifiés d'un thermique (PROCHAIN-PLEIN-1) : annoncés en
+   *  vert comme les recharges — « Plein : … » — et poussés par `majPlan`
+   *  quand le filtre des enseignes refait le plan en roulant. */
+  pleins?: readonly { nom: string; avancementM: number }[];
   /* LA DESTINATION DEMANDÉE (PARK-1, 31/08) — pas la fin du tracé : le tracé
      s'arrête SUR la route, la destination est l'adresse. C'est autour d'ELLE
      qu'on cherche les parkings, et son libellé nomme la fin à pied. */
@@ -2594,7 +2598,7 @@ export class BandeauGuidage extends HTMLElement {
    * à l'arrivée, alors que les pastilles restaient sur la carte. Le
    * planificateur pousse maintenant le plan refait ici, sans redémarrer.
    */
-  majPlan(o: Pick<DemarrageGuidage, 'socDepartTrajet' | 'socFinal' | 'arrets' | 'autonomieFinaleKm'>): void {
+  majPlan(o: Pick<DemarrageGuidage, 'socDepartTrajet' | 'socFinal' | 'arrets' | 'autonomieFinaleKm' | 'pleins'>): void {
     if (!this.#options) return;
     Object.assign(this.#options, o);
     if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
@@ -3019,13 +3023,15 @@ export class BandeauGuidage extends HTMLElement {
         chiffreSoc.hidden = true;
       }
     }
-    /* LE PROCHAIN ARRÊT, EN VERT (BARRE-2) : la plus proche des recharges et
-       des étapes encore devant — distance et durée à la vitesse courante, à
-       la moyenne du trajet à l'arrêt. Rien devant : la ligne se tait. */
+    /* LE PROCHAIN ARRÊT, EN VERT (BARRE-2) : la plus proche des recharges,
+       des pleins (PROCHAIN-PLEIN-1) et des étapes encore devant — distance
+       et durée à la vitesse courante, à la moyenne du trajet à l'arrêt.
+       Rien devant : la ligne se tait. */
     const ligneProchain = this.querySelector<HTMLElement>('.bg-prochain');
     if (ligneProchain) {
       const candidats = [
         ...o.arrets.map((a) => ({ nom: `Recharge : ${a.nom}`, avancementM: a.avancementM })),
+        ...(o.pleins ?? []).map((a) => ({ nom: `Plein : ${a.nom}`, avancementM: a.avancementM })),
         ...(o.escales ?? []),
       ].filter((c) => c.avancementM > e.avancementM + 50)
         .sort((a, b) => a.avancementM - b.avancementM);
