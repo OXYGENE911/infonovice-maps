@@ -1027,6 +1027,28 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       par `import()`. Gain attendu : TBT 1 240 → < 500 ms. À mesurer, pas à
       promettre : Lighthouse avant/après sur le même poste. Cache GitHub
       Pages (10 min) : hors de portée, c'est l'hébergeur.
+      MESURÉ LE 06/09 AU SOIR (Lighthouse 13, mobile simulé, dist en local,
+      trois passages : 66 / 75 / 74 ; FCP 2,7 s, LCP 3,9–4,0 s, TBT 380–680 ms).
+      · L'ÉLÉMENT LCP N'EST PAS LA CARTE (un canevas n'est pas candidat) :
+        c'est le bouton « Installer l'application » de l'en-tête, qui ne
+        paraît qu'à `beforeinstallprompt` (après l'enregistrement du service
+        worker), vers 4 s, sur deux lignes à 412 px.
+      · Sans aucun script, FCP 1,2 s et LCP 1,4 s (note 100) : tout le
+        retard vient de la concurrence réseau simulée entre les 423 Ko de JS
+        (index 176 + MapLibre 247, gzippés) et le CSS.
+      · CE QUI N'A PAS SUFFI (mesuré, chacun deux passages) : CSS inliné
+        (FCP 2,5 s, 78–82, un passage à 89 non reproduit) ; `defer` sur le
+        script module (aucun effet) ; texte réel dans la coquille de
+        recherche + bouton d'installation sur une ligne (aucun effet) ;
+        script en fin de body (80 une fois, LCP 3,6 s — dans le bruit).
+      · CONCLUSION : seule la réduction du JS sur le chemin critique changera
+        la note — sortir `panneau-itineraire` (243 Ko de source) et
+        `bandeau-guidage` (185 Ko) du morceau principal par `import()` au
+        premier appui ou après le premier tracé, et remplacer les
+        `carte.once('load')` par « chargée ? maintenant : au load ». Douze
+        usages du panneau et cinq du bandeau dans carte.ts, un seul import
+        de type ailleurs : le découpage est contenu. Chantier d'une session
+        entière, avec la suite E2E complète ; à mesurer trois fois.
 - [x] RECHERCHE-11 (04/09) : le surnom devient l'enseigne. Second banc
       (quatorze requêtes du quotidien) : « McDo Chennevières » rendait zéro
       — Overpass compare à l'égalité (« McDonald's », apostrophe droite),
