@@ -934,9 +934,23 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
       e.stopPropagation();
       if (derniereDestination) montrerDestination(derniereDestination);
     });
-    carte.flyTo({ center: [r.lon, r.lat], zoom: r.type === 'municipality' ? 13 : 17 });
+    /* SOUS L'EN-TÊTE, PAS DESSOUS (FICHE-SOUS-ENTETE, 06/09). La fiche monte
+       depuis le point ; centré, sur un écran bas (720 px), son haut — et la
+       croix qui y vit — passait sous l'en-tête fixe, que MapLibre ne connaît
+       pas. Le point atterrit plus bas, d'autant que l'en-tête est haut. */
+    carte.flyTo({ center: [r.lon, r.lat], zoom: r.type === 'municipality' ? 13 : 17, offset: decalageSousEntete() });
     montrerDestination(r);
   };
+
+  /** Le décalage [x, y] qui pose un point centré SOUS l'en-tête flottant : sa
+   *  hauteur au-dessus du bord haut de la carte, plus une marge — mesurée à
+   *  l'instant, parce que l'en-tête s'enroule et grandit selon l'écran. */
+  function decalageSousEntete(): [number, number] {
+    const entete = document.querySelector<HTMLElement>('.entete');
+    const bas = entete ? entete.getBoundingClientRect().bottom : 0;
+    const haut = carte.getContainer().getBoundingClientRect().top;
+    return [0, Math.max(0, Math.round(bas - haut) + 8)];
+  }
 
   /** La fiche compacte d'une adresse choisie dans la recherche. */
   function montrerDestination(r: DestinationChoisie): void {
