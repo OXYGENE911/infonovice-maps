@@ -835,10 +835,14 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] PLEINS-CARTE-1 (06/09) : les pleins sur la carte — pastilles numérotées,
+      prix du litre dans la pilule, bulle au toucher (enseigne, adresse, prix,
+      plein estimé). RESTE : jauge carburant pendant le suivi ; « Y aller »
+      vers une station hors plan.
 - [x] ENSEIGNES-1 (06/09) : enseignes des stations lues sur OpenStreetMap
       (une requête par plan, appariement à 150 m), volet « Enseignes
       préférées » sur la page des pleins, filtre gardé d'un trajet à l'autre.
-      RESTE : pastilles des pleins sur la carte ; jauge pendant le suivi.
+      RESTE : jauge pendant le suivi (les pastilles : PLEINS-CARTE-1).
 - [x] MESURE-2 (06/09) : tronçons listés sous le total, « Fermer la surface »
       (aire sphérique, périmètre, polygone teinté), « Rouvrir le tracé ».
       RESTE : distance par la route sur demande ; étiquettes sur la carte.

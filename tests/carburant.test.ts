@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  autonomieCarburantKm, profilCarburant, planifierCarburant, carburantValide, euros, prixLitre,
+  autonomieCarburantKm, profilCarburant, planifierCarburant, carburantValide, euros, prixLitre, pastillesPleins,
   type StationCarburant, type ProfilCarburant,
 } from '../src/lib/carburant';
 
@@ -76,5 +76,17 @@ describe('planifierCarburant', () => {
     expect(prixLitre(1.7)).toBe('1,700 €/L');
     expect(euros(60.256)).toBe('60,26 €');
     expect(euros(123.4)).toBe('123 €');
+  });
+});
+
+describe('pastillesPleins (PLEINS-CARTE-1)', () => {
+  it('une pastille numérotée par plein, le prix du litre dans la pilule, l’enseigne dans le nom', () => {
+    const stations = [{ ...station(155, 1.72, 'Auxerre'), enseigne: 'TotalEnergies' }, station(310, 1.80, 'Mâcon')];
+    const plan = planifierCarburant({ distanceM: 465_000, dureeS: 16_800, profil: PROFIL, stations });
+    const fc = pastillesPleins(plan);
+    expect(fc.features).toHaveLength(2);
+    expect(fc.features[0]!.properties).toMatchObject({ type: 'carburant', rang: '1', duree: '1,720 €/L', nom: 'TotalEnergies, 155 km, Auxerre' });
+    expect(fc.features[1]!.properties).toMatchObject({ rang: '2', nom: '310 km, Mâcon' });
+    expect((fc.features[0]!.geometry as GeoJSON.Point).coordinates).toEqual([0, 0]);
   });
 });
