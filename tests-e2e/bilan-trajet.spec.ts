@@ -128,6 +128,11 @@ test('« ENREGISTRER CE PARCOURS » GARDE, ET SEULEMENT SI ON LE DEMANDE', async
   /* MAPS PRO EN FIN DE TRAJET (PRO-LIENS-1) : une ligne, un lien, dans le
      bilan qu'on lit déjà — jamais une fenêtre de plus. */
   await expect(page.locator('.bg-bilan-pro a')).toHaveAttribute('href', '/pro.html');
+  // LE CHIEN AU VOLANT COMBLE LE VIDE (GRAPH-2) : à gauche des chiffres, en grand.
+  const chien = (await page.locator('.bg-bilan-chien').boundingBox())!;
+  const liste = (await page.locator('.bg-bilan-liste').boundingBox())!;
+  expect(chien.width).toBeGreaterThanOrEqual(72);
+  expect(chien.x + chien.width, 'le chien doit être à gauche des chiffres').toBeLessThanOrEqual(liste.x + 1);
 
   const memoire = async (): Promise<string> => page.evaluate(async () =>
     new Promise<string>((res) => {

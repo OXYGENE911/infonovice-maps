@@ -723,9 +723,12 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
      avec un volant à côté de la ligne Découvrir Maps Pro ». Décoratif. */
   const chien = document.createElement('img');
   chien.className = 'reglages-pro-chien';
-  chien.src = '/icones/volant-48.png';
+  /* EN GRAND (GRAPH-2, 06/09) : « le logo Infonovice avec le volant est
+     tellement petit qu'on a du mal à le distinguer ». Quarante pixels, l'image
+     en 96 pour les écrans denses. */
+  chien.src = '/icones/volant-96.png';
   chien.alt = '';
-  chien.width = 22; chien.height = 22;
+  chien.width = 40; chien.height = 40;
   chien.setAttribute('aria-hidden', 'true');
   lienPro.append(chien, document.createTextNode('Découvrir Maps Pro'));
   /* VERSION ET LIEN PRO SUR LA MÊME RANGÉE (MESURE-1, 05/09) : le menu est

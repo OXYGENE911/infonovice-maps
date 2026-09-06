@@ -835,6 +835,8 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] GRAPH-2 (06/09) : chien au volant en grand devant « Découvrir Maps Pro »
+      (40 px) et sur le bilan du trajet (104 px, à gauche des chiffres).
 - [x] RECHARGE-MODE-1 (06/09) : recharges et pleins planifiés en voiture
       seulement — à pied, à vélo, à moto : pas de plan, la page le dit.
 - [x] RETOURS-0609 (06/09) : liste des parkings qui ne se rouvre plus après

@@ -719,6 +719,12 @@ export class BandeauGuidage extends HTMLElement {
              sort des fixes que le suivi recevait déjà, et rien ne quitte le
              navigateur. -->
         <section class="bg-bilan" hidden aria-label="Bilan du trajet">
+          <!-- LE CHIEN AU VOLANT COMBLE LE VIDE (GRAPH-2, 06/09). Armelin : « la
+               statistique du parcours s'affiche sur quatre lignes avec un grand
+               vide au milieu […] ajouter l'image du chien avec le volant en gros
+               à gauche des résultats pour combler le vide et apporter de la
+               couleur à cette page qui fait trop formulaire ». Décoratif. -->
+          <img class="bg-bilan-chien" src="/icones/volant-192.png" alt="" aria-hidden="true" width="104" height="104">
           <h2 class="bg-bilan-titre">Trajet terminé</h2>
           <dl class="bg-bilan-liste"></dl>
           <!-- ENREGISTRER EST UN GESTE, PAS UN RÉFLEXE DE L'APPLICATION

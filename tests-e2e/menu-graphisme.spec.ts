@@ -25,5 +25,8 @@ test('soleil et lune jaunes sur les thèmes, le chien au volant devant Maps Pro'
   expect(couleur, 'le soleil doit être jaune').toBe('rgb(242, 178, 0)');
   const lien = page.locator('.reglages-pro-lien');
   await expect(lien).toContainText('Découvrir Maps Pro');
-  await expect(lien.locator('img.reglages-pro-chien')).toHaveAttribute('src', '/icones/volant-48.png');
+  await expect(lien.locator('img.reglages-pro-chien')).toHaveAttribute('src', '/icones/volant-96.png');
+  // EN GRAND (GRAPH-2) : Armelin ne le distinguait pas à 22 px.
+  const chien = (await lien.locator('img.reglages-pro-chien').boundingBox())!;
+  expect(chien.width).toBeGreaterThanOrEqual(40);
 });
