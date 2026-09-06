@@ -2,6 +2,19 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.114.0] — 2026-09-06 — GRAPH-2
+
+### Le chien au volant, en grand : dans le menu et sur le bilan du trajet
+- Armelin : « le logo Infonovice avec le volant est tellement petit qu'on a du
+  mal à le distinguer » — quarante pixels devant « Découvrir Maps Pro ».
+- « La statistique du parcours s'affiche sur quatre lignes avec un grand vide
+  au milieu […] ajouter l'image du chien avec le volant en gros à gauche des
+  résultats » — fait : le chien à gauche, le titre et les chiffres à droite,
+  les boutons sur toute la largeur. Deux icônes ajoutées (96 et 192 px)
+  tirées du dessin original.
+- Tests : taille du chien du menu mesurée ; sur le bilan, le chien est à
+  gauche des chiffres et fait au moins 72 px.
+
 ## [1.113.0] — 2026-09-06 — RECHARGE-MODE-1
 
 ### Les arrêts de recharge et les pleins ne se planifient qu'en voiture
