@@ -2,6 +2,16 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.125.0] — 2026-09-06 — AIRES-PICTOS-1
+
+### Les aires d'autoroute : des pictogrammes dessinés, plus d'émojis
+- Le panneau de l'aire à venir et sa pastille bleue portaient dix émojis
+  (⛽ ⚡ 🍴 ☕ 🛒 🚻 🚿 🌳 🧸 🛏) : le dessin changeait d'un téléphone à
+  l'autre, et un émoji absent laissait un carré vide. Dix pictos SVG au même
+  trait que ceux des bornes (carburant, restauration, café et WC sont les
+  mêmes dessins), en `currentColor` — le RESTE d'AIRES-1.
+- Test : chaque signe du panneau est un SVG sans texte, la pastille aussi.
+
 ## [1.124.0] — 2026-09-06 — ZOOM-MOTS-2
 
 ### Le mot vivant du seuil : « carte éloignée, rapprochez encore »

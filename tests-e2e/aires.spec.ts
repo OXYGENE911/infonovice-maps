@@ -137,6 +137,14 @@ test('LA PASTILLE PARAÎT, LE PANNEAU S’OUVRE SEUL À 5 km, dit les commodité
   await expect(feuille.locator('.bg-aire-picto[data-cle="carburant"]')).toContainText('TotalEnergies');
   await expect(feuille.locator('.bg-aire-picto[data-cle="cafe"]')).toBeVisible();
   await expect(feuille.locator('.bg-aire-picto[data-cle="toilettes"]')).toBeVisible();
+  // DES DESSINS, PAS DES ÉMOJIS (AIRES-PICTOS-1) : chaque signe est un SVG, sans texte.
+  const signes = feuille.locator('.bg-aire-picto-signe');
+  expect(await signes.count()).toBeGreaterThanOrEqual(3);
+  expect(await signes.locator('svg').count()).toBe(await signes.count());
+  // Aucun texte HORS du SVG (le picto WC porte « WC » dans son dessin, c'est voulu).
+  expect(await signes.evaluateAll((els) => els.flatMap((e) => [...e.childNodes])
+    .filter((n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? '').trim() !== '').length), 'un émoji subsiste').toBe(0);
+  expect(await page.locator('.bg-aire-p-picto svg').count(), 'la pastille aussi').toBe(1);
   await expect(feuille.locator('.bg-aire-recharge')).toContainText('Corri-dor');
   await expect(feuille.locator('.bg-aire-rang')).toHaveText('1 / 2');
 

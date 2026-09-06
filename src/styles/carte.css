@@ -4771,7 +4771,8 @@ filtre-poi {
 }
 .bg-aire-p[hidden] { display: none; }
 .bg-aire-p:focus-visible { outline: none; box-shadow: var(--focus); }
-.bg-aire-p-picto { font-size: 22px; line-height: 1; }
+.bg-aire-p-picto { display: inline-flex; line-height: 1; }
+.bg-aire-p-picto svg { width: 22px; height: 22px; }
 .bg-aire-p-dist { font: 700 11px var(--police); font-variant-numeric: tabular-nums; }
 
 .bg-aire {
@@ -4802,7 +4803,8 @@ filtre-poi {
   background: #FFFFFF; color: #0B2A5B; border: 2px solid #0B2A5B;
   font: 600 12px var(--police);
 }
-.bg-aire-picto-signe { font-size: 16px; line-height: 1; }
+.bg-aire-picto-signe { display: inline-flex; line-height: 1; }
+.bg-aire-picto-signe svg { width: 16px; height: 16px; }
 .bg-aire-recharge { margin: 8px 0 0; font: 600 13px/1.35 var(--police); }
 .bg-aire-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .bg-aire-actions button {
