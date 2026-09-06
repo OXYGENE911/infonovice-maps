@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <!-- CSP stricte : seules origines réseau, les API souveraines du projet.
+  <!-- CSP stricte : seules origines réseau, les API françaises et européennes du projet.
        Élargir cette liste est une DÉCISION, tracée par PR — jamais un réflexe. -->
     <!-- PAS DE `frame-ancestors` ICI, ET C'EST DÉLIBÉRÉ. Le navigateur
          l'IGNORE lorsqu'il est livré par une balise <meta> — il le dit
@@ -19,15 +19,15 @@
     connect-src 'self' https://data.geopf.fr https://geo.api.gouv.fr https://api-adresse.data.gouv.fr https://data.economie.gouv.fr https://public.opendatasoft.com https://api.panoramax.xyz https://api.open-meteo.com https://www.bison-fute.gouv.fr https://www1.bison-fute.gouv.fr https://proxy.transport.data.gouv.fr https://overpass.openstreetmap.fr https://query.wikidata.org https://commons.wikimedia.org https://data.education.gouv.fr https://api-lannuaire.service-public.fr https://recherche-entreprises.api.gouv.fr https://tabular-api.data.gouv.fr https://data.ampmetropole.fr https://data.nantesmetropole.fr;
     style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self' blob:;
     base-uri 'self'; form-action 'self'">
-  <meta name="description" content="Infonovice Maps — cartographie et itinéraires
-    souverains. L’alternative française à Google Maps : fond IGN, adresses BAN,
-    zéro tracking.">
+  <meta name="description" content="Infonovice Maps — cartographie française et
+    open source, itinéraires et guidage. L’alternative française à Google Maps :
+    fond IGN, adresses BAN, zéro traceur.">
   <!-- LA COULEUR DE LA BARRE DU NAVIGATEUR suit le FOND de l'application,
        pas la charte sombre : « une grosse barre noire horizontale tout en
        haut de l'écran, aucun intérêt » (Armelin, 29/08, en mobile). -->
   <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0E1014" media="(prefers-color-scheme: dark)">
-  <title>Infonovice Maps — cartographie souveraine française</title>
+  <title>Infonovice Maps — cartographie française et open source</title>
   <link rel="canonical" href="https://maps.infonovice.fr/">
   <!-- LA MASCOTTE (LOGO-1, 03/09) : le chien à la carte, dessiné par Armelin
        via GPT, décliné depuis la 1024 transparente et quantifié en 256
@@ -44,7 +44,7 @@
   <meta property="og:site_name" content="Infonovice Maps">
   <meta property="og:locale" content="fr_FR">
   <meta property="og:url" content="https://maps.infonovice.fr/">
-  <meta property="og:title" content="Infonovice Maps — cartographie souveraine française">
+  <meta property="og:title" content="Infonovice Maps — cartographie française et open source">
   <meta property="og:description" content="L’alternative française à Google Maps : fond IGN, adresses BAN, itinéraires, prix des carburants. Aucun traceur, aucun cookie, aucun compte.">
   <meta property="og:image" content="https://maps.infonovice.fr/partage-social.png">
   <meta property="og:image:width" content="1200">
@@ -62,7 +62,7 @@
     "inLanguage": "fr-FR",
     "isAccessibleForFree": true,
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
-    "description": "Cartographie et itinéraires souverains fondés sur les données publiques françaises : fond IGN, adresses BAN, prix des carburants, bornes de recharge. Sans traceur, sans cookie, sans compte.",
+    "description": "Cartographie française et open source : itinéraires et guidage fondés sur les données publiques françaises et européennes — fond IGN, adresses BAN, prix des carburants, bornes de recharge. Sans traceur, sans cookie, sans compte.",
     "license": "https://www.gnu.org/licenses/agpl-3.0.html",
     "publisher": { "@type": "Organization", "name": "Infonovice", "url": "https://infonovice.fr/" },
     "featureList": [
@@ -85,7 +85,7 @@
          la landing page ». Un lien, pas un script : il marche avant le
          bundle et sans lui. -->
     <a class="entete-marque" href="/pro.html" title="Infonovice Maps et Maps Pro">Infonovice <strong>Maps</strong></a>
-    <span class="entete-note">Cartographie souveraine — IGN&nbsp;· BAN&nbsp;· zéro tracking</span>
+    <span class="entete-note">Cartographie française et open source — IGN&nbsp;· BAN&nbsp;· zéro traceur</span>
     <!-- LA BARRE DE RECHERCHE EXISTE AVANT LE SCRIPT (PERF-1, 04/09). Mesuré
          par Lighthouse mobile en production : le plus grand élément peint
          (LCP) est le texte « Rechercher une adresse… », et il n'arrivait

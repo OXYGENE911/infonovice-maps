@@ -1,8 +1,8 @@
 # Projet : Infonovice Maps
 
 ## Contexte
-Application web de cartographie et de planification d'itinéraires souveraine
-française, hébergée sur maps.infonovice.fr. Éditeur : INFONOVICE (auto-entrepreneur,
+Application web de cartographie et de planification d'itinéraires française
+et open source, hébergée sur maps.infonovice.fr. Éditeur : INFONOVICE (auto-entrepreneur,
 France). Positionnement : alternative française à Google Maps, zéro tracking,
 données exclusivement issues d'API publiques françaises. Le client web est la
 phase 1 (vitrine + planificateur PWA). L'app Android native (Kotlin, filtrage
@@ -17,7 +17,13 @@ bibliothèque interne `/src/lib/` réutilisable — pas de backend.
 1. Coût de production : 0 €. Aucun service payant, aucun backend, aucune BDD serveur.
 2. Hébergement : GitHub Pages (repo public) + CNAME maps.infonovice.fr.
    Build et CI exclusivement via GitHub Actions (tier gratuit).
-3. Souveraineté : API publiques françaises ou open data français par défaut.
+3. Sources françaises et open source (le mot « souveraineté » est retiré depuis
+   le 06/09/2026, décision d'Armelin : hébergement GitHub Pages + Cloudflare
+   et certificat Google Trust Services sont américains, Cloud Act oblige ; le
+   discours public dit « cartographie française et open source, API
+   françaises ou européennes de préférence », et la page « À propos »
+   explique ce que l'hébergement ne permet pas de promettre) :
+   API publiques françaises ou open data français par défaut, européens à défaut.
    UNE dérogation existe, décidée par Armelin le 22/08/2026 et écrite sur la
    page publique « À propos » : les prévisions météo viennent d'Open-Meteo
    (européen), aucune source française n'étant utilisable sans clé au

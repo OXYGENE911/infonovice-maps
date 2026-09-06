@@ -24,7 +24,7 @@ async function ouvrirLaBulle(page: Page): Promise<void> {
 }
 
 // Depuis la PR #2, la page EST la carte : on vérifie que MapLibre s'amorce,
-// que les contrôles parlent français, et que la souveraineté tient.
+// que les contrôles parlent français, et que seules les origines déclarées sont appelées.
 
 test('la carte s’amorce : canevas présent, contrôles en français', async ({ page }) => {
   await page.goto('/');
@@ -66,7 +66,7 @@ test('le repère principal et l’application sont DEUX nœuds distincts', async
   expect(structure.etiquette).toContain('Carte de France');
 });
 
-test('SOUVERAINETÉ : seules les origines déclarées sont contactées', async ({ page }) => {
+test('ORIGINES DÉCLARÉES : seules celles de la CSP sont contactées', async ({ page }) => {
   // La contrainte n° 3 du projet, mesurée au navigateur. La liste blanche
   // s'élargit par PR, jamais par accident : data.geopf.fr est arrivée avec
   // la carte (PR #2), api-adresse.data.gouv.fr avec la recherche (PR #4).
