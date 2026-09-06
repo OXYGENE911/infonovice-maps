@@ -1577,6 +1577,34 @@ export class PanneauItineraire extends HTMLElement {
     if ((!auto && this.#vue !== 'recharge') || !iti || this.#rechargePour === iti) return;
     this.#rechargePour = iti;
 
+    /* EN VOITURE SEULEMENT (RECHARGE-MODE-1, 06/09). Armelin : « en profil
+       piéton avec une voiture électrique déclarée, un plan d'arrêts aux
+       bornes se calcule et s'affiche ; pareil à vélo ou à moto. Ça n'a pas
+       de sens sans le mode voiture. » Le véhicule décrit ce qu'on possède,
+       le mode ce qu'on fait aujourd'hui : à pied, à vélo, à moto, ni
+       recharge ni plein — et la barre du suivi n'a pas de batterie à
+       l'arrivée. */
+    if (this.#mode !== 'voiture') {
+      this.#planCourant = null;
+      this.#planCarburant = null;
+      this.#bornesTrajet = [];
+      this.#retirerBornesTrajet();
+      this.#planEnCours = false;
+      this.#majResume();
+      /* LA MÊME COURSE QUE POUR LES PLEINS (CI du 06/09, corps vide) : l'appel
+         automatique arrivait le premier, posait le jeton et se taisait ; celui
+         de l'ouverture de la page voyait le jeton et repartait. Le message
+         s'écrit dès que la page est celle qu'on regarde, et le jeton se rend —
+         relire ce garde ne coûte aucun appel. */
+      if (!auto || this.#vue === 'recharge') {
+        corps.textContent = 'Les arrêts de recharge et les pleins se planifient en voiture'
+          + ' seulement. À pied, à vélo ou à moto, le trajet se fait sans plan — changez le'
+          + ' mode dans « Options du trajet » si vous êtes au volant.';
+      }
+      this.#rechargePour = null;
+      return;
+    }
+
     const profil = await this.#lireVehicule();
     if (!profil) {
       const memo = await lirePreference<unknown>(PREF_VEHICULE);

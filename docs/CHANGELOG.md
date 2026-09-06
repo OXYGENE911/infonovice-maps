@@ -2,6 +2,17 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.113.0] — 2026-09-06 — RECHARGE-MODE-1
+
+### Les arrêts de recharge et les pleins ne se planifient qu'en voiture
+- Armelin : « en profil piéton avec une voiture électrique déclarée, un
+  parcours d'arrêt aux bornes se calcule et s'affiche ; pareil à vélo ou à
+  moto ». Le véhicule décrit ce qu'on possède, le mode ce qu'on fait
+  aujourd'hui : à pied, à vélo ou à moto, plus de plan, plus de bornes du
+  trajet sur la carte, plus de batterie à l'arrivée dans le résumé ni dans le
+  suivi. La page « Arrêts de recharge » le dit et renvoie aux options.
+- Test : plan en voiture, disparu à pied (page et résumé), revenu en voiture.
+
 ## [1.112.0] — 2026-09-06 — RETOURS-0609
 
 ### Retours d'Armelin du 6 septembre — le suivi, sur téléphone
