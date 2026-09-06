@@ -2,6 +2,20 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.124.0] — 2026-09-06 — ZOOM-MOTS-2
+
+### Le mot vivant du seuil : « carte éloignée, rapprochez encore »
+- Sous les réglages des bornes, une ligne dit désormais de quel côté du seuil
+  la carte est, avec la barre d'échelle telle qu'elle est écrite en bas à
+  gauche : **« Carte éloignée (barre d'échelle : 50 km) : le réseau national
+  en amas. Rapprochez encore pour voir toutes les bornes de la vue. »**, puis
+  « Carte rapprochée (barre d'échelle : 500 m) : toutes les bornes de la vue
+  sont interrogées. » — remise à jour à chaque déplacement. C'est le RESTE de
+  ZOOM-MOTS-1 : les seuils étaient dits avec la barre d'échelle, l'écran ne
+  disait pas encore où l'on en était.
+- Test : la ligne cite la barre d'échelle réelle, change au zoom 13, revient
+  au large.
+
 ## [1.123.0] — 2026-09-06 — SEARCH-1
 
 ### Deux commerces homonymes à deux cents mètres restent deux résultats
