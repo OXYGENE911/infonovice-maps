@@ -125,6 +125,9 @@ export interface DemarrageGuidage extends OptionsGuidage {
   sansParkings?: boolean;
   /** « Voiture », « À pied »… — dit dans la barre dépliée (MODE-RETOUR-1). */
   modeLibelle?: string;
+  /** Les étapes intermédiaires, situées sur le tracé (BARRE-2) : le prochain
+   *  arrêt annoncé en vert est la plus proche d'elles ou des recharges. */
+  escales?: readonly { nom: string; avancementM: number }[];
   /* LA DESTINATION DEMANDÉE (PARK-1, 31/08) — pas la fin du tracé : le tracé
      s'arrête SUR la route, la destination est l'adresse. C'est autour d'ELLE
      qu'on cherche les parkings, et son libellé nomme la fin à pied. */
@@ -643,6 +646,12 @@ export class BandeauGuidage extends HTMLElement {
                    est présente pendant la planification mais disparaît pendant
                    la navigation ». Elle ne paraît qu'avec un plan de recharge —
                    sans plan, pas de chiffre inventé. -->
+            </p>
+            <!-- LA DEUXIÈME LIGNE, BARRE DÉPLIÉE (BARRE-2, 06/09). Armelin :
+                 « menu plié, afficher seulement les kilomètres restants, la
+                 durée et l'heure d'arrivée ; menu déplié, afficher en plus
+                 l'autonomie restante à destination ». -->
+            <p class="bg-chiffres-2" aria-hidden="true">
               <span class="bg-chiffre bg-chiffre-soc" hidden><b class="bg-soc"></b><i>à l’arrivée</i></span>
             </p>
           </button>
@@ -661,6 +670,10 @@ export class BandeauGuidage extends HTMLElement {
         <p class="bg-mode" role="status" hidden></p>
         <p class="bg-trafic" role="status"><span class="bg-trafic-mot"></span><button
           type="button" class="bg-trafic-eviter" hidden>Chercher un contournement</button></p>
+        <!-- LE PROCHAIN ARRÊT, EN VERT, BARRE DÉPLIÉE (BARRE-2) : « une phrase
+             en vert indiquant les kilomètres et la durée restante jusqu'à la
+             prochaine étape ou arrêt de recharge planifié ». -->
+        <p class="bg-prochain" role="status" hidden></p>
         <p class="bg-arret"></p>
         <p class="bg-alerte" role="alert" hidden></p>
         <!-- LE MOT DU BIS A SA PROPRE LIGNE, et ce n'est pas un détail :
@@ -3004,6 +3017,27 @@ export class BandeauGuidage extends HTMLElement {
         chiffreSoc.hidden = false;
       } else {
         chiffreSoc.hidden = true;
+      }
+    }
+    /* LE PROCHAIN ARRÊT, EN VERT (BARRE-2) : la plus proche des recharges et
+       des étapes encore devant — distance et durée à la vitesse courante, à
+       la moyenne du trajet à l'arrêt. Rien devant : la ligne se tait. */
+    const ligneProchain = this.querySelector<HTMLElement>('.bg-prochain');
+    if (ligneProchain) {
+      const candidats = [
+        ...o.arrets.map((a) => ({ nom: `Recharge : ${a.nom}`, avancementM: a.avancementM })),
+        ...(o.escales ?? []),
+      ].filter((c) => c.avancementM > e.avancementM + 50)
+        .sort((a, b) => a.avancementM - b.avancementM);
+      const suivant = candidats[0];
+      if (suivant && !e.horsRoute) {
+        const dist = suivant.avancementM - e.avancementM;
+        const moyenneMs = o.dureeTotaleS > 0 ? o.distanceTotaleM / o.dureeTotaleS : 25;
+        const secondes = tempsJusquA(dist, coords.speed ?? null, moyenneMs);
+        ligneProchain.textContent = `Prochain arrêt — ${suivant.nom} : dans ${distanceCourte(dist)} · ${dureeCourte(secondes)}`;
+        ligneProchain.hidden = false;
+      } else {
+        ligneProchain.hidden = true;
       }
     }
     /* « Charges comprises » n'entre pas dans un chiffre : le mot vit sous

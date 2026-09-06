@@ -3659,11 +3659,20 @@ bandeau-guidage:not(.bg-deploye) .bg-chiffre-soc { display: none; }
    informations de navigation sont toutes tronquées […] afficher les
    informations sur deux lignes »). Deux colonnes, deux rangées : chaque
    chiffre a la moitié de la largeur au lieu d'un quart. */
-@media (max-width: 480px) {
-  .bg-chiffres { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; }
-  /* La croix suit le BAS des deux rangées : même marge sous elle et sous les
-     chiffres (le parcours « la ligne du bas » le mesure à 412 px). */
-  .bg-arreter { align-self: flex-end; }
+/* BARRE-2 (06/09) : trois chiffres sur UNE ligne, pliée comme dépliée ; la
+   deuxième ligne (autonomie à l'arrivée) ne paraît que dépliée. Les deux
+   colonnes au téléphone (1.116) sont retirées : Armelin les voulait pour la
+   barre dépliée seulement. */
+.bg-chiffres-2 { display: none; margin: 6px 0 0; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+  gap: 10px; font-variant-numeric: tabular-nums; }
+.bg-deploye .bg-chiffres-2 { display: grid; }
+.bg-chiffres-2:not(:has(.bg-chiffre:not([hidden]))) { display: none; }
+/* LE PROCHAIN ARRÊT, EN VERT (BARRE-2) — barre dépliée seulement. */
+.bg-prochain { display: none; margin: 4px 0 0; font: 600 12.5px var(--police); color: #1E7B4C; }
+.bg-prochain[hidden] { display: none; }
+.bg-deploye .bg-prochain:not([hidden]) { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="clair"]) .bg-prochain { color: #5FD08B; }
 }
 .bg-chiffre {
   display: flex; flex-direction: column; line-height: 1.1; min-width: 0;

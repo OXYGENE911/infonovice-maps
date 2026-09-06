@@ -2,6 +2,22 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.119.0] — 2026-09-06 — BARRE-2
+
+### La barre du suivi telle qu'Armelin la décrit : pliée, trois chiffres ; dépliée, la suite
+- « Menu plié, afficher seulement les kilomètres restants, la durée et
+  l'heure d'arrivée sur une seule ligne. Menu déplié, afficher en plus
+  l'autonomie restante à destination, puis les alertes Bison Futé en orange,
+  puis une phrase en vert indiquant les kilomètres et la durée jusqu'à la
+  prochaine étape ou arrêt de recharge planifié. » Fait tel quel : trois
+  chiffres sur une ligne ; dépliée, une deuxième ligne pour la batterie ou la
+  réserve à l'arrivée, le mode, l'alerte Bison Futé (orange), et **« Prochain
+  arrêt — Recharge : Aire de Beaune : dans 42 km · 25 min »** en vert (ou
+  « Étape 1 » pour une étape ajoutée). Les deux colonnes au téléphone de la
+  1.116 sont retirées : elles répondaient à côté.
+- Tests : trois chiffres sur une ligne et la batterie sur la deuxième ;
+  prochain arrêt en vert (recharge, puis étape ajoutée à la loupe).
+
 ## [1.118.0] — 2026-09-06 — ATTENTE-1 · MODE-RETOUR-1
 
 ### Le chien au volant pendant les calculs, et le mode qui revient à la fin
