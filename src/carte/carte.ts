@@ -730,7 +730,12 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   chien.alt = '';
   chien.width = 40; chien.height = 40;
   chien.setAttribute('aria-hidden', 'true');
-  lienPro.append(chien, document.createTextNode('Découvrir Maps Pro'));
+  lienPro.textContent = 'Découvrir Maps Pro';
+  /* LE CHIEN OCCUPE LA COLONNE DE GAUCHE DE LA BOÎTE (GRAPH-2), sur toute sa
+     hauteur : il ne coûte pas une rangée au menu — mesuré : dans la ligne du
+     lien, quarante pixels faisaient déborder le garde-fou de feuilles-basses
+     (512 px pour 503). */
+  boiteVersion.prepend(chien);
   /* VERSION ET LIEN PRO SUR LA MÊME RANGÉE (MESURE-1, 05/09) : le menu est
      une fenêtre haute comme son contenu, et le volet « Mesurer » lui a coûté
      une rangée. Mesuré : 160 px pour cette boîte, 524 px pour le menu sur un
