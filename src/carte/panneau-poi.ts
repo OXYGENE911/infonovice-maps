@@ -207,6 +207,10 @@ export class PanneauPoi extends HTMLElement {
       this.#minuteur = setTimeout(() => { this.#rechargerActives(); }, 500);
     });
     this.#majSeuilVue();
+    /* LA BARRE D'ÉCHELLE N'EST POSÉE QU'APRÈS CE CÂBLAGE : le mot vivant la
+       relit une fois la carte chargée, pour ne pas rester muet jusqu'au
+       premier déplacement. */
+    if (c.loaded()) this.#majSeuilVue(); else c.once('load', () => { this.#majSeuilVue(); });
     // setStyle détruit les sources : on repose données ET couches (le même
     // contrat que le tracé d'itinéraire).
     c.on('style.load', () => { this.#poserTout(); });
@@ -410,6 +414,10 @@ export class PanneauPoi extends HTMLElement {
             d’échelle à 1 km ou moins — elle interroge le fichier national en
             direct et montre TOUTES les bornes de la vue, quelle que soit
             l’étendue choisie ici.</p>
+          <!-- LE MOT VIVANT (ZOOM-MOTS-2, 06/09) : de quel côté du seuil la
+               carte est MAINTENANT, avec la barre d'échelle telle qu'elle est
+               écrite en bas à gauche — remis à jour à chaque déplacement. -->
+          <p class="poi-filtre-note poi-seuil-vue" role="status"></p>
         </fieldset>
         <p class="poi-etat" role="status"></p>
       </details>`;
@@ -1263,6 +1271,19 @@ export class PanneauPoi extends HTMLElement {
       champNom.placeholder = trop
         ? 'Réseau (rapprochez la carte pour chercher un nom de station)'
         : 'Réseau ou nom de station (Fastned, McDonald…)';
+    }
+    /* LE MOT VIVANT (ZOOM-MOTS-2). ZOOM-MOTS-1 avait remplacé « zoom 12 »
+       par « barre d'échelle à 1 km ou moins » ; Armelin voulait aussi que
+       l'écran DISE où l'on en est. La ligne lit la barre d'échelle du DOM —
+       exactement ce qui est écrit en bas à gauche — et se remet à jour à
+       chaque déplacement, avec le verbe qui manquait : « rapprochez encore ». */
+    const vivant = this.querySelector<HTMLElement>('.poi-seuil-vue');
+    if (vivant) {
+      const echelle = document.querySelector('.maplibregl-ctrl-scale')?.textContent?.trim() ?? '';
+      const lue = echelle ? ` (barre d’échelle : ${echelle})` : '';
+      vivant.textContent = trop
+        ? `Carte éloignée${lue} : le réseau national en amas. Rapprochez encore pour voir toutes les bornes de la vue.`
+        : `Carte rapprochée${lue} : toutes les bornes de la vue sont interrogées.`;
     }
   }
 

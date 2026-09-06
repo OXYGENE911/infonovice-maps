@@ -835,6 +835,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] ZOOM-MOTS-2 (06/09) : la ligne vivante sous les réglages des bornes —
+      « carte éloignée (barre d'échelle : 50 km), rapprochez encore » /
+      « carte rapprochée » — lit la barre d'échelle du DOM à chaque
+      déplacement.
 - [x] SEARCH-1 (06/09) : le dédoublonnage de la recherche lit l'adresse avant
       le rectangle — deux numéros de voie, deux établissements ; l'annuaire et
       OSM du même magasin, une ligne. RESTE : identifiant source (SIRET, objet
@@ -846,8 +850,7 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       adresse, ville, prix du litre) dans la phrase verte de la barre dépliée ;
       poussé au suivi quand le filtre des enseignes refait le plan.
 - [x] ZOOM-MOTS-1 (06/09) : plus de « zoom 12 » à l'écran — les seuils sont
-      dits avec la barre d'échelle (1 km, 100 m). RESTE : un mot vivant
-      (« rapprochez encore ») qui lirait le zoom courant.
+      dits avec la barre d'échelle (1 km, 100 m). Le mot vivant : ZOOM-MOTS-2.
 - [x] BARRE-2 (06/09) : pliée = trois chiffres sur une ligne ; dépliée =
       autonomie à l'arrivée, mode, Bison Futé en orange, prochain arrêt en
       vert (recharge ou étape, distance et durée). Le prochain plein y est
