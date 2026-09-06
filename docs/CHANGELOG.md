@@ -2,6 +2,17 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.120.0] — 2026-09-06 — ZOOM-MOTS-1
+
+### « Zoom 12 » ne veut rien dire : on parle avec la barre d'échelle
+- Armelin : « il est indiqué que certaines informations seront visibles qu'à
+  partir d'un zoom 12 ou zoom 15. Cela ne veut rien dire, il n'y a aucune
+  indication du niveau de zoom sur la carte. » Les trois mentions parlent
+  désormais de ce que l'usager voit : « carte rapprochée — barre d'échelle à
+  1 km ou moins » pour les bornes, « à 100 m ou moins » pour les bâtiments
+  en relief, « rapprochez la carte pour chercher un nom de station » dans
+  le champ.
+
 ## [1.119.0] — 2026-09-06 — BARRE-2
 
 ### La barre du suivi telle qu'Armelin la décrit : pliée, trois chiffres ; dépliée, la suite
