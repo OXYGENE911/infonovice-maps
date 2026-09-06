@@ -3637,6 +3637,12 @@ body.en-guidage #carte .maplibregl-ctrl-bottom-left {
   gap: 10px; font-variant-numeric: tabular-nums;
 }
 .bg-chiffre-soc[hidden] { display: none; }
+/* LE QUATRIÈME CHIFFRE ATTEND LA BARRE DÉPLIÉE (RETOURS-0609). Armelin, sur
+   téléphone en portrait : « trop d'informations, tous les chiffres sont
+   tronqués […] masquer l'autonomie restante à l'arrivée et que la valeur
+   s'affiche quand on appuie sur la barre pour la déplier ». Trois chiffres
+   au repos, quatre une fois la barre ouverte. */
+bandeau-guidage:not(.bg-deploye) .bg-chiffre-soc { display: none; }
 .bg-chiffre {
   display: flex; flex-direction: column; line-height: 1.1; min-width: 0;
 }
@@ -4811,6 +4817,16 @@ body.en-guidage.recherche-ouverte .entete recherche-adresse.recherche-page { dis
 }
 .fonds-nav-feuille[hidden] { display: none; }
 .fonds-nav-feuille details.fonds > summary { display: none; }
+/* LA FEUILLE DES FONDS À SA TAILLE (RETOURS-0609). Armelin : « une fenêtre
+   s'ouvre en tout petit et je dois scroller dans une petite fenêtre ». Le
+   choix des fonds est positionné en ABSOLU sous son volet (la règle du menu
+   flottant) : posé dans la feuille, il n'entrait pas dans sa hauteur — la
+   feuille mesurait son seul bouton Fermer. Ici, il est dans le flux. */
+.fonds-nav-feuille details.fonds fieldset {
+  position: static; min-width: 0; margin: 0; box-shadow: none;
+  background: var(--fond-doux); max-height: none;
+}
+.fonds-nav-feuille { max-height: min(72vh, calc(100dvh - var(--hauteur-bandeau, 120px) - 36px)); }
 .fonds-nav-fermer {
   margin-top: 10px; width: 100%; padding: 8px 12px; border-radius: 10px;
   border: 1px solid var(--bord-2); background: var(--fond-doux); color: var(--texte-1);
@@ -4972,3 +4988,14 @@ body.mesure-active #carte .maplibregl-canvas-container { cursor: crosshair; }
 /* LA BULLE D'UN PLEIN (PLEINS-CARTE-1) : enseigne, prix, plein estimé. */
 .plein-bulle .maplibregl-popup-content { font: 500 13px var(--police); color: var(--texte-1);
   padding: 10px 26px 10px 12px; border-radius: 12px; }
+
+/* FINIR À PIED AVANT L'ARRIVÉE (RETOURS-0609) : le bouton de la feuille des
+   parkings et le piéton de la barre dépliée. */
+.bg-parkings-a-pied {
+  display: inline-flex; align-items: center; gap: 6px; margin: 8px 0 0;
+  padding: 7px 12px; border-radius: 10px; border: 1px solid var(--bord-2);
+  background: var(--fond); color: var(--texte-1); font: 600 13px var(--police); cursor: pointer;
+}
+.bg-parkings-a-pied .picto-menu { width: 18px; height: 18px; }
+.bg-parkings-a-pied:focus-visible { outline: none; box-shadow: var(--focus); }
+.bg-a-pied-icone[hidden] { display: none; }

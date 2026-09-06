@@ -169,6 +169,25 @@ test('LA LISTE VA DU PLUS PRÈS AU PLUS LOIN, et « Se garer » replanifie', asy
   expect(urls[urls.length - 1]).toContain('2.3685');
   // Et la feuille se referme : la décision est prise.
   await expect(page.locator('.bg-parkings')).toBeHidden();
+  /* ET ELLE NE SE ROUVRE PAS (RETOURS-0609). Armelin : « quand je cliquais sur
+     l'un des parkings, je n'ai eu aucune navigation replanifiée mais je
+     revenais au menu de suggestions ». Le suivi repartait vers le parking, à
+     moins de 1,2 km — et la liste se rouvrait d'elle-même. */
+  await rouler(page, 2.3620, 48.8501);
+  await page.waitForTimeout(800);
+  await expect(page.locator('.bg-parkings')).toBeHidden();
+  await expect(page.locator('.bg-parking-p')).toBeHidden();
+});
+
+test('« JE ME GARE ICI : FINIR À PIED » depuis la feuille, sans choisir de parking (RETOURS-0609)', async ({ page }) => {
+  const { urls } = await suivre(page);
+  await rouler(page, 2.3600, 48.8500);
+  await expect(page.locator('.bg-parkings-liste li')).toHaveCount(2, { timeout: 15_000 });
+  await page.locator('.bg-parkings-a-pied').click();
+  await expect(page.locator('.bg-parkings')).toBeHidden();
+  // Le profil bascule piéton depuis ICI vers la destination d'origine.
+  await expect.poll(() => urls.some((u) =>
+    u.includes('profile=pedestrian') && u.includes('start=2.36')), { timeout: 15_000 }).toBe(true);
 });
 
 test('UNE FOIS GARÉ, « Finir à pied » bascule le profil piéton', async ({ page }) => {

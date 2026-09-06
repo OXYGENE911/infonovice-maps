@@ -53,6 +53,11 @@ test('EN SUIVI, UN BOUTON ROND OUVRE LES FONDS ; hors suivi il n’existe pas, e
   await expect(bouton).toHaveAttribute('aria-expanded', 'true');
   // Le sélecteur a DÉMÉNAGÉ, il n'a pas été copié : le menu n'en a plus.
   await expect(feuille.locator('input[name="fond"]')).toHaveCount(3);
+  // LA FEUILLE EST À SA TAILLE (RETOURS-0609) : le choix des fonds est dans le flux, rien ne défile dans un timbre-poste.
+  const boite = (await feuille.boundingBox())!;
+  const choix = (await feuille.locator('details.fonds fieldset').boundingBox())!;
+  expect(boite.height, 'la feuille ne contient pas le choix des fonds').toBeGreaterThan(choix.height);
+  expect(await feuille.evaluate((e) => e.scrollHeight - e.clientHeight)).toBeLessThan(2);
   await expect(page.locator('.reglages-corps .fonds')).toHaveCount(0);
 
   // Choisir la photo aérienne change bien le fond de la carte.

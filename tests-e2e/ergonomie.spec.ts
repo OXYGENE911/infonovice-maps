@@ -518,7 +518,7 @@ test('MOB-1 : sur téléphone, rien ne se recouvre — échelle, barre du trajet
      l'arrivée (RETOURS-AMIS-1) reste `hidden`, et un élément caché répond
      y = 0 — une « deuxième ligne » qui n'existe pas. Payé une CI rouge. */
   const lignes = await page.locator('.bg-chiffre').evaluateAll(
-    (els) => new Set(els.filter((e) => !(e as HTMLElement).hidden)
+    (els) => new Set(els.filter((e) => e.getBoundingClientRect().width > 0)
       .map((e) => Math.round(e.getBoundingClientRect().y))).size);
   expect(lignes, 'les chiffres s’enroulent sur deux lignes').toBe(1);
   await expect(page.locator('.bg-eta')).toContainText(':');

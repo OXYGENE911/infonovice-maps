@@ -85,6 +85,7 @@ import { refermerPanneaux } from './panneaux';
 import { classeRoute, numeroRoute, libelleClasse } from '../lib/classe-route';
 import { fondPanneau, encreSur, cartoucheNumero } from '../lib/panneau';
 import { pictoMenu } from './icone-menu';
+import { poserPositionConnue } from './recherche';
 import { listeCommodites } from './liste-commodites';
 import { Voix } from './voix';
 import {
@@ -119,6 +120,9 @@ export interface DemarrageGuidage extends OptionsGuidage {
   /** L'autonomie carburant restante à l'arrivée, en km, selon le plan des
    *  pleins (JAUGE-SUIVI-1) — pour un thermique ou un hybride rechargeable. */
   autonomieFinaleKm?: number;
+  /** Vrai quand la destination EST déjà le parking choisi (RETOURS-0609) : on
+   *  ne propose pas de se garer à côté du parking où l'on va. */
+  sansParkings?: boolean;
   /* LA DESTINATION DEMANDÉE (PARK-1, 31/08) — pas la fin du tracé : le tracé
      s'arrête SUR la route, la destination est l'adresse. C'est autour d'ELLE
      qu'on cherche les parkings, et son libellé nomme la fin à pied. */
@@ -669,6 +673,11 @@ export class BandeauGuidage extends HTMLElement {
           aria-label="Parkings près de la destination">
           <p class="bg-parkings-titre">Se garer près de l’arrivée</p>
           <ul class="bg-parkings-liste"></ul>
+          <!-- FINIR À PIED, AVANT L'ARRIVÉE (RETOURS-0609). Armelin : « une fois
+               garé dans un parking il faut finir le trajet à pied vers la
+               destination finale » — et l'on se gare parfois soi-même, sans
+               choisir dans la liste. Le geste est ici, où l'on décide. -->
+          <button type="button" class="bg-parkings-a-pied">${pictoMenu('pieton')}Je me gare ici : finir à pied</button>
           <p class="bg-parkings-etat" role="status"></p>
         </div>
         <!-- L'AIRE D'AUTOROUTE À VENIR (AIRES-1, 05/09). Armelin : « un petit
@@ -741,6 +750,13 @@ export class BandeauGuidage extends HTMLElement {
              forme de boussole en mode pressoir », dont le dessin change
              avec l'état. -->
         <div class="bg-boutons" hidden>
+          <!-- LE PIÉTON DE LA BARRE (RETOURS-0609) : « quand je clique sur la
+               barre de navigation en bas, avoir une icône en forme de piéton
+               pour indiquer qu'on s'est garé et qu'on souhaite basculer en
+               navigation piéton jusqu'à la destination ». -->
+          <button type="button" class="bg-a-pied-icone" hidden
+            aria-label="Je suis garé : finir à pied vers la destination"
+            title="Je suis garé : finir à pied">${pictoMenu('pieton')}</button>
           <!-- LE BOUTON DIT SA VUE, PAS SON GESTE (ERGO-2, 30/08). Armelin :
                « ce serait mieux d'afficher simplement 2D ou 3D sur le bouton
                en fonction de la vue affichée, pour que l'utilisateur
@@ -1006,6 +1022,23 @@ export class BandeauGuidage extends HTMLElement {
       const b = this.querySelector<HTMLElement>('.bg-a-pied');
       if (b) b.hidden = true;
     });
+    /* LES DEUX GESTES « FINIR À PIED » AVANT L'ARRIVÉE (RETOURS-0609) : la
+       feuille des parkings et le piéton de la barre dépliée. Même événement
+       que la proposition d'arrivée : le planificateur bascule le profil et
+       repart d'ici vers la destination d'origine. */
+    const finirAPiedIci = (): void => {
+      const c = this.#derniersCoords;
+      if (!c) return;
+      this.#parkingRegle = true;
+      this.#fermerParkings();
+      const b = this.querySelector<HTMLElement>('.bg-parking-p');
+      if (b) b.hidden = true;
+      document.dispatchEvent(new CustomEvent('finir-a-pied', {
+        detail: { lon: c.longitude, lat: c.latitude },
+      }));
+    };
+    this.querySelector('.bg-parkings-a-pied')?.addEventListener('click', finirAPiedIci);
+    this.querySelector('.bg-a-pied-icone')?.addEventListener('click', finirAPiedIci);
     this.querySelector('.bg-bis')?.addEventListener('click', () => { this.#lancerBis(); });
     /* Le contournement d'une route bloquée est LE MÊME geste que le bis —
        un second bouton sur le même circuit, jamais un second chemin. */
@@ -1139,6 +1172,9 @@ export class BandeauGuidage extends HTMLElement {
       return false;
     }
     this.#options = o;
+    /* Le piéton de la barre (RETOURS-0609) : seulement quand on n'est pas déjà à pied. */
+    const pieton = this.querySelector<HTMLElement>('.bg-a-pied-icone');
+    if (pieton) pieton.hidden = o.aPied === true;
     const frise = this.querySelector<HTMLElement>('.bg-frise');
     if (frise) { frise.hidden = true; frise.replaceChildren(); }
     /* Le copilote du trajet précédent ne décrit plus rien : fermé, vidé. */
@@ -1537,8 +1573,18 @@ export class BandeauGuidage extends HTMLElement {
   #majParking(e: EtatGuidage): void {
     const bouton = this.querySelector<HTMLElement>('.bg-parking-p');
     if (!bouton) return;
-    if (this.#parkingRegle || e.horsRoute) { bouton.hidden = true; }
-    else if (e.restantM < 1_200) {
+    /* NI À PIED, NI QUAND LA DESTINATION EST LE PARKING (RETOURS-0609).
+       Armelin : « en navigation piéton, la carte propose de se garer » ; et,
+       après « Se garer », le suivi repart vers le parking — à moins de 1,2 km
+       — et la liste se rouvrait d'elle-même : on croyait que rien ne s'était
+       passé. Le planificateur dit maintenant que la destination est le
+       parking, et la liste se tait. */
+    const o = this.#options;
+    const sansParkings = o?.aPied === true || o?.sansParkings === true;
+    if (sansParkings || this.#parkingRegle || e.horsRoute) {
+      bouton.hidden = true;
+      if (sansParkings) this.#fermerParkings();
+    } else if (e.restantM < 1_200) {
       bouton.hidden = false;
       /* ET LA LISTE SE MONTRE SANS QU'ON LA DEMANDE, à la première approche.
          L'APPEL RESTE UNIQUE : c'est exactement celui que le clic aurait fait,
@@ -2051,6 +2097,8 @@ export class BandeauGuidage extends HTMLElement {
     this.#fermerParkings();
     const boutonP = this.querySelector<HTMLElement>('.bg-parking-p');
     if (boutonP) boutonP.hidden = true;
+    const pietonIcone = this.querySelector<HTMLElement>('.bg-a-pied-icone');
+    if (pietonIcone) pietonIcone.hidden = true;
     const aPied = this.querySelector<HTMLElement>('.bg-a-pied');
     if (aPied) aPied.hidden = true;
     this.#fermerBoussole();
@@ -2496,6 +2544,20 @@ export class BandeauGuidage extends HTMLElement {
     p.hidden = message === '';
   }
 
+  /**
+   * Le plan de recharge (ou des pleins) recalculé PENDANT le suivi
+   * (RETOURS-0609). Armelin, Paris–Agde : une étape ajoutée à la loupe
+   * recalcule le trajet, le suivi repart aussitôt — avant que le plan ne
+   * soit refait — et la frise perdait ses trois arrêts, la barre sa batterie
+   * à l'arrivée, alors que les pastilles restaient sur la carte. Le
+   * planificateur pousse maintenant le plan refait ici, sans redémarrer.
+   */
+  majPlan(o: Pick<DemarrageGuidage, 'socDepartTrajet' | 'socFinal' | 'arrets' | 'autonomieFinaleKm'>): void {
+    if (!this.#options) return;
+    Object.assign(this.#options, o);
+    if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+  }
+
   #majPosition(coords: {
     longitude: number; latitude: number;
     speed?: number | null; heading?: number | null;
@@ -2505,6 +2567,12 @@ export class BandeauGuidage extends HTMLElement {
     this.#derniersCoords = coords;
     const lon = coords.longitude;
     const lat = coords.latitude;
+    /* LA POSITION EST CONNUE DE TOUTE L'APPLICATION (RETOURS-0609). Armelin :
+       « quand on clique sur la loupe, on nous redemande la géolocalisation
+       alors qu'on a déjà donné un consentement pour naviguer ». Le suivi
+       reçoit un fixe par seconde : la recherche le sait désormais, et
+       n'invite plus à se localiser. */
+    poserPositionConnue({ lon, lat });
     const e = etatGuidage(o, { lon, lat });
 
     /* LE CURSEUR AVANT TOUT LE RESTE : c'est la seule chose qui dise « vous

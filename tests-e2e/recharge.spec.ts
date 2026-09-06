@@ -508,13 +508,40 @@ test('SOC-EDIT : l’estimation s’affiche, la correction replanifie et l’éc
      planification, elle disparaît pendant la navigation ». Elle vit désormais
      dans la barre du bas ET dans le Copilote. */
   await expect(copilote).toContainText(/À l’arrivée, selon le plan : ~\d+ %/);
+  // La barre est dépliée depuis « Afficher les commandes du suivi » : le quatrième chiffre paraît (RETOURS-0609).
   await expect(page.locator('.bg-chiffre-soc')).toBeVisible();
   await expect(page.locator('.bg-soc')).toContainText(/~\d+ %/);
   // QUATRE CHIFFRES, UNE SEULE LIGNE : la rangée se partage, elle ne s'enroule pas.
   const lignes = await page.locator('.bg-chiffre').evaluateAll(
-    (els) => new Set(els.filter((e) => !(e as HTMLElement).hidden)
+    (els) => new Set(els.filter((e) => e.getBoundingClientRect().width > 0)
       .map((e) => Math.round(e.getBoundingClientRect().y))).size);
   expect(lignes, 'les quatre chiffres s’enroulent').toBe(1);
+  // REPLIÉE, LA BARRE TAIT LE QUATRIÈME CHIFFRE : trois chiffres lisibles en portrait.
+  await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
+  await expect(page.locator('.bg-chiffre-soc')).toBeHidden();
+  await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
+  await expect(page.locator('.bg-chiffre-soc')).toBeVisible();
+  /* UNE ÉTAPE AJOUTÉE EN ROULANT GARDE LE PLAN (RETOURS-0609). Armelin,
+     Paris–Agde : « je rajoute une étape à la loupe […] j'ai perdu l'indication
+     des trois arrêts dans la barre verticale et l'état de la batterie à
+     l'arrivée ». Le suivi repart avant le plan refait ; le plan est ensuite
+     poussé au suivi sans le redémarrer. */
+  const avantEtape = itineraires.length;
+  await page.evaluate(() => {
+    document.dispatchEvent(new CustomEvent('lieu-etape', { detail: { lon: 3.2, lat: 47.8, nom: 'Étape' } }));
+  });
+  await expect.poll(() => itineraires.length, { timeout: 15_000 }).toBeGreaterThan(avantEtape);
+  const deplier = page.getByRole('button', { name: 'Afficher les commandes du suivi' });
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+  if ((await deplier.getAttribute('aria-expanded')) !== 'true') await deplier.click();
+  await expect(page.locator('.bg-chiffre-soc')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.bg-soc')).toContainText(/~\d+ %/);
+  // Le suivi a redémarré : on rouvre le Copilote pour la suite du parcours.
+  if ((await page.locator('.bg-copilote-bouton').getAttribute('aria-pressed')) !== 'true') {
+    await page.locator('.bg-copilote-bouton').click();
+  }
+  await expect(copilote).toContainText(/À l’arrivée, selon le plan : ~\d+ %/, { timeout: 15_000 });
+
 
   /* Une valeur impossible se refuse poliment. */
   await copilote.getByRole('button', { name: 'Corriger le plan' }).click();

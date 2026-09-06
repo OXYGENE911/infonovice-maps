@@ -631,6 +631,20 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   const guidage = new BandeauGuidage();
   guidage.carte = carte;
   guidage.addEventListener('guidage-arrete', rangerFonds);
+  /* L'ÉCRAN BLANC À LA CROIX ROUGE (RETOURS-0609). Armelin, Huawei Pura 70
+     Ultra sous Chrome : « je clique sur la croix rouge pour quitter le trajet
+     et j'ai toujours un écran blanc ; je dois scroller pour forcer un refresh
+     ou cliquer Menu puis Mise à jour ». Le menu répond, donc l'application
+     vit : c'est le canevas qui ne se redessine pas quand l'en-tête et les
+     rails reviennent (NAV-2) et changent la taille du conteneur — MapLibre
+     n'écoute que la fenêtre. On lui dit la nouvelle taille et on force un
+     rendu, deux fois : tout de suite, et après la mise en page. */
+  guidage.addEventListener('guidage-arrete', () => {
+    const redessiner = (): void => { carte.resize(); carte.triggerRepaint(); };
+    redessiner();
+    requestAnimationFrame(redessiner);
+    setTimeout(redessiner, 400);
+  });
   conteneur.appendChild(guidage);
   panneau.guidage = guidage;
 

@@ -835,6 +835,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] RETOURS-0609 (06/09) : liste des parkings qui ne se rouvre plus après
+      « Se garer », « Je me gare ici : finir à pied » (feuille + piéton de la
+      barre), position connue par la loupe, pas de parking à pied, canevas
+      redessiné à l'arrêt du suivi (écran blanc Huawei), quatrième chiffre
+      seulement barre dépliée, feuille des fonds à sa taille, plan de
+      recharge poussé au suivi après un recalcul. RESTE : vérifier l'écran
+      blanc sur l'appareil d'Armelin (la cause est déduite, pas reproduite).
 - [x] JAUGE-SUIVI-1 (06/09) : « ~180 km à l'arrivée » dans la barre du suivi et
       section « Carburant » du Copilote, selon le plan des pleins. RESTE : les
       annonces vocales des pleins (« station dans 2 km ») — le bandeau ne parle
