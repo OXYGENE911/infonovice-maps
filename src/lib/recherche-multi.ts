@@ -160,8 +160,33 @@ export function cleTrouvaille(t: Trouvaille): string {
  */
 export function memeLieu(a: Trouvaille, b: Trouvaille): boolean {
   const nom = (s: string): string => nu(s).replace(/\s+/g, ' ').trim();
-  return nom(a.libelle) === nom(b.libelle)
-    && Math.abs(a.lon - b.lon) < 0.004 && Math.abs(a.lat - b.lat) < 0.003;
+  if (nom(a.libelle) !== nom(b.libelle)) return false;
+  /* L'ADRESSE AVANT LE RECTANGLE (SEARCH-1, audit Codex du 06/09). Deux
+     « Carrefour City » à deux cents mètres, chacun à son numéro de rue,
+     tenaient dans les trois cents mètres : l'un disparaissait. Quand les
+     DEUX réponses portent un numéro de voie, c'est lui qui tranche — deux
+     numéros, ou deux noms de voie, sont deux établissements. */
+  const ia = identiteAdresse(a.adresse);
+  const ib = identiteAdresse(b.adresse);
+  if (ia && ib) return ia.numero === ib.numero && ia.voie === ib.voie;
+  return Math.abs(a.lon - b.lon) < 0.004 && Math.abs(a.lat - b.lat) < 0.003;
+}
+
+/**
+ * Le numéro et le nom de la voie d'une adresse écrite — PURE ; `null` sans
+ * numéro. « 12 RUE DE RIVOLI 75001 PARIS » (annuaire des entreprises) et
+ * « 12 Rue de Rivoli, 75001 Paris » (OpenStreetMap) donnent la même identité :
+ * le numéro, et le DERNIER mot de la voie avant le code postal ou la virgule —
+ * celui qui la nomme, insensible aux abréviations (« BD », « AV ») du début.
+ */
+export function identiteAdresse(adresse: string): { numero: string; voie: string } | null {
+  // Un numéro de voie fait au plus quatre chiffres : « 75001 PARIS » n'en est pas un.
+  const m = /^\s*(\d{1,4})(?!\d)\s*(bis|ter|quater|[a-z])?\b[\s,]*([^,]*?)(?:,|\s+\d{5}\b|$)/iu.exec(nu(adresse));
+  if (!m) return null;
+  const mots = (m[3] ?? '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').filter((x) => x !== '');
+  const voie = mots[mots.length - 1] ?? '';
+  if (voie === '') return null;
+  return { numero: `${m[1]}${(m[2] ?? '').toLowerCase()}`, voie };
 }
 
 /** Les mots d'un texte, nus : sans accent, sans ponctuation, sans les vides — PURE. */

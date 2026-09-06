@@ -835,6 +835,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] SEARCH-1 (06/09) : le dédoublonnage de la recherche lit l'adresse avant
+      le rectangle — deux numéros de voie, deux établissements ; l'annuaire et
+      OSM du même magasin, une ligne. RESTE : identifiant source (SIRET, objet
+      OSM) quand les sources le donneront au client.
 - [x] FICHE-SOUS-ENTETE (06/09) : le vol de la recherche pose le point sous
       l'en-tête (décalage mesuré sur lui) ; parcours : carte arrêtée, haut de
       fiche sous le bas d'en-tête, croix vraiment sous le doigt.
@@ -852,10 +856,8 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       la préparation du suivi, le recalcul à pied et le calcul des arrêts ;
       mode rendu à l'arrêt du suivi ; « Mode : … » dans la barre dépliée.
 - [x] AUDIT-1 (06/09) : distance de classement en km équivalents (SEARCH-2),
-      noms accessibles des champs et de la carte. RESTE de l'audit Codex,
-      volet Maps : SEARCH-1 — deux commerces homonymes proches fusionnés
-      (dédoublonner par identifiant source / adresse, pas par rectangle) ;
-      corpus de 200–300 requêtes annotées avec Top-1 / Top-5 / MRR mesurés
+      noms accessibles des champs et de la carte. SEARCH-1 livré à part.
+      RESTE de l'audit Codex, volet Maps : corpus de 200–300 requêtes annotées avec Top-1 / Top-5 / MRR mesurés
       (le banc actuel n'en a que douze) ; contrat de route commun
       (points raccordés, provenance) ; « Gare de Lyon » = nom propre même
       depuis Lyon ; parcours clavier mobile / agrandissement du texte /

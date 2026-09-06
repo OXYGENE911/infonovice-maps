@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   ecart, motRepond, motsUtiles, motsPortes, motsCherches, fusionner, cleTrouvaille,
-  bruit, palierDistance, memeLieu,
+  bruit, palierDistance, memeLieu, identiteAdresse,
   type Trouvaille,
 } from '../src/lib/recherche-multi';
 import {
@@ -371,6 +371,45 @@ describe('le nom exact passe devant le nom qui le contient', () => {
     const deux = [t('Castorama', 'osm', 2.55, 48.80), t('Castorama', 'osm', 2.58, 48.80)];
     expect(fusionner(deux, ['castorama'], 10, VUE_FRANCE)).toHaveLength(2);
     expect(memeLieu(deux[0] as Trouvaille, deux[1] as Trouvaille)).toBe(false);
+  });
+
+  it('DEUX COMMERCES HOMONYMES À DEUX CENTS MÈTRES, chacun à son numéro, font DEUX lignes (SEARCH-1)', () => {
+    /* Le scénario de l'audit Codex (06/09) : deux « Carrefour City » à
+       2,350/48,850 et 2,353/48,852, deux adresses — l'un disparaissait. */
+    const deux = [
+      t('Carrefour City', 'entreprise', 2.350, 48.850, '10 RUE DE RIVOLI 75001 PARIS'),
+      t('Carrefour City', 'entreprise', 2.353, 48.852, '45 RUE DE RIVOLI 75001 PARIS'),
+    ];
+    expect(memeLieu(deux[0] as Trouvaille, deux[1] as Trouvaille)).toBe(false);
+    expect(fusionner(deux, ['carrefour', 'city'], 10, VUE_FRANCE)).toHaveLength(2);
+    // Même numéro, autre voie : deux établissements aussi.
+    const autreVoie = t('Carrefour City', 'entreprise', 2.351, 48.851, '10 RUE DE LA PAIX 75002 PARIS');
+    expect(memeLieu(deux[0] as Trouvaille, autreVoie)).toBe(false);
+  });
+
+  it('LE MÊME MAGASIN VU PAR L’ANNUAIRE ET PAR OSM, adresses écrites autrement, fait UNE ligne', () => {
+    const sirene = t('Carrefour City', 'entreprise', 2.3500, 48.8500, '12 RUE DE RIVOLI 75001 PARIS');
+    const osm = t('Carrefour City', 'osm', 2.3503, 48.8502, '12 Rue de Rivoli, 75001 Paris');
+    expect(memeLieu(sirene, osm)).toBe(true);
+    expect(fusionner([sirene, osm], ['carrefour', 'city'], 10, VUE_FRANCE)).toHaveLength(1);
+    // Sans numéro d'un côté, les trois cents mètres tranchent encore.
+    const sansNumero = t('Carrefour City', 'osm', 2.3503, 48.8502, 'Paris');
+    expect(memeLieu(sirene, sansNumero)).toBe(true);
+  });
+});
+
+describe('identiteAdresse (SEARCH-1)', () => {
+  it('lit le numéro et le nom de la voie, quelle que soit l’écriture', () => {
+    expect(identiteAdresse('12 RUE DE RIVOLI 75001 PARIS')).toEqual({ numero: '12', voie: 'rivoli' });
+    expect(identiteAdresse('12 Rue de Rivoli, 75001 Paris')).toEqual({ numero: '12', voie: 'rivoli' });
+    expect(identiteAdresse('3 bis Avenue du Général-Leclerc, 92100 Boulogne')).toEqual({ numero: '3bis', voie: 'leclerc' });
+    expect(identiteAdresse('7B BD SAINT MICHEL 75005 PARIS')).toEqual({ numero: '7b', voie: 'michel' });
+  });
+  it('rend null sans numéro : commune seule, voie seule, vide', () => {
+    expect(identiteAdresse('Paris')).toBeNull();
+    expect(identiteAdresse('RUE DU BOIS 77185 LOGNES')).toBeNull();
+    expect(identiteAdresse('')).toBeNull();
+    expect(identiteAdresse('75001 PARIS')).toBeNull();
   });
 });
 
