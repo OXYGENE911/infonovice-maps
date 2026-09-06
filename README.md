@@ -1,9 +1,12 @@
 # Infonovice Maps
 
-Cartographie et itinéraires **souverains** : une alternative française à
-Google Maps, construite sur les API publiques françaises — à une exception
-près, assumée et documentée : les prévisions météo (voir docs/apis.md)
-(Géoplateforme IGN, BAN, Panoramax, Météo-France, transport.data.gouv.fr).
+Cartographie **française et open source**, itinéraires et guidage : une
+alternative française à Google Maps, construite sur les données publiques
+françaises — européennes à défaut, assumé et documenté (météo Open-Meteo,
+voir docs/apis.md) — Géoplateforme IGN, BAN, Panoramax, OpenStreetMap,
+transport.data.gouv.fr. Le mot « souverain » a été retiré le 06/09/2026 :
+l'hébergement (GitHub Pages, Cloudflare) et le certificat (Google Trust
+Services) sont américains, et la page « À propos » le dit.
 
 - **Zéro tracking.** Aucune donnée ne quitte votre navigateur : favoris et
   préférences vivent en IndexedDB local, exportables en JSON.

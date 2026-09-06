@@ -2,6 +2,22 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.115.0] — 2026-09-06 — SOUVERAINETE-2
+
+### Le mot « souverain » est retiré — et la page « À propos » dit pourquoi
+- Armelin : « la notion de souveraineté n'a plus de sens : les certificats
+  HTTPS sont fournis par Google Trust Services, le dépôt est hébergé sur
+  GitHub et le site sur Cloudflare — des sociétés américaines soumises au
+  Cloud Act. Le dialogue doit dire qu'on utilise une cartographie française
+  et open source, et des API françaises ou européennes de préférence. »
+- Fait : titre, description, balises de partage, données structurées et
+  bandeau de l'accueil disent « cartographie française et open source » ;
+  « À propos » gagne une section « Ce que l'hébergement ne permet pas de
+  promettre » qui nomme GitHub, Cloudflare et Google Trust Services ; le
+  README et la charte du projet (CLAUDE.md, contrainte 3) suivent. Les
+  promesses tenues restent écrites : aucun traceur, aucun compte, aucun
+  serveur à nous, données françaises ou européennes.
+
 ## [1.114.0] — 2026-09-06 — GRAPH-2
 
 ### Le chien au volant, en grand : dans le menu et sur le bilan du trajet
