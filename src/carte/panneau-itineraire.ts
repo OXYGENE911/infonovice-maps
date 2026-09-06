@@ -3286,6 +3286,12 @@ export class PanneauItineraire extends HTMLElement {
       sansParkings: this.#finPietonne !== null,
       /* LE MODE, DIT DANS LA BARRE DÉPLIÉE (MODE-RETOUR-1). */
       modeLibelle: ({ voiture: 'Voiture', moto: 'Moto', velo: 'Vélo', pied: 'À pied' } as const)[this.#mode],
+      /* LES ÉTAPES, SITUÉES SUR LE TRACÉ (BARRE-2) : le bandeau annonce la
+         prochaine en vert, avec sa distance et sa durée. */
+      escales: cliche ? cliche.etapes.map((pt, i) => ({
+        nom: `Étape ${i + 1}`,
+        avancementM: situerSurLeTrace(pt, iti.geometrie.coordinates as [number, number][]).avancement,
+      })) : [],
       /* LA DESTINATION DEMANDÉE (PARK-1) : le tracé s'arrête sur la route,
          l'adresse est à côté — c'est autour d'ELLE qu'on cherche à se
          garer. */

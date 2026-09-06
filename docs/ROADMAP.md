@@ -835,6 +835,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] BARRE-2 (06/09) : pliée = trois chiffres sur une ligne ; dépliée =
+      autonomie à l'arrivée, mode, Bison Futé en orange, prochain arrêt en
+      vert (recharge ou étape, distance et durée). RESTE : le prochain arrêt
+      carburant (plan des pleins) dans la même phrase.
 - [x] ATTENTE-1 · MODE-RETOUR-1 (06/09) : chien au volant plein écran pendant
       la préparation du suivi, le recalcul à pied et le calcul des arrêts ;
       mode rendu à l'arrêt du suivi ; « Mode : … » dans la barre dépliée.

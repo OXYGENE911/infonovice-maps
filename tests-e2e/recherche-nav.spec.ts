@@ -81,6 +81,11 @@ test('EN SUIVI, LA LOUPE ROUVRE LA RECHERCHE ET LE LIEU CHOISI DEVIENT UNE ÉTAP
   await expect(page.locator('body')).toHaveClass(/en-guidage/);
   await expect(page.locator('bandeau-guidage')).toBeVisible();
   await expect(loupe).toBeVisible();
+  // BARRE-2 : l'étape ajoutée est le prochain arrêt, dit en vert dans la barre dépliée.
+  await expect(page.locator('attente-chien')).toBeHidden({ timeout: 15_000 });
+  const deplier = page.getByRole('button', { name: 'Afficher les commandes du suivi' });
+  if ((await deplier.getAttribute('aria-expanded')) !== 'true') await deplier.click();
+  await expect(page.locator('.bg-prochain')).toContainText('Prochain arrêt — Étape 1', { timeout: 15_000 });
 
   // À l'arrêt du suivi, la loupe disparaît ; la barre du haut revient.
   await page.locator('.bg-arreter').click();

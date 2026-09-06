@@ -540,11 +540,16 @@ test('SOC-EDIT : l’estimation s’affiche, la correction replanifie et l’éc
   // La barre est dépliée depuis « Afficher les commandes du suivi » : le quatrième chiffre paraît (RETOURS-0609).
   await expect(page.locator('.bg-chiffre-soc')).toBeVisible();
   await expect(page.locator('.bg-soc')).toContainText(/~\d+ %/);
-  // QUATRE CHIFFRES, UNE SEULE LIGNE : la rangée se partage, elle ne s'enroule pas.
-  const lignes = await page.locator('.bg-chiffre').evaluateAll(
-    (els) => new Set(els.filter((e) => e.getBoundingClientRect().width > 0)
-      .map((e) => Math.round(e.getBoundingClientRect().y))).size);
-  expect(lignes, 'les quatre chiffres s’enroulent').toBe(1);
+  // BARRE-2 : trois chiffres sur une ligne ; la batterie à l'arrivée sur une DEUXIÈME ligne, dépliée.
+  const rangees = await page.locator('.bg-chiffre').evaluateAll(
+    (els) => els.filter((e) => e.getBoundingClientRect().width > 0)
+      .map((e) => ({ soc: e.classList.contains('bg-chiffre-soc'), y: Math.round(e.getBoundingClientRect().y) })));
+  const yPremiers = new Set(rangees.filter((r) => !r.soc).map((r) => r.y));
+  expect(yPremiers.size, 'les trois chiffres s’enroulent').toBe(1);
+  expect(rangees.find((r) => r.soc)!.y, 'la batterie à l’arrivée doit être sous la première ligne').toBeGreaterThan([...yPremiers][0]!);
+  // ET LE PROCHAIN ARRÊT EN VERT : la recharge planifiée, sa distance, sa durée.
+  await expect(page.locator('.bg-prochain')).toBeVisible();
+  await expect(page.locator('.bg-prochain')).toContainText(/Prochain arrêt — Recharge : .* : dans \d/);
   // REPLIÉE, LA BARRE TAIT LE QUATRIÈME CHIFFRE : trois chiffres lisibles en portrait.
   await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
   await expect(page.locator('.bg-chiffre-soc')).toBeHidden();
