@@ -85,6 +85,7 @@ import { refermerPanneaux } from './panneaux';
 import { classeRoute, numeroRoute, libelleClasse } from '../lib/classe-route';
 import { fondPanneau, encreSur, cartoucheNumero } from '../lib/panneau';
 import { pictoMenu } from './icone-menu';
+import { svgAire } from './icone-aire';
 import { poserPositionConnue } from './recherche';
 import { listeCommodites } from './liste-commodites';
 import { Voix } from './voix';
@@ -715,7 +716,7 @@ export class BandeauGuidage extends HTMLElement {
              non : « quitte à m'arrêter, je préfère savoir ». -->
         <button type="button" class="bg-aire-p" hidden aria-expanded="false"
           aria-label="Prochaine aire d’autoroute">
-          <span class="bg-aire-p-picto" aria-hidden="true">☕</span>
+          <span class="bg-aire-p-picto" aria-hidden="true">${svgAire('cafe')}</span>
           <span class="bg-aire-p-dist"></span>
         </button>
         <section class="bg-aire" hidden role="region" aria-label="Prochaine aire d’autoroute">
@@ -1731,10 +1732,8 @@ export class BandeauGuidage extends HTMLElement {
     const c = this.#commodites?.get(a.id);
     const pictos = q<HTMLUListElement>('.bg-aire-pictos');
     pictos.replaceChildren();
-    const DESSINS: Record<string, string> = {
-      carburant: '⛽', recharge: '⚡', restauration: '🍴', cafe: '☕', boutique: '🛒',
-      toilettes: '🚻', douche: '🚿', 'pique-nique': '🌳', jeux: '🧸', hotel: '🛏',
-    };
+    /* DES DESSINS, PAS DES ÉMOJIS (AIRES-PICTOS-1) : le même trait sur tous
+       les téléphones — un émoji manquant laissait un carré vide. */
     const liste = c ? pictosAire(a, c) : (a.toilettes === true ? [{ cle: 'toilettes', libelle: 'Toilettes' }] : []);
     for (const pct of liste) {
       const li = document.createElement('li');
@@ -1744,7 +1743,7 @@ export class BandeauGuidage extends HTMLElement {
       const sym = document.createElement('span');
       sym.className = 'bg-aire-picto-signe';
       sym.setAttribute('aria-hidden', 'true');
-      sym.textContent = DESSINS[pct.cle] ?? '•';
+      sym.innerHTML = svgAire(pct.cle);
       const mot = document.createElement('span');
       mot.className = 'bg-aire-picto-mot';
       mot.textContent = pct.libelle;
