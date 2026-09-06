@@ -240,8 +240,16 @@ export function fusionner(
      Chennevières, parce que les deux premiers sont plus près du centre de la
      France. L'usager avait écrit « Ormesson » ; la liste l'ignorait. */
   const reperes = repere === null ? [] : [repere].flat();
+  /* EN DEGRÉS DE LATITUDE, LA LONGITUDE RAMENÉE (SEARCH-2, audit Codex du
+     06/09) : à 49° N, un degré de longitude ne fait que 73 km contre 111 vers
+     le nord. Sans ce cosinus, un lieu à 0,1° vers l'est (7,3 km) passait
+     DERRIÈRE un lieu à 0,08° vers le nord (8,9 km). Les paliers de
+     `palierDistance` sont en degrés de latitude : ils restent justes. */
   const d2 = (t: Trouvaille): number => reperes.length === 0 ? 0
-    : Math.min(...reperes.map((r) => (t.lon - r.lon) ** 2 + (t.lat - r.lat) ** 2));
+    : Math.min(...reperes.map((r) => {
+      const dx = (t.lon - r.lon) * Math.cos(r.lat * Math.PI / 180);
+      return dx ** 2 + (t.lat - r.lat) ** 2;
+    }));
   /* La note de chaque réponse, calculée UNE fois : les mots portés, la peine
      (palier de distance + bruit du nom), le carré de la distance. */
   const notes = new Map<Trouvaille, [number, number, number]>();

@@ -129,6 +129,16 @@ export class RechercheAdresse extends HTMLElement {
 
   set surSelection(f: (r: ResultatAdresse) => void) { this.#surSelection = f; }
 
+  /* LE NOM ACCESSIBLE DIT LA FONCTION (audit Codex du 06/09) : trois barres
+     portaient le même « Rechercher une adresse en France » — un lecteur
+     d'écran ne distinguait pas la recherche globale, le départ et l'arrivée.
+     Posé avant la connexion, il est lu au rendu ; posé après, il s'applique. */
+  #nomAccessible: string | null = null;
+  set nomAccessible(nom: string) {
+    this.#nomAccessible = nom;
+    this.querySelector('input')?.setAttribute('aria-label', nom);
+  }
+
   /**
    * Inscrit un libellé dans le champ SANS relancer une recherche.
    *
@@ -247,6 +257,7 @@ export class RechercheAdresse extends HTMLElement {
 
         </div>`;
       const champ = this.querySelector('input');
+      if (this.#nomAccessible && champ) champ.setAttribute('aria-label', this.#nomAccessible);
       champ?.addEventListener('input', () => this.#planifier(champ.value));
       champ?.addEventListener('keydown', (e) => this.#clavier(e));
       /* ON N'OUVRE PAS LA PAGE AU FOCUS SEUL. Un champ qui prend l'écran

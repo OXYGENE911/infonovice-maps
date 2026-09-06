@@ -74,6 +74,7 @@ export class EtapesItineraire extends HTMLElement {
     this.#pointDe.set(ligne, point);
 
     const champ = new RechercheAdresse();
+    champ.nomAccessible = 'Adresse de l’étape';
     champ.surSelection = (r: ResultatAdresse) => {
       const avant = this.points;
       this.#pointDe.set(ligne, r);

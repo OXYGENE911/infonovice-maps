@@ -192,6 +192,15 @@ describe('le classement', () => {
       .toBe('CARREFOUR HYPERMARCHES');
   });
 
+  it('LA DISTANCE SE CLASSE EN KILOMÈTRES, PAS EN DEGRÉS (SEARCH-2, audit du 06/09)', () => {
+    /* À 49° N, 0,1° vers l'est fait 7,3 km ; 0,08° vers le nord fait 8,9 km.
+       Le tri en degrés bruts préférait le second. */
+    const est: Trouvaille = { ...t('Boulangerie', 'ign'), lon: 2.1, lat: 49 };
+    const nord: Trouvaille = { ...t('Boulangerie', 'ign'), lon: 2, lat: 49.08 };
+    const classes = fusionner([nord, est], ['boulangerie'], 10, { lon: 2, lat: 49 });
+    expect(classes[0]).toBe(est);
+  });
+
   it('NE MONTRE PAS DEUX FOIS LE MÊME LIEU', () => {
     const liste = [
       t('Collège Albert Camus', 'ign'), t('Collège Albert Camus', 'entreprise'),
@@ -287,7 +296,12 @@ describe('le nom exact passe devant le nom qui le contient', () => {
       t('Castorama', 'osm', 2.4395, 48.7792), t('Castorama', 'osm', 2.2250, 48.7751),
       t('Castorama', 'osm', 2.5582, 48.7961),
     ];
-    expect(fusionner(liste, ['castorama'], 10, VUE_FRANCE)[0]?.lon).toBe(2.4395);
+    /* Depuis le centre de la France, Chennevières et Vitry sont à 240 km à
+       deux cents mètres près : en kilomètres vrais (SEARCH-2, 06/09), Vitry
+       est le plus près d'un cheveu — le tri en degrés bruts préférait
+       Chennevières. L'un ou l'autre : ce qui compte, c'est qu'un lointain ne
+       passe pas devant. */
+    expect([2.4395, 2.225]).toContain(fusionner(liste, ['castorama'], 10, VUE_FRANCE)[0]?.lon);
     const ormessons = [{ lon: 2.6519, lat: 48.2456 }, { lon: 2.5366, lat: 48.7848 }];
     expect(fusionner(liste, ['castorama'], 10, ormessons)[0]?.lon).toBe(2.5582);
   });
