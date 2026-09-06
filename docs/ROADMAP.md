@@ -835,6 +835,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] RETOURS-0609b (06/09) : écran blanc à la croix — VRAIE cause (marqueur
+      d'arrivée qui retirait le conteneur du canevas, audit Codex), parcours
+      qui suit l'usager jusqu'à la carte encore vivante ; rectangle gris =
+      piéton sans picto ; chiffres sur deux lignes au téléphone, « < 1 min ».
 - [x] SOUVERAINETE-2 (06/09) : le mot « souverain » retiré des pages publiques,
       du README et de la charte ; « À propos » nomme GitHub, Cloudflare et
       Google Trust Services (Cloud Act). Discours : cartographie française et

@@ -3655,6 +3655,16 @@ body.en-guidage #carte .maplibregl-ctrl-bottom-left {
    s'affiche quand on appuie sur la barre pour la déplier ». Trois chiffres
    au repos, quatre une fois la barre ouverte. */
 bandeau-guidage:not(.bg-deploye) .bg-chiffre-soc { display: none; }
+/* SUR DEUX LIGNES AU TÉLÉPHONE (Armelin, captures du 06/09 : « les
+   informations de navigation sont toutes tronquées […] afficher les
+   informations sur deux lignes »). Deux colonnes, deux rangées : chaque
+   chiffre a la moitié de la largeur au lieu d'un quart. */
+@media (max-width: 480px) {
+  .bg-chiffres { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; }
+  /* La croix suit le BAS des deux rangées : même marge sous elle et sous les
+     chiffres (le parcours « la ligne du bas » le mesure à 412 px). */
+  .bg-arreter { align-self: flex-end; }
+}
 .bg-chiffre {
   display: flex; flex-direction: column; line-height: 1.1; min-width: 0;
 }
@@ -5011,3 +5021,13 @@ body.mesure-active #carte .maplibregl-canvas-container { cursor: crosshair; }
 .bg-parkings-a-pied .picto-menu { width: 18px; height: 18px; }
 .bg-parkings-a-pied:focus-visible { outline: none; box-shadow: var(--focus); }
 .bg-a-pied-icone[hidden] { display: none; }
+/* LE RECTANGLE GRIS (Armelin, 06/09 : « un petit rectangle gris apparaît tout
+   à gauche, on ne sait pas ce que c'est ») : c'était CE bouton, sans picto
+   dimensionné — un cadre vide. Même habit que les autres commandes. */
+.bg-a-pied-icone {
+  width: 44px; height: 44px; padding: 0; display: grid; place-items: center; flex: 0 0 auto;
+  border: 1px solid var(--bord-2); border-radius: 8px; background: var(--fond-doux); cursor: pointer;
+}
+.bg-a-pied-icone .picto-menu { width: 22px; height: 22px; color: var(--texte-1); }
+.bg-a-pied-icone:hover { border-color: var(--accent); color: var(--accent); }
+.bg-a-pied-icone:focus-visible { outline: none; box-shadow: var(--focus); }

@@ -1325,7 +1325,13 @@ export class BandeauGuidage extends HTMLElement {
 
   #dernierReleveMs: number | null = null;
 
-  #marqueurArrivee: HTMLElement | null = null;
+  /* L'INSTANCE MARKER, PAS SON DIV (P0, audit Codex du 06/09). Le div est
+     posé par MapLibre DIRECTEMENT dans son conteneur de canevas : retirer
+     « le parent du div » retirait le conteneur du canevas — la carte
+     restait blanche après la croix rouge jusqu'au rechargement, ce qu'Armelin
+     signalait depuis trois versions. Le guidage possède son marqueur,
+     MapLibre possède son canevas : chacun libère ce qui est à lui. */
+  #marqueurArrivee: Marker | null = null;
 
   /**
    * Le constat d'arrivée — au bon moment, du bon côté, avec son animation.
@@ -1370,8 +1376,8 @@ export class BandeauGuidage extends HTMLElement {
       boite.className = 'bg-arrivee-pulse';
       boite.setAttribute('aria-hidden', 'true');
       boite.innerHTML = '<span></span><span></span><b></b>';
-      new Marker({ element: boite }).setLngLat([point.lon, point.lat]).addTo(carte);
-      this.#marqueurArrivee = boite;
+      this.#marqueurArrivee = new Marker({ element: boite })
+        .setLngLat([point.lon, point.lat]).addTo(carte);
     }
 
     this.#montrerBilan();
@@ -1539,7 +1545,8 @@ export class BandeauGuidage extends HTMLElement {
   }
 
   #retirerMarqueurArrivee(): void {
-    this.#marqueurArrivee?.parentElement?.remove();
+    /* Marker.remove() retire SON div et ses abonnements — jamais le parent,
+       qui est le conteneur du canevas de MapLibre (P0, 06/09). Idempotent. */
     this.#marqueurArrivee?.remove();
     this.#marqueurArrivee = null;
   }
@@ -2957,8 +2964,12 @@ export class BandeauGuidage extends HTMLElement {
       ? arrivee.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
       : '—';
     (this.querySelector('.bg-km') as HTMLElement).textContent = formaterDistance(e.restantM);
+    /* « MOINS D'UNE MINUTE » NE TIENT PAS DANS UNE CASE DE LA BARRE (Armelin,
+       captures du 06/09 : « moins… ») : ici, « < 1 min » ; le bilan garde
+       la phrase entière. */
+    const restant = e.restantS > 0 ? formaterDuree(Math.round(e.restantS + chargeRestanteS)) : '—';
     (this.querySelector('.bg-temps') as HTMLElement).textContent =
-      e.restantS > 0 ? formaterDuree(Math.round(e.restantS + chargeRestanteS)) : '—';
+      restant === 'moins d’une minute' ? '< 1 min' : restant;
     (this.querySelector('.bg-eta') as HTMLElement).textContent = heure;
     /* LA BATTERIE À L'ARRIVÉE, QUAND LE PLAN LA CONNAÎT (RETOURS-AMIS-1). Le
        chiffre est celui du plan de recharge — une estimation, dite comme
