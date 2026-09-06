@@ -835,6 +835,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] ZOOM-MOTS-1 (06/09) : plus de « zoom 12 » à l'écran — les seuils sont
+      dits avec la barre d'échelle (1 km, 100 m). RESTE : un mot vivant
+      (« rapprochez encore ») qui lirait le zoom courant.
 - [x] BARRE-2 (06/09) : pliée = trois chiffres sur une ligne ; dépliée =
       autonomie à l'arrivée, mode, Bison Futé en orange, prochain arrêt en
       vert (recharge ou étape, distance et durée). RESTE : le prochain arrêt

@@ -52,7 +52,8 @@ export class SelecteurFonds extends HTMLElement {
                ferait rien de visible. -->
           <label><input type="checkbox" name="relief3d" ${relief3d ? 'checked' : ''}>
             Bâtiments en relief</label>
-          <p class="fonds-note">Hauteurs IGN, à partir du zoom 15. Les
+          <p class="fonds-note">Hauteurs IGN, carte rapprochée (barre d’échelle
+            à 100 m ou moins). Les
             bâtiments dont l’IGN ne connaît pas la hauteur restent plats.</p>
         </fieldset>
       </details>`;

@@ -400,11 +400,15 @@ export class PanneauPoi extends HTMLElement {
             <li><span class="poi-legende-pastille poi-legende-inconnue"
               aria-hidden="true">${eclairsSVG(0)}</span> Puissance non déclarée</li>
           </ul>
-          <p class="poi-filtre-note">Sous le zoom 12, la carte montre le réseau
-            national ci-dessus, groupé en amas : il est chargé une fois, puis
-            relu localement — il fonctionne hors ligne et n’interroge plus aucun
-            service. Au-delà du zoom 12, la carte interroge le fichier national
-            en direct et montre TOUTES les bornes de la vue, quelle que soit
+          <!-- « ZOOM 12 » NE VEUT RIEN DIRE (Armelin, 06/09 : « il n'y a aucune
+               indication du niveau de zoom sur la carte »). On parle avec ce
+               que l'usager VOIT : la barre d'échelle, en bas à gauche. -->
+          <p class="poi-filtre-note">Carte éloignée — quand la barre d’échelle,
+            en bas à gauche, indique plus de 1 km — la carte montre le réseau
+            national ci-dessus, groupé en amas : chargé une fois, relu
+            localement, il fonctionne hors ligne. Carte rapprochée — barre
+            d’échelle à 1 km ou moins — elle interroge le fichier national en
+            direct et montre TOUTES les bornes de la vue, quelle que soit
             l’étendue choisie ici.</p>
         </fieldset>
         <p class="poi-etat" role="status"></p>
@@ -1257,7 +1261,7 @@ export class PanneauPoi extends HTMLElement {
     const champNom = this.querySelector<HTMLInputElement>('.poi-reseau-recherche');
     if (champNom) {
       champNom.placeholder = trop
-        ? 'Réseau (le nom de station demande le zoom 12)'
+        ? 'Réseau (rapprochez la carte pour chercher un nom de station)'
         : 'Réseau ou nom de station (Fastned, McDonald…)';
     }
   }
