@@ -645,4 +645,7 @@ test('THERMIQUE OU HYBRIDE : les champs électriques se retirent, le choix se ga
   await page.getByRole('button', { name: 'Afficher les commandes du suivi' }).click();
   await expect(page.locator('.bg-chiffre-soc')).toBeVisible();
   await expect(page.locator('.bg-soc')).toContainText(/^~\d+ km$/);
+  // ET LE PROCHAIN PLEIN EN VERT (PROCHAIN-PLEIN-1) : seule Auxerre reste (filtre TotalEnergies), à 117 km de Paris.
+  await expect(page.locator('.bg-prochain')).toBeVisible();
+  await expect(page.locator('.bg-prochain')).toContainText(/^Prochain arrêt — Plein : TotalEnergies, Auxerre — 1,720 €\/L : dans 1\d\d km · /);
 });

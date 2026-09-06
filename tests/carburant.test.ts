@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   autonomieCarburantKm, profilCarburant, planifierCarburant, carburantValide, euros, prixLitre, pastillesPleins,
+  pleinsAAnnoncer,
   type StationCarburant, type ProfilCarburant,
 } from '../src/lib/carburant';
 
@@ -88,5 +89,21 @@ describe('pastillesPleins (PLEINS-CARTE-1)', () => {
     expect(fc.features[0]!.properties).toMatchObject({ type: 'carburant', rang: '1', duree: '1,720 €/L', nom: 'TotalEnergies, 155 km, Auxerre' });
     expect(fc.features[1]!.properties).toMatchObject({ rang: '2', nom: '310 km, Mâcon' });
     expect((fc.features[0]!.geometry as GeoJSON.Point).coordinates).toEqual([0, 0]);
+  });
+});
+
+describe('pleinsAAnnoncer (PROCHAIN-PLEIN-1)', () => {
+  it('nomme chaque plein comme la barre le dit : enseigne ou adresse, ville, prix — situé sur le tracé', () => {
+    const stations = [{ ...station(155, 1.72, 'Auxerre'), enseigne: 'TotalEnergies' }, station(310, 1.80, 'Mâcon')];
+    const plan = planifierCarburant({ distanceM: 465_000, dureeS: 16_800, profil: PROFIL, stations });
+    expect(pleinsAAnnoncer(plan)).toEqual([
+      { nom: 'TotalEnergies, Auxerre — 1,720 €/L', avancementM: 155_000 },
+      { nom: '310 km, Mâcon — 1,800 €/L', avancementM: 310_000 },
+    ]);
+  });
+  it('un plan infaisable n’annonce rien : pas de faux « prochain plein »', () => {
+    const plan = planifierCarburant({ distanceM: 900_000, dureeS: 32_400, profil: PROFIL, stations: [] });
+    expect(plan.faisable).toBe(false);
+    expect(pleinsAAnnoncer(plan)).toEqual([]);
   });
 });
