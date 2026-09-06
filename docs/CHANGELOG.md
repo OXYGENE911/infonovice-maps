@@ -2,6 +2,25 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.116.0] — 2026-09-06 — RETOURS-0609b
+
+### L'écran blanc à la croix rouge : la vraie cause, trouvée par l'audit Codex
+- Le nettoyage du marqueur d'arrivée retirait « le parent du div » — or
+  MapLibre pose ce div DIRECTEMENT dans le conteneur de son canevas : c'est le
+  canevas qu'on retirait. La carte restait blanche jusqu'au rechargement,
+  seulement après une ARRIVÉE (avant l'arrivée, pas de marqueur, pas de
+  défaut). Le correctif du matin (redimensionner la carte) traitait un autre
+  effet et le dit désormais. Le guidage garde l'instance Marker et la libère
+  par son API. Le parcours du bilan suit maintenant l'usager jusqu'au bout :
+  canevas connecté et mesurable, carte qui bouge, second trajet sans
+  rechargement — il échouait avant correction.
+- **Le rectangle gris** à gauche des commandes : c'était le piéton de la
+  barre (1.112), un bouton sans picto dimensionné. Il a son habit et son
+  picto.
+- **Les chiffres sur deux lignes au téléphone** : deux colonnes, deux
+  rangées ; « moins d'une minute » devient « < 1 min » dans la barre. Le
+  parcours téléphone vérifie qu'aucun chiffre n'est tronqué.
+
 ## [1.115.0] — 2026-09-06 — SOUVERAINETE-2
 
 ### Le mot « souverain » est retiré — et la page « À propos » dit pourquoi

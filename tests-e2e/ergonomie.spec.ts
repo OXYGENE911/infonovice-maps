@@ -520,7 +520,12 @@ test('MOB-1 : sur téléphone, rien ne se recouvre — échelle, barre du trajet
   const lignes = await page.locator('.bg-chiffre').evaluateAll(
     (els) => new Set(els.filter((e) => e.getBoundingClientRect().width > 0)
       .map((e) => Math.round(e.getBoundingClientRect().y))).size);
-  expect(lignes, 'les chiffres s’enroulent sur deux lignes').toBe(1);
+  /* DEUX LIGNES AU TÉLÉPHONE, VOULUES (06/09) : deux colonnes, chaque chiffre
+     a la place de s'écrire en entier — c'est cela que le parcours garde. */
+  expect(lignes, 'plus de deux lignes de chiffres').toBeLessThanOrEqual(2);
+  const tronques = await page.locator('.bg-chiffre b').evaluateAll(
+    (els) => els.filter((e) => e.getBoundingClientRect().width > 0 && e.scrollWidth > e.clientWidth + 1).length);
+  expect(tronques, 'un chiffre est tronqué (« moins… »)').toBe(0);
   await expect(page.locator('.bg-eta')).toContainText(':');
 
   // LE ROND DE VITESSE NE COUVRE PLUS L'ÉCHELLE.

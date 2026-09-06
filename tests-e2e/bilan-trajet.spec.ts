@@ -113,6 +113,25 @@ test('LE BILAN SE FERME, ET S’EN VA AVEC LE SUIVI', async ({ page }) => {
   await page.getByRole('button', { name: 'Arrêter le suivi' }).click();
   await expect(page.locator('bandeau-guidage')).toBeHidden();
   await expect(bilan).toBeHidden();
+
+  /* ET LA CARTE EST ENCORE LÀ (P0, audit Codex du 06/09). Le nettoyage du
+     marqueur d'arrivée retirait le CONTENEUR DU CANEVAS : le bandeau
+     disparaissait, le bilan aussi, et la carte restait blanche — ce parcours
+     s'arrêtait une ligne trop tôt. Il suit maintenant l'usager jusqu'au
+     bout : le canevas est connecté, visible, mesurable, et la carte bouge. */
+  const canevas = page.locator('#carte canvas.maplibregl-canvas');
+  await expect(canevas).toBeVisible();
+  await expect(page.locator('#carte .maplibregl-canvas-container')).toHaveCount(1);
+  const boite = (await canevas.boundingBox())!;
+  expect(boite.width).toBeGreaterThan(100);
+  expect(boite.height).toBeGreaterThan(100);
+  const avant = await page.evaluate(() => (window as unknown as { __carte: { getCenter(): { lng: number } } }).__carte.getCenter().lng);
+  await page.evaluate(() => (window as unknown as { __carte: { panBy(v: [number, number], o: object): void } }).__carte.panBy([120, 0], { duration: 0 }));
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __carte: { getCenter(): { lng: number } } }).__carte.getCenter().lng)).not.toBe(avant);
+  // Et un second trajet se calcule sans recharger la page.
+  await page.goto('/#iti=2.35220,48.85660;2.36781,48.85660;car');
+  await page.reload();
+  await expect(page.locator('.iti-resultat')).toContainText('km', { timeout: 15_000 });
 });
 
 test('« ENREGISTRER CE PARCOURS » GARDE, ET SEULEMENT SI ON LE DEMANDE', async ({ page }) => {
