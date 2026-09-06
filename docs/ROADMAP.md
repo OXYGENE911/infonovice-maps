@@ -835,6 +835,15 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] AUDIT-1 (06/09) : distance de classement en km équivalents (SEARCH-2),
+      noms accessibles des champs et de la carte. RESTE de l'audit Codex,
+      volet Maps : SEARCH-1 — deux commerces homonymes proches fusionnés
+      (dédoublonner par identifiant source / adresse, pas par rectangle) ;
+      corpus de 200–300 requêtes annotées avec Top-1 / Top-5 / MRR mesurés
+      (le banc actuel n'en a que douze) ; contrat de route commun
+      (points raccordés, provenance) ; « Gare de Lyon » = nom propre même
+      depuis Lyon ; parcours clavier mobile / agrandissement du texte /
+      lecteur d'écran sur les trois parcours principaux.
 - [x] RETOURS-0609b (06/09) : écran blanc à la croix — VRAIE cause (marqueur
       d'arrivée qui retirait le conteneur du canevas, audit Codex), parcours
       qui suit l'usager jusqu'à la carte encore vivante ; rectangle gris =

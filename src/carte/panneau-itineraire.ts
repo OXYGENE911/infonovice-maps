@@ -849,6 +849,7 @@ export class PanneauItineraire extends HTMLElement {
 
     for (const role of ['depart', 'arrivee'] as const) {
       const champ = new RechercheAdresse();
+      champ.nomAccessible = role === 'depart' ? 'Adresse de départ' : 'Adresse d’arrivée';
       champ.surSelection = (r: ResultatAdresse) => {
         if (role === 'depart') { this.#depart = r; this.#libelleDepart = r.libelle; }
         else { this.#arrivee = r; this.#libelleArrivee = r.libelle; }

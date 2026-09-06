@@ -2,6 +2,23 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.117.0] — 2026-09-06 — AUDIT-1
+
+### Premiers correctifs de l'audit Codex du 6 septembre (volet Maps)
+- **Classement de la recherche** : la distance qui départage les résultats
+  se mesure désormais en kilomètres équivalents, la longitude ramenée par le
+  cosinus de la latitude. À 49° N, un lieu à 7,3 km vers l'est passait
+  derrière un lieu à 8,9 km vers le nord. Test à sec ajouté.
+- **Noms accessibles** : « Adresse de départ », « Adresse d'arrivée »,
+  « Adresse de l'étape » — trois barres portaient le même nom que la
+  recherche globale. Le nom de la carte ne parle plus de boutons Zoomer /
+  Dézoomer en haut à droite (ils n'existent pas) : il dit où sont Me
+  localiser, la boussole et le menu.
+- Le P0 de l'audit (écran blanc) est corrigé en 1.116.0. Le reste du volet
+  Maps est instruit à la feuille de route (dédoublonnage des commerces
+  homonymes, corpus de requêtes annotées, contrat de route, fiche sous
+  l'en-tête). Le volet Pro et Family est traité dans la conversation Maps Pro.
+
 ## [1.116.0] — 2026-09-06 — RETOURS-0609b
 
 ### L'écran blanc à la croix rouge : la vraie cause, trouvée par l'audit Codex
