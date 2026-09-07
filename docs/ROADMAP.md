@@ -1198,7 +1198,40 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       - **Logos** : aucune base française ne les expose (l'INPI n'a pas d'API
         d'images utilisable) et Wikidata est écarté par Armelin. La
         recommandation reste les pictogrammes maison.
-      - **DATAtourisme, entreprises** : pas encore mesurés.
+      - **DATAtourisme : MESURÉ LE 07/09, ET C'EST UTILISABLE.** La base
+        nationale d'information touristique est publiée sur data.gouv en CSV
+        par région (8 Mo pour l'Île-de-France, 63 Mo pour la
+        Nouvelle-Aquitaine) — inutilisables tels quels dans un navigateur,
+        mais l'API TABULAIRE de data.gouv les interroge par colonnes, et son hôte
+        `tabular-api.data.gouv.fr` est DÉJÀ dans notre CSP (il sert les
+        tarifs de péage).
+        · Requête d'emprise mesurée sur l'Île-de-France (10 669 lignes) :
+          `…/api/resources/<id>/data/?Latitude__greater=48.85&Latitude__less=48.87
+          &Longitude__greater=2.33&Longitude__less=2.36&page_size=5`
+          répond en **0,13 s**, 8,6 Ko, et donne `meta.total` = 869 POI dans
+          ce rectangle. Une requête par vue suffit, comme pour les autres
+          couches.
+        · Ce que chaque POI porte : nom, latitude/longitude, adresse postale,
+          `code postal#commune`, contacts, description, classement officiel
+          (« 4 étoiles#Classement officiel des hébergements touristiques »),
+          périodes d'ouverture regroupées, créateur de la donnée (l'office de
+          tourisme), et la DATE DE MISE À JOUR — celle relevée était du
+          01/09/2026, la base est donc vivante.
+        · CE QUE CELA AJOUTE À OSM, et c'est le seul argument qui compte :
+          les classements officiels, les périodes d'ouverture, les
+          descriptions rédigées par les offices de tourisme — et surtout le
+          jeu ÉVÉNEMENTS (dates), qu'OpenStreetMap n'a pas.
+        · DEUX OBSTACLES, honnêtement : la ressource est PAR RÉGION, donc une
+          vue à cheval sur deux régions demande deux requêtes (ou une table
+          statique des emprises régionales) ; et la catégorie est une liste
+          d'URI d'ontologie (`…/ontology/core#PlaceOfInterest|…#Accommodation`)
+          qu'il faudra traduire en mots français.
+        · DÉCISION À PRENDRE PAR ARMELIN : c'est une COUCHE DE PLUS dans
+          « Autour de moi », donc un choix de produit, pas une correction. Le
+          coût est celui d'une PR ordinaire (module de requête, correspondance
+          des catégories, case dans le panneau, parcours).
+      - **Entreprises** : déjà consommées depuis RECHERCHE-8 (annuaire des
+        entreprises), rien à mesurer de plus.
 - [x] PR #167 — BORNES-8 (01/09) : le rappel des filtres rentre dans le
       panneau « Autour de moi » (un point sur l'entonnoir le remplace sur la
       carte) ; le bouton « Tout afficher » devient lisible en thème sombre.
