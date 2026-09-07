@@ -2,6 +2,24 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.129.0] — 2026-09-07 — LOCALE-FR-2
+
+### Une carte française qui ne dit plus « Map » ni « Close popup »
+- Trouvé en tabulant l'application au clavier, comme le ferait un lecteur
+  d'écran : le canevas de la carte se présentait comme **« Map »**, et la
+  croix des fiches comme **« Close popup »**. MapLibre parle anglais par
+  défaut.
+- La cause tenait à trois traductions MORTES : `ScrollZoomBlocker.CtrlMessage`,
+  `ScrollZoomBlocker.CmdMessage` et `TouchPanBlocker.Message` nommaient une
+  API disparue de MapLibre 6. Elles n'avaient jamais servi, et rien ne le
+  disait — une bibliothèque ne se plaint pas d'une clé qu'elle ne connaît
+  pas, elle garde l'anglais. Table recopiée de la bibliothèque : neuf
+  libellés ajoutés ou corrigés, dont la carte, les repères et les fiches.
+- Tests : un test unitaire qui refuse toute clé inconnue de MapLibre (il
+  aurait attrapé les trois mortes) et relit la table de `maplibre-gl` plutôt
+  qu'une copie qui se périmerait ; un parcours qui relit TOUS les noms
+  accessibles de la page et rougit sur le moindre libellé anglais.
+
 ## [1.128.0] — 2026-09-07 — PERF-4
 
 ### Le planificateur arrive au premier geste qui le demande

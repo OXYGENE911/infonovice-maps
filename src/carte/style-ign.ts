@@ -206,19 +206,37 @@ export function styleIGNPlan(): StyleSpecification {
   return styleCarte({ fond: 'plan' });
 }
 
-/* Les libellés français des contrôles MapLibre : la bibliothèque parle
-   anglais par défaut, et un produit souverain qui dit « Zoom in » à un
-   lecteur d'écran français raterait sa première promesse. */
+/* LES LIBELLÉS FRANÇAIS DES CONTRÔLES MapLibre. La bibliothèque parle anglais
+   par défaut, et une carte française qui dit « Zoom in » à un lecteur d'écran
+   rate sa première promesse.
+   LA TABLE EST RECOPIÉE DE LA BIBLIOTHÈQUE, PAS DEVINÉE (LOCALE-FR-2,
+   07/09/2026). Trois clés d'ici — `ScrollZoomBlocker.*`, `TouchPanBlocker.*` —
+   ne correspondaient à RIEN dans MapLibre 6 : elles nommaient une API
+   disparue, et leurs traductions n'avaient jamais servi. Un libellé mal nommé
+   ne se plaint pas ; il se contente de rester anglais. Deux l'étaient encore,
+   trouvés en tabulant l'application au clavier : le canevas se présentait
+   comme « Map », et la croix des fiches comme « Close popup ».
+   Les clés sont celles de `maplibre-gl` 6.6 ; les unités de l'échelle (km)
+   n'ont pas à être traduites. */
 export const LOCALE_FR: Record<string, string> = {
+  'Map.Title': 'Carte',
+  'Marker.Title': 'Repère sur la carte',
+  'Popup.Close': 'Fermer la fiche',
   'NavigationControl.ZoomIn': 'Zoomer',
   'NavigationControl.ZoomOut': 'Dézoomer',
   'NavigationControl.ResetBearing': 'Remettre le nord en haut',
   'GeolocateControl.FindMyLocation': 'Me localiser',
   'GeolocateControl.LocationNotAvailable': 'Position indisponible',
-  'ScrollZoomBlocker.CtrlMessage': 'Ctrl + molette pour zoomer la carte',
-  'ScrollZoomBlocker.CmdMessage': '⌘ + molette pour zoomer la carte',
-  'TouchPanBlocker.Message': 'Deux doigts pour déplacer la carte',
+  'CooperativeGesturesHandler.WindowsHelpText': 'Ctrl + molette pour zoomer la carte',
+  'CooperativeGesturesHandler.MacHelpText': '⌘ + molette pour zoomer la carte',
+  'CooperativeGesturesHandler.MobileHelpText': 'Deux doigts pour déplacer la carte',
   'AttributionControl.ToggleAttribution': 'Afficher les attributions',
+  'AttributionControl.MapFeedback': 'Signaler un problème sur la carte',
+  'LogoControl.Title': 'Logo MapLibre',
   'FullscreenControl.Enter': 'Plein écran',
   'FullscreenControl.Exit': 'Quitter le plein écran',
+  'GlobeControl.Enable': 'Passer en globe',
+  'GlobeControl.Disable': 'Quitter le globe',
+  'TerrainControl.Enable': 'Afficher le relief',
+  'TerrainControl.Disable': 'Masquer le relief',
 };
