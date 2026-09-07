@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
 import { ouvrirPlanificateur } from './planificateur';
+import { ouvrirMenu } from './volets';
 
 /* LES NOMS ACCESSIBLES DISENT LA FONCTION (AUDIT-1, 06/09/2026). L'audit
    Codex : « les trois combobox visibles portent le même nom accessible » et
@@ -89,4 +90,59 @@ test('AUCUN LIBELLÉ ANGLAIS NE TRAÎNE dans une carte française (LOCALE-FR-2)'
       .filter((t) => motsAnglais.test(t));
   });
   expect(anglais, 'libellés MapLibre restés en anglais').toEqual([]);
+});
+
+test('UNE PAGE PLEIN ÉCRAN GARDE LE FOCUS, ET LE REND EN PARTANT (A11Y-MODALE-1)', async ({ page }) => {
+  /* MESURÉ EN TABULANT, le 08/09. La page des outils se déclare
+     `role="dialog" aria-modal="true"` — elle promet donc au lecteur d'écran
+     que le reste de la page n'existe plus — et la touche Tab en sortait
+     aussitôt : dix arrêts derrière la fenêtre (en-tête, recherche, carte,
+     rail, menu, commandes MapLibre) avant d'y revenir. Et en refermant, le
+     focus tombait sur le `body` : le parcours clavier repartait du haut.
+     Le code VOULAIT le rendre à la carte, mais `#carte` est un `div` sans
+     `tabindex` : `focus()` n'avait aucun effet, et rien ne le disait. */
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  await ouvrirMenu(page);
+  const volet = page.locator('details.outils');
+  if ((await volet.getAttribute('open')) === null) await page.locator('details.outils summary').click();
+  await page.locator('.outils-tuile').filter({ hasText: 'Météo' }).first().click();
+  await expect(page.locator('page-outil')).toBeVisible();
+
+  // LE FOND EST INERTE : ni tabulation, ni clic, ni lecture d'écran.
+  await expect(page.locator('header.entete')).toHaveAttribute('inert', '');
+
+  /* HUIT TABULATIONS N'ATTEIGNENT AUCUNE COMMANDE DU FOND. Ce qu'on garantit
+     est précis : plus AUCUN élément derrière la fenêtre ne prend le focus.
+     Le `body` entre deux tours, lui, est normal — arrivé au dernier élément,
+     la touche Tab passe par la barre du navigateur avant de revenir au haut
+     du document, qui ne contient plus que cette fenêtre. C'est ce que fait
+     aussi une `<dialog>` native. Avant le correctif, cette liste contenait
+     l'en-tête, le champ de recherche, la carte, le rail, le menu et les
+     commandes MapLibre. */
+  const dehors: string[] = [];
+  for (let i = 0; i < 8; i += 1) {
+    await page.keyboard.press('Tab');
+    const ou = await page.evaluate(() => {
+      const a = document.activeElement as HTMLElement | null;
+      if (!a || a === document.body || a === document.documentElement) return '';
+      return a.closest('page-outil') ? '' : `${a.tagName.toLowerCase()} « ${a.getAttribute('aria-label') ?? a.textContent?.trim().slice(0, 30)} »`;
+    });
+    if (ou) dehors.push(ou);
+  }
+  expect(dehors, 'le focus a atteint une commande du fond').toEqual([]);
+
+  // EN PARTANT, LE FOCUS REVIENT SUR QUELQUE CHOSE DE VISIBLE — jamais le body.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('page-outil')).toBeHidden();
+  await expect(page.locator('header.entete')).not.toHaveAttribute('inert', '');
+  const rendu = await page.evaluate(() => {
+    const a = document.activeElement as HTMLElement | null;
+    if (!a || a === document.body) return 'BODY';
+    return `${a.tagName.toLowerCase()} « ${a.getAttribute('aria-label') ?? a.textContent?.trim().slice(0, 30)} »`;
+  });
+  expect(rendu, 'le focus est retombé sur le body').not.toBe('BODY');
 });

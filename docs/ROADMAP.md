@@ -835,6 +835,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] A11Y-MODALE-1 (08/09) : la page plein écran des outils garde le focus
+      (fond inerte) et le rend en partant. Trouvé en tabulant : dix arrêts
+      derrière une fenêtre qui se dit modale, et un retour de focus qui ne
+      marchait pas (`#carte` est un div sans tabindex). RESTE du volet
+      lecteur d'écran : les annonces du suivi sont déjà en régions vivantes
+      (`role="status"` sur le cartouche de manœuvre, la distance restante,
+      le trafic, le prochain arrêt) — vérifié le 08/09, rien à corriger.
 - [x] LOCALE-FR-2 (07/09) : plus aucun libellé anglais de MapLibre — le
       canevas disait « Map », la croix des fiches « Close popup ». Trois clés
       traduites nommaient une API disparue. Garde unitaire contre les clés

@@ -2,6 +2,27 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.131.0] — 2026-09-08 — A11Y-MODALE-1
+
+### Une page plein écran qui garde le focus, et le rend en partant
+- Mesuré en tabulant l'application : la page des outils se déclare
+  « fenêtre modale » — elle promet donc au lecteur d'écran que le reste
+  n'existe plus — et la touche Tab en sortait aussitôt. **Dix arrêts derrière
+  la fenêtre** (en-tête, champ de recherche, carte, rail, menu, commandes de
+  la carte) avant d'y revenir. Une promesse tenue pour le lecteur d'écran et
+  démentie par le clavier est pire que pas de promesse.
+- En refermant, le focus tombait sur le corps du document : le parcours
+  clavier repartait du haut de la page. Le code VOULAIT le rendre à la
+  carte — mais `#carte` est un `div` sans `tabindex`, si bien que l'appel
+  n'avait aucun effet et que rien ne le disait.
+- Désormais : le fond devient inerte le temps de la page (ni tabulation, ni
+  clic, ni lecture d'écran), le premier champ reçoit le focus à l'ouverture
+  plutôt que la flèche de retour, et le focus revient en partant à la tuile
+  d'où l'on venait — au bouton du menu si elle s'est refermée derrière, au
+  canevas de la carte à défaut.
+- Test : huit tabulations n'atteignent aucune commande du fond, et le focus
+  rendu n'est jamais le corps du document.
+
 ## [1.130.0] — 2026-09-07 — FAVORIS-4
 
 ### Les favoris n’ont plus leur propre ascenseur
