@@ -1,6 +1,7 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
 import { ouvrirMenu } from './volets';
+import { ouvrirPlanificateur } from './planificateur';
 
 /* ERGONOMIE — ce que l'œil voit se prouve par des RECTANGLES, pas par des
    captures d'écran. Un panneau qui recouvre le bouton d'à côté, un menu posé
@@ -110,6 +111,10 @@ test('LA RECHARGE EST UN FILTRE — elle vit avec les filtres', async ({ page })
     'la recherche de bornes est retournée dans le menu de droite').toHaveCount(0);
   await expect(page.locator('.poi-hote-recharge .poi'),
     'la recherche de bornes n’est pas dans le filtre des POI').toHaveCount(1);
+  /* LE PLANIFICATEUR ARRIVE À LA DEMANDE (PERF-4, 07/09) : ses pages ne
+     s'inspectent qu'une fois qu'il est là. L'ouvrir ne change rien à ce que
+     ce parcours affirme — il parle d'OÙ vivent les choses, pas de quand. */
+  await ouvrirPlanificateur(page);
   await expect(page.locator('.iti-vers[data-vers="couches"]'),
     'le planificateur a gardé une entrée qui a déménagé').toHaveCount(0);
   await expect(page.locator('.vue-hote[data-vue="vehicule"] .vehicule')).toHaveCount(1);
@@ -550,4 +555,25 @@ test('MOB-1 : sur téléphone, rien ne se recouvre — échelle, barre du trajet
   const frise = (await page.locator('.bg-frise').boundingBox())!;
   expect(frise.y + frise.height, 'la barre du trajet recouvre « Recentrer »')
     .toBeLessThanOrEqual(bouton.y + 1);
+});
+
+test('LE PLANIFICATEUR N’EST PAS LÀ AU PREMIER ÉCRAN — et son volet, si (PERF-4)', async ({ page }) => {
+  /* LE CONTRAT DU CHARGEMENT À LA DEMANDE, dans les deux sens. Son module
+     pèse quarante kilo-octets gzippés : le garder au démarrage coûtait deux
+     dixièmes de seconde sur le premier affichage, mesurés sept fois contre
+     sept. Mais le RAIL, lui, ne doit rien perdre : le volet « Itinéraire »
+     est là dès la première image, et il ouvre. */
+  await ouvrirLaCarte(page);
+  await expect(page.locator('panneau-itineraire'),
+    'le module ne doit pas venir avant qu’on le demande').toHaveCount(0);
+  const volet = page.locator('.maplibregl-ctrl-top-left summary').filter({ hasText: 'Itinéraire' });
+  await expect(volet).toBeVisible();
+
+  await volet.click();
+  await expect(page.locator('panneau-itineraire')).toHaveCount(1, { timeout: 15_000 });
+  /* ET IL S'OUVRE VRAIMENT : le volet cliqué avant l'arrivée du module doit
+     rester ouvert après le remplacement, sans quoi le premier clic serait
+     perdu et il faudrait cliquer deux fois. */
+  await expect(page.locator('.iti[open]')).toHaveCount(1);
+  await expect(page.locator('.iti-corps')).toBeVisible();
 });

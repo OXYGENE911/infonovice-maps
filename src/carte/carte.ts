@@ -29,7 +29,7 @@ import {
 import { SelecteurFonds } from './selecteur-fonds';
 import { installerPanneaux } from './panneaux';
 import { RechercheAdresse, poserEmpriseCourante, poserPositionConnue } from './recherche';
-import { PanneauItineraire } from './panneau-itineraire';
+import { PortePlanificateur, fragmentPorteUnTrajet } from './porte-planificateur';
 import { PanneauPoi } from './panneau-poi';
 import { FiltrePoi } from './filtre-poi';
 import { brancherTempsTrajet } from './temps-trajet';
@@ -284,13 +284,20 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   // commentaire à son ajout. L'objet, lui, existe dès maintenant car les
   // panneaux viennent s'y ranger au fil de leur création.
 
-  /* LE PLANIFICATEUR — à gauche : c'est LA fonction d'une carte d'itinéraire. */
-  const panneau = new PanneauItineraire();
-  panneau.carte = carte;
+  /* LE PLANIFICATEUR — à gauche : c'est LA fonction d'une carte d'itinéraire.
+     IL ARRIVE AU PREMIER GESTE QUI LE DEMANDE (PERF-4, 07/09), pas au
+     démarrage : quarante-huit kilo-octets gzippés de moins sur le premier
+     écran, et trois dixièmes de seconde gagnés sur le premier affichage
+     (mesuré, voir porte-planificateur.ts). La porte pose le même volet fermé
+     et retient les branchements. */
   const porteIti = document.createElement('div');
   porteIti.className = 'maplibregl-ctrl porte-iti';
-  porteIti.appendChild(panneau);
+  const panneau = new PortePlanificateur(porteIti);
+  panneau.carte = carte;
   carte.addControl({ onAdd: () => porteIti, onRemove: () => porteIti.remove() }, 'top-left');
+  /* UN LIEN PARTAGÉ PORTE DÉJÀ SON TRAJET : le planificateur doit être là
+     pour le lire, sans quoi le lien ne mènerait nulle part. */
+  if (fragmentPorteUnTrajet(location.hash)) void panneau.charger();
 
   /* LE FOND DE CARTE est une PRÉFÉRENCE D'AFFICHAGE : il appartient au menu,
      pas au rail des destinations. */

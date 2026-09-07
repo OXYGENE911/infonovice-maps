@@ -835,6 +835,16 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] PERF-4 (07/09) : le planificateur sort du morceau de démarrage
+      (porte-planificateur.ts : même volet, module chargé à l'ouverture, à
+      « Y aller », ou au démarrage si le lien porte un trajet ; 156 → 114 Ko
+      gzip). A/B croisé, sept passages contre sept : médiane 69 → 74, FCP
+      2,6 → 2,4 s à tous les passages. AVEC PERF-3, le morceau de démarrage
+      est passé de 181 à 114 Ko gzip. RESTE de PERF-2 : le fond de la note
+      tient maintenant à MapLibre (254 Ko gzip) et à l'élément LCP — le
+      bouton « Installer l'application », qui ne paraît qu'à
+      `beforeinstallprompt`. Le seuil de 90 demande de s'attaquer à l'un des
+      deux, pas à notre code applicatif.
 - [x] PERF-3 (07/09) : le bandeau de suivi sort du morceau de démarrage
       (`import()` réclamé dès qu'un trajet existe ; 181 → 156 Ko gzip).
       Première marche de PERF-2. A/B croisé Lighthouse : médiane 66,5 → 70,
