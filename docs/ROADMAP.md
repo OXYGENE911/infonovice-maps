@@ -842,6 +842,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       (médiane 60) : le repos tombe dans la fenêtre de mesure. RESTE : le
       planificateur, l'autre moitié — douze branchements dans carte.ts, et le
       bouton « Démarrer » dépend de lui.
+- [x] A11Y-CIBLE-1 (07/09) : le bouton d'installation n'écrase plus le champ
+      de recherche entre 400 et 640 px (cible tactile de 22 px, et
+      recouvrement). Accessibilité Lighthouse 96 → 100 ; bonnes pratiques et
+      référencement déjà à 100. RESTE de l'audit sur ce volet : parcours
+      clavier et lecteur d'écran sur les trois parcours principaux.
 - [x] AIRES-PICTOS-1 (06/09) : les dix commodités des aires en pictos SVG
       dessinés (icone-aire.ts), même famille que ceux des bornes ; plus aucun
       émoji dans le panneau ni la pastille.

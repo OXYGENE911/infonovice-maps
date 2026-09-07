@@ -2,6 +2,24 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.127.0] — 2026-09-07 — A11Y-CIBLE-1
+
+### Le bouton d'installation n'écrase plus le champ de recherche
+- Mesuré par Lighthouse (accessibilité), seul audit en échec : sur un écran
+  de 412 px, le champ de recherche tombait à **22 px de large** — sous le
+  minimum tactile de 24 — et le bouton « Installer l'application » le
+  **recouvrait** (champ 123–145, bouton 131–271). La règle qui fait céder la
+  marque « Infonovice Maps » quand l'en-tête se charge existait déjà, mais
+  sous 400 px seulement : le défaut vivait juste au-dessus. Elle s'applique
+  désormais jusqu'à 640 px. Le champ reprend 100 px, le bouton ne le touche
+  plus, et l'en-tête reste sur UNE ligne — lui en donner une seconde coûtait
+  40 px de carte (mesuré aussi).
+- Accessibilité Lighthouse : 96 → **100**. Bonnes pratiques et référencement
+  étaient déjà à 100.
+- Test : à 412 px, le navigateur proposant l'installation, le champ fait au
+  moins 24 px et les deux rectangles ne se touchent pas. Rouge sans le
+  correctif (22 px), vert avec.
+
 ## [1.126.0] — 2026-09-07 — PERF-3
 
 ### Le bandeau de suivi quitte le morceau de démarrage
