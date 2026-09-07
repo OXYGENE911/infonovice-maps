@@ -872,9 +872,16 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       noms accessibles des champs et de la carte. SEARCH-1 livré à part.
       RESTE de l'audit Codex, volet Maps : corpus de 200–300 requêtes annotées avec Top-1 / Top-5 / MRR mesurés
       (le banc actuel n'en a que douze) ; contrat de route commun
-      (points raccordés, provenance) ; « Gare de Lyon » = nom propre même
-      depuis Lyon ; parcours clavier mobile / agrandissement du texte /
-      lecteur d'écran sur les trois parcours principaux.
+      (points raccordés, provenance) ; parcours clavier mobile /
+      agrandissement du texte / lecteur d'écran sur les trois parcours
+      principaux. « Gare de Lyon » : VÉRIFIÉ CLOS le 07/09 — deux mécanismes
+      déjà en place s'en chargent (le point `toute` aux noms qui portent tous
+      les mots écrits, et la distance mesurée depuis le repère le plus proche
+      des deux : commune nommée et centre de la vue) ; l'index POI de la
+      Géoplateforme étant national, la gare parisienne est bien rapportée
+      depuis Lyon. Depuis Paris elle sort première ; depuis Lyon, troisième,
+      derrière Perrache et Part-Dieu — ce qui est juste. Parcours de
+      non-régression posé dans tests/recherche-multi.test.ts.
 - [x] RETOURS-0609b (06/09) : écran blanc à la croix — VRAIE cause (marqueur
       d'arrivée qui retirait le conteneur du canevas, audit Codex), parcours
       qui suit l'usager jusqu'à la carte encore vivante ; rectangle gris =

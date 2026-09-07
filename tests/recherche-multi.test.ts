@@ -396,6 +396,53 @@ describe('le nom exact passe devant le nom qui le contient', () => {
     const sansNumero = t('Carrefour City', 'osm', 2.3503, 48.8502, 'Paris');
     expect(memeLieu(sirene, sansNumero)).toBe(true);
   });
+
+  it('« GARE DE LYON » DÉSIGNE LE NOM PROPRE PARISIEN — même quand la phrase nomme une commune', () => {
+    /* L'AUDIT CODEX DU 06/09 le demandait : « Gare de Lyon doit pouvoir
+       désigner le nom propre parisien même si l'utilisateur est à Lyon :
+       prévoir l'intention nom propre, pas seulement la séparation
+       nom/commune. » Vérifié le 07/09 : DEUX mécanismes déjà en place s'en
+       chargent, et ce parcours existe pour qu'un réglage du classement ne
+       les défasse pas en silence.
+       · « Lyon » est reconnu comme commune, donc retiré des mots CHERCHÉS ;
+         mais il reste dans les mots ÉCRITS, et un nom qui les porte TOUS
+         gagne le point `toute` — « Gare de Lyon » l'a, « Gare de Vaise » non.
+       · La distance se mesure depuis le repère le PLUS PROCHE — la commune
+         nommée ET le centre de la vue. Depuis Paris, la gare parisienne est
+         donc à zéro, et elle passe devant les gares lyonnaises.
+       Retrouvée aussi : l'index POI de la Géoplateforme est NATIONAL (aucune
+       emprise dans `urlPoiIgn`), donc la gare de Paris est bien RAPPORTÉE
+       depuis Lyon — le classement n'aurait rien pu faire sans cela. */
+    const LYON = { lon: 4.8357, lat: 45.7640 };
+    const PARIS = { lon: 2.3522, lat: 48.8566 };
+    const gares = [
+      t('Gare de Lyon', 'ign', 2.3731, 48.8443, 'Paris 12e'),
+      t('Gare de Vaise', 'ign', 4.8043, 45.7806, 'Lyon 9e'),
+      t('Gare de Lyon-Part-Dieu', 'ign', 4.8592, 45.7605, 'Lyon 3e'),
+      t('Gare de Lyon-Perrache', 'ign', 4.8259, 45.7492, 'Lyon 2e'),
+    ];
+    /* « Lyon » reconnu : les mots cherchés n'en gardent que « gare ». */
+    const commune = { lon: 4.8357, lat: 45.7640, nom: 'Lyon', codePostal: '69000' };
+    const mots = motsCherches('gare de lyon', commune);
+    const ecrits = motsUtiles('gare de lyon');
+    expect(mots).toEqual(['gare']);
+    expect(ecrits).toEqual(['gare', 'lyon']);
+
+    // DEPUIS PARIS : la gare parisienne d'abord, et c'est tout l'enjeu.
+    const deParis = fusionner(gares, mots, 10, [commune, PARIS], ecrits);
+    expect(deParis[0]?.libelle, 'depuis Paris, « gare de lyon » est la gare parisienne')
+      .toBe('Gare de Lyon');
+
+    /* DEPUIS LYON : les gares lyonnaises d'abord — c'est juste, on est
+       devant — mais la parisienne reste ATTEIGNABLE, dans les trois
+       premières. La reléguer plus loin serait le défaut de l'audit. */
+    const deLyon = fusionner(gares, mots, 10, [commune, LYON], ecrits);
+    expect(deLyon.slice(0, 3).map((x) => x.libelle))
+      .toContain('Gare de Lyon');
+    expect(deLyon[0]?.libelle).toMatch(/^Gare de Lyon-/);
+    // Et « Gare de Vaise », qui ne porte pas « lyon » dans son nom, ferme la marche.
+    expect(deLyon[3]?.libelle).toBe('Gare de Vaise');
+  });
 });
 
 describe('identiteAdresse (SEARCH-1)', () => {
