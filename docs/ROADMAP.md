@@ -894,9 +894,19 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       noms accessibles des champs et de la carte. SEARCH-1 livré à part.
       RESTE de l'audit Codex, volet Maps : corpus de 200–300 requêtes annotées avec Top-1 / Top-5 / MRR mesurés
       (le banc actuel n'en a que douze) ; contrat de route commun
-      (points raccordés, provenance) ; parcours clavier mobile /
-      agrandissement du texte / lecteur d'écran sur les trois parcours
-      principaux. « Gare de Lyon » : VÉRIFIÉ CLOS le 07/09 — deux mécanismes
+      (points raccordés, provenance) ; lecteur d'écran sur les trois parcours
+      principaux. PARCOURS CLAVIER : vérifié le 07/09 — quinze arrêts nommés
+      au premier écran, liste d'adresses aux flèches
+      (`aria-activedescendant`), et le focus arrive sur « Y aller » après
+      validation ; le seul défaut trouvé était deux libellés anglais
+      (LOCALE-FR-2). TEXTE AGRANDI : vérifié le 08/09 contre le critère WCAG
+      1.4.10 « Reflow » — à 320 px de large (un écran de 1280 zoomé à 400 %),
+      RIEN ne sort de l'écran sur six surfaces (accueil, planificateur, menu,
+      trajet calculé, plan de recharge, barre de suivi pliée et dépliée), et
+      la page ne défile pas horizontalement. Parcours de non-régression :
+      tests-e2e/reflow.spec.ts — il mesure l'écran, pas la feuille de style,
+      et sa morsure est prouvée (un `min-width: 500px` posé exprès sur
+      l'en-tête le fait rougir). « Gare de Lyon » : VÉRIFIÉ CLOS le 07/09 — deux mécanismes
       déjà en place s'en chargent (le point `toute` aux noms qui portent tous
       les mots écrits, et la distance mesurée depuis le repère le plus proche
       des deux : commune nommée et centre de la vue) ; l'index POI de la
