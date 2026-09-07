@@ -2,6 +2,21 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.130.0] — 2026-09-07 — FAVORIS-4
+
+### Les favoris n’ont plus leur propre ascenseur
+- Les amis d’Armelin, le 05/09 : « deux défilements ». Reproduit et mesuré le
+  07/09 à 412 px, avec deux repères et huit favoris : le corps du menu
+  défilait sur **1 214 px** et la liste des favoris sur **713 px** dans sa
+  fenêtre de 220. Deux ascenseurs imbriqués font un piège au doigt : celui
+  qu’on attrape dépend du pixel où l’on pose le pouce, et la liste avale le
+  geste destiné à la page. La liste grandit désormais librement ; le corps du
+  menu défile, lui seul, comme pour tous les autres volets.
+- Les cartouches domicile et travail, eux, ne débordent plus : mesuré avec une
+  adresse de quatre-vingts caractères, rien ne sort de l’écran.
+- Test : le parcours ne lit pas la règle CSS, il mesure l’écran — tout
+  `max-height` posé demain ailleurs dans ce volet le fera rougir aussi.
+
 ## [1.129.0] — 2026-09-07 — LOCALE-FR-2
 
 ### Une carte française qui ne dit plus « Map » ni « Close popup »

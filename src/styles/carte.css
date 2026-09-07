@@ -725,8 +725,14 @@ etapes-itineraire { display: grid; gap: 7px; }
   background: var(--fond); box-shadow: var(--ombre-m);
   display: grid; gap: 9px;
 }
-.favoris-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px;
-  max-height: 220px; overflow-y: auto; }
+/* UN SEUL ASCENSEUR (FAVORIS-4, 07/09/2026). Les amis d'Armelin : « deux
+   défilements ». Mesuré à 412 px, avec deux repères et huit favoris : le
+   corps du menu défilait sur 1 214 px ET cette liste sur 713 px dans sa
+   fenêtre de 220. Deux ascenseurs imbriqués font un piège au doigt — celui
+   qu'on attrape dépend du pixel où l'on pose le pouce, et la liste avale le
+   geste destiné à la page. La liste grandit donc librement : le corps du
+   menu défile, lui seul, comme pour tous les autres volets. */
+.favoris-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
 .favoris-liste:empty { display: none; }
 .favoris-liste li { display: flex; gap: 5px; align-items: center; }
 .favori-aller {

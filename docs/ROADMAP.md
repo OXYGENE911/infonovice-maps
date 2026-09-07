@@ -852,6 +852,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       bouton « Installer l'application », qui ne paraît qu'à
       `beforeinstallprompt`. Le seuil de 90 demande de s'attaquer à l'un des
       deux, pas à notre code applicatif.
+- [x] A11Y-CIBLE-1 (07/09) : le bouton d'installation n'écrase plus le champ
+      de recherche entre 400 et 640 px (cible tactile de 22 px, et
+      recouvrement). Accessibilité Lighthouse 96 → 100 ; bonnes pratiques et
+      référencement déjà à 100. RESTE de l'audit sur ce volet : parcours
+      clavier et lecteur d'écran sur les trois parcours principaux.
 - [x] PERF-3 (07/09) : le bandeau de suivi sort du morceau de démarrage
       (`import()` réclamé dès qu'un trajet existe ; 181 → 156 Ko gzip).
       Première marche de PERF-2. A/B croisé Lighthouse : médiane 66,5 → 70,
@@ -859,11 +864,6 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       (médiane 60) : le repos tombe dans la fenêtre de mesure. RESTE : le
       planificateur, l'autre moitié — douze branchements dans carte.ts, et le
       bouton « Démarrer » dépend de lui.
-- [x] A11Y-CIBLE-1 (07/09) : le bouton d'installation n'écrase plus le champ
-      de recherche entre 400 et 640 px (cible tactile de 22 px, et
-      recouvrement). Accessibilité Lighthouse 96 → 100 ; bonnes pratiques et
-      référencement déjà à 100. RESTE de l'audit sur ce volet : parcours
-      clavier et lecteur d'écran sur les trois parcours principaux.
 - [x] AIRES-PICTOS-1 (06/09) : les dix commodités des aires en pictos SVG
       dessinés (icone-aire.ts), même famille que ceux des bornes ; plus aucun
       émoji dans le panneau ni la pastille.
@@ -999,9 +999,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
         dessiné point à point, sans réseau.
       · METEO-VILLE-1 : météo d'une ville au choix (heure par heure, 7 jours)
         — Open-Meteo, dérogation déjà publique.
-      · FAVORIS-4 : gestion des favoris en page pleine (cartouches domicile /
-        travail qui débordent, deux défilements, menus de déplacement
-        multiples) — ergonomie à revoir, chantier UX à part.
+      · FAVORIS-4 (07/09) : les DEUX DÉFILEMENTS sont traités — la liste des
+        favoris n’a plus son propre ascenseur (mesuré : menu 1 214 px, liste
+        713 px dans 220). Les cartouches domicile / travail ne débordent plus
+        (mesuré à 412 px avec une adresse de 80 caractères). RESTE : les menus
+        de déplacement multiples, et la page pleine — chantier UX à part.
       · RANDO-1 (étude) : sentiers, topographie, altimétrie, points de
         passage et retour sur ses pas — un autre produit ou un mode.
       · TC-1 (étude) : transports en commun (PAN transport.data.gouv.fr,
