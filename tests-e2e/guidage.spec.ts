@@ -1457,3 +1457,23 @@ test('le bis DIT quand le service ne rend rien, au lieu de se taire', async ({ p
   await expect(page.locator('.bg-bis-mot'))
     .toContainText('aucun itinéraire bis', { timeout: 25_000 });
 });
+
+test('LE BANDEAU N’EST PAS LÀ AU PREMIER ÉCRAN, et arrive dès qu’un trajet existe (PERF-3)', async ({ page }) => {
+  /* LE CONTRAT DU CHARGEMENT À LA DEMANDE, dans les deux sens.
+     Sans trajet, le bandeau ne doit PAS être là : c'est tout le gain, vingt-
+     cinq kilo-octets gzippés de moins au démarrage. Dès qu'un trajet existe,
+     il doit être là — sans quoi le bouton « Démarrer le suivi » ne
+     paraîtrait jamais, et l'application serait muette sur la raison. */
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('bandeau-guidage'), 'le bandeau ne doit pas venir sans trajet').toHaveCount(0);
+
+  /* LE LIEN NE CHANGE QUE LE FRAGMENT : sans rechargement, le trajet qu'il
+     porte n'est jamais rejoué — le piège que ce fichier documente plus haut,
+     et qu'il vient de me coûter une fois de plus. */
+  await page.goto(PARIS_LYON);
+  await page.reload();
+  await expect(page.locator('.iti-resultat')).toContainText('390 km', { timeout: 15_000 });
+  await expect(page.locator('bandeau-guidage')).toHaveCount(1, { timeout: 15_000 });
+  await expect(page.getByRole('button', { name: 'Démarrer le suivi' })).toBeVisible();
+});
