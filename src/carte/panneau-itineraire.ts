@@ -394,8 +394,16 @@ export class PanneauItineraire extends HTMLElement {
      que d'échouer au clic. */
   #guidage: BandeauGuidage | null = null;
 
+  /** Fait VENIR le bandeau, chargé à la demande (PERF-3) — il n'est plus dans
+   *  le morceau de démarrage. Appelée dès qu'un trajet existe. */
+  #prevoirGuidage: (() => void) | null = null;
+
+  set prevoirGuidage(f: () => void) { this.#prevoirGuidage = f; }
+
   set guidage(b: BandeauGuidage) {
     this.#guidage = b;
+    // Le bouton « Démarrer le suivi » attendait ce bandeau pour paraître.
+    this.#majBoutonDemarrer();
     // Le bandeau se referme aussi de lui-même : le bouton doit le savoir.
     b.addEventListener('guidage-arrete', () => {
       this.#majBoutonDemarrer();
@@ -3120,6 +3128,10 @@ export class PanneauItineraire extends HTMLElement {
   #majBoutonDemarrer(): void {
     const bouton = this.querySelector<HTMLButtonElement>('.iti-demarrer');
     if (!bouton) return;
+    /* UN TRAJET EXISTE : on fait venir le bandeau sans attendre le repos du
+       navigateur (PERF-3). C'est le seul endroit à le savoir — toutes les
+       routes qui posent un trajet passent par ce bouton. */
+    if (this.#dernier && !this.#guidage) this.#prevoirGuidage?.();
     bouton.hidden = !this.#guidage || !this.#dernier;
     bouton.textContent = this.#guidage?.actif ? 'Arrêter le suivi' : 'Démarrer le suivi';
   }

@@ -2,6 +2,26 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.126.0] — 2026-09-07 — PERF-3
+
+### Le bandeau de suivi quitte le morceau de démarrage
+- Le bandeau de guidage ne sert jamais au premier écran. Il arrive désormais
+  par `import()`, réclamé par le planificateur dès qu'un trajet existe. Le
+  morceau de démarrage passe de 181 à 156 Ko gzippés.
+- MESURÉ, PAS PROMIS (Lighthouse 13, mobile simulé, A/B croisé sur la même
+  machine, six passages contre sept) : note médiane 66,5 → 70 ; **premier
+  affichage 2,7 s → 2,6 s, à TOUS les passages** ; plus grand élément peint
+  4,0–4,2 s → 3,7–4,1 s. Le gain est réel mais modeste : la note reste tenue
+  par la quantité totale de JavaScript, dont le planificateur est l'autre
+  moitié (PERF-2).
+- Une première version préchargeait le bandeau au repos du navigateur : elle
+  faisait TOMBER la note médiane à 60, le repos survenant dans la fenêtre de
+  mesure. Retirée, et la raison écrite dans le code pour qu'on ne la remette
+  pas.
+- Tests : une garde unitaire qui dit l'intention (un `import` statique
+  reviendrait en silence), et un parcours qui vérifie les deux sens du
+  contrat — absent sans trajet, présent dès qu'un trajet existe.
+
 ## [1.125.0] — 2026-09-06 — AIRES-PICTOS-1
 
 ### Les aires d'autoroute : des pictogrammes dessinés, plus d'émojis

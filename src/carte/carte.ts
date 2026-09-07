@@ -56,7 +56,6 @@ import { ecrireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { VisionneusePhoto } from './visionneuse-photo';
 import { FicheBorne } from './fiche-borne';
 import { FicheLieu } from './fiche-lieu';
-import { BandeauGuidage } from './bandeau-guidage';
 import { chercherPhotos, plusProche, ErreurPhotos } from '../lib/panoramax';
 import { adresseInverse } from '../lib/adresse';
 import { libelleDestination } from '../lib/adresse-lieu';
@@ -628,24 +627,46 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   /* LE BANDEAU DE SUIVI — un seul, posé au conteneur de la carte. Il occupe le
      bas de l'écran pendant le trajet : c'est la zone qu'on regarde le moins
      longtemps, donc celle qui convient à trois lignes qu'on lit d'un coup. */
-  const guidage = new BandeauGuidage();
-  guidage.carte = carte;
-  guidage.addEventListener('guidage-arrete', rangerFonds);
-  /* LA CARTE SE REDIMENSIONNE À L'ARRÊT DU SUIVI : l'en-tête et les rails
-     reviennent (NAV-2) et changent la taille du conteneur — MapLibre n'écoute
-     que la fenêtre. CE N'ÉTAIT PAS la cause de l'écran blanc à la croix rouge
-     (déduit à tort le 06/09 au matin) : la cause, trouvée par l'audit Codex du
-     06/09, était le nettoyage du marqueur d'arrivée qui retirait le conteneur
-     du canevas (bandeau-guidage.ts, #retirerMarqueurArrivee). Un resize ne
-     réinsère pas un canevas supprimé ; il reste utile pour la mise en page. */
-  guidage.addEventListener('guidage-arrete', () => {
-    const redessiner = (): void => { carte.resize(); carte.triggerRepaint(); };
-    redessiner();
-    requestAnimationFrame(redessiner);
-    setTimeout(redessiner, 400);
-  });
-  conteneur.appendChild(guidage);
-  panneau.guidage = guidage;
+  /* IL N'EST PLUS DANS LE MORCEAU DE DÉMARRAGE (PERF-3, 07/09). Il ne sert
+     JAMAIS au premier écran — seulement une fois un trajet calculé. Il arrive
+     donc par `import()`, réclamé par le planificateur (`prevoirGuidage`) dès
+     qu'un trajet existe : bien avant que « Démarrer le suivi » ne puisse être
+     pressé, et jamais au démarrage. Le morceau principal perd 25 Ko gzippés.
+
+     PAS DE PRÉCHARGEMENT AU REPOS, ET C'EST MESURÉ. Première version : un
+     `requestIdleCallback` faisait venir le bandeau sans attendre de trajet.
+     Six passages Lighthouse contre six : la note MÉDIANE tombait de 66,5 à
+     60 — le repos du navigateur survient DANS la fenêtre de mesure, et le
+     travail déplacé s'y ajoutait au lieu d'en sortir. Sans préchargement,
+     même comparaison croisée : médiane 70, et surtout FCP 2,6 s aux sept
+     passages contre 2,7 s aux six — le seul chiffre que le bruit n'atteint
+     pas. Ne pas « optimiser » en rajoutant un préchargement ici. */
+  let venueGuidage: Promise<void> | null = null;
+  const assurerGuidage = (): Promise<void> => {
+    venueGuidage ??= import('./bandeau-guidage').then(({ BandeauGuidage }) => {
+      const guidage = new BandeauGuidage();
+      guidage.carte = carte;
+      guidage.addEventListener('guidage-arrete', rangerFonds);
+      /* LA CARTE SE REDIMENSIONNE À L'ARRÊT DU SUIVI : l'en-tête et les rails
+         reviennent (NAV-2) et changent la taille du conteneur — MapLibre
+         n'écoute que la fenêtre. CE N'ÉTAIT PAS la cause de l'écran blanc à la
+         croix rouge (déduit à tort le 06/09 au matin) : la cause, trouvée par
+         l'audit Codex du 06/09, était le nettoyage du marqueur d'arrivée qui
+         retirait le conteneur du canevas (bandeau-guidage.ts,
+         #retirerMarqueurArrivee). Un resize ne réinsère pas un canevas
+         supprimé ; il reste utile pour la mise en page. */
+      guidage.addEventListener('guidage-arrete', () => {
+        const redessiner = (): void => { carte.resize(); carte.triggerRepaint(); };
+        redessiner();
+        requestAnimationFrame(redessiner);
+        setTimeout(redessiner, 400);
+      });
+      conteneur.appendChild(guidage);
+      panneau.guidage = guidage;
+    });
+    return venueGuidage;
+  };
+  panneau.prevoirGuidage = assurerGuidage;
 
   /* LE VÉHICULE ÉLECTRIQUE — profil et rayon d'action. Tout reste local :
      batterie, santé, charge, relevés d'autonomie ne sortent jamais du

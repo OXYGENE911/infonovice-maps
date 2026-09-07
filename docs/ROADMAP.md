@@ -835,6 +835,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] PERF-3 (07/09) : le bandeau de suivi sort du morceau de démarrage
+      (`import()` réclamé dès qu'un trajet existe ; 181 → 156 Ko gzip).
+      Première marche de PERF-2. A/B croisé Lighthouse : médiane 66,5 → 70,
+      FCP 2,7 → 2,6 s à tous les passages. PRÉCHARGER AU REPOS FAIT PIRE
+      (médiane 60) : le repos tombe dans la fenêtre de mesure. RESTE : le
+      planificateur, l'autre moitié — douze branchements dans carte.ts, et le
+      bouton « Démarrer » dépend de lui.
 - [x] AIRES-PICTOS-1 (06/09) : les dix commodités des aires en pictos SVG
       dessinés (icone-aire.ts), même famille que ceux des bornes ; plus aucun
       émoji dans le panneau ni la pastille.
