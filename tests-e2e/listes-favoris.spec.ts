@@ -211,3 +211,55 @@ test('UN FICHIER QUI N’EN EST PAS UN le dit, et ne crée rien', async ({ page 
   // AUCUNE LISTE FANTÔME : un fichier illisible ne doit pas laisser de trace.
   await expect(page.locator('.favoris-entete-liste')).toHaveCount(3);
 });
+
+test('UN SEUL ASCENSEUR : la liste des favoris n’en a plus le sien (FAVORIS-4)', async ({ page }) => {
+  /* LES AMIS D’ARMELIN, 05/09 : « deux défilements ». Mesuré le 07/09 à
+     412 px, avec deux repères et huit favoris : le corps du menu défilait sur
+     1 214 px ET la liste sur 713 px dans sa fenêtre de 220. Deux ascenseurs
+     imbriqués font un piège au doigt — celui qu’on attrape dépend du pixel où
+     l’on pose le pouce, et la liste avale le geste destiné à la page.
+     ON NE MESURE PAS LA RÈGLE CSS, ON MESURE L’ÉCRAN : n’importe quel
+     `max-height` posé demain ailleurs dans ce volet rougirait ici aussi. */
+  await page.setViewportSize({ width: 412, height: 823 });
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  await page.evaluate(async () => {
+    const ouvrir = (): Promise<IDBDatabase> => new Promise((ok, ko) => {
+      const d = indexedDB.open('infonovice-maps');
+      d.onsuccess = () => ok(d.result);
+      d.onerror = () => ko(d.error);
+    });
+    const db = await ouvrir();
+    const mettre = (magasin: string, cle: string, valeur: unknown): Promise<void> => new Promise((ok, ko) => {
+      const t = db.transaction(magasin, 'readwrite');
+      t.objectStore(magasin).put(valeur, cle);
+      t.oncomplete = () => ok();
+      t.onerror = () => ko(t.error);
+    });
+    for (let i = 1; i <= 8; i += 1) {
+      await mettre('favoris', `f${i}`, {
+        id: `f${i}`, nom: `Boulangerie du Marché numéro ${i} — Chennevières`,
+        lon: 2.5 + i / 100, lat: 48.8, ajoute: Date.now(),
+      });
+    }
+  });
+  await page.reload();
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+  await ouvrirVolet(page, '.favoris');
+  await expect(page.locator('.favoris-liste li').first()).toBeVisible({ timeout: 10_000 });
+
+  const imbriques = await page.evaluate(() => {
+    const defilants = [...document.querySelectorAll<HTMLElement>('*')].filter((e) => {
+      const s = getComputedStyle(e);
+      return /auto|scroll/.test(s.overflowY + s.overflowX)
+        && e.scrollHeight > e.clientHeight + 2 && e.getBoundingClientRect().width > 0;
+    });
+    return defilants
+      .filter((e) => defilants.some((a) => a !== e && a.contains(e)))
+      .map((e) => `${e.tagName.toLowerCase()}.${String(e.className).split(' ')[0]}`);
+  });
+  expect(imbriques, 'un ascenseur dans un ascenseur').toEqual([]);
+});
