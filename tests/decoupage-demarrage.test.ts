@@ -23,6 +23,16 @@ describe('le découpage du morceau de démarrage', () => {
       .not.toMatch(/^import\s[^\n]*from '\.\/bandeau-guidage'/m);
   });
 
+  it('charge le PLANIFICATEUR par import() — jamais statiquement (PERF-4)', () => {
+    expect(CARTE, 'carte.ts ne doit plus importer le planificateur directement')
+      .not.toMatch(/^import\s[^\n]*from '\.\/panneau-itineraire'/m);
+    const porte = readFileSync(new URL('../src/carte/porte-planificateur.ts', import.meta.url), 'utf-8');
+    expect(porte, 'le chargement à la demande a disparu')
+      .toContain("import('./panneau-itineraire')");
+    expect(porte, 'un import de valeur ramènerait 40 Ko gzip au démarrage')
+      .not.toMatch(/^import\s+\{[^}]*\}\s+from '\.\/panneau-itineraire'/m);
+  });
+
   it('le planificateur ne connaît le bandeau QUE par son type', () => {
     const p = readFileSync(new URL('../src/carte/panneau-itineraire.ts', import.meta.url), 'utf-8');
     const lignes = p.split('\n').filter((l) => l.includes("from './bandeau-guidage'"));

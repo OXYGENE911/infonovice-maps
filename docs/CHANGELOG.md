@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.128.0] — 2026-09-07 — PERF-4
+
+### Le planificateur arrive au premier geste qui le demande
+- Le plus gros module de l'application (40 Ko gzippés) quitte le morceau de
+  démarrage : le rail porte le même volet « Itinéraire », et le module vient
+  quand on l'ouvre — ou dès qu'un lien partagé porte un trajet, ou qu'une
+  fiche dit « Y aller ». Le morceau de démarrage passe de **156 à 114 Ko
+  gzippés** ; avec PERF-3 la veille, il aura maigri de 181 à 114.
+- MESURÉ, PAS PROMIS (Lighthouse 13, mobile simulé, A/B croisé sur la même
+  machine, sept passages contre sept, les deux paquets construits d'avance et
+  mesurés en alternance) : note médiane 69 → 74 ; **premier affichage 2,6 s →
+  2,4 s, à TOUS les passages** ; plus grand élément peint resserré de
+  3,7–4,2 s à 3,6–3,8 s ; pire temps de blocage 1 030 → 680 ms.
+- Ce que la suite a attrapé, et qu'aucun compilateur n'aurait vu : le
+  cartouche d'une borne reçoit le planificateur par une interface dont deux
+  méthodes sont OPTIONNELLES (`etatDansLePlan`, `basculerArret`). Les oublier
+  ne fait rougir personne — sauf les deux parcours qui retirent et ajoutent un
+  arrêt depuis la carte.
+- Tests : une garde unitaire qui refuse un `import` statique du planificateur,
+  et un parcours qui vérifie les deux sens du contrat — module absent au
+  premier écran, volet présent et ouvrant du premier clic.
+
 ## [1.127.0] — 2026-09-07 — A11Y-CIBLE-1
 
 ### Le bouton d'installation n'écrase plus le champ de recherche

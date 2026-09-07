@@ -79,6 +79,22 @@ export async function ouvrirVolet(page: Page, selecteur: string): Promise<void> 
     return;
   }
 
+  /* RIEN N'A RÉPONDU — ET LE PLANIFICATEUR N'EST PEUT-ÊTRE PAS ENCORE LÀ.
+     Depuis PERF-4 (07/09) il arrive au premier geste qui le demande : tant
+     qu'il n'est pas venu, le DOM ne peut rien dire des volets qui vivent
+     dedans. On l'ouvre — c'est aussi le geste de l'usager — puis on repose
+     exactement la même question. */
+  if (await page.locator('panneau-itineraire').count() === 0) {
+    await ouvrirPlanificateur(page);
+    const venu = page.locator(`.vue-hote:has(${selecteur})`);
+    if (await venu.count() > 0) {
+      const vue = await venu.first().getAttribute('data-vue');
+      await page.locator(`.iti-vers[data-vers="${vue}"]`).click();
+      await expect(page.locator(`.vue[data-vue="${vue}"]`)).toBeVisible();
+      return;
+    }
+  }
+
   await page.locator(`${selecteur} summary`).first().click();
 }
 

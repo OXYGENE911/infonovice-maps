@@ -82,7 +82,9 @@ test('IL NE CHEVAUCHE PLUS le planificateur, sur un écran large', async ({ page
   await ouvrirCarte(page);
   const chevauche = await page.evaluate(() => {
     const f = document.querySelector('.poi-bulle')!.getBoundingClientRect();
-    const i = document.querySelector('panneau-itineraire')!.getBoundingClientRect();
+    /* LA PLACE DU PLANIFICATEUR DANS LE RAIL, pas son module : depuis PERF-4
+       il arrive à la demande, et c'est le conteneur qui occupe le coin. */
+    const i = document.querySelector('.porte-iti')!.getBoundingClientRect();
     return !(f.right <= i.left || f.left >= i.right || f.bottom <= i.top || f.top >= i.bottom);
   });
   expect(chevauche, 'le filtre et le planificateur se recouvrent').toBe(false);
