@@ -49,3 +49,44 @@ test('LE BOUTON D’INSTALLATION N’ÉCRASE PLUS LE CHAMP DE RECHERCHE (A11Y-CI
   expect(Math.round(champ.x + champ.width), 'le bouton recouvre le champ')
     .toBeLessThanOrEqual(Math.round(bouton.x));
 });
+
+test('AUCUN LIBELLÉ ANGLAIS NE TRAÎNE dans une carte française (LOCALE-FR-2)', async ({ page }) => {
+  /* TROUVÉ EN TABULANT L'APPLICATION AU CLAVIER, comme le ferait un lecteur
+     d'écran : le canevas se présentait « Map », et la croix d'une fiche
+     « Close popup ». MapLibre parle anglais par défaut, et trois de nos clés
+     de traduction nommaient une API disparue — elles ne servaient à rien
+     sans que rien ne le dise. */
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+  await page.route('**/api-adresse.data.gouv.fr/**', (r) => r.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ features: [{
+      properties: { label: 'Fnac Darty Ivry', context: '94, Val-de-Marne', type: 'housenumber', id: 'a', score: 0.9 },
+      geometry: { type: 'Point', coordinates: [2.3901, 48.8234] },
+    }] }),
+  }));
+  await page.goto('/');
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
+
+  // LE CANEVAS SE PRÉSENTE EN FRANÇAIS.
+  await expect(page.locator('#carte canvas.maplibregl-canvas')).toHaveAttribute('aria-label', 'Carte');
+
+  // UNE FICHE OUVERTE : sa croix aussi.
+  const champ = page.locator('.entete .recherche input');
+  await champ.click();
+  await champ.fill('fnac');
+  await page.locator('.entete .recherche [role="option"]').first().click();
+  await expect(page.locator('.fiche-destination')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.maplibregl-popup-close-button')).toHaveAttribute('aria-label', 'Fermer la fiche');
+
+  /* ET RIEN D'AUTRE À L'ÉCRAN : on relit TOUS les noms accessibles plutôt que
+     les deux qu'on vient de corriger — c'est la seule façon d'attraper le
+     prochain oubli. */
+  const anglais = await page.evaluate(() => {
+    const motsAnglais = /\b(close popup|map marker|zoom in|zoom out|find my location|toggle attribution|enter fullscreen|exit fullscreen|map feedback)\b/i;
+    return [...document.querySelectorAll('[aria-label], [title]')]
+      .map((e) => `${e.tagName.toLowerCase()} « ${e.getAttribute('aria-label') ?? e.getAttribute('title')} »`)
+      .filter((t) => motsAnglais.test(t));
+  });
+  expect(anglais, 'libellés MapLibre restés en anglais').toEqual([]);
+});

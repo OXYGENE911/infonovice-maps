@@ -835,6 +835,13 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] LOCALE-FR-2 (07/09) : plus aucun libellé anglais de MapLibre — le
+      canevas disait « Map », la croix des fiches « Close popup ». Trois clés
+      traduites nommaient une API disparue. Garde unitaire contre les clés
+      mortes, parcours qui relit tous les noms accessibles. Trouvé en
+      TABULANT l'application : le reste du parcours clavier est propre
+      (quinze arrêts nommés, la liste d'adresses se parcourt aux flèches, et
+      « Y aller » reçoit le focus après validation).
 - [x] PERF-4 (07/09) : le planificateur sort du morceau de démarrage
       (porte-planificateur.ts : même volet, module chargé à l'ouverture, à
       « Y aller », ou au démarrage si le lien porte un trajet ; 156 → 114 Ko
