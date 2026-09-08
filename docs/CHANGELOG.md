@@ -2,6 +2,31 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.134.0] — 2026-09-08 — COULOIR-1
+
+### Emporter la carte du trajet avant de partir
+- Une fois l'itinéraire calculé, « Partager ou exporter » propose **« Emporter
+  la carte du trajet »** : les fonds de carte le long de la route, sur deux
+  kilomètres de part et d'autre, gardés quatorze jours sur l'appareil. De quoi
+  voir où l'on est dans un tunnel ou une vallée sans réseau.
+- **LE COÛT EST ANNONCÉ AVANT** : « 947 tuiles, environ 55 Mo » pour
+  Paris–Lyon, mesuré et non estimé au doigt mouillé. Une jauge suit
+  l'avancement, un bouton arrête à tout moment, et ce qui est déjà emporté ne
+  repart pas sur le réseau au prochain essai.
+- Les zooms 8 à 13 : la vue d'ensemble pour se resituer, le niveau des routes
+  pour se guider. Le 14 doublait le nombre de tuiles pour un détail utile
+  surtout en ville — c'est-à-dire là où l'on a du réseau.
+- Quatre requêtes à la fois, pas davantage : « ces quotas sont un bien
+  commun », et un couloir en demande moins qu'un écran qu'on fait glisser.
+- La réserve du fond de plan passe de 400 à 1 300 tuiles, sans quoi un couloir
+  aurait chassé tout ce que l'usager avait consulté puis se serait chassé
+  lui-même aux deux tiers. La page « Vie privée » dit ce que cela change :
+  la réserve entière reste sous 110 Mo, et un test unitaire garde ce chiffre.
+- La page « Vie privée » nomme aussi ce que le couloir a de particulier : ce
+  n'est plus seulement une trace de ce qu'on a regardé, mais de la route qu'on
+  comptait prendre. Elle ne quitte pas l'appareil.
+- Dernier des quatre emprunts à CoMaps et OsmAnd listés le 05/09.
+
 ## [1.133.0] — 2026-09-08 — HIST-4
 
 ### Le trajet réellement parcouru s'exporte en GPX

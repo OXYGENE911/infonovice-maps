@@ -56,7 +56,19 @@ export const RESERVES_TUILES: readonly ReserveTuiles[] = [
     couche: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
     cache: 'tuiles-plan',
     format: 'image/png',
-    tuiles: 400,
+    /* MILLE TROIS CENTS DEPUIS LE COULOIR HORS LIGNE (COULOIR-1, 08/09). Le
+       plafond était de 400, taillé pour ce qu'on regarde en naviguant. Un
+       couloir de Paris–Lyon fait 947 tuiles : à 400, il aurait chassé tout ce
+       que l'usager avait consulté, PUIS se serait chassé lui-même aux deux
+       tiers — une carte à trous, sans que rien ne le dise. À 1 300, le plus
+       long couloir tient, et il reste de la place pour ce qu'on a regardé.
+       POURQUOI PAS PLUS : le chiffre est borné par la promesse écrite dans
+       « Vie privée » — environ 110 Mo pour la réserve entière — et un test
+       unitaire le vérifie plutôt que de s'en remettre à la mémoire.
+       CE PLAFOND N'EST PAS UNE RÉSERVATION : le cache ne grossit qu'à mesure
+       des tuiles qui arrivent. Qui n'emporte jamais de couloir garde la même
+       empreinte qu'avant. */
+    tuiles: 1300,
     motif: motifDeCouche('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2'),
   },
   {

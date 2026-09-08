@@ -835,6 +835,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] COULOIR-1 (08/09) : emporter les fonds de carte du trajet avant de
+      partir (zooms 8–13, 2 km de part et d'autre, plafond 1 200 tuiles ;
+      947 pour Paris–Lyon, mesuré). Coût annoncé avant, jauge, arrêt,
+      reprise. Réserve du plan 400 → 1 300, sous les 110 Mo annoncés dans
+      « Vie privée » et gardés par un test. DERNIER des quatre emprunts du
+      05/09 : les quatre sont livrés.
 - [x] HIST-4 (08/09) : export GPX du tracé RÉELLEMENT PARCOURU, avec
       altitude et heure absolue de chaque point (`versGPXTrace`, pure). Bouton
       éteint et motivé quand le parcours n'a pas de positions. Deuxième des
