@@ -16,9 +16,10 @@
 // gauche. La réponse n'était pas de renoncer, c'était d'EXTRAIRE la page dans
 // son propre composant — ce que fait ce fichier.
 import {
-  lireHistorique, ecrireHistorique, comparerTrajets, peutRelancer,
+  lireHistorique, ecrireHistorique, comparerTrajets, peutRelancer, traceDuTrajet,
   type TrajetEnregistre,
 } from '../lib/historique-trajets';
+import { versGPXTrace, telecharger } from '../lib/trace';
 import {
   texteDuPartage, nomDuFichier, CONTACT, CE_QUI_PART, CE_QUI_RESTE,
 } from '../lib/partage-trajet';
@@ -53,6 +54,7 @@ export class PanneauHistorique extends HTMLElement {
             <button type="button" class="iti-hist-comparer">Comparer</button>
             <button type="button" class="iti-hist-contribuer">Contribuer à
               l’algorithme</button>
+            <button type="button" class="iti-hist-gpx">Exporter la trace (GPX)</button>
             <button type="button" class="iti-hist-oublier">Oublier</button>
           </div>
           <p class="iti-hist-note">Ces parcours ne quittent pas cet appareil.</p>
@@ -76,6 +78,9 @@ export class PanneauHistorique extends HTMLElement {
     });
     this.querySelector('.iti-hist-contribuer')?.addEventListener('click', () => {
       this.#montrerLePartage();
+    });
+    this.querySelector('.iti-hist-gpx')?.addEventListener('click', () => {
+      this.#exporterTrace();
     });
     this.querySelector('.iti-hist-oublier')?.addEventListener('click', () => {
       void (async () => {
@@ -314,6 +319,35 @@ export class PanneauHistorique extends HTMLElement {
     );
   }
 
+  /**
+   * Écrit le tracé réellement parcouru dans un fichier GPX (HIST-4, 08/09).
+   *
+   * POURQUOI CE BOUTON EXISTE. L'export du trajet CALCULÉ était là depuis
+   * longtemps ; celui du trajet PARCOURU, non — alors que c'est celui-là qu'on
+   * veut relire ailleurs : il porte l'altitude et l'heure de chaque point.
+   * Étude CoMaps / OsmAnd du 05/09 : « attendue des randonneurs et des
+   * motards ». Zéro réseau, tout se fabrique sur l'appareil.
+   */
+  #exporterTrace(): void {
+    const seul = this.#coches.size === 1
+      ? this.#trajets.find((x) => this.#coches.has(x.id)) : undefined;
+    if (!seul) return;
+    const points = seul.releves
+      .filter((r): r is typeof r & { lon: number; lat: number } =>
+        typeof r.lon === 'number' && typeof r.lat === 'number')
+      .map((r) => ({ lon: r.lon, lat: r.lat, altitudeM: r.altitudeM, tMs: r.tMs }));
+    if (points.length === 0) return;
+    /* LE NOM DU FICHIER PORTE LA DATE : trois exports du même trajet ne
+       doivent pas s'appeler pareil dans le dossier de téléchargement. */
+    const jour = new Date(seul.departMs).toISOString().slice(0, 10);
+    const propre = seul.titre.replace(/[^\p{L}\p{N} -]/gu, '').trim().replace(/\s+/g, '-') || 'trajet';
+    telecharger(
+      versGPXTrace(points, seul.titre, seul.departMs),
+      `${propre}-${jour}.gpx`,
+      'application/gpx+xml',
+    );
+  }
+
   #majActionsHistorique(): void {
     const actions = this.querySelector<HTMLElement>('.iti-hist-actions');
     const comparer = this.querySelector<HTMLButtonElement>('.iti-hist-comparer');
@@ -323,6 +357,19 @@ export class PanneauHistorique extends HTMLElement {
        ET UNE ARRIVÉE ENREGISTRÉE. Les parcours gardés avant HIST-2 n'en ont
        pas : le bouton reste éteint et DIT POURQUOI, plutôt que de faire un
        clic sans effet qu'on prendrait pour une panne. */
+    /* EXPORTER EXIGE UN SEUL PARCOURS, ET DES POSITIONS. Les parcours gardés
+       avant HIST-2 n'en ont pas : le bouton s'éteint et DIT POURQUOI, plutôt
+       que de livrer un fichier vide qu'on croirait cassé. */
+    const gpx = this.querySelector<HTMLButtonElement>('.iti-hist-gpx');
+    if (gpx) {
+      const seul = this.#coches.size === 1
+        ? this.#trajets.find((x) => this.#coches.has(x.id)) : undefined;
+      const points = seul ? traceDuTrajet(seul).length : 0;
+      gpx.disabled = points === 0;
+      gpx.title = this.#coches.size !== 1
+        ? 'Cochez un seul parcours'
+        : (points === 0 ? 'Ce parcours n’a pas gardé de positions' : `${points} points enregistrés`);
+    }
     const relancer = this.querySelector<HTMLButtonElement>('.iti-hist-relancer');
     if (relancer) {
       const seul = this.#coches.size === 1

@@ -2,6 +2,24 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.133.0] — 2026-09-08 — HIST-4
+
+### Le trajet réellement parcouru s'exporte en GPX
+- L'export du trajet CALCULÉ existait depuis longtemps ; celui du trajet
+  PARCOURU, non. C'est pourtant celui-là qu'on veut relire ailleurs : il porte
+  **l'altitude et l'heure de chaque point**. Garmin, OsmAnd et Strava
+  recalculent le dénivelé et la vitesse à partir de ces deux champs ; un GPX
+  qui en manque leur paraît vide.
+- Un bouton « Exporter la trace (GPX) » dans l'historique, actif quand un seul
+  parcours est coché. Les parcours enregistrés avant le 2 septembre n'ont pas
+  gardé de positions : le bouton s'éteint et DIT pourquoi, plutôt que de
+  livrer un fichier vide qu'on prendrait pour une panne.
+- Le nom du fichier porte la date, pour que trois exports du même trajet ne
+  s'écrasent pas.
+- Zéro réseau : le parcours de test coupe la connexion avant de cliquer,
+  plutôt que de compter des appels.
+- Deuxième des quatre emprunts à CoMaps et OsmAnd listés le 05/09.
+
 ## [1.132.0] — 2026-09-08 — SANS-RESEAU-1
 
 ### Une page qui dit ce qui marche quand le réseau vous lâche
