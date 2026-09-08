@@ -2,6 +2,26 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.135.0] — 2026-09-08 — LOGO-1
+
+### Le chien au volant signe les deux fenêtres
+- Le point traînait depuis le 3 septembre : où poser la mascotte sans qu'un
+  dessin en couleurs jure au milieu de pictogrammes monochromes. Armelin a
+  tranché le 08/09 : « en haut à droite de la fenêtre itinéraire car il y a un
+  espace vide », et « en haut à droite de la fenêtre Menu, à condition de
+  réduire la taille du bouton Fonds ». Fait tel quel.
+- ELLE NE COÛTE RIEN, et c'est ce que les parcours défendent. Dans le
+  planificateur, une image de 36 px aurait porté l'en-tête de 43 à 59 px :
+  seize pixels de carte en moins pour une signature. Elle déborde donc sur le
+  rembourrage et l'en-tête ne bouge pas d'un pixel. Dans le menu, elle est
+  posée en absolu : aucune rangée, et le budget de hauteur — 62 % de l'écran —
+  reste tenu.
+- Le bouton « Fonds » passe de 362 à 310 px sur un téléphone, ce qui lui donne
+  la place. Mesuré.
+- Sur une page interne du planificateur, la mascotte s'efface : la croix de
+  fermeture revient et deux images dans un en-tête de quarante-trois pixels
+  feraient un bandeau chargé.
+
 ## [1.134.0] — 2026-09-08 — COULOIR-1
 
 ### Emporter la carte du trajet avant de partir

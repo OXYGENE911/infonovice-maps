@@ -510,6 +510,17 @@ export class PanneauItineraire extends HTMLElement {
                  REMONTE d'une page ; il manquait le geste qui congédie tout
                  — c'est lui, autant que la position, qui fait lire une
                  fenêtre plutôt qu'un tiroir. -->
+            <!-- LE CHIEN AU VOLANT (LOGO-1, décidé le 08/09). Armelin :
+                 « je le vois en haut à droite de la fenêtre itinéraire car il
+                 y a un espace vide ». C'est exact, et mesuré : sur la page
+                 d'accueil, le titre occupe vingt pixels de haut dans un
+                 en-tête de quarante-trois, et les deux boutons — la flèche de
+                 retour, la croix — sont masqués. La mascotte prend cette
+                 place, et LÀ SEULEMENT : dès qu'on entre dans une page, la
+                 croix revient et l'espace n'est plus libre. Décorative, donc
+                 muette pour un lecteur d'écran. -->
+            <img class="vue-chien" src="/icones/volant-96.png" alt=""
+              aria-hidden="true" width="36" height="36">
             <button type="button" class="vue-fermer" hidden
               aria-label="Fermer la fenêtre">✕</button>
           </div>
@@ -3116,6 +3127,10 @@ export class PanneauItineraire extends HTMLElement {
     // La croix ne paraît qu'avec la fenêtre : sur l'accueil, le volet se
     // referme par sa pastille, comme il l'a toujours fait.
     (this.querySelector('.vue-fermer') as HTMLElement).hidden = vue === 'accueil';
+    /* LE CHIEN NE PARAÎT QUE SUR L'ACCUEIL : ailleurs, la croix occupe le
+       coin, et deux images dans un en-tête de quarante-trois pixels feraient
+       un bandeau chargé plutôt qu'une signature (LOGO-1). */
+    (this.querySelector('.vue-chien') as HTMLElement).hidden = vue !== 'accueil';
     /* LA PAGE OUVERTE EST UNE FENÊTRE, PAS UN TIROIR (FEN-2, 29/08 —
        Armelin : « quand je clique sur un pictogramme, je n'ai toujours pas
        de fenêtre flottante pour la configuration »). L'accueil reste la

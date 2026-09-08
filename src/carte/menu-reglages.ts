@@ -36,7 +36,19 @@ export class MenuReglages extends HTMLElement {
           <span class="reglages-barres" aria-hidden="true"></span>
           <span class="reglages-mot">Menu</span>
         </summary>
-        <div class="reglages-corps"></div>
+        <div class="reglages-corps">
+          <!-- LE CHIEN AU VOLANT (LOGO-1, décidé le 08/09). Armelin : « je le
+               vois également en haut à droite de la fenêtre Menu, à condition
+               de réduire la taille du bouton Fonds ». Fait tel quel : la
+               mascotte occupe le coin, et la première section lui cède la
+               place par une marge — mesuré, « Fonds » passe de 362 à 310 px
+               sur un téléphone, ce qui lui suffit largement.
+               ELLE NE COÛTE AUCUNE RANGÉE : posée en absolu, elle ne pousse
+               rien vers le bas, et le budget de hauteur du menu — 62 % de
+               l'écran, gardé par un parcours — reste tenu. -->
+          <img class="reglages-chien" src="/icones/volant-96.png" alt=""
+            aria-hidden="true" width="44" height="44">
+        </div>
       </details>`;
     /* SUR TÉLÉPHONE, LE MENU AUSSI EST UNE FEUILLE BASSE — même mécanique
        que le planificateur, mêmes gestes (décision d'Armelin du 28/08). */
@@ -57,6 +69,9 @@ export class MenuReglages extends HTMLElement {
     if (!corps) throw new Error('menu-reglages : conteneur introuvable après construction');
     const section = document.createElement('section');
     section.className = 'reglages-section';
+    /* LA PREMIÈRE SECTION PARTAGE SA RANGÉE AVEC LA MASCOTTE : c'est elle,
+       et elle seule, qui lui laisse la place. */
+    if (!corps.querySelector('.reglages-section')) section.classList.add('reglages-section-tete');
     const etiquette = document.createElement('p');
     etiquette.className = 'reglages-etiquette';
     etiquette.textContent = titre;

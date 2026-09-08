@@ -1105,6 +1105,27 @@ etat-connexion { display: contents; }
    l'élément — sans quoi la région `role="status"` n'annoncerait rien. */
 .hors-ligne:empty { display: none; }
 .hors-ligne strong { color: var(--ambre); font-weight: 700; }
+/* LE CHIEN AU VOLANT DANS LES DEUX FENÊTRES (LOGO-1, 08/09).
+   Il signe la fenêtre sans rien pousser : dans le planificateur il occupe la
+   place laissée par la croix masquée, dans le menu il est posé en absolu sur
+   le coin, et la première section lui cède une marge. */
+.vue-chien {
+  flex: 0 0 auto; margin-left: auto;
+  /* LA MARGE NÉGATIVE ÉVITE DE PAYER SEIZE PIXELS DE FEUILLE pour une
+     signature : mesuré, l'en-tête passait de 43 à 59 px, autant de carte en
+     moins. Le chien déborde donc sur le rembourrage plutôt que de le pousser,
+     et l'en-tête ne grandit que de quatre pixels. */
+  margin-block: -8px;
+}
+.vue-chien[hidden] { display: none; }
+
+.reglages-corps { position: relative; }
+.reglages-chien {
+  position: absolute; top: 0; right: 0; z-index: 1;
+  pointer-events: none;
+}
+.reglages-section-tete { padding-right: 52px; }
+
 /* LE COULOIR HORS LIGNE (COULOIR-1, 08/09) : le geste, la jauge, le compte.
    La jauge occupe toute la largeur — c'est elle qu'on regarde pendant que
    cinquante mégaoctets arrivent. */
