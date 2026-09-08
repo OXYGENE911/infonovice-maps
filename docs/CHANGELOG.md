@@ -2,6 +2,31 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.132.0] — 2026-09-08 — SANS-RESEAU-1
+
+### Une page qui dit ce qui marche quand le réseau vous lâche
+- Nouvelle page publique « Sans réseau », atteignable depuis la bulle « i »
+  de la carte, le pied de page et — surtout — depuis le bandeau « Hors ligne »
+  lui-même. Elle est pré-cachée par le service worker : une page qui explique
+  le hors-ligne et qu'on ne pourrait pas ouvrir hors ligne serait une
+  plaisanterie.
+- CHAQUE LIGNE EST MESURÉE, réseau coupé pour de bon, pas simulé. Ce qui
+  marche : l'application se relance, la carte déjà consultée s'affiche, les
+  favoris, l'historique, le profil de véhicule et l'outil Mesurer répondent,
+  et le planificateur s'ouvre sur le trajet déjà calculé. Ce qui attend le
+  réseau : la recherche, le calcul d'itinéraire, les bornes et points
+  d'intérêt, le trafic, les prix, la météo, les photos de rue.
+- La page dit aussi POURQUOI le hors-ligne complet n'est pas promis : le
+  graphe routier de la France pèse des gigaoctets et une page web sans serveur
+  n'a nulle part où le mettre. Prétendre le contraire serait mentir sur la
+  seule chose qui compte le jour où l'on est vraiment coupé du monde.
+- Corrigé au passage : hors réseau, la recherche disait « momentanément
+  indisponible, réessayez dans un instant ». Réessayer dans un tunnel n'a
+  jamais ramené la 4G. Elle nomme désormais la cause et rappelle ce qui reste
+  disponible.
+- Tests : trois parcours qui coupent VRAIMENT le réseau et vérifient les
+  promesses de la page une à une — une page qui énumère se démode en silence.
+
 ## [1.131.0] — 2026-09-08 — A11Y-MODALE-1
 
 ### Une page plein écran qui garde le focus, et le rend en partant

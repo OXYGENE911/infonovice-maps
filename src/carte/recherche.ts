@@ -116,6 +116,25 @@ function distanceKm(a: { lon: number; lat: number }, b: { lon: number; lat: numb
   return Math.hypot(dLat, dLon);
 }
 
+/**
+ * Ce qu'on dit quand la recherche échoue — PURE sauf la lecture de l'état
+ * réseau.
+ *
+ * « MOMENTANÉMENT INDISPONIBLE, RÉESSAYEZ DANS UN INSTANT » EST UN MENSONGE
+ * QUAND ON EST HORS LIGNE (SANS-RESEAU-1, 08/09). Mesuré réseau coupé : le
+ * message s'affichait bien — c'est déjà cela — mais il invitait à réessayer
+ * une chose qui ne peut pas marcher, et taisait la seule information utile.
+ * Réessayer dans un tunnel n'a jamais ramené la 4G.
+ */
+function messageDePanne(e: unknown): string {
+  if (!navigator.onLine) {
+    return 'Vous êtes hors réseau : la recherche a besoin des services publics '
+      + 'français pour répondre. Vos favoris, votre historique et la carte déjà '
+      + 'consultée restent disponibles.';
+  }
+  return e instanceof Error ? e.message : 'Recherche impossible.';
+}
+
 export class RechercheAdresse extends HTMLElement {
   #resultats: ResultatAdresse[] = [];
   #actif = -1;
@@ -343,7 +362,7 @@ export class RechercheAdresse extends HTMLElement {
         if (e instanceof DOMException && e.name === 'AbortError') return;
         this.#resultats = [];
         this.#afficher();
-        erreur.textContent = e instanceof Error ? e.message : 'Recherche impossible.';
+        erreur.textContent = messageDePanne(e);
         erreur.hidden = false;
         return;
       }
@@ -484,7 +503,7 @@ export class RechercheAdresse extends HTMLElement {
       if (e instanceof DOMException && e.name === 'AbortError') return;
       this.#resultats = [];
       this.#afficher();
-      erreur.textContent = e instanceof Error ? e.message : 'Recherche impossible.';
+      erreur.textContent = messageDePanne(e);
       erreur.hidden = false;
     }
   }

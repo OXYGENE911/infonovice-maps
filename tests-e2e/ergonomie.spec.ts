@@ -290,7 +290,7 @@ test('les liens légaux ne recouvrent plus rien — ils vivent dans la bulle du 
   await expect(attribution).toBeVisible();
   await expect(attribution).toContainText('IGN');
   for (const lien of ['/a-propos.html', '/offre-flottes.html',
-    '/vie-privee.html', '/mentions-legales.html']) {
+    '/vie-privee.html', '/mentions-legales.html', '/sans-reseau.html']) {
     await expect(attribution.locator(`a[href="${lien}"]`),
       `le lien ${lien} a disparu de la bulle`).toHaveCount(1);
   }

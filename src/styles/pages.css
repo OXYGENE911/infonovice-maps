@@ -50,6 +50,13 @@ body.page {
   padding: 13px 16px; border: 1px solid var(--bord); border-radius: var(--rayon);
   background: var(--fond-doux);
 }
+/* CE QUI ATTEND LE RÉSEAU se lit autrement de ce qui marche : même grille,
+   ton plus sourd et un liseré qui dit « en pause » plutôt que « acquis ».
+   Deux listes identiques auraient demandé de relire le titre à chaque
+   ligne (SANS-RESEAU-1, 08/09). */
+.page-promesses-non li {
+  background: transparent; border-style: dashed; color: var(--texte-2);
+}
 .page-promesses strong { display: block; margin-bottom: 2px; }
 .page-promesses span { color: var(--texte-2); font-size: 15px; }
 

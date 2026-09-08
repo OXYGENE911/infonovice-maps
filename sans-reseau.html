@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self';
+    img-src 'self' data:; style-src 'self'; script-src 'none';
+    base-uri 'self'; form-action 'none'">
+  <meta name="description" content="Ce qui marche dans Infonovice Maps quand le
+    réseau manque, et ce qui l’attend. Mesuré, pas promis : la carte déjà vue,
+    les favoris, l’historique, le profil véhicule et l’outil Mesurer restent
+    disponibles hors ligne.">
+  <meta name="theme-color" content="#0F1B2D">
+  <title>Sans réseau — Infonovice Maps</title>
+  <link rel="canonical" href="https://maps.infonovice.fr/sans-reseau.html">
+  <link rel="icon" href="/icones/icone-192.png" type="image/png">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Infonovice Maps">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:url" content="https://maps.infonovice.fr/sans-reseau.html">
+  <meta property="og:title" content="Sans réseau — Infonovice Maps">
+  <meta property="og:description" content="Ce qui marche sans réseau, et ce qui l’attend. Mesuré, pas promis.">
+  <meta property="og:image" content="https://maps.infonovice.fr/partage-social.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="/src/styles/tokens.css">
+  <link rel="stylesheet" href="/src/styles/pages.css">
+</head>
+<body class="page">
+  <header class="page-entete">
+    <div class="page-entete-bande">
+      <a class="page-marque" href="/">Infonovice <strong>Maps</strong></a>
+      <a class="page-retour" href="/">← Retour à la carte</a>
+    </div>
+  </header>
+
+  <main class="page-corps">
+    <h1>Quand le réseau vous lâche</h1>
+    <p class="page-chapo">Un tunnel, une vallée, un forfait épuisé. Voici ce qui
+      continue de fonctionner, et ce qui attend le retour du réseau. Chaque
+      ligne de cette page a été <strong>mesurée</strong> le 8 septembre 2026,
+      réseau coupé pour de bon — aucune n’est une promesse.</p>
+
+    <h2>Ce qui marche</h2>
+    <ul class="page-promesses">
+      <li><strong>L’application se relance</strong>
+        <span>Ouvrir l’adresse sans réseau rouvre la carte : elle est gardée
+        sur votre appareil dès la première visite.</span></li>
+      <li><strong>La carte déjà consultée</strong>
+        <span>Les fonds que vous avez vus restent affichés. Ceux que vous
+        n’avez jamais ouverts, non : ils n’ont jamais été téléchargés.</span></li>
+      <li><strong>Vos favoris et vos repères</strong>
+        <span>Domicile, travail, listes. Ils n’ont jamais quitté votre
+        appareil : ils n’ont donc besoin de rien.</span></li>
+      <li><strong>Votre historique de trajets</strong>
+        <span>Avec les tracés enregistrés.</span></li>
+      <li><strong>Votre profil de véhicule</strong>
+        <span>Batterie, consommation, autonomie, réglages.</span></li>
+      <li><strong>L’outil Mesurer</strong>
+        <span>Distances, tronçons et surfaces se calculent entièrement sur
+        votre appareil, réseau ou pas.</span></li>
+      <li><strong>Le planificateur s’ouvre</strong>
+        <span>Il vous montre le trajet déjà calculé. Il ne peut simplement pas
+        en calculer un nouveau.</span></li>
+    </ul>
+
+    <h2>Ce qui attend le réseau</h2>
+    <ul class="page-promesses page-promesses-non">
+      <li><strong>La recherche d’adresses et de lieux</strong>
+        <span>Elle interroge des services publics français.</span></li>
+      <li><strong>Le calcul d’itinéraire</strong>
+        <span>Et le guidage qui en découle. Un itinéraire déjà calculé, lui,
+        reste à l’écran.</span></li>
+      <li><strong>Les bornes, stations et parkings</strong>
+        <span>Ainsi que les aires d’autoroute et les points d’intérêt.</span></li>
+      <li><strong>Le trafic, les prix, la météo, les photos de rue</strong>
+        <span>Bison Futé, les prix des carburants, les prévisions et
+        Panoramax attendent tous le réseau.</span></li>
+    </ul>
+
+    <h2>Pourquoi nous ne promettons pas le hors-ligne complet</h2>
+    <p>D’autres applications téléchargent la France entière : les cartes, mais
+      aussi le graphe des routes qui sert à calculer un itinéraire. Ce graphe
+      pèse plusieurs gigaoctets et se met à jour sans cesse. Infonovice Maps est
+      une page web sans serveur : elle n’a nulle part où le mettre, et prétendre
+      le contraire serait vous mentir sur la seule chose qui compte le jour où
+      vous êtes vraiment coupé du monde.</p>
+    <p>Ce que nous préparons à la place : <strong>emporter le couloir de votre
+      trajet</strong> avant de partir, c’est-à-dire garder les fonds de carte le
+      long de la route choisie. Le calcul, lui, se fera toujours pendant que
+      vous avez du réseau.</p>
+
+    <h2>Ce que vous pouvez faire avant de partir</h2>
+    <ul class="page-promesses">
+      <li><strong>Calculez votre trajet pendant que vous avez du réseau</strong>
+        <span>Il reste affiché ensuite, avec sa feuille de route.</span></li>
+      <li><strong>Parcourez la carte le long de votre route</strong>
+        <span>Ce que vous regardez est gardé, et sera là dans le tunnel.</span></li>
+      <li><strong>Posez vos favoris à l’avance</strong>
+        <span>Ils ne dépendent jamais du réseau.</span></li>
+    </ul>
+
+    <div class="page-note">Le réseau qui revient ne demande aucun geste :
+      l’application s’en aperçoit seule et le bandeau « Hors ligne » disparaît.
+      Vos trajets et vos favoris n’ont, eux, jamais été perdus.</div>
+
+    <footer class="page-pied">
+      <nav>
+        <a href="/">Carte</a>
+        <a href="/a-propos.html">À propos</a>
+        <a href="/vie-privee.html">Vie privée</a>
+        <a href="/mentions-legales.html">Mentions légales</a>
+        <a href="https://github.com/OXYGENE911/infonovice-maps">Code source</a>
+      </nav>
+      <p>Infonovice Maps — données © IGN-F / Géoplateforme, Base Adresse
+        Nationale et partenaires publics. Code sous AGPL-3.0.</p>
+    </footer>
+  </main>
+</body>
+</html>

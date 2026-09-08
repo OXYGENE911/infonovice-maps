@@ -835,6 +835,12 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] SANS-RESEAU-1 (08/09) : page publique « Sans réseau », pré-cachée,
+      atteignable depuis le bandeau hors ligne, la bulle « i » et les pieds de
+      page. Chaque promesse mesurée réseau coupé, et gardée par un parcours.
+      Premier des quatre emprunts à CoMaps/OsmAnd listés le 05/09. La
+      recherche nomme désormais la vraie cause hors réseau. RESTE des quatre :
+      export GPX du tracé enregistré, couloir hors ligne, courbes de niveau.
 - [x] A11Y-MODALE-1 (08/09) : la page plein écran des outils garde le focus
       (fond inerte) et le rend en partant. Trouvé en tabulant : dix arrêts
       derrière une fenêtre qui se dit modale, et un retour de focus qui ne
