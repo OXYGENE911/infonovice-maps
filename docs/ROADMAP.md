@@ -608,9 +608,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
 - [x] PR #217 — LOGO-1 (03/09) : la mascotte officielle (chien à la carte)
       en icône PWA, favicon et apple-touch ; la boussole sur la page de
       recherche. Sources canoniques dans /brand, déclinaisons quantifiées.
-      RESTE OUVERT : où poser le chien AU VOLANT — un dessin en couleurs au
-      milieu des pictos monochromes des menus jurerait ; à décider avec
-      Armelin (bandeau de guidage ? écran de démarrage du suivi ?).
+      TRANCHÉ LE 08/09 par Armelin, et livré (LOGO-1, v1.135.0) : en haut à
+      droite de la fenêtre Itinéraire — la place laissée libre par la croix
+      masquée sur l'accueil — et en haut à droite du Menu, le bouton « Fonds »
+      réduit de 362 à 310 px pour lui céder le coin. Aucune hauteur ajoutée
+      d'un côté comme de l'autre : c'est ce que garde le parcours.
 - [x] PR #216 — PICTO-2 (03/09) : la pastille de la carte dans les résultats
       de recherche, famille devinée au libellé — dans le doute, rien.
 - [x] PR #214 — MAJ-1 (03/09) : la nouvelle version s'annonce par un bandeau
