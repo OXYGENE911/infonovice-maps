@@ -23,6 +23,12 @@ const MESSAGE = 'La carte déjà consultée et vos favoris restent accessibles. 
   + 'Tout ce qui interroge un service — recherche, itinéraire, trafic, météo, '
   + 'points d’intérêt, photos de rue — attend le réseau.';
 
+/* ET LE DÉTAIL EST À UN CLIC (SANS-RESEAU-1, 08/09). Le bandeau tient en deux
+   phrases ; la page dit ce qui marche, ligne par ligne, et pourquoi le
+   hors-ligne complet n'est pas promis. Elle est pré-cachée : elle s'ouvre
+   justement quand le réseau manque. */
+const LIEN_DETAIL = 'Ce qui marche sans réseau';
+
 export class EtatConnexion extends HTMLElement {
   #installation: EvenementInstallation | null = null;
 
@@ -47,7 +53,11 @@ export class EtatConnexion extends HTMLElement {
       titre.textContent = 'Hors ligne.';
       const detail = document.createElement('span');
       detail.textContent = MESSAGE;
-      bandeau.replaceChildren(titre, detail);
+      const lien = document.createElement('a');
+      lien.className = 'hors-ligne-lien';
+      lien.href = '/sans-reseau.html';
+      lien.textContent = LIEN_DETAIL;
+      bandeau.replaceChildren(titre, detail, lien);
     };
     window.addEventListener('online', afficher);
     window.addEventListener('offline', afficher);

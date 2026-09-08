@@ -53,6 +53,10 @@ export default defineConfig({
         'a-propos': resolve(__dirname, 'a-propos.html'),
         'offre-flottes': resolve(__dirname, 'offre-flottes.html'),
         'vie-privee': resolve(__dirname, 'vie-privee.html'),
+        /* SANS-RESEAU-1 : entrée du build, donc PRÉ-CACHÉE par le service
+           worker — une page qui explique le hors-ligne et qu'on ne pourrait
+           pas ouvrir hors ligne serait une plaisanterie. */
+        'sans-reseau': resolve(__dirname, 'sans-reseau.html'),
         'mentions-legales': resolve(__dirname, 'mentions-legales.html'),
         pro: resolve(__dirname, 'pro.html'),
       },

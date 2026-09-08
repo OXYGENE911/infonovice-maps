@@ -92,6 +92,10 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
         '<a href="/offre-flottes.html">Professionnels</a>',
         '<a href="/vie-privee.html">Vie privée</a>',
         '<a href="/mentions-legales.html">Mentions légales</a>',
+        /* SANS-RESEAU-1 : la page se lit surtout quand le réseau manque, donc
+           elle doit se trouver AVANT — d'où sa place à côté des liens
+           légaux, et non dans un coin réservé aux pannes. */
+        '<a href="/sans-reseau.html">Sans réseau</a>',
       ],
     },
   });

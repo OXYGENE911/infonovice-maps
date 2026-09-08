@@ -16,10 +16,14 @@ const SITEMAP = lire('public/sitemap.xml');
 const BASE = 'https://maps.infonovice.fr/';
 
 describe('pages HTML', () => {
-  test('le dépôt sert bien les six pages attendues', () => {
+  test('le dépôt sert bien les sept pages attendues', () => {
+    /* CETTE LISTE EST UNE PORTE, pas un inventaire : une page qui naît sans
+       canonical, sans Open Graph, sans JSON-LD ou hors du sitemap doit faire
+       rougir la CI avant d'être publiée. Elle a rattrapé « Sans réseau » le
+       08/09, née avec les trois derniers manquants. */
     expect(PAGES.sort()).toEqual(
       ['a-propos.html', 'index.html', 'mentions-legales.html', 'offre-flottes.html',
-        'pro.html', 'vie-privee.html'],
+        'pro.html', 'sans-reseau.html', 'vie-privee.html'],
     );
   });
 
