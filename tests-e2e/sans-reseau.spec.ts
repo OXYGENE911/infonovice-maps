@@ -98,6 +98,10 @@ test('LE BANDEAU MÈNE À LA PAGE, ET LA PAGE S’OUVRE SANS RÉSEAU', async ({ 
   await expect(lien).toHaveAttribute('href', '/sans-reseau.html');
 
   await lien.click();
+  /* ON ATTEND LA NAVIGATION AVANT DE LIRE LA PAGE. Sans cela, l'assertion
+     pouvait tomber sur l'ancienne page pendant que le service worker servait
+     la nouvelle — vu une fois en local, sur une machine chargée. */
+  await page.waitForURL(/sans-reseau\.html/, { timeout: 20_000 });
   await expect(page.locator('h1'), 'la page n’est pas pré-cachée')
     .toContainText('réseau', { timeout: 20_000 });
   // Elle dit les deux moitiés : ce qui marche, et ce qui attend.

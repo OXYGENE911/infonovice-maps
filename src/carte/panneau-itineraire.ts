@@ -21,6 +21,9 @@ import { listerFavoris, listerListes } from '../lib/favoris';
 import { listeDe } from '../lib/mes-poi-traits';
 import { adresseInverse, type ResultatAdresse } from '../lib/adresse';
 import { versGPX, versKML, telecharger } from '../lib/trace';
+import { tuilesDuCouloir, urlDeTuile, poidsEnMots } from '../lib/couloir';
+import { emporterLesTuiles, gardienPresent } from './couloir-hors-ligne';
+import { urlTuiles } from './style-ign';
 import { versFragment, depuisFragment } from '../lib/partage-url';
 import { installerFeuilleBasse } from './feuille-basse';
 import { pictoMenu, type NomPicto } from './icone-menu';
@@ -872,6 +875,21 @@ export class PanneauItineraire extends HTMLElement {
             <p class="vue-note">GPX pour un GPS de randonnée ou un compteur de
               vélo, KML pour un globe virtuel. Les deux se téléchargent sans
               rien envoyer nulle part.</p>
+
+            <!-- LE COULOIR HORS LIGNE (COULOIR-1, 08/09). Il vit ici, avec ce
+                 qu'on fait AVANT de partir : copier le lien, exporter la
+                 trace, emporter la carte. -->
+            <div class="iti-couloir">
+              <button type="button" class="iti-couloir-emporter">Emporter la carte du trajet</button>
+              <button type="button" class="iti-couloir-arreter" hidden>Arrêter</button>
+              <progress class="iti-couloir-jauge" max="100" value="0" hidden></progress>
+              <p class="iti-couloir-etat" role="status"></p>
+            </div>
+            <p class="vue-note">Les fonds de carte le long de la route, gardés
+              sur votre appareil pour quatorze jours. De quoi voir où vous êtes
+              dans un tunnel ou une vallée sans réseau — le calcul d’itinéraire,
+              lui, demandera toujours du réseau
+              (<a href="/sans-reseau.html">ce qui marche sans réseau</a>).</p>
           </section>
         </div>
       </details>`;
@@ -1135,6 +1153,12 @@ export class PanneauItineraire extends HTMLElement {
     this.querySelector('.iti-gpx')?.addEventListener('click', () => {
       if (this.#dernier) void this.#livrerFichier(versGPX(this.#dernier, this.#nomTrajet()),
         'itineraire-infonovice.gpx', 'application/gpx+xml');
+    });
+    this.querySelector('.iti-couloir-emporter')?.addEventListener('click', () => {
+      void this.#emporterLeCouloir();
+    });
+    this.querySelector('.iti-couloir-arreter')?.addEventListener('click', () => {
+      this.#arretCouloir?.abort();
     });
     this.querySelector('.iti-kml')?.addEventListener('click', () => {
       if (this.#dernier) void this.#livrerFichier(versKML(this.#dernier, this.#nomTrajet()),
@@ -3085,6 +3109,10 @@ export class PanneauItineraire extends HTMLElement {
     titre.textContent = VUES[vue];
     const retour = this.querySelector('.vue-retour') as HTMLElement;
     retour.hidden = vue === 'accueil';
+    /* LE COÛT DU COULOIR SE RECALCULE À L'OUVERTURE DE LA PAGE, jamais avant :
+       il dépend du trajet du moment, et l'annoncer d'avance sur un trajet
+       périmé serait pire que se taire (COULOIR-1). */
+    if (vue === 'partage') this.#majCouloir();
     // La croix ne paraît qu'avec la fenêtre : sur l'accueil, le volet se
     // referme par sa pastille, comme il l'a toujours fait.
     (this.querySelector('.vue-fermer') as HTMLElement).hidden = vue === 'accueil';
@@ -3960,6 +3988,103 @@ export class PanneauItineraire extends HTMLElement {
   }
 
   /** Les arrêts du plan tels que le bandeau les annonce et les dessine. */
+  /** L'arrêt du couloir en cours ; `null` quand rien ne tourne. */
+  #arretCouloir: AbortController | null = null;
+
+  /**
+   * Annonce ce que coûterait le couloir, AVANT tout téléchargement.
+   *
+   * « NE JAMAIS PROMETTRE SANS MESURER » vaut aussi dans l'autre sens : on ne
+   * lance pas cinquante mégaoctets sur le forfait de quelqu'un sans le lui
+   * avoir dit. Le compte est exact — c'est la même fonction qui produira les
+   * URL — et le poids est une estimation nommée comme telle.
+   */
+  #majCouloir(): void {
+    const bouton = this.querySelector<HTMLButtonElement>('.iti-couloir-emporter');
+    const etat = this.querySelector<HTMLElement>('.iti-couloir-etat');
+    if (!bouton || !etat) return;
+    if (this.#arretCouloir) return; // un téléchargement parle pour lui-même
+    const iti = this.#dernier;
+    if (!iti) {
+      /* DÉFENSIF, ET INATTEIGNABLE PAR L'INTERFACE : le menu des détails —
+         donc cette page — ne paraît qu'une fois un trajet calculé. Le garde
+         reste, parce qu'il coûte deux lignes et qu'une page peut s'ouvrir
+         autrement demain ; il n'est pas gardé par un parcours, faute de
+         pouvoir l'atteindre. */
+      bouton.disabled = true;
+      etat.textContent = 'Calculez d’abord un trajet.';
+      return;
+    }
+    if (!gardienPresent()) {
+      /* SANS SERVICE WORKER, RIEN NE SERAIT GARDÉ : le téléchargement
+         tournerait pour rien. On l'éteint et on dit quoi faire. */
+      bouton.disabled = true;
+      etat.textContent = 'Rechargez la page une fois : la mise en réserve hors '
+        + 'ligne n’est pas encore active sur cet onglet.';
+      return;
+    }
+    const trace = iti.geometrie.coordinates as [number, number][];
+    const couloir = tuilesDuCouloir(trace);
+    bouton.disabled = couloir.tuiles.length === 0;
+    etat.textContent = couloir.tuiles.length === 0
+      ? 'Rien à emporter.'
+      : `${couloir.tuiles.length} tuiles, environ ${poidsEnMots(couloir.tuiles.length)}`
+        + (couloir.tronque ? ' — trajet trop long : le couloir s’arrêtera avant la fin.' : '.');
+  }
+
+  /**
+   * Emporte les fonds de carte du trajet (COULOIR-1, 08/09).
+   *
+   * Étude CoMaps / OsmAnd du 05/09 : « le service worker sait déjà mettre en
+   * cache ; il manque le geste et la jauge ». Les voici. Le calcul reste en
+   * ligne — un graphe routier ne tient pas dans un navigateur, et la page
+   * « Sans réseau » le dit sans détour.
+   */
+  async #emporterLeCouloir(): Promise<void> {
+    const iti = this.#dernier;
+    const bouton = this.querySelector<HTMLButtonElement>('.iti-couloir-emporter');
+    const arreter = this.querySelector<HTMLButtonElement>('.iti-couloir-arreter');
+    const jauge = this.querySelector<HTMLProgressElement>('.iti-couloir-jauge');
+    const etat = this.querySelector<HTMLElement>('.iti-couloir-etat');
+    if (!iti || !bouton || !arreter || !jauge || !etat || this.#arretCouloir) return;
+
+    const couloir = tuilesDuCouloir(iti.geometrie.coordinates as [number, number][]);
+    if (couloir.tuiles.length === 0) return;
+    const gabarit = urlTuiles('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', 'image/png');
+    const urls = couloir.tuiles.map((t) => urlDeTuile(gabarit, t));
+
+    const arret = new AbortController();
+    this.#arretCouloir = arret;
+    bouton.hidden = true;
+    arreter.hidden = false;
+    jauge.hidden = false;
+    jauge.value = 0;
+    etat.textContent = `0 sur ${urls.length}…`;
+
+    const bilan = await emporterLesTuiles(urls, {
+      signal: arret.signal,
+      surAvance: (a) => {
+        jauge.value = Math.round((a.faites / a.total) * 100);
+        etat.textContent = `${a.faites} sur ${a.total}…`;
+      },
+    });
+
+    this.#arretCouloir = null;
+    bouton.hidden = false;
+    arreter.hidden = true;
+    jauge.hidden = true;
+    const gardees = bilan.faites - bilan.echouees;
+    if (arret.signal.aborted) {
+      etat.textContent = `Arrêté : ${gardees} tuiles emportées sur ${bilan.total}.`
+        + ' Relancer reprendra où l’on s’est arrêté.';
+      return;
+    }
+    etat.textContent = bilan.echouees > 0
+      ? `${gardees} tuiles emportées, ${bilan.echouees} manquées : la carte aura `
+        + 'quelques trous. Relancer les redemandera.'
+      : `Couloir emporté : ${gardees} tuiles, gardées quatorze jours.`;
+  }
+
   #arretsAAnnoncer(plan: PlanRecharge): ArretAAnnoncer[] {
     return plan.arrets.map((a) => ({
       nom: a.borne.nom,

@@ -8,6 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { JOURS_EN_CACHE, RESERVES_TUILES } from '../src/lib/tuiles-en-cache';
+import { OCTETS_PAR_TUILE } from '../src/lib/couloir';
 import { urlTuiles } from '../src/carte/style-ign';
 
 describe('réserves de tuiles', () => {
@@ -48,8 +49,19 @@ describe('réserves de tuiles', () => {
     expect(new Set(noms).size).toBe(noms.length);
     for (const reserve of RESERVES_TUILES) {
       expect(reserve.tuiles).toBeGreaterThan(0);
-      expect(reserve.tuiles).toBeLessThanOrEqual(400);
+      expect(reserve.tuiles).toBeLessThanOrEqual(2_000);
     }
+  });
+
+  it('LA RÉSERVE ENTIÈRE RESTE SOUS LES 110 Mo ANNONCÉS À L’USAGER', () => {
+    /* CE TEST GARDE UNE PROMESSE PUBLIQUE, pas un détail d'implémentation :
+       la page « Vie privée » chiffre la place que l'application peut prendre
+       sur l'appareil. Le plafond du plan est passé de 400 à 1 600 tuiles le
+       08/09 pour accueillir un couloir hors ligne (COULOIR-1) ; sans ce
+       garde-fou, le prochain qui l'augmentera rendra cette page fausse sans
+       le savoir. */
+    const octets = RESERVES_TUILES.reduce((t, r) => t + r.tuiles * OCTETS_PAR_TUILE, 0);
+    expect(Math.round(octets / 1_000_000)).toBeLessThanOrEqual(110);
   });
 
   it('reste en deçà des 21 jours annoncés par le serveur IGN', () => {
