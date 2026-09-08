@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Cinq pages, écrites à la main : un générateur serait plus de code que
-     de contenu. À tenir à jour quand une page naît (la CI le vérifie). -->
+<!-- Écrites à la main : un générateur serait plus de code que de contenu.
+     À tenir à jour quand une page naît — la CI le vérifie, et c'est elle qui
+     a rattrapé l'oubli de « Sans réseau » le 08/09. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://maps.infonovice.fr/</loc>
@@ -24,6 +25,11 @@
   </url>
   <url>
     <loc>https://maps.infonovice.fr/vie-privee.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://maps.infonovice.fr/sans-reseau.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
