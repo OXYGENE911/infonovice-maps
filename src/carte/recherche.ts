@@ -5,6 +5,7 @@
 import {
   chercherAdresses, communeNommee, repondALaSaisie, type ResultatAdresse,
 } from '../lib/adresse';
+import { toutesACote, MOT_A_COTE } from '../lib/frappe';
 import { dansEmprise, type Emprise } from '../lib/couverture';
 import { LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
 import { chercherPartout } from '../lib/recherche-multi';
@@ -257,6 +258,14 @@ export class RechercheAdresse extends HTMLElement {
                d'une liste codée en dur qui promettrait du vide. -->
           <div class="recherche-filtres" hidden></div>
           <p class="recherche-rail-etat" role="status"></p>
+          <!-- « AUCUNE NE REPREND CE QUE VOUS AVEZ TAPÉ » (FRAPPE-1, 09/09).
+               ELLE EST AU-DESSUS DE LA LISTE, et c'est tout l'intérêt : sous
+               cinq suggestions, sur un téléphone, elle serait hors de l'écran
+               au moment où l'on choisit — donc inutilisable au sens de la
+               règle du projet.
+               SA PROPRE LIGNE, comme la note et l'erreur : celles-là servent
+               à autre chose et se réécrivent à d'autres moments. -->
+          <p class="recherche-a-cote" role="status" hidden></p>
           <ul id="${this.#idListe}" role="listbox" aria-label="Suggestions d’adresses" hidden></ul>
           <p class="recherche-erreur" role="alert" hidden></p>
           <!-- LE CHIEN MEUBLE LA PAGE VIERGE (MASCOTTE-2, 04/09). Armelin :
@@ -693,6 +702,32 @@ export class RechercheAdresse extends HTMLElement {
     });
     liste.hidden = this.#resultats.length === 0;
     champ.setAttribute('aria-expanded', String(!liste.hidden));
+    this.#direSiToutEstACote(champ.value);
+  }
+
+  /**
+   * Dit que RIEN dans la liste ne reprend la saisie — quand c'est vrai.
+   *
+   * POURQUOI CETTE PHRASE EXISTE (FRAPPE-1, mesuré le 09/09). La Base Adresse
+   * Nationale rattrape déjà 94 % des fautes d'un caractère : sur 72 variantes
+   * de 22 adresses réelles, la bonne revenait au PREMIER rang. Il n'y avait
+   * donc pas de correcteur à écrire — la porte était ouverte.
+   *
+   * MAIS LES 6 % QUI RESTENT ÉCHOUENT EN SILENCE, et c'est là qu'est le mal.
+   * « Place Kléer » à Strasbourg rend cinq vraies rues de Strasbourg, aucune
+   * ne s'appelant Kléber, sans que rien ne le signale. On choisit, et l'on
+   * part ailleurs. La phrase ne corrige pas : elle rend la chose VISIBLE, ce
+   * qui suffit — l'usager, lui, sait s'il s'est trompé de lettre ou de ville.
+   *
+   * ELLE NE PARLE QUE LORSQUE TOUTE LA LISTE EST À CÔTÉ : une seule
+   * suggestion juste, et il n'y a rien à dire, il n'y a qu'à la choisir.
+   */
+  #direSiToutEstACote(saisie: string): void {
+    const ligne = this.querySelector('.recherche-a-cote') as HTMLElement | null;
+    if (!ligne) return;
+    const aCote = toutesACote(saisie, this.#resultats.map((r) => r.libelle));
+    ligne.textContent = aCote ? MOT_A_COTE : '';
+    ligne.hidden = !aCote;
   }
 
   #clavier(e: KeyboardEvent): void {

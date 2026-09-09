@@ -738,10 +738,17 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       fusion union — fini les rebases en chaîne.
 - [x] PR #220 — RECHERCHE-9 (04/09) : le plus proche d'abord à mots égaux ;
       latitude:null ne devient plus l'île Nulle ; FNACDARTY se décolle au
-      dictionnaire d'enseignes. RESTE OUVERT de ce retour : « à un caractère
-      près, l'adresse est introuvable » — la tolérance aux fautes de la BAN
-      est ce qu'elle est ; l'index IGN la porte pour les LIEUX, pas pour les
-      adresses. À mesurer avant de promettre.
+      dictionnaire d'enseignes. « À un caractère près, l'adresse est
+      introuvable » : MESURÉ ET TRAITÉ LE 09/09 (FRAPPE-1, v1.138.0), et la
+      prémisse était fausse. Sur 22 adresses réelles vérifiées et 72 variantes
+      d'une faute, la BAN rend la bonne adresse au PREMIER rang dans 94 % des
+      cas (insertion et inversion : 100 % ; suppression et substitution :
+      89 %). Aucun correcteur à écrire. Mais les 6 % restants échouent EN
+      SILENCE — « Place Kléer » rend cinq vraies rues de Strasbourg, aucune
+      nommée Kléber — et c'est cela qui a été traité : la recherche VÉRIFIE
+      que la saisie se retrouve dans la réponse, et le dit quand ce n'est le
+      cas d'aucune suggestion. Le score du service ne pouvait pas servir de
+      signal : 13 % des saisies EN COURS passent sous son seuil.
 - [x] PR #219 — DEST-1 (04/09) : la carte va vraiment à la destination (le
       suivi GPS se désarme au choix — son verrou rabattait chaque flyTo), et
       le marqueur rouvre la fiche fermée.
@@ -837,6 +844,17 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] FRAPPE-1 (09/09) : la recherche dit quand aucune suggestion ne reprend
+      ce qu'on a tapé. Le point « à un caractère près, l'adresse est
+      introuvable » (04/09) était marqué « à mesurer avant de promettre » : la
+      mesure a renversé la prémisse (94 % des fautes d'un caractère passent
+      déjà) et déplacé le travail de la correction vers la VÉRIFICATION.
+      Règle pure (Damerau borné — l'inversion vaut UNE faute, sans quoi dix
+      bonnes réponses sur dix étaient accusées à tort ; mots génériques et
+      chiffres écartés ; le préfixe compte comme une correspondance pour ne
+      pas crier pendant la frappe), évaluée sur les 92 cas mesurés : 4
+      à-côtés vus sur 4, zéro bonne réponse accusée, zéro cri pendant la
+      frappe.
 - [x] CONTRAT-1 (09/09) : le tracé et la feuille de route se répondent, ou la
       feuille est écartée. Dernier point « Maps » de l'audit Codex du 06/09
       (« contrat de route commun : points raccordés, provenance »). Le guidage
