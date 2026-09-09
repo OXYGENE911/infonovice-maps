@@ -2,6 +2,69 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.140.0] — 2026-09-10 — CORPUS-1
+
+### Un corpus annoté de 348 requêtes, et le défaut qu'il a trouvé du premier coup
+- Dernier point « Maps » de l'audit du 6 septembre : « corpus de 200–300
+  requêtes annotées avec Top-1 / Top-5 / MRR mesurés ; le banc actuel n'en a
+  que douze ».
+- **348 requêtes sur 90 communes**, de Paris (2,1 M habitants) à Courties (46).
+  Rien n'est écrit de mémoire : chaque réponse attendue est **obtenue d'une
+  source publique**, puis son nom est dégradé pour en faire une requête — sans
+  le code postal, sans les accents, avec une faute, réduit au nom seul. La
+  vérité de terrain est la **coordonnée**, jamais le libellé, qui change d'une
+  source à l'autre.
+- Le banc **ne part pas avec `npm test`** : 900 appels réels sur cinq services
+  publics n'ont rien à faire dans une suite qui tourne à chaque poussée. Il a
+  sa propre configuration et se lance à la main.
+
+### Ce que la mesure dit
+
+| | Top-1 | Top-5 | MRR |
+|---|---:|---:|---:|
+| **Ensemble (348)** | 95,1 % | 98,6 % | 0,967 |
+| Adresses — complète, sans code postal, sans accents | 100 % | 100 % | 1,000 |
+| Communes seules (90) | 93,3 % | 97,8 % | 0,956 |
+| Lieux nommés (138) | 92–98 % | 100 % | 0,96–0,98 |
+| Écoles + commune (55) | 87,3 % | 94,5 % | 0,909 |
+
+### Le défaut trouvé, et corrigé
+- En tapant **« Félines »**, la recherche rendait d'abord une rue Félines à
+  Carcassonne, une rue Felines à Bonnat, deux lieux-dits Félines ailleurs — et
+  la commune en cinquième. **Quatorze communes sur quatre-vingt-dix** ne
+  sortaient pas en tête. Le service n'a pas tort : ces objets portent bien ce
+  nom. Mais celui qui écrit « Félines » tout court veut la commune.
+- La commune remonte désormais quand la saisie **entière** est son nom, aux
+  accents et à la casse près. « 12 rue de Paris » ne déclenche rien. **Aucun
+  appel de plus** : on réordonne ce qui est déjà revenu.
+- Mesuré : **84,4 % → 93,3 %** de Top-1 sur cette famille, MRR 0,905 → 0,956,
+  et aucune autre famille ne bouge d'un point. C'est exactement ce que le MRR
+  sert à voir — le Top-5 n'a pas changé, puisque rien de neuf n'a été trouvé :
+  seul l'ordre a changé.
+
+### Trois passes ont été nécessaires pour que le banc dise la vérité
+- La première mesure annonçait 58 % de Top-1. Elle comptait **« Marseille »
+  absente** alors que le service la rendait en tête : elle exigeait 200 m entre
+  deux définitions du centre d'une ville de 238 km². Chaque entrée déclare
+  maintenant **sa** tolérance — la taille de la commune pour une commune.
+- La deuxième interrogeait des **raisons sociales** du registre des entreprises
+  (« BOULANGERIES DESIGN IMPLANTATIONS MARSEILLE ») : personne ne tape cela, et
+  ce n'est pas une tâche d'usager. Remplacées par des noms d'écoles — ceux
+  qu'on dit vraiment, et le cas exact d'Armelin le 1er septembre.
+- La troisième acceptait encore « Ecole primaire publique » et « Zone
+  d'activité ou d'intérêt » comme des noms, et reprochait au service de ne pas
+  deviner lequel on visait. Un nom n'est pas une catégorie : on retire ce qui
+  dit le type, et l'on juge ce qui reste.
+- Les tolérances sont **mesurées, pas rondes** : 500 m pour une école parce que
+  deux annuaires officiels placent le collège Robert-Cellerier de
+  Saint-Savinien **à 363 m de lui-même**.
+
+### Ce qui reste ouvert
+- Deux communes restent introuvables : **« Beaulieu »** n'a aucune commune dans
+  quinze résultats de la Base Adresse Nationale. La corriger demanderait un
+  appel supplémentaire à chaque frappe — cela touche au principe « ces quotas
+  sont un bien commun », et la décision revient à Armelin.
+
 ## [1.139.0] — 2026-09-09 — A11Y-LECTEUR-1
 
 ### Ce qu'un lecteur d'écran entend sur les deux parcours d'avant la route

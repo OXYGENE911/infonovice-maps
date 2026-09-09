@@ -1,6 +1,6 @@
 // Le géocodage BAN : la transformation pure, et la résilience réseau.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { versResultats, chercherAdresses, adresseInverse, contexteADire, ErreurAdresse } from '../src/lib/adresse';
+import { versResultats, chercherAdresses, adresseInverse, contexteADire, communeDAbord, ErreurAdresse } from '../src/lib/adresse';
 
 const REPONSE_BAN = {
   features: [{
@@ -92,5 +92,50 @@ describe('la commune ne se dit pas deux fois (A11Y-LECTEUR-1)', () => {
 
   it('un contexte vide ne fabrique rien', () => {
     expect(contexteADire('1 Rue de Rivoli 75001 Paris', '')).toBe('');
+  });
+});
+
+describe('la commune passe devant quand c’est elle qu’on a écrite (CORPUS-1)', () => {
+  /* MESURÉ SUR LE CORPUS le 09/09 : sur quatre-vingt-dix communes tapées telles
+     quelles, QUATORZE ne sortaient pas en tête. « Félines » rendait d’abord une
+     rue Félines à Carcassonne, une rue Felines à Bonnat, deux lieux-dits — et la
+     commune en cinquième. */
+  const r = (libelle: string, type: string) => ({
+    libelle, type, contexte: '', lon: 0, lat: 0,
+  });
+
+  it('une commune coincée derrière des rues homonymes remonte en tête', () => {
+    const liste = [r('Félines 11000 Carcassonne', 'street'), r('Felines 23220 Bonnat', 'street'),
+      r('Félines 42550 Usson-en-Forez', 'locality'), r('Félines', 'municipality')];
+    expect(communeDAbord('Félines', liste)[0]!.libelle).toBe('Félines');
+    // Et rien d’autre ne bouge : les trois suivantes gardent leur ordre.
+    expect(communeDAbord('Félines', liste).slice(1).map((x) => x.libelle))
+      .toEqual(liste.slice(0, 3).map((x) => x.libelle));
+  });
+
+  it('les accents et la casse ne l’empêchent pas — on tape « felines »', () => {
+    const liste = [r('Rue Félines', 'street'), r('Félines', 'municipality')];
+    expect(communeDAbord('felines', liste)[0]!.type).toBe('municipality');
+    expect(communeDAbord('FÉLINES', liste)[0]!.type).toBe('municipality');
+  });
+
+  it('LA RÈGLE EST ÉTROITE, ET DOIT LE RESTER : « 12 rue de Paris » ne remonte '
+    + 'rien. Réordonner plus largement reviendrait à préférer nos idées à celles '
+    + 'du service, qui a mesuré son classement sur bien plus que quatre-vingt-dix '
+    + 'cas', () => {
+    const liste = [r('12 Rue de Paris 59000 Lille', 'housenumber'), r('Paris', 'municipality')];
+    expect(communeDAbord('12 rue de Paris', liste)[0]!.type).toBe('housenumber');
+  });
+
+  it('une commune déjà en tête n’est pas déplacée, et une liste sans commune non plus', () => {
+    const dejaLa = [r('Paris', 'municipality'), r('Rue de Paris', 'street')];
+    expect(communeDAbord('Paris', dejaLa)).toEqual(dejaLa);
+    const sansCommune = [r('Beaulieu 18000 Bourges', 'street')];
+    expect(communeDAbord('Beaulieu', sansCommune)).toEqual(sansCommune);
+  });
+
+  it('une saisie vide ne réordonne rien', () => {
+    const liste = [r('Rue X', 'street'), r('Paris', 'municipality')];
+    expect(communeDAbord('   ', liste)).toEqual(liste);
   });
 });
