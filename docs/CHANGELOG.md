@@ -2,6 +2,44 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.138.0] — 2026-09-09 — FRAPPE-1
+
+### La recherche dit quand aucune suggestion ne reprend ce qu'on a tapé
+- Point ouvert depuis le 4 septembre, marqué « à mesurer avant de promettre » :
+  « à un caractère près, l'adresse est introuvable ».
+- **La mesure dit autre chose, et c'est elle qui a décidé du travail.**
+  22 adresses réelles vérifiées auprès du service, 72 variantes d'une faute
+  d'un caractère, dans le mode exact de la recherche : **94 % rendent la bonne
+  adresse au premier rang**. L'insertion et l'inversion de deux lettres
+  passent à 100 %, la suppression et la substitution à 89 %. Il n'y avait donc
+  pas de correcteur à écrire — la Base Adresse Nationale fait déjà ce travail,
+  et mieux que ce qu'on aurait posé par-dessus.
+- **Ce qui blesse, ce sont les 6 % qui restent — parce qu'ils échouent en
+  silence.** « Place Kléer » à Strasbourg rend cinq vraies rues de Strasbourg
+  — Heckler, Geiler, Cuvier, Herder, Doller — dont aucune ne s'appelle Kléber,
+  et rien ne le dit. On choisit la première, et l'on part ailleurs.
+- La recherche **vérifie** donc désormais, au lieu de corriger : ce qui a été
+  tapé se retrouve-t-il dans ce qui revient, à une faute près ? Quand aucune
+  suggestion ne reprend la saisie, une ligne le dit, **au-dessus de la
+  liste** — sous cinq suggestions, sur un téléphone, elle serait hors de
+  l'écran au moment où l'on choisit.
+- Les suggestions **restent** : c'est un avertissement, pas une censure. Et
+  une seule suggestion juste suffit à faire taire la ligne — il n'y a alors
+  rien à signaler, il n'y a qu'à la choisir.
+- **Le score du service ne pouvait pas servir de signal**, et la mesure l'a
+  montré : il sépare bien sur une adresse complète (fausses ≤ 0,61, justes
+  ≥ 0,70), mais l'application interroge à chaque frappe et **13 % des saisies
+  en cours passent sous ce seuil** — « 12 Place Be » vaut 0,49. Un
+  avertissement accroché au score aurait crié pendant qu'on tape.
+- **L'inversion de deux lettres compte pour une faute** (Damerau, pas
+  Levenshtein), et ce n'est pas un raffinement d'école : « Carems » pour
+  « Carmes » est la faute la plus banale qui soit. Comptée double, elle faisait
+  accuser des réponses parfaitement justes — sur dix accusations à tort de la
+  première version, **dix** étaient exactement cela.
+- Mesuré sur les 92 cas relevés : la règle voit les 4 réponses à côté sur 4,
+  n'accuse à tort aucune des 88 bonnes réponses, et reste muette sur les 7
+  saisies en cours qui font trébucher le score.
+
 ## [1.137.0] — 2026-09-09 — CONTRAT-1
 
 ### Le tracé et la feuille de route se répondent, ou la feuille est écartée
