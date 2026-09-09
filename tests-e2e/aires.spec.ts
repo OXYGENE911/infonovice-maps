@@ -186,3 +186,79 @@ test('L’OUVERTURE AUTOMATIQUE SE REFERME SEULE UNE FOIS L’AIRE DÉPASSÉE �
   expect(derniere, 'l’aire est devenue une étape du trajet').toContain(AIRE_2.lon.toFixed(4).slice(0, 5));
   await expect(feuille).toBeHidden();
 });
+
+/** Le mouchard de la voix : il note ce qu'on lui demande de dire. */
+async function espionnerLaVoix(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const dites: string[] = [];
+    (window as unknown as { ditesVoix: string[] }).ditesVoix = dites;
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: {
+        getVoices: () => [{ lang: 'fr-FR', name: 'Locale', localService: true }],
+        speak: (m: { text: string }) => { dites.push(m.text); },
+        cancel: () => {},
+        addEventListener: () => {},
+      },
+    });
+    Object.defineProperty(window, 'SpeechSynthesisUtterance', {
+      configurable: true,
+      value: class { text: string; lang = ''; rate = 1; voice: unknown = null;
+
+        constructor(t: string) { this.text = t; } },
+    });
+  });
+}
+
+const ditesVoix = (page: Page): Promise<string[]> =>
+  page.evaluate(() => (window as unknown as { ditesVoix: string[] }).ditesVoix);
+
+test('« ME PRÉVENIR » FAIT PARLER LA VOIX À DEUX KILOMÈTRES — et elle se tait sans demande (AIRE-VOIX-1)', async ({ page }) => {
+  /* Armelin, en livrant AIRES-1 : « la voix pourrait dire "aire dans 2 km"
+     SUR DEMANDE ». Ces deux derniers mots portent tout : une autoroute a une
+     aire tous les dix à vingt kilomètres, et les annoncer toutes ferait de la
+     voix un bavardage qu'on finit par couper — en perdant du même geste les
+     manœuvres, qui sont une fonction de sécurité. */
+  await page.setViewportSize({ width: 390, height: 844 });
+  await espionnerLaVoix(page);
+  await suivre(page);
+
+  const feuille = page.locator('.bg-aire');
+
+  /* 1. ON APPROCHE DE LA PREMIÈRE AIRE SANS RIEN DEMANDER : le panneau
+        s'ouvre seul à cinq kilomètres, mais la voix ne dit rien d'elle. */
+  await rouler(page, 3.5 + 8.5 * 0.0068);
+  await expect(feuille).toBeVisible();
+  await expect(feuille.locator('.bg-aire-nom')).toHaveText('Aire de Venoy-Chablis');
+
+  const prevenir = feuille.getByRole('button', { name: 'Me prévenir' });
+  await expect(prevenir).toBeEnabled();
+  await expect(prevenir).toHaveAttribute('aria-pressed', 'false');
+
+  /* 2. ON DEMANDE — et le bouton DIT qu'il a compris, sans quoi on appuierait
+        deux fois, donc on annulerait sa propre demande. */
+  await prevenir.click();
+  const demande = feuille.getByRole('button', { name: 'Rappel demandé' });
+  await expect(demande).toHaveAttribute('aria-pressed', 'true');
+  // Demander un rappel n'est pas partir : la feuille reste ouverte.
+  await expect(feuille).toBeVisible();
+
+  /* 3. DEUX KILOMÈTRES AVANT, la voix la nomme. */
+  await rouler(page, 3.5 + 10.2 * 0.0068);
+  await expect.poll(() => ditesVoix(page).then((d) => d.join(' | ')), { timeout: 10_000 })
+    .toContain('Aire de Venoy-Chablis dans');
+
+  /* 4. ET ELLE NE LE DIT QU'UNE FOIS : une aire répétée à chaque fixe cesse
+        d'informer et devient du harcèlement. */
+  await rouler(page, 3.5 + 10.6 * 0.0068);
+  await rouler(page, 3.5 + 11.0 * 0.0068);
+  const apres = await ditesVoix(page);
+  expect(apres.filter((p) => p.includes('Venoy-Chablis')).length,
+    'l’aire a été répétée').toBe(1);
+
+  /* 5. LA SECONDE AIRE N'A RIEN DEMANDÉ : on passe à deux kilomètres d'elle
+        sans un mot. C'est le cœur du « sur demande ». */
+  await rouler(page, 3.5 + 20.2 * 0.0068);
+  const fin = await ditesVoix(page);
+  expect(fin.filter((p) => p.includes('Biche')), 'une aire non demandée a parlé').toEqual([]);
+});
