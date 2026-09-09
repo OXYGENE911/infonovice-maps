@@ -844,6 +844,28 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] A11Y-LECTEUR-1 (09/09) : ce qu'un lecteur d'écran entend sur les deux
+      parcours d'avant la route. DERNIER VOLET DE L'AUDIT CODEX du 06/09 —
+      clavier vérifié le 07/09, texte agrandi le 08/09, annonces du suivi
+      relues le 08/09. Deux défauts trouvés en LISANT l'arbre d'accessibilité,
+      malgré un Lighthouse à 100 sur ce volet : la commune était dite DEUX
+      FOIS sur chaque suggestion (« 1 Rue de Rivoli 75001 Paris 75001 Paris »)
+      — le libellé de la BAN la porte déjà, et le contexte la répétait ; et la
+      page n'avait AUCUN titre de niveau, alors que naviguer par les titres
+      est un geste de base. UNE FAUSSE PISTE ÉCARTÉE : « PParkings » et
+      « WCToilettes » venaient de mon outil de mesure, qui lisait le texte du
+      SVG — le vrai calcul de nom accessible honore `aria-hidden`. Les gardes
+      lisent désormais le nom accessible réel. Le volet Maps de l'audit est
+      clos, hors corpus de requêtes annotées (décision d'Armelin en attente).
+      AU PASSAGE, LE COULOIR HORS LIGNE, après DEUX hypothèses fausses de ma
+      part : une sonde a nommé la vraie cause des tuiles perdues — des 502 du
+      service IGN, que le code comptait comme des refus définitifs et ne
+      rejouait jamais. Se rejouent désormais 5xx, 408 et 429 ; pas les autres
+      refus, ni un portail captif. LA SONDE A AUSSI MONTRÉ QUE LES TESTS
+      SORTAIENT SUR LE VRAI SERVICE : la simulation des tuiles était posée sur
+      la page, et le service worker lui échappait — 149 tuiles demandées à
+      data.geopf.fr à chaque exécution, en local comme en CI. Infraction à
+      « ces quotas sont un bien commun », commise par les tests. Corrigé.
 - [x] FRAPPE-1 (09/09) : la recherche dit quand aucune suggestion ne reprend
       ce qu'on a tapé. Le point « à un caractère près, l'adresse est
       introuvable » (04/09) était marqué « à mesurer avant de promettre » : la
@@ -933,7 +955,7 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de recherche entre 400 et 640 px (cible tactile de 22 px, et
       recouvrement). Accessibilité Lighthouse 96 → 100 ; bonnes pratiques et
       référencement déjà à 100. RESTE de l'audit sur ce volet : parcours
-      clavier et lecteur d'écran sur les trois parcours principaux.
+      clavier et lecteur d'écran : FAIT le 09/09 (A11Y-LECTEUR-1).
 - [x] PERF-3 (07/09) : le bandeau de suivi sort du morceau de démarrage
       (`import()` réclamé dès qu'un trajet existe ; 181 → 156 Ko gzip).
       Première marche de PERF-2. A/B croisé Lighthouse : médiane 66,5 → 70,
@@ -972,7 +994,7 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       CONTRAT DE ROUTE : livré le 09/09 (CONTRAT-1, v1.137.0) — voir plus
       bas. RESTE de l'audit Codex, volet Maps : corpus de 200–300 requêtes
       annotées avec Top-1 / Top-5 / MRR mesurés (le banc actuel n'en a que
-      douze) ; lecteur d'écran sur les trois parcours principaux. PARCOURS CLAVIER : vérifié le 07/09 — quinze arrêts nommés
+      douze) ; lecteur d'écran : FAIT le 09/09 (A11Y-LECTEUR-1). PARCOURS CLAVIER : vérifié le 07/09 — quinze arrêts nommés
       au premier écran, liste d'adresses aux flèches
       (`aria-activedescendant`), et le focus arrive sur « Y aller » après
       validation ; le seul défaut trouvé était deux libellés anglais

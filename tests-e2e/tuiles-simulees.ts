@@ -19,6 +19,14 @@ export const PNG_PANORAMA_2X1 = Buffer.from(
   'base64');
 
 export async function simulerTuiles(page: Page): Promise<void> {
+  /* UNE ROUTE DE PAGE, ET C'EST VOULU. Elle n'intercepte pas ce que demande
+     le SERVICE WORKER ; la poser sur le CONTEXTE le ferait — mais cela
+     dérange le service worker lui-même, et la mesure du 09/09 est nette : le
+     parcours « sans réseau » échoue alors trois fois sur trois, la page
+     pré-cachée n'étant plus servie. Le seul parcours qui demande des tuiles
+     À TRAVERS le service worker est celui du couloir hors ligne : il pose sa
+     propre route de contexte, là où elle ne gêne personne
+     (`tuilesDuServiceWorker`). */
   await page.route('**/data.geopf.fr/wmts**', (route) => route.fulfill({
     contentType: 'image/png', body: PNG_1PX,
   }));
@@ -53,5 +61,27 @@ export async function simulerCommunes(page: Page): Promise<void> {
       nom: 'Paris', code: '75056',
       centre: { type: 'Point', coordinates: [2.3488, 48.8534] },
     }]),
+  }));
+}
+
+/**
+ * Les tuiles demandées PAR LE SERVICE WORKER, simulées elles aussi.
+ *
+ * POURQUOI CETTE SECONDE FONCTION EXISTE. Une route de page n'intercepte pas
+ * ce qu'un service worker demande — mesuré le 09/09 par une sonde posée dans
+ * le téléchargement du couloir : cent quarante-neuf tuiles partaient sur le
+ * VRAI service IGN à chaque exécution, en local comme en intégration
+ * continue, et ses 502 occasionnels faisaient rougir le parcours. C'était
+ * aussi une infraction à la règle du projet — « ne jamais marteler les API
+ * publiques : ces quotas sont un bien commun » — commise par les tests.
+ *
+ * ELLE N'EST PAS DANS `simulerTuiles`, ET C'EST MESURÉ : une route de
+ * contexte dérange le service worker au point que le parcours « sans réseau »
+ * ne reçoit plus sa page pré-cachée — trois échecs sur trois. On ne la pose
+ * donc QUE là où l'on télécharge à travers lui.
+ */
+export async function tuilesDuServiceWorker(page: Page): Promise<void> {
+  await page.context().route('**/data.geopf.fr/wmts**', (route) => route.fulfill({
+    contentType: 'image/png', body: PNG_1PX,
   }));
 }

@@ -2,6 +2,75 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.139.0] — 2026-09-09 — A11Y-LECTEUR-1
+
+### Ce qu'un lecteur d'écran entend sur les deux parcours d'avant la route
+- Dernier volet de l'audit du 6 septembre. Le parcours clavier était vérifié
+  (07/09), le texte agrandi aussi (08/09), et les annonces du suivi relues le
+  08/09. Restaient les deux parcours qu'on fait **avant** de rouler : chercher
+  une adresse, et planifier un trajet.
+- **Deux défauts trouvés en lisant l'arbre d'accessibilité** — celui que lit
+  vraiment un lecteur d'écran, et que Lighthouse ne regarde pas. La page est
+  à 100 sur ce volet ; les deux étaient là quand même, comme les trois
+  précédents.
+- **La commune était dite deux fois sur chaque suggestion.** Chaque option
+  s'annonçait « 1 Rue de Rivoli 75001 Paris **75001 Paris** 250 km » : le
+  libellé de la Base Adresse Nationale finit déjà par le code postal et la
+  commune, et l'on ajoutait les mêmes en dessous. À l'œil, deux lignes qui se
+  répètent se pardonnent — on saute la seconde. À l'oreille, il faut les
+  écouter toutes les deux, sur **chaque** suggestion, avant d'atteindre la
+  suivante. Le contexte reste partout où il sert : sur un lieu nommé
+  (« Boulangerie Martin ») il porte la seule commune qu'on ait, et c'est lui
+  qui lève l'homonymie entre deux « Rue de la Paix ». On n'efface que la
+  répétition.
+- **La page n'avait aucun titre de niveau.** Or prendre la mesure d'une page
+  en parcourant ses titres est l'un des deux ou trois gestes de base d'un
+  lecteur d'écran ; ici, il ne rendait rien. Un `<h1>` nomme désormais
+  l'application. Il est lu sans être vu, et c'est assumé : la marque en haut
+  à gauche est un **lien vers Maps Pro**, et faire du titre de cette page un
+  lien vers une autre page serait un contresens.
+- **Une fausse piste, écartée par la vérification.** Le premier relevé
+  accusait les boutons « PParkings » et « WCToilettes » — le « P » et le
+  « WC » des pictogrammes collés au libellé. C'était mon outil de mesure qui
+  lisait le texte du SVG : le vrai calcul de nom accessible honore
+  `aria-hidden`, et les boutons s'annoncent bien « Parkings » et
+  « Toilettes ». Les gardes lisent maintenant le nom accessible réel, pas le
+  texte du DOM.
+- Trois parcours gardent l'acquis, et chacun a été mis en échec en remettant
+  le défaut qu'il surveille.
+
+### Au passage : le couloir hors ligne, et deux hypothèses fausses avant la bonne
+- Le parcours du couloir tombait par intermittence — une ou deux tuiles
+  perdues sur cent quarante-neuf. J'ai d'abord ajouté une reprise, puis un
+  délai avant cette reprise. **Les deux hypothèses étaient fausses**, et le
+  parcours retombait.
+- Une **sonde posée dans le téléchargement** a nommé la cause : les tuiles
+  manquantes reviennent en **502 Bad Gateway** du service IGN, parfois en
+  400. Or le code comptait tout refus comme définitif et ne le rejouait
+  jamais — c'est-à-dire exactement l'inverse de ce qu'il fallait faire : un
+  502 est une panne de passerelle, passagère par nature. La reprise ajoutée
+  la veille ne servait à rien sur le seul cas qui se produisait vraiment.
+- Se rejouent désormais : les pannes de serveur (5xx), l'attente expirée
+  (408), le débit refusé (429). Ne se rejouent pas : les autres refus, où le
+  service dit que la demande est mauvaise et le répétera ; ni une réponse
+  valide au mauvais type, signature d'un portail captif.
+- **Et la sonde a montré autre chose, plus gênant.** Ces 502 venaient du
+  **vrai** service IGN : les tuiles demandées par le service worker
+  échappaient à la simulation, posée sur la page et non sur le contexte. Cent
+  quarante-neuf tuiles partaient donc sur data.geopf.fr à chaque exécution du
+  parcours, en local comme en intégration continue. C'était une infraction à
+  la règle du projet — « ne jamais marteler les API publiques : ces quotas
+  sont un bien commun » — commise par les tests eux-mêmes, à chaque poussée.
+  Corrigé : plus une seule requête ne sort.
+- **Et la correction elle-même a demandé une mesure.** Intercepter au niveau
+  du *contexte* attrape bien ce que demande le service worker — mais dérange
+  le service worker au point que le parcours « sans réseau » ne reçoit plus
+  sa page pré-cachée : trois échecs sur trois. L'interception large n'est
+  donc posée que là où l'on télécharge à travers lui, c'est-à-dire dans le
+  seul parcours du couloir.
+- Le parcours attendait par ailleurs jusqu'à soixante secondes dans un budget
+  de trente : son attente ne pouvait jamais aller à son terme.
+
 ## [1.138.0] — 2026-09-09 — FRAPPE-1
 
 ### La recherche dit quand aucune suggestion ne reprend ce qu'on a tapé

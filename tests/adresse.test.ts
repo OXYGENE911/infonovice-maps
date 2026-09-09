@@ -1,6 +1,6 @@
 // Le géocodage BAN : la transformation pure, et la résilience réseau.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { versResultats, chercherAdresses, adresseInverse, ErreurAdresse } from '../src/lib/adresse';
+import { versResultats, chercherAdresses, adresseInverse, contexteADire, ErreurAdresse } from '../src/lib/adresse';
 
 const REPONSE_BAN = {
   features: [{
@@ -62,5 +62,35 @@ describe('adresseInverse', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ features: [] }), { status: 200 }));
     expect(await adresseInverse({ lon: 0, lat: 0 })).toBeNull();
+  });
+});
+
+describe('la commune ne se dit pas deux fois (A11Y-LECTEUR-1)', () => {
+  /* TROUVÉ LE 09/09 EN LISANT L'ARBRE D'ACCESSIBILITÉ, pas en regardant
+     l'écran : chaque suggestion s'annonçait « 1 Rue de Rivoli 75001 Paris
+     75001 Paris 250 km ». Le libellé de la BAN finit déjà par le code postal
+     et la commune, et l'on ajoutait les mêmes en dessous. À l'œil, deux
+     lignes qui se répètent se pardonnent — on saute la seconde. À l'oreille,
+     il faut les écouter toutes les deux, sur CHAQUE suggestion. */
+  it('la répétition tombe quand le libellé porte déjà la commune', () => {
+    expect(contexteADire('1 Rue de Rivoli 75001 Paris', '75001 Paris')).toBe('');
+  });
+
+  it('LE CONTEXTE RESTE PARTOUT OÙ IL SERT, et c’est pourquoi on ne le retire '
+    + 'pas d’office : sur un lieu nommé, il porte la seule commune qu’on ait', () => {
+    expect(contexteADire('Boulangerie Martin', '75001 Paris')).toBe('75001 Paris');
+  });
+
+  it('il reste aussi quand il lève une homonymie — deux « Rue de la Paix »', () => {
+    expect(contexteADire('Rue de la Paix', '75002 Paris')).toBe('75002 Paris');
+    expect(contexteADire('Rue de la Paix', '69003 Lyon')).toBe('69003 Lyon');
+  });
+
+  it('la casse et les espaces en trop ne cachent pas la répétition', () => {
+    expect(contexteADire('1 RUE DE RIVOLI  75001   PARIS', '75001 Paris')).toBe('');
+  });
+
+  it('un contexte vide ne fabrique rien', () => {
+    expect(contexteADire('1 Rue de Rivoli 75001 Paris', '')).toBe('');
   });
 });

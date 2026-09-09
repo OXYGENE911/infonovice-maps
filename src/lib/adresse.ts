@@ -254,6 +254,29 @@ export function repondALaSaisie(texte: string, libelle: string): boolean {
   return mots.every((m) => dans.includes(` ${m} `));
 }
 
+/**
+ * Le contexte À DIRE : vide quand le libellé le contient déjà — PURE.
+ *
+ * TROUVÉ EN LISANT L'ARBRE D'ACCESSIBILITÉ (A11Y-LECTEUR-1, 09/09). Chaque
+ * suggestion s'annonçait « 1 Rue de Rivoli 75001 Paris 75001 Paris 250 km » :
+ * le libellé de la Base Adresse Nationale finit par le code postal et la
+ * commune, et l'on ajoutait les mêmes en dessous. À l'œil, deux lignes qui se
+ * répètent se pardonnent — on saute la seconde. À l'oreille, il faut les
+ * écouter toutes les deux, sur CHAQUE suggestion, avant d'atteindre la
+ * suivante.
+ *
+ * LE CONTEXTE RESTE PARTOUT OÙ IL SERT, et c'est pour cela qu'on ne le retire
+ * pas d'office : sur un lieu nommé — « Boulangerie Martin » — il porte la
+ * seule commune qu'on ait, et c'est lui qui lève l'homonymie entre deux
+ * « Rue de la Paix ». On n'efface donc que la RÉPÉTITION, jamais
+ * l'information.
+ */
+export function contexteADire(libelle: string, contexte: string): string {
+  if (contexte === '') return '';
+  const nu = (t: string) => t.toLowerCase().replace(/\s+/g, ' ').trim();
+  return nu(libelle).includes(nu(contexte)) ? '' : contexte;
+}
+
 export function communeNommee(texte: string, contexte: string): boolean {
   const saisie = ` ${nu(texte)} `;
   /* LE CONTEXTE EST « 75007 Paris » : on essaie chaque mot d'au moins trois
