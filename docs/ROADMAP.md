@@ -866,7 +866,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       les relais qui définissaient le corridor direct et peut donc ramener au
       détour du service. Le défaut existait avant (le recalcul ne les a jamais
       connus) ; le corriger demande un état propre aux relais, ce qui relève
-      de ROUTE-1 et non du contrat de route.
+      de ROUTE-1 et non du contrat de route. AU PASSAGE : le couloir hors
+      ligne gagne UNE reprise par tuile (la CI a rendu 147 sur 149 sans qu'une
+      seule ait été refusée) — la règle du projet l'imposait déjà partout
+      ailleurs, et une tuile perdue fait un trou définitif dans la carte
+      qu'on emporte.
 - [x] COULOIR-1 (08/09) : emporter les fonds de carte du trajet avant de
       partir (zooms 8–13, 2 km de part et d'autre, plafond 1 200 tuiles ;
       947 pour Paris–Lyon, mesuré). Coût annoncé avant, jauge, arrêt,

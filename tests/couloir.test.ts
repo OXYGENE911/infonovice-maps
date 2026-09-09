@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   tuileDe, coteTuileM, tuilesDuCouloir, echantillonner, urlDeTuile, poidsEnMots,
   COULOIR_PAR_DEFAUT,
 } from '../src/lib/couloir';
+import { emporterLesTuiles } from '../src/carte/couloir-hors-ligne';
 
 /* LE COULOIR HORS LIGNE (COULOIR-1, 08/09/2026).
  *
@@ -134,5 +135,66 @@ describe('urlDeTuile et poidsEnMots', () => {
   it('dit les mégaoctets comme on les lit', () => {
     expect(poidsEnMots(100)).toBe('5,8 Mo');
     expect(poidsEnMots(947)).toBe('55 Mo');
+  });
+});
+
+describe('emporter les tuiles : une coupure ne fait pas un trou définitif', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const image = (): Response => new Response('', {
+    status: 200, headers: { 'content-type': 'image/png' },
+  });
+
+  it('UNE COUPURE SE REJOUE UNE FOIS — et une seule. Un couloir, ce sont des '
+    + 'centaines de requêtes d’affilée : sans reprise, la poignée qui se perd '
+    + 'sur une connexion de bord de route laisse des trous que l’usager ne '
+    + 'découvrira qu’une fois hors réseau (constaté le 09/09 : 147 sur 149)', async () => {
+    let appels = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+      appels += 1;
+      // La deuxième tuile tombe une fois, puis passe.
+      if (appels === 2) return Promise.reject(new TypeError('réseau'));
+      return Promise.resolve(image());
+    });
+    const bilan = await emporterLesTuiles(['a', 'b', 'c'], { concurrence: 1 });
+    expect(bilan).toEqual({ faites: 3, total: 3, echouees: 0 });
+    expect(appels, 'la tuile perdue n’a pas été redemandée').toBe(4);
+  });
+
+  it('deux coupures d’affilée sur la même tuile la comptent perdue, sans insister', async () => {
+    let appels = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+      appels += 1;
+      return appels <= 2 ? Promise.reject(new TypeError('réseau')) : Promise.resolve(image());
+    });
+    const bilan = await emporterLesTuiles(['a', 'b'], { concurrence: 1 });
+    expect(bilan.echouees).toBe(1);
+    expect(appels, 'une tuile a été redemandée plus d’une fois').toBe(3);
+  });
+
+  it('UN REFUS FRANC NE SE REJOUE PAS : « ces quotas sont un bien commun », et '
+    + 'un serveur qui refuse répondra la même chose', async () => {
+    let appels = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+      appels += 1;
+      return Promise.resolve(new Response('', { status: 403 }));
+    });
+    const bilan = await emporterLesTuiles(['a'], { concurrence: 1 });
+    expect(bilan.echouees).toBe(1);
+    expect(appels).toBe(1);
+  });
+
+  it('UN PORTAIL CAPTIF NE SE REJOUE PAS NON PLUS : il répond 200 en HTML, et '
+    + 'insister ne le changerait pas en tuile', async () => {
+    let appels = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+      appels += 1;
+      return Promise.resolve(new Response('<html>', {
+        status: 200, headers: { 'content-type': 'text/html' },
+      }));
+    });
+    const bilan = await emporterLesTuiles(['a'], { concurrence: 1 });
+    expect(bilan.echouees).toBe(1);
+    expect(appels).toBe(1);
   });
 });

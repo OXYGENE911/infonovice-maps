@@ -49,6 +49,15 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - Les tolérances sont des multiples de ce qui a été mesuré, pas des chiffres
   ronds : cinquante mètres ou deux millièmes sur les étapes, soit cent fois le
   pire écart relevé.
+- **Une reprise ajoutée au couloir hors ligne, au passage.** La CI a rendu
+  « 147 tuiles emportées, 2 manquées » sans qu'aucune n'ait été refusée :
+  deux coupures fortuites sur cent quarante-neuf requêtes. `emporterLesTuiles`
+  n'avait aucune reprise, alors que la règle du projet en impose une partout
+  ailleurs — et chaque tuile perdue fait un trou **définitif** dans la carte
+  qu'on emporte, découvert une fois hors réseau, c'est-à-dire trop tard.
+  Une seule reprise, et seulement sur une coupure : un refus franc ou un
+  portail captif répondront la même chose, et « ces quotas sont un bien
+  commun ».
 - **Un contrôle a été retiré en cours de route, et cela vaut d'être dit.** Une
   première version comparait aussi la longueur mesurée du tracé à la distance
   annoncée. Vingt parcours l'ont mis en échec du premier coup, et ils avaient
