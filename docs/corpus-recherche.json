@@ -1,0 +1,4889 @@
+{
+ "batiLe": "2026-09-09",
+ "comment": "Corpus annoté de recherche. Chaque réponse attendue vient d’une source publique, aucune n’est écrite de mémoire. La vérité de terrain est la COORDONNÉE ; le libellé change d’une source à l’autre.",
+ "communes": 90,
+ "parFamille": {
+  "adresse-complete": 31,
+  "adresse-sans-code": 31,
+  "ecole-commune": 55,
+  "commune-seule": 90,
+  "lieu-commune": 68,
+  "lieu-sans-accents": 43,
+  "lieu-seul": 27,
+  "adresse-sans-accents": 3
+ },
+ "entrees": [
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Haxo 75020 Paris",
+   "attendu": {
+    "lon": 2.403959,
+    "lat": 48.872649
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Haxo 75020 Paris",
+   "commune": "Paris",
+   "codeInsee": "75056"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Haxo Paris",
+   "attendu": {
+    "lon": 2.403959,
+    "lat": 48.872649
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Haxo 75020 Paris",
+   "commune": "Paris",
+   "codeInsee": "75056"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Collège privé Saint-Germain de Charonne Paris",
+   "attendu": {
+    "lon": 2.404743767392534,
+    "lat": 48.861090344397674
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Collège privé Saint-Germain de Charonne",
+   "commune": "Paris",
+   "codeInsee": "75056"
+  },
+  {
+   "rayonM": 5791,
+   "famille": "commune-seule",
+   "requete": "Paris",
+   "attendu": {
+    "lon": 2.347,
+    "lat": 48.8589
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Paris",
+   "commune": "Paris",
+   "codeInsee": "75056"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue albe 13004 Marseille",
+   "attendu": {
+    "lon": 5.404829,
+    "lat": 43.311043
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue albe 13004 Marseille",
+   "commune": "Marseille",
+   "codeInsee": "13055"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue albe Marseille",
+   "attendu": {
+    "lon": 5.404829,
+    "lat": 43.311043
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue albe 13004 Marseille",
+   "commune": "Marseille",
+   "codeInsee": "13055"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Lycée Paul Melizan Marseille",
+   "attendu": {
+    "lon": 5.492524157481288,
+    "lat": 43.299991989880745
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Lycée Paul Melizan",
+   "commune": "Marseille",
+   "codeInsee": "13055"
+  },
+  {
+   "rayonM": 8703,
+   "famille": "commune-seule",
+   "requete": "Marseille",
+   "attendu": {
+    "lon": 5.3806,
+    "lat": 43.2803
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Marseille",
+   "commune": "Marseille",
+   "codeInsee": "13055"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Bara 69003 Lyon",
+   "attendu": {
+    "lon": 4.873102,
+    "lat": 45.750725
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Bara 69003 Lyon",
+   "commune": "Lyon",
+   "codeInsee": "69123"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Bara Lyon",
+   "attendu": {
+    "lon": 4.873102,
+    "lat": 45.750725
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Bara 69003 Lyon",
+   "commune": "Lyon",
+   "codeInsee": "69123"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Collège Raoul Dufy Lyon",
+   "attendu": {
+    "lon": 4.847529171105776,
+    "lat": 45.75881533570775
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Collège Raoul Dufy",
+   "commune": "Lyon",
+   "codeInsee": "69123"
+  },
+  {
+   "rayonM": 3908,
+   "famille": "commune-seule",
+   "requete": "Lyon",
+   "attendu": {
+    "lon": 4.8351,
+    "lat": 45.758
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Lyon",
+   "commune": "Lyon",
+   "codeInsee": "69123"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Cany 31300 Toulouse",
+   "attendu": {
+    "lon": 1.431904,
+    "lat": 43.591843
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Cany 31300 Toulouse",
+   "commune": "Toulouse",
+   "codeInsee": "31555"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Cany Toulouse",
+   "attendu": {
+    "lon": 1.431904,
+    "lat": 43.591843
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Cany 31300 Toulouse",
+   "commune": "Toulouse",
+   "codeInsee": "31555"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole élémentaire d'application Ricardie 3 Toulouse",
+   "attendu": {
+    "lon": 1.4498370497215034,
+    "lat": 43.58128091546669
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole élémentaire d'application Ricardie 3",
+   "commune": "Toulouse",
+   "codeInsee": "31555"
+  },
+  {
+   "rayonM": 6130,
+   "famille": "commune-seule",
+   "requete": "Toulouse",
+   "attendu": {
+    "lon": 1.4328,
+    "lat": 43.6007
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Toulouse",
+   "commune": "Toulouse",
+   "codeInsee": "31555"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Eden 06100 Nice",
+   "attendu": {
+    "lon": 7.256877,
+    "lat": 43.712412
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Eden 06100 Nice",
+   "commune": "Nice",
+   "codeInsee": "06088"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Eden Nice",
+   "attendu": {
+    "lon": 7.256877,
+    "lat": 43.712412
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Eden 06100 Nice",
+   "commune": "Nice",
+   "codeInsee": "06088"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Nice Hôpital Lenval",
+   "attendu": {
+    "lon": 7.241642,
+    "lat": 43.689325
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Nice Hôpital Lenval",
+   "commune": "Nice",
+   "codeInsee": "06088"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Nice Hopital Lenval",
+   "attendu": {
+    "lon": 7.241642,
+    "lat": 43.689325
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Nice Hôpital Lenval",
+   "commune": "Nice",
+   "codeInsee": "06088"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole primaire Crémat Nice",
+   "attendu": {
+    "lon": 7.208614618487993,
+    "lat": 43.7227226303741
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole primaire Crémat",
+   "commune": "Nice",
+   "codeInsee": "06088"
+  },
+  {
+   "rayonM": 4847,
+   "famille": "commune-seule",
+   "requete": "Nice",
+   "attendu": {
+    "lon": 7.2528,
+    "lat": 43.7032
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Nice",
+   "commune": "Nice",
+   "codeInsee": "06088"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Nantes Nord",
+   "attendu": {
+    "lon": -1.563677,
+    "lat": 47.263261
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Nantes Nord",
+   "commune": "Nantes",
+   "codeInsee": "44109"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole élémentaire publique Champenois Nantes",
+   "attendu": {
+    "lon": -1.5272550198561263,
+    "lat": 47.22537000579129
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole élémentaire publique Champenois",
+   "commune": "Nantes",
+   "codeInsee": "44109"
+  },
+  {
+   "rayonM": 4574,
+   "famille": "commune-seule",
+   "requete": "Nantes",
+   "attendu": {
+    "lon": -1.5603,
+    "lat": 47.2382
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Nantes",
+   "commune": "Nantes",
+   "codeInsee": "44109"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Foch 34000 Montpellier",
+   "attendu": {
+    "lon": 3.875126,
+    "lat": 43.610953
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Foch 34000 Montpellier",
+   "commune": "Montpellier",
+   "codeInsee": "34172"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Foch Montpellier",
+   "attendu": {
+    "lon": 3.875126,
+    "lat": 43.610953
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Foch 34000 Montpellier",
+   "commune": "Montpellier",
+   "codeInsee": "34172"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Montpellier Centre",
+   "attendu": {
+    "lon": 3.876168,
+    "lat": 43.613584
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Montpellier Centre",
+   "commune": "Montpellier",
+   "codeInsee": "34172"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Collège privé Saint-Jean-Baptiste de la Salle Montpellier",
+   "attendu": {
+    "lon": 3.8797094811146304,
+    "lat": 43.615259249401625
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Collège privé Saint-Jean-Baptiste de la Salle",
+   "commune": "Montpellier",
+   "codeInsee": "34172"
+  },
+  {
+   "rayonM": 4263,
+   "famille": "commune-seule",
+   "requete": "Montpellier",
+   "attendu": {
+    "lon": 3.8742,
+    "lat": 43.61
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Montpellier",
+   "commune": "Montpellier",
+   "codeInsee": "34172"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Kuhn 67000 Strasbourg",
+   "attendu": {
+    "lon": 7.738394,
+    "lat": 48.584959
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Kuhn 67000 Strasbourg",
+   "commune": "Strasbourg",
+   "codeInsee": "67482"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Kuhn Strasbourg",
+   "attendu": {
+    "lon": 7.738394,
+    "lat": 48.584959
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Kuhn 67000 Strasbourg",
+   "commune": "Strasbourg",
+   "codeInsee": "67482"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Cathédrale Notre-Dame Strasbourg",
+   "attendu": {
+    "lon": 7.751018,
+    "lat": 48.581894
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Cathédrale Notre-Dame",
+   "commune": "Strasbourg",
+   "codeInsee": "67482"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Cathedrale Notre-Dame Strasbourg",
+   "attendu": {
+    "lon": 7.751018,
+    "lat": 48.581894
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Cathédrale Notre-Dame",
+   "commune": "Strasbourg",
+   "codeInsee": "67482"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Cathédrale Notre-Dame",
+   "attendu": {
+    "lon": 7.751018,
+    "lat": 48.581894
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Cathédrale Notre-Dame",
+   "commune": "Strasbourg",
+   "codeInsee": "67482"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole primaire Gliesberg Strasbourg",
+   "attendu": {
+    "lon": 7.710208472152747,
+    "lat": 48.56789234478759
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole primaire Gliesberg",
+   "commune": "Strasbourg",
+   "codeInsee": "67482"
+  },
+  {
+   "rayonM": 4989,
+   "famille": "commune-seule",
+   "requete": "Strasbourg",
+   "attendu": {
+    "lon": 7.7621,
+    "lat": 48.5691
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Strasbourg",
+   "commune": "Strasbourg",
+   "codeInsee": "67482"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Jude 33200 Bordeaux",
+   "attendu": {
+    "lon": -0.628259,
+    "lat": 44.862191
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Jude 33200 Bordeaux",
+   "commune": "Bordeaux",
+   "codeInsee": "33063"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Jude Bordeaux",
+   "attendu": {
+    "lon": -0.628259,
+    "lat": 44.862191
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Jude 33200 Bordeaux",
+   "commune": "Bordeaux",
+   "codeInsee": "33063"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Bordeaux Lac",
+   "attendu": {
+    "lon": -0.565162,
+    "lat": 44.879849
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Bordeaux Lac",
+   "commune": "Bordeaux",
+   "codeInsee": "33063"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole maternelle Anatole France Bordeaux",
+   "attendu": {
+    "lon": -0.582437048323933,
+    "lat": 44.83895416664223
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole maternelle Anatole France",
+   "commune": "Bordeaux",
+   "codeInsee": "33063"
+  },
+  {
+   "rayonM": 3980,
+   "famille": "commune-seule",
+   "requete": "Bordeaux",
+   "attendu": {
+    "lon": -0.5848,
+    "lat": 44.8624
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Bordeaux",
+   "commune": "Bordeaux",
+   "codeInsee": "33063"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Kant 59000 Lille",
+   "attendu": {
+    "lon": 3.024722,
+    "lat": 50.634315
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Kant 59000 Lille",
+   "commune": "Lille",
+   "codeInsee": "59350"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Kant Lille",
+   "attendu": {
+    "lon": 3.024722,
+    "lat": 50.634315
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Kant 59000 Lille",
+   "commune": "Lille",
+   "codeInsee": "59350"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Lille Southern Cemetery",
+   "attendu": {
+    "lon": 3.050274,
+    "lat": 50.610119
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Lille Southern Cemetery",
+   "commune": "Lille",
+   "codeInsee": "59350"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole élémentaire Viala-Voltaire Lille",
+   "attendu": {
+    "lon": 3.0520707014726307,
+    "lat": 50.6199274036358
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole élémentaire Viala-Voltaire",
+   "commune": "Lille",
+   "codeInsee": "59350"
+  },
+  {
+   "rayonM": 3326,
+   "famille": "commune-seule",
+   "requete": "Lille",
+   "attendu": {
+    "lon": 3.0468,
+    "lat": 50.6311
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Lille",
+   "commune": "Lille",
+   "codeInsee": "59350"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Papu 35000 Rennes",
+   "attendu": {
+    "lon": -1.695934,
+    "lat": 48.111233
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Papu 35000 Rennes",
+   "commune": "Rennes",
+   "codeInsee": "35238"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Papu Rennes",
+   "attendu": {
+    "lon": -1.695934,
+    "lat": 48.111233
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Papu 35000 Rennes",
+   "commune": "Rennes",
+   "codeInsee": "35238"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Collège Notre-Dame du Vieux cours Rennes",
+   "attendu": {
+    "lon": -1.6787187617227946,
+    "lat": 48.106415392837775
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Collège Notre-Dame du Vieux cours",
+   "commune": "Rennes",
+   "codeInsee": "35238"
+  },
+  {
+   "rayonM": 4003,
+   "famille": "commune-seule",
+   "requete": "Rennes",
+   "attendu": {
+    "lon": -1.6884,
+    "lat": 48.1159
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Rennes",
+   "commune": "Rennes",
+   "codeInsee": "35238"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Clio 83100 Toulon",
+   "attendu": {
+    "lon": 5.985333,
+    "lat": 43.125004
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Clio 83100 Toulon",
+   "commune": "Toulon",
+   "codeInsee": "83137"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Clio Toulon",
+   "attendu": {
+    "lon": 5.985333,
+    "lat": 43.125004
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Clio 83100 Toulon",
+   "commune": "Toulon",
+   "codeInsee": "83137"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Collège George Sand Toulon",
+   "attendu": {
+    "lon": 5.915652061746194,
+    "lat": 43.1295936654314
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Collège George Sand",
+   "commune": "Toulon",
+   "codeInsee": "83137"
+  },
+  {
+   "rayonM": 3745,
+   "famille": "commune-seule",
+   "requete": "Toulon",
+   "attendu": {
+    "lon": 5.9334,
+    "lat": 43.1364
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Toulon",
+   "commune": "Toulon",
+   "codeInsee": "83137"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Reims Tourisme & Congrès",
+   "attendu": {
+    "lon": 4.031545,
+    "lat": 49.253136
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Reims Tourisme & Congrès",
+   "commune": "Reims",
+   "codeInsee": "51454"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Reims Tourisme & Congres",
+   "attendu": {
+    "lon": 4.031545,
+    "lat": 49.253136
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Reims Tourisme & Congrès",
+   "commune": "Reims",
+   "codeInsee": "51454"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Reims Tourisme & Congrès",
+   "attendu": {
+    "lon": 4.031545,
+    "lat": 49.253136
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Reims Tourisme & Congrès",
+   "commune": "Reims",
+   "codeInsee": "51454"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole élémentaire Barthou Reims",
+   "attendu": {
+    "lon": 4.030999821438094,
+    "lat": 49.23500146831305
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole élémentaire Barthou",
+   "commune": "Reims",
+   "codeInsee": "51454"
+  },
+  {
+   "rayonM": 3860,
+   "famille": "commune-seule",
+   "requete": "Reims",
+   "attendu": {
+    "lon": 4.0551,
+    "lat": 49.2535
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Reims",
+   "commune": "Reims",
+   "codeInsee": "51454"
+  },
+  {
+   "rayonM": 5047,
+   "famille": "commune-seule",
+   "requete": "Saint-Étienne",
+   "attendu": {
+    "lon": 4.3665,
+    "lat": 45.4241
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Saint-Étienne",
+   "commune": "Saint-Étienne",
+   "codeInsee": "42218"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Déro 76620 Le Havre",
+   "attendu": {
+    "lon": 0.127628,
+    "lat": 49.514788
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Déro 76620 Le Havre",
+   "commune": "Le Havre",
+   "codeInsee": "76351"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Déro Le Havre",
+   "attendu": {
+    "lon": 0.127628,
+    "lat": 49.514788
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Déro 76620 Le Havre",
+   "commune": "Le Havre",
+   "codeInsee": "76351"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-accents",
+   "requete": "Rue Dero 76620 Le Havre",
+   "attendu": {
+    "lon": 0.127628,
+    "lat": 49.514788
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Déro 76620 Le Havre",
+   "commune": "Le Havre",
+   "codeInsee": "76351"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole maternelle Jules Guesde Le Havre",
+   "attendu": {
+    "lon": 0.1231187704737396,
+    "lat": 49.51782671987422
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole maternelle Jules Guesde",
+   "commune": "Le Havre",
+   "codeInsee": "76351"
+  },
+  {
+   "rayonM": 4110,
+   "famille": "commune-seule",
+   "requete": "Le Havre",
+   "attendu": {
+    "lon": 0.1312,
+    "lat": 49.4958
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Le Havre",
+   "commune": "Le Havre",
+   "codeInsee": "76351"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue René 69100 Villeurbanne",
+   "attendu": {
+    "lon": 4.888672,
+    "lat": 45.778215
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue René 69100 Villeurbanne",
+   "commune": "Villeurbanne",
+   "codeInsee": "69266"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue René Villeurbanne",
+   "attendu": {
+    "lon": 4.888672,
+    "lat": 45.778215
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue René 69100 Villeurbanne",
+   "commune": "Villeurbanne",
+   "codeInsee": "69266"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-accents",
+   "requete": "Rue Rene 69100 Villeurbanne",
+   "attendu": {
+    "lon": 4.888672,
+    "lat": 45.778215
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue René 69100 Villeurbanne",
+   "commune": "Villeurbanne",
+   "codeInsee": "69266"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Villeurbanne - Mairie Annexe",
+   "attendu": {
+    "lon": 4.877063,
+    "lat": 45.766184
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Villeurbanne - Mairie Annexe",
+   "commune": "Villeurbanne",
+   "codeInsee": "69266"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Villeurbanne - Mairie Annexe",
+   "attendu": {
+    "lon": 4.877063,
+    "lat": 45.766184
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Villeurbanne - Mairie Annexe",
+   "commune": "Villeurbanne",
+   "codeInsee": "69266"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole élémentaire Ernest Renan A Villeurbanne",
+   "attendu": {
+    "lon": 4.901929272121907,
+    "lat": 45.76548730750408
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole élémentaire Ernest Renan A",
+   "commune": "Villeurbanne",
+   "codeInsee": "69266"
+  },
+  {
+   "rayonM": 2178,
+   "famille": "commune-seule",
+   "requete": "Villeurbanne",
+   "attendu": {
+    "lon": 4.8898,
+    "lat": 45.7719
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Villeurbanne",
+   "commune": "Villeurbanne",
+   "codeInsee": "69266"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Dijon Gare",
+   "attendu": {
+    "lon": 5.028395,
+    "lat": 47.323313
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Dijon Gare",
+   "commune": "Dijon",
+   "codeInsee": "21231"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "ECOLE MATERNELLE OUEST Dijon",
+   "attendu": {
+    "lon": 5.018949680635014,
+    "lat": 47.323480754981006
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "ECOLE MATERNELLE OUEST",
+   "commune": "Dijon",
+   "codeInsee": "21231"
+  },
+  {
+   "rayonM": 3643,
+   "famille": "commune-seule",
+   "requete": "Dijon",
+   "attendu": {
+    "lon": 5.0322,
+    "lat": 47.3319
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Dijon",
+   "commune": "Dijon",
+   "codeInsee": "21231"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Éblé 49000 Angers",
+   "attendu": {
+    "lon": -0.563134,
+    "lat": 47.458816
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Éblé 49000 Angers",
+   "commune": "Angers",
+   "codeInsee": "49007"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Éblé Angers",
+   "attendu": {
+    "lon": -0.563134,
+    "lat": 47.458816
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Éblé 49000 Angers",
+   "commune": "Angers",
+   "codeInsee": "49007"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-accents",
+   "requete": "Rue Eble 49000 Angers",
+   "attendu": {
+    "lon": -0.563134,
+    "lat": 47.458816
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Éblé 49000 Angers",
+   "commune": "Angers",
+   "codeInsee": "49007"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Angers-Roseraie",
+   "attendu": {
+    "lon": -0.553972,
+    "lat": 47.44389
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Angers-Roseraie",
+   "commune": "Angers",
+   "codeInsee": "49007"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole maternelle publique Montesquieu Angers",
+   "attendu": {
+    "lon": -0.5873202687376103,
+    "lat": 47.47135758886781
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole maternelle publique Montesquieu",
+   "commune": "Angers",
+   "codeInsee": "49007"
+  },
+  {
+   "rayonM": 3763,
+   "famille": "commune-seule",
+   "requete": "Angers",
+   "attendu": {
+    "lon": -0.5629,
+    "lat": 47.4819
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Angers",
+   "commune": "Angers",
+   "codeInsee": "49007"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Joya 38000 Grenoble",
+   "attendu": {
+    "lon": 5.709694,
+    "lat": 45.182785
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Joya 38000 Grenoble",
+   "commune": "Grenoble",
+   "codeInsee": "38185"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Joya Grenoble",
+   "attendu": {
+    "lon": 5.709694,
+    "lat": 45.182785
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Joya 38000 Grenoble",
+   "commune": "Grenoble",
+   "codeInsee": "38185"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Grenoble Sud",
+   "attendu": {
+    "lon": 5.73638,
+    "lat": 45.167766
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Grenoble Sud",
+   "commune": "Grenoble",
+   "codeInsee": "38185"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Grenoble Sud",
+   "attendu": {
+    "lon": 5.73638,
+    "lat": 45.167766
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Grenoble Sud",
+   "commune": "Grenoble",
+   "codeInsee": "38185"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole maternelle Anatole France Grenoble",
+   "attendu": {
+    "lon": 5.705819517020835,
+    "lat": 45.17231346856727
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole maternelle Anatole France",
+   "commune": "Grenoble",
+   "codeInsee": "38185"
+  },
+  {
+   "rayonM": 2422,
+   "famille": "commune-seule",
+   "requete": "Grenoble",
+   "attendu": {
+    "lon": 5.7155,
+    "lat": 45.1842
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Grenoble",
+   "commune": "Grenoble",
+   "codeInsee": "38185"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Foch 97490 Saint-Denis",
+   "attendu": {
+    "lon": 55.49408,
+    "lat": -20.901975
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Foch 97490 Saint-Denis",
+   "commune": "Saint-Denis",
+   "codeInsee": "97411"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Foch Saint-Denis",
+   "attendu": {
+    "lon": 55.49408,
+    "lat": -20.901975
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Foch 97490 Saint-Denis",
+   "commune": "Saint-Denis",
+   "codeInsee": "97411"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole élémentaire Pierre Sémard Saint-Denis",
+   "attendu": {
+    "lon": 2.350097692965753,
+    "lat": 48.94731722163716
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole élémentaire Pierre Sémard",
+   "commune": "Saint-Denis",
+   "codeInsee": "97411"
+  },
+  {
+   "rayonM": 6731,
+   "famille": "commune-seule",
+   "requete": "Saint-Denis",
+   "attendu": {
+    "lon": 55.4444,
+    "lat": -20.9434
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Saint-Denis",
+   "commune": "Saint-Denis",
+   "codeInsee": "97411"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Watt 30000 Nîmes",
+   "attendu": {
+    "lon": 4.368419,
+    "lat": 43.843926
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Watt 30000 Nîmes",
+   "commune": "Nîmes",
+   "codeInsee": "30189"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Watt Nîmes",
+   "attendu": {
+    "lon": 4.368419,
+    "lat": 43.843926
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Watt 30000 Nîmes",
+   "commune": "Nîmes",
+   "codeInsee": "30189"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Arènes de Nîmes",
+   "attendu": {
+    "lon": 4.35963,
+    "lat": 43.83489
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Arènes de Nîmes",
+   "commune": "Nîmes",
+   "codeInsee": "30189"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Arenes de Nimes",
+   "attendu": {
+    "lon": 4.35963,
+    "lat": 43.83489
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Arènes de Nîmes",
+   "commune": "Nîmes",
+   "codeInsee": "30189"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole maternelle Combe des Oiseaux Castanet Nîmes",
+   "attendu": {
+    "lon": 4.323820158085083,
+    "lat": 43.838202917355495
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole maternelle Combe des Oiseaux Castanet",
+   "commune": "Nîmes",
+   "codeInsee": "30189"
+  },
+  {
+   "rayonM": 7163,
+   "famille": "commune-seule",
+   "requete": "Nîmes",
+   "attendu": {
+    "lon": 4.3429,
+    "lat": 43.8322
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Nîmes",
+   "commune": "Nîmes",
+   "codeInsee": "30189"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue  Aude 13100 Aix-en-Provence",
+   "attendu": {
+    "lon": 5.448095,
+    "lat": 43.528224
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue  Aude 13100 Aix-en-Provence",
+   "commune": "Aix-en-Provence",
+   "codeInsee": "13001"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue  Aude Aix-en-Provence",
+   "attendu": {
+    "lon": 5.448095,
+    "lat": 43.528224
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue  Aude 13100 Aix-en-Provence",
+   "commune": "Aix-en-Provence",
+   "codeInsee": "13001"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Aix-en-Provence Centre Hospitalier",
+   "attendu": {
+    "lon": 5.442262,
+    "lat": 43.534736
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Aix-en-Provence Centre Hospitalier",
+   "commune": "Aix-en-Provence",
+   "codeInsee": "13001"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole élémentaire Celony Aix-en-Provence",
+   "attendu": {
+    "lon": 5.4202102082461785,
+    "lat": 43.557002450362525
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole élémentaire Celony",
+   "commune": "Aix-en-Provence",
+   "codeInsee": "13001"
+  },
+  {
+   "rayonM": 7725,
+   "famille": "commune-seule",
+   "requete": "Aix-en-Provence",
+   "attendu": {
+    "lon": 5.3879,
+    "lat": 43.536
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Aix-en-Provence",
+   "commune": "Aix-en-Provence",
+   "codeInsee": "13001"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Havy 93380 Saint-Denis",
+   "attendu": {
+    "lon": 2.361453,
+    "lat": 48.948834
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Havy 93380 Saint-Denis",
+   "commune": "Saint-Denis",
+   "codeInsee": "93066"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Havy Saint-Denis",
+   "attendu": {
+    "lon": 2.361453,
+    "lat": 48.948834
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Havy 93380 Saint-Denis",
+   "commune": "Saint-Denis",
+   "codeInsee": "93066"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole élémentaire Pierre Sémard Saint-Denis",
+   "attendu": {
+    "lon": 2.350097692965753,
+    "lat": 48.94731722163716
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole élémentaire Pierre Sémard",
+   "commune": "Saint-Denis",
+   "codeInsee": "93066"
+  },
+  {
+   "rayonM": 2241,
+   "famille": "commune-seule",
+   "requete": "Saint-Denis",
+   "attendu": {
+    "lon": 2.3657,
+    "lat": 48.9378
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Saint-Denis",
+   "commune": "Saint-Denis",
+   "codeInsee": "93066"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "rue Niel 63100 Clermont-Ferrand",
+   "attendu": {
+    "lon": 3.102587,
+    "lat": 45.783053
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "rue Niel 63100 Clermont-Ferrand",
+   "commune": "Clermont-Ferrand",
+   "codeInsee": "63113"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "rue Niel Clermont-Ferrand",
+   "attendu": {
+    "lon": 3.102587,
+    "lat": 45.783053
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "rue Niel 63100 Clermont-Ferrand",
+   "commune": "Clermont-Ferrand",
+   "codeInsee": "63113"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Clermont-Ferrand - Mairie Annexe de Montferrand",
+   "attendu": {
+    "lon": 3.113126,
+    "lat": 45.791423
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Clermont-Ferrand - Mairie Annexe de Montferrand",
+   "commune": "Clermont-Ferrand",
+   "codeInsee": "63113"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Clermont-Ferrand - Mairie Annexe de Montferrand",
+   "attendu": {
+    "lon": 3.113126,
+    "lat": 45.791423
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Clermont-Ferrand - Mairie Annexe de Montferrand",
+   "commune": "Clermont-Ferrand",
+   "codeInsee": "63113"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole maternelle Jean Jaurès Clermont-Ferrand",
+   "attendu": {
+    "lon": 3.090500602180419,
+    "lat": 45.764348679521134
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole maternelle Jean Jaurès",
+   "commune": "Clermont-Ferrand",
+   "codeInsee": "63113"
+  },
+  {
+   "rayonM": 3705,
+   "famille": "commune-seule",
+   "requete": "Clermont-Ferrand",
+   "attendu": {
+    "lon": 3.1127,
+    "lat": 45.787
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Clermont-Ferrand",
+   "commune": "Clermont-Ferrand",
+   "codeInsee": "63113"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Bara 72100 Le Mans",
+   "attendu": {
+    "lon": 0.204195,
+    "lat": 47.986138
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Bara 72100 Le Mans",
+   "commune": "Le Mans",
+   "codeInsee": "72181"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Bara Le Mans",
+   "attendu": {
+    "lon": 0.204195,
+    "lat": 47.986138
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Bara 72100 Le Mans",
+   "commune": "Le Mans",
+   "codeInsee": "72181"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "le Mans-Hôpital",
+   "attendu": {
+    "lon": 0.174598,
+    "lat": 48.014028
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "le Mans-Hôpital",
+   "commune": "Le Mans",
+   "codeInsee": "72181"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "le Mans-Hopital",
+   "attendu": {
+    "lon": 0.174598,
+    "lat": 48.014028
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "le Mans-Hôpital",
+   "commune": "Le Mans",
+   "codeInsee": "72181"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Collège Léon Tolstoï Le Mans",
+   "attendu": {
+    "lon": 0.2097945372364403,
+    "lat": 48.02011676905311
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Collège Léon Tolstoï",
+   "commune": "Le Mans",
+   "codeInsee": "72181"
+  },
+  {
+   "rayonM": 4091,
+   "famille": "commune-seule",
+   "requete": "Le Mans",
+   "attendu": {
+    "lon": 0.1957,
+    "lat": 47.9819
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Le Mans",
+   "commune": "Le Mans",
+   "codeInsee": "72181"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Goya 29200 Brest",
+   "attendu": {
+    "lon": -4.525986,
+    "lat": 48.394251
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Goya 29200 Brest",
+   "commune": "Brest",
+   "codeInsee": "29019"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Goya Brest",
+   "attendu": {
+    "lon": -4.525986,
+    "lat": 48.394251
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Goya 29200 Brest",
+   "commune": "Brest",
+   "codeInsee": "29019"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Brest-Amirauté",
+   "attendu": {
+    "lon": -4.492888,
+    "lat": 48.380002
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Brest-Amirauté",
+   "commune": "Brest",
+   "codeInsee": "29019"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Brest-Amiraute",
+   "attendu": {
+    "lon": -4.492888,
+    "lat": 48.380002
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Brest-Amirauté",
+   "commune": "Brest",
+   "codeInsee": "29019"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Brest-Amirauté",
+   "attendu": {
+    "lon": -4.492888,
+    "lat": 48.380002
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Brest-Amirauté",
+   "commune": "Brest",
+   "codeInsee": "29019"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole maternelle publique Alice Abarnou Brest",
+   "attendu": {
+    "lon": -4.478690400560478,
+    "lat": 48.395598884265844
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole maternelle publique Alice Abarnou",
+   "commune": "Brest",
+   "codeInsee": "29019"
+  },
+  {
+   "rayonM": 3957,
+   "famille": "commune-seule",
+   "requete": "Brest",
+   "attendu": {
+    "lon": -4.4996,
+    "lat": 48.4085
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Brest",
+   "commune": "Brest",
+   "codeInsee": "29019"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Bois 37000 Tours",
+   "attendu": {
+    "lon": 0.677936,
+    "lat": 47.38193
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Bois 37000 Tours",
+   "commune": "Tours",
+   "codeInsee": "37261"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Bois Tours",
+   "attendu": {
+    "lon": 0.677936,
+    "lat": 47.38193
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Bois 37000 Tours",
+   "commune": "Tours",
+   "codeInsee": "37261"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole primaire Romain Rolland Tours",
+   "attendu": {
+    "lon": 0.7106293780231107,
+    "lat": 47.40362327028917
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole primaire Romain Rolland",
+   "commune": "Tours",
+   "codeInsee": "37261"
+  },
+  {
+   "rayonM": 3259,
+   "famille": "commune-seule",
+   "requete": "Tours",
+   "attendu": {
+    "lon": 0.6949,
+    "lat": 47.3943
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Tours",
+   "commune": "Tours",
+   "codeInsee": "37261"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Vion 80090 Amiens",
+   "attendu": {
+    "lon": 2.323074,
+    "lat": 49.88626
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Vion 80090 Amiens",
+   "commune": "Amiens",
+   "codeInsee": "80021"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Vion Amiens",
+   "attendu": {
+    "lon": 2.323074,
+    "lat": 49.88626
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Vion 80090 Amiens",
+   "commune": "Amiens",
+   "codeInsee": "80021"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Amiens Équitation",
+   "attendu": {
+    "lon": 2.270157,
+    "lat": 49.896434
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Amiens Équitation",
+   "commune": "Amiens",
+   "codeInsee": "80021"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Amiens Equitation",
+   "attendu": {
+    "lon": 2.270157,
+    "lat": 49.896434
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Amiens Équitation",
+   "commune": "Amiens",
+   "codeInsee": "80021"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Amiens Équitation",
+   "attendu": {
+    "lon": 2.270157,
+    "lat": 49.896434
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Amiens Équitation",
+   "commune": "Amiens",
+   "codeInsee": "80021"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Lycée professionnel Montaigne Amiens",
+   "attendu": {
+    "lon": 2.319605807184914,
+    "lat": 49.91055117159291
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Lycée professionnel Montaigne",
+   "commune": "Amiens",
+   "codeInsee": "80021"
+  },
+  {
+   "rayonM": 4005,
+   "famille": "commune-seule",
+   "requete": "Amiens",
+   "attendu": {
+    "lon": 2.2847,
+    "lat": 49.8987
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Amiens",
+   "commune": "Amiens",
+   "codeInsee": "80021"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Annecy-le-Vieux",
+   "attendu": {
+    "lon": 6.144375,
+    "lat": 45.920644
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Annecy-le-Vieux",
+   "commune": "Annecy",
+   "codeInsee": "74010"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole primaire publique Colovry Annecy-Le-Vieux ANNECY",
+   "attendu": {
+    "lon": 6.151300263743963,
+    "lat": 45.90691889138777
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole primaire publique Colovry Annecy-Le-Vieux ANNECY",
+   "commune": "Annecy",
+   "codeInsee": "74010"
+  },
+  {
+   "rayonM": 4716,
+   "famille": "commune-seule",
+   "requete": "Annecy",
+   "attendu": {
+    "lon": 6.1264,
+    "lat": 45.9024
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Annecy",
+   "commune": "Annecy",
+   "codeInsee": "74010"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "rue Goya 87000 Limoges",
+   "attendu": {
+    "lon": 1.235441,
+    "lat": 45.829858
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "rue Goya 87000 Limoges",
+   "commune": "Limoges",
+   "codeInsee": "87085"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "rue Goya Limoges",
+   "attendu": {
+    "lon": 1.235441,
+    "lat": 45.829858
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "rue Goya 87000 Limoges",
+   "commune": "Limoges",
+   "codeInsee": "87085"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Limoges Bellegarde",
+   "attendu": {
+    "lon": 1.180266,
+    "lat": 45.861278
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Limoges Bellegarde",
+   "commune": "Limoges",
+   "codeInsee": "87085"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole maternelle La Brégère Limoges",
+   "attendu": {
+    "lon": 1.2604182689640342,
+    "lat": 45.85094593369165
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole maternelle La Brégère",
+   "commune": "Limoges",
+   "codeInsee": "87085"
+  },
+  {
+   "rayonM": 5040,
+   "famille": "commune-seule",
+   "requete": "Limoges",
+   "attendu": {
+    "lon": 1.226,
+    "lat": 45.8567
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Limoges",
+   "commune": "Limoges",
+   "codeInsee": "87085"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Daga 57050 Metz",
+   "attendu": {
+    "lon": 6.154182,
+    "lat": 49.134779
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Daga 57050 Metz",
+   "commune": "Metz",
+   "codeInsee": "57463"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Daga Metz",
+   "attendu": {
+    "lon": 6.154182,
+    "lat": 49.134779
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Daga 57050 Metz",
+   "commune": "Metz",
+   "codeInsee": "57463"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Lycée de la communication Metz",
+   "attendu": {
+    "lon": 6.2217909169684775,
+    "lat": 49.10074199702923
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Lycée de la communication",
+   "commune": "Metz",
+   "codeInsee": "57463"
+  },
+  {
+   "rayonM": 3646,
+   "famille": "commune-seule",
+   "requete": "Metz",
+   "attendu": {
+    "lon": 6.1962,
+    "lat": 49.1048
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Metz",
+   "commune": "Metz",
+   "codeInsee": "57463"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Gaia 66100 Perpignan",
+   "attendu": {
+    "lon": 2.910773,
+    "lat": 42.661228
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Gaia 66100 Perpignan",
+   "commune": "Perpignan",
+   "codeInsee": "66136"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Gaia Perpignan",
+   "attendu": {
+    "lon": 2.910773,
+    "lat": 42.661228
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Gaia 66100 Perpignan",
+   "commune": "Perpignan",
+   "codeInsee": "66136"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole maternelle Claude Debussy Perpignan",
+   "attendu": {
+    "lon": 2.8931930425073644,
+    "lat": 42.70629663780282
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole maternelle Claude Debussy",
+   "commune": "Perpignan",
+   "codeInsee": "66136"
+  },
+  {
+   "rayonM": 4652,
+   "famille": "commune-seule",
+   "requete": "Perpignan",
+   "attendu": {
+    "lon": 2.9045,
+    "lat": 42.699
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Perpignan",
+   "commune": "Perpignan",
+   "codeInsee": "66136"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Diaz 92100 Boulogne-Billancourt",
+   "attendu": {
+    "lon": 2.234842,
+    "lat": 48.834997
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Diaz 92100 Boulogne-Billancourt",
+   "commune": "Boulogne-Billancourt",
+   "codeInsee": "92012"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Diaz Boulogne-Billancourt",
+   "attendu": {
+    "lon": 2.234842,
+    "lat": 48.834997
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Diaz 92100 Boulogne-Billancourt",
+   "commune": "Boulogne-Billancourt",
+   "codeInsee": "92012"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Conservatoire National de Région Georges Gorse Boulogne-Billancourt",
+   "attendu": {
+    "lon": 2.242768,
+    "lat": 48.837697
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Conservatoire National de Région Georges Gorse",
+   "commune": "Boulogne-Billancourt",
+   "codeInsee": "92012"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Conservatoire National de Region Georges Gorse Boulogne-Billancourt",
+   "attendu": {
+    "lon": 2.242768,
+    "lat": 48.837697
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Conservatoire National de Région Georges Gorse",
+   "commune": "Boulogne-Billancourt",
+   "codeInsee": "92012"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Conservatoire National de Région Georges Gorse",
+   "attendu": {
+    "lon": 2.242768,
+    "lat": 48.837697
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Conservatoire National de Région Georges Gorse",
+   "commune": "Boulogne-Billancourt",
+   "codeInsee": "92012"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Collège Bartholdi Boulogne-Billancourt",
+   "attendu": {
+    "lon": 2.2339075382032294,
+    "lat": 48.8395338984394
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Collège Bartholdi",
+   "commune": "Boulogne-Billancourt",
+   "codeInsee": "92012"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Boulogne-Billancourt",
+   "attendu": {
+    "lon": 2.2429,
+    "lat": 48.8375
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Boulogne-Billancourt",
+   "commune": "Boulogne-Billancourt",
+   "codeInsee": "92012"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "rue duet 25000 Besançon",
+   "attendu": {
+    "lon": 6.043591,
+    "lat": 47.248952
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "rue duet 25000 Besançon",
+   "commune": "Besançon",
+   "codeInsee": "25056"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "rue duet Besançon",
+   "attendu": {
+    "lon": 6.043591,
+    "lat": 47.248952
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "rue duet 25000 Besançon",
+   "commune": "Besançon",
+   "codeInsee": "25056"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Besançon Formation Besançon",
+   "attendu": {
+    "lon": 5.962248,
+    "lat": 47.216383
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Besançon Formation Besançon",
+   "commune": "Besançon",
+   "codeInsee": "25056"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Besancon Formation Besancon",
+   "attendu": {
+    "lon": 5.962248,
+    "lat": 47.216383
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Besançon Formation Besançon",
+   "commune": "Besançon",
+   "codeInsee": "25056"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole primaire Jean Boichard Besançon",
+   "attendu": {
+    "lon": 5.975919628946582,
+    "lat": 47.23795573750781
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole primaire Jean Boichard",
+   "commune": "Besançon",
+   "codeInsee": "25056"
+  },
+  {
+   "rayonM": 4553,
+   "famille": "commune-seule",
+   "requete": "Besançon",
+   "attendu": {
+    "lon": 6.0123,
+    "lat": 47.2602
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Besançon",
+   "commune": "Besançon",
+   "codeInsee": "25056"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Orbe 76000 Rouen",
+   "attendu": {
+    "lon": 1.103849,
+    "lat": 49.443278
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Orbe 76000 Rouen",
+   "commune": "Rouen",
+   "codeInsee": "76540"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Orbe Rouen",
+   "attendu": {
+    "lon": 1.103849,
+    "lat": 49.443278
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Orbe 76000 Rouen",
+   "commune": "Rouen",
+   "codeInsee": "76540"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Rouen Tourisme",
+   "attendu": {
+    "lon": 1.094108,
+    "lat": 49.444484
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Rouen Tourisme",
+   "commune": "Rouen",
+   "codeInsee": "76540"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Rouen Tourisme",
+   "attendu": {
+    "lon": 1.094108,
+    "lat": 49.444484
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Rouen Tourisme",
+   "commune": "Rouen",
+   "codeInsee": "76540"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Lycée Pierre Corneille Rouen",
+   "attendu": {
+    "lon": 1.1002126235139644,
+    "lat": 49.44531087715537
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Lycée Pierre Corneille",
+   "commune": "Rouen",
+   "codeInsee": "76540"
+  },
+  {
+   "rayonM": 2609,
+   "famille": "commune-seule",
+   "requete": "Rouen",
+   "attendu": {
+    "lon": 1.0912,
+    "lat": 49.4412
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Rouen",
+   "commune": "Rouen",
+   "codeInsee": "76540"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Orléans la Source",
+   "attendu": {
+    "lon": 1.935217,
+    "lat": 47.838341
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Orléans la Source",
+   "commune": "Orléans",
+   "codeInsee": "45234"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Orleans la Source",
+   "attendu": {
+    "lon": 1.935217,
+    "lat": 47.838341
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Orléans la Source",
+   "commune": "Orléans",
+   "codeInsee": "45234"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole élémentaire L. Pasteur Orléans",
+   "attendu": {
+    "lon": 1.9271800152600005,
+    "lat": 47.834470975508836
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole élémentaire L. Pasteur",
+   "commune": "Orléans",
+   "codeInsee": "45234"
+  },
+  {
+   "rayonM": 2966,
+   "famille": "commune-seule",
+   "requete": "Orléans",
+   "attendu": {
+    "lon": 1.9122,
+    "lat": 47.8734
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Orléans",
+   "commune": "Orléans",
+   "codeInsee": "45234"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-complete",
+   "requete": "Rue Coli 93100 Montreuil",
+   "attendu": {
+    "lon": 2.46895,
+    "lat": 48.868288
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Coli 93100 Montreuil",
+   "commune": "Montreuil",
+   "codeInsee": "93048"
+  },
+  {
+   "rayonM": 200,
+   "famille": "adresse-sans-code",
+   "requete": "Rue Coli Montreuil",
+   "attendu": {
+    "lon": 2.46895,
+    "lat": 48.868288
+   },
+   "pipeline": "adresse",
+   "origine": "BAN",
+   "reference": "Rue Coli 93100 Montreuil",
+   "commune": "Montreuil",
+   "codeInsee": "93048"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole maternelle Daniel Renoult Montreuil",
+   "attendu": {
+    "lon": 2.4712666283530136,
+    "lat": 48.86298827012809
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole maternelle Daniel Renoult",
+   "commune": "Montreuil",
+   "codeInsee": "93048"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Montreuil",
+   "attendu": {
+    "lon": 2.4491,
+    "lat": 48.8637
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Montreuil",
+   "commune": "Montreuil",
+   "codeInsee": "93048"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Saint Avold Nord Saint-Avold",
+   "attendu": {
+    "lon": 6.714616,
+    "lat": 49.13613
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Saint Avold Nord",
+   "commune": "Saint-Avold",
+   "codeInsee": "57606"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Lycée professionnel Sainte-Chrétienne La Salle Saint-Avold",
+   "attendu": {
+    "lon": 6.707599495119236,
+    "lat": 49.104908428738334
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Lycée professionnel Sainte-Chrétienne La Salle",
+   "commune": "Saint-Avold",
+   "codeInsee": "57606"
+  },
+  {
+   "rayonM": 3357,
+   "famille": "commune-seule",
+   "requete": "Saint-Avold",
+   "attendu": {
+    "lon": 6.7088,
+    "lat": 49.1279
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Saint-Avold",
+   "commune": "Saint-Avold",
+   "codeInsee": "57606"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église du Bourg Saint-Madeleine Charnay-lès-Mâcon",
+   "attendu": {
+    "lon": 4.784105,
+    "lat": 46.309621
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église du Bourg Saint-Madeleine",
+   "commune": "Charnay-lès-Mâcon",
+   "codeInsee": "71105"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise du Bourg Saint-Madeleine Charnay-lès-Mâcon",
+   "attendu": {
+    "lon": 4.784105,
+    "lat": 46.309621
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église du Bourg Saint-Madeleine",
+   "commune": "Charnay-lès-Mâcon",
+   "codeInsee": "71105"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Église du Bourg Saint-Madeleine",
+   "attendu": {
+    "lon": 4.784105,
+    "lat": 46.309621
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église du Bourg Saint-Madeleine",
+   "commune": "Charnay-lès-Mâcon",
+   "codeInsee": "71105"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Établissement régional d'enseignement adapté Claude Brosse Charnay-lès-Mâcon",
+   "attendu": {
+    "lon": 4.814996371012995,
+    "lat": 46.30664003001271
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Établissement régional d'enseignement adapté Claude Brosse",
+   "commune": "Charnay-lès-Mâcon",
+   "codeInsee": "71105"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Charnay-lès-Mâcon",
+   "attendu": {
+    "lon": 4.7887,
+    "lat": 46.3054
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Charnay-lès-Mâcon",
+   "commune": "Charnay-lès-Mâcon",
+   "codeInsee": "71105"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Chapelle Sainte-Emérance Erdre-en-Anjou",
+   "attendu": {
+    "lon": -0.806774,
+    "lat": 47.549816
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Chapelle Sainte-Emérance",
+   "commune": "Erdre-en-Anjou",
+   "codeInsee": "49367"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Chapelle Sainte-Emerance Erdre-en-Anjou",
+   "attendu": {
+    "lon": -0.806774,
+    "lat": 47.549816
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Chapelle Sainte-Emérance",
+   "commune": "Erdre-en-Anjou",
+   "codeInsee": "49367"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Chapelle Sainte-Emérance",
+   "attendu": {
+    "lon": -0.806774,
+    "lat": 47.549816
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Chapelle Sainte-Emérance",
+   "commune": "Erdre-en-Anjou",
+   "codeInsee": "49367"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole maternelle publique l'Ardoisine Erdre-en-Anjou",
+   "attendu": {
+    "lon": -0.8090404901173079,
+    "lat": 47.552899433957066
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole maternelle publique l'Ardoisine",
+   "commune": "Erdre-en-Anjou",
+   "codeInsee": "49367"
+  },
+  {
+   "rayonM": 5426,
+   "famille": "commune-seule",
+   "requete": "Erdre-en-Anjou",
+   "attendu": {
+    "lon": -0.8178,
+    "lat": 47.589
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Erdre-en-Anjou",
+   "commune": "Erdre-en-Anjou",
+   "codeInsee": "49367"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Sainte-Marie-Madeleine Sarralbe",
+   "attendu": {
+    "lon": 7.012971,
+    "lat": 48.983485
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Sainte-Marie-Madeleine",
+   "commune": "Sarralbe",
+   "codeInsee": "57628"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Sainte-Marie-Madeleine Sarralbe",
+   "attendu": {
+    "lon": 7.012971,
+    "lat": 48.983485
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Sainte-Marie-Madeleine",
+   "commune": "Sarralbe",
+   "codeInsee": "57628"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Collège Robert Doisneau Sarralbe",
+   "attendu": {
+    "lon": 7.022000014992119,
+    "lat": 48.98280036455819
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Collège Robert Doisneau",
+   "commune": "Sarralbe",
+   "codeInsee": "57628"
+  },
+  {
+   "rayonM": 2947,
+   "famille": "commune-seule",
+   "requete": "Sarralbe",
+   "attendu": {
+    "lon": 7.0144,
+    "lat": 48.9987
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Sarralbe",
+   "commune": "Sarralbe",
+   "codeInsee": "57628"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Saint-Martin Bergues",
+   "attendu": {
+    "lon": 2.430748,
+    "lat": 50.968729
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Martin",
+   "commune": "Bergues",
+   "codeInsee": "59067"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Saint-Martin Bergues",
+   "attendu": {
+    "lon": 2.430748,
+    "lat": 50.968729
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Martin",
+   "commune": "Bergues",
+   "codeInsee": "59067"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole maternelle Charles Perrault Bergues",
+   "attendu": {
+    "lon": 2.437349831080359,
+    "lat": 50.97065391350496
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole maternelle Charles Perrault",
+   "commune": "Bergues",
+   "codeInsee": "59067"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Bergues",
+   "attendu": {
+    "lon": 2.4342,
+    "lat": 50.969
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Bergues",
+   "commune": "Bergues",
+   "codeInsee": "59067"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Plouvorn Équitation",
+   "attendu": {
+    "lon": -4.061025,
+    "lat": 48.580211
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Plouvorn Équitation",
+   "commune": "Plouvorn",
+   "codeInsee": "29210"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Plouvorn Equitation",
+   "attendu": {
+    "lon": -4.061025,
+    "lat": 48.580211
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Plouvorn Équitation",
+   "commune": "Plouvorn",
+   "codeInsee": "29210"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Plouvorn Équitation",
+   "attendu": {
+    "lon": -4.061025,
+    "lat": 48.580211
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Plouvorn Équitation",
+   "commune": "Plouvorn",
+   "codeInsee": "29210"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole primaire privée Notre-Dame de Lambader Plouvorn",
+   "attendu": {
+    "lon": -4.033450138334713,
+    "lat": 48.57751700802245
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole primaire privée Notre-Dame de Lambader",
+   "commune": "Plouvorn",
+   "codeInsee": "29210"
+  },
+  {
+   "rayonM": 3356,
+   "famille": "commune-seule",
+   "requete": "Plouvorn",
+   "attendu": {
+    "lon": -4.0139,
+    "lat": 48.5759
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Plouvorn",
+   "commune": "Plouvorn",
+   "codeInsee": "29210"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Saint-Savinien-sur-Charente",
+   "attendu": {
+    "lon": -0.682883,
+    "lat": 45.881306
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Savinien-sur-Charente",
+   "commune": "Saint-Savinien",
+   "codeInsee": "17397"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Saint-Savinien-sur-Charente",
+   "attendu": {
+    "lon": -0.682883,
+    "lat": 45.881306
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Savinien-sur-Charente",
+   "commune": "Saint-Savinien",
+   "codeInsee": "17397"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Collège Robert Cellerier Saint-Savinien",
+   "attendu": {
+    "lon": -0.6752733695212816,
+    "lat": 45.87637770214706
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Collège Robert Cellerier",
+   "commune": "Saint-Savinien",
+   "codeInsee": "17397"
+  },
+  {
+   "rayonM": 3875,
+   "famille": "commune-seule",
+   "requete": "Saint-Savinien",
+   "attendu": {
+    "lon": -0.6859,
+    "lat": 45.8819
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Saint-Savinien",
+   "commune": "Saint-Savinien",
+   "codeInsee": "17397"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Èze Bord de Mer",
+   "attendu": {
+    "lon": 7.352783,
+    "lat": 43.720192
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Èze Bord de Mer",
+   "commune": "Èze",
+   "codeInsee": "06059"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eze Bord de Mer",
+   "attendu": {
+    "lon": 7.352783,
+    "lat": 43.720192
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Èze Bord de Mer",
+   "commune": "Èze",
+   "codeInsee": "06059"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Èze",
+   "attendu": {
+    "lon": 7.3566,
+    "lat": 43.7299
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Èze",
+   "commune": "Èze",
+   "codeInsee": "06059"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Roquette Frères Beinheim",
+   "attendu": {
+    "lon": 8.101696,
+    "lat": 48.858986
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Roquette Frères",
+   "commune": "Beinheim",
+   "codeInsee": "67025"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Roquette Freres Beinheim",
+   "attendu": {
+    "lon": 8.101696,
+    "lat": 48.858986
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Roquette Frères",
+   "commune": "Beinheim",
+   "codeInsee": "67025"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Roquette Frères",
+   "attendu": {
+    "lon": 8.101696,
+    "lat": 48.858986
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Roquette Frères",
+   "commune": "Beinheim",
+   "codeInsee": "67025"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole élémentaire intercommunale Beinheim",
+   "attendu": {
+    "lon": 8.091865697311865,
+    "lat": 48.86323873345733
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole élémentaire intercommunale",
+   "commune": "Beinheim",
+   "codeInsee": "67025"
+  },
+  {
+   "rayonM": 2149,
+   "famille": "commune-seule",
+   "requete": "Beinheim",
+   "attendu": {
+    "lon": 8.0903,
+    "lat": 48.8517
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Beinheim",
+   "commune": "Beinheim",
+   "codeInsee": "67025"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Saint-Martin Cauvigny",
+   "attendu": {
+    "lon": 2.248483,
+    "lat": 49.301522
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Martin",
+   "commune": "Cauvigny",
+   "codeInsee": "60135"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Saint-Martin Cauvigny",
+   "attendu": {
+    "lon": 2.248483,
+    "lat": 49.301522
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Martin",
+   "commune": "Cauvigny",
+   "codeInsee": "60135"
+  },
+  {
+   "rayonM": 2360,
+   "famille": "commune-seule",
+   "requete": "Cauvigny",
+   "attendu": {
+    "lon": 2.2394,
+    "lat": 49.3015
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Cauvigny",
+   "commune": "Cauvigny",
+   "codeInsee": "60135"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole élémentaire les Catelaines Montmain",
+   "attendu": {
+    "lon": 1.2401828160753192,
+    "lat": 49.40786674107136
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole élémentaire les Catelaines",
+   "commune": "Montmain",
+   "codeInsee": "76448"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Montmain",
+   "attendu": {
+    "lon": 1.2447,
+    "lat": 49.41
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Montmain",
+   "commune": "Montmain",
+   "codeInsee": "76448"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Ancien Couvent des Pères de Picpus Moulins-Engilbert",
+   "attendu": {
+    "lon": 3.810426,
+    "lat": 46.98428
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Ancien Couvent des Pères de Picpus",
+   "commune": "Moulins-Engilbert",
+   "codeInsee": "58182"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Ancien Couvent des Peres de Picpus Moulins-Engilbert",
+   "attendu": {
+    "lon": 3.810426,
+    "lat": 46.98428
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Ancien Couvent des Pères de Picpus",
+   "commune": "Moulins-Engilbert",
+   "codeInsee": "58182"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Ancien Couvent des Pères de Picpus",
+   "attendu": {
+    "lon": 3.810426,
+    "lat": 46.98428
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Ancien Couvent des Pères de Picpus",
+   "commune": "Moulins-Engilbert",
+   "codeInsee": "58182"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Collège Les Deux Rivières Moulins-Engilbert",
+   "attendu": {
+    "lon": 3.8060999784733864,
+    "lat": 46.98646080375931
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Collège Les Deux Rivières",
+   "commune": "Moulins-Engilbert",
+   "codeInsee": "58182"
+  },
+  {
+   "rayonM": 3633,
+   "famille": "commune-seule",
+   "requete": "Moulins-Engilbert",
+   "attendu": {
+    "lon": 3.8216,
+    "lat": 46.9759
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Moulins-Engilbert",
+   "commune": "Moulins-Engilbert",
+   "codeInsee": "58182"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Tête de Couleau Châteauroux-les-Alpes",
+   "attendu": {
+    "lon": 6.455323,
+    "lat": 44.684148
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Tête de Couleau",
+   "commune": "Châteauroux-les-Alpes",
+   "codeInsee": "05036"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Tete de Couleau Châteauroux-les-Alpes",
+   "attendu": {
+    "lon": 6.455323,
+    "lat": 44.684148
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Tête de Couleau",
+   "commune": "Châteauroux-les-Alpes",
+   "codeInsee": "05036"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Tête de Couleau",
+   "attendu": {
+    "lon": 6.455323,
+    "lat": 44.684148
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Tête de Couleau",
+   "commune": "Châteauroux-les-Alpes",
+   "codeInsee": "05036"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole primaire CHATEAUROUX Châteauroux-les-Alpes",
+   "attendu": {
+    "lon": 6.522442608327211,
+    "lat": 44.61241466297607
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole primaire CHATEAUROUX",
+   "commune": "Châteauroux-les-Alpes",
+   "codeInsee": "05036"
+  },
+  {
+   "rayonM": 5406,
+   "famille": "commune-seule",
+   "requete": "Châteauroux-les-Alpes",
+   "attendu": {
+    "lon": 6.4834,
+    "lat": 44.6424
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Châteauroux-les-Alpes",
+   "commune": "Châteauroux-les-Alpes",
+   "codeInsee": "05036"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole primaire publique L'Hilvern Saint-Caradec",
+   "attendu": {
+    "lon": -2.8542495036668902,
+    "lat": 48.19284988569295
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole primaire publique L'Hilvern",
+   "commune": "Saint-Caradec",
+   "codeInsee": "22279"
+  },
+  {
+   "rayonM": 2657,
+   "famille": "commune-seule",
+   "requete": "Saint-Caradec",
+   "attendu": {
+    "lon": -2.8653,
+    "lat": 48.1993
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Saint-Caradec",
+   "commune": "Saint-Caradec",
+   "codeInsee": "22279"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Ruisseau des Alberges Saint-Cassin",
+   "attendu": {
+    "lon": 5.898838,
+    "lat": 45.53918
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Ruisseau des Alberges",
+   "commune": "Saint-Cassin",
+   "codeInsee": "73228"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Ruisseau des Alberges",
+   "attendu": {
+    "lon": 5.898838,
+    "lat": 45.53918
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Ruisseau des Alberges",
+   "commune": "Saint-Cassin",
+   "codeInsee": "73228"
+  },
+  {
+   "rayonM": 2192,
+   "famille": "commune-seule",
+   "requete": "Saint-Cassin",
+   "attendu": {
+    "lon": 5.8792,
+    "lat": 45.5217
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Saint-Cassin",
+   "commune": "Saint-Cassin",
+   "codeInsee": "73228"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Service départemental d'incendie et de secours Chambon-la-Forêt",
+   "attendu": {
+    "lon": 2.299863,
+    "lat": 48.059301
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Service départemental d'incendie et de secours",
+   "commune": "Chambon-la-Forêt",
+   "codeInsee": "45069"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Service departemental d'incendie et de secours Chambon-la-Forêt",
+   "attendu": {
+    "lon": 2.299863,
+    "lat": 48.059301
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Service départemental d'incendie et de secours",
+   "commune": "Chambon-la-Forêt",
+   "codeInsee": "45069"
+  },
+  {
+   "rayonM": 2337,
+   "famille": "commune-seule",
+   "requete": "Chambon-la-Forêt",
+   "attendu": {
+    "lon": 2.2827,
+    "lat": 48.0535
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Chambon-la-Forêt",
+   "commune": "Chambon-la-Forêt",
+   "codeInsee": "45069"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Saint-Remy Ceintrey",
+   "attendu": {
+    "lon": 6.164266,
+    "lat": 48.524688
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Remy",
+   "commune": "Ceintrey",
+   "codeInsee": "54109"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Saint-Remy Ceintrey",
+   "attendu": {
+    "lon": 6.164266,
+    "lat": 48.524688
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Remy",
+   "commune": "Ceintrey",
+   "codeInsee": "54109"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Ceintrey",
+   "attendu": {
+    "lon": 6.1787,
+    "lat": 48.5277
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Ceintrey",
+   "commune": "Ceintrey",
+   "codeInsee": "54109"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Pount Aredoun Pointis-de-Rivière",
+   "attendu": {
+    "lon": 0.624087,
+    "lat": 43.082234
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Pount Aredoun",
+   "commune": "Pointis-de-Rivière",
+   "codeInsee": "31426"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Pount Aredoun",
+   "attendu": {
+    "lon": 0.624087,
+    "lat": 43.082234
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Pount Aredoun",
+   "commune": "Pointis-de-Rivière",
+   "codeInsee": "31426"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Pointis-de-Rivière",
+   "attendu": {
+    "lon": 0.626,
+    "lat": 43.0909
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Pointis-de-Rivière",
+   "commune": "Pointis-de-Rivière",
+   "codeInsee": "31426"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "le Moulin de Nouan Chezal-Benoît",
+   "attendu": {
+    "lon": 2.126128,
+    "lat": 46.877812
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "le Moulin de Nouan",
+   "commune": "Chezal-Benoît",
+   "codeInsee": "18065"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "le Moulin de Nouan",
+   "attendu": {
+    "lon": 2.126128,
+    "lat": 46.877812
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "le Moulin de Nouan",
+   "commune": "Chezal-Benoît",
+   "codeInsee": "18065"
+  },
+  {
+   "rayonM": 3848,
+   "famille": "commune-seule",
+   "requete": "Chezal-Benoît",
+   "attendu": {
+    "lon": 2.1008,
+    "lat": 46.8357
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Chezal-Benoît",
+   "commune": "Chezal-Benoît",
+   "codeInsee": "18065"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Chapelle Saint-Lambert Criquiers",
+   "attendu": {
+    "lon": 1.70321,
+    "lat": 49.65778
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Chapelle Saint-Lambert",
+   "commune": "Criquiers",
+   "codeInsee": "76199"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole primaire du Centre Criquiers",
+   "attendu": {
+    "lon": 1.7084905704445918,
+    "lat": 49.67510563830817
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole primaire du Centre",
+   "commune": "Criquiers",
+   "codeInsee": "76199"
+  },
+  {
+   "rayonM": 2693,
+   "famille": "commune-seule",
+   "requete": "Criquiers",
+   "attendu": {
+    "lon": 1.7052,
+    "lat": 49.6758
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Criquiers",
+   "commune": "Criquiers",
+   "codeInsee": "76199"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Aire de Décollage de Charmy Confort",
+   "attendu": {
+    "lon": 5.835901,
+    "lat": 46.160849
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Aire de Décollage de Charmy",
+   "commune": "Confort",
+   "codeInsee": "01114"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Aire de Decollage de Charmy Confort",
+   "attendu": {
+    "lon": 5.835901,
+    "lat": 46.160849
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Aire de Décollage de Charmy",
+   "commune": "Confort",
+   "codeInsee": "01114"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Aire de Décollage de Charmy",
+   "attendu": {
+    "lon": 5.835901,
+    "lat": 46.160849
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Aire de Décollage de Charmy",
+   "commune": "Confort",
+   "codeInsee": "01114"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Confort",
+   "attendu": {
+    "lon": 5.8358,
+    "lat": 46.1536
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Confort",
+   "commune": "Confort",
+   "codeInsee": "01114"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Sainte-Opportune Sainte-Opportune-du-Bosc",
+   "attendu": {
+    "lon": 0.837055,
+    "lat": 49.164093
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Sainte-Opportune",
+   "commune": "Sainte-Opportune-du-Bosc",
+   "codeInsee": "27576"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Sainte-Opportune Sainte-Opportune-du-Bosc",
+   "attendu": {
+    "lon": 0.837055,
+    "lat": 49.164093
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Sainte-Opportune",
+   "commune": "Sainte-Opportune-du-Bosc",
+   "codeInsee": "27576"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Sainte-Opportune-du-Bosc",
+   "attendu": {
+    "lon": 0.8436,
+    "lat": 49.1675
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Sainte-Opportune-du-Bosc",
+   "commune": "Sainte-Opportune-du-Bosc",
+   "codeInsee": "27576"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Notre-Dame Ségrie",
+   "attendu": {
+    "lon": 0.025183,
+    "lat": 48.19973
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Notre-Dame",
+   "commune": "Ségrie",
+   "codeInsee": "72332"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Notre-Dame Ségrie",
+   "attendu": {
+    "lon": 0.025183,
+    "lat": 48.19973
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Notre-Dame",
+   "commune": "Ségrie",
+   "codeInsee": "72332"
+  },
+  {
+   "rayonM": 2652,
+   "famille": "commune-seule",
+   "requete": "Ségrie",
+   "attendu": {
+    "lon": 0.0117,
+    "lat": 48.2122
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Ségrie",
+   "commune": "Ségrie",
+   "codeInsee": "72332"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "les Choux Le Coudray-sur-Thelle",
+   "attendu": {
+    "lon": 2.125242,
+    "lat": 49.315066
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "les Choux",
+   "commune": "Le Coudray-sur-Thelle",
+   "codeInsee": "60165"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Le Coudray-sur-Thelle",
+   "attendu": {
+    "lon": 2.1239,
+    "lat": 49.3103
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Le Coudray-sur-Thelle",
+   "commune": "Le Coudray-sur-Thelle",
+   "codeInsee": "60165"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "San Tumasgiu Castello-di-Rostino",
+   "attendu": {
+    "lon": 9.312991,
+    "lat": 42.46963
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "San Tumasgiu",
+   "commune": "Castello-di-Rostino",
+   "codeInsee": "2B079"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "San Tumasgiu",
+   "attendu": {
+    "lon": 9.312991,
+    "lat": 42.46963
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "San Tumasgiu",
+   "commune": "Castello-di-Rostino",
+   "codeInsee": "2B079"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole primaire Castello di Rostino Castello-di-Rostino",
+   "attendu": {
+    "lon": 9.279949636849896,
+    "lat": 42.48086275540379
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole primaire Castello di Rostino",
+   "commune": "Castello-di-Rostino",
+   "codeInsee": "2B079"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Castello-di-Rostino",
+   "attendu": {
+    "lon": 9.2967,
+    "lat": 42.4732
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Castello-di-Rostino",
+   "commune": "Castello-di-Rostino",
+   "codeInsee": "2B079"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole primaire des 4 Vents Boisseaux",
+   "attendu": {
+    "lon": 1.9814096103898504,
+    "lat": 48.25639375063103
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole primaire des 4 Vents",
+   "commune": "Boisseaux",
+   "codeInsee": "45037"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Boisseaux",
+   "attendu": {
+    "lon": 1.9861,
+    "lat": 48.2521
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Boisseaux",
+   "commune": "Boisseaux",
+   "codeInsee": "45037"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Saint-Arbogast Munwiller",
+   "attendu": {
+    "lon": 7.344456,
+    "lat": 47.930558
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Arbogast",
+   "commune": "Munwiller",
+   "codeInsee": "68228"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Saint-Arbogast Munwiller",
+   "attendu": {
+    "lon": 7.344456,
+    "lat": 47.930558
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Arbogast",
+   "commune": "Munwiller",
+   "codeInsee": "68228"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole primaire intercommunale Munwiller",
+   "attendu": {
+    "lon": 7.343573805569598,
+    "lat": 47.93043589929682
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole primaire intercommunale",
+   "commune": "Munwiller",
+   "codeInsee": "68228"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Munwiller",
+   "attendu": {
+    "lon": 7.3508,
+    "lat": 47.9357
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Munwiller",
+   "commune": "Munwiller",
+   "codeInsee": "68228"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Saint-Jean-Baptiste Luigny",
+   "attendu": {
+    "lon": 1.024216,
+    "lat": 48.240222
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Jean-Baptiste",
+   "commune": "Luigny",
+   "codeInsee": "28219"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Saint-Jean-Baptiste Luigny",
+   "attendu": {
+    "lon": 1.024216,
+    "lat": 48.240222
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Jean-Baptiste",
+   "commune": "Luigny",
+   "codeInsee": "28219"
+  },
+  {
+   "rayonM": 2273,
+   "famille": "commune-seule",
+   "requete": "Luigny",
+   "attendu": {
+    "lon": 1.0246,
+    "lat": 48.2393
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Luigny",
+   "commune": "Luigny",
+   "codeInsee": "28219"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "la Césarine Saint-Jean-Lespinasse",
+   "attendu": {
+    "lon": 1.854695,
+    "lat": 44.850161
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "la Césarine",
+   "commune": "Saint-Jean-Lespinasse",
+   "codeInsee": "46271"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "la Cesarine Saint-Jean-Lespinasse",
+   "attendu": {
+    "lon": 1.854695,
+    "lat": 44.850161
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "la Césarine",
+   "commune": "Saint-Jean-Lespinasse",
+   "codeInsee": "46271"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "la Césarine",
+   "attendu": {
+    "lon": 1.854695,
+    "lat": 44.850161
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "la Césarine",
+   "commune": "Saint-Jean-Lespinasse",
+   "codeInsee": "46271"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Saint-Jean-Lespinasse",
+   "attendu": {
+    "lon": 1.8599,
+    "lat": 44.8621
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Saint-Jean-Lespinasse",
+   "commune": "Saint-Jean-Lespinasse",
+   "codeInsee": "46271"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Notre-Dame La Celle-Guenand",
+   "attendu": {
+    "lon": 0.895016,
+    "lat": 46.944734
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Notre-Dame",
+   "commune": "La Celle-Guenand",
+   "codeInsee": "37044"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Notre-Dame La Celle-Guenand",
+   "attendu": {
+    "lon": 0.895016,
+    "lat": 46.944734
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Notre-Dame",
+   "commune": "La Celle-Guenand",
+   "codeInsee": "37044"
+  },
+  {
+   "rayonM": 3439,
+   "famille": "commune-seule",
+   "requete": "La Celle-Guenand",
+   "attendu": {
+    "lon": 0.9103,
+    "lat": 46.943
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "La Celle-Guenand",
+   "commune": "La Celle-Guenand",
+   "codeInsee": "37044"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Saint-Blaise, Notre-Dame Écretteville-lès-Baons",
+   "attendu": {
+    "lon": 0.682858,
+    "lat": 49.627629
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Blaise, Notre-Dame",
+   "commune": "Écretteville-lès-Baons",
+   "codeInsee": "76225"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Saint-Blaise, Notre-Dame Écretteville-lès-Baons",
+   "attendu": {
+    "lon": 0.682858,
+    "lat": 49.627629
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Blaise, Notre-Dame",
+   "commune": "Écretteville-lès-Baons",
+   "codeInsee": "76225"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Écretteville-lès-Baons",
+   "attendu": {
+    "lon": 0.6713,
+    "lat": 49.6299
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Écretteville-lès-Baons",
+   "commune": "Écretteville-lès-Baons",
+   "codeInsee": "76225"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Saleich Vieille",
+   "attendu": {
+    "lon": 0.975444,
+    "lat": 43.02444
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Saleich Vieille",
+   "commune": "Saleich",
+   "codeInsee": "31521"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Saleich Vieille",
+   "attendu": {
+    "lon": 0.975444,
+    "lat": 43.02444
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Saleich Vieille",
+   "commune": "Saleich",
+   "codeInsee": "31521"
+  },
+  {
+   "rayonM": 2117,
+   "famille": "commune-seule",
+   "requete": "Saleich",
+   "attendu": {
+    "lon": 0.9649,
+    "lat": 43.0234
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Saleich",
+   "commune": "Saleich",
+   "codeInsee": "31521"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Orpierre - le Quiquillon",
+   "attendu": {
+    "lon": 5.696328,
+    "lat": 44.317894
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Orpierre - le Quiquillon",
+   "commune": "Orpierre",
+   "codeInsee": "05097"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "DITEP - Pôle Dys les Lavandes Orpierre",
+   "attendu": {
+    "lon": 5.6919879158808575,
+    "lat": 44.31290882197856
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "DITEP - Pôle Dys les Lavandes",
+   "commune": "Orpierre",
+   "codeInsee": "05097"
+  },
+  {
+   "rayonM": 2956,
+   "famille": "commune-seule",
+   "requete": "Orpierre",
+   "attendu": {
+    "lon": 5.7071,
+    "lat": 44.316
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Orpierre",
+   "commune": "Orpierre",
+   "codeInsee": "05097"
+  },
+  {
+   "rayonM": 2558,
+   "famille": "commune-seule",
+   "requete": "Félines",
+   "attendu": {
+    "lon": 3.7485,
+    "lat": 45.2599
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Félines",
+   "commune": "Félines",
+   "codeInsee": "43093"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église de l'Assomption Rupt-en-Woëvre",
+   "attendu": {
+    "lon": 5.490145,
+    "lat": 49.05321
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église de l'Assomption",
+   "commune": "Rupt-en-Woëvre",
+   "codeInsee": "55449"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise de l'Assomption Rupt-en-Woëvre",
+   "attendu": {
+    "lon": 5.490145,
+    "lat": 49.05321
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église de l'Assomption",
+   "commune": "Rupt-en-Woëvre",
+   "codeInsee": "55449"
+  },
+  {
+   "rayonM": 2334,
+   "famille": "commune-seule",
+   "requete": "Rupt-en-Woëvre",
+   "attendu": {
+    "lon": 5.4973,
+    "lat": 49.0648
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Rupt-en-Woëvre",
+   "commune": "Rupt-en-Woëvre",
+   "codeInsee": "55449"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Col des Pises Aumessas",
+   "attendu": {
+    "lon": 3.495632,
+    "lat": 44.035731
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Col des Pises",
+   "commune": "Aumessas",
+   "codeInsee": "30025"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Col des Pises",
+   "attendu": {
+    "lon": 3.495632,
+    "lat": 44.035731
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Col des Pises",
+   "commune": "Aumessas",
+   "codeInsee": "30025"
+  },
+  {
+   "rayonM": 2603,
+   "famille": "commune-seule",
+   "requete": "Aumessas",
+   "attendu": {
+    "lon": 3.5126,
+    "lat": 44.0074
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Aumessas",
+   "commune": "Aumessas",
+   "codeInsee": "30025"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Saint-Vaast Bonnay",
+   "attendu": {
+    "lon": 2.512453,
+    "lat": 49.935018
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Vaast",
+   "commune": "Bonnay",
+   "codeInsee": "80112"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Saint-Vaast Bonnay",
+   "attendu": {
+    "lon": 2.512453,
+    "lat": 49.935018
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Vaast",
+   "commune": "Bonnay",
+   "codeInsee": "80112"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Bonnay",
+   "attendu": {
+    "lon": 2.5078,
+    "lat": 49.9433
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Bonnay",
+   "commune": "Bonnay",
+   "codeInsee": "80112"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Hurtières",
+   "attendu": {
+    "lon": 5.9678,
+    "lat": 45.2877
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Hurtières",
+   "commune": "Hurtières",
+   "codeInsee": "38192"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Saint-Jacques de Conzac Saint-Aulais-la-Chapelle",
+   "attendu": {
+    "lon": -0.03083,
+    "lat": 45.450214
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Jacques de Conzac",
+   "commune": "Saint-Aulais-la-Chapelle",
+   "codeInsee": "16301"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Saint-Jacques de Conzac Saint-Aulais-la-Chapelle",
+   "attendu": {
+    "lon": -0.03083,
+    "lat": 45.450214
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Jacques de Conzac",
+   "commune": "Saint-Aulais-la-Chapelle",
+   "codeInsee": "16301"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Église Saint-Jacques de Conzac",
+   "attendu": {
+    "lon": -0.03083,
+    "lat": 45.450214
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Jacques de Conzac",
+   "commune": "Saint-Aulais-la-Chapelle",
+   "codeInsee": "16301"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole Primaire Saint-Aulais-La-Chapelle",
+   "attendu": {
+    "lon": -0.049130380279155984,
+    "lat": 45.44773723675229
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole Primaire Saint-Aulais-La-Chapelle",
+   "commune": "Saint-Aulais-la-Chapelle",
+   "codeInsee": "16301"
+  },
+  {
+   "rayonM": 2171,
+   "famille": "commune-seule",
+   "requete": "Saint-Aulais-la-Chapelle",
+   "attendu": {
+    "lon": -0.048,
+    "lat": 45.4463
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Saint-Aulais-la-Chapelle",
+   "commune": "Saint-Aulais-la-Chapelle",
+   "codeInsee": "16301"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Saint-François-Xavier Jaxu",
+   "attendu": {
+    "lon": -1.19263,
+    "lat": 43.196521
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-François-Xavier",
+   "commune": "Jaxu",
+   "codeInsee": "64283"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Saint-Francois-Xavier Jaxu",
+   "attendu": {
+    "lon": -1.19263,
+    "lat": 43.196521
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-François-Xavier",
+   "commune": "Jaxu",
+   "codeInsee": "64283"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Jaxu",
+   "attendu": {
+    "lon": -1.2096,
+    "lat": 43.2032
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Jaxu",
+   "commune": "Jaxu",
+   "codeInsee": "64283"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Base de Loisirs du Lac de Pannecière Chaumard",
+   "attendu": {
+    "lon": 3.904763,
+    "lat": 47.143357
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Base de Loisirs du Lac de Pannecière",
+   "commune": "Chaumard",
+   "codeInsee": "58068"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Base de Loisirs du Lac de Panneciere Chaumard",
+   "attendu": {
+    "lon": 3.904763,
+    "lat": 47.143357
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Base de Loisirs du Lac de Pannecière",
+   "commune": "Chaumard",
+   "codeInsee": "58068"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Base de Loisirs du Lac de Pannecière",
+   "attendu": {
+    "lon": 3.904763,
+    "lat": 47.143357
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Base de Loisirs du Lac de Pannecière",
+   "commune": "Chaumard",
+   "codeInsee": "58068"
+  },
+  {
+   "rayonM": 2515,
+   "famille": "commune-seule",
+   "requete": "Chaumard",
+   "attendu": {
+    "lon": 3.9151,
+    "lat": 47.1447
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Chaumard",
+   "commune": "Chaumard",
+   "codeInsee": "58068"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Parking touristique isolé Mérey-Vieilley",
+   "attendu": {
+    "lon": 6.065604,
+    "lat": 47.33106
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Parking touristique isolé",
+   "commune": "Mérey-Vieilley",
+   "codeInsee": "25376"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Parking touristique isole Mérey-Vieilley",
+   "attendu": {
+    "lon": 6.065604,
+    "lat": 47.33106
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Parking touristique isolé",
+   "commune": "Mérey-Vieilley",
+   "codeInsee": "25376"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Mérey-Vieilley",
+   "attendu": {
+    "lon": 6.0629,
+    "lat": 47.331
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Mérey-Vieilley",
+   "commune": "Mérey-Vieilley",
+   "codeInsee": "25376"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Bailleul Marquay",
+   "attendu": {
+    "lon": 2.434701,
+    "lat": 50.3884
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Bailleul",
+   "commune": "Marquay",
+   "codeInsee": "62558"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Marquay",
+   "attendu": {
+    "lon": 2.4252,
+    "lat": 50.3791
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Marquay",
+   "commune": "Marquay",
+   "codeInsee": "62558"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Saint-Rémi Girondelle",
+   "attendu": {
+    "lon": 4.374836,
+    "lat": 49.849147
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Rémi",
+   "commune": "Girondelle",
+   "codeInsee": "08189"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Saint-Remi Girondelle",
+   "attendu": {
+    "lon": 4.374836,
+    "lat": 49.849147
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Rémi",
+   "commune": "Girondelle",
+   "codeInsee": "08189"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Girondelle",
+   "attendu": {
+    "lon": 4.3842,
+    "lat": 49.8531
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Girondelle",
+   "commune": "Girondelle",
+   "codeInsee": "08189"
+  },
+  {
+   "rayonM": 500,
+   "famille": "ecole-commune",
+   "requete": "Ecole primaire des Hirondelles Beaulieu",
+   "attendu": {
+    "lon": 3.286450509279509,
+    "lat": 45.4449686350219
+   },
+   "pipeline": "nom",
+   "origine": "Annuaire de l’Éducation",
+   "reference": "Ecole primaire des Hirondelles",
+   "commune": "Beaulieu",
+   "codeInsee": "58026"
+  },
+  {
+   "rayonM": 2233,
+   "famille": "commune-seule",
+   "requete": "Beaulieu",
+   "attendu": {
+    "lon": 3.536,
+    "lat": 47.2593
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Beaulieu",
+   "commune": "Beaulieu",
+   "codeInsee": "58026"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "le Thuré Vouvray-sur-Huisne",
+   "attendu": {
+    "lon": 0.550545,
+    "lat": 48.08669
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "le Thuré",
+   "commune": "Vouvray-sur-Huisne",
+   "codeInsee": "72383"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "le Thure Vouvray-sur-Huisne",
+   "attendu": {
+    "lon": 0.550545,
+    "lat": 48.08669
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "le Thuré",
+   "commune": "Vouvray-sur-Huisne",
+   "codeInsee": "72383"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "le Thuré",
+   "attendu": {
+    "lon": 0.550545,
+    "lat": 48.08669
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "le Thuré",
+   "commune": "Vouvray-sur-Huisne",
+   "codeInsee": "72383"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Vouvray-sur-Huisne",
+   "attendu": {
+    "lon": 0.5539,
+    "lat": 48.0845
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Vouvray-sur-Huisne",
+   "commune": "Vouvray-sur-Huisne",
+   "codeInsee": "72383"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Sainte-Madeleine Bors (Canton de Charente-Sud)",
+   "attendu": {
+    "lon": -0.198583,
+    "lat": 45.320212
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Sainte-Madeleine",
+   "commune": "Bors (Canton de Charente-Sud)",
+   "codeInsee": "16053"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Sainte-Madeleine Bors (Canton de Charente-Sud)",
+   "attendu": {
+    "lon": -0.198583,
+    "lat": 45.320212
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Sainte-Madeleine",
+   "commune": "Bors (Canton de Charente-Sud)",
+   "codeInsee": "16053"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Bors (Canton de Charente-Sud)",
+   "attendu": {
+    "lon": -0.2004,
+    "lat": 45.3265
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Bors (Canton de Charente-Sud)",
+   "commune": "Bors (Canton de Charente-Sud)",
+   "codeInsee": "16053"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Bief",
+   "attendu": {
+    "lon": 6.7752,
+    "lat": 47.3235
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Bief",
+   "commune": "Bief",
+   "codeInsee": "25061"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Serre de Pallières Sainte-Croix-de-Caderle",
+   "attendu": {
+    "lon": 3.871893,
+    "lat": 44.068795
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Serre de Pallières",
+   "commune": "Sainte-Croix-de-Caderle",
+   "codeInsee": "30246"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Serre de Pallieres Sainte-Croix-de-Caderle",
+   "attendu": {
+    "lon": 3.871893,
+    "lat": 44.068795
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Serre de Pallières",
+   "commune": "Sainte-Croix-de-Caderle",
+   "codeInsee": "30246"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-seul",
+   "requete": "Serre de Pallières",
+   "attendu": {
+    "lon": 3.871893,
+    "lat": 44.068795
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Serre de Pallières",
+   "commune": "Sainte-Croix-de-Caderle",
+   "codeInsee": "30246"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Sainte-Croix-de-Caderle",
+   "attendu": {
+    "lon": 3.8675,
+    "lat": 44.0666
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Sainte-Croix-de-Caderle",
+   "commune": "Sainte-Croix-de-Caderle",
+   "codeInsee": "30246"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Saint-Pierre La Chapelle-Lasson",
+   "attendu": {
+    "lon": 3.832083,
+    "lat": 48.622483
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Pierre",
+   "commune": "La Chapelle-Lasson",
+   "codeInsee": "51127"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Saint-Pierre La Chapelle-Lasson",
+   "attendu": {
+    "lon": 3.832083,
+    "lat": 48.622483
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Pierre",
+   "commune": "La Chapelle-Lasson",
+   "codeInsee": "51127"
+  },
+  {
+   "rayonM": 2187,
+   "famille": "commune-seule",
+   "requete": "La Chapelle-Lasson",
+   "attendu": {
+    "lon": 3.8192,
+    "lat": 48.6341
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "La Chapelle-Lasson",
+   "commune": "La Chapelle-Lasson",
+   "codeInsee": "51127"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Église Saint-Brice Saint-Bresson",
+   "attendu": {
+    "lon": 6.50773,
+    "lat": 47.870235
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Brice",
+   "commune": "Saint-Bresson",
+   "codeInsee": "30238"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-sans-accents",
+   "requete": "Eglise Saint-Brice Saint-Bresson",
+   "attendu": {
+    "lon": 6.50773,
+    "lat": 47.870235
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Église Saint-Brice",
+   "commune": "Saint-Bresson",
+   "codeInsee": "30238"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Saint-Bresson",
+   "attendu": {
+    "lon": 3.6447,
+    "lat": 43.956
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Saint-Bresson",
+   "commune": "Saint-Bresson",
+   "codeInsee": "30238"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Osches",
+   "attendu": {
+    "lon": 5.2504,
+    "lat": 49.0453
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Osches",
+   "commune": "Osches",
+   "codeInsee": "55395"
+  },
+  {
+   "rayonM": 200,
+   "famille": "lieu-commune",
+   "requete": "Clocher Berbérust-Lias",
+   "attendu": {
+    "lon": -0.030254,
+    "lat": 43.045297
+   },
+   "pipeline": "nom",
+   "origine": "Géoplateforme POI",
+   "reference": "Clocher",
+   "commune": "Berbérust-Lias",
+   "codeInsee": "65082"
+  },
+  {
+   "rayonM": 2000,
+   "famille": "commune-seule",
+   "requete": "Berbérust-Lias",
+   "attendu": {
+    "lon": -0.0355,
+    "lat": 43.0359
+   },
+   "pipeline": "adresse",
+   "origine": "geo.api.gouv.fr",
+   "reference": "Berbérust-Lias",
+   "commune": "Berbérust-Lias",
+   "codeInsee": "65082"
+  }
+ ]
+}

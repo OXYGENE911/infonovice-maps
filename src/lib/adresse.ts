@@ -178,7 +178,10 @@ export async function chercherAdresses(texte: string, signal?: AbortSignal): Pro
   const q = requeteNormalisee(texte);
   // La BAN refuse les requêtes de moins de 3 caractères : on n'envoie rien.
   if (q.length < 3) return [];
-  const premiers = versResultats(await appelResilient(urlRecherche(q), signal));
+  /* LA COMMUNE D'ABORD QUAND C'EST ELLE QU'ON A ÉCRITE (CORPUS-1) : le tri se
+     fait ici, à la source, pour que TOUT ce qui lit des adresses en profite —
+     la barre de recherche comme les champs du planificateur. */
+  const premiers = communeDAbord(q, versResultats(await appelResilient(urlRecherche(q), signal)));
 
   /* LE REPLI AVOUÉ (ADRESSE-2) — voir l'en-tête pour la mesure. Il ne part
      QUE si la saisie portait un suffixe reconnu ET qu'aucun résultat ne
@@ -198,6 +201,40 @@ export async function chercherAdresses(texte: string, signal?: AbortSignal): Pro
      réponse honnête — et si la base s'enrichit demain, elle passera devant
      sans qu'on touche à ce code. */
   return [...avoues, ...premiers];
+}
+
+/**
+ * La commune passe devant quand c'est ELLE qu'on a écrite — PURE.
+ *
+ * MESURÉ SUR LE CORPUS (CORPUS-1, 09/09/2026) : sur quatre-vingt-dix communes
+ * tapées telles quelles, QUATORZE ne sortaient pas en tête. « Félines » rendait
+ * d'abord une rue Félines à Carcassonne, une rue Felines à Bonnat, deux
+ * lieux-dits Félines ailleurs — et la commune en cinquième. Le service n'a pas
+ * tort : ces objets portent bien ce nom. Mais celui qui écrit « Félines » tout
+ * court veut la commune, pas une rue qui la cite.
+ *
+ * LA RÈGLE EST ÉTROITE, ET DOIT LE RESTER. On ne remonte une commune que si la
+ * saisie ENTIÈRE est son nom, aux accents et à la casse près. « 12 rue de
+ * Paris » ne déclenche rien ; « Paris » oui, et elle était déjà première.
+ * Réordonner plus largement reviendrait à préférer nos idées à celles du
+ * service, qui a mesuré son classement sur bien plus que quatre-vingt-dix cas.
+ *
+ * ET CELA NE COÛTE AUCUN APPEL : on ne redemande rien, on remet dans l'ordre
+ * ce qui est déjà revenu. Les douze communes qui traînaient entre le deuxième
+ * et le cinquième rang remontent ; les deux qui n'étaient nulle part restent
+ * introuvables, et ce banc le dira toujours.
+ */
+export function communeDAbord(
+  saisie: string, resultats: readonly ResultatAdresse[],
+): ResultatAdresse[] {
+  const nu = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const cherche = nu(saisie);
+  if (cherche === '') return [...resultats];
+  const i = resultats.findIndex((r) => r.type === 'municipality' && nu(r.libelle) === cherche);
+  if (i <= 0) return [...resultats];
+  const gagnante = resultats[i]!;
+  return [gagnante, ...resultats.filter((_, j) => j !== i)];
 }
 
 export async function adresseInverse(p: PointGeo): Promise<ResultatAdresse | null> {

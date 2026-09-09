@@ -844,6 +844,29 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] CORPUS-1 (10/09) : le corpus annoté de recherche, et le défaut qu'il a
+      trouvé du premier coup. DERNIER POINT « Maps » de l'audit Codex du
+      06/09 — le volet est désormais CLOS. 348 requêtes sur 90 communes, de
+      Paris à Courties (46 hab.) ; chaque réponse attendue est OBTENUE d'une
+      source publique, jamais écrite de mémoire, et la vérité de terrain est
+      la COORDONNÉE. Ensemble : Top-1 95,1 %, Top-5 98,6 %, MRR 0,967.
+      Adresses à 100 % sur les trois familles ; écoles + commune la plus
+      faible à 87,3 %. LE DÉFAUT : « Félines » rendait quatre rues et
+      lieux-dits homonymes avant la commune, quatorze communes sur
+      quatre-vingt-dix ne sortaient pas en tête. Corrigé sans un appel de
+      plus (on réordonne ce qui est déjà revenu) : 84,4 % → 93,3 % de Top-1,
+      MRR 0,905 → 0,956, aucune autre famille ne bouge.
+      TROIS PASSES ONT ÉTÉ NÉCESSAIRES POUR QUE LE BANC DISE VRAI, et c'est
+      la leçon : la première mesure annonçait 58 % en comptant « Marseille »
+      absente quand le service la rendait en tête (200 m exigés entre deux
+      définitions du centre d'une ville de 238 km²) ; la deuxième interrogeait
+      des raisons sociales que personne ne tape ; la troisième prenait « Ecole
+      primaire publique » pour un nom. Les tolérances sont mesurées : 500 m
+      pour une école, parce que deux annuaires officiels placent le collège
+      Robert-Cellerier à 363 m de lui-même.
+      RESTE OUVERT : « Beaulieu » n'a aucune commune dans quinze résultats de
+      la BAN ; la corriger demanderait un appel de plus à chaque frappe —
+      décision d'Armelin.
 - [x] A11Y-LECTEUR-1 (09/09) : ce qu'un lecteur d'écran entend sur les deux
       parcours d'avant la route. DERNIER VOLET DE L'AUDIT CODEX du 06/09 —
       clavier vérifié le 07/09, texte agrandi le 08/09, annonces du suivi
@@ -994,7 +1017,9 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       CONTRAT DE ROUTE : livré le 09/09 (CONTRAT-1, v1.137.0) — voir plus
       bas. RESTE de l'audit Codex, volet Maps : corpus de 200–300 requêtes
       annotées avec Top-1 / Top-5 / MRR mesurés (le banc actuel n'en a que
-      douze) ; lecteur d'écran : FAIT le 09/09 (A11Y-LECTEUR-1). PARCOURS CLAVIER : vérifié le 07/09 — quinze arrêts nommés
+      douze) : FAIT le 10/09 (CORPUS-1) — 348 requêtes, Top-1 95,1 % ;
+      lecteur d'écran : FAIT le 09/09 (A11Y-LECTEUR-1). LE VOLET MAPS DE
+      L'AUDIT EST CLOS. PARCOURS CLAVIER : vérifié le 07/09 — quinze arrêts nommés
       au premier écran, liste d'adresses aux flèches
       (`aria-activedescendant`), et le focus arrive sur « Y aller » après
       validation ; le seul défaut trouvé était deux libellés anglais
