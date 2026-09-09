@@ -837,6 +837,36 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] CONTRAT-1 (09/09) : le tracé et la feuille de route se répondent, ou la
+      feuille est écartée. Dernier point « Maps » de l'audit Codex du 06/09
+      (« contrat de route commun : points raccordés, provenance »). Le guidage
+      vit de DEUX appels séparés et rien ne vérifiait qu'ils décrivent la même
+      route. MESURÉ le 09/09 sur le service réel, quatre trajets : dans une
+      même réponse, la somme des étapes égale la distance à 0,5 m près sur
+      600 km — l'hypothèse écrite dans `guidage.ts` était juste ; entre deux
+      réponses qui ne diffèrent que par l'optimisation, Paris–Lyon rend
+      465,6 km ou 448,1 km, soit dix-sept kilomètres de décalage possible en
+      silence. UN BUG RÉEL TROUVÉ AU PASSAGE : après un « itinéraire bis », le
+      via entrait dans la requête du tracé mais pas dans le cliché, si bien
+      que la feuille de route — suivi ET impression — décrivait la route
+      d'AVANT le détour. UN SECOND, DE LA MÊME FAMILLE : « Prendre ce
+      trajet » (ROUTE-1) remplaçait le tracé sans toucher au cliché, si bien
+      que la feuille repartait sur le détour de 492 km affiché sur un tracé de
+      318. Les deux corrigés. AUTRE DÉFAUT MESURÉ : le service compte en
+      géodésique, l'avancement à la haversine, 0,028 % de moins de façon
+      constante — 131 m de retard accumulé sur Paris–Lyon. Les bornes d'étapes
+      sont désormais ramenées sur la règle du tracé. UN CONTRÔLE RETIRÉ EN
+      COURS DE ROUTE : comparer la longueur mesurée du tracé à la distance
+      annoncée jugeait le service contre lui-même (même réponse) et non le
+      raccord entre les deux appels ; vingt parcours l'ont mis en échec, et
+      ils avaient raison. Quand le contrat rompt,
+      les instructions sont écartées et le bandeau DIT pourquoi, sur sa propre
+      ligne (celle des alertes est réécrite à chaque fixe GPS). NON TRAITÉ,
+      ET ASSUMÉ : après un trajet direct adopté, un recalcul hors-route perd
+      les relais qui définissaient le corridor direct et peut donc ramener au
+      détour du service. Le défaut existait avant (le recalcul ne les a jamais
+      connus) ; le corriger demande un état propre aux relais, ce qui relève
+      de ROUTE-1 et non du contrat de route.
 - [x] COULOIR-1 (08/09) : emporter les fonds de carte du trajet avant de
       partir (zooms 8–13, 2 km de part et d'autre, plafond 1 200 tuiles ;
       947 pour Paris–Lyon, mesuré). Coût annoncé avant, jauge, arrêt,
@@ -917,10 +947,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       mode rendu à l'arrêt du suivi ; « Mode : … » dans la barre dépliée.
 - [x] AUDIT-1 (06/09) : distance de classement en km équivalents (SEARCH-2),
       noms accessibles des champs et de la carte. SEARCH-1 livré à part.
-      RESTE de l'audit Codex, volet Maps : corpus de 200–300 requêtes annotées avec Top-1 / Top-5 / MRR mesurés
-      (le banc actuel n'en a que douze) ; contrat de route commun
-      (points raccordés, provenance) ; lecteur d'écran sur les trois parcours
-      principaux. PARCOURS CLAVIER : vérifié le 07/09 — quinze arrêts nommés
+      CONTRAT DE ROUTE : livré le 09/09 (CONTRAT-1, v1.137.0) — voir plus
+      bas. RESTE de l'audit Codex, volet Maps : corpus de 200–300 requêtes
+      annotées avec Top-1 / Top-5 / MRR mesurés (le banc actuel n'en a que
+      douze) ; lecteur d'écran sur les trois parcours principaux. PARCOURS CLAVIER : vérifié le 07/09 — quinze arrêts nommés
       au premier écran, liste d'adresses aux flèches
       (`aria-activedescendant`), et le focus arrive sur « Y aller » après
       validation ; le seul défaut trouvé était deux libellés anglais

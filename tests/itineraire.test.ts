@@ -1,6 +1,6 @@
 // Le calcul d'itinéraire : transformation pure, formats français, résilience.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { versItineraire, calculerItineraire, formaterDistance, formaterDuree, ErreurItineraire, urlItineraire } from '../src/lib/itineraire';
+import { versItineraire, calculerItineraire, itineraireDirect, formaterDistance, formaterDuree, ErreurItineraire, urlItineraire } from '../src/lib/itineraire';
 
 const REPONSE = {
   geometry: { type: 'LineString', coordinates: [[2.33, 48.85], [2.35, 48.86]] },
@@ -103,5 +103,55 @@ describe('urlItineraire', () => {
     expect(u).toContain('profile=pedestrian');
     expect(u).toContain('getSteps=true');
     expect(u).toContain('waysAttributes=name');
+  });
+});
+
+describe('le trajet direct DIT ce qu’il a demandé (CONTRAT-1)', () => {
+  /* POURQUOI CE SUPPLÉMENT EXISTE. Adopter le trajet direct remplace le tracé
+     par celui d’une AUTRE requête — étapes de l’usager écartées, « plus
+     court » ou relais choisis par nous. Tant qu’il ne disait pas laquelle, le
+     planificateur redemandait la feuille de route du trajet d’AVANT et
+     l’affichait sur le nouveau tracé. Ce champ n’est pas de la comptabilité :
+     c’est ce qui permet aux instructions de décrire la route qu’on voit.
+
+     LA VÉRIFICATION EST DONC LA BONNE : on ne relit pas le champ, on
+     reconstruit l’URL à partir de lui et l’on exige qu’elle soit CELLE QUI
+     EST PARTIE en dernier. */
+  const long = Array.from({ length: 60 }, (_, i) => [2.3 + i * 0.05, 48.8 - i * 0.05]);
+  const A = { lon: 2.3, lat: 48.8 };
+  const B = { lon: 5.25, lat: 45.85 };
+
+  it('l’URL rebâtie depuis `demande` est exactement la dernière requête partie', async () => {
+    /* UNE RÉPONSE NEUVE À CHAQUE APPEL : un `Response` ne se lit qu’une fois,
+       et le trajet direct en demande deux. */
+    const espion = vi.spyOn(globalThis, 'fetch').mockImplementation(() => Promise.resolve(
+      new Response(JSON.stringify({
+        geometry: { type: 'LineString', coordinates: long },
+        distance: 292_000, duration: 25_800,
+      }), { status: 200 }),
+    ));
+    const d = await itineraireDirect(A, B, 'car', { eviter: ['tunnel'] });
+    const derniere = String(espion.mock.calls[espion.mock.calls.length - 1]![0]);
+    expect(urlItineraire(A, B, 'car', {
+      etapes: d.demande.etapes, eviter: ['tunnel'], optimisation: d.demande.optimisation,
+    })).toBe(derniere);
+  });
+
+  it('LES ÉVITEMENTS SURVIVENT, LES ÉTAPES DE L’USAGER NON : refuser les tunnels '
+    + 'vaut pour toutes les variantes, mais le direct ne passe pas par les points '
+    + 'du trajet qu’il remplace', async () => {
+    const espion = vi.spyOn(globalThis, 'fetch').mockImplementation(() => Promise.resolve(
+      new Response(JSON.stringify({
+        geometry: { type: 'LineString', coordinates: long },
+        distance: 292_000, duration: 25_800,
+      }), { status: 200 }),
+    ));
+    const mien = { lon: 3.9, lat: 47.3 };
+    const d = await itineraireDirect(A, B, 'car', { etapes: [mien], eviter: ['tunnel'] });
+    for (const appel of espion.mock.calls) {
+      expect(String(appel[0])).toContain('constraints=');
+      expect(String(appel[0])).not.toContain('3.9,47.3');
+    }
+    expect(d.demande.etapes).not.toContainEqual(mien);
   });
 });

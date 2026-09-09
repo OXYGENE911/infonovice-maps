@@ -361,8 +361,12 @@ test('réordonner les étapes, copier le lien, ouvrir la feuille : tout suit le 
     const url = route.request().url();
     urls.push(url);
     if (url.includes('getSteps=true')) {
+      /* LES ÉTAPES TOTALISENT LA DISTANCE ANNONCÉE (CONTRAT-1, 09/09) : le
+         service ne peut pas rendre dix mètres d'instructions pour un trajet
+         de 539 km, et le contrat de route écarte désormais une feuille qui
+         ne concorde pas avec son trajet. */
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ portions: [{ steps: [
-        { instruction: { type: 'depart', modifier: 'left' }, distance: 10,
+        { instruction: { type: 'depart', modifier: 'left' }, distance: 539_000,
           attributes: { name: { nom_1_gauche: 'R DE RIVOLI', cpx_numero: '', cpx_toponyme: '' } } },
         { instruction: { type: 'arrive' }, distance: 0,
           attributes: { name: { nom_1_gauche: '', cpx_numero: '', cpx_toponyme: '' } } },
@@ -467,9 +471,14 @@ test('la feuille de route parle français, et ne se charge qu’à la demande', 
           attributes: { name: { nom_1_gauche: '', nom_1_droite: '', cpx_numero: '', cpx_toponyme: '' } } },
       ] }] }) });
     }
+    /* LE TOTAL ANNONCÉ EST CELUI DES ÉTAPES (CONTRAT-1, 09/09) : ce parcours
+       juge le FRANÇAIS de la feuille — « Rue de Rivoli », « Avenue Victoria » —
+       et ces deux rues font cent dix-huit mètres, pas quatre cent soixante-cinq
+       kilomètres. Le jeu d'essai décrivait une réponse impossible ; le contrat
+       de route l'a montré. */
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
       geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
-      distance: 465_000, duration: 15_480,
+      distance: 117.8, duration: 48,
     }) });
   });
   await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
@@ -520,9 +529,11 @@ test('la feuille de route en panne parle français, et se réessaie', async ({ p
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
     const url = route.request().url();
     if (!url.includes('getSteps=true')) {
+      /* Le total suit les étapes rendues plus bas (CONTRAT-1) : ce parcours
+         juge la REPRISE après panne, pas des kilomètres. */
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
         geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [4.8357, 45.764]] },
-        distance: 465_000, duration: 15_480,
+        distance: 10, duration: 5,
       }) });
     }
     if (enPanne) return route.abort('failed');

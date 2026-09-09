@@ -14,7 +14,7 @@ import { EtapesItineraire } from './etapes-itineraire';
 import {
   meriteUneAlternative, vautLaPeine, phraseAlternative,
 } from '../lib/detour';
-import { calculerItineraire, itineraireDirect, formaterDistance, formaterDuree, EVITEMENTS, OPTIMISATIONS, ErreurItineraire, MAX_ETAPES, type Profil, type Itineraire, type Eviter, type Optimisation } from '../lib/itineraire';
+import { calculerItineraire, itineraireDirect, formaterDistance, formaterDuree, EVITEMENTS, OPTIMISATIONS, ErreurItineraire, MAX_ETAPES, type Profil, type Itineraire, type ItineraireDirect, type Eviter, type Optimisation, type OptionsItineraire } from '../lib/itineraire';
 import { formaterCoordonnees, type PointGeo } from '../lib/coordonnees';
 import { lireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { listerFavoris, listerListes } from '../lib/favoris';
@@ -45,6 +45,9 @@ import { pointLateral, choisirBis, traceDevant } from '../lib/bis';
 import { chargerVoies, recoudreVoies, recoudreEurope } from '../lib/voies';
 import { capEntre } from './curseur-vehicule';
 import { etapesItineraire, ErreurFeuille, type EtapeRoute } from '../lib/feuille-de-route';
+import {
+  contratDeRoute, provenanceDe, motDeLaRupture, type Provenance,
+} from '../lib/contrat-route';
 import { stationsDuTrajet, distanceM, situerSurLeTrace, type SurLeTrajet } from '../lib/le-long-du-trajet';
 import {
   planifierArrets, cleBorne, type PlanRecharge, type BorneCandidate,
@@ -163,6 +166,29 @@ const VUES = {
 type CleVue = keyof typeof VUES;
 
 
+/**
+ * LE CLICHÉ DU CALCUL RÉUSSI — ce qui a produit le tracé affiché.
+ *
+ * IL PORTE DÉSORMAIS LE VIA DU BIS ET LA PROVENANCE (CONTRAT-1, 09/09). Ce
+ * n'est pas un reniement de BIS-2 : le via reste HORS de `etapes`, donc
+ * invisible dans la liste, dissous au recalcul hors-route, jamais empilé.
+ * Mais il entrait dans la requête du tracé SANS entrer dans le cliché — si
+ * bien que la feuille de route, reconstruite depuis le cliché, décrivait la
+ * route d'avant le détour pendant que la carte dessinait le détour. Rien ne
+ * pouvait le montrer : les deux paraissaient également plausibles.
+ */
+interface ClicheCalcul {
+  depart: PointGeo; arrivee: PointGeo; profil: Profil; mode: Mode;
+  etapes: PointGeo[]; eviter: Eviter[]; optimisation: Optimisation;
+  /* LES POINTS QUI ONT FORCÉ LE TRACÉ SANS ÊTRE DES ÉTAPES DE L'USAGER : le
+     via de l'itinéraire bis, les relais du trajet direct. Ils entrent dans la
+     REQUÊTE et n'ont rien à faire dans la liste des étapes — mais la feuille
+     de route doit les connaître, sans quoi elle décrit une autre route. */
+  viaInternes: readonly PointGeo[];
+  /** L'URL réellement demandée pour ce tracé — l'autre moitié du contrat. */
+  provenance: Provenance;
+}
+
 export class PanneauItineraire extends HTMLElement {
   #carte: CarteMapLibre | null = null;
   #depart: PointGeo | null = null;
@@ -196,10 +222,7 @@ export class PanneauItineraire extends HTMLElement {
   /** Le cliché complet qui a produit #dernier — il vieillit AVEC lui : un
       recalcul raté laisse les deux cohérents entre eux. Feuille de route,
       lien partagé et marqueurs se lisent ICI, jamais dans l'état vivant. */
-  #calculPour: {
-    depart: PointGeo; arrivee: PointGeo; profil: Profil; mode: Mode;
-    etapes: PointGeo[]; eviter: Eviter[]; optimisation: Optimisation;
-  } | null = null;
+  #calculPour: ClicheCalcul | null = null;
   /* LE VIA DU BIS N'EST PAS UNE ÉTAPE (BIS-2, 04/09). Armelin : « ça rajoute
      automatiquement une étape supplémentaire dans la planification et le GPS
      insiste pour me faire revenir dans tous les lieux où j'ai cliqué sur
@@ -994,8 +1017,40 @@ export class PanneauItineraire extends HTMLElement {
       const direct = this.#direct;
       if (!direct) return;
       this.#dernier = direct;
+      /* LE CLICHÉ SUIT LE TRACÉ (CONTRAT-1, 09/09), et c'est un défaut réel
+         qui se corrige ici. Le trajet direct vient d'une AUTRE requête —
+         étapes de l'usager écartées, `shortest` ou relais choisis par nous —
+         et le cliché, lui, restait celui du trajet d'avant. La feuille de
+         route et le suivi décrivaient donc l'ancienne route sur le nouveau
+         tracé. Une route vingt-cinq kilomètres plus courte peut passer par
+         d'autres villes : les instructions n'avaient plus aucun rapport. */
+      const avant = this.#calculPour;
+      if (avant) {
+        const options: OptionsItineraire = {
+          etapes: direct.demande.etapes,
+          eviter: avant.eviter,
+          optimisation: direct.demande.optimisation,
+        };
+        this.#calculPour = {
+          ...avant,
+          /* LES ÉTAPES DE L'USAGER SONT TOMBÉES AVEC LE TRAJET : le direct ne
+             passe pas par elles, et prétendre le contraire ferait revenir le
+             recalcul hors-route sur des points qui ne sont plus sur la
+             route. */
+          etapes: [],
+          optimisation: direct.demande.optimisation,
+          viaInternes: direct.demande.etapes,
+          provenance: provenanceDe(avant.depart, avant.arrivee, avant.profil, options),
+        };
+      }
       this.#direct = null;
       (this.querySelector('.iti-direct') as HTMLElement).hidden = true;
+      /* LA LISTE DES ÉTAPES SUIT, ELLE AUSSI (CONTRAT-1) : le trajet direct
+         ne passe pas par elles — c'est le service qui les a écartées de la
+         requête. Les laisser affichées ferait dire au planificateur qu'on
+         passe par Dijon sur une route qui l'évite. Poser `points` ne relance
+         aucun calcul : seule une manipulation de l'usager le fait. */
+      (this.querySelector('etapes-itineraire') as EtapesItineraire).points = [];
       /* LE PLAN DE RECHARGE REPART : il décrivait l'autre trajet, et ses
          bornes ne sont plus sur la route. Même raisonnement qu'au recalcul. */
       this.#planCourant = null;
@@ -3304,6 +3359,18 @@ export class PanneauItineraire extends HTMLElement {
       + `, ${formaterDuree(gagnant.dureeS)} jusqu’à l’arrivée.`);
   }
 
+  /* LES OPTIONS DE LA FEUILLE SE DÉRIVENT DU CLICHÉ, ICI ET NULLE PART
+     AILLEURS (CONTRAT-1) : deux endroits demandaient la feuille — le suivi et
+     l'impression — et tous deux oubliaient le via. Une seule dérivation, et
+     le contrat vérifie ensuite qu'elle a bien redonné la requête d'origine. */
+  #optionsDuCliche(c: ClicheCalcul): OptionsItineraire {
+    return {
+      etapes: [...c.viaInternes, ...c.etapes],
+      eviter: c.eviter,
+      optimisation: c.optimisation,
+    };
+  }
+
   async #demarrerSuivi(relance = false): Promise<void> {
     const bandeau = this.#guidage;
     const iti = this.#dernier;
@@ -3326,12 +3393,12 @@ export class PanneauItineraire extends HTMLElement {
        « Suivez l'itinéraire » — ce qui est vrai. */
     const cliche = this.#calculPour;
     let etapes: EtapeRoute[] = [];
+    let provenanceFeuille: Provenance | undefined;
     if (cliche) {
+      const options = this.#optionsDuCliche(cliche);
       try {
-        etapes = await etapesItineraire(
-          cliche.depart, cliche.arrivee, cliche.profil,
-          { etapes: cliche.etapes, eviter: cliche.eviter, optimisation: cliche.optimisation },
-        );
+        etapes = await etapesItineraire(cliche.depart, cliche.arrivee, cliche.profil, options);
+        provenanceFeuille = provenanceDe(cliche.depart, cliche.arrivee, cliche.profil, options);
       } catch { /* le suivi vaut mieux sans instructions que pas de suivi */ }
     }
     if (bouton) bouton.disabled = false;
@@ -3339,10 +3406,27 @@ export class PanneauItineraire extends HTMLElement {
     if (this.#dernier !== iti) { this.#majBoutonDemarrer(); attente.effacer(); return; }
 
     const plan = this.#planCourant;
+    /* LE CONTRAT DE ROUTE (CONTRAT-1) : on ne guide pas avec une feuille dont
+       rien ne prouve qu'elle décrit CE tracé. Il compare la provenance des
+       deux appels, vérifie les longueurs, ramène les bornes d'étapes sur la
+       règle du tracé — et rend une feuille VIDE plutôt qu'une feuille fausse.
+       Sans instructions, le bandeau dit « Suivez l'itinéraire » et l'usager
+       garde la carte, la distance et l'heure d'arrivée ; avec de mauvaises
+       instructions, il entend « sortez à droite » là où il ne faut pas. */
+    const contrat = contratDeRoute({
+      trace: iti.geometrie.coordinates as [number, number][],
+      distanceTotaleM: iti.distance,
+      dureeTotaleS: iti.duree,
+      etapes,
+      provenanceTrace: cliche?.provenance ?? { requete: '', obtenuLe: 0 },
+      provenanceFeuille,
+    });
     bandeau.demarrer({
       trace: iti.geometrie.coordinates as [number, number][],
       distanceTotaleM: iti.distance,
       dureeTotaleS: iti.duree,
+      bornesEtapesM: contrat.bornesM,
+      ...(contrat.rupture ? { avertissement: motDeLaRupture(contrat.rupture) } : {}),
       /* LE PROFIL DÉCIDE DE L'ÉCART TOLÉRÉ (GUIDE-6, 02/09) : à pied, quatre-
          vingts mètres sont un pâté de maisons — c'est ce qui a empêché le
          recalcul quand Armelin a contourné une résidence fermée. */
@@ -3364,7 +3448,7 @@ export class PanneauItineraire extends HTMLElement {
       ...(cliche ? {
         destination: { ...cliche.arrivee, libelle: this.#libelleArrivee },
       } : {}),
-      etapes,
+      etapes: contrat.etapes,
       /* LES DEUX BOUTS DU FIL DE BATTERIE (SOC-EDIT) — seulement quand un
          plan existe : sans plan, pas de section Batterie au Copilote. */
       ...(plan?.faisable
@@ -4492,9 +4576,29 @@ export class PanneauItineraire extends HTMLElement {
     this.#feuillePour = iti;
     corps.textContent = 'Préparation de la feuille de route…';
     try {
-      const etapes = await etapesItineraire(cliche.depart, cliche.arrivee, cliche.profil,
-        { etapes: cliche.etapes, eviter: cliche.eviter, optimisation: cliche.optimisation });
+      const options = this.#optionsDuCliche(cliche);
+      const brutes = await etapesItineraire(
+        cliche.depart, cliche.arrivee, cliche.profil, options,
+      );
       if (this.#dernier !== iti) return;
+      /* LE MÊME CONTRAT QU'AU SUIVI (CONTRAT-1) : une feuille qu'on IMPRIME
+         est emportée en voiture et lue sans la carte sous les yeux. Elle a
+         plus besoin d'être juste, pas moins. */
+      const contrat = contratDeRoute({
+        trace: iti.geometrie.coordinates as [number, number][],
+        distanceTotaleM: iti.distance,
+        dureeTotaleS: iti.duree,
+        etapes: brutes,
+        provenanceTrace: cliche.provenance,
+        provenanceFeuille: provenanceDe(
+          cliche.depart, cliche.arrivee, cliche.profil, options,
+        ),
+      });
+      if (contrat.rupture) {
+        corps.textContent = motDeLaRupture(contrat.rupture);
+        return;
+      }
+      const etapes = contrat.etapes;
       corps.textContent = '';
       // Titre et résumé FIGÉS avec les étapes : l'impression décrira ce
       // trajet-là, quel que soit l'état du panneau au moment du clic.
@@ -4516,7 +4620,7 @@ export class PanneauItineraire extends HTMLElement {
 
   /** La liste des étapes, construite en textContent : les noms de voies sont
       des données EXTERNES (BD TOPO via le service) — jamais d'innerHTML. */
-  #listeEtapes(etapes: EtapeRoute[]): HTMLOListElement {
+  #listeEtapes(etapes: readonly EtapeRoute[]): HTMLOListElement {
     const liste = document.createElement('ol');
     liste.className = 'feuille-etapes';
     for (const e of etapes) {
@@ -4541,7 +4645,7 @@ export class PanneauItineraire extends HTMLElement {
       classe `impression-feuille` est posée sur body : sans elle, un Ctrl+P
       ordinaire imprime la page normalement (la première version masquait tout,
       pages blanches — revue du 21/08). */
-  #imprimerFeuille(etapes: EtapeRoute[], titre: string, resume: string): void {
+  #imprimerFeuille(etapes: readonly EtapeRoute[], titre: string, resume: string): void {
     // Idempotent : si un afterprint ne s'est jamais présenté (WebView, environ-
     // nements sans impression), on repart d'un body propre au lieu d'empiler.
     document.querySelectorAll('.zone-impression').forEach((z) => z.remove());
@@ -4563,7 +4667,7 @@ export class PanneauItineraire extends HTMLElement {
 
 
   /** Le trajet direct proposé, gardé pour le bouton qui l'applique. */
-  #direct: Itineraire | null = null;
+  #direct: ItineraireDirect | null = null;
 
   /**
    * Cherche un trajet plus direct, et le PROPOSE (ROUTE-1, 02/09).
@@ -4766,8 +4870,14 @@ export class PanneauItineraire extends HTMLElement {
          recalcul hors-route relit cliche.etapes, et un via qui y resterait
          ferait « revenir dans tous les lieux où j'ai cliqué » (BIS-2). */
       const viaBis = this.#viaBis;
-      const brut = await calculerItineraire(depart, arrivee, profil,
-        { etapes: viaBis ? [viaBis, ...inter] : inter, eviter, optimisation });
+      const options: OptionsItineraire = {
+        etapes: viaBis ? [viaBis, ...inter] : inter, eviter, optimisation,
+      };
+      const brut = await calculerItineraire(depart, arrivee, profil, options);
+      /* LA PROVENANCE SE NOTE ICI, au moment de la requête, et non plus tard
+         depuis le cliché (CONTRAT-1) : reconstruite ailleurs, elle dirait ce
+         qu'on CROIT avoir demandé, pas ce qui est parti. */
+      const provenance = provenanceDe(depart, arrivee, profil, options);
       /* À VÉLO, LA DISTANCE VAUT ET LE TEMPS NON. Le moteur rend une durée de
          PIÉTON sur un chemin de piéton : quatre kilomètres font une heure à
          pied et un quart d'heure à vélo. On garde le tracé et la distance —
@@ -4778,7 +4888,10 @@ export class PanneauItineraire extends HTMLElement {
         ? { ...brut, duree: dureeVelo(brut.distance) } : brut;
       if (jeton !== this.#sequence) return;
       this.#dernier = iti;
-      this.#calculPour = { depart, arrivee, profil, mode, etapes: inter, eviter, optimisation };
+      this.#calculPour = {
+        depart, arrivee, profil, mode, etapes: inter, eviter, optimisation,
+        viaInternes: viaBis ? [viaBis] : [], provenance,
+      };
       /* ON APPREND la destination (routines, 29/08) — nom et point, rien
          d'autre : ni départ, ni tracé. Un lien rejoué s'apprend AUSSI (c'est
          un trajet voulu) — sans nom, sous ses coordonnées, et le premier

@@ -117,6 +117,41 @@ test('« PRENDRE CE TRAJET » L’APPLIQUE, sans repayer une requête', async ({
     .toBe(avant);
 });
 
+test('APRÈS « PRENDRE CE TRAJET », LA FEUILLE DE ROUTE DÉCRIT LE TRAJET DIRECT '
+  + '— pas celui d’avant (CONTRAT-1)', async ({ page }) => {
+  /* CE QUI SE PASSAIT, et que le contrat de route a mis au jour le 09/09.
+     Adopter le trajet direct remplaçait le TRACÉ, mais pas le cliché du
+     calcul — or c'est le cliché qui sert à redemander les instructions. La
+     feuille de route et le suivi décrivaient donc toujours le détour de
+     492 km, affiché sur le tracé de 318. Ce ne sont pas des variantes d'une
+     même route : elles ne passent pas par les mêmes villes.
+
+     LE JUGE EST LA REQUÊTE. Le trajet direct est le seul des deux à porter
+     des points de passage : une demande d'instructions qui n'en porte pas
+     décrit forcément l'autre. */
+  const { appels } = await simulerService(page, 318_000);
+  await calculer(page);
+  await expect(page.locator('.iti-direct')).toBeVisible({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'Prendre ce trajet' }).click();
+  await expect(page.locator('.iti-resultat')).toContainText('318 km');
+
+  /* ET LA LISTE DES ÉTAPES SUIT : le direct ne passe par aucune d'elles, le
+     service les ayant écartées de la requête. En laisser une affichée ferait
+     dire au planificateur qu'on passe par un point que la route évite. */
+  await expect(page.locator('.etape-ligne')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Feuille de route' }).click();
+  await expect.poll(
+    () => appels.filter((u) => u.includes('getSteps=true')).length,
+    { timeout: 20_000 },
+  ).toBeGreaterThan(0);
+  const feuilles = appels.filter((u) => u.includes('getSteps=true'));
+  for (const u of feuilles) {
+    expect(u, 'la feuille de route est repartie sur le trajet d’avant')
+      .toContain('intermediates=');
+  }
+});
+
 test('UN GAIN TROP MAIGRE NE SE PROPOSE PAS', async ({ page }) => {
   /* 470 km au lieu de 492 : 22 km, sous le seuil des 25. La proposition
      coûterait deux requêtes ET une décision à l'usager pour rien. */
