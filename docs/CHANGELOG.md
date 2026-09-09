@@ -62,6 +62,12 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   la règle du projet — « ne jamais marteler les API publiques : ces quotas
   sont un bien commun » — commise par les tests eux-mêmes, à chaque poussée.
   Corrigé : plus une seule requête ne sort.
+- **Et la correction elle-même a demandé une mesure.** Intercepter au niveau
+  du *contexte* attrape bien ce que demande le service worker — mais dérange
+  le service worker au point que le parcours « sans réseau » ne reçoit plus
+  sa page pré-cachée : trois échecs sur trois. L'interception large n'est
+  donc posée que là où l'on télécharge à travers lui, c'est-à-dire dans le
+  seul parcours du couloir.
 - Le parcours attendait par ailleurs jusqu'à soixante secondes dans un budget
   de trente : son attente ne pouvait jamais aller à son terme.
 

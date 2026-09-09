@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
+import { simulerTuiles, simulerCommunes, tuilesDuServiceWorker } from './tuiles-simulees';
 import { allerA } from './planificateur';
 
 /* EMPORTER LA CARTE DU TRAJET (COULOIR-1, 08/09/2026).
@@ -18,6 +18,10 @@ const TRACE: [number, number][] = [[2.3522, 48.8566], [2.66, 48.54]];
 
 async function trajetCalcule(page: Page): Promise<void> {
   await simulerTuiles(page);
+  /* LE COULOIR TÉLÉCHARGE À TRAVERS LE SERVICE WORKER : sans cette seconde
+     route, ses cent quarante-neuf tuiles partent sur le vrai service IGN —
+     mesuré le 09/09, avec les 502 qui vont avec. */
+  await tuilesDuServiceWorker(page);
   await simulerCommunes(page);
   await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
     if (/resource=bdtopo-pgr/.test(route.request().url())) {
