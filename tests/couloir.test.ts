@@ -161,6 +161,22 @@ describe('emporter les tuiles : une coupure ne fait pas un trou définitif', () 
     expect(appels, 'la tuile perdue n’a pas été redemandée').toBe(4);
   });
 
+  it('LA REPRISE PREND UN SOUFFLE : une seconde tentative lancée dans la même '
+    + 'milliseconde retombe dans la condition qui vient de faire échouer la '
+    + 'première — mesuré le 09/09, il restait une tuile perdue sur 149', async () => {
+    let quand: number[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+      quand.push(Date.now());
+      return quand.length === 1
+        ? Promise.reject(new TypeError('réseau'))
+        : Promise.resolve(image());
+    });
+    await emporterLesTuiles(['a'], { concurrence: 1 });
+    expect(quand).toHaveLength(2);
+    expect(quand[1]! - quand[0]!, 'la reprise est partie sans attendre')
+      .toBeGreaterThanOrEqual(100);
+  });
+
   it('deux coupures d’affilée sur la même tuile la comptent perdue, sans insister', async () => {
     let appels = 0;
     vi.spyOn(globalThis, 'fetch').mockImplementation(() => {

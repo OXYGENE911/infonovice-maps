@@ -46,13 +46,28 @@ export function gardienPresent(): boolean {
  * qu'une fois hors réseau, c'est-à-dire quand il ne pourra plus rien y faire.
  * Constaté le 09/09 : 147 tuiles sur 149, sans qu'aucune n'ait été refusée.
  *
- * UNE SEULE, ET SANS ATTENTE : « ces quotas sont un bien commun ». Un échec
- * franc — serveur qui refuse, portail captif — se répétera à l'identique ;
- * insister n'y changerait rien et coûterait au service public.
+ * UNE SEULE REPRISE, ET APRÈS UN SOUFFLE. « Sans attente » était le premier
+ * choix, au nom de « ces quotas sont un bien commun » ; la mesure l'a corrigé
+ * (09/09) : une reprise immédiate retombe dans la condition même qui vient de
+ * faire échouer la première — sur cent quarante-neuf tuiles lancées quatre à
+ * la fois, il en restait une perdue. Cent cinquante millisecondes ne se
+ * sentent pas sur un geste qui en prend des milliers, et elles suffisent à
+ * laisser passer l'embouteillage. C'est d'ailleurs ce que la règle du projet
+ * demandait depuis toujours : « timeout + retry exponentiel ».
+ *
+ * UN ÉCHEC FRANC NE SE REJOUE PAS pour autant — serveur qui refuse, portail
+ * captif : il se répétera à l'identique, et insister coûterait au service
+ * public sans rien rendre.
  */
+const SOUFFLE_MS = 150;
+
 async function emporterUne(url: string, signal?: AbortSignal): Promise<boolean> {
   for (let essai = 0; essai < 2; essai += 1) {
     if (signal?.aborted) return false;
+    if (essai > 0) {
+      await new Promise((suite) => { setTimeout(suite, SOUFFLE_MS); });
+      if (signal?.aborted) return false;
+    }
     try {
       /* L'objet d'options se construit à part : le projet compile avec
          `exactOptionalPropertyTypes`, et passer `signal: undefined` n'est

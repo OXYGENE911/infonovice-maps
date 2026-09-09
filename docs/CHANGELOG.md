@@ -2,6 +2,54 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.139.0] — 2026-09-09 — A11Y-LECTEUR-1
+
+### Ce qu'un lecteur d'écran entend sur les deux parcours d'avant la route
+- Dernier volet de l'audit du 6 septembre. Le parcours clavier était vérifié
+  (07/09), le texte agrandi aussi (08/09), et les annonces du suivi relues le
+  08/09. Restaient les deux parcours qu'on fait **avant** de rouler : chercher
+  une adresse, et planifier un trajet.
+- **Deux défauts trouvés en lisant l'arbre d'accessibilité** — celui que lit
+  vraiment un lecteur d'écran, et que Lighthouse ne regarde pas. La page est
+  à 100 sur ce volet ; les deux étaient là quand même, comme les trois
+  précédents.
+- **La commune était dite deux fois sur chaque suggestion.** Chaque option
+  s'annonçait « 1 Rue de Rivoli 75001 Paris **75001 Paris** 250 km » : le
+  libellé de la Base Adresse Nationale finit déjà par le code postal et la
+  commune, et l'on ajoutait les mêmes en dessous. À l'œil, deux lignes qui se
+  répètent se pardonnent — on saute la seconde. À l'oreille, il faut les
+  écouter toutes les deux, sur **chaque** suggestion, avant d'atteindre la
+  suivante. Le contexte reste partout où il sert : sur un lieu nommé
+  (« Boulangerie Martin ») il porte la seule commune qu'on ait, et c'est lui
+  qui lève l'homonymie entre deux « Rue de la Paix ». On n'efface que la
+  répétition.
+- **La page n'avait aucun titre de niveau.** Or prendre la mesure d'une page
+  en parcourant ses titres est l'un des deux ou trois gestes de base d'un
+  lecteur d'écran ; ici, il ne rendait rien. Un `<h1>` nomme désormais
+  l'application. Il est lu sans être vu, et c'est assumé : la marque en haut
+  à gauche est un **lien vers Maps Pro**, et faire du titre de cette page un
+  lien vers une autre page serait un contresens.
+- **Une fausse piste, écartée par la vérification.** Le premier relevé
+  accusait les boutons « PParkings » et « WCToilettes » — le « P » et le
+  « WC » des pictogrammes collés au libellé. C'était mon outil de mesure qui
+  lisait le texte du SVG : le vrai calcul de nom accessible honore
+  `aria-hidden`, et les boutons s'annoncent bien « Parkings » et
+  « Toilettes ». Les gardes lisent maintenant le nom accessible réel, pas le
+  texte du DOM.
+- Trois parcours gardent l'acquis, et chacun a été mis en échec en remettant
+  le défaut qu'il surveille.
+
+### Au passage : la reprise du couloir hors ligne prend un souffle
+- La reprise ajoutée la veille partait **sans attendre**, au nom de « ces
+  quotas sont un bien commun ». La mesure a corrigé ce choix : une seconde
+  tentative lancée dans la même milliseconde retombe dans la condition même
+  qui vient de faire échouer la première, et il restait une tuile perdue sur
+  cent quarante-neuf. Cent cinquante millisecondes ne se sentent pas sur un
+  geste qui en prend des milliers — et c'est ce que la règle du projet
+  demandait depuis toujours : « timeout + retry **exponentiel** ».
+- Le parcours qui le garde attendait par ailleurs jusqu'à soixante secondes
+  dans un budget de trente : son attente ne pouvait jamais aller à son terme.
+
 ## [1.138.0] — 2026-09-09 — FRAPPE-1
 
 ### La recherche dit quand aucune suggestion ne reprend ce qu'on a tapé

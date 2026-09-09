@@ -79,6 +79,20 @@
 </head>
 <body>
   <a class="evitement" href="#carte">Aller à la carte</a>
+  <!-- LE TITRE DE LA PAGE, LU ET NON VU (A11Y-LECTEUR-1, 09/09).
+       TROUVÉ EN LISANT L'ARBRE D'ACCESSIBILITÉ : l'application n'avait aucun
+       titre de niveau. Or naviguer PAR LES TITRES est l'un des deux ou trois
+       gestes de base d'un lecteur d'écran — celui par lequel on prend la
+       mesure d'une page avant d'y entrer. Ici, il ne rendait rien : la page
+       n'avait pas de forme.
+       POURQUOI IL N'EST PAS VISIBLE, alors que le projet se méfie de ce qui
+       se cache. La marque « Infonovice Maps » est déjà là, en haut à gauche —
+       mais c'est un LIEN vers Maps Pro (PRO-LIENS-1), et faire du titre de
+       cette page un lien vers une autre page serait un contresens. Le titre
+       nomme donc la page pour qui l'écoute, sans rien ajouter à un écran de
+       téléphone où chaque ligne compte. Même technique que la phrase du suivi
+       (`bg-lu-seulement`), et même raison. -->
+  <h1 class="lu-seulement">Infonovice Maps — carte de France, recherche et itinéraires</h1>
   <header class="entete" role="banner">
     <!-- LA MARQUE MÈNE À MAPS PRO (PRO-LIENS-1, 05/09). Armelin : « pouvoir
          cliquer sur le logo Infonovice Maps en haut à gauche pour aller sur

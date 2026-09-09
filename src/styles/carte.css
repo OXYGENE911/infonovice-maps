@@ -3782,8 +3782,13 @@ bandeau-guidage:not(.bg-deploye) .bg-chiffre-soc { display: none; }
 }
 .bg-copilote-bouton[aria-pressed="true"] .picto-menu { color: var(--accent); }
 
-/* Masqué à l'œil, lu par qui écoute — voir le commentaire du gabarit. */
-.bg-lu-seulement {
+/* Masqué à l'œil, lu par qui écoute — voir le commentaire du gabarit.
+   DEUX CLASSES POUR UNE MÊME RÈGLE, et c'est voulu : `bg-lu-seulement`
+   appartient au bandeau de suivi, `lu-seulement` est générale (le titre de
+   niveau 1, A11Y-LECTEUR-1). Les fondre ferait dépendre l'en-tête du document
+   d'une classe nommée d'après un composant. */
+.bg-lu-seulement,
+.lu-seulement {
   position: absolute; width: 1px; height: 1px; margin: -1px;
   padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }

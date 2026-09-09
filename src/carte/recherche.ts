@@ -3,7 +3,8 @@
 // referme. Débounce de 300 ms et annulation de la requête précédente : le
 // quota BAN est un bien commun (règle du projet).
 import {
-  chercherAdresses, communeNommee, repondALaSaisie, type ResultatAdresse,
+  chercherAdresses, communeNommee, contexteADire, repondALaSaisie,
+  type ResultatAdresse,
 } from '../lib/adresse';
 import { toutesACote, MOT_A_COTE } from '../lib/frappe';
 import { dansEmprise, type Emprise } from '../lib/couverture';
@@ -667,7 +668,10 @@ export class RechercheAdresse extends HTMLElement {
       const picto = li.querySelector('.picto-lieu') as HTMLElement;
       if (motif && teinte) picto.innerHTML = svgPastille(motif, teinte, 20);
       else picto.hidden = true;
-      (li.querySelector('.contexte') as HTMLElement).textContent = r.type === 'municipality' ? 'Commune' : r.contexte;
+      /* LA COMMUNE NE SE DIT PAS DEUX FOIS (A11Y-LECTEUR-1) : le libellé de
+         la BAN finit déjà par « 75001 Paris ». Voir `contexteADire`. */
+      (li.querySelector('.contexte') as HTMLElement).textContent = r.type === 'municipality'
+        ? 'Commune' : contexteADire(r.libelle, r.contexte);
       /* L'AVEU SE LIT DANS LA LISTE (ADRESSE-2) : un repli muet poserait
          l'usager au 23 en lui laissant croire qu'il est au 23 bis. */
       (li.querySelector('.approche') as HTMLElement).textContent = r.approche ?? '';
