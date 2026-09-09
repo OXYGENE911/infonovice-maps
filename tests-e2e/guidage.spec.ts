@@ -1280,10 +1280,16 @@ test('ZOOM-1 : la carte se rapproche à l’intersection, et rend la vue d’ava
      mètres d'écart suffisent à basculer d'une étape à l'autre. On avance
      donc jusqu'à ce que l'application dise elle-même « dans N m ». */
   const distance = page.locator('.bg-distance');
-  /* LE PAS EST FIN — la fenêtre est étroite : mesuré, on passe de « dans
-     350 m » à « dans 250 m » entre 0,5100 et 0,5102 du tracé, et l'étape
-     bascule dès 0,5108. Un pas trop gros saute l'approche entière. */
-  let part = 0.5090;
+  /* LE PAS EST FIN — la fenêtre est étroite, et son EMPLACEMENT a changé le
+     09/09 avec le contrat de route (CONTRAT-1). Les bornes d'étapes sont
+     désormais ramenées sur la règle du tracé : le segment Paris–Lyon de cette
+     fixture mesure 391 499 m à la haversine quand elle en annonce 390 000, si
+     bien que le virage des 200 km s'est déplacé de 769 m — de la part 0,51086
+     à 0,51282. Partir de 0,5090 comme avant demandait seize pas au lieu de
+     six ; localement cela tenait dans les vingt secondes, sur la CI non, et le
+     parcours s'arrêtait à « dans 400 m ». On repart donc d'où l'annonce
+     commence : la part 0,5116 vaut 460 m du virage. */
+  let part = 0.5116;
   await expect.poll(async () => {
     part += 0.0002;
     await avancerA(part);

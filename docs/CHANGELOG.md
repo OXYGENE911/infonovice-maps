@@ -2,6 +2,71 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.137.0] — 2026-09-09 — CONTRAT-1
+
+### Le tracé et la feuille de route se répondent, ou la feuille est écartée
+- Dernier point « Maps » de l'audit du 6 septembre : « contrat de route commun
+  (points raccordés, provenance) ». Le guidage vit de **deux appels séparés**
+  au service d'itinéraire — l'un rend la géométrie et les totaux, l'autre les
+  instructions — et rien ne vérifiait qu'ils décrivent la même route.
+- **Mesuré avant d'écrire une ligne**, sur le service réel, quatre trajets.
+  Dans une même réponse, la somme des longueurs d'étapes égale la distance
+  annoncée à moins de 0,5 m sur 600 km : l'hypothèse écrite dans le code
+  depuis l'origine était juste, elle n'était simplement jamais vérifiée. Mais
+  entre deux réponses qui ne diffèrent que par l'optimisation, le même
+  Paris–Lyon rend 465,6 km en 99 étapes ou 448,1 km en 439 étapes. Une feuille
+  prise sur l'une et posée sur le tracé de l'autre décalerait l'instruction de
+  dix-sept kilomètres, en silence, à cent trente à l'heure.
+- **Un bug réel trouvé en cherchant la couture.** Après un « itinéraire bis »,
+  le point latéral qui force le détour entrait dans la requête du tracé mais
+  pas dans le cliché du calcul. La feuille de route, reconstruite depuis ce
+  cliché, décrivait donc la route d'**avant** le détour — au suivi comme à
+  l'impression. Rien ne pouvait le montrer : les deux paraissaient également
+  plausibles. Le cliché porte désormais le via, sans le remettre dans la liste
+  des étapes ni le faire survivre à un recalcul hors-route.
+- **Et un second bug, de la même famille.** « Prendre ce trajet », qui adopte
+  l'itinéraire plus direct proposé quand le service fait un détour, remplaçait
+  le tracé sans toucher au cliché du calcul. Or le trajet direct vient d'une
+  autre requête : sans les étapes de l'usager, en « plus court » ou par des
+  relais que nous choisissons. La feuille de route repartait donc sur le
+  détour de 492 km affiché sur un tracé de 318 — deux routes qui ne passent
+  pas par les mêmes villes. Le trajet direct dit maintenant quelle requête l'a
+  produit, et le cliché le suit.
+- **Un second défaut, mesuré lui aussi.** Le service compte ses mètres en
+  géodésique ; le guidage situe la voiture à la haversine, qui rend 0,028 % de
+  moins — le même biais sur les quatre trajets. Deux règles différentes qu'on
+  additionnait : 131 m de retard accumulés sur Paris–Lyon, la dernière
+  instruction tombant cent trente mètres trop tôt. Les bornes d'étapes sont
+  maintenant ramenées sur la règle du tracé, celle-là même qui situe la
+  voiture.
+- **Ce qui se passe quand ça ne concorde pas** : les instructions sont
+  écartées, et le bandeau le dit. Sans feuille, le suivi reste entier — carte,
+  distance restante, heure d'arrivée — et le cartouche se tait plutôt que
+  d'annoncer une manœuvre prise sur une autre route. Une consigne fausse coûte
+  plus cher qu'une consigne absente. L'avertissement a sa propre ligne : celle
+  des alertes est réécrite à chaque fixe GPS et l'aurait effacé en une
+  seconde.
+- Les tolérances sont des multiples de ce qui a été mesuré, pas des chiffres
+  ronds : cinquante mètres ou deux millièmes sur les étapes, soit cent fois le
+  pire écart relevé.
+- **Une reprise ajoutée au couloir hors ligne, au passage.** La CI a rendu
+  « 147 tuiles emportées, 2 manquées » sans qu'aucune n'ait été refusée :
+  deux coupures fortuites sur cent quarante-neuf requêtes. `emporterLesTuiles`
+  n'avait aucune reprise, alors que la règle du projet en impose une partout
+  ailleurs — et chaque tuile perdue fait un trou **définitif** dans la carte
+  qu'on emporte, découvert une fois hors réseau, c'est-à-dire trop tard.
+  Une seule reprise, et seulement sur une coupure : un refus franc ou un
+  portail captif répondront la même chose, et « ces quotas sont un bien
+  commun ».
+- **Un contrôle a été retiré en cours de route, et cela vaut d'être dit.** Une
+  première version comparait aussi la longueur mesurée du tracé à la distance
+  annoncée. Vingt parcours l'ont mis en échec du premier coup, et ils avaient
+  raison : la géométrie et la distance viennent de la **même** réponse, si
+  bien que les confronter juge le service contre lui-même au lieu de tester le
+  raccord entre les deux appels. Il n'aurait rien protégé non plus, la mise à
+  l'échelle ramenant de toute façon les bornes sur la polyligne réelle. Son
+  seul effet possible était d'écarter une feuille juste.
+
 ## [1.136.0] — 2026-09-09 — AIRE-VOIX-1
 
 ### La voix annonce l'aire — celle qu'on lui a demandée

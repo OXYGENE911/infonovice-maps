@@ -114,6 +114,11 @@ export interface ArretAAnnoncer {
 
 export interface DemarrageGuidage extends OptionsGuidage {
   arrets: readonly ArretAAnnoncer[];
+  /* POURQUOI LES INSTRUCTIONS MANQUENT (CONTRAT-1, 09/09). Le suivi sans
+     feuille de route est parfaitement utilisable — carte, distance restante,
+     heure d'arrivée — mais un bandeau qui se tait sur ce qu'il ne fait pas
+     laisse croire qu'il n'y avait rien à dire. On le dit. */
+  avertissement?: string;
   /* LES DEUX BOUTS DU FIL DE BATTERIE (SOC-EDIT, 04/09) : avec les SOC des
      arrêts, ils suffisent à estimer le niveau à l'instant T. Absents quand
      aucun plan n'existe — pas de véhicule électrique, pas de section. */
@@ -687,6 +692,13 @@ export class BandeauGuidage extends HTMLElement {
              contresens), ce qui effacerait la réponse au bout d'une
              seconde. -->
         <p class="bg-bis-mot" role="status" hidden></p>
+        <!-- L'AVERTISSEMENT DU CONTRAT DE ROUTE A SA PROPRE LIGNE (CONTRAT-1,
+             09/09), pour la même raison que le mot du bis : la ligne d'alerte
+             est réécrite à CHAQUE fixe GPS — hors-route, contresens — et
+             effacerait au premier fixe la seule phrase qui explique pourquoi
+             il n'y a pas d'instructions. Elle vaut pour tout le trajet ;
+             elle reste. -->
+        <p class="bg-contrat-mot" role="status" hidden></p>
         <!-- LE PANNEAU P (PARK-1, 31/08). Armelin : « un petit panneau rond P
              lorsqu'on arrive presque à destination, afin de proposer une
              liste de parkings publics à proximité ». Il ne paraît qu'à
@@ -1244,6 +1256,12 @@ export class BandeauGuidage extends HTMLElement {
     this.hidden = false;
     this.#publierHauteur?.();
     this.#alerte('');
+    /* CE QUE LE CONTRAT DE ROUTE A ÉCARTÉ, ET POURQUOI (CONTRAT-1). Posé une
+       fois, pour tout le trajet : les instructions ne reviendront pas en
+       roulant, et un message qui clignote ne s'explique pas. */
+    const contrat = this.querySelector('.bg-contrat-mot') as HTMLElement;
+    contrat.textContent = o.avertissement ?? '';
+    contrat.hidden = !o.avertissement;
     /* ON DÉGAGE LA VUE. Volets refermés, et une classe sur le document qui
        efface ce qui ne sert pas au volant — la recherche d'adresse d'abord,
        qui occupe le tiers de l'en-tête. Ce n'est pas un encombrement

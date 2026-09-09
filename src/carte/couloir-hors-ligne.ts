@@ -36,6 +36,45 @@ export function gardienPresent(): boolean {
 }
 
 /**
+ * Une tuile, avec UNE reprise — vrai si elle est arrivée.
+ *
+ * LA REPRISE N'EST PAS UN LUXE, c'est la règle du projet appliquée là où elle
+ * manquait : « toujours un timeout + retry ». Un couloir, ce sont des
+ * centaines de requêtes d'affilée ; sur une connexion de bord de route, deux
+ * ou trois se perdent sans que le serveur soit en cause, et chacune laisse un
+ * trou DÉFINITIF dans la carte qu'on emporte — l'usager ne le découvrira
+ * qu'une fois hors réseau, c'est-à-dire quand il ne pourra plus rien y faire.
+ * Constaté le 09/09 : 147 tuiles sur 149, sans qu'aucune n'ait été refusée.
+ *
+ * UNE SEULE, ET SANS ATTENTE : « ces quotas sont un bien commun ». Un échec
+ * franc — serveur qui refuse, portail captif — se répétera à l'identique ;
+ * insister n'y changerait rien et coûterait au service public.
+ */
+async function emporterUne(url: string, signal?: AbortSignal): Promise<boolean> {
+  for (let essai = 0; essai < 2; essai += 1) {
+    if (signal?.aborted) return false;
+    try {
+      /* L'objet d'options se construit à part : le projet compile avec
+         `exactOptionalPropertyTypes`, et passer `signal: undefined` n'est
+         pas la même chose que ne pas le passer. */
+      const init: RequestInit = signal ? { signal } : {};
+      const r = await fetch(url, init);
+      /* UN 200 NE SUFFIT PAS : un portail captif répond 200 en HTML. Le
+         service worker fait déjà ce contrôle avant de garder ; on le refait
+         ici pour COMPTER juste, sans quoi la jauge annoncerait un couloir
+         complet là où rien n'aurait été gardé. */
+      if (r.ok && (r.headers.get('content-type') ?? '').startsWith('image/')) return true;
+      /* UN REFUS FRANC NE SE REJOUE PAS : il se répéterait à l'identique. */
+      return false;
+    } catch {
+      if (signal?.aborted) return false;
+      // Une coupure, elle, mérite une seconde chance — et une seule.
+    }
+  }
+  return false;
+}
+
+/**
  * Demande les tuiles, quatre à la fois, en rendant compte à chaque arrivée.
  *
  * L'ARRÊT EST IMMÉDIAT ET PROPRE : le signal coupe les requêtes en vol, et la
@@ -58,20 +97,7 @@ export async function emporterLesTuiles(
       curseur += 1;
       const url = urls[i];
       if (url === undefined) return;
-      try {
-        /* L'objet d'options se construit à part : le projet compile avec
-           `exactOptionalPropertyTypes`, et passer `signal: undefined` n'est
-           pas la même chose que ne pas le passer. */
-        const init: RequestInit = options.signal ? { signal: options.signal } : {};
-        const r = await fetch(url, init);
-        /* UN 200 NE SUFFIT PAS : un portail captif répond 200 en HTML. Le
-           service worker fait déjà ce contrôle avant de garder ; on le refait
-           ici pour COMPTER juste, sans quoi la jauge annoncerait un couloir
-           complet là où rien n'aurait été gardé. */
-        if (!r.ok || !(r.headers.get('content-type') ?? '').startsWith('image/')) {
-          etat.echouees += 1;
-        }
-      } catch {
+      if (!(await emporterUne(url, options.signal))) {
         if (options.signal?.aborted) return;
         etat.echouees += 1;
       }

@@ -3911,6 +3911,20 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
   background: var(--bleu-50); color: var(--accent);
   font: 600 12.5px var(--police);
 }
+/* L'AVERTISSEMENT DU CONTRAT DE ROUTE (CONTRAT-1, 09/09) : même famille que
+   l'alerte — c'est un manque, pas une nouvelle — mais sur sa propre ligne,
+   qu'aucun fixe GPS ne réécrit. */
+.bg-contrat-mot {
+  margin: 6px 0 0; padding: 7px 9px; border-radius: 8px;
+  background: #FDF0DC; color: #7A4A05;
+  font: 600 12.5px var(--police); line-height: 1.4;
+}
+.bg-contrat-mot[hidden] { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="clair"]) .bg-contrat-mot { background: #3A2A0E; color: #F2C879; }
+}
+:root[data-theme="sombre"] .bg-contrat-mot { background: #3A2A0E; color: #F2C879; }
+
 @media (prefers-color-scheme: dark) { :root:not([data-theme="clair"]) .bg-bis-mot { background: #14263A; } }
  :root[data-theme="sombre"] .bg-bis-mot { background: #14263A; }
 /* La bifurcation est faite de traits fins et longs : au trait commun, elle

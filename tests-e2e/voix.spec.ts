@@ -50,6 +50,13 @@ const dites = (page: Page): Promise<string[]> =>
 /**
  * Un suivi dont la manœuvre est à `distance` mètres — c'est elle qui décide
  * du palier atteint, donc de ce qui se dit.
+ *
+ * LE TOTAL ANNONCÉ SUIT LES ÉTAPES (CONTRAT-1, 09/09) : `distance + 1 600`,
+ * et non un 2 000 fixe. Le service ne peut pas rendre des étapes qui
+ * totalisent neuf kilomètres six en annonçant deux kilomètres ; le contrat de
+ * route écarte désormais une feuille qui ne concorde pas avec son trajet, et
+ * il a raison — c'est ce désaccord-là qui décalerait l'instruction sur la
+ * route. Le jeu d'essai décrivait une réponse impossible.
  */
 async function suivre(
   page: Page, distance: number, trafic = false, voie?: string,
@@ -84,7 +91,7 @@ async function suivre(
       return route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
-          geometry: GEOMETRIE, distance: 2_000, duration: 200,
+          geometry: GEOMETRIE, distance: distance + 1_600, duration: 200,
           portions: [{ steps: [
             { instruction: { type: 'depart' }, distance,
               attributes: { name: { cpx_numero: 'D606' } } },
@@ -100,7 +107,7 @@ async function suivre(
     }
     return route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify({ geometry: GEOMETRIE, distance: 2_000, duration: 200 }),
+      body: JSON.stringify({ geometry: GEOMETRIE, distance: distance + 1_600, duration: 200 }),
     });
   });
   await page.goto('/#iti=2.35220,48.85660;2.36000,48.84000;car');

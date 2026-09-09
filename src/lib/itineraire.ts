@@ -117,10 +117,26 @@ export function versItineraire(brut: unknown): Itineraire {
  * 499 km contre 466. C'est l'appelant qui compare et décide de montrer — voir
  * `vautLaPeine` dans lib/detour.
  */
+/**
+ * Un trajet direct AVEC la demande qui l'a produit (CONTRAT-1, 09/09).
+ *
+ * POURQUOI CE SUPPLÉMENT. Adopter le trajet direct remplace le tracé par
+ * celui d'une AUTRE requête : sans étapes de l'usager, en `shortest` ou par
+ * des relais que l'on a choisis. Tant que le planificateur ne savait pas
+ * cela, il continuait de demander la feuille de route du trajet d'AVANT — et
+ * l'affichait sur le tracé direct. Une route peut être vingt-cinq kilomètres
+ * plus courte et passer par d'autres villes : les instructions n'avaient
+ * alors plus aucun rapport avec la carte.
+ */
+export interface ItineraireDirect extends Itineraire {
+  /** Ce que la requête portait vraiment, en plus des évitements conservés. */
+  demande: { etapes: PointGeo[]; optimisation: Optimisation };
+}
+
 export async function itineraireDirect(
   depart: PointGeo, arrivee: PointGeo, profil: Profil,
   options: OptionsItineraire = {},
-): Promise<Itineraire> {
+): Promise<ItineraireDirect> {
   /* LES ÉTAPES DE L'USAGER SONT ÉCARTÉES : elles décrivent SON trajet, et le
      trajet direct est une autre proposition. Les mêler donnerait un chemin qui
      n'est ni l'un ni l'autre. Les ÉVITEMENTS restent, eux : refuser les
@@ -131,9 +147,12 @@ export async function itineraireDirect(
   const court = await calculerItineraire(depart, arrivee, profil,
     { ...sansEtapes, optimisation: 'shortest' });
   const relais = relaisDuTrace(court.geometrie.coordinates as [number, number][]);
-  if (relais.length === 0) return court;
-  return calculerItineraire(depart, arrivee, profil,
+  if (relais.length === 0) {
+    return { ...court, demande: { etapes: [], optimisation: 'shortest' } };
+  }
+  const parRelais = await calculerItineraire(depart, arrivee, profil,
     { ...sansEtapes, optimisation: 'fastest', etapes: relais });
+  return { ...parRelais, demande: { etapes: relais, optimisation: 'fastest' } };
 }
 
 export async function calculerItineraire(

@@ -206,17 +206,32 @@ export interface EtatGuidage {
  * instruction et une longueur, pas un point. On les cumule donc : l'étape
  * courante est celle dont l'intervalle contient l'avancement.
  *
- * CE QUE CELA SUPPOSE, et qui mérite d'être écrit : que la somme des longueurs
- * d'étapes égale la distance du trajet. Les deux viennent du même service et
- * s'accordent à quelques mètres ; un écart plus grand décalerait l'instruction
- * affichée. C'est le prix d'une feuille de route sans géométrie, et il est
- * modeste comparé à celui d'un second appel réseau.
+ * CE QUE CELA SUPPOSE : que la somme des longueurs d'étapes égale la distance
+ * du trajet, ET que les deux se comptent avec la même règle. L'hypothèse était
+ * écrite ici depuis l'origine ; elle n'était pas vérifiée, et sa seconde
+ * moitié était FAUSSE — mesuré le 09/09 : le service annonce ses mètres en
+ * géodésique, l'avancement les compte à la haversine, et le second est 0,028 %
+ * plus court, soit 131 m de retard accumulé sur Paris–Lyon.
+ *
+ * C'EST DÉSORMAIS LE CONTRAT DE ROUTE QUI RÉPOND DES DEUX (`contrat-route.ts`,
+ * CONTRAT-1) : il vérifie l'accord et rend des `bornesM` déjà ramenées sur la
+ * règle du tracé. Quand elles sont fournies, on les lit ; le cumul reste pour
+ * les appels qui n'en ont pas, et il garde son ancien défaut, assumé.
  */
 export function etapeAlAvancement(
   etapes: readonly EtapeRoute[], avancementM: number,
+  bornesM?: readonly number[],
 ): { index: number; debutM: number; finM: number } | null {
   if (etapes.length === 0) return null;
   const cible = Math.max(0, avancementM);
+  if (bornesM && bornesM.length === etapes.length) {
+    let debut = 0;
+    for (const [index, fin] of bornesM.entries()) {
+      if (cible < fin) return { index, debutM: debut, finM: fin };
+      debut = fin;
+    }
+    return { index: etapes.length - 1, debutM: debut, finM: debut };
+  }
   let cumul = 0;
   for (const [index, e] of etapes.entries()) {
     const longueur = Number.isFinite(e.distance) && e.distance > 0 ? e.distance : 0;
@@ -234,6 +249,10 @@ export interface OptionsGuidage {
   distanceTotaleM: number;
   dureeTotaleS: number;
   etapes: readonly EtapeRoute[];
+  /* LES BORNES DU CONTRAT DE ROUTE (CONTRAT-1) : les fins d'étapes déjà
+     ramenées sur la règle du tracé. Absentes, on retombe sur le cumul brut —
+     le comportement d'avant, avec son biais de 0,028 %. */
+  bornesEtapesM?: readonly number[] | undefined;
   /** Vrai en profil piéton : l'écart toléré n'est pas le même (GUIDE-6). */
   aPied?: boolean;
 }
@@ -255,7 +274,7 @@ export function etatGuidage(o: OptionsGuidage, p: Position): EtatGuidage {
   const part = distance > 0 ? restantM / distance : 0;
   const duree = Number.isFinite(o.dureeTotaleS) && o.dureeTotaleS > 0 ? o.dureeTotaleS : 0;
 
-  const situe = etapeAlAvancement(o.etapes, avancement);
+  const situe = etapeAlAvancement(o.etapes, avancement, o.bornesEtapesM);
   const etape = situe ? o.etapes[situe.index] ?? null : null;
   /* CE QUI ARRIVE, c'est l'instruction de l'étape SUIVANTE. À la dernière,
      il n'y a plus rien après : l'étape courante — « Vous êtes arrivé » —
