@@ -245,6 +245,62 @@ export function rechargeADire(
   return null;
 }
 
+/* L'AIRE SE DIT À DEUX KILOMÈTRES, et une seule fois (AIRE-VOIX-1, 09/09).
+   Armelin : « la voix pourrait dire "aire dans 2 km" SUR DEMANDE ». Deux
+   kilomètres, c'est le mot qu'il a employé, et c'est aussi la bonne distance :
+   à 130 km/h il reste une minute pour se rabattre, assez pour décider sans
+   se précipiter. Un seul palier — deux annonces pour la même aire seraient
+   une insistance, pas un service. */
+export const PALIER_AIRE_M = 2_000;
+
+/** Une aire d'autoroute à annoncer. */
+export interface AireADire {
+  id: string;
+  nom: string;
+  avancementM: number;
+  distanceM: number;
+}
+
+/**
+ * L'aire à annoncer maintenant, s'il y en a une — PURE.
+ *
+ * « SUR DEMANDE » EST LE CŒUR DE CETTE FONCTION, et non un détail : une
+ * autoroute porte une aire tous les dix à vingt kilomètres. Les annoncer
+ * toutes ferait de la voix un bavardage qu'on finit par couper — et couper la
+ * voix, c'est perdre AUSSI les manœuvres, qui sont, elles, une fonction de
+ * sécurité. Seules les aires que l'usager a demandées, une par une, se
+ * disent. Sans demande, silence complet.
+ *
+ * MÊME GARDE QUE LE TRAFIC ET LA RECHARGE : la manœuvre passe d'abord.
+ */
+export function aireADire(
+  aires: readonly { id: string; nom: string; avancementM: number }[],
+  avancementM: number, distanceManoeuvreM: number,
+  demandees: ReadonlySet<string>,
+): AireADire | null {
+  if (demandees.size === 0) return null;
+  if (distanceManoeuvreM < GARDE_MANOEUVRE_M) return null;
+  for (const a of aires) {
+    if (!demandees.has(a.id)) continue;
+    const devant = a.avancementM - avancementM;
+    if (devant <= 0 || devant > PALIER_AIRE_M) continue;
+    return { id: a.id, nom: a.nom, avancementM: a.avancementM, distanceM: devant };
+  }
+  return null;
+}
+
+/**
+ * La phrase d'une aire — PURE.
+ *
+ * LE NOM D'ABORD, LA DISTANCE ENSUITE : l'usager a demandé CETTE aire, il
+ * sait pourquoi ; ce qu'il attend, c'est qu'on la lui rappelle au bon moment.
+ * Un nom vide ne fait pas une phrase bancale : on dit « aire » tout court.
+ */
+export function phraseAire(a: AireADire): string {
+  const nom = a.nom.trim() === '' ? 'Aire' : a.nom.trim();
+  return `${nom} ${distanceDite('loin', a.distanceM)}`;
+}
+
 /**
  * La phrase d'un arrêt de recharge — PURE.
  *
@@ -277,11 +333,11 @@ export class MemoireAnnonces {
      auraient deux fois les mêmes défauts à corriger. */
 
   /** Vrai si ce motif n'a pas encore été dit pour ce point du trajet. */
-  aDire(reference: number, motif: Palier | 'trafic' | `recharge-${number}`): boolean {
+  aDire(reference: number, motif: Palier | 'trafic' | 'aire' | `recharge-${number}`): boolean {
     return !this.#dites.has(`${Math.round(reference)}-${motif}`);
   }
 
-  noter(reference: number, motif: Palier | 'trafic' | `recharge-${number}`): void {
+  noter(reference: number, motif: Palier | 'trafic' | 'aire' | `recharge-${number}`): void {
     this.#dites.add(`${Math.round(reference)}-${motif}`);
   }
 

@@ -91,6 +91,7 @@ import { listeCommodites } from './liste-commodites';
 import { Voix } from './voix';
 import {
   palierA, phraseAnnonce, traficADire, phraseTrafic,
+  aireADire, phraseAire,
   rechargeADire, phraseRecharge, MemoireAnnonces, type ContexteAnnonce,
 } from '../lib/annonces';
 import { CurseurVehicule, capEntre, formeValide, PREF_CURSEUR } from './curseur-vehicule';
@@ -732,6 +733,12 @@ export class BandeauGuidage extends HTMLElement {
             <button type="button" class="bg-aire-prec" aria-label="Aire précédente">▲</button>
             <span class="bg-aire-rang"></span>
             <button type="button" class="bg-aire-suiv" aria-label="Aire suivante">▼</button>
+            <!-- « ME PRÉVENIR » N'EST PAS « Y ALLER » (AIRE-VOIX-1, 09/09).
+                 « Y aller » change le trajet ; celui-ci ne touche à rien et
+                 demande seulement qu'on rappelle cette aire à deux kilomètres.
+                 Beaucoup de conducteurs veulent le second sans le premier :
+                 se garder la possibilité, sans s'engager. -->
+            <button type="button" class="bg-aire-prevenir" aria-pressed="false">Me prévenir</button>
             <button type="button" class="bg-aire-aller">Y aller</button>
           </div>
         </section>
@@ -984,6 +991,16 @@ export class BandeauGuidage extends HTMLElement {
     this.querySelector('.bg-aire-suiv')?.addEventListener('click', () => {
       this.#aireIndex += 1;
       if (this.#aireOuvertePar === 'auto') this.#aireOuvertePar = 'usager';
+      if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
+    });
+    this.querySelector('.bg-aire-prevenir')?.addEventListener('click', (ev) => {
+      const b = ev.currentTarget as HTMLButtonElement;
+      const id = b.dataset['id'];
+      if (id === undefined || id === '') return;
+      if (this.#airesAnnoncees.has(id)) this.#airesAnnoncees.delete(id);
+      else this.#airesAnnoncees.add(id);
+      /* LA FEUILLE RESTE OUVERTE : demander un rappel n'est pas partir. On se
+         contente de redessiner pour que le bouton dise son nouvel état. */
       if (this.#derniersCoords) this.#majPosition(this.#derniersCoords);
     });
     this.querySelector('.bg-aire-aller')?.addEventListener('click', (ev) => {
@@ -1300,6 +1317,10 @@ export class BandeauGuidage extends HTMLElement {
        charge ses voix en tâche de fond, et les demander au moment de parler
        revient à ne rien dire de la première manœuvre. */
     this.#annonces.vider();
+    /* LES RAPPELS D'AIRE VALENT POUR CE TRAJET-CI (AIRE-VOIX-1) : garder la
+       demande d'hier ferait parler la voix sur une route qu'on ne prend
+       plus. */
+    this.#airesAnnoncees.clear();
     this.#voix.preparer();
     /* LA VOIX PARLE PAR DÉFAUT (VOIX-3, 01/09), et c'est un renversement.
        LE TERRAIN. Armelin, après un essai à pied : « pas de guidage vocal. Je
@@ -1767,6 +1788,21 @@ export class BandeauGuidage extends HTMLElement {
     aller.dataset['lon'] = String(a.lon);
     aller.dataset['lat'] = String(a.lat);
     aller.dataset['nom'] = a.nom;
+    /* « ME PRÉVENIR » DIT SON ÉTAT (AIRE-VOIX-1) : un bouton qui bascule sans
+       le montrer laisse l'usager appuyer deux fois, donc annuler ce qu'il
+       vient de demander. `aria-pressed` le dit au lecteur d'écran, le mot le
+       dit à l'œil. */
+    const prevenir = q<HTMLButtonElement>('.bg-aire-prevenir');
+    prevenir.dataset['id'] = a.id;
+    const demandee = this.#airesAnnoncees.has(a.id);
+    prevenir.setAttribute('aria-pressed', String(demandee));
+    prevenir.textContent = demandee ? 'Rappel demandé' : 'Me prévenir';
+    /* SANS VOIX, LE BOUTON NE PROMET RIEN : il s'éteint et dit pourquoi,
+       plutôt que d'accepter une demande qui ne serait jamais tenue. */
+    prevenir.disabled = !this.#parle;
+    prevenir.title = this.#parle
+      ? 'La voix rappellera cette aire deux kilomètres avant'
+      : 'Activez le guidage vocal pour être prévenu';
   }
 
   /** Les commodités de TOUTES les aires du trajet — UNE requête par trajet. */
@@ -2492,6 +2528,7 @@ export class BandeauGuidage extends HTMLElement {
        service d'instructions en panne, un itinéraire rejoué depuis un lien.
        Trouvé par le parcours de VOIX-2, pas au volant. */
     if (!e.manoeuvre) {
+      if (this.#annoncerAire(e, Infinity)) return;
       if (!this.#annoncerRecharge(e, Infinity)) this.#annoncerTrafic(e, Infinity);
       return;
     }
@@ -2500,10 +2537,14 @@ export class BandeauGuidage extends HTMLElement {
        manœuvre n'est à annoncer, et seulement si la prochaine est assez
        loin. La règle vit dans lib/annonces.ts — on n'interrompt pas, on
        attend. */
-    /* DANS LES BLANCS DE LA NAVIGATION, DEUX CHOSES À DIRE, DANS CET ORDRE :
-       l'arrêt de recharge d'abord — il demande une DÉCISION, et c'est ce qui
-       manque le plus en électrique — puis le trafic, qui informe. */
+    /* DANS LES BLANCS DE LA NAVIGATION, TROIS CHOSES À DIRE, DANS CET ORDRE.
+       L'AIRE DEMANDÉE PASSE DEVANT (AIRE-VOIX-1, 09/09) : elle est la seule
+       des trois que l'usager a RÉCLAMÉE, et la seule qui périme — deux
+       kilomètres plus loin, la sortie est passée. Vient ensuite l'arrêt de
+       recharge, qui demande une DÉCISION et manque le plus en électrique,
+       puis le trafic, qui informe. */
     if (palier === null) {
+      if (this.#annoncerAire(e, e.jusquALaManoeuvreM)) return;
       if (!this.#annoncerRecharge(e, e.jusquALaManoeuvreM)) {
         this.#annoncerTrafic(e, e.jusquALaManoeuvreM);
       }
@@ -2530,6 +2571,22 @@ export class BandeauGuidage extends HTMLElement {
     if (phrase === '') return;
     this.#voix.dire(phrase);
     this.#aParle = true;
+  }
+
+  /* LES AIRES DONT L'USAGER A DEMANDÉ QU'ON LE PRÉVIENNE (AIRE-VOIX-1).
+     Vidé au démarrage d'un suivi comme la mémoire des annonces : une demande
+     vaut pour le trajet en cours, pas pour la vie de l'application. */
+  #airesAnnoncees = new Set<string>();
+
+  /** L'aire demandée, rappelée une fois à deux kilomètres. Vrai si elle a parlé. */
+  #annoncerAire(e: EtatGuidage, jusquALaManoeuvreM: number): boolean {
+    const a = aireADire(this.#aires, e.avancementM, jusquALaManoeuvreM, this.#airesAnnoncees);
+    if (!a) return false;
+    if (!this.#annonces.aDire(a.avancementM, 'aire')) return false;
+    this.#annonces.noter(a.avancementM, 'aire');
+    this.#voix.dire(phraseAire(a));
+    this.#aParle = true;
+    return true;
   }
 
   /** L'arrêt de recharge à venir, dit une fois par palier. Vrai s'il a parlé. */

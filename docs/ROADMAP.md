@@ -1055,8 +1055,11 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       les suivantes, « Y aller » = étape. Aires dans le relevé de corridor
       (zéro requête de plus), commodités en une requête par trajet, côté
       droit du tracé seulement (mesuré : l'aire d'en face est à gauche).
-      Pictos SVG : AIRES-PICTOS-1 (06/09). RESTE : la voix pourrait dire
-      « aire dans 2 km » sur demande.
+      Pictos SVG : AIRES-PICTOS-1 (06/09). La voix : AIRE-VOIX-1 (09/09) —
+      bouton « Me prévenir » sur le panneau, annonce à deux kilomètres, une
+      seule fois, et RIEN sans demande (une aire tous les dix à vingt km sur
+      autoroute : tout annoncer ferait couper la voix, donc perdre les
+      manœuvres). Plus rien à faire sur AIRES-1.
 - [x] PRO-LIENS-1 (05/09) : trois portes vers Maps Pro — entrée de menu,
       marque de l'en-tête cliquable, ligne dans le bilan de fin de trajet —
       toutes vers /pro.html, page passerelle lisible sans script dont la

@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.136.0] — 2026-09-09 — AIRE-VOIX-1
+
+### La voix annonce l'aire — celle qu'on lui a demandée
+- Armelin, en livrant les aires d'autoroute : « la voix pourrait dire "aire
+  dans 2 km" **sur demande** ». Ces deux derniers mots portent tout le dessin.
+  Une autoroute compte une aire tous les dix à vingt kilomètres : les annoncer
+  toutes ferait de la voix un bavardage qu'on finit par couper — en perdant du
+  même geste les manœuvres, qui sont une fonction de sécurité.
+- Le panneau de l'aire gagne donc un bouton **« Me prévenir »**, à côté de
+  « Y aller ». Il ne touche pas au trajet : il demande seulement qu'on rappelle
+  cette aire-là, deux kilomètres avant. « Aire de Venoy-Chablis dans
+  2 kilomètres », une fois, jamais deux.
+- Le bouton dit son état — « Rappel demandé », `aria-pressed` — sans quoi on
+  appuie deux fois et l'on annule sa propre demande. Sans guidage vocal, il
+  s'éteint et dit pourquoi plutôt que d'accepter une demande qu'il ne pourrait
+  pas tenir.
+- Dans les blancs de la navigation, l'aire demandée passe DEVANT l'arrêt de
+  recharge et le trafic : c'est la seule des trois que l'usager a réclamée, et
+  la seule qui périme — deux kilomètres plus loin, la sortie est passée. La
+  manœuvre, elle, garde la priorité sur tout.
+- Les demandes valent pour le trajet en cours et s'effacent au suivant.
+
 ## [1.135.0] — 2026-09-08 — LOGO-1
 
 ### Le chien au volant signe les deux fenêtres
