@@ -3,7 +3,7 @@ import {
   tuileDe, coteTuileM, tuilesDuCouloir, echantillonner, urlDeTuile, poidsEnMots,
   COULOIR_PAR_DEFAUT,
 } from '../src/lib/couloir';
-import { emporterLesTuiles } from '../src/carte/couloir-hors-ligne';
+import { emporterLesTuiles, pannePassagere } from '../src/carte/couloir-hors-ligne';
 
 /* LE COULOIR HORS LIGNE (COULOIR-1, 08/09/2026).
  *
@@ -186,6 +186,33 @@ describe('emporter les tuiles : une coupure ne fait pas un trou définitif', () 
     const bilan = await emporterLesTuiles(['a', 'b'], { concurrence: 1 });
     expect(bilan.echouees).toBe(1);
     expect(appels, 'une tuile a été redemandée plus d’une fois').toBe(3);
+  });
+
+  it('UN 502 SE REJOUE — et c’est LA cause réelle, nommée par une sonde le 09/09 '
+    + 'après deux hypothèses fausses : les tuiles manquantes revenaient en Bad '
+    + 'Gateway du service IGN, et le code comptait cela comme un refus franc', async () => {
+    let appels = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+      appels += 1;
+      return Promise.resolve(appels === 1
+        ? new Response('<ExceptionReport/>', {
+          status: 502, headers: { 'content-type': 'text/xml' },
+        })
+        : image());
+    });
+    const bilan = await emporterLesTuiles(['a'], { concurrence: 1 });
+    expect(bilan.echouees, 'une panne de passerelle a fait un trou définitif').toBe(0);
+    expect(appels).toBe(2);
+  });
+
+  it('LA RÈGLE SE LIT SEULE : passagères les pannes de serveur, l’attente expirée '
+    + 'et le débit refusé ; définitifs les autres refus', () => {
+    for (const s of [500, 502, 503, 504, 408, 429]) {
+      expect(pannePassagere(s), `${s} devrait se rejouer`).toBe(true);
+    }
+    for (const s of [400, 401, 403, 404, 410]) {
+      expect(pannePassagere(s), `${s} ne devrait pas se rejouer`).toBe(false);
+    }
   });
 
   it('UN REFUS FRANC NE SE REJOUE PAS : « ces quotas sont un bien commun », et '

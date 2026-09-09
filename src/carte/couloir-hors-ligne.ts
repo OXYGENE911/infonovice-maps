@@ -46,6 +46,21 @@ export function gardienPresent(): boolean {
  * qu'une fois hors réseau, c'est-à-dire quand il ne pourra plus rien y faire.
  * Constaté le 09/09 : 147 tuiles sur 149, sans qu'aucune n'ait été refusée.
  *
+ * CE QUI SE REJOUE, ET CE QUI NE SE REJOUE PAS — mesuré, pas supposé. Une
+ * sonde posée dans le téléchargement le 09/09 a nommé la vraie cause des
+ * tuiles manquantes, après deux hypothèses fausses de ma part : ce sont des
+ * **502 Bad Gateway** du service IGN, parfois des 400. Le code comptait tout
+ * `!r.ok` comme un refus franc à ne jamais rejouer — et c'est précisément
+ * l'inverse : un 502 est une panne PASSAGÈRE de passerelle, exactement ce
+ * qu'une seconde tentative rattrape. La reprise ajoutée la veille ne servait
+ * donc à rien sur le cas qui se produisait vraiment.
+ *
+ * LA RÈGLE, DÉSORMAIS. Se rejouent : les pannes de serveur (5xx), l'attente
+ * expirée (408) et le débit refusé (429) — toutes passagères par nature. Ne
+ * se rejouent pas : les autres 4xx, où le service dit que la demande est
+ * mauvaise et le répétera à l'identique ; ni une réponse valide au mauvais
+ * type, qui est la signature d'un portail captif.
+ *
  * UNE SEULE REPRISE, ET APRÈS UN SOUFFLE. « Sans attente » était le premier
  * choix, au nom de « ces quotas sont un bien commun » ; la mesure l'a corrigé
  * (09/09) : une reprise immédiate retombe dans la condition même qui vient de
@@ -60,6 +75,11 @@ export function gardienPresent(): boolean {
  * public sans rien rendre.
  */
 const SOUFFLE_MS = 150;
+
+/** Un code de statut annonce-t-il une panne passagère — PURE. */
+export function pannePassagere(statut: number): boolean {
+  return statut >= 500 || statut === 408 || statut === 429;
+}
 
 async function emporterUne(url: string, signal?: AbortSignal): Promise<boolean> {
   for (let essai = 0; essai < 2; essai += 1) {
@@ -79,8 +99,8 @@ async function emporterUne(url: string, signal?: AbortSignal): Promise<boolean> 
          ici pour COMPTER juste, sans quoi la jauge annoncerait un couloir
          complet là où rien n'aurait été gardé. */
       if (r.ok && (r.headers.get('content-type') ?? '').startsWith('image/')) return true;
-      /* UN REFUS FRANC NE SE REJOUE PAS : il se répéterait à l'identique. */
-      return false;
+      /* UNE PANNE PASSAGÈRE MÉRITE LA SECONDE CHANCE ; un refus franc, non. */
+      if (!pannePassagere(r.status)) return false;
     } catch {
       if (signal?.aborted) return false;
       // Une coupure, elle, mérite une seconde chance — et une seule.

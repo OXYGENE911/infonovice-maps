@@ -19,7 +19,16 @@ export const PNG_PANORAMA_2X1 = Buffer.from(
   'base64');
 
 export async function simulerTuiles(page: Page): Promise<void> {
-  await page.route('**/data.geopf.fr/wmts**', (route) => route.fulfill({
+  /* LES TUILES SE SIMULENT AU NIVEAU DU CONTEXTE, PAS DE LA PAGE (09/09).
+     Une route posée sur la PAGE n'intercepte pas ce que demande le SERVICE
+     WORKER — et le couloir hors ligne passe justement par lui. Résultat
+     mesuré par une sonde : cent quarante-neuf tuiles partaient sur le VRAI
+     service IGN à chaque exécution du parcours, en local comme en CI, et
+     ses 502 occasionnels faisaient rougir un test qui n'avait rien à voir.
+     C'était aussi une infraction à la règle du projet — « ne jamais marteler
+     les API publiques : ces quotas sont un bien commun » — commise par les
+     tests eux-mêmes, à chaque poussée. */
+  await page.context().route('**/data.geopf.fr/wmts**', (route) => route.fulfill({
     contentType: 'image/png', body: PNG_1PX,
   }));
   /* L'ÉTAT DES POINTS DE CHARGE PART À CHAQUE FICHE OUVERTE (IRVE-1, 01/09) :

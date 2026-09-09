@@ -857,10 +857,15 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       SVG — le vrai calcul de nom accessible honore `aria-hidden`. Les gardes
       lisent désormais le nom accessible réel. Le volet Maps de l'audit est
       clos, hors corpus de requêtes annotées (décision d'Armelin en attente).
-      AU PASSAGE : la reprise du couloir hors ligne prend un souffle de 150 ms
-      — sans attente, elle retombait dans la condition qui venait de faire
-      échouer la première tentative (une tuile perdue sur 149), et la règle du
-      projet disait « retry EXPONENTIEL » depuis toujours.
+      AU PASSAGE, LE COULOIR HORS LIGNE, après DEUX hypothèses fausses de ma
+      part : une sonde a nommé la vraie cause des tuiles perdues — des 502 du
+      service IGN, que le code comptait comme des refus définitifs et ne
+      rejouait jamais. Se rejouent désormais 5xx, 408 et 429 ; pas les autres
+      refus, ni un portail captif. LA SONDE A AUSSI MONTRÉ QUE LES TESTS
+      SORTAIENT SUR LE VRAI SERVICE : la simulation des tuiles était posée sur
+      la page, et le service worker lui échappait — 149 tuiles demandées à
+      data.geopf.fr à chaque exécution, en local comme en CI. Infraction à
+      « ces quotas sont un bien commun », commise par les tests. Corrigé.
 - [x] FRAPPE-1 (09/09) : la recherche dit quand aucune suggestion ne reprend
       ce qu'on a tapé. Le point « à un caractère près, l'adresse est
       introuvable » (04/09) était marqué « à mesurer avant de promettre » : la

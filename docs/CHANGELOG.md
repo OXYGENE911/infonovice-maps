@@ -39,16 +39,31 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - Trois parcours gardent l'acquis, et chacun a été mis en échec en remettant
   le défaut qu'il surveille.
 
-### Au passage : la reprise du couloir hors ligne prend un souffle
-- La reprise ajoutée la veille partait **sans attendre**, au nom de « ces
-  quotas sont un bien commun ». La mesure a corrigé ce choix : une seconde
-  tentative lancée dans la même milliseconde retombe dans la condition même
-  qui vient de faire échouer la première, et il restait une tuile perdue sur
-  cent quarante-neuf. Cent cinquante millisecondes ne se sentent pas sur un
-  geste qui en prend des milliers — et c'est ce que la règle du projet
-  demandait depuis toujours : « timeout + retry **exponentiel** ».
-- Le parcours qui le garde attendait par ailleurs jusqu'à soixante secondes
-  dans un budget de trente : son attente ne pouvait jamais aller à son terme.
+### Au passage : le couloir hors ligne, et deux hypothèses fausses avant la bonne
+- Le parcours du couloir tombait par intermittence — une ou deux tuiles
+  perdues sur cent quarante-neuf. J'ai d'abord ajouté une reprise, puis un
+  délai avant cette reprise. **Les deux hypothèses étaient fausses**, et le
+  parcours retombait.
+- Une **sonde posée dans le téléchargement** a nommé la cause : les tuiles
+  manquantes reviennent en **502 Bad Gateway** du service IGN, parfois en
+  400. Or le code comptait tout refus comme définitif et ne le rejouait
+  jamais — c'est-à-dire exactement l'inverse de ce qu'il fallait faire : un
+  502 est une panne de passerelle, passagère par nature. La reprise ajoutée
+  la veille ne servait à rien sur le seul cas qui se produisait vraiment.
+- Se rejouent désormais : les pannes de serveur (5xx), l'attente expirée
+  (408), le débit refusé (429). Ne se rejouent pas : les autres refus, où le
+  service dit que la demande est mauvaise et le répétera ; ni une réponse
+  valide au mauvais type, signature d'un portail captif.
+- **Et la sonde a montré autre chose, plus gênant.** Ces 502 venaient du
+  **vrai** service IGN : les tuiles demandées par le service worker
+  échappaient à la simulation, posée sur la page et non sur le contexte. Cent
+  quarante-neuf tuiles partaient donc sur data.geopf.fr à chaque exécution du
+  parcours, en local comme en intégration continue. C'était une infraction à
+  la règle du projet — « ne jamais marteler les API publiques : ces quotas
+  sont un bien commun » — commise par les tests eux-mêmes, à chaque poussée.
+  Corrigé : plus une seule requête ne sort.
+- Le parcours attendait par ailleurs jusqu'à soixante secondes dans un budget
+  de trente : son attente ne pouvait jamais aller à son terme.
 
 ## [1.138.0] — 2026-09-09 — FRAPPE-1
 
