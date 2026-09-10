@@ -844,6 +844,23 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] COURBES-1 (10/09) : les courbes de niveau IGN en option d'affichage.
+      DERNIER des quatre emprunts à CoMaps et OsmAnd listés le 05/09 — une
+      entrée de la roadmap les disait tous livrés depuis le 08/09, à tort, et
+      l'oubli n'a été vu qu'en relisant l'étude. L'étude en donnait la forme :
+      « un calque WMTS de la Géoplateforme, pas un nouveau moteur ».
+      MESURÉ AVANT D'ÉCRIRE : la couche ELEVATION.CONTOUR.LINE répond sans
+      clé, en PNG à fond TRANSPARENT — donc une vraie surcouche, qui se pose
+      sur le Plan comme sur le satellite. Bornes relevées sur une tuile de
+      Chamonix : 200 aux zooms 6 (28,7 Ko), 13 (44,7 Ko) et 18 (3,8 Ko), 404
+      au zoom 19. Elles sont déclarées, pour ne pas demander ce qui n'existe
+      pas. Rien ne part sans qu'on coche.
+      AU PASSAGE, DEUX CHOSES APPRISES SUR LE BANC LUI-MÊME : `ecrirePreference`
+      part sans être attendue, si bien qu'un rechargement immédiat peut
+      devancer l'écriture (quelques millisecondes, mais la fenêtre existe pour
+      un usager aussi) ; et le chemin du menu vers le sélecteur de fonds reste
+      instable — le parcours pose donc la préférence lui-même et ne juge que
+      la restitution, la seule chose qu'un navigateur puisse prouver ici.
 - [x] CORPUS-1 (10/09) : le corpus annoté de recherche, et le défaut qu'il a
       trouvé du premier coup. DERNIER POINT « Maps » de l'audit Codex du
       06/09 — le volet est désormais CLOS. 348 requêtes sur 90 communes, de
@@ -938,8 +955,10 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       partir (zooms 8–13, 2 km de part et d'autre, plafond 1 200 tuiles ;
       947 pour Paris–Lyon, mesuré). Coût annoncé avant, jauge, arrêt,
       reprise. Réserve du plan 400 → 1 300, sous les 110 Mo annoncés dans
-      « Vie privée » et gardés par un test. DERNIER des quatre emprunts du
-      05/09 : les quatre sont livrés.
+      « Vie privée » et gardés par un test. TROISIÈME des quatre emprunts du
+      05/09 — cette entrée disait « les quatre sont livrés », à tort : les
+      COURBES DE NIVEAU manquaient encore, et l'oubli n'a été vu que le 10/09
+      en relisant l'étude (COURBES-1).
 - [x] HIST-4 (08/09) : export GPX du tracé RÉELLEMENT PARCOURU, avec
       altitude et heure absolue de chaque point (`versGPXTrace`, pure). Bouton
       éteint et motivé quand le parcours n'a pas de positions. Deuxième des

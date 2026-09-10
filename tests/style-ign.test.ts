@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   styleIGNPlan, styleCarte, urlTuiles, ATTRIBUTION_IGN, LOCALE_FR,
   calquesEtiquettes, sourceEtiquettes,
-  pourImagerie, INCLINAISON_RELIEF,
+  pourImagerie, INCLINAISON_RELIEF, COURBES_ZOOM_MIN, COURBES_ZOOM_MAX,
 } from '../src/carte/style-ign';
 import { CALQUE_BATI_3D } from '../src/carte/etiquettes-ign';
 
@@ -256,5 +256,68 @@ describe('le relief des bâtiments', () => {
 
   it('n’apparaît qu’à partir du zoom 15, là où la couche est peuplée', () => {
     expect(CALQUE_BATI_3D.minzoom).toBe(15);
+  });
+});
+
+describe('les courbes de niveau (COURBES-1)', () => {
+  /* Troisième des quatre emprunts à CoMaps et OsmAnd listés le 05/09 : « un
+     calque WMTS de la Géoplateforme, pas un nouveau moteur ». C'était le seul
+     des quatre qui restât à faire. */
+  const src = (o: Parameters<typeof styleCarte>[0]) =>
+    styleCarte(o).sources['courbes'] as { tiles: string[]; minzoom?: number; maxzoom?: number } | undefined;
+
+  it('ELLE N’EST PAS LÀ SANS QU’ON LA DEMANDE : une surcouche qu’on n’a pas '
+    + 'cochée coûterait des tuiles à un service public pour rien', () => {
+    expect(src({ fond: 'plan' })).toBeUndefined();
+    expect(styleCarte({ fond: 'plan' }).layers.some((l) => l.id === 'surcouche-courbes'))
+      .toBe(false);
+  });
+
+  it('cochée, elle tire de la Géoplateforme et de nulle part ailleurs', () => {
+    const s = src({ fond: 'plan', courbes: true });
+    expect(s).toBeDefined();
+    for (const url of s!.tiles) {
+      expect(url).toMatch(/^https:\/\/data\.geopf\.fr\//);
+      expect(url).toContain('ELEVATION.CONTOUR.LINE');
+      expect(url).toContain('image/png');
+    }
+  });
+
+  it('LES BORNES DE ZOOM SONT MESURÉES, PAS DEVINÉES : le service rend une tuile '
+    + 'aux zooms 6, 13 et 18, et répond 404 au zoom 19 (relevé du 10/09 sur '
+    + 'Chamonix). Les déclarer évite de demander ce qui n’existe pas', () => {
+    expect(COURBES_ZOOM_MIN).toBe(6);
+    expect(COURBES_ZOOM_MAX).toBe(18);
+    const s = src({ fond: 'plan', courbes: true });
+    expect(s!.minzoom).toBe(COURBES_ZOOM_MIN);
+    expect(s!.maxzoom).toBe(COURBES_ZOOM_MAX);
+  });
+
+  it('C’EST UNE SURCOUCHE, DONC ELLE SE POSE SUR LE SATELLITE AUSSI : le service '
+    + 'rend un PNG à fond transparent, ce qui n’obligeait à choisir aucun fond', () => {
+    for (const fond of ['plan', 'ortho', 'ortho-routes'] as const) {
+      const st = styleCarte({ fond, courbes: true });
+      expect(st.layers.some((l) => l.id === 'surcouche-courbes'), fond).toBe(true);
+    }
+  });
+
+  it('elle reste franche à 0,85 — plus pâle, les cotes ne se lisent plus', () => {
+    const calque = styleCarte({ fond: 'plan', courbes: true })
+      .layers.find((l) => l.id === 'surcouche-courbes');
+    expect((calque as { paint: Record<string, number> }).paint['raster-opacity'])
+      .toBeCloseTo(0.85, 5);
+  });
+
+  it('elle cohabite avec le cadastre, et le nom du style dit les deux', () => {
+    const st = styleCarte({ fond: 'plan', cadastre: true, courbes: true });
+    expect(st.name).toContain('cadastre');
+    expect(st.name).toContain('courbes');
+    expect(st.layers.filter((l) => l.id.startsWith('surcouche-'))).toHaveLength(2);
+  });
+
+  it('L’ATTRIBUTION SUIT LA SOURCE : les conditions de la Géoplateforme '
+    + 'l’exigent, et une couche de plus est une attribution de plus', () => {
+    const s = styleCarte({ fond: 'plan', courbes: true }).sources['courbes'];
+    expect((s as { attribution: string }).attribution).toBe(ATTRIBUTION_IGN);
   });
 });

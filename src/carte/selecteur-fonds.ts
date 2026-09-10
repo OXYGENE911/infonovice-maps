@@ -29,7 +29,7 @@ export class SelecteurFonds extends HTMLElement {
   }
 
   #rendre(): void {
-    const { fond, cadastre, relief3d } = this.#options;
+    const { fond, cadastre, relief3d, courbes } = this.#options;
     this.innerHTML = `
       <!-- DÉPLIÉ D'OFFICE quand l'attribut « deplie » est posé (FOND-NAV-1) : la
            feuille du suivi accueille ce sélecteur sans son sommaire, et un
@@ -55,6 +55,15 @@ export class SelecteurFonds extends HTMLElement {
           <p class="fonds-note">Hauteurs IGN, carte rapprochée (barre d’échelle
             à 100 m ou moins). Les
             bâtiments dont l’IGN ne connaît pas la hauteur restent plats.</p>
+          <!-- LES COURBES DE NIVEAU (COURBES-1, 10/09). Troisième des quatre
+               emprunts à CoMaps et OsmAnd du 05/09, et le seul qui restait.
+               Une surcouche WMTS de la Géoplateforme : aucun moteur de plus,
+               aucune clé. Elle se pose aussi bien sur le satellite. -->
+          <label><input type="checkbox" name="courbes" ${courbes ? 'checked' : ''}>
+            Courbes de niveau</label>
+          <p class="fonds-note">Altitudes IGN, du niveau département au niveau
+            rue. En terrain plat, la carte reste nue : c’est qu’il n’y a rien
+            à dessiner.</p>
         </fieldset>
       </details>`;
     /* LE DOM N'EST RENDU QU'UNE FOIS. La première version reconstruisait tout
@@ -74,6 +83,9 @@ export class SelecteurFonds extends HTMLElement {
     });
     this.querySelector('input[name="relief3d"]')?.addEventListener('change', (e) => {
       this.#appliquer({ relief3d: (e.target as HTMLInputElement).checked });
+    });
+    this.querySelector('input[name="courbes"]')?.addEventListener('change', (e) => {
+      this.#appliquer({ courbes: (e.target as HTMLInputElement).checked });
     });
   }
 }

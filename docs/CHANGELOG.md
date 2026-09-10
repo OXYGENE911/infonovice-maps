@@ -2,6 +2,38 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.141.0] — 2026-09-10 — COURBES-1
+
+### Les courbes de niveau IGN, en option d'affichage
+- **Dernier des quatre emprunts à CoMaps et OsmAnd** listés le 5 septembre.
+  Une entrée de la roadmap les disait tous livrés depuis le 8 ; c'était faux,
+  et l'oubli n'a été vu qu'en relisant l'étude. Celle-ci en donnait la forme :
+  « un calque WMTS de la Géoplateforme, pas un nouveau moteur ».
+- Une case **« Courbes de niveau »** dans le sélecteur de fonds. Les courbes
+  brunes cotées de l'IGN se posent sur le Plan **comme sur le satellite** —
+  c'est là qu'elles servent le plus, une photographie aérienne ne cotant rien.
+- **Mesuré avant d'écrire une ligne.** La couche répond sans clé, en PNG à
+  fond **transparent** — d'où une vraie surcouche et non un fond de plus. Sur
+  une tuile de Chamonix : 200 aux zooms 6 (28,7 Ko), 13 (44,7 Ko) et 18
+  (3,8 Ko), et **404 au zoom 19**. Les bornes sont déclarées dans le style,
+  pour ne pas demander au service des tuiles qui n'existent pas.
+- **Rien ne part sans qu'on coche** : une surcouche allumée d'office coûterait
+  des tuiles à un service public pour un usager qui n'a rien demandé.
+- Le choix survit au rechargement, et la case le dit — une carte qui
+  dessinerait les courbes avec la case vide serait pire qu'un oubli.
+
+### Deux choses apprises sur le banc lui-même
+- `ecrirePreference` part **sans être attendue** : un rechargement immédiat
+  peut devancer l'écriture. Quelques millisecondes, mais la fenêtre existe
+  aussi pour un usager qui cocherait puis fermerait aussitôt. J'ai d'abord cru
+  à un défaut de restitution — six rechargements successifs ont montré qu'elle
+  marchait toujours.
+- Le chemin du menu vers le sélecteur de fonds reste instable, comme la
+  configuration Playwright le notait déjà. Le parcours pose donc la préférence
+  lui-même et ne juge que la restitution : la composition du style — courbes
+  sur le Plan, sur le satellite, avec le cadastre, dans le bon ordre — est
+  **pure**, et déjà prouvée à sec, sans navigateur ni réseau.
+
 ## [1.140.0] — 2026-09-10 — CORPUS-1
 
 ### Un corpus annoté de 348 requêtes, et le défaut qu'il a trouvé du premier coup
