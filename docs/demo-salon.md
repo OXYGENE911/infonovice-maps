@@ -6,7 +6,8 @@
 parcours Playwright qui doit rejouer exactement la même chose en CI. Chaque
 étape porte donc trois choses : le **geste**, le **résultat vérifiable** (texte
 affiché et sélecteur DOM réel, relevés dans le code du 11/09), et la **durée
-cible**. Total : **2 min 55**, huit étapes.
+cible**. Total : **2 min 50**, huit étapes
+(10 + 25 + 25 + 20 + 20 + 15 + 35 + 20 = 170 s).
 
 Les noms de gestes reprennent ceux des utilitaires existants — `ouvrirPlanificateur`,
 `allerA`, `ouvrirVolet`, `ouvrirReglagesBornes` (`tests-e2e/planificateur.ts`,
@@ -61,7 +62,7 @@ fonctionnalité à décider, pas une case à cocher : voir le rapport de cycle.
 **Ce qu'on dit** : « pas de compte, pas de cookie, pas de bandeau de
 consentement. Vous êtes déjà dans la carte. »
 
-## Étape 2 — Le véhicule : VF 8 Plus, 80 % au départ (cible : 30 s)
+## Étape 2 — Le véhicule : VF 8 Plus, 80 % au départ (cible : 25 s)
 
 **Geste** — `ouvrirVolet(page, '.vehicule')` (ou `allerA(page, 'vehicule')`),
 déplier **« Toutes les marques »**, ouvrir **VinFast**, choisir
@@ -83,7 +84,7 @@ déplier **« Toutes les marques »**, ouvrir **VinFast**, choisir
 **Ce qu'on dit** : « le catalogue connaît la VF 8 Plus, y compris son bridage
 de charge par grand froid. Je pars à 80 %, comme ce matin. »
 
-## Étape 3 — Paris 15e → Lyon Part-Dieu (cible : 30 s)
+## Étape 3 — Paris 15e → Lyon Part-Dieu (cible : 25 s)
 
 **Geste** — `ouvrirPlanificateur(page)`, puis remplir les deux champs de
 `.vue-accueil` et valider chaque fois la première suggestion.
@@ -110,7 +111,7 @@ argument, pas un manque — le dire.
 Format exact du résumé une fois le plan calculé (l. 3145-3148) :
 `465 km — 5 h 40 au total (4 h 18 de route + 1 h 22 de charge) · arrivée vers 18:35 avec 23 % de batterie`.
 
-## Étape 4 — Mes réseaux, mes badges (cible : 25 s)
+## Étape 4 — Mes réseaux, mes badges (cible : 20 s)
 
 **Geste** — `allerA(page, 'recharge')`, déplier **« Réseaux préférés »**,
 cocher **Ionity** puis **IZIVIA**. Puis `ouvrirReglagesBornes(page)` et cocher
@@ -137,7 +138,7 @@ privilégie mes deux réseaux. »
 > passage vert du spec**. Si l'une des deux manquait, prendre les deux premiers
 > réseaux affichés et adapter le discours : le geste ne change pas.
 
-## Étape 5 — Le plan de recharge, et pourquoi (cible : 25 s)
+## Étape 5 — Le plan de recharge, et pourquoi (cible : 20 s)
 
 **Geste** — rester sur la page **Arrêts de recharge**, lire le résumé, puis
 ouvrir **« Pourquoi ce plan ? »**.
@@ -155,7 +156,7 @@ ouvrir **« Pourquoi ce plan ? »**.
 **Ce qu'on dit** : « température aux deux bouts, dénivelé, vitesse du parcours,
 bridage de la VF 8 : tout est écrit là-dedans. Aucune boîte noire. »
 
-## Étape 6 — Ce qu'il y a autour de la borne (cible : 20 s)
+## Étape 6 — Ce qu'il y a autour de la borne (cible : 15 s)
 
 **Geste** — sur le premier arrêt, presser **« Commodités sur place »**.
 
