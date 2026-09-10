@@ -2,6 +2,34 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.142.0] — 2026-09-10 — PORTE-1
+
+### Une rue nommée d'après un lieu n'est pas ce lieu
+- **Trouvé en sondant la production à la main.** Taper **« Stade de France »**
+  rendait « Avenue du Stade de France 93210 Saint-Denis », puis trois terrains
+  de football à Marle, Berthecourt et Breilly. Le stade n'était nulle part —
+  alors que l'index des lieux de la Géoplateforme le rend **en premier**.
+- **Pourquoi.** L'application demande d'abord à la Base Adresse Nationale, et
+  ne va chercher un lieu nommé que si la BAN « n'a pas répondu ». La porte,
+  écrite le 1er septembre, lit les **mots** : tous les mots tapés se
+  retrouvant dans « Avenue du Stade de France », elle concluait que la BAN
+  avait répondu et ne regardait jamais ailleurs.
+- **Ce qui tranche, c'est le mot ajouté.** « Avenue du Stade de France »
+  ajoute « avenue » à ce qu'on a écrit : ce n'est plus la chose demandée,
+  c'est une voie qui la cite. « le Thuré 72160 Vouvray-sur-Huisne » n'ajoute
+  rien à « le Thuré Vouvray-sur-Huisne » : c'est bien le lieu, et la porte
+  reste fermée.
+- **Mesuré avant d'être écrit**, sur les 193 requêtes de nom du corpus. La
+  porte se ferme 14 fois ; la règle en rouvre **sept**, et les sept sont des
+  voies nommées d'après autre chose — Arènes de Nîmes, Église
+  Sainte-Opportune, Bailleul. Une première version, plus large (« la BAN rend
+  une voie »), en rouvrait quatorze, dont **la moitié pour rien**. Chaque
+  réouverture coûte un appel à des services publics : la décision du 1er
+  septembre interdit d'élargir sans compter, et l'on a compté.
+- **Vérifié de bout en bout** : « Stade de France » rend désormais le stade,
+  « Arènes de Nîmes » les arènes, « Tour Eiffel » la tour — et « rue de Rivoli
+  Paris » ne coûte toujours aucun appel de plus.
+
 ## [1.141.0] — 2026-09-10 — COURBES-1
 
 ### Les courbes de niveau IGN, en option d'affichage

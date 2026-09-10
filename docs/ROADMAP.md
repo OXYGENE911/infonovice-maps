@@ -844,6 +844,24 @@ docs/mandat-ux-28-08.md ; chaque PR livrée s'y coche.
       de trois, en 1,6 s) — et la commune était cherchée comme un morceau du
       nom. Dix véhicules ajoutés sur les configurateurs officiels, et le
       dossier de signalement à la Géoplateforme rédigé.
+- [x] PORTE-1 (10/09) : une rue nommée d'après un lieu n'est pas ce lieu.
+      TROUVÉ EN SONDANT LA PRODUCTION À LA MAIN : « Stade de France » rendait
+      l'AVENUE du Stade de France puis trois terrains de football, le stade
+      nulle part — alors que l'index des lieux le rend en premier. La porte de
+      la BAN (RECHERCHE-5, 01/09) lit les mots : tous ceux de la saisie
+      figurant dans « Avenue du Stade de France », elle concluait que la BAN
+      avait répondu. CE QUI TRANCHE : le mot AJOUTÉ. « Avenue du » n'était pas
+      dans la saisie ; « le Thuré 72160 Vouvray » n'ajoute rien et reste donc
+      une bonne réponse. MESURÉ SUR LE CORPUS avant d'écrire
+      (docs/mesure-porte-ban.md) : la porte se ferme 14 fois sur 193 requêtes
+      de nom, la règle en rouvre SEPT, toutes fautives ; une première version
+      plus large en rouvrait quatorze, dont la moitié pour rien. Vérifié de
+      bout en bout : Stade de France, Arènes de Nîmes et Tour Eiffel
+      reviennent en tête.
+      RESTE VU ET NON TRAITÉ : « Castorama Ormesson » rend quatre « Castorama »
+      étiquetés « Lieu de la carte », sans commune pour les départager ; et le
+      Stade de France paraît DEUX FOIS dans la liste fusionnée (deux objets
+      pour le même lieu que `memeLieu` ne réunit pas).
 - [x] COURBES-1 (10/09) : les courbes de niveau IGN en option d'affichage.
       DERNIER des quatre emprunts à CoMaps et OsmAnd listés le 05/09 — une
       entrée de la roadmap les disait tous livrés depuis le 08/09, à tort, et
