@@ -972,5 +972,287 @@ faudra donc un champ déclaré dans « Mon véhicule » — ce qu'Armelin peut
 remplir, il connaît sa VF8. Sans poids déclaré, aucun avertissement : mieux
 vaut se taire que d'alerter au hasard.
 
+## Disponibilité des bornes — les cinq pistes du CEO, mesurées (11/09/2026)
+
+Armelin, le 10/09 : « TomTom EV availability ; le flux IRVE dynamique de
+transport.data.gouv.fr opérateur par opérateur ; data.gouv.fr ; les API
+OCPI/AFIR directes des cinq plus gros opérateurs français ». Cinq pistes, cinq
+appels réels datés du **10/09/2026 vers 22 h 20 UTC** (11/09, 00 h 20 à Paris).
+Rien ici n'est repris d'une documentation : chaque ligne a un `curl` derrière.
+
+**Le verdict tient en une ligne : rien de neuf ne se branche avant le salon.**
+La mesure du 01/09 (« la base existe, elle n'est pas vivante ») tient toujours,
+mais elle a changé d'échelle et de point d'entrée — c'est ce que dit la suite.
+
+| Source | Clé | CORS navigateur | Fraîcheur médiane | Verdict |
+|---|---|---|---|---|
+| TomTom EV Availability | **oui** | oui (préflight OK) | annoncée « minutes », **non mesurable sans compte** | **jamais** en l'état |
+| transport.data.gouv.fr — consolidation IRVE dynamique (bêta) | non | oui (`*`) | **23,8 h** sur 116 155 points | **après** le salon, et daté |
+| data.gouv.fr — `tabular-api` | non | oui (`*`) | même donnée, même fraîcheur | **après**, c'est la bonne porte |
+| OCPI direct des 5 opérateurs | **jeton bilatéral** | **non** | — | **jamais** depuis un navigateur |
+| Flux d'un opérateur qui joue le jeu (Parera) | non | oui (`*`) | **0,3 min** | preuve que le tuyau marche |
+
+### 1. TomTom EV Charging Stations Availability — écartée
+
+```
+GET https://api.tomtom.com/search/2/chargingAvailability.json?chargingAvailabilityId=…
+→ HTTP 401  {"detailedError":{"code":"Unauthorized",…}}  en 0,56 s
+```
+
+Le préflight, lui, répond parfaitement :
+
+```
+OPTIONS … avec Origin: https://maps.infonovice.fr
+→ HTTP 204
+   access-control-allow-origin: https://maps.infonovice.fr
+   access-control-allow-methods: GET,POST
+```
+
+Techniquement, un navigateur peut donc l'appeler. **Trois choses l'interdisent
+quand même.**
+
+1. **La clé passe dans l'URL.** Sur un site statique sans backend, elle est
+   lisible dans le source de la page par quiconque ouvre l'inspecteur. Le
+   premier passant peut brûler le quota du salon.
+2. **Obtenir la clé demande de créer un compte** — liste rouge d'INFONOVICE :
+   création de compte sur un service tiers. La mesure de fraîcheur RÉELLE de
+   TomTom est donc, à ce jour, **impossible sans une Decision du CEO**. La
+   documentation dit « Updates are provided regularly, typically within
+   minutes » ; c'est une promesse d'éditeur, pas un relevé, et cela ne s'écrit
+   pas dans l'interface.
+3. **`Cache-Control: no-cache`** dans la documentation de l'API : le cache
+   agressif qui est notre règle de résilience serait hors conditions d'usage.
+
+Éditeur : **TomTom N.V.**, Amsterdam, **Pays-Bas** — européen, donc conforme à
+la règle fournisseurs ; c'est le seul point qui plaide pour. Le traitement
+observé vient de `x-tomtom-processed-by: westeurope`.
+
+**Verdict : jamais en l'état.** Réexaminable si le CEO décide un jour d'un
+compte TomTom ET d'un relais qui cache la clé — donc d'un backend, donc hors
+contrainte « 0 € ».
+
+### 2. transport.data.gouv.fr — la consolidation nationale a bougé depuis le 01/09
+
+Le catalogue du Point d'Accès National (`GET https://transport.data.gouv.fr/api/datasets`,
+HTTP 200 en 0,36 s, 2,5 Mo, `access-control-allow-origin: *`) porte 789 jeux,
+dont **5 de type `charging-stations`**. Le nouveau, absent de la mesure du
+01/09 :
+
+> **[BETA] Base Nationale des Points de Recharge pour Véhicules Électriques
+> (IRVE)**, éditeur *Point d'Accès National transport.data.gouv.fr* — avec une
+> ressource **« données dynamiques »** republiée en continu.
+
+**Attention à la porte d'entrée**, mesurée :
+
+```
+GET https://transport.data.gouv.fr/resources/84098/download
+→ 302 vers data.gouv.fr   (CETTE réponse n'a PAS d'access-control-allow-origin)
+→ 302 vers proxy.transport.data.gouv.fr  (celle-là oui)
+→ 200
+```
+
+Un `fetch` navigateur **échoue sur le premier saut** : une redirection sans
+en-tête CORS casse la chaîne. L'URL à appeler est donc la finale, directement :
+
+```
+https://proxy.transport.data.gouv.fr/resource/consolidation-nationale-irve-dynamique
+→ HTTP 200 en 0,40 s · content-encoding: gzip
+   1 543 919 o sur le fil · 8 624 411 o décompressés · access-control-allow-origin: *
+   colonnes : id_pdc_itinerance, etat_pdc, occupation_pdc, horodatage,
+              etat_prise_type_2 / _combo_ccs / _chademo / _ef
+```
+
+**Cette origine est DÉJÀ dans notre CSP** (`connect-src` d'`index.html`) : la
+brancher un jour ne coûtera pas une ligne de politique.
+
+**Comptage exact sur les 116 155 points, 10/09/2026 22 h 19 UTC** — aucun point
+sans horodatage, aucun horodatage dans le futur :
+
+| Âge du relevé | Points | Part |
+|---|---|---|
+| moins de **15 min** | 2 484 | **2,1 %** |
+| moins d'1 h | 9 513 | 8,2 % |
+| moins de 6 h | 34 319 | 29,5 % |
+| moins de 24 h | 58 211 | 50,1 % |
+| moins de 7 j | 70 535 | 60,7 % |
+| plus de 30 j | 41 107 | **35,4 %** |
+
+Médiane **23,75 h**. Le p75 saute à **2 102 h** (87 jours) : la distribution est
+à deux bosses — une minorité vivante, un tiers de fichier mort depuis près de
+trois mois. États déclarés : `en_service` 103 388, `hors_service` 9 384,
+`inconnu` 3 383 ; occupation : `libre` 96 859, `occupe` 8 318, `inconnu`
+10 970, `reserve` 8.
+
+#### Opérateur par opérateur — ce que le CEO demandait
+
+Le préfixe AFIREV des `id_pdc_itinerance` (5 caractères) donne l'opérateur ; le
+nom vient du fichier statique consolidé du même jour (169 002 lignes, 120 Mo,
+champ `nom_operateur`). Les vingt premiers par volume :
+
+| Opérateur | Points | Âge médian | < 15 min | < 1 h |
+|---|---|---|---|---|
+| EASYCHARGE | 10 025 | 36,0 h | 0,4 % | 1,9 % |
+| **Freshmile** | 9 366 | **90 j** | 0,0 % | 0,0 % |
+| Power Dot France | 7 541 | 10,7 h | 0,8 % | 2,3 % |
+| Lidl France | 4 992 | 10,1 h | 3,0 % | 5,8 % |
+| **Tesla** | 4 678 | **0,6 h** | **21,5 %** | **84,8 %** |
+| ENGIE Vianeo | 4 096 | 19,8 h | 0,0 % | 2,5 % |
+| **TotalEnergies Marketing France** | 4 081 | 4,3 h | 2,8 % | 12,1 % |
+| Citeos Mobilité Électrique Paris | 3 426 | 8,7 h | 1,3 % | 3,7 % |
+| Bouygues Energies & Services | 3 194 | 8,5 h | 1,3 % | 12,5 % |
+| EVzen | 3 161 | 17 j | 0,1 % | 0,4 % |
+| E.Leclerc | 3 137 | 89 j | 0,0 % | 0,0 % |
+| Allego | 3 063 | 4,7 h | 1,8 % | 7,5 % |
+| Atlante France | 2 970 | 87 j | 1,1 % | 4,0 % |
+| **Electra** | 2 961 | 4,2 h | 4,8 % | 15,8 % |
+| **IZIVIA** | 2 739 | 5,5 h | 1,2 % | 6,4 % |
+| **TotalEnergies Charging Services** | 2 615 | 2 j | 0,2 % | 1,5 % |
+| E-Totem | 2 512 | 33,6 h | 0,3 % | 2,0 % |
+| Load Stations | 2 343 | 88 j | 0,1 % | 0,4 % |
+| WAAT SAS | 2 136 | 89 j | 0,1 % | 0,3 % |
+| **Ionity** | 1 826 | 4,6 h | 4,4 % | 10,9 % |
+
+**Les cinq gros que le CEO nommait sont tous là — et aucun n'est en direct.**
+Le meilleur d'entre eux, Electra, a **4,8 %** de relevés de moins d'un quart
+d'heure. Freshmile, le plus gros contributeur français du lot, publie une
+photographie vieille de **trois mois**.
+
+Un seul opérateur du fichier tient une vraie cadence : **Tesla** (84,8 % de
+relevés de moins d'une heure) — réseau américain, fermé aux badges que le CEO
+cite, et donc sans usage pour nous.
+
+#### Le couloir Paris → Lyon, celui de la démo
+
+Restreint aux points de **150 kW et plus à moins de 25 km** de la droite
+Paris–Lyon (3 986 points, dont 3 525 présents dans le flux, soit **88 %** de
+couverture) :
+
+| Mesure sur le couloir | Valeur |
+|---|---|
+| âge médian | **4,0 h** |
+| moins de 15 min | 194 points (**5,5 %**) |
+| moins d'1 h | 823 points (23,3 %) |
+| moins de 6 h | 2 217 points (62,9 %) |
+
+Par opérateur sur ce couloir : Electra 701 pts (médiane 1,7 h), Tesla 485
+(0,5 h), TotalEnergies 367 (3,8 h), Allego 269 (3,8 h), Power Dot 262 (9,0 h),
+IZIVIA 249 (3,8 h), EVzen 142 (**87 j**), Fastned 72 (3,7 h).
+
+**Ce que cela permet, et rien de plus** : dire « hors service » (l'état d'une
+borne en panne ne se périme pas en quatre heures) et afficher une occupation
+**datée**. Ce que cela interdit : promettre une place libre, et surtout
+rerouter dessus. Quatre heures, c'est le temps qu'il faut pour vider et
+remplir trois fois une borne de 150 kW.
+
+**Verdict : après le salon, et daté.** La donnée est française, publique,
+gratuite, sans clé, déjà autorisée par notre CSP. Elle n'est simplement pas
+assez vivante pour ce qu'on en ferait sur un stand.
+
+### 3. data.gouv.fr — `tabular-api`, la bonne porte
+
+Les deux identifiants de ressource (`411443b1-…`, celui du 01/09, et
+`89185b1f-…`, celui que sert le PAN) rendent **le même premier
+enregistrement** : c'est le même fichier, servi en base interrogeable.
+
+```
+GET https://tabular-api.data.gouv.fr/api/resources/411443b1-…/data/?page_size=1
+→ HTTP 200 en 0,31 s
+   access-control-allow-origin: *
+   access-control-allow-methods: GET, OPTIONS
+```
+
+Mesures complémentaires du 10/09 :
+
+| Question | Réponse mesurée |
+|---|---|
+| filtre par liste d'identifiants | `id_pdc_itinerance__in=` avec **40 identifiants** → URL de 736 caractères, **HTTP 200 en 0,26 s**, 40 lignes, 11,8 Ko |
+| plafond de pagination | **200** (`page_size=200` → 200 ; `page_size=500` → `HTTP 400 « Page size exceeds allowed maximum: 200 »`) |
+| jointure | inchangée depuis le 01/09 : **seuls les `id_pdc_itinerance` joignent** ; l'identifiant de station n'est pas un préfixe de celui de ses points |
+
+Un appel par station (quarante points), jamais en boucle : la règle du 01/09
+reste la bonne, et la mesure de fraîcheur ci-dessus explique pourquoi
+interroger « à intervalles en approchant » redemanderait la valeur d'hier.
+
+**Verdict : après le salon.** C'est la route à retenir le jour où l'on
+affichera un état daté ; elle n'a besoin d'aucune décision, d'aucune clé,
+d'aucun hôte nouveau.
+
+### 4. Les API OCPI directes des cinq gros — écartées, deux fois
+
+Sondes du 10/09, toutes avec `Origin: https://maps.infonovice.fr` :
+
+| Opérateur | Point sondé | Réponse |
+|---|---|---|
+| **Freshmile** | `https://ocpi.freshmile.com/ocpi/cpo/versions` | **HTTP 401** — `{"status_code":2434,"status_message":"UnknownOperator: Unknown operator with no Authorization header or empty token."}` |
+| Freshmile | `…/ocpi/versions` | HTTP 404 |
+| **Ionity** | `https://api.ionity.eu/ocpi/versions` | **HTTP 403** |
+| Ionity | `https://api.ionity.eu/core/v1/locations` | HTTP 403 |
+| **IZIVIA** | `https://api.izivia.com/ocpi/versions` | HTTP 404 · `ocpi.izivia.com` : **le nom ne résout pas** |
+| **Electra** | `https://ocpi.go-electra.com/ocpi/versions` | HTTP 404 (page Rails) · `api.go-electra.com` : **ne résout pas** |
+| **TotalEnergies** | `ocpi.totalenergies.com`, `api.totalenergies.com`, `charge.totalenergies.fr` | **aucun ne résout** |
+
+La réponse de Freshmile est la plus instructive : le point d'entrée OCPI existe
+bel et bien, et il dit lui-même ce qu'il attend — un **opérateur connu** avec
+un **jeton d'autorisation**. OCPI est un protocole **bilatéral** entre un CPO
+et un e-MSP, pas une API ouverte : y accéder suppose un contrat d'itinérance,
+donc une entité juridique en face, donc bien au-delà du périmètre.
+
+**Et même avec un jeton, ce serait mort** : aucune de ces réponses ne porte
+d'en-tête `access-control-allow-origin`. Un navigateur ne pourrait pas lire le
+corps. Il faudrait un relais serveur — la contrainte « 0 €, aucun backend »
+l'interdit.
+
+**AFIR (règlement UE 2023/1804, article 20)** oblige depuis le 14/04/2025 les
+exploitants de points de charge ouverts au public à mettre leurs données
+statiques **et dynamiques** à disposition — en France, **via le Point d'Accès
+National, c'est-à-dire transport.data.gouv.fr**. Autrement dit : l'obligation
+ne crée pas cinq API à interroger, elle alimente le fichier mesuré au §2. La
+piste « API directes » et la piste « PAN » sont la même piste, vue des deux
+bouts — et c'est le bout PAN qui est ouvert.
+
+**Verdict : jamais depuis le navigateur.** Sans contrat d'itinérance, sans
+CORS, sans backend : trois murs, un seul suffisait.
+
+### 5. Le contre-exemple qui prouve que le tuyau fonctionne — Parera Mobilité
+
+Le catalogue data.gouv.fr rend 31 jeux « IRVE dynamique » déposés **par
+opérateur** ; ce sont pour la plupart de petites structures, et la plupart
+n'ont pas bougé depuis 2024 (BORNECO, PROXITECH, Dubois, Charge-in…). Un seul
+est vivant à la seconde :
+
+```
+GET https://www.data.gouv.fr/api/1/datasets/?q=IRVE dynamique Parera   → 200 en 0,13 s
+GET https://static.data.gouv.fr/resources/irve-dynamique-organisation-parera-mobilite/
+    20260910-222130/data-gouv-dynamique.csv                            → 200 en 0,15 s
+   access-control-allow-origin: *   ·   17 461 o   ·   230 points
+   âge des relevés : min 0,3 min · médiane 0,3 min · max 0,3 min
+```
+
+**Piège mesuré** : l'URL porte l'horodatage de publication
+(`20260910-222130`). Un premier essai sur l'URL lue quarante-six secondes plus
+tôt (`…-222044`) a rendu **HTTP 404** : le fichier avait déjà été republié. Un
+client navigateur ne peut donc pas figer cette URL — il doit d'abord
+l'interroger auprès de l'API data.gouv, soit **deux requêtes par relevé**.
+
+230 points sur 116 155, c'est 0,2 % du parc. Mais cela démontre que la chaîne
+« opérateur → data.gouv → consolidation » sait porter du direct : ce qui
+manque n'est pas la plomberie, c'est la volonté des gros opérateurs.
+
+### Ce qui est décidé, et ce qui ne l'est pas
+
+- **Rien n'est branché pour le salon.** Aucune source ne tient la promesse
+  qu'une carte ferait en affichant « libre » ou « occupé ».
+- **La route d'après est écrite** : `tabular-api.data.gouv.fr`, filtre
+  `id_pdc_itinerance__in`, un appel par station, affichage **daté**, et rien
+  au-delà de sept jours. Aucun hôte nouveau, aucune clé, aucune Decision.
+- **À rouvrir** : le jour où la médiane du couloir Paris–Lyon passe sous
+  l'heure. Le comptage de ce jour (4,0 h de médiane, 5,5 % sous le quart
+  d'heure) est le point de comparaison.
+- **Pour mémoire, l'outil qui a manqué** : `gemini -p` n'a pas pu servir à la
+  recherche documentaire de cette session (`GEMINI_API_KEY` absente de
+  l'environnement non interactif). Les points documentaires — conditions
+  TomTom, article 20 d'AFIR — viennent de leurs pages officielles, lues
+  directement. Toutes les mesures chiffrées, elles, sont des appels faits ici.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.
