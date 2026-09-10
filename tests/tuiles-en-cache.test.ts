@@ -60,7 +60,14 @@ describe('réserves de tuiles', () => {
        08/09 pour accueillir un couloir hors ligne (COULOIR-1) ; sans ce
        garde-fou, le prochain qui l'augmentera rendra cette page fausse sans
        le savoir. */
-    const octets = RESERVES_TUILES.reduce((t, r) => t + r.tuiles * OCTETS_PAR_TUILE, 0);
+    /* CHAQUE COUCHE PÈSE SON POIDS, quand il a été mesuré pour elle
+       (COURBES-1, 10/09) : les compter toutes à 58 Ko surestimait les plus
+       légères et interdisait d'ajouter quoi que ce soit. Faute de mesure, le
+       défaut reste 58 Ko — conservateur, et c'est ce qu'on veut d'un
+       plafond. */
+    const octets = RESERVES_TUILES.reduce(
+      (t, r) => t + r.tuiles * (r.octets ?? OCTETS_PAR_TUILE), 0,
+    );
     expect(Math.round(octets / 1_000_000)).toBeLessThanOrEqual(110);
   });
 

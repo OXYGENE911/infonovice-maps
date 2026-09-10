@@ -41,7 +41,17 @@ export interface OptionsStyle {
      cartes 3D gouvernementales ? ». Oui, et c'est la même tuile : voir
      etiquettes-ign.ts pour la mesure de couverture. */
   relief3d?: boolean;
+  /* LES COURBES DE NIVEAU (COURBES-1, 10/09) — voir la source plus bas. */
+  courbes?: boolean;
 }
+
+/* LES BORNES DE LA COUCHE DE COURBES, MESURÉES le 10/09 sur le service et non
+   lues dans une documentation : une tuile de Chamonix revient en 200 aux zooms
+   6 (28,7 Ko), 13 (44,7 Ko) et 18 (3,8 Ko), et le service répond 404 au zoom
+   19. Les déclarer évite à la carte de demander des tuiles qui n'existent pas
+   — et « ces quotas sont un bien commun ». */
+export const COURBES_ZOOM_MIN = 6;
+export const COURBES_ZOOM_MAX = 18;
 
 /* L'INCLINAISON QUI VA AVEC LE RELIEF. À plat, une extrusion ne se voit PAS —
    on regarde les toits par-dessus. Cocher la case sans incliner la caméra
@@ -50,7 +60,9 @@ export interface OptionsStyle {
    peut ne pas trouver ». Une option sans effet visible est pire encore. */
 export const INCLINAISON_RELIEF = 50;
 
-export function styleCarte({ fond, cadastre = false }: OptionsStyle): StyleSpecification {
+export function styleCarte(
+  { fond, cadastre = false, courbes = false }: OptionsStyle,
+): StyleSpecification {
   const sources: StyleSpecification['sources'] = {};
   const layers: StyleSpecification['layers'] = [];
   /* LE FOND EST RASTER : ses étiquettes sont PEINTES DANS L'IMAGE. Le
@@ -118,12 +130,44 @@ export function styleCarte({ fond, cadastre = false }: OptionsStyle): StyleSpeci
     });
   }
 
+  /*
+   * LES COURBES DE NIVEAU (COURBES-1, 10/09/2026).
+   *
+   * Troisième des quatre emprunts à CoMaps et OsmAnd listés le 05/09 : « un
+   * calque WMTS de la Géoplateforme, pas un nouveau moteur ». C'était le seul
+   * des quatre qui restât à faire — une entrée de la roadmap les disait tous
+   * livrés, à tort.
+   *
+   * CE QUE LA COUCHE REND VRAIMENT, vérifié le 10/09 sur une tuile de
+   * Chamonix : des courbes brunes cotées sur fond TRANSPARENT (PNG RVBA), ce
+   * qui en fait une vraie surcouche — elle se pose sur le Plan comme sur le
+   * satellite, sans cacher ni l'un ni l'autre.
+   *
+   * ELLE RESTE FRANCHE, à 0,85 : plus pâle, les cotes deviennent illisibles ;
+   * opaque, elle mangerait les noms de rue du fond. Le cadastre, lui, est à
+   * 0,75 — il couvre des surfaces, quand celles-ci ne sont que des traits.
+   */
+  if (courbes) {
+    sources['courbes'] = {
+      type: 'raster',
+      tiles: [urlTuiles('ELEVATION.CONTOUR.LINE', 'image/png')],
+      tileSize: 256,
+      minzoom: COURBES_ZOOM_MIN,
+      maxzoom: COURBES_ZOOM_MAX,
+      attribution: ATTRIBUTION_IGN,
+    };
+    layers.push({
+      id: 'surcouche-courbes', type: 'raster', source: 'courbes',
+      paint: { 'raster-opacity': 0.85 },
+    });
+  }
+
   /* LES ÉTIQUETTES PASSENT EN DERNIER, cadastre compris : un texte lu sous
      une surcouche opaque ne se lit pas. */
 
   return {
     version: 8,
-    name: `Fond ${fond}${cadastre ? ' + cadastre' : ''}`,
+    name: `Fond ${fond}${cadastre ? ' + cadastre' : ''}${courbes ? ' + courbes' : ''}`,
     /* LES GLYPHES RESTENT DANS LE STYLE, eux : un calque de symboles ajouté
        plus tard a besoin d'une police DÉJÀ déclarée, faute de quoi MapLibre
        le refuse. C'est la seule part de la surcouche qui doit naître avec le
