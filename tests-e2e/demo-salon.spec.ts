@@ -359,12 +359,25 @@ test.describe('DÉMO SALON — Paris 15e → Lyon Part-Dieu, VF 8 Plus (T2, rect
       await expect(lien).toHaveText('Ce qui marche sans réseau');
       await expect(lien).toHaveAttribute('href', '/sans-reseau.html');
 
+      // « LA CARTE TIENT » NE SE PROUVE PAS PAR LA SEULE VISIBILITÉ DU
+      // CANEVAS (revue Codex de la PR #306) : un canevas vide reste
+      // « visible » au sens du DOM. `areTilesLoaded()` de MapLibre dit si
+      // les tuiles VISIBLES sont réellement peintes — depuis le cache du
+      // service worker, puisque le réseau est coupé.
+      const tuilesPeintes = (): Promise<boolean> => page.evaluate(() => {
+        const c = (window as unknown as {
+          __carte?: { areTilesLoaded?: () => boolean };
+        }).__carte;
+        return c?.areTilesLoaded?.() ?? false;
+      });
       await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible();
+      await expect.poll(tuilesPeintes, { timeout: 15_000 }).toBe(true);
       await page.mouse.move(400, 300);
       await page.mouse.down();
       await page.mouse.move(250, 220, { steps: 10 });
       await page.mouse.up();
       await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible();
+      await expect.poll(tuilesPeintes, { timeout: 15_000 }).toBe(true);
 
       await ouvrirPlanificateur(page);
       await expect(page.locator('.iti-corps')).toBeVisible();

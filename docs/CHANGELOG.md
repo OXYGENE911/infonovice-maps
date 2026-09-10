@@ -24,6 +24,8 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   reprise (`retries: 1`). Voir le rapport de la tâche T2 pour le détail et la
   recommandation (statut **Bloqué**).
 
+## [1.141.0] — 2026-09-10 — COURBES-1
+
 ### Les courbes de niveau IGN, en option d'affichage
 - **Dernier des quatre emprunts à CoMaps et OsmAnd** listés le 5 septembre.
   Une entrée de la roadmap les disait tous livrés depuis le 8 ; c'était faux,
