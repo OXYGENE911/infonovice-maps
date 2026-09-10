@@ -18,9 +18,32 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   (3,8 Ko), et **404 au zoom 19**. Les bornes sont déclarées dans le style,
   pour ne pas demander au service des tuiles qui n'existent pas.
 - **Rien ne part sans qu'on coche** : une surcouche allumée d'office coûterait
-  des tuiles à un service public pour un usager qui n'a rien demandé.
+  des tuiles à un service public pour un usager qui n'a rien demandé. Le
+  parcours le garde en lisant ce que la carte DÉCLARE — car depuis que la
+  couche a sa réserve de cache, ses tuiles sont demandées par le service
+  worker, et une route de page ne les voit plus. Ce qui part vraiment — l'URL,
+  le format, les bornes de zoom — est pinné à sec, sans navigateur.
 - Le choix survit au rechargement, et la case le dit — une carte qui
   dessinerait les courbes avec la case vide serait pire qu'un oubli.
+
+### Un garde-fou du projet m'a repris, et il avait raison
+- La CI a refusé la première version : un test exige que **toute couche du
+  style déclare sa réserve de cache**, faute de quoi elle ne serait jamais
+  gardée et le hors ligne mentirait sur ce fond-là. J'avais manqué l'échec en
+  local en ne lisant que trois lignes de sortie.
+- La réserve entière est bornée par les « environ 110 Mo » écrits dans
+  « Vie privée », et les quatre couches d'avant en occupaient déjà 107. Plutôt
+  que de relever un chiffre annoncé aux usagers — ce qui est une décision
+  d'Armelin — **le garde-fou pèse désormais chaque couche à son poids mesuré**
+  au lieu de les compter toutes à 58 Ko. Les courbes valent 45 Ko au pire de
+  quatre relevés (28,7 au zoom 6, 44,7 à Chamonix au zoom 13, 6,8 sur Paris au
+  zoom 15, 3,8 au zoom 18).
+- Leur réserve tient donc en **soixante tuiles**, soit trois écrans. Ce n'est
+  pas la bonne réponse, c'est la réponse honnête : une réserve digne de ce nom
+  demanderait soit de revoir le chiffre public, soit de mesurer le poids réel
+  des quatre autres couches — un relevé du 10/09 sur Paris donne 38 Ko pour le
+  Plan, 15 pour le satellite, 16 pour les routes, 13 pour le cadastre, quand
+  le garde-fou les compte toutes à 58. Une campagne à elle seule.
 
 ### Deux choses apprises sur le banc lui-même
 - `ecrirePreference` part **sans être attendue** : un rechargement immédiat

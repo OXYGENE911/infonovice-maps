@@ -19,41 +19,30 @@ import { ouvrirVolet } from './volets';
  * qu'elle émet — et c'est aussi ce qui compte pour un service public.
  */
 
-/** Ouvre la carte en notant toutes les tuiles demandées. */
-async function ouvrir(page: Page): Promise<string[]> {
-  const tuiles: string[] = [];
+/**
+ * Ouvre la carte, tuiles simulées.
+ *
+ * CE PARCOURS NE COMPTE PLUS LES REQUÊTES, et l'échec qui l'a imposé mérite
+ * d'être écrit. Depuis que la couche des courbes a SA RÉSERVE DE CACHE, c'est
+ * le SERVICE WORKER qui va chercher ses tuiles — et une route de page ne voit
+ * pas ce qu'il demande : le parcours concluait que rien ne partait alors que
+ * tout partait. Poser la route sur le CONTEXTE les rend visibles, mais dérange
+ * le service worker au point de faire tomber le reste (mesuré le 09/09 sur le
+ * parcours « sans réseau », trois échecs sur trois).
+ *
+ * ON JUGE DONC CE QUE LA CARTE DÉCLARE, et c'est fidèle : MapLibre ne demande
+ * que les sources de son style. Ce qui PART vers la Géoplateforme — l'URL, le
+ * format, les bornes de zoom — est pinné à sec dans tests/style-ign.test.ts,
+ * sans navigateur et sans réseau.
+ */
+async function ouvrir(page: Page): Promise<void> {
   await simulerTuiles(page);
   await simulerCommunes(page);
-  await page.route('**/data.geopf.fr/wmts**', (route) => {
-    tuiles.push(decodeURIComponent(route.request().url()));
-    return route.fulfill({
-      contentType: 'image/png',
-      body: Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-        'base64',
-      ),
-    });
-  });
   await page.goto('/');
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
-  return tuiles;
 }
 
-/* ON PASSE PAR `ouvrirVolet`, ET C'EST TOUT L'INTÉRÊT QU'IL EXISTE : le
-   sélecteur de fonds a déjà déménagé une fois — posé sur la carte, puis rangé
-   dans le menu. Trente-cinq parcours codaient son emplacement ; celui-ci
-   demande au DOM. Ma première version le cherchait à la main, et échouait. */
-async function cocher(page: Page, nom: string): Promise<void> {
-  await ouvrirVolet(page, '.fonds');
-  await page.getByLabel(nom).check();
-}
-
-/* CE QUE LA CARTE DESSINE VRAIMENT — son style, pas les requêtes.
-   POURQUOI LES DEUX MESURES COEXISTENT : les tuiles disent ce qui PART vers le
-   service public, et c'est ce qui compte pour les quotas ; le style dit ce qui
-   se SUPERPOSE, et c'est ce qui compte pour l'usager. Une première version de
-   ces parcours jugeait tout aux requêtes et se trompait — le navigateur sert
-   du cache, et l'absence d'une requête ne prouve pas l'absence d'un calque. */
+/* CE QUE LA CARTE DESSINE VRAIMENT — son style. */
 const calques = (page: Page): Promise<string> => page.evaluate(() => {
   const c = (window as unknown as {
     __carte?: { getStyle(): { name?: string; layers: { id: string }[] } };
@@ -63,31 +52,31 @@ const calques = (page: Page): Promise<string> => page.evaluate(() => {
   return `${st.name ?? ''} | ${st.layers.map((l) => l.id).join(',')}`;
 });
 
-test('LES COURBES NE PARTENT PAS SANS QU’ON LES DEMANDE, et partent dès qu’on '
-  + 'les demande', async ({ page }) => {
-  const tuiles = await ouvrir(page);
+/* ON PASSE PAR `ouvrirVolet` : le sélecteur de fonds a déjà déménagé une fois,
+   et trente-cinq parcours codaient son emplacement. Celui-ci demande au DOM. */
+async function cocher(page: Page, nom: string): Promise<void> {
+  await ouvrirVolet(page, '.fonds');
+  await page.getByLabel(nom).check();
+}
 
-  /* 1. RIEN N'EST DEMANDÉ D'OFFICE. Une surcouche allumée par défaut coûterait
+test('LES COURBES NE SONT PAS LÀ SANS QU’ON LES DEMANDE, et y sont dès qu’on '
+  + 'les demande', async ({ page }) => {
+  await ouvrir(page);
+
+  /* 1. RIEN N'EST DÉCLARÉ D'OFFICE. Une surcouche allumée par défaut coûterait
         des tuiles à un service public pour un usager qui n'a rien demandé —
         « ces quotas sont un bien commun ». */
-  await page.waitForTimeout(1500);
-  expect(tuiles.filter((u) => u.includes('ELEVATION.CONTOUR.LINE')),
-    'des courbes ont été demandées sans être cochées').toEqual([]);
-  expect(tuiles.length, 'aucune tuile de fond : le parcours ne juge rien')
-    .toBeGreaterThan(0);
+  await expect.poll(() => calques(page), { timeout: 20_000 }).not.toBe('CARTE ABSENTE');
+  expect(await calques(page)).not.toContain('surcouche-courbes');
 
-  /* 2. COCHÉE, ELLE TIRE — et sur la bonne couche. */
+  /* 2. COCHÉE, LA SURCOUCHE EXISTE — et la carte la dessine PAR-DESSUS le
+        fond, sans quoi elle serait cachée sous lui. */
   await cocher(page, 'Courbes de niveau');
-  await expect.poll(() => tuiles.filter((u) => u.includes('ELEVATION.CONTOUR.LINE')).length,
-    { timeout: 15_000 }).toBeGreaterThan(0);
-
-  /* 3. ET ELLE TIRE DE LA GÉOPLATEFORME, EN PNG : le fond transparent est ce
-        qui en fait une surcouche plutôt qu'un fond de plus. */
-  const demandes = tuiles.filter((u) => u.includes('ELEVATION.CONTOUR.LINE'));
-  for (const u of demandes) {
-    expect(u).toMatch(/^https:\/\/data\.geopf\.fr\/wmts/);
-    expect(u).toContain('FORMAT=image/png');
-  }
+  await expect.poll(() => calques(page), { timeout: 15_000 }).toContain('surcouche-courbes');
+  const dessin = await calques(page);
+  expect(dessin).toContain('courbes');
+  expect(dessin.indexOf('fond-plan-ign'),
+    'les courbes passeraient sous le fond').toBeLessThan(dessin.indexOf('surcouche-courbes'));
 });
 
 test('LE CHOIX SURVIT AU RECHARGEMENT — une option qu’il faut recocher à chaque '
@@ -119,7 +108,7 @@ test('LE CHOIX SURVIT AU RECHARGEMENT — une option qu’il faut recocher à ch
     });
   });
 
-  const tuiles = await ouvrir(page);
+  await ouvrir(page);
 
   /* 1. LA CARTE LES DESSINE — et l'on attend qu'elle existe avant de
         l'interroger : la toile paraît avant que le style restitué ne soit
@@ -129,12 +118,7 @@ test('LE CHOIX SURVIT AU RECHARGEMENT — une option qu’il faut recocher à ch
     message: 'les courbes n’ont pas été rétablies au rechargement', timeout: 20_000,
   }).toContain('surcouche-courbes');
 
-  /* 2. ET ELLES PARTENT VRAIMENT : un calque déclaré qui ne demande aucune
-        tuile ne dessinerait rien. */
-  await expect.poll(() => tuiles.filter((u) => u.includes('ELEVATION.CONTOUR.LINE')).length,
-    { timeout: 20_000 }).toBeGreaterThan(0);
-
-  /* 3. ET LA CASE LE DIT : une carte qui dessine les courbes pendant que la
+  /* 2. ET LA CASE LE DIT : une carte qui dessine les courbes pendant que la
         case est vide serait pire qu'un oubli — on ne saurait pas comment les
         éteindre. */
   await ouvrirVolet(page, '.fonds');

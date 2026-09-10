@@ -35,6 +35,14 @@ export interface ReserveTuiles {
   readonly tuiles: number;
   /** Le motif que le service worker applique à l'URL entière. */
   readonly motif: RegExp;
+  /* LE POIDS D'UNE TUILE DE CETTE COUCHE, quand il a été MESURÉ pour elle.
+     Absent, on retombe sur `OCTETS_PAR_TUILE` — les 58 Ko relevés sur seize
+     tuiles de Plan par le couloir hors ligne (COULOIR-1). Ce défaut est
+     conservateur pour les autres couches : un relevé du 10/09 sur Paris au
+     zoom 15 donne 38 Ko pour le Plan, 15 pour le satellite, 16 pour les
+     routes et 13 pour le cadastre. On ne les baisse PAS sur un seul
+     échantillon — un plafond se taille sur le pire cas, pas sur un cas. */
+  readonly octets?: number;
 }
 
 /* Le motif est ancré sur l'origine : workbox exige qu'une expression
@@ -91,5 +99,33 @@ export const RESERVES_TUILES: readonly ReserveTuiles[] = [
     format: 'image/png',
     tuiles: 150,
     motif: motifDeCouche('CADASTRALPARCELS.PARCELLAIRE_EXPRESS'),
+  },
+  {
+    couche: 'ELEVATION.CONTOUR.LINE',
+    cache: 'tuiles-courbes',
+    format: 'image/png',
+    /* SOIXANTE, ET C'EST LA PROMESSE PUBLIQUE QUI L'A FIXÉ (COURBES-1, 10/09).
+       Trois écrans de courbes, pas davantage : la réserve entière est bornée
+       par les « environ 110 Mo » écrits dans « Vie privée », et les quatre
+       couches d'avant en occupent déjà 107. Soixante tuiles de courbes — 45 Ko
+       au pire relevé — tiennent dans ce qui reste, et pas une de plus.
+       CE N'EST PAS LA BONNE RÉPONSE, C'EST LA RÉPONSE HONNÊTE. Une réserve
+       digne de ce nom demanderait soit de relever le chiffre annoncé à
+       l'usager — ce qui est une décision d'Armelin, pas la mienne — soit de
+       mesurer le poids RÉEL des quatre autres couches, que le garde-fou
+       suppose toutes à 58 Ko alors qu'un relevé du 10/09 sur Paris donne 38 Ko
+       pour le Plan, 15 pour le satellite, 16 pour les routes et 13 pour le
+       cadastre. Le second chemin ferait de la place sans rien promettre de
+       plus ; il demande une campagne de mesure à lui seul.
+       CE QUE SOIXANTE DONNE QUAND MÊME : le dernier coin regardé garde ses
+       courbes hors réseau, ce qui est le cas d'usage — on consulte le relief
+       là où l'on va marcher, puis on perd le réseau. */
+    tuiles: 60,
+    /* QUARANTE-CINQ KILO-OCTETS, le PIRE de quatre relevés du 10/09 : 28,7 Ko
+       au zoom 6, 44,7 au zoom 13 (Chamonix, terrain le plus dense qui soit),
+       6,8 au zoom 15 sur Paris, 3,8 au zoom 18. Un plafond se taille sur le
+       pire cas. */
+    octets: 45_000,
+    motif: motifDeCouche('ELEVATION.CONTOUR.LINE'),
   },
 ];
