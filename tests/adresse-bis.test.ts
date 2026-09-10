@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   decomposerNumero, requeteNormalisee, versResultats, communeNommee,
-  repondALaSaisie,
+  repondALaSaisie, ditUneVoie,
 } from '../src/lib/adresse';
 
 /* LES ADRESSES BIS, TER, QUATER (ADRESSE-2, 01/09).
@@ -153,5 +153,61 @@ describe('repondALaSaisie', () => {
 
   it('une saisie sans mot utile ne prétend pas avoir sa réponse', () => {
     expect(repondALaSaisie('le', 'Le Mans')).toBe(false);
+  });
+});
+
+describe('une rue nommée d’après un lieu n’est pas ce lieu (PORTE-1)', () => {
+  /* TROUVÉ EN SONDANT LA PRODUCTION À LA MAIN, le 10/09 : « Stade de France »
+     rendait « Avenue du Stade de France 93210 Saint-Denis », puis trois
+     terrains de football à Marle, Berthecourt et Breilly. Le stade n'était
+     nulle part — et l'index des lieux, lui, le rend EN PREMIER. */
+
+  it('LE CAS QUI A TOUT DÉCLENCHÉ : « Stade de France » contre l’avenue du même '
+    + 'nom. Tous les mots y sont, et pourtant ce n’est pas la chose demandée', () => {
+    expect(repondALaSaisie('Stade de France', 'Avenue du Stade de France 93210 Saint-Denis'))
+      .toBe(false);
+  });
+
+  it('et ses frères, relevés sur le corpus', () => {
+    expect(repondALaSaisie('Arènes de Nîmes', 'Rue des Arènes 30000 Nîmes')).toBe(false);
+    expect(repondALaSaisie('Limoges Bellegarde', 'allée de Bellegarde 87100 Limoges'))
+      .toBe(false);
+    expect(repondALaSaisie('Église Sainte-Opportune Sainte-Opportune-du-Bosc',
+      'Route de l’Eglise 27110 Sainte-Opportune-du-Bosc')).toBe(false);
+  });
+
+  it('MAIS LA PORTE RESTE FERMÉE QUAND LE LIBELLÉ N’AJOUTE RIEN : « le Thuré » '
+    + 'rendu par « le Thuré 72160 Vouvray-sur-Huisne », c’est bien le lieu, et '
+    + 'un appel de plus n’y apporterait rien. Sept des quatorze cas mesurés '
+    + 'étaient de cette sorte', () => {
+    expect(repondALaSaisie('le Thuré Vouvray-sur-Huisne', 'le Thuré 72160 Vouvray-sur-Huisne'))
+      .toBe(true);
+    expect(repondALaSaisie('San Tumasgiu', 'San Tumasgiu 20235 Castello-di-Rostino'))
+      .toBe(true);
+    expect(repondALaSaisie('la Césarine', 'La Césarine 41300 Pierrefitte-sur-Sauldre'))
+      .toBe(true);
+  });
+
+  it('QUAND L’USAGER ÉCRIT LUI-MÊME LE TYPE DE VOIE, il cherche une voie et la '
+    + 'BAN est chez elle : rien ne change', () => {
+    expect(repondALaSaisie('rue de Rivoli Paris', 'Rue de Rivoli 75001 Paris')).toBe(true);
+    expect(repondALaSaisie('avenue du Stade de France',
+      'Avenue du Stade de France 93210 Saint-Denis')).toBe(true);
+  });
+
+  it('une commune reste une commune', () => {
+    expect(repondALaSaisie('lyon', 'Lyon')).toBe(true);
+    expect(repondALaSaisie('Le Plessis-Trévise', 'Le Plessis-Trévise')).toBe(true);
+  });
+
+  it('la brique se lit seule', () => {
+    expect(ditUneVoie('Avenue du Stade de France')).toBe(true);
+    expect(ditUneVoie('Route de l’Eglise')).toBe(true);
+    expect(ditUneVoie('Stade de France')).toBe(false);
+    expect(ditUneVoie('le Thuré 72160 Vouvray-sur-Huisne')).toBe(false);
+    /* « Voie » est un mot de voie, mais « Vouvray » n’en est pas un : on
+       compare des MOTS ENTIERS, jamais des morceaux. */
+    expect(ditUneVoie('Vouvray')).toBe(false);
+    expect(ditUneVoie('Courstriangle')).toBe(false);
   });
 });

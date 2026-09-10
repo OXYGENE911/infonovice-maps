@@ -282,13 +282,48 @@ function nu(s: string): string {
  * Un mot de la saisie absent du libellé, c'est une question sans réponse : là,
  * et là seulement, on va voir ailleurs.
  */
+/* LES MOTS QUI DISENT UN TYPE DE VOIE. Ils ne nomment rien par eux-mêmes :
+   ils disent ce que la chose EST. C'est précisément ce qui les rend utiles
+   ici — voir `repondALaSaisie`. */
+const MOTS_DE_VOIE = new Set([
+  'rue', 'avenue', 'boulevard', 'place', 'impasse', 'allee', 'chemin', 'route',
+  'quai', 'cours', 'square', 'passage', 'sentier', 'esplanade', 'villa',
+  'rond', 'giratoire', 'voie', 'venelle', 'traverse', 'montee', 'descente',
+]);
+
+/** Un texte nomme-t-il un type de voie ? — PURE. */
+export function ditUneVoie(texte: string): boolean {
+  return nu(texte).split(' ').some((m) => MOTS_DE_VOIE.has(m));
+}
+
 export function repondALaSaisie(texte: string, libelle: string): boolean {
   const dans = ` ${nu(libelle)} `;
   /* LES MOTS COURTS NE PROUVENT RIEN — « rue », « le », « de » se retrouvent
      partout et diraient oui à tort. Trois lettres, comme pour les communes. */
   const mots = nu(texte).split(' ').filter((m) => m.length >= 3);
   if (mots.length === 0) return false;
-  return mots.every((m) => dans.includes(` ${m} `));
+  if (!mots.every((m) => dans.includes(` ${m} `))) return false;
+
+  /* UNE RUE NOMMÉE D'APRÈS UN LIEU N'EST PAS CE LIEU (PORTE-1, 10/09/2026).
+     TROUVÉ EN SONDANT LA PRODUCTION À LA MAIN : « Stade de France » rendait
+     « Avenue du Stade de France 93210 Saint-Denis », puis trois terrains de
+     football à Marle, Berthecourt et Breilly. Le stade n'était nulle part —
+     et l'index des lieux, lui, le rend EN PREMIER. La règle des mots disait
+     « la BAN a répondu », puisque « stade » et « france » figurent bien dans
+     le libellé ; la porte se fermait, et l'on n'allait jamais voir ailleurs.
+     CE QUI TRANCHE, C'EST LE MOT AJOUTÉ. « Avenue du Stade de France » ajoute
+     « avenue » à ce qu'on a écrit : ce n'est plus la chose demandée, c'est une
+     voie qui la cite. « le Thuré 72160 Vouvray-sur-Huisne » n'ajoute rien à
+     « le Thuré Vouvray-sur-Huisne » : c'est bien le lieu, et la porte reste
+     fermée — un appel de plus n'y apporterait rien.
+     MESURÉ SUR LE CORPUS avant d'être écrit (docs/mesure-porte-ban.md) : sur
+     193 requêtes de nom, la porte se ferme 14 fois ; cette clause en rouvre
+     SEPT, et les sept sont des voies nommées d'après autre chose — Arènes de
+     Nîmes, Église Sainte-Opportune, Bailleul… Une première version, plus
+     large (« la BAN rend une voie »), en rouvrait quatorze, dont la moitié
+     pour rien. Chaque réouverture coûte un appel à des services publics : la
+     décision du 01/09 interdit d'élargir sans compter, et l'on a compté. */
+  return !(ditUneVoie(libelle) && !ditUneVoie(texte));
 }
 
 /**
