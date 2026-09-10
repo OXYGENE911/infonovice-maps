@@ -129,6 +129,14 @@ cocher **Ionity** puis **IZIVIA**. Puis `ouvrirReglagesBornes(page)` et cocher
 publique ne permet pas. Je vous dis ce qui est raccordé à l'itinérance, et je
 privilégie mes deux réseaux. »
 
+> **La liste des cases se calcule sur les bornes RÉELLEMENT trouvées le long du
+> trajet** (`#voletReseaux`, panneau-itineraire.ts) : « proposer une case
+> *Ionity* sur un trajet qui n'en croise aucune est une promesse creuse ».
+> Le relevé du 11/09 dit qu'elles seront là (Ionity 14 stations, IZIVIA 368
+> points à ≥ 150 kW le long du couloir) — **mais c'est à confirmer au premier
+> passage vert du spec**. Si l'une des deux manquait, prendre les deux premiers
+> réseaux affichés et adapter le discours : le geste ne change pas.
+
 ## Étape 5 — Le plan de recharge, et pourquoi (cible : 25 s)
 
 **Geste** — rester sur la page **Arrêts de recharge**, lire le résumé, puis
