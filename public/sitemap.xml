@@ -38,4 +38,11 @@
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
+  <url>
+    <!-- SALON-1 (11/09) : péremption au 18/10/2026, voir docs/ROADMAP.md
+         section « Vitrine & B2B » — retirer ce bloc à cette date. -->
+    <loc>https://maps.infonovice.fr/salon.html</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.5</priority>
+  </url>
 </urlset>
