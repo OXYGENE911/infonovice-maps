@@ -114,8 +114,24 @@ Format exact du résumé une fois le plan calculé (l. 3145-3148) :
 ## Étape 4 — Mes réseaux, mes badges (cible : 20 s)
 
 **Geste** — `allerA(page, 'recharge')`, déplier **« Réseaux préférés »**,
-cocher **Ionity** puis **IZIVIA**. Puis `ouvrirReglagesBornes(page)` et cocher
-**« Accessibles en itinérance (badges) »**.
+cocher **Ionity** puis **IZIVIA**. Puis `ouvrirReglagesBornes(page)`, cocher
+**« Bornes électriques »**, et **seulement ensuite** « Accessibles en
+itinérance (badges) ».
+
+**L'ORDRE N'EST PAS UN DÉTAIL, et le test le paierait.** Le bloc
+`.poi-filtres`, qui porte `input.poi-itinerance`, est `hidden` tant que la
+couche des bornes n'est pas active : `#majVisibiliteFiltres()` dans
+`src/carte/panneau-poi.ts` pose `bloc.hidden = !this.#actives.has('bornes')`.
+Or `ouvrirReglagesBornes` (`tests-e2e/volets.ts` l. 109-118) ouvre le volet,
+elle n'allume pas la couche ; et dans un contexte Playwright neuf aucune
+préférence n'est en IndexedDB, donc `#actives` est vide. Sans
+`page.getByRole('checkbox', { name: 'Bornes électriques' }).check()`, la case
+d'itinérance reste masquée et le `check()` expire. Recette exacte dans
+`tests-e2e/bornes-filtres.spec.ts` l. 42-52 — qui saute d'abord au zoom 13,
+les POI ne se chargeant qu'à partir du zoom 12.
+
+Sur le stand la question ne se pose pas : la tablette a déjà servi, sa
+préférence est en mémoire. C'est au test que l'ordre s'impose.
 
 **Résultat vérifiable**
 
@@ -287,10 +303,16 @@ couper — `caches.open('tuiles-plan')` puis `cache.put()` sur les URL que
 écrit ce que le worker aurait écrit — mais cela ne dépend d'aucune route.
 
 **Le couloir du test n'est pas celui du stand** : `couloir.spec.ts` prend
-Paris → Melun, environ 149 tuiles, là où la démo fait Paris → Lyon (947
-tuiles, comptées à sec dans `tests/couloir.test.ts`). Le second test doit en
-faire autant : ce qu'il prouve, c'est qu'un fond EMPORTÉ tient hors réseau —
-pas qu'il fait six cents kilomètres.
+Paris → Melun, environ 149 tuiles. Le second test doit en faire autant : ce
+qu'il prouve, c'est qu'un fond EMPORTÉ tient hors réseau — pas qu'il fait six
+cents kilomètres.
+
+Un ordre de grandeur circule pour Paris–Lyon, **947 tuiles** ; il vient de
+`tests/couloir.test.ts`, qui l'obtient sur une **ligne droite** de quarante
+points entre Paris (2,3522 / 48,8566) et Lyon (4,8357 / 45,7640). Ce n'est
+PAS le trajet de la démo, qui part de Linois et arrive à Beraudier en suivant
+la route : le compte réel du stand se lit dans `.iti-couloir-etat` avant le
+téléchargement, il ne se déduit pas de ce 947.
 
 **Le chemin rapide, pour les étapes 3 à 7** : `page.goto('/#iti=2.282604,48.848501;4.859273,45.760829;car')`
 **puis `page.reload()`** — le fragment n'est rejoué qu'au démarrage. Le

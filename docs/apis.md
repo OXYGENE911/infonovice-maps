@@ -1327,8 +1327,12 @@ appelle**, `src/lib/photos-monuments.ts`, et **un seul appelant** l'utilise,
 `public/donnees/monuments.json` porte 14 350 monuments classés géolocalisés
 (1,40 Mo), et **100 %** d'entre eux portent une référence Mérimée — vérifié
 ligne à ligne le 11/09. Toute fiche de lieu d'exception ouverte déclenche donc
-les deux appels. Rien d'autre dans le produit ne touche Wikimedia : aucun
-autre résultat pour `wikidata|wikimedia|wikipedia` dans `src/`.
+**l'appel SPARQL** ; le second ne part que si le premier a rendu un nom de
+fichier — `photoDuMonument()` rend `null` sans appeler Commons quand les
+`bindings` sont vides (`photos-monuments.ts`, l. 160-162). Sur notre
+échantillon du 11/09, c'est le cas 2 fois sur 30. Rien d'autre dans le produit
+ne touche Wikimedia : aucun autre résultat pour
+`wikidata|wikimedia|wikipedia` dans `src/`.
 
 **Les logos par Wikidata de la ROADMAP : INFIRMÉ.** Les lignes 1339, 1355 et
 1416 de `docs/ROADMAP.md` parlent bien de logos d'enseignes, mais pour dire
@@ -1421,15 +1425,20 @@ Gard** et **Chambord** — précisément ceux que l'on montrerait sur un stand.
 
 **Trois obstacles qu'il faut écrire, mesurés eux aussi.**
 
-1. **Les images viennent de trois hôtes, et notre CSP n'en déclare qu'un.**
+1. **Les images viennent de trois hôtes, et nous n'en acceptons qu'un.**
    Sur 794 photos relevées autour de huit monuments couverts :
    `panoramax.openstreetmap.fr` 403 (51 %), **`panoramax.ign.fr` 388 (49 %)**,
-   `panoramax.mapcomplete.org` 3. Or `img-src` ne porte que le premier, et
-   `src/lib/panoramax.ts` prend l'`href` de l'`asset` tel quel : **près d'une
-   photo sur deux est donc déjà bloquée aujourd'hui**, y compris pour la
-   fonction « photos de rue » existante. Un hôte absent de la CSP échoue sans
-   panne réseau visible. Constat sur `src/`, à traiter par Ingénierie,
-   indépendant de la décision Wikimedia.
+   `panoramax.mapcomplete.org` 3. **Près d'une photo sur deux est donc
+   inutilisable aujourd'hui**, y compris pour la fonction « photos de rue »
+   existante — mais le mécanisme n'est pas celui qu'on croit, et la nuance
+   change le correctif. Ce n'est pas la CSP qui bloque à l'affichage : c'est
+   `versPhotos()` qui écarte la photo AVANT, dans `src/lib/panoramax.ts`, sur
+   un motif d'hôte (`/^https:\/\/[a-z0-9.-]*panoramax\.(openstreetmap\.fr|xyz)\//`)
+   — une garde délibérée, dont le commentaire dit qu'elle évite « un cadre
+   vide ». Corriger demande donc **deux** gestes, pas un : élargir ce motif à
+   `panoramax.ign.fr` **et** ajouter l'hôte à `img-src` dans `index.html`.
+   L'un sans l'autre ne rend rien. Constat sur `src/`, à traiter par
+   Ingénierie, indépendant de la décision Wikimedia.
 2. **La licence n'est pas unique, elle est par photo.** Sur les mêmes 794 :
    **CC-BY-SA-4.0** pour 406, **Licence Ouverte / Etalab 2.0** pour 388. Les
    deux exigent la paternité ; CC-BY-SA impose en plus le partage à
@@ -1469,16 +1478,29 @@ Le jeu « Mémoire — illustration Mérimée et Palissy », ministère de la
 Culture, licence **ODbL**, mis à jour le 06/09/2026 : **un seul fichier CSV de
 1 357 374 283 octets (1,36 Go)** sur `ministere-culture.s3.sbg.io.cloud.ovh.net`
 (pas d'en-tête CORS ; un index engendré au build, comme `monuments.json`, le
-contournerait). 120 colonnes. Sondage par requêtes `Range` sur six fenêtres
-de 3 Mo — **17 590 lignes examinées** :
+contournerait). 120 colonnes. **Deux tirages distincts** par requêtes `Range`,
+et les dénominateurs diffèrent — autant les écrire :
 
-- `Lien_vers_l_image` renseigné à **100 %** ;
+*Premier tirage : six fenêtres de 3 Mo, **17 590 lignes*** —
+
+- `Lien_vers_l_image` renseigné à **100 %** (17 511 sur 17 590) ;
 - rattachement : **53,5 % à une référence Mérimée `PA…`**, 46,5 % à une
   référence Palissy `PM…` ;
-- `Copyright` : **vide sur 11 071 lignes sur 11 071** ;
 - `Droits_de_diffusion` : vide sur 99,8 % ; les 0,2 % renseignés portent
   « reproduction soumise à autorisation du titulaire des droits
   d'exploitation ».
+
+*Second tirage, fenêtres différentes du même fichier : quatre fenêtres de
+3 Mo, **11 071 lignes***, dont 6 255 rattachées à un `PA…` —
+
+- `Copyright` : **vide sur 11 071 lignes sur 11 071**, et vide de même sur les
+  6 255 lignes Mérimée prises seules.
+
+Les 11 071 lignes du second tirage ne sont pas un sous-ensemble des 17 590 du
+premier : ce sont deux échantillons du même fichier de 1,36 Go, pas une
+mesure faite deux fois. Rien n'autorise à conclure sur les lignes non tirées ;
+ce qui est établi, c'est que **sur deux échantillons indépendants totalisant
+28 661 lignes, aucune ne porte de mention de droits exploitable**.
 
 Autrement dit : **l'open data ne publie aucune licence par image**. L'ODbL
 couvre la base de métadonnées, pas les photographies. Afficher l'image serait
@@ -1552,9 +1574,13 @@ exception de moins à expliquer.
 
 **Si le CEO préfère garder une image**, la seule voie mesurée est Panoramax en
 **complément assumé** : un bouton « voir la rue » qui ne paraît que lorsqu'une
-photo existe à moins de 50 m (37 % des fiches), avec producteur, licence et
-date sous l'image — et, préalable obligatoire, `panoramax.ign.fr` ajouté à
-`img-src`, sans quoi une photo sur deux ne s'affichera pas.
+photo existe à moins de 50 m, avec producteur, licence et date sous l'image.
+Combien de fiches en porteraient un ? **11 sur les 30 de notre échantillon** ;
+extrapoler ces 37 % aux 14 350 fiches est une estimation, pas une mesure — un
+comptage sur l'index entier demanderait 14 350 appels et n'a pas été fait.
+Préalable obligatoire, dans les deux cas : élargir le motif d'hôte de
+`src/lib/panoramax.ts` **et** ajouter `panoramax.ign.fr` à `img-src`, sans
+quoi une photo sur deux restera écartée.
 
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.
