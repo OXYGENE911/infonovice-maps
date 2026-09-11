@@ -98,8 +98,19 @@ const PICTO_MODE: Record<Mode, NomPicto> = {
    1200 ms — vérifié par mesure (docs/mesure-paris-lyon.md) : une taxe
    garantie sur chaque calcul, sans rapport avec la taille des rafales
    réelles observées (quelques centaines de ms entre deux cases cochées à la
-   main). 300 ms absorbe toujours ces rafales tout en rendant le débounce
-   quasi imperceptible sur un calcul isolé. */
+   main). 300 ms absorbe toujours ces rafales-là tout en rendant le débounce
+   quasi imperceptible sur un calcul isolé.
+   CE QUE 300 MS NE COUVRE PLUS (revue Codex du 11/09/2026, remarque 5,
+   signalé et assumé, non corrigé) : sur un itinéraire déjà calculé, deux
+   modifications du véhicule espacées de PLUS de 300 ms mais de MOINS de
+   1200 ms (le cas illustré : 600 ms) relancent chacune leur propre relevé de
+   conditions (météo + altimétrie, jamais l'IRVE ni l'itinéraire) au lieu
+   d'un seul avec l'ancien débounce — un coût réel mais borné (deux petits
+   appels, pas les deux plus lourds), absent des scénarios mesurés par cette
+   tâche (banc T3, démo salon) où le véhicule se règle UNE fois avant tout
+   calcul. Réduire ce risque à zéro demanderait de garder un débounce plus
+   large que ce qu'un calcul isolé peut se permettre de payer : arbitrage du
+   chef si ce coût borné n'est pas acceptable. */
 const DEBOUNCE_PLAN_AUTO_MS = 300;
 
 const SOURCE = 'itineraire';
@@ -1218,16 +1229,25 @@ export class PanneauItineraire extends HTMLElement {
          calcul. Le premier calcul de la session payait jusqu'à plusieurs
          secondes du seul téléchargement de l'index (docs/mesure-paris-lyon.md,
          ~700 Ko gzippés), alors que rien n'empêche de le lancer PENDANT que
-         l'usager tape encore l'adresse d'arrivée. Un appel de PLUS ne serait
-         pas acceptable (règle « ne jamais marteler les API publiques »),
-         mais lancer PLUS TÔT le même appel unique n'en ajoute aucun :
-         `indexNational` dédoublonne déjà les appels concurrents (`enCours`,
-         lib/index-bornes.ts) et sert le cache IndexedDB existant s'il est
-         frais — `#planifierRecharge` retrouvera cet appel déjà résolu (ou en
-         vol) au lieu d'en relancer un. Thermique/hybride exclu : ce véhicule
-         ne consulte jamais l'index IRVE. */
+         l'usager tape encore l'adresse d'arrivée. Dans le cas courant (cache
+         IndexedDB disponible en écriture, ou plusieurs appels réellement
+         concurrents), lancer PLUS TÔT le même appel unique n'en ajoute
+         aucun : `indexNational` dédoublonne les appels concurrents
+         (`enCours`, lib/index-bornes.ts) et sert le cache IndexedDB existant
+         s'il est frais — `#planifierRecharge` retrouvera cet appel déjà
+         résolu (ou en vol) au lieu d'en relancer un. Thermique/hybride
+         exclu : ce véhicule ne consulte jamais l'index IRVE.
+         SI L'ÉCRITURE INDEXEDDB ÉCHOUE (quota, navigation privée…), ce
+         préchargement n'est PAS suivi d'un second appel gratuit : c'est
+         `indexNational` elle-même qui, sans rien à relire en cache, retélé-
+         chargera au calcul suivant — un comportement déjà présent AVANT
+         cette tâche (revue Codex du 11/09/2026, remarque 3 : signalé, non
+         corrigé ici, hors du périmètre de cette optimisation). Le `.catch`
+         évite seulement qu'un rejet de PROMESSE non suivi (préchargement
+         seul, sans calcul déclenché ensuite) remonte comme une erreur non
+         gérée. */
       void lirePreference<unknown>(PREF_VEHICULE).then((memo) => {
-        if (!estThermique(memo)) void indexNational();
+        if (!estThermique(memo)) void indexNational().catch(() => { /* voir commentaire ci-dessus */ });
       });
 
       if (!this.#dernier) return;

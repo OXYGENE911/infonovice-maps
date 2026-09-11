@@ -7,36 +7,56 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 ### Paris → Lyon, plan de recharge inclus, sous 5 secondes
 - **Le calcul mesuré par le banc T3 (`docs/mesure-paris-lyon.md`) passait
   systématiquement le seuil de 5 s (p95 6 704 à 9 454 ms sur trois passages,
-  banc corrigé, réseau réel) ; il tient désormais large (p95 2 096 à 3 524 ms
-  sur trois nouveaux passages).**
+  banc corrigé, réseau réel) ; il tient désormais large (p95 1 410 à 3 494 ms
+  sur trois nouveaux passages, médiane 677 à 702 ms).**
 - **Débounce de planification automatique, 1 200 ms → 300 ms**
   (`panneau-itineraire.ts`, `#minuteurPlanAuto` → `DEBOUNCE_PLAN_AUTO_MS`) :
   une taxe fixe et garantie sur CHAQUE calcul, mesurée à elle seule entre
   1 207 et 1 578 ms sur les 30 exécutions de référence. La règle « ne jamais
-  marteler les API publiques » vise le réseau, pas ce minuteur local — le
-  nombre d'appels ne change pas, seule l'attente pour rien disparaît.
+  marteler les API publiques » vise le réseau, pas ce minuteur local, et le
+  nombre d'appels ne change pas pour les scénarios mesurés (banc T3, démo
+  salon). Un cas plus étroit reste ouvert, signalé et assumé (revue Codex,
+  remarque 5) : sur un itinéraire déjà calculé, deux modifications du
+  véhicule espacées de 300 ms à 1 200 ms relancent chacune un relevé
+  météo + altimétrie au lieu d'un seul — jamais l'IRVE ni l'itinéraire,
+  jamais dans les parcours exercés ici. Détail dans le commentaire au-dessus
+  de `DEBOUNCE_PLAN_AUTO_MS`.
 - **Préchargement de l'index IRVE dès que le véhicule est renseigné**, pendant
   la saisie de la destination (`vehicule-change`), au lieu d'attendre le
-  calcul : `indexNational` dédoublonne déjà les appels concurrents et sert le
+  calcul : `indexNational` dédoublonne les appels concurrents et sert le
   cache IndexedDB existant, donc précharger plus tôt le même appel unique
-  n'en ajoute aucun. Le premier calcul d'une session payait jusqu'à
-  plusieurs secondes de ce seul téléchargement (~700 Ko).
+  n'en ajoute aucun DANS LE CAS COURANT. Le premier calcul d'une session
+  payait jusqu'à plusieurs secondes de ce seul téléchargement (~700 Ko).
+  Gate `estThermique` : un véhicule thermique/hybride ne consulte jamais
+  l'index IRVE, aucun préchargement inutile.
 - **Filtrage des 14 133 stations contre le corridor, par grille de cellules**
   (`stationsDuTrajet`, `src/lib/le-long-du-trajet.ts`) : le pré-filtre par
   boîte englobante existait déjà, mais chaque candidat retenu était ensuite
   projeté sur TOUS les segments du trajet — un coût qui grandit avec la
   LONGUEUR du trajet (plusieurs milliers de segments sur Paris-Lyon), mesuré
-  entre 2,1 et 3,9 s à lui seul. Une grille de cellules de la taille du rayon
-  cherché ramène cette recherche aux ~9 cellules qui entourent chaque
-  candidat, sans changer le résultat (preuve dans le commentaire du code,
-  contre-épreuve différentielle dans `tests/le-long-du-trajet.test.ts`).
+  entre 2,1 et 3,9 s à lui seul. Une grille de cellules ramène cette
+  recherche aux ~9 cellules qui entourent chaque candidat, sans changer le
+  résultat (preuve dans le commentaire du code, contre-épreuve différentielle
+  dans `tests/le-long-du-trajet.test.ts`) — **cellules dimensionnées par axe**
+  (longitude ET latitude séparément, `mLonMinimal`) : une première version
+  utilisait une cellule carrée en degrés, qui sous-couvrait l'axe est-ouest
+  d'un facteur ~1,4-1,5 à latitude française et pouvait exclure une station
+  pourtant à portée — trouvé par la revue Codex (remarque 1), corrigé et
+  verrouillé par un test de régression avant la fusion. Une seconde remarque
+  (égalités exactes départagées par l'ordre des cellules plutôt que l'ordre
+  du trajet) et une troisième (grille disproportionnée à rayon nul) ont reçu
+  le même traitement — voir `handoffs/2026-09-11-2100-codex-optim.md`.
 - **Altimétrie, météo et IRVE, déjà lancés en parallèle** (`Promise.all`,
   `#planifierRecharge`) : vérifié en tête de cette tâche, rien à changer —
   une cible de moins à optimiser n'est pas une cible ratée.
-- Bundle : +1,1 Ko / +0,37 Ko gzippé (chunk `index`, la grille de cellules),
-  chunk `panneau-itineraire` inchangé au Ko près. Aucune dépendance nouvelle,
-  aucun appel réseau supplémentaire, « Pourquoi ce plan ? » inchangé.
-- Revue Codex : `handoffs/2026-09-11-2100-codex-optim.md`.
+- Bundle (chunks JS, gzippé) : `panneau-itineraire` inchangé au Ko près,
+  `index` +1,3 Ko brut / gzip stable (grille de cellules). Aucune dépendance
+  nouvelle, aucun appel réseau de plus dans les scénarios mesurés,
+  « Pourquoi ce plan ? » inchangé.
+- Revue Codex : `handoffs/2026-09-11-2100-codex-optim.md` — VERDICT BLOQUANT
+  sur la première passe (2 remarques bloquantes, 4 sérieuses), toutes
+  corrigées ou explicitement assumées avant la fusion (voir le détail
+  ci-dessus et le handoff).
 
 ## [1.141.0] — 2026-09-10 — COURBES-1
 

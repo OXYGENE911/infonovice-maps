@@ -134,18 +134,37 @@ function prefixeCumul(trace: [number, number][]): number[] {
 type Grille = Map<string, number[]>;
 const cleCellule = (cx: number, cy: number): string => `${cx},${cy}`;
 
-/** Une grille de cellules `celluleDeg` de côté : `grille[cx,cy]` liste les
-    indices des segments (`trace[i]` → `trace[i+1]`) dont la boîte englobante
-    touche cette cellule. Construite UNE fois par appel — voir
+/** Le mètre-par-degré-de-longitude le plus DÉFAVORABLE du tracé — celui de
+    son point le plus proche d'un pôle. La longitude se resserre avec la
+    latitude (`distanceAuSegment` le corrige déjà, point par point, avec
+    `Math.cos(rad(p[1]))`) ; une grille ne peut pas suivre cette variation
+    partout à la fois, donc elle prend la valeur qui donne la cellule la plus
+    LARGE en degrés, pour ne jamais sous-couvrir le rayon cherché — trouvé par
+    la revue Codex du 11/09/2026 (`handoffs/2026-09-11-2100-codex-optim.md`,
+    remarque 1) : une grille carrée en degrés, à latitude française (45-49°N,
+    cos ≈ 0,66-0,70), sous-couvrait l'axe est-ouest d'un facteur ~1,4-1,5 et
+    perdait des candidats pourtant à portée. */
+function mLonMinimal(trace: [number, number][]): number {
+  let latMaxAbs = 0;
+  for (const p of trace) latMaxAbs = Math.max(latMaxAbs, Math.abs(p[1]));
+  const cos = Math.max(Math.cos((latMaxAbs * Math.PI) / 180), 0.01);
+  return 111_320 * cos;
+}
+
+/** Une grille de cellules `celluleLonDeg` × `celluleLatDeg` : `grille[cx,cy]`
+    liste les indices des segments (`trace[i]` → `trace[i+1]`) dont la boîte
+    englobante touche cette cellule. Construite UNE fois par appel — voir
     `stationsDuTrajet`. */
-function construireGrille(trace: [number, number][], celluleDeg: number): Grille {
+function construireGrille(
+  trace: [number, number][], celluleLonDeg: number, celluleLatDeg: number,
+): Grille {
   const grille: Grille = new Map();
   for (let i = 0; i < trace.length - 1; i += 1) {
     const a = trace[i]!; const b = trace[i + 1]!;
-    const xMin = Math.floor(Math.min(a[0], b[0]) / celluleDeg);
-    const xMax = Math.floor(Math.max(a[0], b[0]) / celluleDeg);
-    const yMin = Math.floor(Math.min(a[1], b[1]) / celluleDeg);
-    const yMax = Math.floor(Math.max(a[1], b[1]) / celluleDeg);
+    const xMin = Math.floor(Math.min(a[0], b[0]) / celluleLonDeg);
+    const xMax = Math.floor(Math.max(a[0], b[0]) / celluleLonDeg);
+    const yMin = Math.floor(Math.min(a[1], b[1]) / celluleLatDeg);
+    const yMax = Math.floor(Math.max(a[1], b[1]) / celluleLatDeg);
     for (let x = xMin; x <= xMax; x += 1) {
       for (let y = yMin; y <= yMax; y += 1) {
         const cle = cleCellule(x, y);
@@ -161,23 +180,33 @@ function construireGrille(trace: [number, number][], celluleDeg: number): Grille
  * Le plus proche segment du tracé, cherché SEULEMENT dans les cellules
  * voisines du point — pas dans le tracé entier (voir `stationsDuTrajet`).
  *
- * POURQUOI LES 9 CELLULES VOISINES SUFFISENT, TOUJOURS. La cellule fait
- * `celluleDeg` (= `rayonM` converti en degrés) de côté. Où que le point
- * tombe À L'INTÉRIEUR de sa propre cellule, il ne peut jamais être à plus de
- * `celluleDeg` (donc `rayonM`) du bord le plus proche des cellules
- * immédiatement voisines — et à plus de `celluleDeg` de tout ce qui est
- * au-delà. Un segment à moins de `rayonM` du point est donc FORCÉMENT
- * inscrit dans l'une des 9 cellules (la sienne ou l'une des 8 voisines) :
- * ce n'est pas une approximation, le résultat est identique à celui d'une
- * recherche en force brute sur le tracé entier.
+ * POURQUOI LES 9 CELLULES VOISINES SUFFISENT, TOUJOURS. Chaque cellule fait
+ * `celluleLonDeg` × `celluleLatDeg`, dimensionnées pour valoir AU MOINS
+ * `rayonM` en mètres réels sur les deux axes, PARTOUT sur le tracé (voir
+ * `mLonMinimal`). Où que le point tombe À L'INTÉRIEUR de sa propre cellule,
+ * il ne peut jamais être à plus de `rayonM` du bord le plus proche des
+ * cellules immédiatement voisines — et à plus de `rayonM` de tout ce qui est
+ * au-delà. Un segment à moins de `rayonM` du point est donc FORCÉMENT inscrit
+ * dans l'une des 9 cellules (la sienne ou l'une des 8 voisines).
+ *
+ * LES ÉGALITÉS EXACTES SE DÉPARTAGENT COMME EN FORCE BRUTE : à écart
+ * RIGOUREUSEMENT identique (un point du tracé qui repasse exactement par les
+ * mêmes coordonnées, remarque 2 de la revue Codex), le segment retenu est
+ * celui du PLUS PETIT INDICE — le même choix que `situerSurLeTrace`, qui
+ * parcourt le tracé dans l'ordre et ne remplace jamais un écart égal. L'ordre
+ * de visite des cellules, lui, ne suit pas l'ordre du tracé — sans cette
+ * règle explicite, une égalité pourrait désigner un point du trajet à une
+ * tout autre étape (`avancement` très différent) selon la cellule visitée en
+ * premier.
  */
 function situerViaGrille(
   point: { lon: number; lat: number }, trace: [number, number][],
-  grille: Grille, celluleDeg: number, prefixe: number[],
+  grille: Grille, celluleLonDeg: number, celluleLatDeg: number, prefixe: number[],
 ): { ecart: number; avancement: number } {
-  const cx = Math.floor(point.lon / celluleDeg);
-  const cy = Math.floor(point.lat / celluleDeg);
+  const cx = Math.floor(point.lon / celluleLonDeg);
+  const cy = Math.floor(point.lat / celluleLatDeg);
   let meilleur = { ecart: Infinity, avancement: 0 };
+  let meilleurIndice = -1;
   const vus = new Set<number>();
   for (let x = cx - 1; x <= cx + 1; x += 1) {
     for (let y = cy - 1; y <= cy + 1; y += 1) {
@@ -188,8 +217,9 @@ function situerViaGrille(
         vus.add(i);
         const a = trace[i]!; const b = trace[i + 1]!;
         const { distance, t } = distanceAuSegment([point.lon, point.lat], a, b);
-        if (distance < meilleur.ecart) {
+        if (distance < meilleur.ecart || (distance === meilleur.ecart && i < meilleurIndice)) {
           meilleur = { ecart: distance, avancement: prefixe[i]! + t * (prefixe[i + 1]! - prefixe[i]!) };
+          meilleurIndice = i;
         }
       }
     }
@@ -225,10 +255,20 @@ export function stationsDuTrajet(
   const boites = tronconner(trace, rayonM);
   if (boites.length === 0) return [];
   const candidats = stations.filter((s) => dansUneBoite(s, boites));
-  // Cellule = rayon cherché, en degrés (même formule que la marge de
-  // `tronconner`) : c'est elle qui rend la preuve de `situerViaGrille` vraie.
-  const celluleDeg = Math.max(rayonM / 111_320, 1e-6);
-  const grille = construireGrille(trace, celluleDeg);
+  // UN RAYON NUL (OU NÉGATIF) N'EST PAS LE CHEMIN CHAUD — 10 km sur le seul
+  // appel réel (`panneau-itineraire.ts`) — mais un appel de test ou futur
+  // pourrait le passer : sans ce garde, des cellules quasi ponctuelles (le
+  // `Math.max(…, 1e-6)` d'avant) couvraient le tracé entier de centaines de
+  // millions de cellules (revue Codex du 11/09/2026, remarque 6). La force
+  // brute reste correcte, et rapide sur ce cas dégénéré (peu de candidats
+  // passent un pré-filtre à marge nulle).
+  if (rayonM <= 0) return retenir(candidats, trace, rayonM);
+  // Cellules dimensionnées pour valoir AU MOINS `rayonM` en mètres réels sur
+  // les deux axes, PARTOUT sur le tracé — voir `mLonMinimal` et la preuve
+  // dans le commentaire de `situerViaGrille`.
+  const celluleLatDeg = rayonM / 111_320;
+  const celluleLonDeg = rayonM / mLonMinimal(trace);
+  const grille = construireGrille(trace, celluleLonDeg, celluleLatDeg);
   const prefixe = prefixeCumul(trace);
   // DÉDOUBLONNE, comme `retenir` : les tronçons de boîtes se chevauchent, un
   // même point peut revenir deux fois dans `candidats`.
@@ -238,7 +278,7 @@ export function stationsDuTrajet(
     const cle = `${poi.lon.toFixed(5)},${poi.lat.toFixed(5)}`;
     if (vus.has(cle)) continue;
     vus.add(cle);
-    const { ecart, avancement } = situerViaGrille(poi, trace, grille, celluleDeg, prefixe);
+    const { ecart, avancement } = situerViaGrille(poi, trace, grille, celluleLonDeg, celluleLatDeg, prefixe);
     if (ecart <= rayonM) gardes.push({ poi, ecart, avancement });
   }
   return gardes.sort((a, b) => a.avancement - b.avancement);

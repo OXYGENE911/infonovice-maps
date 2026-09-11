@@ -147,6 +147,49 @@ describe('stationsDuTrajet', () => {
     expect(stationsDuTrajet([station(2.5, 48, 'x')], [[2, 48]], 1_000)).toEqual([]);
   });
 
+  // RÉGRESSIONS TROUVÉES PAR LA REVUE CODEX (11/09/2026,
+  // handoffs/2026-09-11-2100-codex-optim.md) — reproduites ici pour qu'elles
+  // ne reviennent jamais.
+  test('CODEX #1 — une cellule carrée en degrés sous-couvrait l’axe est-ouest, à latitude française', () => {
+    // À 48°N, 1° de longitude vaut ~74,5 km, pas 111,3 km comme la latitude :
+    // une grille qui traitait les deux axes pareil pouvait exclure une
+    // station pourtant à portée (967 m sur un rayon de 1000 m).
+    const trace: [number, number][] = [
+      [2, 48], [2, 48.1], [2.04, 48.1], [2.05, 48.1], [2.06, 48.1], [2.07, 48.1], [2.08, 48.1], [2.09, 48.1],
+    ];
+    const s = station(2.013, 48.05, 'x');
+    const r = stationsDuTrajet([s], trace, 1_000);
+    expect(r).toHaveLength(1);
+    expect(r[0]!.ecart).toBeCloseTo(967.4, 0);
+  });
+
+  test('CODEX #2 — une égalité exacte se départage par l’ordre du TRAJET, pas par l’ordre des cellules', () => {
+    // Un tracé qui repasse par son point de départ : la station EST ce point,
+    // à écart nul des deux côtés de la boucle. `retenir` (en force brute,
+    // dans l'ordre du tracé) retient le PREMIER segment rencontré —
+    // avancement 0, pas la fin de la boucle.
+    const trace: [number, number][] = [
+      [2, 48], [2.02, 48], [2.02, 48.02], [1.98, 48.02], [1.98, 48], [2, 48],
+    ];
+    const s = station(2, 48, 'x');
+    const r = stationsDuTrajet([s], trace, 1_000);
+    const reference = retenir([s], trace, 1_000);
+    expect(r).toHaveLength(1);
+    expect(r[0]!.ecart).toBe(0);
+    expect(r[0]!.avancement).toBe(reference[0]!.avancement);
+    expect(r[0]!.avancement).toBe(0);
+  });
+
+  test('CODEX #6 — un rayon nul ne construit pas une grille disproportionnée', () => {
+    // `Math.max(rayonM / 111_320, 1e-6)` produisait des cellules de ~11 cm à
+    // rayon nul : des centaines de millions de cellules sur un tracé de
+    // quelques degrés. `stationsDuTrajet` bascule maintenant en force brute
+    // pour ce cas dégénéré — ce test échouerait par TIMEOUT s'il régressait.
+    const trace: [number, number][] = [[2, 48], [2.01, 48.01]];
+    expect(stationsDuTrajet([], trace, 0)).toEqual([]);
+    expect(stationsDuTrajet([station(2, 48, 'x')], trace, 0)).toEqual(retenir([station(2, 48, 'x')], trace, 0));
+  });
+
   test('équivalent à la force brute sur un grand tracé et des stations dispersées', () => {
     const long: [number, number][] = Array.from({ length: 3_000 },
       (_, i) => [2 + i / 1000, 48 - i / 2000]);
