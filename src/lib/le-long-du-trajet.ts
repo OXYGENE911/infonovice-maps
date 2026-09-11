@@ -144,10 +144,21 @@ const cleCellule = (cx: number, cy: number): string => `${cx},${cy}`;
     remarque 1) : une grille carrée en degrés, à latitude française (45-49°N,
     cos ≈ 0,66-0,70), sous-couvrait l'axe est-ouest d'un facteur ~1,4-1,5 et
     perdait des candidats pourtant à portée. */
-function mLonMinimal(trace: [number, number][]): number {
+function mLonMinimal(trace: [number, number][], rayonM: number): number {
   let latMaxAbs = 0;
   for (const p of trace) latMaxAbs = Math.max(latMaxAbs, Math.abs(p[1]));
-  const cos = Math.max(Math.cos((latMaxAbs * Math.PI) / 180), 0.01);
+  /* LA MARGE DU PRÉ-FILTRE COMPTE AUSSI (revue Codex, second passage,
+     11/09/2026) : une STATION n'est pas un point du TRACÉ — `dansUneBoite`
+     la retient jusqu'à `rayonM / 111_320` degrés AU-DELÀ du tracé lui-même,
+     et c'est SA latitude à elle, pas celle du tracé, que `distanceAuSegment`
+     utilise pour convertir sa longitude en mètres. Une première version
+     s'arrêtait à la latitude la plus extrême du TRACÉ : une station à peine
+     plus proche du pôle (0,000156° de plus, dans le scénario reproduit par
+     Codex) suffisait à sous-dimensionner la cellule et à la perdre — alors
+     même que la marge du pré-filtre en admet bien davantage. La même marge
+     s'ajoute donc ici. */
+  const margeDeg = rayonM / 111_320;
+  const cos = Math.max(Math.cos(((latMaxAbs + margeDeg) * Math.PI) / 180), 0.01);
   return 111_320 * cos;
 }
 
@@ -267,7 +278,7 @@ export function stationsDuTrajet(
   // les deux axes, PARTOUT sur le tracé — voir `mLonMinimal` et la preuve
   // dans le commentaire de `situerViaGrille`.
   const celluleLatDeg = rayonM / 111_320;
-  const celluleLonDeg = rayonM / mLonMinimal(trace);
+  const celluleLonDeg = rayonM / mLonMinimal(trace, rayonM);
   const grille = construireGrille(trace, celluleLonDeg, celluleLatDeg);
   const prefixe = prefixeCumul(trace);
   // DÉDOUBLONNE, comme `retenir` : les tronçons de boîtes se chevauchent, un

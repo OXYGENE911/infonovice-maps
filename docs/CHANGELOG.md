@@ -8,7 +8,8 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - **Le calcul mesuré par le banc T3 (`docs/mesure-paris-lyon.md`) passait
   systématiquement le seuil de 5 s (p95 6 704 à 9 454 ms sur trois passages,
   banc corrigé, réseau réel) ; il tient désormais large (p95 1 410 à 3 494 ms
-  sur trois nouveaux passages, médiane 677 à 702 ms).**
+  sur les six passages mesurés après optimisation — trois avant la seconde
+  correction Codex, trois après ; médiane 673 à 702 ms).**
 - **Débounce de planification automatique, 1 200 ms → 300 ms**
   (`panneau-itineraire.ts`, `#minuteurPlanAuto` → `DEBOUNCE_PLAN_AUTO_MS`) :
   une taxe fixe et garantie sur CHAQUE calcul, mesurée à elle seule entre
@@ -23,12 +24,17 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   de `DEBOUNCE_PLAN_AUTO_MS`.
 - **Préchargement de l'index IRVE dès que le véhicule est renseigné**, pendant
   la saisie de la destination (`vehicule-change`), au lieu d'attendre le
-  calcul : `indexNational` dédoublonne les appels concurrents et sert le
-  cache IndexedDB existant, donc précharger plus tôt le même appel unique
-  n'en ajoute aucun DANS LE CAS COURANT. Le premier calcul d'une session
-  payait jusqu'à plusieurs secondes de ce seul téléchargement (~700 Ko).
-  Gate `estThermique` : un véhicule thermique/hybride ne consulte jamais
-  l'index IRVE, aucun préchargement inutile.
+  calcul : `indexNational` dédoublonne les appels réellement concurrents et
+  sert le cache IndexedDB existant, donc précharger plus tôt le même appel
+  unique n'en ajoute aucun. Le premier calcul d'une session payait jusqu'à
+  plusieurs secondes de ce seul téléchargement (~700 Ko). Gate `estThermique` :
+  un véhicule thermique/hybride ne consulte jamais l'index IRVE, aucun
+  préchargement inutile. **`indexNational` (`src/lib/index-bornes.ts`) garde
+  aussi, depuis la revue Codex (remarque 2 du second passage), une mémoire de
+  session en plus d'IndexedDB** : sans elle, un préchargement terminé AVANT
+  le calcul (le cas courant) pouvait être suivi d'un second téléchargement si
+  l'écriture IndexedDB avait échoué (quota, navigation privée) — l'appel
+  réellement AJOUTÉ que la première version ne fermait pas complètement.
 - **Filtrage des 14 133 stations contre le corridor, par grille de cellules**
   (`stationsDuTrajet`, `src/lib/le-long-du-trajet.ts`) : le pré-filtre par
   boîte englobante existait déjà, mais chaque candidat retenu était ensuite
@@ -38,25 +44,32 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   recherche aux ~9 cellules qui entourent chaque candidat, sans changer le
   résultat (preuve dans le commentaire du code, contre-épreuve différentielle
   dans `tests/le-long-du-trajet.test.ts`) — **cellules dimensionnées par axe**
-  (longitude ET latitude séparément, `mLonMinimal`) : une première version
-  utilisait une cellule carrée en degrés, qui sous-couvrait l'axe est-ouest
-  d'un facteur ~1,4-1,5 à latitude française et pouvait exclure une station
-  pourtant à portée — trouvé par la revue Codex (remarque 1), corrigé et
-  verrouillé par un test de régression avant la fusion. Une seconde remarque
-  (égalités exactes départagées par l'ordre des cellules plutôt que l'ordre
-  du trajet) et une troisième (grille disproportionnée à rayon nul) ont reçu
-  le même traitement — voir `handoffs/2026-09-11-2100-codex-optim.md`.
+  (longitude ET latitude séparément, `mLonMinimal`), **latitude de référence
+  élargie de la marge du pré-filtre** : deux passes de revue Codex ont trouvé
+  deux variantes du même défaut — une cellule carrée en degrés, qui
+  sous-couvrait l'axe est-ouest d'un facteur ~1,4-1,5 à latitude française
+  (1ʳᵉ passe), puis une référence de latitude limitée aux seuls sommets du
+  tracé, insuffisante pour une station légèrement plus proche du pôle que le
+  tracé lui-même mais encore dans la marge du pré-filtre (2ᵉ passe) — les
+  deux corrigées et verrouillées par des tests de régression différentiels
+  (`tests/le-long-du-trajet.test.ts`, cas « CODEX #1 » et « CODEX #1bis »).
+  Une égalité exacte départagée par l'ordre des cellules plutôt que l'ordre
+  du trajet, et une grille disproportionnée à rayon nul, ont reçu le même
+  traitement (cas « CODEX #2 » et « CODEX #6 ») — voir
+  `handoffs/2026-09-11-2100-codex-optim.md`.
 - **Altimétrie, météo et IRVE, déjà lancés en parallèle** (`Promise.all`,
   `#planifierRecharge`) : vérifié en tête de cette tâche, rien à changer —
   une cible de moins à optimiser n'est pas une cible ratée.
 - Bundle (chunks JS, gzippé) : `panneau-itineraire` inchangé au Ko près,
-  `index` +1,3 Ko brut / gzip stable (grille de cellules). Aucune dépendance
-  nouvelle, aucun appel réseau de plus dans les scénarios mesurés,
-  « Pourquoi ce plan ? » inchangé.
-- Revue Codex : `handoffs/2026-09-11-2100-codex-optim.md` — VERDICT BLOQUANT
-  sur la première passe (2 remarques bloquantes, 4 sérieuses), toutes
-  corrigées ou explicitement assumées avant la fusion (voir le détail
-  ci-dessus et le handoff).
+  `index` +1,4 Ko brut / gzip stable (grille de cellules + mémoire de
+  session). Aucune dépendance nouvelle, aucun appel réseau de plus dans les
+  scénarios mesurés, « Pourquoi ce plan ? » inchangé.
+- Revue Codex, deux passes : `handoffs/2026-09-11-2100-codex-optim.md` —
+  VERDICT BLOQUANT sur la première (2 remarques bloquantes, 4 sérieuses) ;
+  VERDICT BLOQUANT sur la deuxième également (1 remarque bloquante restante
+  sur la grille, corrigée depuis et vérifiée par un nouveau test de
+  régression, mais non revue une troisième fois faute de budget de temps sur
+  cette tâche — signalé au chef de cabinet dans le compte rendu de mission).
 
 ## [1.141.0] — 2026-09-10 — COURBES-1
 

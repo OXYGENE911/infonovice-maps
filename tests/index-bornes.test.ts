@@ -1,11 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import {
+  describe, it, expect, vi, beforeEach, afterEach,
+} from 'vitest';
 import {
   urlIndexNational, versStations, versStationsGardees, acces,
   reseauxNationaux, filtrerStations, stationsDans, perime, cleReseau,
   nomCourtReseau, chercherReseaux, etendue, ETENDUES,
   SEUIL_RAPIDE, PEREMPTION_MS, type StationRapide,
-  stationPasseFiltres,
+  stationPasseFiltres, indexNational, reinitialiserIndex,
 } from '../src/lib/index-bornes';
+import * as stockage from '../src/lib/stockage';
 
 /** Une ligne d'export telle que le portail la rend (forme mesurée le 26/08). */
 const ligne = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({
@@ -623,5 +626,60 @@ describe('stationPasseFiltres — UNE règle pour la carte ET le trajet (BORNES-
       station({ reseau: 'Tesla', operateur: 'Tesla', id: 'FRTEST3' })];
     const f = { puissanceMin: 100, reseaux: ['Ionity'] };
     expect(filtrerStations(lot, f)).toEqual(lot.filter((s) => stationPasseFiltres(s, f)));
+  });
+});
+
+// PERF-PARIS-LYON (11/09/2026, optim. cible 2, correction post-revue Codex,
+// handoffs/2026-09-11-2100-codex-optim.md, remarque 2 du second passage) :
+// `indexNational` garde désormais un téléchargement réussi en mémoire de
+// session, même si IndexedDB refuse de l'écrire — sans quoi un préchargement
+// (fini avant tout calcul, le cas courant) suivi d'un calcul pouvait
+// retélécharger l'index en double.
+describe('indexNational — mémoire de session', () => {
+  beforeEach(() => {
+    reinitialiserIndex();
+    vi.restoreAllMocks();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    reinitialiserIndex();
+  });
+
+  it('un téléchargement réussi n’est PAS relancé par un second appel séquentiel, même si IndexedDB refuse de l’écrire', async () => {
+    // AUCUN cache IndexedDB à relire, et l'ÉCRITURE échoue (quota, navigation
+    // privée) : le scénario exact reproduit par la revue Codex.
+    vi.spyOn(stockage, 'lirePreference').mockResolvedValue(undefined);
+    vi.spyOn(stockage, 'ecrirePreference').mockRejectedValue(new Error('quota dépassé'));
+    let appelsReseau = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      appelsReseau += 1;
+      return { ok: true, json: async () => [ligne()] } as Response;
+    }));
+
+    const premier = await indexNational();
+    expect(premier.stations).toHaveLength(1);
+    expect(appelsReseau).toBe(1);
+
+    // SÉQUENTIEL, PAS CONCURRENT : le premier appel est déjà résolu (sorti
+    // de `enCours`) avant que celui-ci ne démarre — exactement le
+    // préchargement suivi, plus tard, du calcul.
+    const second = await indexNational();
+    expect(second.stations).toHaveLength(1);
+    expect(appelsReseau).toBe(1); // pas un second téléchargement
+  });
+
+  it('deux appels VRAIMENT concurrents restent dédoublonnés (comportement inchangé)', async () => {
+    vi.spyOn(stockage, 'lirePreference').mockResolvedValue(undefined);
+    vi.spyOn(stockage, 'ecrirePreference').mockResolvedValue(undefined);
+    let appelsReseau = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      appelsReseau += 1;
+      return { ok: true, json: async () => [ligne()] } as Response;
+    }));
+
+    const [a, b] = await Promise.all([indexNational(), indexNational()]);
+    expect(a.stations).toHaveLength(1);
+    expect(b.stations).toHaveLength(1);
+    expect(appelsReseau).toBe(1);
   });
 });

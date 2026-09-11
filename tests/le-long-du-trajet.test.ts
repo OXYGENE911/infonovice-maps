@@ -180,6 +180,25 @@ describe('stationsDuTrajet', () => {
     expect(r[0]!.avancement).toBe(0);
   });
 
+  test('CODEX #1bis (second passage) — une station plus proche du pôle que TOUT le tracé reste couverte', () => {
+    // Le tracé culmine à 48° ; la station est à 48.000156° — plus proche du
+    // pôle que n'importe quel point du tracé. `mLonMinimal` ne regardait que
+    // la latitude du TRACÉ ; la marge du pré-filtre (celle de `dansUneBoite`)
+    // s'y ajoute désormais, pour couvrir aussi les candidats qui la
+    // dépassent légèrement.
+    const trace: [number, number][] = [
+      [2.0137574772580966, 48], [2.0137574772580966, 47.7], [2.5137574772580966, 47.7],
+      [2.6137574772580967, 47.7], [2.7137574772580964, 47.7], [2.813757477258097, 47.7],
+      [2.9137574772580965, 47.7], [3.0137574772580966, 47.7],
+    ];
+    const s = station(2.1480079778086365, 48.000156, 'x');
+    const r = stationsDuTrajet([s], trace, 10_000);
+    const reference = retenir([s], trace, 10_000);
+    expect(reference).toHaveLength(1); // la force brute la garde — le rayon existe bien
+    expect(r).toHaveLength(1);
+    expect(r[0]!.ecart).toBeCloseTo(reference[0]!.ecart, 3);
+  });
+
   test('CODEX #6 — un rayon nul ne construit pas une grille disproportionnée', () => {
     // `Math.max(rayonM / 111_320, 1e-6)` produisait des cellules de ~11 cm à
     // rayon nul : des centaines de millions de cellules sur un tracé de
