@@ -158,6 +158,15 @@ function mLonMinimal(trace: [number, number][], rayonM: number): number {
      même que la marge du pré-filtre en admet bien davantage. La même marge
      s'ajoute donc ici. */
   const margeDeg = rayonM / 111_320;
+  /* LE PLANCHER À 0,01 NE PROTÈGE PLUS RIEN PRÈS DES PÔLES (revue Codex,
+     3e passage, 11/09/2026, remarque 2, mineure — « hors périmètre
+     français ») : au-delà d'environ 89,4°, `cos` descend sous 0,01 et ce
+     plancher fixe recommence à sous-dimensionner la cellule. Sans objet
+     pour ce produit : les sources et le public visés sont français et
+     européens (CLAUDE.md), et aucune route n'approche cette latitude —
+     le point le plus au nord du réseau routier européen (Nordkapp,
+     Norvège) reste sous 71°. Accepté tel quel, documenté plutôt que
+     corrigé pour un cas hors du domaine réel de l'application. */
   const cos = Math.max(Math.cos(((latMaxAbs + margeDeg) * Math.PI) / 180), 0.01);
   return 111_320 * cos;
 }

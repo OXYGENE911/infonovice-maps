@@ -647,9 +647,16 @@ describe('indexNational — mémoire de session', () => {
 
   it('un téléchargement réussi n’est PAS relancé par un second appel séquentiel, même si IndexedDB refuse de l’écrire', async () => {
     // AUCUN cache IndexedDB à relire, et l'ÉCRITURE échoue (quota, navigation
-    // privée) : le scénario exact reproduit par la revue Codex.
+    // privée) : le scénario exact reproduit par la revue Codex. `ecrirePreference`
+    // AVALE ses erreurs par contrat (stockage.ts : « échec d'écriture de
+    // préférence : l'usage continue », jamais de rejet) — un mock qui
+    // rejetterait ne reproduirait PAS le vrai contrat et laisserait un rejet
+    // de promesse non intercepté par `indexNational` (`void ecrirePreference(…)`,
+    // trouvé par la revue Codex du 3e passage) : on simule donc l'échec
+    // silencieux réel — la promesse RÉSOUT, mais rien n'est retenu, donc la
+    // lecture suivante ne trouve toujours rien.
     vi.spyOn(stockage, 'lirePreference').mockResolvedValue(undefined);
-    vi.spyOn(stockage, 'ecrirePreference').mockRejectedValue(new Error('quota dépassé'));
+    vi.spyOn(stockage, 'ecrirePreference').mockResolvedValue(undefined);
     let appelsReseau = 0;
     vi.stubGlobal('fetch', vi.fn(async () => {
       appelsReseau += 1;
