@@ -127,8 +127,11 @@ elle n'allume pas la couche ; et dans un contexte Playwright neuf aucune
 préférence n'est en IndexedDB, donc `#actives` est vide. Sans
 `page.getByRole('checkbox', { name: 'Bornes électriques' }).check()`, la case
 d'itinérance reste masquée et le `check()` expire. Recette exacte dans
-`tests-e2e/bornes-filtres.spec.ts` l. 42-52 — qui saute d'abord au zoom 13,
-les POI ne se chargeant qu'à partir du zoom 12.
+`tests-e2e/bornes-filtres.spec.ts` l. 42-52 — qui saute d'abord au zoom 13.
+Ce saut n'est pas indispensable au filtre lui-même : `ZOOM_MIN = 12` commande
+l'interrogation du PORTAIL, et sous ce seuil les bornes viennent quand même de
+l'index national embarqué (`#chargerDepuisIndex`, `panneau-poi.ts` l. 976-977).
+Il l'est pour le reste de la démo, où l'on veut la donnée fraîche du portail.
 
 Sur le stand la question ne se pose pas : la tablette a déjà servi, sa
 préférence est en mémoire. C'est au test que l'ordre s'impose.
@@ -278,8 +281,11 @@ de couper :
    demande les tuiles, le worker les garde) ; sans la route de contexte, elles
    partent sur le vrai service IGN — 149 tuiles et ses 502, mesuré le 09/09.
 3. Le trajet : `page.goto('/#iti=…')` puis `page.reload()`, attendre
-   `.iti-resultat`, puis `navigator.serviceWorker.controller`. Sans gardien,
-   `emporterLesTuiles` ne garde rien et le dit au lieu de télécharger.
+   `.iti-resultat`, puis `navigator.serviceWorker.controller`. Sans gardien, le
+   bouton est **désactivé avant tout téléchargement** et `.iti-couloir-etat`
+   affiche « Rechargez la page une fois… » — le contrôle est dans
+   `src/carte/panneau-itineraire.ts` l. 4117-4123 (`gardienPresent()`), pas
+   dans `emporterLesTuiles`, qui, elle, télécharge sans rien vérifier.
 4. `allerA(page, 'partage')`, cliquer **Emporter la carte du trajet**, et
    attendre la phrase de fin `Couloir emporté : N tuiles` : c'est elle, pas la
    jauge, qui atteste que le cache est rempli.

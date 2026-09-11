@@ -1483,7 +1483,7 @@ et les dénominateurs diffèrent — autant les écrire :
 
 *Premier tirage : six fenêtres de 3 Mo, **17 590 lignes*** —
 
-- `Lien_vers_l_image` renseigné à **100 %** (17 511 sur 17 590) ;
+- `Lien_vers_l_image` renseigné sur **17 511 lignes sur 17 590 — 99,55 %** ;
 - rattachement : **53,5 % à une référence Mérimée `PA…`**, 46,5 % à une
   référence Palissy `PM…` ;
 - `Droits_de_diffusion` : vide sur 99,8 % ; les 0,2 % renseignés portent
