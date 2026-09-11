@@ -190,8 +190,12 @@ trajet »**, laisser la jauge aller au bout.
 
 ## Étape 8 — Mode avion (cible : 20 s)
 
-**Geste** — mettre la tablette en **mode avion**, puis revenir à la carte,
-la déplacer le long du trajet, et rouvrir le planificateur.
+**Geste** — mettre la tablette en **mode avion**, puis revenir à la carte, la
+déplacer le long du trajet, **taper « boulangerie » dans le champ de
+recherche**, et rouvrir le planificateur. La saisie n'est pas décorative :
+c'est le SEUL geste de cette étape qui fasse paraître le message d'erreur
+attendu plus bas. Sans elle, `.recherche-erreur` reste masquée et l'assertion
+tombe.
 
 **Résultat vérifiable**
 
@@ -201,7 +205,7 @@ la déplacer le long du trajet, et rouvrir le planificateur.
 | il dit quoi exactement | `.hors-ligne` | « La carte déjà consultée et vos favoris restent accessibles. Tout ce qui interroge un service — recherche, itinéraire, trafic, météo, points d'intérêt, photos de rue — attend le réseau. » |
 | et où en lire plus | `.hors-ligne-lien` | texte `Ce qui marche sans réseau`, `href="/sans-reseau.html"` |
 | la carte du couloir tient | `#carte canvas.maplibregl-canvas` | toujours visible, fond peint le long du trajet |
-| une recherche échoue proprement | `.recherche-erreur:visible` | contient `hors réseau`, **ne contient pas** `Réessayez` |
+| une recherche échoue proprement | `.recherche-erreur:visible` | **après la saisie de « boulangerie »**, contient `hors réseau` et **ne contient pas** `Réessayez` (rien avant la saisie) |
 | le planificateur s'ouvre quand même | `.iti-corps` | visible après `ouvrirPlanificateur` |
 
 **Ce qu'on dit** : « je ne vous promets pas le hors-ligne complet, et la page
@@ -237,10 +241,56 @@ hors réseau (commentaire de `tests-e2e/tuiles-simulees.ts` l. 68-82 : trois
 - `test('DÉMO SALON — étapes 1 à 7')` : `simulerTuiles` + `tuilesDuServiceWorker`,
   `test.setTimeout(120_000)`, attente de `navigator.serviceWorker.controller`
   avant l'étape 7.
-- `test('DÉMO SALON — étape 8, mode avion')` : `simulerTuiles` **seul**, puis la
-  recette de `tests-e2e/sans-reseau.spec.ts` l. 19-30 — attendre l'activation
-  du service worker, `page.reload()`, `context.setOffline(true)`, puis
-  `window.dispatchEvent(new Event('offline'))`.
+- `test('DÉMO SALON — étape 8, mode avion')` : il ne peut PAS hériter du
+  couloir emporté par le premier — voir juste en dessous ce qu'il doit
+  préparer lui-même.
+
+### Ce que le second test doit préparer lui-même, et pourquoi
+
+**Playwright donne à chaque `test()` un contexte neuf.** Cache Storage,
+service worker et IndexedDB du premier test n'existent pas dans le second :
+les tuiles emportées à l'étape 7 **n'y sont pas**. Ouvrir l'accueil puis le
+recharger ne prépare donc aucun fond le long de Paris–Lyon, et la ligne « la
+carte du couloir tient » du tableau de l'étape 8 tomberait sur une carte
+vide. Le second test doit refaire le couloir, dans son propre contexte, AVANT
+de couper :
+
+1. `test.setTimeout(120_000)` — le seul couloir prend jusqu'à soixante
+   secondes sous la charge de la suite (mesuré, `couloir.spec.ts` l. 47-52).
+2. `simulerTuiles(page)` **et** `tuilesDuServiceWorker(page)` : le
+   téléchargement passe PAR le service worker (`src/carte/couloir-hors-ligne.ts`
+   demande les tuiles, le worker les garde) ; sans la route de contexte, elles
+   partent sur le vrai service IGN — 149 tuiles et ses 502, mesuré le 09/09.
+3. Le trajet : `page.goto('/#iti=…')` puis `page.reload()`, attendre
+   `.iti-resultat`, puis `navigator.serviceWorker.controller`. Sans gardien,
+   `emporterLesTuiles` ne garde rien et le dit au lieu de télécharger.
+4. `allerA(page, 'partage')`, cliquer **Emporter la carte du trajet**, et
+   attendre la phrase de fin `Couloir emporté : N tuiles` : c'est elle, pas la
+   jauge, qui atteste que le cache est rempli.
+5. **Retirer la route de contexte avant de couper** :
+   `await page.context().unroute('**/data.geopf.fr/wmts**')`. C'est elle qui
+   empêchait le worker de servir sa coquille pré-cachée (trois échecs sur
+   trois, 09/09) ; le couloir une fois en cache, elle n'a plus d'objet.
+6. Alors seulement la recette de `tests-e2e/sans-reseau.spec.ts` l. 19-30 :
+   attendre `registration.active`, `page.reload()`, `context.setOffline(true)`,
+   puis `window.dispatchEvent(new Event('offline'))`.
+
+**UN POINT N'EST PAS MESURÉ, ET IL FAUT LE DIRE** : la mesure du 09/09 porte
+sur une route de contexte posée pendant TOUT le parcours ; personne n'a
+vérifié qu'un `unroute` la répare. Si l'étape 6 échoue encore, le repli est de
+ne pas passer par le service worker et de garnir le cache à la main avant de
+couper — `caches.open('tuiles-plan')` puis `cache.put()` sur les URL que
+`urlTuiles('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', 'image/png')`
+(`src/carte/style-ign.ts`) fabrique pour les tuiles rendues par
+`tuilesDuCouloir()` (`src/lib/couloir.ts`). Le nom du cache vient de
+`RESERVES_TUILES`, dans `src/lib/tuiles-en-cache.ts`. C'est moins fidèle — on
+écrit ce que le worker aurait écrit — mais cela ne dépend d'aucune route.
+
+**Le couloir du test n'est pas celui du stand** : `couloir.spec.ts` prend
+Paris → Melun, environ 149 tuiles, là où la démo fait Paris → Lyon (947
+tuiles, comptées à sec dans `tests/couloir.test.ts`). Le second test doit en
+faire autant : ce qu'il prouve, c'est qu'un fond EMPORTÉ tient hors réseau —
+pas qu'il fait six cents kilomètres.
 
 **Le chemin rapide, pour les étapes 3 à 7** : `page.goto('/#iti=2.282604,48.848501;4.859273,45.760829;car')`
 **puis `page.reload()`** — le fragment n'est rejoué qu'au démarrage. Le
