@@ -118,6 +118,85 @@ export function retenir<T extends { lon: number; lat: number }>(
 const dansUneBoite = (p: { lon: number; lat: number }, boites: Bbox[]): boolean =>
   boites.some((b) => p.lon >= b.ouest && p.lon <= b.est && p.lat >= b.sud && p.lat <= b.nord);
 
+/** Les longueurs cumulées du tracé, sommet par sommet — `prefixe[i]` est la
+    distance depuis le départ jusqu'à `trace[i]`. Calculée UNE fois pour tout
+    le trajet (PERF-PARIS-LYON, 11/09/2026, optim., cible 4) : c'était le rôle
+    du `cumul` accumulé pas à pas dans `situerSurLeTrace`, un travail qui se
+    répétait à l'identique pour chaque candidat. */
+function prefixeCumul(trace: [number, number][]): number[] {
+  const prefixe = [0];
+  for (let i = 0; i < trace.length - 1; i += 1) {
+    prefixe.push(prefixe[i]! + distanceM(trace[i]!, trace[i + 1]!));
+  }
+  return prefixe;
+}
+
+type Grille = Map<string, number[]>;
+const cleCellule = (cx: number, cy: number): string => `${cx},${cy}`;
+
+/** Une grille de cellules `celluleDeg` de côté : `grille[cx,cy]` liste les
+    indices des segments (`trace[i]` → `trace[i+1]`) dont la boîte englobante
+    touche cette cellule. Construite UNE fois par appel — voir
+    `stationsDuTrajet`. */
+function construireGrille(trace: [number, number][], celluleDeg: number): Grille {
+  const grille: Grille = new Map();
+  for (let i = 0; i < trace.length - 1; i += 1) {
+    const a = trace[i]!; const b = trace[i + 1]!;
+    const xMin = Math.floor(Math.min(a[0], b[0]) / celluleDeg);
+    const xMax = Math.floor(Math.max(a[0], b[0]) / celluleDeg);
+    const yMin = Math.floor(Math.min(a[1], b[1]) / celluleDeg);
+    const yMax = Math.floor(Math.max(a[1], b[1]) / celluleDeg);
+    for (let x = xMin; x <= xMax; x += 1) {
+      for (let y = yMin; y <= yMax; y += 1) {
+        const cle = cleCellule(x, y);
+        const liste = grille.get(cle);
+        if (liste) liste.push(i); else grille.set(cle, [i]);
+      }
+    }
+  }
+  return grille;
+}
+
+/**
+ * Le plus proche segment du tracé, cherché SEULEMENT dans les cellules
+ * voisines du point — pas dans le tracé entier (voir `stationsDuTrajet`).
+ *
+ * POURQUOI LES 9 CELLULES VOISINES SUFFISENT, TOUJOURS. La cellule fait
+ * `celluleDeg` (= `rayonM` converti en degrés) de côté. Où que le point
+ * tombe À L'INTÉRIEUR de sa propre cellule, il ne peut jamais être à plus de
+ * `celluleDeg` (donc `rayonM`) du bord le plus proche des cellules
+ * immédiatement voisines — et à plus de `celluleDeg` de tout ce qui est
+ * au-delà. Un segment à moins de `rayonM` du point est donc FORCÉMENT
+ * inscrit dans l'une des 9 cellules (la sienne ou l'une des 8 voisines) :
+ * ce n'est pas une approximation, le résultat est identique à celui d'une
+ * recherche en force brute sur le tracé entier.
+ */
+function situerViaGrille(
+  point: { lon: number; lat: number }, trace: [number, number][],
+  grille: Grille, celluleDeg: number, prefixe: number[],
+): { ecart: number; avancement: number } {
+  const cx = Math.floor(point.lon / celluleDeg);
+  const cy = Math.floor(point.lat / celluleDeg);
+  let meilleur = { ecart: Infinity, avancement: 0 };
+  const vus = new Set<number>();
+  for (let x = cx - 1; x <= cx + 1; x += 1) {
+    for (let y = cy - 1; y <= cy + 1; y += 1) {
+      const segments = grille.get(cleCellule(x, y));
+      if (!segments) continue;
+      for (const i of segments) {
+        if (vus.has(i)) continue;
+        vus.add(i);
+        const a = trace[i]!; const b = trace[i + 1]!;
+        const { distance, t } = distanceAuSegment([point.lon, point.lat], a, b);
+        if (distance < meilleur.ecart) {
+          meilleur = { ecart: distance, avancement: prefixe[i]! + t * (prefixe[i + 1]! - prefixe[i]!) };
+        }
+      }
+    }
+  }
+  return meilleur;
+}
+
 /**
  * Les stations de l'index national qui bordent un trajet — SANS AUCUN APPEL.
  *
@@ -129,18 +208,40 @@ const dansUneBoite = (p: { lon: number; lat: number }, boites: Bbox[]): boolean 
  * tronçon. L'index, lui, est complet à partir de 50 kW — exactement le domaine
  * qui intéresse un trajet — et tient en mémoire.
  *
- * LE PRÉ-FILTRE PAR BOÎTES N'EST PAS UNE OPTIMISATION GRATUITE. `retenir`
- * projette chaque candidat sur CHAQUE segment du tracé : quatorze mille
- * stations contre trois mille segments feraient quarante millions de calculs
- * à chaque ouverture du volet. Les boîtes ramènent les candidats à quelques
- * centaines avant ce travail.
+ * LE PRÉ-FILTRE PAR BOÎTES N'EST PAS SUFFISANT, LUI NON PLUS (PERF-PARIS-LYON,
+ * 11/09/2026, optim., cible 4). Il ramène les candidats de 14 133 à quelques
+ * centaines — mais `retenir` projetait ENSUITE chaque candidat sur TOUS les
+ * segments du trajet entier (`situerSurLeTrace`), un coût qui grandit avec la
+ * LONGUEUR du trajet (plusieurs milliers de segments sur Paris-Lyon), pas
+ * avec le nombre de candidats déjà réduit — mesuré entre 2,1 et 3,9 s
+ * (docs/mesure-paris-lyon.md). La grille de cellules (voir `situerViaGrille`)
+ * ramène cette recherche aux ~9 cellules qui entourent chaque candidat, sans
+ * changer le résultat — la preuve est dans le commentaire de
+ * `situerViaGrille`.
  */
 export function stationsDuTrajet(
   stations: StationRapide[], trace: [number, number][], rayonM: number,
 ): SurLeTrajet<StationRapide>[] {
   const boites = tronconner(trace, rayonM);
   if (boites.length === 0) return [];
-  return retenir(stations.filter((s) => dansUneBoite(s, boites)), trace, rayonM);
+  const candidats = stations.filter((s) => dansUneBoite(s, boites));
+  // Cellule = rayon cherché, en degrés (même formule que la marge de
+  // `tronconner`) : c'est elle qui rend la preuve de `situerViaGrille` vraie.
+  const celluleDeg = Math.max(rayonM / 111_320, 1e-6);
+  const grille = construireGrille(trace, celluleDeg);
+  const prefixe = prefixeCumul(trace);
+  // DÉDOUBLONNE, comme `retenir` : les tronçons de boîtes se chevauchent, un
+  // même point peut revenir deux fois dans `candidats`.
+  const vus = new Set<string>();
+  const gardes: SurLeTrajet<StationRapide>[] = [];
+  for (const poi of candidats) {
+    const cle = `${poi.lon.toFixed(5)},${poi.lat.toFixed(5)}`;
+    if (vus.has(cle)) continue;
+    vus.add(cle);
+    const { ecart, avancement } = situerViaGrille(poi, trace, grille, celluleDeg, prefixe);
+    if (ecart <= rayonM) gardes.push({ poi, ecart, avancement });
+  }
+  return gardes.sort((a, b) => a.avancement - b.avancement);
 }
 
 export type Categorie = 'carburants' | 'bornes';

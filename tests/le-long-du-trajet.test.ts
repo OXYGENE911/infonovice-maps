@@ -3,8 +3,9 @@
 // connue d'avance (un degré de latitude ≈ 111,3 km).
 import { describe, expect, test } from 'vitest';
 import {
-  distanceM, distanceAuSegment, situerSurLeTrace, tronconner, retenir, MAX_TRONCONS,
+  distanceM, distanceAuSegment, situerSurLeTrace, tronconner, retenir, stationsDuTrajet, MAX_TRONCONS,
 } from '../src/lib/le-long-du-trajet';
+import type { StationRapide } from '../src/lib/index-bornes';
 
 // Un tracé simple : plein est le long du parallèle 48, de 2° à 3°.
 const TRACE: [number, number][] = [[2, 48], [2.5, 48], [3, 48]];
@@ -108,5 +109,74 @@ describe('retenir', () => {
     const r = retenir([poi(2.5, 48), poi(2.5, 48.01)], TRACE, 0);
     expect(r).toHaveLength(1);
     expect(r[0]!.ecart).toBeCloseTo(0, 5);
+  });
+});
+
+// PERF-PARIS-LYON (11/09/2026, optim., cible 4) : `stationsDuTrajet` cherche
+// désormais le segment le plus proche via une grille de cellules plutôt qu'en
+// force brute (voir le commentaire de `situerViaGrille`, non exporté). Ces
+// tests vérifient que le résultat reste IDENTIQUE à `retenir` en force brute
+// — la preuve mathématique de la grille est dans le code, ces tests en sont
+// la contre-épreuve.
+describe('stationsDuTrajet', () => {
+  const station = (lon: number, lat: number, id: string): StationRapide => ({
+    lon, lat, nom: `Station ${id}`, reseau: null, operateur: null, puissance: 150,
+    pdc: null, ouvert: true, prises: [], id,
+  });
+
+  test('même résultat que `retenir` en force brute — écarte, garde, trie', () => {
+    const stations = [
+      station(2.9, 48.002, 'a'), station(2.1, 48.001, 'b'), station(2.5, 49, 'c'),
+    ];
+    const r = stationsDuTrajet(stations, TRACE, 1_000);
+    const reference = retenir(stations, TRACE, 1_000);
+    expect(r).toEqual(reference);
+    expect(r).toHaveLength(2);
+    expect(r[0]!.poi.id).toBe('b'); // plus tôt sur le trajet
+    expect(r[1]!.poi.id).toBe('a');
+  });
+
+  test('DÉDOUBLONNE : un point qui revient deux fois ne sort qu’une fois', () => {
+    const stations = [station(2.5, 48.001, 'x'), station(2.5, 48.001, 'x')];
+    const r = stationsDuTrajet(stations, TRACE, 1_000);
+    expect(r).toHaveLength(1);
+  });
+
+  test('un tracé dégénéré ne garde rien', () => {
+    expect(stationsDuTrajet([station(2.5, 48, 'x')], [], 1_000)).toEqual([]);
+    expect(stationsDuTrajet([station(2.5, 48, 'x')], [[2, 48]], 1_000)).toEqual([]);
+  });
+
+  test('équivalent à la force brute sur un grand tracé et des stations dispersées', () => {
+    const long: [number, number][] = Array.from({ length: 3_000 },
+      (_, i) => [2 + i / 1000, 48 - i / 2000]);
+    // Des positions pseudo-aléatoires MAIS déterministes — un échec ne dépend
+    // pas d'un tirage qui change à chaque exécution (générateur congruentiel
+    // linéaire, graine fixe).
+    let graine = 42;
+    const alea = (): number => {
+      graine = (graine * 1_103_515_245 + 12_345) % (2 ** 31);
+      return graine / (2 ** 31);
+    };
+    const stations = Array.from({ length: 500 }, (_, i) => station(
+      2 + alea() * 3, 48 - alea() * 1.5, `s${i}`,
+    ));
+    const rayonM = 8_000;
+    const rapide = stationsDuTrajet(stations, long, rayonM);
+    const brut = retenir(stations, long, rayonM);
+    // Un tirage qui ne garderait jamais rien ne prouverait rien.
+    expect(rapide.length).toBeGreaterThan(0);
+    expect(rapide).toHaveLength(brut.length);
+    // MÊME ENSEMBLE, MÊME ORDRE, ÉCART ET AVANCEMENT ÉGAUX — à l'erreur
+    // d'arrondi près : la grille cumule les longueurs de segment par une
+    // somme préfixe globale, `retenir` par une somme pas à pas ; deux ordres
+    // d'addition en virgule flottante différents, pas un désaccord sur le
+    // résultat (les deux valent la même distance au mètre près).
+    rapide.forEach((r, i) => {
+      const ref = brut[i]!;
+      expect(r.poi.id).toBe(ref.poi.id);
+      expect(r.ecart).toBeCloseTo(ref.ecart, 6);
+      expect(r.avancement).toBeCloseTo(ref.avancement, 6);
+    });
   });
 });

@@ -90,6 +90,18 @@ const PICTO_MODE: Record<Mode, NomPicto> = {
   voiture: 'vehicule', moto: 'moto', velo: 'velo', pied: 'pieton',
 };
 
+/* LE PLAN PART TOUT SEUL, un court instant après le calme (PERF-PARIS-LYON,
+   11/09/2026, optim.) — 300 ms, pas zéro : les rafales de recalcul (cases
+   cochées, étapes déplacées) ne doivent déclencher qu'UN calcul de plan, donc
+   UN relevé de conditions (règle « ne jamais marteler les API publiques »,
+   qui vise le RÉSEAU, pas ce minuteur local). Le débounce était fixé à
+   1200 ms — vérifié par mesure (docs/mesure-paris-lyon.md) : une taxe
+   garantie sur chaque calcul, sans rapport avec la taille des rafales
+   réelles observées (quelques centaines de ms entre deux cases cochées à la
+   main). 300 ms absorbe toujours ces rafales tout en rendant le débounce
+   quasi imperceptible sur un calcul isolé. */
+const DEBOUNCE_PLAN_AUTO_MS = 300;
+
 const SOURCE = 'itineraire';
 /* LES VARIANTES A/B/C — une seule source pour les trois : elles se
    distinguent par une propriété, pas par un calque de plus. */
@@ -1064,7 +1076,7 @@ export class PanneauItineraire extends HTMLElement {
       this.#reinitialiserSections(false);
       this.#tracer(direct);
       clearTimeout(this.#minuteurPlanAuto);
-      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, 1200);
+      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, DEBOUNCE_PLAN_AUTO_MS);
     });
     this.querySelector('.iti-direct-ignorer')?.addEventListener('click', () => {
       this.#direct = null;
@@ -1201,12 +1213,29 @@ export class PanneauItineraire extends HTMLElement {
     });
 
     document.addEventListener('vehicule-change', () => {
+      /* PRÉCHARGE DE L'INDEX IRVE, DÈS QUE LE VÉHICULE EST CONNU
+         (PERF-PARIS-LYON, 11/09/2026, optim., cible 2) — pas seulement au
+         calcul. Le premier calcul de la session payait jusqu'à plusieurs
+         secondes du seul téléchargement de l'index (docs/mesure-paris-lyon.md,
+         ~700 Ko gzippés), alors que rien n'empêche de le lancer PENDANT que
+         l'usager tape encore l'adresse d'arrivée. Un appel de PLUS ne serait
+         pas acceptable (règle « ne jamais marteler les API publiques »),
+         mais lancer PLUS TÔT le même appel unique n'en ajoute aucun :
+         `indexNational` dédoublonne déjà les appels concurrents (`enCours`,
+         lib/index-bornes.ts) et sert le cache IndexedDB existant s'il est
+         frais — `#planifierRecharge` retrouvera cet appel déjà résolu (ou en
+         vol) au lieu d'en relancer un. Thermique/hybride exclu : ce véhicule
+         ne consulte jamais l'index IRVE. */
+      void lirePreference<unknown>(PREF_VEHICULE).then((memo) => {
+        if (!estThermique(memo)) void indexNational();
+      });
+
       if (!this.#dernier) return;
       this.#rechargePour = null;
       clearTimeout(this.#minuteurPlanAuto);
       this.#minuteurPlanAuto = setTimeout(() => {
         void this.#planifierRecharge(this.#vue !== 'recharge');
-      }, 1200);
+      }, DEBOUNCE_PLAN_AUTO_MS);
     });
 
     /* SUR TÉLÉPHONE, LE VOLET EST UNE FEUILLE BASSE (décision d'Armelin du
@@ -4929,7 +4958,7 @@ export class PanneauItineraire extends HTMLElement {
          recalcul (cases cochées, étapes déplacées) ne déclenchent qu'UN
          calcul de plan — et donc UN relevé de conditions. */
       clearTimeout(this.#minuteurPlanAuto);
-      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, 1200);
+      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, DEBOUNCE_PLAN_AUTO_MS);
       const etatPause = this.querySelector<HTMLElement>('.recharge-pause-etat');
       if (etatPause) etatPause.textContent = '';
       this.#rechercheReseau = '';

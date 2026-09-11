@@ -2,6 +2,42 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [Non publié] — 2026-09-11 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
+
+### Paris → Lyon, plan de recharge inclus, sous 5 secondes
+- **Le calcul mesuré par le banc T3 (`docs/mesure-paris-lyon.md`) passait
+  systématiquement le seuil de 5 s (p95 6 704 à 9 454 ms sur trois passages,
+  banc corrigé, réseau réel) ; il tient désormais large (p95 2 096 à 3 524 ms
+  sur trois nouveaux passages).**
+- **Débounce de planification automatique, 1 200 ms → 300 ms**
+  (`panneau-itineraire.ts`, `#minuteurPlanAuto` → `DEBOUNCE_PLAN_AUTO_MS`) :
+  une taxe fixe et garantie sur CHAQUE calcul, mesurée à elle seule entre
+  1 207 et 1 578 ms sur les 30 exécutions de référence. La règle « ne jamais
+  marteler les API publiques » vise le réseau, pas ce minuteur local — le
+  nombre d'appels ne change pas, seule l'attente pour rien disparaît.
+- **Préchargement de l'index IRVE dès que le véhicule est renseigné**, pendant
+  la saisie de la destination (`vehicule-change`), au lieu d'attendre le
+  calcul : `indexNational` dédoublonne déjà les appels concurrents et sert le
+  cache IndexedDB existant, donc précharger plus tôt le même appel unique
+  n'en ajoute aucun. Le premier calcul d'une session payait jusqu'à
+  plusieurs secondes de ce seul téléchargement (~700 Ko).
+- **Filtrage des 14 133 stations contre le corridor, par grille de cellules**
+  (`stationsDuTrajet`, `src/lib/le-long-du-trajet.ts`) : le pré-filtre par
+  boîte englobante existait déjà, mais chaque candidat retenu était ensuite
+  projeté sur TOUS les segments du trajet — un coût qui grandit avec la
+  LONGUEUR du trajet (plusieurs milliers de segments sur Paris-Lyon), mesuré
+  entre 2,1 et 3,9 s à lui seul. Une grille de cellules de la taille du rayon
+  cherché ramène cette recherche aux ~9 cellules qui entourent chaque
+  candidat, sans changer le résultat (preuve dans le commentaire du code,
+  contre-épreuve différentielle dans `tests/le-long-du-trajet.test.ts`).
+- **Altimétrie, météo et IRVE, déjà lancés en parallèle** (`Promise.all`,
+  `#planifierRecharge`) : vérifié en tête de cette tâche, rien à changer —
+  une cible de moins à optimiser n'est pas une cible ratée.
+- Bundle : +1,1 Ko / +0,37 Ko gzippé (chunk `index`, la grille de cellules),
+  chunk `panneau-itineraire` inchangé au Ko près. Aucune dépendance nouvelle,
+  aucun appel réseau supplémentaire, « Pourquoi ce plan ? » inchangé.
+- Revue Codex : `handoffs/2026-09-11-2100-codex-optim.md`.
+
 ## [1.141.0] — 2026-09-10 — COURBES-1
 
 ### Les courbes de niveau IGN, en option d'affichage
