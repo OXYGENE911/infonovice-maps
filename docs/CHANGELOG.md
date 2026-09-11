@@ -2,6 +2,32 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.142.0] — 2026-09-11 — MESURE-PARIS-LYON (T3)
+
+### Le banc Paris 15e → Lyon Part-Dieu en VF8 Plus, contre les vraies API
+- Nouveau spec `tests-e2e/mesure-paris-lyon.spec.ts`, **hors CI par défaut**
+  (`test.skip` conditionné à `MESURE=1`) : dix calculs de suite du même
+  trajet, véhicule VinFast VF8 Plus à 80 % de batterie, plan de recharge
+  automatique inclus (PR #84). Chronomètre du clic sur l'adresse d'arrivée
+  — il n'y a pas de bouton « Calculer » séparé — à l'affichage du résumé
+  final, réseau réel (IGN, Open-Meteo, IRVE), aucune tuile ni requête
+  simulée.
+- **p95 ≥ 5 s dans trois passages sur trois** (6,3 à 7,4 s). Rapport complet,
+  découpé en appels réseau (itinéraire, altimétrie, météo, IRVE) et calcul
+  local, dans `docs/mesure-paris-lyon.md`. Trois points chauds nommés,
+  preuves à l'appui : le calcul local qui suit le réseau (filtrage de
+  l'index IRVE + planification des arrêts + pose sur la carte, 2,1 à 3,9 s,
+  le plus gros poste), le débounce fixe de planification (1 200 ms sur
+  chacune des trente exécutions), et le téléchargement de l'index IRVE au
+  premier calcul de la session (jusqu'à 2 s, en cache ensuite pour 30 jours).
+- **Ce cycle ne corrige rien** : c'est l'entrée de la tâche S3
+  d'optimisation.
+- Le premier jet du banc concluait le calcul ~1,2 à 4 s trop tôt — un texte
+  transitoire du résumé (« hors recharge », sans points de suspension)
+  ressemble au résultat final sans l'être, le vrai plan ne démarrant que
+  1 200 ms plus tard. Corrigé avant tout chiffre publié : voir le spec et
+  `docs/mesure-paris-lyon.md`.
+
 ## [1.141.0] — 2026-09-10 — COURBES-1
 
 ### Les courbes de niveau IGN, en option d'affichage
