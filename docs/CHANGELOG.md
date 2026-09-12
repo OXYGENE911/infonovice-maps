@@ -71,6 +71,42 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   régression, mais non revue une troisième fois faute de budget de temps sur
   cette tâche — signalé au chef de cabinet dans le compte rendu de mission).
 
+### 2026-09-12 — ALTI-GARDE-1 (recu7iXoI2DPdP5Pr) — le vrai facteur limitant, plafonné
+- **La contre-mesure indépendante du 12/09 (six sessions froides) a donné
+  p95 = 5 376 ms, AU-DESSUS du seuil dur** — après l'optimisation ci-dessus,
+  ce qui reste à dépasser 5 s n'est plus notre code : c'est l'altimétrie de
+  la Géoplateforme (902 ms à ~7 s), attendue dans le `Promise.all` de
+  `#chargerConditions` sans délai de garde ni repli.
+- **Délai de garde de 2 000 ms sur l'altimétrie seule** (nouveau
+  `src/lib/delai-garde.ts`, fonction `avecDelaiDeGarde`, générique et pure,
+  testée à sec dans `tests/delai-garde.test.ts`) : au-delà, le plan se
+  calcule sans le dénivelé — la promesse sous-jacente n'est NI annulée NI
+  relancée, aucun appel supplémentaire. Justifié par dix appels réels au
+  service (neuf entre 576 et 872 ms, un à 7 277 ms — détail et limites de
+  cette mesure dans `docs/mesure-paris-lyon.md`). La météo (Open-Meteo),
+  mesurée dans la même série (103-150 ms), n'a montré aucun risque
+  comparable : elle garde son comportement d'avant, sans délai de garde.
+- **Jamais un silence** : quand le relief n'a pas pu être pris en compte
+  (délai dépassé ou service en erreur), « Pourquoi ce plan ? » et la note de
+  réserve du volet recharge le disent explicitement — avant cette tâche, un
+  dénivelé manquant se traduisait par une ligne D+/D− simplement absente,
+  sans un mot, quand d'autres conditions (température) avaient, elles,
+  abouti.
+- **Six sessions froides, relevés bruts publiés** dans
+  `docs/mesure-paris-lyon.md` (build vérifié par hash du bundle servi) :
+  2 364 / 494 / 6 642 / 3 924 / 4 291 / 3 202 ms. Médiane 3 563 ms (< 4 s,
+  tenu) ; **p95 = 6 642 ms, au-dessus du seuil de 5 s — critère NON tenu**.
+  Le relief a été compté dans les six sessions (l'altimétrie a toujours
+  répondu sous 2 s aujourd'hui) : la session lente (6 642 ms) ne vient donc
+  PAS de l'altimétrie mais d'ailleurs dans la chaîne réseau (itinéraire ou
+  IRVE), hors du périmètre de cette tâche — dit en clair dans le document de
+  mesure plutôt que masqué.
+- Bundle : `panneau-itineraire` +595 o (124 253 o contre 123 658 o), bien
+  sous le budget de ±5 Ko. Aucune dépendance nouvelle. 1 687 tests unitaires
+  verts (`npm test`), aucun test E2E touché (hors périmètre de cette tâche,
+  mission B du même cycle).
+- Revue Codex : `handoffs/2026-09-12-1630-codex-altimetrie.md`.
+
 ## [1.141.0] — 2026-09-10 — COURBES-1
 
 ### Les courbes de niveau IGN, en option d'affichage
