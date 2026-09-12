@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   facteurVitesse, facteurTemperature, energieDeniveleKwh,
   consommationAjustee, plafondThermiqueKw, MASSE_DEFAUT_KG,
+  noteReserveConditions,
 } from '../src/lib/conditions';
 
 /* LES CONDITIONS DU TRAJET (demande d'Armelin du 28/08). Le contrat de ce
@@ -88,5 +89,53 @@ describe('plafondThermiqueKw — les chiffres du VF8 d’Armelin comme cas d’�
   });
   it('un départ gelé vers une arrivée caniculaire : le PIRE des deux bridages', () => {
     expect(plafondThermiqueKw(-1, 36, VF8)).toBe(30);
+  });
+});
+
+describe('noteReserveConditions — ALTI-GARDE-1, 12/09/2026, jamais un silence', () => {
+  /* ÉGALITÉ EXACTE, pas des motifs partiels (revue Codex, 3e passage : une
+     regex `not.toMatch` laissait passer une phrase fausse tant qu'elle
+     évitait le motif interdit — « La température est comptée. » aurait
+     satisfait toutes les assertions précédentes malgré la contradiction).
+     La fonction est PURE et ses quatre sorties sont FIXES : comparer le
+     texte entier ne peut ni laisser passer un mensonge partiel, ni rejeter
+     une formulation honnête différente, puisqu'il n'y en a qu'une par cas. */
+  const TOUT_COMPTE = 'Température, relief et vitesse du parcours sont comptés (détail dans'
+    + ' « Pourquoi ce plan ? ») ; restent inconnus le vent, la pluie, le'
+    + ' trafic et la vraie courbe de charge de votre véhicule.';
+  const RELIEF_SEUL_MANQUANT = 'Température et vitesse du parcours sont comptées ; le relief n’a'
+    + ' PAS pu être pris en compte (service altimétrique trop lent ou'
+    + ' indisponible — détail dans « Pourquoi ce plan ? »). Restent'
+    + ' inconnus le vent, la pluie, le trafic et la vraie courbe de'
+    + ' charge de votre véhicule.';
+  const TEMPERATURE_SEULE_MANQUANTE = 'Relief et vitesse du parcours sont comptés ; la température n’a'
+    + ' PAS pu être relevée (service météo indisponible — détail dans'
+    + ' « Pourquoi ce plan ? »), le plan suppose 20 °C. Restent inconnus'
+    + ' le vent, la pluie, le trafic et la vraie courbe de charge de votre'
+    + ' véhicule.';
+  const RIEN_COMPTE = 'Estimation à plat, à consommation constante :'
+    + ' ni le relief, ni le vent, ni le trafic, ni la vraie courbe de charge'
+    + ' de votre véhicule ne sont pris en compte.';
+
+  it('température et relief comptés', () => {
+    expect(noteReserveConditions(true, true)).toBe(TOUT_COMPTE);
+  });
+  it('température comptée, relief NON compté : le dit explicitement, jamais un silence', () => {
+    expect(noteReserveConditions(true, false)).toBe(RELIEF_SEUL_MANQUANT);
+  });
+  it('relief compté, température NON comptée (les deux appels météo en échec, l’altimétrie répond à temps)', () => {
+    // Scénario réel, pas défensif : météo et altimétrie sont attrapées
+    // séparément dans #chargerConditions, l'une peut échouer sans l'autre
+    // (revue Codex, 2e passage — la version précédente de ce test qualifiait
+    // ce cas d'« impossible en pratique » et exigeait la phrase fausse
+    // « température […] comptée »).
+    expect(noteReserveConditions(false, true)).toBe(TEMPERATURE_SEULE_MANQUANTE);
+  });
+  it('rien compté : « à plat, à consommation constante » — le comportement d’avant', () => {
+    expect(noteReserveConditions(false, false)).toBe(RIEN_COMPTE);
+  });
+  it('les quatre phrases sont bien distinctes deux à deux (aucun doublon qui cacherait un cas)', () => {
+    const phrases = [TOUT_COMPTE, RELIEF_SEUL_MANQUANT, TEMPERATURE_SEULE_MANQUANTE, RIEN_COMPTE];
+    expect(new Set(phrases).size).toBe(phrases.length);
   });
 });

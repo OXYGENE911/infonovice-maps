@@ -28,6 +28,7 @@ import { versFragment, depuisFragment } from '../lib/partage-url';
 import { installerFeuilleBasse } from './feuille-basse';
 import { pictoMenu, type NomPicto } from './icone-menu';
 import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
+import { noteReserveConditions } from '../lib/conditions';
 import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
 import { apprendreTrajet, lireHabitudes, oublierHabitude, suggerer } from '../lib/routines';
@@ -40,6 +41,7 @@ import { chercherLeLongDuTrajet } from '../lib/le-long-du-trajet';
 import type { PoiCarburant } from '../lib/poi';
 import { chargerEnseignes, apparierEnseignes, enseignesDuTrajet } from '../lib/enseignes';
 import { profilItineraire, denivele } from '../lib/altimetrie';
+import { avecDelaiDeGarde } from '../lib/delai-garde';
 import { chargerGrille, estimerPeages } from '../lib/peages-tarifs';
 import { pointLateral, choisirBis, traceDevant } from '../lib/bis';
 import { chargerVoies, recoudreVoies, recoudreEurope } from '../lib/voies';
@@ -89,6 +91,49 @@ import type { BandeauGuidage, ArretAAnnoncer } from './bandeau-guidage';
 const PICTO_MODE: Record<Mode, NomPicto> = {
   voiture: 'vehicule', moto: 'moto', velo: 'velo', pied: 'pieton',
 };
+
+/* LE PLAN PART TOUT SEUL, un court instant après le calme (PERF-PARIS-LYON,
+   11/09/2026, optim.) — 300 ms, pas zéro : les rafales de recalcul (cases
+   cochées, étapes déplacées) ne doivent déclencher qu'UN calcul de plan, donc
+   UN relevé de conditions (règle « ne jamais marteler les API publiques »,
+   qui vise le RÉSEAU, pas ce minuteur local). Le débounce était fixé à
+   1200 ms — vérifié par mesure (docs/mesure-paris-lyon.md) : une taxe
+   garantie sur chaque calcul, sans rapport avec la taille des rafales
+   réelles observées (quelques centaines de ms entre deux cases cochées à la
+   main). 300 ms absorbe toujours ces rafales-là tout en rendant le débounce
+   quasi imperceptible sur un calcul isolé.
+   CE QUE 300 MS NE COUVRE PLUS (revue Codex du 11/09/2026, remarque 5,
+   signalé et assumé, non corrigé) : sur un itinéraire déjà calculé, deux
+   modifications du véhicule espacées de PLUS de 300 ms mais de MOINS de
+   1200 ms (le cas illustré : 600 ms) relancent chacune leur propre relevé de
+   conditions — MÉTÉO DÉPART, MÉTÉO ARRIVÉE ET ALTIMÉTRIE, les trois en
+   `Promise.all` (`#chargerConditions`), donc jusqu'à trois appels de plus si
+   le premier relevé n'a pas eu le temps d'aboutir — jamais l'IRVE ni
+   l'itinéraire. Un coût réel mais borné (les trois appels les plus légers,
+   pas les deux plus lourds), absent des scénarios mesurés par cette tâche
+   (banc T3, démo salon) où le véhicule se règle UNE fois avant tout calcul.
+   Réduire ce risque à zéro demanderait de garder un débounce plus large que
+   ce qu'un calcul isolé peut se permettre de payer : arbitrage du chef si ce
+   coût borné n'est pas acceptable. */
+const DEBOUNCE_PLAN_AUTO_MS = 300;
+
+/* LE DÉLAI DE GARDE SUR L'ALTIMÉTRIE (ALTI-GARDE-1, tâche recu7iXoI2DPdP5Pr,
+   12/09/2026) — LE FACTEUR LIMITANT DU CYCLE C4.
+   La contre-mesure du 12/09 (six sessions froides) a chiffré l'altimétrie de
+   la Géoplateforme entre 902 ms et environ 7 s, attendue en plein milieu du
+   `Promise.all` de `#chargerConditions` SANS aucun délai de garde : un
+   service public lent bloquait le plan aussi longtemps qu'il voulait, et le
+   critère (p95 < 5 s) dépendait alors d'un tiers hors de notre contrôle.
+   MESURE DE CETTE TÂCHE (12/09, dix appels réels au service, hors
+   navigateur — voir docs/mesure-paris-lyon.md) : neuf réponses entre
+   576 ms et 872 ms (médiane ≈ 700 ms), UNE à 7 277 ms — cohérent avec la
+   contre-mesure. 2 000 ms laisse une marge large (≈ ×2,9) sur le cas normal
+   tout en coupant la queue de latence AVANT qu'elle ne menace le seuil de
+   5 s. La météo (Open-Meteo), mesurée dans la même session (3 appels,
+   103-150 ms), n'a montré aucun risque comparable : elle garde son
+   comportement d'avant (`.catch` sur erreur seul), voir docs/mesure-paris-lyon.md
+   pour le détail et la décision de ne pas lui appliquer le même délai. */
+const DELAI_GARDE_ALTIMETRIE_MS = 2000;
 
 const SOURCE = 'itineraire';
 /* LES VARIANTES A/B/C — une seule source pour les trois : elles se
@@ -299,6 +344,12 @@ export class PanneauItineraire extends HTMLElement {
   #conditions: ConditionsTrajet | null = null;
 
   #conditionsPour: Itineraire | null = null;
+
+  /* LE DÉNIVELÉ N'A PAS PU ÊTRE PRIS EN COMPTE (ALTI-GARDE-1, 12/09) — délai
+     de garde dépassé OU service en erreur, les deux se traitent pareil.
+     Jamais de silence : « Pourquoi ce plan ? » et la note de réserve le
+     disent en toutes lettres plutôt que d'omettre la ligne D+/D- sans un mot. */
+  #deniveleIndisponible = false;
 
   /** Masse et bridages thermiques du véhicule courant. */
   #profilConditions: ProfilConditions = {};
@@ -1064,7 +1115,7 @@ export class PanneauItineraire extends HTMLElement {
       this.#reinitialiserSections(false);
       this.#tracer(direct);
       clearTimeout(this.#minuteurPlanAuto);
-      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, 1200);
+      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, DEBOUNCE_PLAN_AUTO_MS);
     });
     this.querySelector('.iti-direct-ignorer')?.addEventListener('click', () => {
       this.#direct = null;
@@ -1201,12 +1252,34 @@ export class PanneauItineraire extends HTMLElement {
     });
 
     document.addEventListener('vehicule-change', () => {
+      /* PRÉCHARGE DE L'INDEX IRVE, DÈS QUE LE VÉHICULE EST CONNU
+         (PERF-PARIS-LYON, 11/09/2026, optim., cible 2) — pas seulement au
+         calcul. Le premier calcul de la session payait jusqu'à plusieurs
+         secondes du seul téléchargement de l'index (docs/mesure-paris-lyon.md,
+         ~700 Ko gzippés), alors que rien n'empêche de le lancer PENDANT que
+         l'usager tape encore l'adresse d'arrivée. Lancer PLUS TÔT le même
+         appel unique n'en ajoute aucun : `indexNational` dédoublonne les
+         appels réellement concurrents (`enCours`, lib/index-bornes.ts) ET
+         garde, depuis la revue Codex de cette tâche (remarque 2 du second
+         passage, handoffs/2026-09-11-2100-codex-optim.md), une mémoire de
+         session qui survit à un échec d'écriture IndexedDB (quota,
+         navigation privée…) — sans elle, un préchargement terminé AVANT le
+         calcul (le cas courant, celui que ce préchargement vise) pouvait
+         être suivi d'un second téléchargement si le disque avait refusé le
+         premier. Thermique/hybride exclu : ce véhicule ne consulte jamais
+         l'index IRVE. Le `.catch` évite qu'un rejet de promesse non suivi
+         (préchargement seul, sans calcul déclenché ensuite) remonte comme
+         une erreur non gérée. */
+      void lirePreference<unknown>(PREF_VEHICULE).then((memo) => {
+        if (!estThermique(memo)) void indexNational().catch(() => { /* voir commentaire ci-dessus */ });
+      });
+
       if (!this.#dernier) return;
       this.#rechargePour = null;
       clearTimeout(this.#minuteurPlanAuto);
       this.#minuteurPlanAuto = setTimeout(() => {
         void this.#planifierRecharge(this.#vue !== 'recharge');
-      }, 1200);
+      }, DEBOUNCE_PLAN_AUTO_MS);
     });
 
     /* SUR TÉLÉPHONE, LE VOLET EST UNE FEUILLE BASSE (décision d'Armelin du
@@ -1882,6 +1955,12 @@ export class PanneauItineraire extends HTMLElement {
    * (le même service que le profil de la page « alti »), et la vitesse
    * moyenne qui ne coûte RIEN : distance/durée du moteur — c'est le graphe
    * routier qui a déjà compté les limites tronçon par tronçon.
+   *
+   * L'ALTIMÉTRIE A UN DÉLAI DE GARDE (ALTI-GARDE-1, 12/09) : au-delà de
+   * `DELAI_GARDE_ALTIMETRIE_MS`, on arrête d'ATTENDRE plutôt que de laisser
+   * un service public lent dicter la durée du calcul — voir delai-garde.ts.
+   * La météo n'en a pas : mesurée dans la même session, elle n'a montré
+   * aucun risque comparable (docs/mesure-paris-lyon.md).
    */
   async #chargerConditions(iti: Itineraire, signal: AbortSignal): Promise<void> {
     if (this.#conditionsPour === iti && this.#conditions) return;
@@ -1894,6 +1973,7 @@ export class PanneauItineraire extends HTMLElement {
     const arriveeEstimee = new Date(maintenant.getTime() + iti.duree * 1000);
     const sommets = iti.geometrie.coordinates;
     const [pDep, pArr] = [sommets[0], sommets[sommets.length - 1]];
+    let deniveleIndisponible = false;
     await Promise.all([
       pDep
         ? meteoA(pDep[0]!, pDep[1]!, maintenant, signal)
@@ -1905,17 +1985,20 @@ export class PanneauItineraire extends HTMLElement {
           .then((m) => { conditions.tempArriveeC = m.temperature; })
           .catch(() => { /* idem */ })
         : Promise.resolve(),
-      profilItineraire(iti.geometrie)
+      avecDelaiDeGarde(profilItineraire(iti.geometrie), DELAI_GARDE_ALTIMETRIE_MS)
         .then((points) => {
+          // `undefined` : délai de garde dépassé OU service en erreur — les
+          // deux se traitent pareil, honnêtement (voir #deniveleIndisponible).
+          if (!points) { deniveleIndisponible = true; return; }
           const d = denivele(points);
           conditions.monteeM = d.montee;
           conditions.descenteM = d.descente;
-        })
-        .catch(() => { /* le plan vivra à plat, et le dira */ }),
+        }),
     ]);
     if (signal.aborted) return;
     this.#conditions = conditions;
     this.#conditionsPour = iti;
+    this.#deniveleIndisponible = deniveleIndisponible;
   }
 
   /**
@@ -3962,6 +4045,13 @@ export class PanneauItineraire extends HTMLElement {
       if (typeof releve.monteeM === 'number') {
         bouts.push(`D+ ${Math.round(releve.monteeM)} m / D− ${Math.round(releve.descenteM ?? 0)} m`
           + ` (${cond.deniveleKwh >= 0 ? '+' : '−'}${Math.abs(cond.deniveleKwh).toFixed(1)} kWh)`);
+      } else if (this.#deniveleIndisponible) {
+        /* JAMAIS UN SILENCE (ALTI-GARDE-1, 12/09) : d'autres conditions ont
+           pu être relevées (température, vitesse) pendant que l'altimétrie
+           dépassait le délai de garde ou échouait — le dire ici plutôt que
+           de simplement omettre la ligne D+/D-. */
+        bouts.push('relief non pris en compte — le service altimétrique était'
+          + ' trop lent ou indisponible');
       }
       if (cond.plafondThermiqueKw !== null) {
         bouts.push(`charge bridée à ${cond.plafondThermiqueKw} kW — le bridage`
@@ -4365,19 +4455,24 @@ export class PanneauItineraire extends HTMLElement {
        un <p> sans `.options` : elle s'interrompait là, laissant les réglages
        suivants à leur valeur par défaut. Une classe ne nomme qu'une chose. */
     reserve.className = 'recharge-note-reserve';
-    /* LA NOTE SUIT LE CALCUL (28/08) : quand météo et relief sont relevés,
-       « à plat, à consommation constante » serait un mensonge — et quand ils
-       ne le sont pas, l'ancien aveu reste le bon. */
-    const releves = this.#conditionsPour === this.#dernier
+    /* LA NOTE SUIT LE CALCUL (28/08, affinée le 12/09 — ALTI-GARDE-1) : quand
+       météo et relief sont relevés, « à plat, à consommation constante »
+       serait un mensonge ; quand SEUL le relief manque (délai de garde
+       dépassé ou service en panne, la météo ayant abouti), dire qu'il est
+       « compté » serait tout autant un mensonge — un silence par omission
+       que le mandat du 12/09 interdit explicitement. Trois cas, trois
+       phrases (`noteReserveConditions`, testée à sec dans
+       tests/conditions.test.ts), jamais une approximation qui les couvre.
+       TEMPÉRATURE COMPTÉE : au DÉPART ou à L'ARRIVÉE, pas seulement au
+       départ (revue Codex du 12/09 — l'ancienne version ne regardait que
+       `tempDepartC` et disait « à plat » alors qu'une météo d'arrivée
+       seule avait bien été retenue dans le calcul). */
+    const pourCeTrajet = this.#conditionsPour === this.#dernier;
+    const temperatureCompte = pourCeTrajet
       && (this.#conditions?.tempDepartC !== undefined
-        || this.#conditions?.monteeM !== undefined);
-    reserve.textContent = (releves
-      ? 'Température, relief et vitesse du parcours sont comptés (détail dans'
-        + ' « Pourquoi ce plan ? ») ; restent inconnus le vent, la pluie, le'
-        + ' trafic et la vraie courbe de charge de votre véhicule.'
-      : 'Estimation à plat, à consommation constante :'
-        + ' ni le relief, ni le vent, ni le trafic, ni la vraie courbe de charge'
-        + ' de votre véhicule ne sont pris en compte.')
+        || this.#conditions?.tempArriveeC !== undefined);
+    const deniveleCompte = pourCeTrajet && this.#conditions?.monteeM !== undefined;
+    reserve.textContent = noteReserveConditions(temperatureCompte, deniveleCompte)
       + ` Bornes de ${SEUIL_RAPIDE} kW et plus, depuis le fichier national IRVE.`;
     corps.append(reserve);
   }
@@ -4929,7 +5024,7 @@ export class PanneauItineraire extends HTMLElement {
          recalcul (cases cochées, étapes déplacées) ne déclenchent qu'UN
          calcul de plan — et donc UN relevé de conditions. */
       clearTimeout(this.#minuteurPlanAuto);
-      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, 1200);
+      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, DEBOUNCE_PLAN_AUTO_MS);
       const etatPause = this.querySelector<HTMLElement>('.recharge-pause-etat');
       if (etatPause) etatPause.textContent = '';
       this.#rechercheReseau = '';

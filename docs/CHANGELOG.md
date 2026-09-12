@@ -2,6 +2,120 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [Non publié] — 2026-09-11 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
+
+### Paris → Lyon, plan de recharge inclus, sous 5 secondes
+- **Le calcul mesuré par le banc T3 (`docs/mesure-paris-lyon.md`) passait
+  systématiquement le seuil de 5 s (p95 6 704 à 9 454 ms sur trois passages,
+  banc corrigé, réseau réel) ; il tient désormais large (p95 1 410 à 3 494 ms
+  sur les six passages mesurés après optimisation — trois avant la seconde
+  correction Codex, trois après ; médiane 673 à 702 ms).**
+- **Débounce de planification automatique, 1 200 ms → 300 ms**
+  (`panneau-itineraire.ts`, `#minuteurPlanAuto` → `DEBOUNCE_PLAN_AUTO_MS`) :
+  une taxe fixe et garantie sur CHAQUE calcul, mesurée à elle seule entre
+  1 207 et 1 578 ms sur les 30 exécutions de référence. La règle « ne jamais
+  marteler les API publiques » vise le réseau, pas ce minuteur local, et le
+  nombre d'appels ne change pas pour les scénarios mesurés (banc T3, démo
+  salon). Un cas plus étroit reste ouvert, signalé et assumé (revue Codex,
+  remarque 5) : sur un itinéraire déjà calculé, deux modifications du
+  véhicule espacées de 300 ms à 1 200 ms relancent chacune un relevé
+  météo + altimétrie au lieu d'un seul — jamais l'IRVE ni l'itinéraire,
+  jamais dans les parcours exercés ici. Détail dans le commentaire au-dessus
+  de `DEBOUNCE_PLAN_AUTO_MS`.
+- **Préchargement de l'index IRVE dès que le véhicule est renseigné**, pendant
+  la saisie de la destination (`vehicule-change`), au lieu d'attendre le
+  calcul : `indexNational` dédoublonne les appels réellement concurrents et
+  sert le cache IndexedDB existant, donc précharger plus tôt le même appel
+  unique n'en ajoute aucun. Le premier calcul d'une session payait jusqu'à
+  plusieurs secondes de ce seul téléchargement (~700 Ko). Gate `estThermique` :
+  un véhicule thermique/hybride ne consulte jamais l'index IRVE, aucun
+  préchargement inutile. **`indexNational` (`src/lib/index-bornes.ts`) garde
+  aussi, depuis la revue Codex (remarque 2 du second passage), une mémoire de
+  session en plus d'IndexedDB** : sans elle, un préchargement terminé AVANT
+  le calcul (le cas courant) pouvait être suivi d'un second téléchargement si
+  l'écriture IndexedDB avait échoué (quota, navigation privée) — l'appel
+  réellement AJOUTÉ que la première version ne fermait pas complètement.
+- **Filtrage des 14 133 stations contre le corridor, par grille de cellules**
+  (`stationsDuTrajet`, `src/lib/le-long-du-trajet.ts`) : le pré-filtre par
+  boîte englobante existait déjà, mais chaque candidat retenu était ensuite
+  projeté sur TOUS les segments du trajet — un coût qui grandit avec la
+  LONGUEUR du trajet (plusieurs milliers de segments sur Paris-Lyon), mesuré
+  entre 2,1 et 3,9 s à lui seul. Une grille de cellules ramène cette
+  recherche aux ~9 cellules qui entourent chaque candidat, sans changer le
+  résultat (preuve dans le commentaire du code, contre-épreuve différentielle
+  dans `tests/le-long-du-trajet.test.ts`) — **cellules dimensionnées par axe**
+  (longitude ET latitude séparément, `mLonMinimal`), **latitude de référence
+  élargie de la marge du pré-filtre** : deux passes de revue Codex ont trouvé
+  deux variantes du même défaut — une cellule carrée en degrés, qui
+  sous-couvrait l'axe est-ouest d'un facteur ~1,4-1,5 à latitude française
+  (1ʳᵉ passe), puis une référence de latitude limitée aux seuls sommets du
+  tracé, insuffisante pour une station légèrement plus proche du pôle que le
+  tracé lui-même mais encore dans la marge du pré-filtre (2ᵉ passe) — les
+  deux corrigées et verrouillées par des tests de régression différentiels
+  (`tests/le-long-du-trajet.test.ts`, cas « CODEX #1 » et « CODEX #1bis »).
+  Une égalité exacte départagée par l'ordre des cellules plutôt que l'ordre
+  du trajet, et une grille disproportionnée à rayon nul, ont reçu le même
+  traitement (cas « CODEX #2 » et « CODEX #6 ») — voir
+  `handoffs/2026-09-11-2100-codex-optim.md`.
+- **Altimétrie, météo et IRVE, déjà lancés en parallèle** (`Promise.all`,
+  `#planifierRecharge`) : vérifié en tête de cette tâche, rien à changer —
+  une cible de moins à optimiser n'est pas une cible ratée.
+- Bundle (chunks JS, gzippé) : `panneau-itineraire` inchangé au Ko près,
+  `index` +1,4 Ko brut / gzip stable (grille de cellules + mémoire de
+  session). Aucune dépendance nouvelle, aucun appel réseau de plus dans les
+  scénarios mesurés, « Pourquoi ce plan ? » inchangé.
+- Revue Codex, deux passes : `handoffs/2026-09-11-2100-codex-optim.md` —
+  VERDICT BLOQUANT sur la première (2 remarques bloquantes, 4 sérieuses) ;
+  VERDICT BLOQUANT sur la deuxième également (1 remarque bloquante restante
+  sur la grille, corrigée depuis et vérifiée par un nouveau test de
+  régression, mais non revue une troisième fois faute de budget de temps sur
+  cette tâche — signalé au chef de cabinet dans le compte rendu de mission).
+
+### 2026-09-12 — ALTI-GARDE-1 (recu7iXoI2DPdP5Pr) — le vrai facteur limitant, plafonné
+- **La contre-mesure indépendante du 12/09 (six sessions froides) a donné
+  p95 = 5 376 ms, AU-DESSUS du seuil dur** — après l'optimisation ci-dessus,
+  ce qui reste à dépasser 5 s n'est plus notre code : c'est l'altimétrie de
+  la Géoplateforme (902 ms à ~7 s), attendue dans le `Promise.all` de
+  `#chargerConditions` sans délai de garde ni repli.
+- **Délai de garde de 2 000 ms sur l'altimétrie seule** (nouveau
+  `src/lib/delai-garde.ts`, fonction `avecDelaiDeGarde`, générique et pure,
+  testée à sec dans `tests/delai-garde.test.ts`) : au-delà, le plan se
+  calcule sans le dénivelé — la promesse sous-jacente n'est NI annulée NI
+  relancée, aucun appel supplémentaire. Justifié par neuf appels réels aux
+  services (six à l'altimétrie — cinq entre 576 et 872 ms, un à 7 277 ms —
+  et trois à la météo, 103-150 ms, aucun risque comparable trouvé sur la
+  météo, d'où l'absence de délai de garde pour elle ; détail et limites de
+  cette mesure dans `docs/mesure-paris-lyon.md`).
+- **Jamais un silence** : quand le relief n'a pas pu être pris en compte
+  (délai dépassé ou service en erreur), « Pourquoi ce plan ? » et la note de
+  réserve du volet recharge le disent explicitement — avant cette tâche, un
+  dénivelé manquant se traduisait par une ligne D+/D− simplement absente,
+  sans un mot, quand d'autres conditions (température) avaient, elles,
+  abouti.
+- **Six sessions froides, relevés bruts publiés** dans
+  `docs/mesure-paris-lyon.md` (build vérifié par hash du bundle servi) :
+  2 364 / 494 / 6 642 / 3 924 / 4 291 / 3 202 ms. Médiane 3 563 ms (< 4 s,
+  tenu) ; **p95 = 6 642 ms, au-dessus du seuil de 5 s — critère NON tenu**.
+  Le relief a été compté dans les six sessions : l'altimétrie n'a jamais
+  dépassé le budget de 2 s que le délai de garde lui impose. Ça ne prouve PAS
+  qu'elle a répondu vite pour autant (un appel à 1 900 ms compte aussi comme
+  « relief pris en compte ») : la cause exacte de la session lente
+  (6 642 ms) reste NON VÉRIFIÉE — la sonde posée ici ne décompose pas le
+  total par poste réseau. Dit en clair, avec ses limites, dans le document
+  de mesure plutôt que résumé de façon trompeuse ici.
+- Bundle : `panneau-itineraire` 123 654 o contre 123 658 o avant la tâche
+  (−4 o après extraction de `noteReserveConditions` vers `lib/conditions.ts`),
+  bien sous le budget de ±5 Ko. Aucune dépendance nouvelle. 1 691 tests
+  unitaires verts (`npm test`), aucun test E2E touché (hors périmètre de
+  cette tâche, mission B du même cycle).
+- Revue Codex, deux passages : `handoffs/2026-09-12-1630-codex-altimetrie.md`
+  — VERDICT BLOQUANT sur le premier (4 remarques sérieuses, 1 mineure : un
+  vrai bug d'affichage sur la température d'arrivée seule, un test qui ne
+  prouvait pas tout ce que le document affirmait, une erreur de comptage
+  (« dix » au lieu de neuf appels de mesure) et une conclusion causale non
+  soutenue par les chiffres — toutes corrigées dans un second commit, détail
+  dans `docs/mesure-paris-lyon.md`).
+
 ## [1.141.0] — 2026-09-10 — COURBES-1
 
 ### Les courbes de niveau IGN, en option d'affichage
