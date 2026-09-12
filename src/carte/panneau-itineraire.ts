@@ -90,6 +90,31 @@ const PICTO_MODE: Record<Mode, NomPicto> = {
   voiture: 'vehicule', moto: 'moto', velo: 'velo', pied: 'pieton',
 };
 
+/* LE PLAN PART TOUT SEUL, un court instant après le calme (PERF-PARIS-LYON,
+   11/09/2026, optim.) — 300 ms, pas zéro : les rafales de recalcul (cases
+   cochées, étapes déplacées) ne doivent déclencher qu'UN calcul de plan, donc
+   UN relevé de conditions (règle « ne jamais marteler les API publiques »,
+   qui vise le RÉSEAU, pas ce minuteur local). Le débounce était fixé à
+   1200 ms — vérifié par mesure (docs/mesure-paris-lyon.md) : une taxe
+   garantie sur chaque calcul, sans rapport avec la taille des rafales
+   réelles observées (quelques centaines de ms entre deux cases cochées à la
+   main). 300 ms absorbe toujours ces rafales-là tout en rendant le débounce
+   quasi imperceptible sur un calcul isolé.
+   CE QUE 300 MS NE COUVRE PLUS (revue Codex du 11/09/2026, remarque 5,
+   signalé et assumé, non corrigé) : sur un itinéraire déjà calculé, deux
+   modifications du véhicule espacées de PLUS de 300 ms mais de MOINS de
+   1200 ms (le cas illustré : 600 ms) relancent chacune leur propre relevé de
+   conditions — MÉTÉO DÉPART, MÉTÉO ARRIVÉE ET ALTIMÉTRIE, les trois en
+   `Promise.all` (`#chargerConditions`), donc jusqu'à trois appels de plus si
+   le premier relevé n'a pas eu le temps d'aboutir — jamais l'IRVE ni
+   l'itinéraire. Un coût réel mais borné (les trois appels les plus légers,
+   pas les deux plus lourds), absent des scénarios mesurés par cette tâche
+   (banc T3, démo salon) où le véhicule se règle UNE fois avant tout calcul.
+   Réduire ce risque à zéro demanderait de garder un débounce plus large que
+   ce qu'un calcul isolé peut se permettre de payer : arbitrage du chef si ce
+   coût borné n'est pas acceptable. */
+const DEBOUNCE_PLAN_AUTO_MS = 300;
+
 const SOURCE = 'itineraire';
 /* LES VARIANTES A/B/C — une seule source pour les trois : elles se
    distinguent par une propriété, pas par un calque de plus. */
@@ -1064,7 +1089,7 @@ export class PanneauItineraire extends HTMLElement {
       this.#reinitialiserSections(false);
       this.#tracer(direct);
       clearTimeout(this.#minuteurPlanAuto);
-      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, 1200);
+      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, DEBOUNCE_PLAN_AUTO_MS);
     });
     this.querySelector('.iti-direct-ignorer')?.addEventListener('click', () => {
       this.#direct = null;
@@ -1201,12 +1226,34 @@ export class PanneauItineraire extends HTMLElement {
     });
 
     document.addEventListener('vehicule-change', () => {
+      /* PRÉCHARGE DE L'INDEX IRVE, DÈS QUE LE VÉHICULE EST CONNU
+         (PERF-PARIS-LYON, 11/09/2026, optim., cible 2) — pas seulement au
+         calcul. Le premier calcul de la session payait jusqu'à plusieurs
+         secondes du seul téléchargement de l'index (docs/mesure-paris-lyon.md,
+         ~700 Ko gzippés), alors que rien n'empêche de le lancer PENDANT que
+         l'usager tape encore l'adresse d'arrivée. Lancer PLUS TÔT le même
+         appel unique n'en ajoute aucun : `indexNational` dédoublonne les
+         appels réellement concurrents (`enCours`, lib/index-bornes.ts) ET
+         garde, depuis la revue Codex de cette tâche (remarque 2 du second
+         passage, handoffs/2026-09-11-2100-codex-optim.md), une mémoire de
+         session qui survit à un échec d'écriture IndexedDB (quota,
+         navigation privée…) — sans elle, un préchargement terminé AVANT le
+         calcul (le cas courant, celui que ce préchargement vise) pouvait
+         être suivi d'un second téléchargement si le disque avait refusé le
+         premier. Thermique/hybride exclu : ce véhicule ne consulte jamais
+         l'index IRVE. Le `.catch` évite qu'un rejet de promesse non suivi
+         (préchargement seul, sans calcul déclenché ensuite) remonte comme
+         une erreur non gérée. */
+      void lirePreference<unknown>(PREF_VEHICULE).then((memo) => {
+        if (!estThermique(memo)) void indexNational().catch(() => { /* voir commentaire ci-dessus */ });
+      });
+
       if (!this.#dernier) return;
       this.#rechargePour = null;
       clearTimeout(this.#minuteurPlanAuto);
       this.#minuteurPlanAuto = setTimeout(() => {
         void this.#planifierRecharge(this.#vue !== 'recharge');
-      }, 1200);
+      }, DEBOUNCE_PLAN_AUTO_MS);
     });
 
     /* SUR TÉLÉPHONE, LE VOLET EST UNE FEUILLE BASSE (décision d'Armelin du
@@ -4929,7 +4976,7 @@ export class PanneauItineraire extends HTMLElement {
          recalcul (cases cochées, étapes déplacées) ne déclenchent qu'UN
          calcul de plan — et donc UN relevé de conditions. */
       clearTimeout(this.#minuteurPlanAuto);
-      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, 1200);
+      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, DEBOUNCE_PLAN_AUTO_MS);
       const etatPause = this.querySelector<HTMLElement>('.recharge-pause-etat');
       if (etatPause) etatPause.textContent = '';
       this.#rechercheReseau = '';
