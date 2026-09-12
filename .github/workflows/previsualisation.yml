@@ -48,10 +48,20 @@ jobs:
       # branche et la publiait sous `--branch=staging`, donc sur le domaine que
       # les testeurs de l'AFUVE regardent. Elle est placée AVANT le `checkout` :
       # rien du dépôt n'est exécuté tant qu'elle n'a pas répondu.
+      #
+      # LE NOM DE BRANCHE PASSE PAR `env`, JAMAIS PAR `${{ }}` DANS LE SCRIPT
+      # (2e revue Codex). Interpolé directement, il est COLLÉ dans le script
+      # avant que Bash le lise : une branche nommée `feat/";exit 0;#` refermait
+      # la chaîne, exécutait `exit 0`, et l'étape réussissait — la garde tombait
+      # sur la seule règle de nommage d'une branche. En variable d'environnement,
+      # le contenu reste une donnée et n'est jamais du code.
       - name: N'accepter que la branche staging
         if: github.ref != 'refs/heads/staging'
+        env:
+          REFERENCE: ${{ github.ref }}
         run: |
-          echo "::error title=Branche interdite::La prévisualisation ne publie que « staging ». Branche demandée : ${{ github.ref }}."
+          echo "Référence demandée : $REFERENCE"
+          echo "::error title=Branche interdite::La prévisualisation ne publie que « staging »."
           exit 1
 
       - uses: actions/checkout@v7
@@ -78,10 +88,16 @@ jobs:
         run: node scripts/verifier-previsualisation.mjs dist
 
       # LE JETON N'EST DONNÉ QU'AUX DEUX ÉTAPES QUI EN ONT BESOIN (revue Codex).
-      # Posé au niveau du job, il aurait été présent dans l'environnement de
+      # Posé au niveau du job, il était présent dans l'environnement de
       # `npm ci`, du lint et des tests : un script d'installation compromis
-      # aurait pu le lire. Ici, cette étape ne fait que constater s'il existe et
-      # publie un « oui » ou un « non » — elle n'imprime jamais sa valeur.
+      # pouvait le lire directement. Ici, cette étape ne fait que constater s'il
+      # existe et publie un « oui » ou un « non » — elle n'imprime jamais sa
+      # valeur.
+      # C'EST UNE RÉDUCTION D'EXPOSITION, PAS UNE ISOLATION, et il faut le dire :
+      # une dépendance compromise peut encore écrire dans `$GITHUB_ENV` pour se
+      # faire charger par le shell d'une étape ultérieure. Contre CETTE menace,
+      # seul un job séparé sans `npm ci` protégerait vraiment ; c'est la piste à
+      # prendre si l'on veut fermer ce chemin.
       - name: Les secrets sont-ils déposés ?
         id: secrets
         env:

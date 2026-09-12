@@ -16,7 +16,7 @@ en fin de page.
 | Hébergeur | GitHub Pages (source « GitHub Actions ») | Cloudflare Pages, projet `infonovice-maps-previsualisation` |
 | Domaine | https://maps.infonovice.fr/ | https://staging.maps.infonovice.fr/ |
 | Construction | `npm run build` | `INFONOVICE_ENVIRONNEMENT=previsualisation npm run build` |
-| Indexable | oui (`robots.txt` ouvert, sitemap) | **non** : `Disallow: /` **et** en-tête `X-Robots-Tag: noindex` |
+| Indexation | ouverte (`robots.txt` ouvert, sitemap) | refusée par trois filets — `Disallow: /`, en-tête `X-Robots-Tag: noindex`, balise `meta`. **Ce n'est pas une garantie absolue : voir la limite au §3.** |
 | Qui pousse | le CEO seul fusionne `staging` → `main` | toute fusion de PR sur `staging` |
 
 La production n'est **pas** touchée par la prévisualisation : autre branche,
@@ -199,6 +199,12 @@ elle, les en empêche. **Cloudflare Access** (Zero Trust, palier gratuit)
 protège `staging.maps.infonovice.fr` derrière un code envoyé par courriel, à
 une liste d'adresses : les quatre testeurs de l'AFUVE, le CEO. Un robot
 n'entre pas ; un lien fuité ne mène nulle part.
+
+**Attention, et c'est le piège** : protéger le seul domaine personnalisé ne
+suffit pas. Le contenu reste servi par `infonovice-maps-previsualisation.pages.dev`
+et par l'URL propre à chaque déploiement. Il faut donc couvrir **aussi** ces
+adresses (une politique Access sur `*.pages.dev` du projet), sans quoi la porte
+est posée à côté de l'entrée.
 
 Ce qu'il en coûte : chaque testeur reçoit un code à la première visite, et
 recommence quand la session expire. À arbitrer — un vrai testeur de terrain

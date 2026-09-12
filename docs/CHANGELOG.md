@@ -30,18 +30,27 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   relit le dossier réellement construit et refuse de livrer s'il manque une
   seule marque sur une seule des sept pages. Contre-épreuve faite : le même
   script rejette un `dist/` de production avec 40 griefs.
-- **La revue Codex a trouvé six points bloquants, tous corrigés.** Cinq façons
-  de franchir la porte en écrivant les bons mots au mauvais endroit — en-tête
-  en commentaire, en-tête posé sur `/prive/*`, `Disallow` réservé à Bingbot,
-  page dans un sous-dossier, bandeau en `display: none`. La porte ne cherche
-  plus des chaînes : elle lit les groupes de `robots.txt`, les blocs de
-  `_headers`, les règles du CSS, et descend dans les sous-dossiers. Les cinq
-  contournements sont devenus dix tests (`tests/porte-previsualisation.test.ts`).
-  Sixième point : `workflow_dispatch` laissait publier **n'importe quelle
-  branche** sous `--branch=staging` ; une garde de branche est désormais la
-  toute première étape, avant même le `checkout`. En prime, le jeton Cloudflare
-  n'est plus posé au niveau du job — il n'entre que dans les deux étapes qui en
-  ont besoin, plus dans l'environnement de `npm ci`.
+- **Deux revues Codex ont trouvé dix façons de franchir la porte.** Toutes de la
+  même famille : elle cherchait des CHAÎNES là où il fallait lire une STRUCTURE.
+  Un `X-Robots-Tag` en commentaire, sous `/prive/*`, sous le domaine d'un tiers,
+  adressé au seul Bingbot, ou détaché plus bas par `! X-Robots-Tag`. Un
+  `Disallow: /` réservé à un robot, ou annulé par un groupe `Googlebot: Allow: /`
+  placé après. Un bandeau éteint par une seconde règle CSS ou par un
+  `display : none` avec des espaces. Une page dans un sous-dossier. Un lien de
+  feuille qui ne résout nulle part. La porte lit désormais les groupes, les
+  blocs, toutes les règles d'un sélecteur, et suit les liens jusqu'au fichier.
+  Vingt tests la mettent à l'épreuve (`tests/porte-previsualisation.test.ts`), et
+  son témoin « conforme » est bâti avec les constantes de production, pas écrit
+  à la main pour la circonstance.
+- **Deux trous de sécurité dans le workflow, fermés.** `workflow_dispatch`
+  laissait publier **n'importe quelle branche** sous `--branch=staging` : une
+  garde de branche est maintenant la toute première étape, avant le `checkout`.
+  Et cette garde interpolait `github.ref` dans un script shell — une branche
+  nommée `feat/";exit 0;#` la faisait réussir ; le nom passe désormais par une
+  variable d'environnement, où il reste une donnée. Le jeton Cloudflare, lui,
+  n'est plus posé au niveau du job : il n'entre que dans les deux étapes qui en
+  ont besoin. Réduction d'exposition, pas isolation — c'est écrit tel quel dans
+  le workflow.
 - **Une limite, écrite plutôt que tue** : `Disallow: /` empêche un moteur de
   LIRE le `noindex` qu'on lui destine. Un lien fuité peut donc encore produire
   un résultat nu, sans titre. On garde les deux (c'est la consigne, et certains
