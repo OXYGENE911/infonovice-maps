@@ -220,9 +220,13 @@ export function formaterDuree(secondes: number): string {
  * serait d'extraire `heureArriveeReelle` d'ici pour la tester à sec — mais
  * `panneau-itineraire.ts` est hors périmètre de cette tâche (mission A du
  * même cycle y travaille). Cette copie porte donc le test unitaire du
- * franchissement de minuit exigé par la tâche ; si les deux divergent un
- * jour, `npm run e2e:demo` (étape 3, résultat `.iti-resultat`) le
- * détecterait à son tour.
+ * franchissement de minuit exigé par la tâche — mais ELLE NE GARANTIT PAS
+ * l'accord avec `heureArriveeReelle` (revue Codex, 12/09) : `npm run
+ * e2e:demo` (étape 3, résultat `.iti-resultat`) ne verrait une divergence
+ * QUE si elle change la présence du mot « demain » un jour où le calcul
+ * franchit minuit — un jour ordinaire ne la révélerait pas. Sans extraction
+ * réelle, la seule garantie est la relecture manuelle : les deux formules
+ * sont identiques au moment où ce commentaire est écrit.
  *
  * `maintenant` est injectable pour les tests ; par défaut l'instant réel.
  */
