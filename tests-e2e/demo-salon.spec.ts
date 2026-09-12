@@ -223,29 +223,92 @@ test.describe('DÉMO SALON — Paris 15e → Lyon Part-Dieu, VF 8 Plus (T2, rect
       })).toBe(true);
     });
 
-    // ---- Étape 4 — mes réseaux et l'itinérance (cible 20 s) ----
-    await test.step('4. Mes réseaux (Ionity, IZIVIA) et l’itinérance', async () => {
+    // ---- Étape 4 — l'itinérance, sans nommer de réseau (cible 20 s) ----
+    /* CE QUE LA DÉCISION DU 13/09/2026 A CHANGÉ ICI, et pourquoi l'assertion
+     * suit le scénario et non l'inverse.
+     *
+     * L'ancienne rédaction exigeait `toHaveCount(1)` sur une étiquette
+     * « Ionity » puis sur une étiquette « IZIVIA ». Elle a tenu ce parcours
+     * ROUGE trois cycles durant, et elle avait raison de rougir : la liste des
+     * réseaux se calcule sur les bornes RÉELLEMENT trouvées le long du trajet
+     * (`#voletReseaux`, panneau-itineraire.ts). Exiger un exploitant nommé,
+     * c'est exiger que le fichier IRVE national place CE JOUR-LÀ des stations
+     * de cet exploitant sur le couloir Paris–Lyon. Le produit n'a aucune prise
+     * là-dessus ; l'assertion mesurait la donnée publique, pas le code.
+     *
+     * CE QU'ELLE GARANTIT DÉSORMAIS — rien de tout cela n'est trivial :
+     *   1. le résumé du dépliant annonce N réseaux avec N ≥ 1 : la liste vient
+     *      bien du trajet, elle n'est pas vide ;
+     *   2. le corps porte EXACTEMENT `min(N, 15)` étiquettes — 15 est le
+     *      plafond d'affichage de `#majListeReseaux` : résumé et contenu ne
+     *      peuvent pas diverger sans que ce parcours rougisse ;
+     *   3. chaque étiquette porte un compte NON NUL : pas de réseau fantôme,
+     *      pas de « (0) » ;
+     *   4. la case d'itinérance est décochée AVANT le geste et cochée après :
+     *      un état déjà acquis ne prouverait rien ;
+     *   5. le résumé des filtres réellement appliqués vaut EXACTEMENT
+     *      « itinérance (badges) » — donc le filtre agit (une case cochée qui
+     *      n'atteint pas `#filtres` laisserait la carte non filtrée) ET aucun
+     *      réseau n'est coché, ce que la décision exige.
+     *
+     * CE QU'ELLE NE GARANTIT PLUS : qu'un exploitant NOMMÉ (Ionity, IZIVIA ou
+     * un autre) soit présent sur le couloir. C'est assumé — ce fait appartient
+     * à la donnée publique, pas au produit, et la veille hebdomadaire du
+     * corridor est l'endroit où il se surveille. */
+    await test.step('4. L’itinérance, sans nommer aucun réseau', async () => {
       await allerA(page, 'recharge');
       const corps = page.locator('.vue[data-vue="recharge"]');
       await corps.locator('.recharge-reseaux > summary').click();
       const reseauxCorps = corps.locator('.recharge-reseaux-corps');
-      await expect(corps.locator('.recharge-reseaux > summary'))
-        .toContainText(/^Réseaux préférés — tous \(\d+ sur ce trajet\)$/);
+      const resume = corps.locator('.recharge-reseaux > summary');
+      await expect(resume).toContainText(/^Réseaux préférés — tous \(\d+ sur ce trajet\)$/);
 
-      const ionity = reseauxCorps.locator('label').filter({ hasText: /ionity/i });
-      const izivia = reseauxCorps.locator('label').filter({ hasText: /izivia/i });
-      await expect(ionity, 'Ionity ne fait pas partie des exploitants du trajet').toHaveCount(1);
-      await expect(izivia, 'IZIVIA ne fait pas partie des exploitants du trajet').toHaveCount(1);
-      await expect(ionity).toContainText(/Ionity \(\d+\)/i);
-      await expect(izivia).toContainText(/IZIVIA \(\d+\)/i);
-      await ionity.locator('input').check();
-      await izivia.locator('input').check();
-      await expect(corps.locator('.recharge-reseaux > summary'))
-        .toContainText(/^Réseaux préférés — 2 sur \d+$/);
+      const annonces = Number(
+        /\((\d+) sur ce trajet\)/.exec((await resume.textContent()) ?? '')?.[1] ?? '0');
+      expect(annonces,
+        'le dépliant annonce 0 réseau : la liste ne vient pas des bornes du trajet')
+        .toBeGreaterThan(0);
+
+      /* LE CORPS NE MONTRE QUE LES QUINZE PREMIERS — plus les réseaux cochés
+         au-delà (`#majListeReseaux`, panneau-itineraire.ts : `trouves.slice(0,
+         15)`). Paris → Lyon en croise plusieurs dizaines ; sans ce plafond la
+         liste serait un mur. On n'en coche aucun, donc le compte attendu vaut
+         exactement `min(N, 15)` — mesuré, pas supposé : le premier passage de
+         ce parcours a relevé 55 annoncés pour 15 montrés. */
+      const PLAFOND_LISTE = 15;
+      const attendus = Math.min(annonces, PLAFOND_LISTE);
+      const etiquettes = reseauxCorps.locator('label');
+      await expect(etiquettes,
+        `le résumé annonce ${annonces} réseaux, le corps devrait en montrer ${attendus}`)
+        .toHaveCount(attendus);
+      for (const texte of await etiquettes.allTextContents()) {
+        expect(texte, `« ${texte.trim()} » ne porte pas de compte non nul`)
+          .toMatch(/\([1-9]\d*\)\s*$/);
+      }
+      // ON NE COCHE AUCUN RÉSEAU — le dépliant est montré, pas utilisé.
 
       await ouvrirReglagesBornes(page);
-      await page.locator('.poi-itinerance').check();
-      await expect(page.locator('.poi-itinerance')).toBeChecked();
+      /* LA COUCHE DES BORNES D'ABORD : `.poi-filtres`, qui porte la case
+         d'itinérance, est `hidden` tant que `#actives` ne contient pas
+         « bornes » (`#majVisibiliteFiltres`, panneau-poi.ts). Recette de
+         `tests-e2e/bornes-filtres.spec.ts` l. 42-52, et de `docs/demo-salon.md`
+         étape 4. Sans effet si la couche est déjà active. */
+      await page.getByRole('checkbox', { name: 'Bornes électriques' }).check();
+      const itinerance = page.locator('.poi-itinerance');
+      await expect(itinerance,
+        'la case d’itinérance est déjà cochée : le geste de la démo ne prouverait rien')
+        .not.toBeChecked();
+      await itinerance.check();
+      await expect(itinerance).toBeChecked();
+
+      /* LE FILTRE AGIT, ET LUI SEUL. Le bouton de retrait est écrit par
+         `resumerFiltresBornes` (lib, pure) à partir des filtres RÉELLEMENT
+         appliqués — pas de l'état visuel des cases. Le texte exact vaut deux
+         assertions : l'itinérance restreint, et rien d'autre ne restreint
+         (un réseau coché y écrirait « réseau X » ou « N réseaux cochés »). */
+      await expect(page.locator('.poi-filtres-effacer'))
+        .toHaveText('Tout afficher — retirer : itinérance (badges)');
+
       await expect(page.locator('.poi-filtre-ligne:has(.poi-itinerance) + p'))
         .toContainText('La donnée publique ne dit pas quels badges précisément');
     });
