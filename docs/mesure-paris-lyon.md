@@ -42,8 +42,8 @@ risque sur la météo, le même traitement s'impose — la fonction
 
 ## Le délai de 2 000 ms, justifié
 
-**Mesure hors navigateur** (dix appels réels au service, `curl`, le 12/09,
-horaires ouvrés) :
+**Mesure hors navigateur** (neuf appels réels aux services, `curl`, le 12/09,
+horaires ouvrés — six à l'altimétrie, trois à la météo) :
 
 | # | Service | Résultat |
 |---|---|---|
@@ -57,16 +57,17 @@ horaires ouvrés) :
 | 8 | Météo | 117 ms |
 | 9 | Météo | 103 ms |
 
-Neuf réponses altimétrie sur dix entre 576 et 872 ms (médiane ≈ 700 ms), une à
-7 277 ms — cohérent avec la fourchette 902 ms-7 s relevée par la contre-mesure
-du 12/09. **2 000 ms** laisse une marge large (≈ ×2,9) sur le cas normal tout
-en coupant la queue de latence avant qu'elle ne menace le seuil de 5 s. La
-météo, elle, n'a montré aucun cas au-delà de 150 ms dans cette même série :
-aucun risque comparable trouvé, d'où la décision de ne pas lui appliquer de
-délai de garde pour l'instant (voir plus haut).
+**Cinq réponses altimétrie sur six entre 576 et 872 ms** (médiane ≈ 700 ms),
+**une (la première de la série) à 7 277 ms** — cohérent avec la fourchette
+902 ms-7 s relevée par la contre-mesure du 12/09. **2 000 ms** laisse une
+marge large (≈ ×2,9) sur le cas normal tout en coupant la queue de latence
+avant qu'elle ne menace le seuil de 5 s. La météo, elle, n'a montré aucun cas
+au-delà de 150 ms dans cette même série (trois appels) : aucun risque
+comparable trouvé, d'où la décision de ne pas lui appliquer de délai de garde
+pour l'instant (voir plus haut).
 
-**Limite de cette justification, dite en clair** : neuf appels rapides et un
-lent, sur dix, à une heure donnée, ne sont pas une distribution statistique —
+**Limite de cette justification, dite en clair** : cinq appels rapides et un
+lent, sur six, à une heure donnée, ne sont pas une distribution statistique —
 c'est un ordre de grandeur, cohérent avec la contre-mesure indépendante du
 12/09 (six sessions, même fourchette), mais rien de plus. Non vérifié : la
 distribution de la latence de `data.geopf.fr/altimetrie` à d'autres heures ou
@@ -124,14 +125,25 @@ contre-mesure du 12/09) — AU-DESSUS du seuil dur de 5 s.**
 
 Les six sessions ont toutes compté le relief (« oui » partout dans le
 tableau) : dans aucune des six, l'altimétrie n'a dépassé le délai de garde de
-2 000 ms. **Le délai de garde n'a donc jamais eu l'occasion de jouer pendant
-cette mesure** — la lenteur de la session 3 (6 642 ms) ne vient pas de
-l'altimétrie, qui a répondu à temps, mais d'ailleurs dans la chaîne (calcul de
-l'itinéraire, téléchargement ou lecture de l'index IRVE, latence réseau
-générale d'un service public un jour donné) : la sonde posée ici (les deux
-`performance.now()`) ne décompose pas le total par poste, contrairement au
-banc Playwright du C3 (qui, lui, catégorisait chaque requête réseau par nom
-mais n'existe pas sur cette branche — voir « Ce qui n'a pas pu être fait »).
+2 000 ms — le délai de garde n'a donc jamais eu l'occasion de JOUER SON RÔLE
+(refuser d'attendre) pendant cette mesure.
+
+**Ce que « relief compté » ne prouve PAS, et qu'il faut dire clairement
+(revue Codex du 12/09, remarque tenue) : ça ne veut pas dire que l'altimétrie
+a répondu vite — seulement qu'elle a répondu en moins de 2 000 ms.** Un appel
+qui aurait pris, par exemple, 1 900 ms compterait comme « relief pris en
+compte » tout en ayant pesé lourd dans le total de la session 3 (6 642 ms) si
+cet appel se trouvait sur le chemin le plus lent du `Promise.all`. La sonde
+posée ici (les deux `performance.now()`, départ et fin du calcul complet) ne
+décompose PAS le total par poste réseau — contrairement au banc Playwright du
+C3, qui catégorisait chaque requête par nom mais n'existe pas sur cette
+branche (voir « Ce qui n'a pas pu être fait »). **Je ne peux donc PAS exclure
+que l'altimétrie ait contribué de façon significative (jusqu'à un peu moins de
+2 s) au total de la session 3, ni l'affirmer : c'est un NON-VÉRIFIÉ, pas un
+NON.** Ce qui est vérifié, en revanche : l'altimétrie n'a jamais, dans ces
+six sessions, à elle seule dépassé le budget de 2 s que le délai de garde lui
+impose désormais — le pire cas que la tâche visait à plafonner est plafonné,
+que le reste de la chaîne soit lent ou non ce jour-là.
 
 **Ce que ça veut dire, en clair : le délai de garde sur l'altimétrie corrige
 le facteur limitant que la contre-mesure avait identifié, mais n'est pas, à
@@ -160,12 +172,14 @@ mesuré — pas de traiter tous les points chauds possibles du pipeline réseau.
   (préférence véhicule relue = `"vide"`, capture jointe pour chaque
   itération) ; le cache HTTP disque du navigateur, lui, n'a pas été vidé par
   un mécanisme vérifiable dans cet environnement (pas d'accès DevTools
-  « Empty cache and hard reload » depuis les outils disponibles ici). Ce que
-  j'observe rend cette hypothèse peu probable en pratique — le total ne
-  décroît PAS de façon monotone d'une session à l'autre (2 364 → 494 → 6 642 →
-  3 924 → 4 291 → 3 202 ms), ce qu'on attendrait d'un cache HTTP qui se
-  réchaufferait progressivement — mais je le déclare NON VÉRIFIÉ plutôt que
-  de le compter comme acquis.
+  « Empty cache and hard reload » depuis les outils disponibles ici). **Je ne
+  dispose d'aucun argument qui permette d'écarter cette hypothèse** — l'écart
+  entre sessions (494 ms à 6 642 ms) est compatible aussi bien avec un cache
+  actif par endroits qu'avec un cache totalement froid : je le déclare NON
+  VÉRIFIÉ, sans chercher à le minimiser par un raisonnement qui ne tiendrait
+  pas (revue Codex du 12/09 : une tentative antérieure de cette phrase
+  invoquait l'absence de décroissance monotone comme indice — argument
+  invalide, retiré).
 - **Une seule campagne, un seul moment de la journée.** Comme pour la
   contre-mesure du 12/09 et pour la mesure hors navigateur ci-dessus : six
   passages et dix appels ne sont pas une distribution, seulement un ordre de
@@ -178,12 +192,73 @@ plan de recharge (dénivelé Paris→Lyon compris dans le calcul de consommation
 est resté aussi précis qu'avant cette tâche. Le coût potentiel — un plan qui
 ignore un col ou une descente parce que l'altimétrie a mis plus de 2 s à
 répondre — ne s'est pas matérialisé aujourd'hui, mais reste réel les jours où
-le service est plus lent : le test unitaire (`tests/delai-garde.test.ts`)
-prouve que le mécanisme bascule correctement sur « sans dénivelé » dans ce
-cas, et que « Pourquoi ce plan ? » le dit — mais cette bascule elle-même
-**n'a pas été observée dans une session réelle** aujourd'hui (voir
-ci-dessus) : vérifiée par construction et par test, pas par l'observation
-d'un cas réel.
+le service est plus lent.
+
+**Ce que les tests unitaires prouvent, précisément, et pas plus** (revue
+Codex du 12/09 : la version précédente de ce paragraphe surclamait leur
+portée) :
+- `tests/delai-garde.test.ts` prouve que `avecDelaiDeGarde` — l'utilitaire
+  générique, isolé de toute donnée métier — rend bien `undefined` au bout du
+  délai sans jamais attendre la promesse lente au-delà, et sans rejet non
+  géré même quand cette promesse échoue APRÈS coup.
+- `tests/conditions.test.ts` (fonction `noteReserveConditions`, extraite de
+  `panneau-itineraire.ts` pendant cette même tâche à la suite de la revue
+  Codex) prouve que la note de réserve du volet recharge dit EXACTEMENT la
+  bonne phrase dans les trois cas (relief compté, relief manquant seul,
+  rien compté) — jamais que le relief est compté quand il ne l'est pas.
+- **Ce qu'AUCUN test ne prouve** : que `#chargerConditions` (la méthode privée
+  qui orchestre réellement l'appel réseau, le `Promise.all` et l'écriture de
+  `#deniveleIndisponible`) déclenche bien ce chemin en conditions réelles, ni
+  que le panneau « Pourquoi ce plan ? » (son propre bloc `cond`, distinct de
+  la note de réserve) affiche la bonne phrase au moment voulu — cette classe
+  fait plus de 5 000 lignes et n'a aucun harnais de test unitaire existant ;
+  en construire un pour cette seule tâche aurait dépassé son périmètre. Cette
+  bascule intégrale **n'a pas été observée dans une session réelle**
+  aujourd'hui non plus (voir ci-dessus, aucune des six sessions n'a déclenché
+  le délai de garde) : elle est vérifiée par construction et par lecture du
+  code (la mienne, puis celle de Codex), pas par l'observation d'un cas réel
+  ni par un test automatisé de bout en bout.
+
+## Suite à la première revue Codex (12/09, VERDICT BLOQUANT)
+
+Codex a trouvé quatre remarques sérieuses et une mineure sur la première
+version de ce commit — rapport complet dans
+`handoffs/2026-09-12-1630-codex-altimetrie.md`. Un second commit les corrige :
+
+1. **Bug réel, corrigé** : la note de réserve ne regardait que `tempDepartC`
+   pour décider si « la température est comptée », alors que le calcul retient
+   la température LA PLUS DÉFAVORABLE des deux bouts — un départ en échec
+   météo avec une arrivée glaciale comptée aurait affiché « à plat » alors
+   que la température AVAIT compté. Corrigé (regarde `tempDepartC` OU
+   `tempArriveeC`), et la logique de sélection des trois phrases a été
+   extraite en une fonction pure `noteReserveConditions`
+   (`src/lib/conditions.ts`), testée à sec sur ses trois cas.
+2. **Écart entre le test et ce qu'il prouve, corrigé dans ce document** (voir
+   « Ce que le délai de garde coûte en précision du plan » plus haut) : le
+   test unitaire ne prouvait ni la bascule de `#chargerConditions` ni
+   l'affichage de « Pourquoi ce plan ? » — seulement l'utilitaire générique.
+   Dit maintenant précisément, sans surclamer.
+3. **Erreur de comptage dans ce document, corrigée** : « dix appels » et
+   « neuf sur dix » étaient faux — le relevé n'en comportait que neuf (six
+   altimétrie, trois météo), cinq altimétries rapides sur six. Corrigé
+   ci-dessus.
+4. **Conclusion causale non soutenue par la mesure, corrigée** : ce document
+   affirmait que la lenteur de la session 3 ne venait « pas » de
+   l'altimétrie ; en réalité, « relief compté » prouve seulement que
+   l'altimétrie a répondu sous 2 000 ms, pas qu'elle a répondu VITE — elle
+   a pu peser jusqu'à ~1 900 ms dans le total sans déclencher le délai de
+   garde. Reformulé en NON-VÉRIFIÉ plutôt qu'en négation.
+5. **Argument faible sur le cache HTTP, retiré** (remarque mineure) :
+   l'absence de décroissance monotone entre sessions ne permettait pas de
+   conclure à l'absence d'effet de cache. Retiré, remplacé par un aveu simple
+   de non-vérification.
+
+**Ce qui N'A PAS changé** : la logique du délai de garde lui-même
+(`avecDelaiDeGarde`, `DELAI_GARDE_ALTIMETRIE_MS = 2000`), donc les six
+mesures brutes ci-dessus restent valides pour le comportement mesuré — elles
+n'ont pas été rejouées après ce second commit, seule la CORRECTION d'un bug
+d'affichage et de plusieurs erreurs de rédaction dans ce document justifiait
+un second passage, pas une remesure.
 
 ## Pourquoi la même PR (#313)
 

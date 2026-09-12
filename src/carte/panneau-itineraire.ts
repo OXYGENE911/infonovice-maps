@@ -28,6 +28,7 @@ import { versFragment, depuisFragment } from '../lib/partage-url';
 import { installerFeuilleBasse } from './feuille-basse';
 import { pictoMenu, type NomPicto } from './icone-menu';
 import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
+import { noteReserveConditions } from '../lib/conditions';
 import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
 import { apprendreTrajet, lireHabitudes, oublierHabitude, suggerer } from '../lib/routines';
@@ -4460,24 +4461,18 @@ export class PanneauItineraire extends HTMLElement {
        dépassé ou service en panne, la météo ayant abouti), dire qu'il est
        « compté » serait tout autant un mensonge — un silence par omission
        que le mandat du 12/09 interdit explicitement. Trois cas, trois
-       phrases, jamais une approximation qui couvre les trois. */
+       phrases (`noteReserveConditions`, testée à sec dans
+       tests/conditions.test.ts), jamais une approximation qui les couvre.
+       TEMPÉRATURE COMPTÉE : au DÉPART ou à L'ARRIVÉE, pas seulement au
+       départ (revue Codex du 12/09 — l'ancienne version ne regardait que
+       `tempDepartC` et disait « à plat » alors qu'une météo d'arrivée
+       seule avait bien été retenue dans le calcul). */
     const pourCeTrajet = this.#conditionsPour === this.#dernier;
-    const temperatureCompte = pourCeTrajet && this.#conditions?.tempDepartC !== undefined;
+    const temperatureCompte = pourCeTrajet
+      && (this.#conditions?.tempDepartC !== undefined
+        || this.#conditions?.tempArriveeC !== undefined);
     const deniveleCompte = pourCeTrajet && this.#conditions?.monteeM !== undefined;
-    const texteReserve = deniveleCompte
-      ? 'Température, relief et vitesse du parcours sont comptés (détail dans'
-        + ' « Pourquoi ce plan ? ») ; restent inconnus le vent, la pluie, le'
-        + ' trafic et la vraie courbe de charge de votre véhicule.'
-      : temperatureCompte
-        ? 'Température et vitesse du parcours sont comptées ; le relief n’a'
-          + ' PAS pu être pris en compte (service altimétrique trop lent ou'
-          + ' indisponible — détail dans « Pourquoi ce plan ? »). Restent'
-          + ' inconnus le vent, la pluie, le trafic et la vraie courbe de'
-          + ' charge de votre véhicule.'
-        : 'Estimation à plat, à consommation constante :'
-          + ' ni le relief, ni le vent, ni le trafic, ni la vraie courbe de charge'
-          + ' de votre véhicule ne sont pris en compte.';
-    reserve.textContent = `${texteReserve}`
+    reserve.textContent = noteReserveConditions(temperatureCompte, deniveleCompte)
       + ` Bornes de ${SEUIL_RAPIDE} kW et plus, depuis le fichier national IRVE.`;
     corps.append(reserve);
   }

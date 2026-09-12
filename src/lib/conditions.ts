@@ -148,3 +148,34 @@ export function plafondThermiqueKw(
   }
   return plafonds.length > 0 ? Math.min(...plafonds) : null;
 }
+
+/**
+ * La note de réserve du volet recharge — TROIS phrases distinctes, PURE,
+ * testée à sec (ALTI-GARDE-1, revue Codex du 12/09/2026 : extraite de
+ * `panneau-itineraire.ts` où elle vivait en ligne, sans test dédié — un
+ * scénario, température connue au SEUL bout arrivée, avait échappé à
+ * l'implémentation en ligne, qui ne regardait que `tempDepartC`).
+ *
+ * Ni le relief ni la température ne doivent jamais être dits « comptés »
+ * quand ils ne le sont pas — le mandat du 12/09 interdit le silence par
+ * omission autant que le mensonge par excès.
+ */
+export function noteReserveConditions(
+  temperatureCompte: boolean, deniveleCompte: boolean,
+): string {
+  if (deniveleCompte) {
+    return 'Température, relief et vitesse du parcours sont comptés (détail dans'
+      + ' « Pourquoi ce plan ? ») ; restent inconnus le vent, la pluie, le'
+      + ' trafic et la vraie courbe de charge de votre véhicule.';
+  }
+  if (temperatureCompte) {
+    return 'Température et vitesse du parcours sont comptées ; le relief n’a'
+      + ' PAS pu être pris en compte (service altimétrique trop lent ou'
+      + ' indisponible — détail dans « Pourquoi ce plan ? »). Restent'
+      + ' inconnus le vent, la pluie, le trafic et la vraie courbe de'
+      + ' charge de votre véhicule.';
+  }
+  return 'Estimation à plat, à consommation constante :'
+    + ' ni le relief, ni le vent, ni le trafic, ni la vraie courbe de charge'
+    + ' de votre véhicule ne sont pris en compte.';
+}

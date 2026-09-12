@@ -101,11 +101,18 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   PAS de l'altimétrie mais d'ailleurs dans la chaîne réseau (itinéraire ou
   IRVE), hors du périmètre de cette tâche — dit en clair dans le document de
   mesure plutôt que masqué.
-- Bundle : `panneau-itineraire` +595 o (124 253 o contre 123 658 o), bien
-  sous le budget de ±5 Ko. Aucune dépendance nouvelle. 1 687 tests unitaires
-  verts (`npm test`), aucun test E2E touché (hors périmètre de cette tâche,
-  mission B du même cycle).
-- Revue Codex : `handoffs/2026-09-12-1630-codex-altimetrie.md`.
+- Bundle : `panneau-itineraire` 123 654 o contre 123 658 o avant la tâche
+  (−4 o après extraction de `noteReserveConditions` vers `lib/conditions.ts`),
+  bien sous le budget de ±5 Ko. Aucune dépendance nouvelle. 1 691 tests
+  unitaires verts (`npm test`), aucun test E2E touché (hors périmètre de
+  cette tâche, mission B du même cycle).
+- Revue Codex, deux passages : `handoffs/2026-09-12-1630-codex-altimetrie.md`
+  — VERDICT BLOQUANT sur le premier (4 remarques sérieuses, 1 mineure : un
+  vrai bug d'affichage sur la température d'arrivée seule, un test qui ne
+  prouvait pas tout ce que le document affirmait, une erreur de comptage
+  (« dix » au lieu de neuf appels de mesure) et une conclusion causale non
+  soutenue par les chiffres — toutes corrigées dans un second commit, détail
+  dans `docs/mesure-paris-lyon.md`).
 
 ## [1.141.0] — 2026-09-10 — COURBES-1
 

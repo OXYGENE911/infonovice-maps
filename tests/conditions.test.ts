@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   facteurVitesse, facteurTemperature, energieDeniveleKwh,
   consommationAjustee, plafondThermiqueKw, MASSE_DEFAUT_KG,
+  noteReserveConditions,
 } from '../src/lib/conditions';
 
 /* LES CONDITIONS DU TRAJET (demande d'Armelin du 28/08). Le contrat de ce
@@ -88,5 +89,30 @@ describe('plafondThermiqueKw — les chiffres du VF8 d’Armelin comme cas d’�
   });
   it('un départ gelé vers une arrivée caniculaire : le PIRE des deux bridages', () => {
     expect(plafondThermiqueKw(-1, 36, VF8)).toBe(30);
+  });
+});
+
+describe('noteReserveConditions — ALTI-GARDE-1, 12/09/2026, jamais un silence', () => {
+  it('relief compté : les trois sont dits comptés, l’aveu porte sur vent/pluie/trafic/charge', () => {
+    const t = noteReserveConditions(true, true);
+    expect(t).toMatch(/Température, relief et vitesse.*sont comptés/);
+    expect(t).not.toMatch(/à plat/);
+  });
+  it('relief NON compté mais température comptée : le dit explicitement, jamais un silence', () => {
+    const t = noteReserveConditions(true, false);
+    expect(t).toMatch(/relief n.*PAS pu être pris en compte/);
+    expect(t).toMatch(/service altimétrique trop lent ou\s+indisponible/);
+    // Ne doit JAMAIS prétendre que le relief est compté quand il ne l'est pas.
+    expect(t).not.toMatch(/relief.*sont comptés/);
+  });
+  it('rien compté : « à plat, à consommation constante » — le comportement d’avant', () => {
+    const t = noteReserveConditions(false, false);
+    expect(t).toMatch(/à plat, à consommation constante/);
+  });
+  it('cas impossible en pratique (dénivelé compté sans température) : privilégie quand même l’aveu complet', () => {
+    // Défensif : si jamais ce cas se produisait, la phrase la plus complète
+    // (les trois comptés) ne doit jamais dire moins que la vérité.
+    const t = noteReserveConditions(false, true);
+    expect(t).toMatch(/Température, relief et vitesse.*sont comptés/);
   });
 });
