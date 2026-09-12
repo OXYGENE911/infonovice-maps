@@ -67,6 +67,16 @@ const DEPART_ATTENDU = /Linois/;
 const ARRIVEE_SAISIE = '5 place Charles Beraudier Lyon';
 const ARRIVEE_ATTENDUE = /Beraudier/i;
 const FRAGMENT_TRAJET = '2.282604,48.848501;4.859273,45.760829;car';
+/* LE RÉSUMÉ DIT « arrivée vers HH:MM », OU « arrivée vers demain HH:MM »
+ * quand le calcul fait franchir minuit (C4, 12/09/2026, rectlR6gVbiWQzUN4).
+ * `npm run e2e:demo` a rougi le 12/09 sur le trajet simulé tard le soir
+ * (5 h 22 de route) : la ligne 203 (chrono ≤ 5 s) PASSAIT, c'est cette
+ * assertion, sans rapport avec le temps de calcul, qui ignorait la forme
+ * « demain » qu'ajoute `#majResume` (panneau-itineraire.ts) quand le jour
+ * change. Les deux formes sont acceptées SANS relâcher la rigueur : l'heure
+ * reste deux chiffres, les minutes aussi — voir `formaterHeureArrivee`
+ * (lib/itineraire.ts) et son test unitaire du franchissement de minuit. */
+const REGEX_RESUME_ITINERAIRE = /^\d+ km — .+ · arrivée vers (?:demain )?\d\d:\d\d/;
 
 type Categorie = 'itineraire' | 'altimetrie' | 'meteo' | 'irve';
 
@@ -204,7 +214,7 @@ test.describe('DÉMO SALON — Paris 15e → Lyon Part-Dieu, VF 8 Plus (T2, rect
         .toBeLessThan(5_000);
 
       await expect(champArrivee).toHaveValue(ARRIVEE_ATTENDUE);
-      await expect(resultat).toHaveText(/^\d+ km — .+ · arrivée vers \d\d:\d\d/);
+      await expect(resultat).toHaveText(REGEX_RESUME_ITINERAIRE);
       await expect.poll(() => page.evaluate(() => {
         const c = (window as unknown as {
           __carte?: { getSource: (id: string) => unknown };
@@ -328,7 +338,7 @@ test.describe('DÉMO SALON — Paris 15e → Lyon Part-Dieu, VF 8 Plus (T2, rect
       const el = document.querySelector('.iti-resultat');
       return !!el && !(el as HTMLElement).hidden && /% de batterie/.test(el.textContent ?? '');
     }, null, { timeout: 30_000, polling: 'raf' });
-    await expect(resultat).toHaveText(/^\d+ km — .+ · arrivée vers \d\d:\d\d/);
+    await expect(resultat).toHaveText(REGEX_RESUME_ITINERAIRE);
 
     await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 20_000 });
     await allerA(page, 'partage');

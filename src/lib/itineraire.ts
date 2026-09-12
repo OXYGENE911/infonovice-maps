@@ -206,3 +206,31 @@ export function formaterDuree(secondes: number): string {
   const m = minutes % 60;
   return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`;
 }
+
+/**
+ * L'heure d'arrivée réelle : départ choisi (ou maintenant) + route + charges.
+ * « demain » est dit quand le jour change.
+ *
+ * MIROIR VOLONTAIRE, PAS UNE EXTRACTION (C4, 12/09/2026). La règle vit aussi,
+ * en fermeture privée, dans `#majResume` → `heureArriveeReelle`
+ * (panneau-itineraire.ts) — c'est CETTE formule, au caractère près, que le
+ * volet affiche. `npm run e2e:demo` a rougi le 12/09 sur un trajet
+ * franchissant minuit : l'assertion E2E ignorait la forme « demain »
+ * (corrigée dans demo-salon.spec.ts), pas ce calcul. Le vrai correctif
+ * serait d'extraire `heureArriveeReelle` d'ici pour la tester à sec — mais
+ * `panneau-itineraire.ts` est hors périmètre de cette tâche (mission A du
+ * même cycle y travaille). Cette copie porte donc le test unitaire du
+ * franchissement de minuit exigé par la tâche ; si les deux divergent un
+ * jour, `npm run e2e:demo` (étape 3, résultat `.iti-resultat`) le
+ * détecterait à son tour.
+ *
+ * `maintenant` est injectable pour les tests ; par défaut l'instant réel.
+ */
+export function formaterHeureArrivee(
+  depart: Date, totalS: number, maintenant: Date = new Date(),
+): string {
+  const a = new Date(depart.getTime() + totalS * 1000);
+  const heure = a.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const demain = a.getDate() !== maintenant.getDate();
+  return ` · arrivée vers ${demain ? 'demain ' : ''}${heure}`;
+}

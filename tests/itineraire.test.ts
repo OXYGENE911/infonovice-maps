@@ -1,6 +1,6 @@
 // Le calcul d'itinéraire : transformation pure, formats français, résilience.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { versItineraire, calculerItineraire, itineraireDirect, formaterDistance, formaterDuree, ErreurItineraire, urlItineraire } from '../src/lib/itineraire';
+import { versItineraire, calculerItineraire, itineraireDirect, formaterDistance, formaterDuree, formaterHeureArrivee, ErreurItineraire, urlItineraire } from '../src/lib/itineraire';
 
 const REPONSE = {
   geometry: { type: 'LineString', coordinates: [[2.33, 48.85], [2.35, 48.86]] },
@@ -35,6 +35,43 @@ describe('formats français', () => {
     expect(formaterDuree(512)).toBe('9 min');
     expect(formaterDuree(3900)).toBe('1 h 05');
     expect(formaterDuree(7200)).toBe('2 h');
+  });
+});
+
+/* LE FRANCHISSEMENT DE MINUIT (C4, 12/09/2026, rectlR6gVbiWQzUN4). Le trajet
+   simulé de `npm run e2e:demo` (tard le soir, 5 h 22 de route) fait
+   basculer l'arrivée au lendemain — la forme « demain HH:MM » que
+   l'assertion E2E ignorait. Verrouillé ici à sec, indépendamment du réseau
+   et de l'heure réelle d'exécution (`maintenant` figé). */
+describe('formaterHeureArrivee', () => {
+  it('dit « demain » quand le calcul fait franchir minuit', () => {
+    const depart = new Date(2026, 8, 12, 22, 0); // 12/09 22 h 00, heure locale
+    const maintenant = new Date(2026, 8, 12, 21, 30);
+    // + 5 h 22 → 13/09 03 h 22
+    expect(formaterHeureArrivee(depart, (5 * 3600) + (22 * 60), maintenant))
+      .toBe(' · arrivée vers demain 03:22');
+  });
+
+  it('ne dit rien de plus quand l’arrivée reste dans la journée de « maintenant »', () => {
+    const depart = new Date(2026, 8, 12, 8, 0);
+    const maintenant = new Date(2026, 8, 12, 8, 0);
+    expect(formaterHeureArrivee(depart, 3 * 3600, maintenant)).toBe(' · arrivée vers 11:00');
+  });
+
+  it('un trajet qui arrive JUSTE avant minuit ne dit pas « demain »', () => {
+    const depart = new Date(2026, 8, 12, 20, 0);
+    const maintenant = new Date(2026, 8, 12, 19, 45);
+    // + 3 h 59 → 23 h 59, encore le 12
+    expect(formaterHeureArrivee(depart, (3 * 3600) + (59 * 60), maintenant))
+      .toBe(' · arrivée vers 23:59');
+  });
+
+  it('un trajet qui arrive à 00:00 pile dit déjà « demain »', () => {
+    const depart = new Date(2026, 8, 12, 20, 0);
+    const maintenant = new Date(2026, 8, 12, 19, 45);
+    // + 4 h → 00:00 le 13
+    expect(formaterHeureArrivee(depart, 4 * 3600, maintenant))
+      .toBe(' · arrivée vers demain 00:00');
   });
 });
 

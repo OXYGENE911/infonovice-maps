@@ -2,6 +2,48 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [Non publié] — 2026-09-12 — E2E-VERT-C4 (recB9dFvq0P1Rzohp)
+
+### La suite E2E redevient verte de bout en bout
+
+- **`npm run e2e:demo` accepte enfin l'arrivée du lendemain.** L'assertion du
+  résumé (`.iti-resultat`) ne reconnaissait que la forme « arrivée vers
+  HH:MM » ; `#majResume` (panneau-itineraire.ts) dit « arrivée vers demain
+  HH:MM » quand le calcul fait franchir minuit — le cas du trajet simulé,
+  tard le soir, 5 h 22 de route. Regex corrigée pour accepter les deux formes
+  SANS relâcher la rigueur (heure et minutes restent deux chiffres chacune) —
+  `tests-e2e/demo-salon.spec.ts`. Verrouillé par un test unitaire dédié du
+  franchissement de minuit (`formaterHeureArrivee`, `src/lib/itineraire.ts`,
+  4 cas dont l'arrivée pile à 00:00) : cette fonction est un MIROIR de la
+  fermeture privée `heureArriveeReelle` de `#majResume` — pas une extraction,
+  `panneau-itineraire.ts` étant hors périmètre de cette tâche (mission A du
+  même cycle y travaille).
+- **Une régression réelle de la PR #313 est identifiée et isolée, PAS
+  corrigée ici** (hors périmètre — `panneau-itineraire.ts`, plan de
+  recharge, mission A) : `recharge.spec.ts:778` (« AUCUN appel tant que la
+  section est repliée ») échoue de façon déterministe dès la seule PR #313
+  (confirmé par bissection : vert sur `main`, rouge sur `978e685` isolément,
+  hors de toute interaction avec les PR #306/#314). Cause : le préchargement
+  de l'index IRVE sur l'événement `vehicule-change` (cible 2 de la PR #313)
+  se déclenche aussi quand `panneau-vehicule.ts` restaure le véhicule
+  sauvegardé au chargement de la page — pas seulement sur un changement
+  explicite de l'usager — et le véhicule par défaut est électrique. Une
+  recherche de bornes part donc alors que personne ne l'a demandée, en
+  contradiction avec la règle « ne jamais marteler les API publiques sans
+  demande ». Décrit en détail dans le rapport de tâche pour la mission A.
+- **Les échecs E2E locaux dits « préexistants » (PR #314 : 4 nommés ;
+  reproduits ici : 5 à 7 selon le run, jamais le même ensemble) sont
+  confirmés comme de la contention entre workers Playwright en parallèle,
+  PAS des régressions.** Méthode : chaque échec observé sur `npm run e2e`
+  (parallèle, machine partagée) a été rejoué isolément avec `--workers=1`
+  (2 à 3 répétitions chacun) — TOUS passent alors à 100 %, sur la branche
+  combinée comme sur la PR #313 seule. `playwright.config.ts` le documentait
+  déjà (workers:1 forcé en CI, jamais en local) ; ce cycle en apporte la
+  contre-épreuve chiffrée. `npm run e2e` en local reste donc sujet à un
+  sous-ensemble non déterministe et VARIABLE de faux rouges sous charge —
+  caractéristique préexistante de la machine partagée, pas du code — quand
+  la CI (workers:1) est stable.
+
 ## [Non publié] — 2026-09-11 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
 
 ### Paris → Lyon, plan de recharge inclus, sous 5 secondes
