@@ -36,4 +36,13 @@ describe('les seuils de lenteur de l’itinéraire', () => {
     expect(SOURCE).toMatch(/signalerLenteur\(\s*calculerItineraire\(depart, arrivee, profil, options\),/);
     expect(SOURCE).not.toMatch(/avecDelaiDeGarde\(calculerItineraire/);
   });
+
+  it('« Effacer le trajet » masque les deux bandeaux (revue Codex du 12/09, régression réelle avant correction) : #effacer() incrémente le jeton de séquence, donc le succès ou l’échec tardif de #calculer ne les nettoiera jamais lui-même', () => {
+    const debutEffacer = SOURCE.indexOf('#effacer(): void {');
+    expect(debutEffacer, '#effacer() introuvable').toBeGreaterThan(-1);
+    const finEffacer = SOURCE.indexOf('\n  }', debutEffacer);
+    const corpsEffacer = SOURCE.slice(debutEffacer, finEffacer);
+    expect(corpsEffacer).toMatch(/querySelector\('\.iti-lenteur-service'\) as HTMLElement\)\.hidden = true/);
+    expect(corpsEffacer).toMatch(/querySelector\('\.iti-abandon-service'\) as HTMLElement\)\.hidden = true/);
+  });
 });

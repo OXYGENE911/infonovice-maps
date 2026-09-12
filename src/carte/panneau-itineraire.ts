@@ -5124,6 +5124,13 @@ export class PanneauItineraire extends HTMLElement {
     (this.querySelector('.iti-resultat') as HTMLElement).hidden = true;
     (this.querySelector('.iti-actions') as HTMLElement).hidden = true;
     (this.querySelector('.iti-menu:not(.iti-menu-toujours)') as HTMLElement).hidden = true;
+    /* REVUE CODEX (ITI-LENT-1) : le jeton change deux lignes plus haut, donc
+       le succès ou l'échec tardif de #calculer ne nettoiera JAMAIS ces deux
+       bandeaux lui-même (son propre garde de jeton les en empêche) — sans
+       cette ligne, « Effacer le trajet » pendant une attente lente laissait
+       le message affiché sur un panneau vidé. */
+    (this.querySelector('.iti-lenteur-service') as HTMLElement).hidden = true;
+    (this.querySelector('.iti-abandon-service') as HTMLElement).hidden = true;
     /* EFFACER LE TRAJET ARRÊTE LE SUIVI. Un bandeau qui continue de compter
        les kilomètres d'un itinéraire qui n'existe plus consomme le GPS pour
        rien — et ment. */

@@ -110,21 +110,50 @@ cette tâche :
 | | `panneau-itineraire-*.js` | gzip |
 |---|---|---|
 | avant (staging, a304eb9) | 123,62 Ko | 39,99 Ko |
-| après (cette tâche) | 125,34 Ko | 40,56 Ko |
-| delta | +1,72 Ko | **+0,57 Ko** |
+| après (cette tâche, avant revue Codex) | 125,34 Ko | 40,56 Ko |
+| après correction du bogue trouvé par Codex (§5) | 125,45 Ko | 40,57 Ko |
+| delta final | +1,83 Ko | **+0,58 Ko** |
 
 Bien dans le budget « ±5 Ko » du critère d'acceptation.
 
 `npm test` (2026-09-12T19:22:04Z, commit de départ `a304eb9`, branche
-`feat/recaAomQQUEykgE5f-iti-lent`) : 117 fichiers, **1 680 tests verts**.
-Vérifié par contre-épreuve (`git stash` sans `-u`, qui ne remet PAS les
-nouveaux fichiers non suivis, donc les 7 tests nouveaux restent présents) :
-`npm test` sur `panneau-itineraire.ts` remis à l'état `staging` donne
-**1 677 passés + 3 échoués** (les trois tests de `iti-lent-seuils.test.ts` qui
-vérifient précisément l'existence des constantes ajoutées par cette tâche) —
-soit un total de 1 680 tests recensés dans les deux cas, ce qui confirme que
-les 4 tests de `service-lent.test.ts` (mécanisme pur, indépendant du fichier
-modifié) ET les 3 de `iti-lent-seuils.test.ts` s'ajoutent bien à une base de
-**1 673 tests préexistants sur `staging`**, sans qu'aucun test existant n'ait
-été modifié ou supprimé. `npm run lint` et `npm run build` (`tsc --noEmit`
-inclus) sans erreur sur l'état final.
+`feat/recaAomQQUEykgE5f-iti-lent`) : 117 fichiers, **1 680 tests verts** avant
+la revue Codex. Vérifié par contre-épreuve (`git stash` sans `-u`, qui ne
+remet PAS les nouveaux fichiers non suivis, donc les 7 tests nouveaux restent
+présents) : `npm test` sur `panneau-itineraire.ts` remis à l'état `staging`
+donne **1 677 passés + 3 échoués** (les trois tests de
+`iti-lent-seuils.test.ts` qui vérifient précisément l'existence des
+constantes ajoutées par cette tâche) — soit un total de 1 680 tests recensés
+dans les deux cas, ce qui confirme que les 4 tests de `service-lent.test.ts`
+(mécanisme pur, indépendant du fichier modifié) ET les 3 de
+`iti-lent-seuils.test.ts` s'ajoutent bien à une base de **1 673 tests
+préexistants sur `staging`**, sans qu'aucun test existant n'ait été modifié ou
+supprimé.
+
+Après correction du bogue trouvé par Codex (§5, un 4ᵉ test ajouté) :
+`npm test` (2026-09-12T19:28:53Z) donne **117 fichiers, 1 681 tests verts**.
+`npm run lint` et `npm run build` (`tsc --noEmit` inclus) sans erreur sur
+l'état final.
+
+## 5. Revue Codex (`codex exec -s read-only`, 2026-09-12T19:25:28Z, commit
+`57350a7`)
+
+**Verdict initial : BLOQUANT.** `#effacer()` (bouton « Effacer le trajet »)
+n'incluait pas le nettoyage des deux nouveaux bandeaux. Le jeton de séquence
+change au tout début de `#effacer()`, donc le succès ou l'échec tardif de
+`#calculer()` — dont c'est normalement le rôle de nettoyer ces éléments — ne
+le fait jamais dans ce cas précis (son propre garde `if (jeton !== this.#sequence) return;`
+l'en empêche). Scénario d'échec décrit par Codex : lancer un calcul, attendre
+2,5 s ou 15 s sans réponse, cliquer « Effacer le trajet » → le bandeau reste
+affiché sur un panneau vidé.
+
+**Corrigé** : `#effacer()` masque désormais explicitement
+`.iti-lenteur-service` et `.iti-abandon-service`. Verrouillé par un test
+dédié dans `tests/iti-lent-seuils.test.ts`, dont la contre-épreuve a été
+faite manuellement (correctif temporairement retiré → le test échoue ; remis
+→ il passe), avant de committer la version finale.
+
+Reste de la revue : minuteurs nettoyés au succès comme au rejet, callbacks
+déclenchés une seule fois, réponses obsolètes neutralisées par le jeton de
+séquence, aucun double calcul possible via « Réessayer », seuils cohérents
+avec la documentation, CSS conforme à la règle `hidden` du projet (ERGO-6).

@@ -32,8 +32,13 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   public. Bundle : +570 o gzip sur le morceau du planificateur (mesuré,
   123,62 → 125,34 Ko / 39,99 → 40,56 Ko gzip).
 - 4 tests unitaires sur le mécanisme (`tests/service-lent.test.ts`, dont les
-  deux scénarios du mandat : ralenti à 3 s, ralenti à 20 s) + 3 tests de
-  cohérence des seuils (`tests/iti-lent-seuils.test.ts`). 1 680 tests verts.
+  deux scénarios du mandat : ralenti à 3 s, ralenti à 20 s) + 4 tests de
+  cohérence (`tests/iti-lent-seuils.test.ts`). 1 681 tests verts.
+- **Revue Codex (BLOQUANT, corrigé)** : « Effacer le trajet » (`#effacer`)
+  n'aurait masqué ni le bandeau de lenteur ni celui d'abandon — le jeton de
+  séquence change dans `#effacer`, donc le succès ou l'échec tardif de
+  `#calculer` ne les nettoie jamais lui-même. Corrigé, verrouillé par un
+  test dédié (contre-épreuve faite : le test rougit sans le correctif).
 
 ## [1.141.0] — 2026-09-10 — COURBES-1
 
