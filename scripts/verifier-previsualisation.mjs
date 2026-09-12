@@ -32,6 +32,9 @@
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, posix } from 'node:path';
 
+/** La SEULE feuille de bandeau admise : celle que le point 3 contrôle. */
+const FEUILLE_ATTENDUE = 'previsualisation.css';
+
 /** Retire le commentaire « # … » d'une ligne de robots.txt ou de _headers. */
 function sansCommentaire(ligne) {
   const i = ligne.indexOf('#');
@@ -180,7 +183,7 @@ export function verifierPrevisualisation(dossier) {
   // 3. La feuille du bandeau. SANS ELLE, LE BANDEAU EST UN TEXTE NU : les six
   //    pages de texte portent une CSP `style-src 'self'` qui interdit le style
   //    en ligne — vu à la capture d'écran, pas deviné.
-  const feuille = lire('previsualisation.css');
+  const feuille = lire(FEUILLE_ATTENDUE);
   if (feuille === null) griefs.push('previsualisation.css absent (le bandeau serait sans style)');
   else {
     const cadre = reglesCss(feuille, '.previsualisation-cadre');
@@ -227,16 +230,21 @@ export function verifierPrevisualisation(dossier) {
     if (!/<title>PRÉVISUALISATION — /.test(html)) {
       griefs.push(`${page} : le titre ne commence pas par « PRÉVISUALISATION — »`);
     }
-    // LE LIEN DOIT MENER QUELQUE PART. Depuis `aide/index.html`, un href
-    // relatif « previsualisation.css » demande /aide/previsualisation.css.
-    const lien = /<link rel="stylesheet" href="([^"]*previsualisation\.css)">/.exec(html);
-    if (lien === null) {
-      griefs.push(`${page} : la feuille previsualisation.css n'est pas liée`);
-    } else {
-      const cible = cibleDuLien(lien[1], page);
-      if (cible === null || !existsSync(join(dossier, cible))) {
-        griefs.push(`${page} : le lien « ${lien[1]} » ne mène à aucun fichier livré`);
-      }
+    /* LE LIEN DOIT MENER À LA FEUILLE QU'ON A VÉRIFIÉE, ET À AUCUNE AUTRE.
+       Deux pièges, tous deux trouvés en revue :
+       - depuis `aide/index.html`, un href relatif « previsualisation.css »
+         demande /aide/previsualisation.css, qui n'existe pas ;
+       - une page qui lierait « autre-previsualisation.css » satisfaisait le
+         motif tout en chargeant une feuille que la porte n'a jamais lue — et
+         qui pouvait éteindre le bandeau.
+       D'où : on RÉSOUT chaque lien, et l'un d'eux doit tomber exactement sur
+       le fichier contrôlé au point 3. */
+    const liens = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)]
+      .map((m) => m[1]);
+    const mene = liens.some((href) => cibleDuLien(href, page) === FEUILLE_ATTENDUE);
+    if (!mene) {
+      const vus = liens.length === 0 ? 'aucun lien de feuille' : liens.join(', ');
+      griefs.push(`${page} : aucun lien ne mène à ${FEUILLE_ATTENDUE} (${vus})`);
     }
   }
   if (pages.length > 0) constats.push(`${pages.length} page(s) HTML marquée(s) : ${pages.join(', ')}`);

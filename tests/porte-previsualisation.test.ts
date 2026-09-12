@@ -169,7 +169,30 @@ describe('les pages livrées', () => {
     mkdirSync(join(dossier, 'aide'));
     writeFileSync(join(dossier, 'aide', 'index.html'),
       marquerHtmlPrevisualisation(PAGE_SOURCE, 'aide/index.html'));
-    expect(griefsDe().join(' ')).toMatch(/ne mène à aucun fichier livré/);
+    expect(griefsDe().join(' ')).toMatch(/aide\/index\.html : aucun lien ne mène à/);
+  });
+
+  it('une page qui lie une AUTRE feuille est refusée', () => {
+    /* Trouvé à la 3e revue Codex. La feuille contrôlée restait conforme, mais
+       la page en chargeait une autre — qui éteignait le bandeau. Le motif de
+       recherche acceptait « autre-previsualisation.css » ; la porte résout
+       maintenant chaque lien et exige qu'il tombe sur la feuille vérifiée. */
+    dossierConforme();
+    writeFileSync(join(dossier, 'autre-previsualisation.css'),
+      '.previsualisation-cadre { display: none; }\n');
+    writeFileSync(join(dossier, 'index.html'),
+      marquerHtmlPrevisualisation(PAGE_SOURCE, 'index.html')
+        .replace('href="previsualisation.css"', 'href="autre-previsualisation.css"'));
+    expect(griefsDe().join(' ')).toMatch(/aucun lien ne mène à previsualisation\.css/);
+  });
+
+  it('un lien racine « /previsualisation.css » reste accepté', () => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'index.html'),
+      marquerHtmlPrevisualisation(PAGE_SOURCE, 'index.html')
+        .replace('href="previsualisation.css"', 'href="/previsualisation.css"'));
+    const griefs = griefsDe();
+    expect(griefs, griefs.join(' | ')).toEqual([]);
   });
 
   it('un bandeau privé de sa pastille est refusé', () => {
