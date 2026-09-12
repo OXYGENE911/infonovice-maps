@@ -21,27 +21,34 @@ Les noms de gestes reprennent ceux des utilitaires existants — `ouvrirPlanific
 | Arrivée | **5 Place Charles Beraudier, 69003 Lyon** — gare de la Part-Dieu, vérifié BAN (`4.859273, 45.760829`) |
 | Véhicule | **VinFast VF 8 (Plus)** — au catalogue (`src/lib/catalogue-vehicules.ts`, clé `vinfast-vf8-plus`) : 87,7 kWh, 150 kW, WLTP 457 km, Combo CCS, bridage froid 30 kW / canicule 60 kW |
 | Charge au départ | **80 %** (champ `Charge (SOC)`) |
-| Réseaux déclarés | **Ionity** et **IZIVIA** + case « Accessibles en itinérance (badges) » |
+| Filtre de recharge déclaré | case « **Accessibles en itinérance (badges)** » — **aucun réseau nommé** (décision CEO du 13/09/2026, options A et B) |
 
-### Pourquoi « réseaux » et non « badges » — à dire sur le stand
+### Pourquoi l'itinérance, et pourquoi aucun nom de réseau — à dire sur le stand
 
 Le brief demandait « deux badges déclarés » (Chargemap, Ulys, Mobilize…).
 **L'application ne sait pas déclarer un badge, et c'est volontaire** : le
 schéma IRVE ne porte aucun champ e-MSP (mesuré le 03/09, `src/lib/poi.ts`
 l. 83-90). Ce qu'elle sait faire, et qui est la traduction honnête de la
-demande :
+demande : cocher **« Accessibles en itinérance (badges) »** — une station
+raccordée à l'itinérance accepte la grande majorité des badges.
 
-- cocher **« Accessibles en itinérance (badges) »** — une station raccordée à
-  l'itinérance accepte la grande majorité des badges ;
-- cocher les **réseaux** que l'on veut privilégier sur ce trajet, par leur nom
-  d'exploitant.
+**Le scénario ne nomme plus aucun réseau** (décision du CEO du 13/09/2026,
+options A et B). La raison est mesurée, pas idéologique : une case portant le
+nom d'un exploitant n'existe à l'écran que si le fichier IRVE national place,
+ce jour-là, des stations de cet exploitant le long du trajet. La liste se
+calcule sur les bornes RÉELLEMENT trouvées (`#voletReseaux`,
+`panneau-itineraire.ts`). Nommer un exploitant dans le scénario, c'est donc
+faire une promesse que la donnée publique peut retirer du jour au lendemain —
+et elle l'a fait : c'est ce qui a tenu le garde-fou du stand rouge pendant
+trois cycles.
 
-**Ionity** et **IZIVIA** ont été retenus parce qu'ils sont à la fois des marques
-de badge citées par le CEO (« Ionity Power », « IZivia Pass ») **et** des
-exploitants présents sur le couloir : relevé du 11/09 sur le fichier IRVE
-national, à moins de 25 km de la droite Paris–Lyon et à 150 kW ou plus —
-Ionity **14 stations / 46 points de charge**, IZIVIA **368 points**. La case
-sera donc bien là, avec un nombre non nul à côté.
+Le filtre par itinérance, lui, ne dépend d'aucun opérateur : il lit le format
+de l'identifiant AFIREV (`enItinerance`, `src/lib/poi.ts` l. 99). Un
+exploitant peut changer de nom, de tarif ou de couloir, la case reste vraie.
+
+Le dépliant « Réseaux préférés » est **montré** au visiteur — il prouve que la
+liste se calcule sur le trajet et non sur un catalogue — **mais on n'y coche
+rien**, et aucun nom n'est annoncé à l'avance.
 
 Si le CEO veut voir écrit « Chargemap » ou « Ulys » à l'écran, c'est une
 fonctionnalité à décider, pas une case à cocher : voir le rapport de cycle.
@@ -111,12 +118,12 @@ argument, pas un manque — le dire.
 Format exact du résumé une fois le plan calculé (l. 3145-3148) :
 `465 km — 5 h 40 au total (4 h 18 de route + 1 h 22 de charge) · arrivée vers 18:35 avec 23 % de batterie`.
 
-## Étape 4 — Mes réseaux, mes badges (cible : 20 s)
+## Étape 4 — L'itinérance, sans nommer de réseau (cible : 20 s)
 
-**Geste** — `allerA(page, 'recharge')`, déplier **« Réseaux préférés »**,
-cocher **Ionity** puis **IZIVIA**. Puis `ouvrirReglagesBornes(page)`, cocher
-**« Bornes électriques »**, et **seulement ensuite** « Accessibles en
-itinérance (badges) ».
+**Geste** — `allerA(page, 'recharge')`, déplier **« Réseaux préférés »** pour
+montrer que la liste se calcule sur le trajet, **et n'y cocher aucun réseau**.
+Puis `ouvrirReglagesBornes(page)`, cocher **« Bornes électriques »**, et
+**seulement ensuite** « Accessibles en itinérance (badges) ».
 
 **L'ORDRE N'EST PAS UN DÉTAIL, et le test le paierait.** Le bloc
 `.poi-filtres`, qui porte `input.poi-itinerance`, est `hidden` tant que la
@@ -140,22 +147,23 @@ préférence est en mémoire. C'est au test que l'ordre s'impose.
 
 | Quoi | Sélecteur | Attendu |
 |---|---|---|
-| le dépliant s'annonce | `details.recharge-reseaux summary` | `Réseaux préférés — tous (N sur ce trajet)` avant, `Réseaux préférés — 2 sur N` après |
-| chaque réseau porte son compte | `.recharge-reseaux-corps label` | un `Ionity (n)` et un `IZIVIA (n)`, `n ≥ 1` |
-| l'itinérance est cochée | `input.poi-itinerance` | `checked` |
+| le dépliant s'annonce | `details.recharge-reseaux summary` | `Réseaux préférés — tous (N sur ce trajet)`, avec **N ≥ 1** |
+| la liste est celle du trajet | `.recharge-reseaux-corps label` | **exactement N** étiquettes, chacune de la forme `NOM (n)` avec **n ≥ 1** |
+| l'itinérance change d'état | `input.poi-itinerance` | **décochée** avant le geste, `checked` après |
+| le filtre AGIT, et lui seul | `.poi-filtres-effacer` | `Tout afficher — retirer : itinérance (badges)` — **texte exact**, donc aucun réseau coché |
 | la note reste honnête | `.poi-filtre-ligne + p` | contient « La donnée publique ne dit pas quels badges précisément » |
 
 **Ce qu'on dit** : « je ne vous vends pas un filtre par badge que la donnée
-publique ne permet pas. Je vous dis ce qui est raccordé à l'itinérance, et je
-privilégie mes deux réseaux. »
+publique ne permet pas. Je vous dis ce qui est raccordé à l'itinérance — et
+ça, aucun changement d'exploitant ne me l'enlèvera. »
 
 > **La liste des cases se calcule sur les bornes RÉELLEMENT trouvées le long du
-> trajet** (`#voletReseaux`, panneau-itineraire.ts) : « proposer une case
-> *Ionity* sur un trajet qui n'en croise aucune est une promesse creuse ».
-> Le relevé du 11/09 dit qu'elles seront là (Ionity 14 stations, IZIVIA 368
-> points à ≥ 150 kW le long du couloir) — **mais c'est à confirmer au premier
-> passage vert du spec**. Si l'une des deux manquait, prendre les deux premiers
-> réseaux affichés et adapter le discours : le geste ne change pas.
+> trajet** (`#voletReseaux`, panneau-itineraire.ts) : on la **montre**, on ne la
+> coche pas. Le scénario n'annonce donc plus aucun nom d'exploitant à l'avance
+> — c'est exactement ce que corrige la décision CEO du 13/09/2026. Ce que la
+> démo ne prouve plus : qu'un exploitant donné est présent sur le couloir. Ce
+> qu'elle prouve désormais : que la liste vient du trajet, que chaque entrée
+> porte un compte non nul, et que le filtre d'itinérance agit seul.
 
 ## Étape 5 — Le plan de recharge, et pourquoi (cible : 20 s)
 
