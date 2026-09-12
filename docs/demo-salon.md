@@ -148,7 +148,7 @@ préférence est en mémoire. C'est au test que l'ordre s'impose.
 | Quoi | Sélecteur | Attendu |
 |---|---|---|
 | le dépliant s'annonce | `details.recharge-reseaux summary` | `Réseaux préférés — tous (N sur ce trajet)`, avec **N ≥ 1** |
-| la liste est celle du trajet | `.recharge-reseaux-corps label` | **exactement N** étiquettes, chacune de la forme `NOM (n)` avec **n ≥ 1** |
+| la liste est celle du trajet | `.recharge-reseaux-corps label` | **exactement `min(N, 15)`** étiquettes — 15 est le plafond d'affichage de `#majListeReseaux` — chacune de la forme `NOM (n)` avec **n ≥ 1** |
 | l'itinérance change d'état | `input.poi-itinerance` | **décochée** avant le geste, `checked` après |
 | le filtre AGIT, et lui seul | `.poi-filtres-effacer` | `Tout afficher — retirer : itinérance (badges)` — **texte exact**, donc aucun réseau coché |
 | la note reste honnête | `.poi-filtre-ligne + p` | contient « La donnée publique ne dit pas quels badges précisément » |
@@ -164,6 +164,10 @@ publique ne permet pas. Je vous dis ce qui est raccordé à l'itinérance — et
 > démo ne prouve plus : qu'un exploitant donné est présent sur le couloir. Ce
 > qu'elle prouve désormais : que la liste vient du trajet, que chaque entrée
 > porte un compte non nul, et que le filtre d'itinérance agit seul.
+>
+> **Mesuré le 13/09/2026 à 01 h 36** sur le trajet de la démo : le dépliant
+> annonce **55 réseaux sur ce trajet**, le corps en montre **15** — le plafond.
+> Le test compare donc `min(N, 15)`, pas `N`.
 
 ## Étape 5 — Le plan de recharge, et pourquoi (cible : 20 s)
 
