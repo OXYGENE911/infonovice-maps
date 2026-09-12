@@ -2,6 +2,45 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.142.0] — 2026-09-13 — STAGING-1
+
+### Une URL de prévisualisation qui porte `staging`
+- **Le motif, mot pour mot (CEO, 13/09)** : « Sans elle je ne peux pas tester
+  en conditions réelles ni faire tester par les testeurs AFUVE. » Trois choses
+  en dépendaient : la mesure sur téléphone réel, les quatre testeurs de
+  l'AFUVE, et la répétition du stand du Mondial de l'Auto.
+- **Un workflow `previsualisation.yml`** : chaque poussée sur `staging` relance
+  lint, tests unitaires, construction en mode prévisualisation, puis envoie le
+  `dist/` à un projet Cloudflare Pages (téléversement direct — Cloudflare ne
+  construit rien) qui sert `staging.maps.infonovice.fr`. La **production ne
+  bouge pas** : `deploiement.yml` et GitHub Pages sont inchangés.
+- **La préversion se DIT.** Liseré ambre sur les quatre bords avec la mention
+  « PRÉVISUALISATION — ce site n'est pas la production », titre d'onglet
+  préfixé, application installée renommée « Maps préviz », attribut
+  `data-environnement` sur `<html>`. Posé dans le HTML à la construction, donc
+  visible avant le bundle et même sans lui ; `pointer-events: none`, donc
+  jamais un clic intercepté. Un retour de testeur qui croit être en production
+  est un retour perdu — c'est cela qu'on achète.
+- **Pas d'indexation, par trois moyens et non par un** : `robots.txt` en
+  `Disallow: /`, en-tête `X-Robots-Tag: noindex, nofollow, noarchive` via le
+  fichier `_headers`, et balise `<meta name="robots">` dans chaque page. Le
+  fichier seul ne suffit pas si un lien fuite ; l'en-tête couvre aussi les URL
+  `*.pages.dev`. `CNAME` et `sitemap.xml` sortent du `dist/` de préversion.
+- **Une porte avant le déploiement** (`scripts/verifier-previsualisation.mjs`)
+  relit le dossier réellement construit et refuse de livrer s'il manque une
+  seule marque sur une seule des sept pages. Contre-épreuve faite : le même
+  script rejette un `dist/` de production avec 32 griefs.
+- **La contrainte 2 du `CLAUDE.md` est complétée dans le même commit**, pas
+  contournée : elle dit désormais ce qui vaut pour la production et ce qui est
+  ouvert pour la seule prévisualisation, et ce que l'ouverture ne couvre pas.
+  Une règle qu'on contourne en silence se retourne contre nous au premier agent
+  qui la fait respecter correctement.
+- **Ce qui reste à faire, et qui n'appartient pas aux agents** : créer le
+  projet Cloudflare, poser le DNS, déposer le jeton. Les trois gestes sont
+  écrits prêts à exécuter dans `docs/DEPLOIEMENT.md`, dans l'ordre, avec ce qui
+  se passe si l'un manque. Tant qu'ils ne sont pas faits, le workflow construit,
+  vérifie, et **reste vert** en disant qu'il n'a rien déployé.
+
 ## [1.141.0] — 2026-09-10 — COURBES-1
 
 ### Les courbes de niveau IGN, en option d'affichage

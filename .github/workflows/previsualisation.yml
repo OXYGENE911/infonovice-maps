@@ -1,0 +1,106 @@
+# PRÉVISUALISATION DE `staging` (STAGING-1, 13/09/2026).
+#
+# À QUOI SERT CE WORKFLOW. Chaque poussée sur `staging` construit l'application
+# en mode prévisualisation et l'envoie à un projet Cloudflare Pages qui sert
+# https://staging.maps.infonovice.fr/. Le CEO et les testeurs de l'AFUVE
+# essaient alors la préversion depuis un vrai téléphone, sans tunnel depuis un
+# poste de développement.
+#
+# CE WORKFLOW NE TOUCHE PAS À LA PRODUCTION. `deploiement.yml` publie `main`
+# sur GitHub Pages et reste inchangé. Les deux chemins sont séparés de bout en
+# bout : autre branche, autre construction, autre hébergeur, autre domaine.
+#
+# LA PORTE AVANT LE DÉPLOIEMENT. Trois étapes doivent passer avant que quoi que
+# ce soit parte : lint + tests unitaires (une fusion sur `staging` peut différer
+# des PR qui l'ont formée), puis `verifier-previsualisation.mjs`, qui relit le
+# `dist/` RÉEL et refuse un dossier auquel il manquerait le bandeau ou l'un des
+# deux verrous d'indexation. Un `dist/` non conforme ne part pas — et la
+# préversion précédente reste en ligne, ce qui est le bon repli.
+#
+# TANT QUE LES SECRETS N'EXISTENT PAS, ce workflow reste VERT et se contente de
+# l'écrire : créer le projet Cloudflare, poser le DNS et déposer le jeton sont
+# trois gestes du CEO (voir docs/DEPLOIEMENT.md). Un workflow qui rougirait à
+# chaque poussée en attendant ces gestes apprendrait surtout à ignorer le rouge.
+name: Prévisualisation
+on:
+  push:
+    branches: [staging]
+  # Pour rejouer un déploiement sans commit — après une panne Cloudflare, ou
+  # juste après que le CEO a déposé le jeton.
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  # Une seule préversion en vol : la dernière poussée gagne, les précédentes
+  # sont abandonnées plutôt que de se doubler à l'arrivée.
+  group: previsualisation
+  cancel-in-progress: true
+jobs:
+  previsualiser:
+    runs-on: ubuntu-latest
+    env:
+      # LES SECRETS PASSENT PAR `env` PARCE QUE LE CONTEXTE `secrets` N'EST PAS
+      # LISIBLE DANS UN `if:` D'ÉTAPE. C'est le seul moyen de distinguer
+      # « le CEO n'a pas encore déposé le jeton » de « le déploiement a échoué ».
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROJET_PAGES: infonovice-maps-previsualisation
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        # Node 24 comme la CI : le npm 10 de Node 22 appelle un point d'audit
+        # retiré (voir ci.yml).
+        with: { node-version: 24, cache: npm }
+      - run: npm ci
+
+      - name: Lint et typecheck
+        run: npm run lint
+      - name: Tests unitaires
+        run: npm test
+
+      - name: Construire la préversion
+        # LA SEULE DIFFÉRENCE AVEC LA CONSTRUCTION DE PRODUCTION tient dans
+        # cette variable : elle allume le plugin de src/lib/previsualisation.ts
+        # (bandeau, titre, robots.txt fermé, _headers X-Robots-Tag).
+        env:
+          INFONOVICE_ENVIRONNEMENT: previsualisation
+        run: npm run build
+
+      - name: Porte — la préversion se dit et ne s'indexe pas
+        run: node scripts/verifier-previsualisation.mjs dist
+
+      - name: Jeton absent — déploiement remis à plus tard
+        if: env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == ''
+        run: |
+          echo "::notice title=Préversion construite, non déployée::Les secrets CLOUDFLARE_API_TOKEN et CLOUDFLARE_ACCOUNT_ID ne sont pas encore déposés. La construction est vérifiée ; le déploiement attend les trois gestes décrits dans docs/DEPLOIEMENT.md."
+
+      - name: Déployer sur Cloudflare Pages
+        id: deploiement
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        # ÉPINGLÉE AU COMMIT, PAS AU TAG. Cette action reçoit un jeton d'API
+        # Cloudflare ; un tag mobile peut être redirigé vers un autre commit
+        # par quiconque a les droits sur le dépôt de l'action. Le commit, lui,
+        # ne bouge pas. Ci-dessous : cloudflare/wrangler-action v4.0.0
+        # (12/05/2026). Pour monter de version, remplacer le SHA ET le
+        # commentaire, jamais l'un sans l'autre.
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
+        with:
+          apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
+          # Version exacte : à trois semaines du Mondial de l'Auto, une montée
+          # de version automatique est un risque qu'on ne prend pas.
+          wranglerVersion: "4.131.1"
+          # `--branch=staging` DOIT être la branche de production du projet
+          # Pages (créé avec `--production-branch=staging`), sinon chaque envoi
+          # devient un déploiement de PRÉVERSION Cloudflare et le domaine
+          # staging.maps.infonovice.fr continue de servir le tout premier.
+          command: pages deploy dist --project-name=${{ env.PROJET_PAGES }} --branch=staging --commit-hash=${{ github.sha }}
+
+      - name: Où regarder
+        if: steps.deploiement.outcome == 'success'
+        run: |
+          echo "### Préversion déployée" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Domaine : <https://staging.maps.infonovice.fr/>" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Déploiement : ${{ steps.deploiement.outputs.deployment-url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit : \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"

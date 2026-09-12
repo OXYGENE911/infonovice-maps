@@ -15,8 +15,34 @@ bibliothèque interne `/src/lib/` réutilisable — pas de backend.
 
 ## Contraintes ABSOLUES (jamais de dérogation)
 1. Coût de production : 0 €. Aucun service payant, aucun backend, aucune BDD serveur.
-2. Hébergement : GitHub Pages (repo public) + CNAME maps.infonovice.fr.
-   Build et CI exclusivement via GitHub Actions (tier gratuit).
+2. Hébergement de la PRODUCTION : GitHub Pages (repo public) + CNAME
+   maps.infonovice.fr. Build et CI exclusivement via GitHub Actions (tier
+   gratuit).
+
+   COMPLÉTÉE LE 13/09/2026, SUR DIRECTIVE DU CEO, ET IL FAUT LIRE POURQUOI.
+   Cette contrainte dit « GitHub Pages », et elle continue de le dire pour la
+   PRODUCTION : rien n'y change, c'est toujours `deploiement.yml` qui publie
+   `main` sur maps.infonovice.fr. Mais un dépôt n'a qu'UN site GitHub Pages.
+   Prise au pied de la lettre, la règle interdisait donc aussi d'avoir une URL
+   de PRÉVISUALISATION — or sans elle, le CEO ne peut ni tester en conditions
+   réelles ni faire tester par les quatre testeurs de l'AFUVE avant le Mondial
+   de l'Auto. C'est le motif écrit de sa directive du 13/09/2026.
+   DONC, ET POUR LA SEULE PRÉVISUALISATION : la branche `staging` est déployée
+   sur Cloudflare Pages (palier gratuit, téléversement direct depuis GitHub
+   Actions) et sert https://staging.maps.infonovice.fr/.
+   CE QUE CETTE OUVERTURE NE COUVRE PAS, et qui reste interdit sans une
+   nouvelle décision écrite : déplacer la production hors de GitHub Pages,
+   ajouter un backend, une base de données serveur, ou un service payant. La
+   contrainte 1 (0 €) n'est pas entamée : le palier gratuit suffit, et la
+   construction reste faite par GitHub Actions — Cloudflare ne fait que servir
+   des fichiers statiques.
+   LA PRÉVERSION N'EST PAS LA PRODUCTION et le dit elle-même : bandeau visible
+   sur chaque page, et interdiction d'indexation par trois moyens (robots.txt,
+   en-tête X-Robots-Tag, balise meta). Tout est décrit dans
+   docs/DEPLOIEMENT.md, y compris les trois gestes du CEO et le retour arrière.
+   Un agent qui ferait respecter « GitHub Pages » contre ce paragraphe ferait
+   correctement son travail sur un texte périmé : c'est exactement pour cela
+   qu'il est écrit ici, et pas seulement dans une PR.
 3. Sources françaises et open source (le mot « souveraineté » est retiré depuis
    le 06/09/2026, décision d'Armelin : hébergement GitHub Pages + Cloudflare
    et certificat Google Trust Services sont américains, Cloud Act oblige ; le
