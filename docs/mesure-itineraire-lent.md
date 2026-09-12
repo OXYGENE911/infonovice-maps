@@ -157,3 +157,12 @@ Reste de la revue : minuteurs nettoyés au succès comme au rejet, callbacks
 déclenchés une seule fois, réponses obsolètes neutralisées par le jeton de
 séquence, aucun double calcul possible via « Réessayer », seuils cohérents
 avec la documentation, CSS conforme à la règle `hidden` du projet (ERGO-6).
+
+**Second passage (2026-09-12T19:31:11Z, commit `65d141b`) : NON BLOQUANT.**
+Le correctif est confirmé — « les lignes … masquent les deux bandeaux …
+après 2,5 s comme après 15 s ». Une remarque mineure : le test dédié
+vérifiait la PRÉSENCE TEXTUELLE des deux affectations sans exclure qu'elles
+soient commentées (`//`), ce qui les aurait laissées passer à tort si le
+correctif avait été retiré de cette façon précise. Corrigé par un ancrage
+`^\s*` en début de ligne (drapeau `m`) — contre-épreuve refaite : les deux
+affectations commentées font rougir le test, restaurées il repasse au vert.

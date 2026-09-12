@@ -42,7 +42,12 @@ describe('les seuils de lenteur de l’itinéraire', () => {
     expect(debutEffacer, '#effacer() introuvable').toBeGreaterThan(-1);
     const finEffacer = SOURCE.indexOf('\n  }', debutEffacer);
     const corpsEffacer = SOURCE.slice(debutEffacer, finEffacer);
-    expect(corpsEffacer).toMatch(/querySelector\('\.iti-lenteur-service'\) as HTMLElement\)\.hidden = true/);
-    expect(corpsEffacer).toMatch(/querySelector\('\.iti-abandon-service'\) as HTMLElement\)\.hidden = true/);
+    // ANCRÉ EN DÉBUT DE LIGNE (^, drapeau m) : une ligne commentée par `//`
+    // ne matcherait pas — sans cette précision, retirer le correctif en le
+    // commentant laisserait le test vert (revue Codex du 12/09, second
+    // passage : « le test détecte la suppression des lignes, mais peut
+    // passer à tort »).
+    expect(corpsEffacer).toMatch(/^\s*\(this\.querySelector\('\.iti-lenteur-service'\) as HTMLElement\)\.hidden = true;/m);
+    expect(corpsEffacer).toMatch(/^\s*\(this\.querySelector\('\.iti-abandon-service'\) as HTMLElement\)\.hidden = true;/m);
   });
 });
