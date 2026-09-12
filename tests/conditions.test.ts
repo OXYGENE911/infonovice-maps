@@ -93,32 +93,49 @@ describe('plafondThermiqueKw — les chiffres du VF8 d’Armelin comme cas d’�
 });
 
 describe('noteReserveConditions — ALTI-GARDE-1, 12/09/2026, jamais un silence', () => {
-  it('relief compté : les trois sont dits comptés, l’aveu porte sur vent/pluie/trafic/charge', () => {
-    const t = noteReserveConditions(true, true);
-    expect(t).toMatch(/Température, relief et vitesse.*sont comptés/);
-    expect(t).not.toMatch(/à plat/);
+  /* ÉGALITÉ EXACTE, pas des motifs partiels (revue Codex, 3e passage : une
+     regex `not.toMatch` laissait passer une phrase fausse tant qu'elle
+     évitait le motif interdit — « La température est comptée. » aurait
+     satisfait toutes les assertions précédentes malgré la contradiction).
+     La fonction est PURE et ses quatre sorties sont FIXES : comparer le
+     texte entier ne peut ni laisser passer un mensonge partiel, ni rejeter
+     une formulation honnête différente, puisqu'il n'y en a qu'une par cas. */
+  const TOUT_COMPTE = 'Température, relief et vitesse du parcours sont comptés (détail dans'
+    + ' « Pourquoi ce plan ? ») ; restent inconnus le vent, la pluie, le'
+    + ' trafic et la vraie courbe de charge de votre véhicule.';
+  const RELIEF_SEUL_MANQUANT = 'Température et vitesse du parcours sont comptées ; le relief n’a'
+    + ' PAS pu être pris en compte (service altimétrique trop lent ou'
+    + ' indisponible — détail dans « Pourquoi ce plan ? »). Restent'
+    + ' inconnus le vent, la pluie, le trafic et la vraie courbe de'
+    + ' charge de votre véhicule.';
+  const TEMPERATURE_SEULE_MANQUANTE = 'Relief et vitesse du parcours sont comptés ; la température n’a'
+    + ' PAS pu être relevée (service météo indisponible — détail dans'
+    + ' « Pourquoi ce plan ? »), le plan suppose 20 °C. Restent inconnus'
+    + ' le vent, la pluie, le trafic et la vraie courbe de charge de votre'
+    + ' véhicule.';
+  const RIEN_COMPTE = 'Estimation à plat, à consommation constante :'
+    + ' ni le relief, ni le vent, ni le trafic, ni la vraie courbe de charge'
+    + ' de votre véhicule ne sont pris en compte.';
+
+  it('température et relief comptés', () => {
+    expect(noteReserveConditions(true, true)).toBe(TOUT_COMPTE);
   });
-  it('relief NON compté mais température comptée : le dit explicitement, jamais un silence', () => {
-    const t = noteReserveConditions(true, false);
-    expect(t).toMatch(/relief n.*PAS pu être pris en compte/);
-    expect(t).toMatch(/service altimétrique trop lent ou\s+indisponible/);
-    // Ne doit JAMAIS prétendre que le relief est compté quand il ne l'est pas.
-    expect(t).not.toMatch(/relief.*sont comptés/);
+  it('température comptée, relief NON compté : le dit explicitement, jamais un silence', () => {
+    expect(noteReserveConditions(true, false)).toBe(RELIEF_SEUL_MANQUANT);
   });
-  it('rien compté : « à plat, à consommation constante » — le comportement d’avant', () => {
-    const t = noteReserveConditions(false, false);
-    expect(t).toMatch(/à plat, à consommation constante/);
-  });
-  it('relief compté mais température NON comptée (les deux appels météo en échec, l’altimétrie répond à temps) : le dit explicitement, jamais « température comptée »', () => {
+  it('relief compté, température NON comptée (les deux appels météo en échec, l’altimétrie répond à temps)', () => {
     // Scénario réel, pas défensif : météo et altimétrie sont attrapées
     // séparément dans #chargerConditions, l'une peut échouer sans l'autre
     // (revue Codex, 2e passage — la version précédente de ce test qualifiait
     // ce cas d'« impossible en pratique » et exigeait la phrase fausse
     // « température […] comptée »).
-    const t = noteReserveConditions(false, true);
-    expect(t).toMatch(/Relief et vitesse.*sont comptés/);
-    expect(t).toMatch(/température n.*PAS pu être relevée/);
-    // Ne doit JAMAIS prétendre que la température est comptée quand elle ne l'est pas.
-    expect(t).not.toMatch(/Température.*sont? comptée?s/);
+    expect(noteReserveConditions(false, true)).toBe(TEMPERATURE_SEULE_MANQUANTE);
+  });
+  it('rien compté : « à plat, à consommation constante » — le comportement d’avant', () => {
+    expect(noteReserveConditions(false, false)).toBe(RIEN_COMPTE);
+  });
+  it('les quatre phrases sont bien distinctes deux à deux (aucun doublon qui cacherait un cas)', () => {
+    const phrases = [TOUT_COMPTE, RELIEF_SEUL_MANQUANT, TEMPERATURE_SEULE_MANQUANTE, RIEN_COMPTE];
+    expect(new Set(phrases).size).toBe(phrases.length);
   });
 });

@@ -81,11 +81,11 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   `src/lib/delai-garde.ts`, fonction `avecDelaiDeGarde`, générique et pure,
   testée à sec dans `tests/delai-garde.test.ts`) : au-delà, le plan se
   calcule sans le dénivelé — la promesse sous-jacente n'est NI annulée NI
-  relancée, aucun appel supplémentaire. Justifié par neuf appels réels au
-  service (cinq entre 576 et 872 ms, un à 7 277 ms — détail et limites de
-  cette mesure dans `docs/mesure-paris-lyon.md`). La météo (Open-Meteo),
-  mesurée dans la même série (103-150 ms), n'a montré aucun risque
-  comparable : elle garde son comportement d'avant, sans délai de garde.
+  relancée, aucun appel supplémentaire. Justifié par neuf appels réels aux
+  services (six à l'altimétrie — cinq entre 576 et 872 ms, un à 7 277 ms —
+  et trois à la météo, 103-150 ms, aucun risque comparable trouvé sur la
+  météo, d'où l'absence de délai de garde pour elle ; détail et limites de
+  cette mesure dans `docs/mesure-paris-lyon.md`).
 - **Jamais un silence** : quand le relief n'a pas pu être pris en compte
   (délai dépassé ou service en erreur), « Pourquoi ce plan ? » et la note de
   réserve du volet recharge le disent explicitement — avant cette tâche, un

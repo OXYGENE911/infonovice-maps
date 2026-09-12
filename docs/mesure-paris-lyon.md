@@ -203,9 +203,11 @@ portée) :
   géré même quand cette promesse échoue APRÈS coup.
 - `tests/conditions.test.ts` (fonction `noteReserveConditions`, extraite de
   `panneau-itineraire.ts` pendant cette même tâche à la suite de la revue
-  Codex) prouve que la note de réserve du volet recharge dit EXACTEMENT la
-  bonne phrase dans les trois cas (relief compté, relief manquant seul,
-  rien compté) — jamais que le relief est compté quand il ne l'est pas.
+  Codex, puis corrigée à la suite d'un second passage — voir plus bas)
+  prouve, par égalité EXACTE de texte (pas un motif partiel), que la note de
+  réserve du volet recharge dit la bonne phrase dans CHACUN des quatre cas
+  possibles (température × relief, compté ou non, indépendamment l'un de
+  l'autre) — jamais qu'une donnée est comptée quand elle ne l'est pas.
 - **Ce qu'AUCUN test ne prouve** : que `#chargerConditions` (la méthode privée
   qui orchestre réellement l'appel réseau, le `Promise.all` et l'écriture de
   `#deniveleIndisponible`) déclenche bien ce chemin en conditions réelles, ni
@@ -262,10 +264,13 @@ un second passage, pas une remesure.
 
 ## Suite à la deuxième revue Codex (12/09, VERDICT BLOQUANT à nouveau)
 
-Le second commit corrigeait bien les points 3 et 5 ci-dessus, mais Codex a
-trouvé : (a) deux occurrences oubliées de la coquille sur le nombre d'appels
-(« dix » subsistait dans `docs/CHANGELOG.md` et dans la section « Ce qui n'a
-pas pu être fait » de CE document — corrigées) ; (b) `docs/CHANGELOG.md`
+Le second commit corrigeait les points 3 et 5 ci-dessus À L'ENDROIT qu'il
+visait (le corps de ce document), mais de façon INCOMPLÈTE : Codex a trouvé
+que la même coquille et la même conclusion trop affirmative traînaient
+encore ailleurs, oubliées. Précisément : (a) deux occurrences oubliées de la
+coquille sur le nombre d'appels (« dix » subsistait dans `docs/CHANGELOG.md`
+et dans la section « Ce qui n'a pas pu être fait » de CE document —
+corrigées) ; (b) `docs/CHANGELOG.md`
 répétait encore la conclusion causale non soutenue (« ne vient donc PAS de
 l'altimétrie ») que ce document avait, lui, déjà corrigée — reformulé pour
 dire la même chose que ci-dessus (NON VÉRIFIÉ) ; **(c) un bug réel et NOUVEAU,
@@ -292,8 +297,34 @@ C'est le genre d'erreur que ce document doit aussi aux CEO et au chef de
 cabinet de ne pas cacher : la première correction d'un défaut d'honnêteté en
 a introduit un second, verrouillé par un test qui le validait — la revue
 Codex, appliquée deux fois plutôt qu'une, l'a trouvé avant la mise en
-production. Troisième passage de revue Codex lancé après ce commit ; verdict
-dans `handoffs/2026-09-12-1630-codex-altimetrie.md`.
+production.
+
+## Troisième passage de revue Codex — VERDICT NON BLOQUANT
+
+Après le troisième commit, Codex confirme les six points des deux revues
+précédentes CORRIGÉS (relecture ligne par ligne, avec citations) et ne
+trouve aucun nouveau défaut fonctionnel. Restent quatre remarques MINEURES,
+toutes corrigées dans un quatrième commit (celui-ci) sans nouvelle revue
+demandée (le mandat exige l'absence de commentaire BLOQUANT, pas zéro
+commentaire) :
+- Les tests de `noteReserveConditions` comparaient par motif partiel plutôt
+  que par égalité exacte — une phrase fausse ajoutée aux côtés du texte
+  honnête aurait pu passer. Remplacé par une comparaison de texte EXACTE
+  (la fonction est pure, à sorties fixes : l'égalité est le test le plus
+  strict possible, pas une extravagance).
+- Une phrase de ce document parlait encore de « trois cas » pour les tests
+  de la note de réserve, alors qu'ils en couvrent quatre depuis le troisième
+  commit — corrigée.
+- Le CHANGELOG disait « neuf appels réels au service » (singulier) en tête
+  du paragraphe altimétrie, laissable comme si les neuf concernaient
+  l'altimétrie seule — précisé (six altimétrie, trois météo).
+- La phrase d'ouverture de la section « Suite à la deuxième revue Codex »
+  disait que le second commit « corrigeait bien » deux points immédiatement
+  suivis de leurs corrections manquantes — reformulée pour ne plus se
+  contredire elle-même.
+
+Rapport complet des trois passages dans
+`handoffs/2026-09-12-1630-codex-altimetrie.md`.
 
 ## Pourquoi la même PR (#313)
 
