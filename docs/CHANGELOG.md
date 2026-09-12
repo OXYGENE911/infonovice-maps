@@ -2,6 +2,39 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.142.0] — 2026-09-12 — ITI-LENT-1
+
+### Le calcul d'itinéraire ne fait plus attendre en silence
+- **Le vrai reste de « plafonner l'altimétrie » (C4).** La contre-mesure du
+  12/09 l'a établi : le délai de garde posé au cycle précédent ne couvre que
+  l'altimétrie (facultative). L'itinéraire, lui, ne peut PAS être sauté —
+  sans lui il n'y a pas de trajet — donc pas de repli silencieux ici : deux
+  seuils qui préviennent l'usager, sans jamais annuler ni relancer l'appel.
+- **2 500 ms : « ça répond lentement, le calcul continue ».** Mesuré le
+  12/09 : huit appels réels au service (data.geopf.fr/navigation,
+  Paris→Lyon) répondent tous entre 246 et 380 ms — 2,5 s, c'est environ sept
+  fois ce plafond observé, loin de la latence normale.
+- **15 000 ms : l'écran arrête de tourner en silence**, un bouton
+  « Réessayer » apparaît. `calculerItineraire` (deux essais, 8 s de timeout
+  chacun, 500 ms entre les deux) ne peut jamais dépasser 16,5 s — 15 s tombe
+  sous ce plafond dur : l'usager voit la porte de sortie avant que le
+  mécanisme interne n'ait fini de renoncer tout seul.
+- **Le mécanisme est différent de `delai-garde.ts` (ALTI-GARDE-1), et c'est
+  volontaire** : `avecDelaiDeGarde` jette la valeur tardive et rend
+  `undefined` — juste pour une donnée facultative. Ici (`lib/service-lent.ts`,
+  `signalerLenteur`), la promesse d'origine n'est jamais abandonnée : elle
+  continue de vivre, et sa résolution — même tardive, même après le bouton
+  « Réessayer » affiché — sert normalement à l'appelant, protégée par le
+  jeton de séquence déjà en place.
+- **Aucun appel de plus.** « Réessayer » relance le même calcul comme le
+  ferait n'importe quel geste de l'usager (changer une étape, cocher un
+  évitement) — aucune relance automatique, aucun martèlement du service
+  public. Bundle : +570 o gzip sur le morceau du planificateur (mesuré,
+  123,62 → 125,34 Ko / 39,99 → 40,56 Ko gzip).
+- 4 tests unitaires sur le mécanisme (`tests/service-lent.test.ts`, dont les
+  deux scénarios du mandat : ralenti à 3 s, ralenti à 20 s) + 3 tests de
+  cohérence des seuils (`tests/iti-lent-seuils.test.ts`). 1 680 tests verts.
+
 ## [1.141.0] — 2026-09-10 — COURBES-1
 
 ### Les courbes de niveau IGN, en option d'affichage

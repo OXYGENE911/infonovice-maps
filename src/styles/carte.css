@@ -579,6 +579,26 @@ body.recherche-ouverte .pied-carte { display: none; }
 .iti-profil input:focus-visible ~ span { box-shadow: var(--focus); }
 .iti-resultat { font: 650 15px var(--police); color: var(--texte-1); }
 .iti-erreur { font: 400 13px var(--police); color: #C0392B; }
+/* LE SERVICE D'ITINÉRAIRE EST LENT (ITI-LENT-1, 12/09/2026) : une
+   information, pas une alerte — le calcul continue, sa propre ligne évite
+   qu'un `#majResume` sur l'ancien trajet ne l'efface (voir la note dans
+   panneau-itineraire.ts). */
+.iti-lenteur-service { font: 500 13px var(--police); color: var(--texte-2); margin: 4px 0 0; }
+/* AU SECOND SEUIL, UN CARTOUCHE avec un geste — même famille visuelle que
+   `.iti-direct`, jamais un écran figé sans issue. */
+.iti-abandon-service {
+  margin: 6px 0 2px; padding: 8px 10px; border-radius: 10px;
+  border: 1px solid #C0392B; background: var(--fond);
+  display: grid; gap: 7px;
+}
+.iti-abandon-service[hidden] { display: none; }
+.iti-abandon-texte { margin: 0; font: 500 12px/1.4 var(--police); color: var(--texte-1); }
+.iti-abandon-reessayer {
+  justify-self: start; padding: 5px 10px; border-radius: 8px; cursor: pointer;
+  font: 600 11.5px var(--police);
+  border: 1px solid #C0392B; background: #C0392B; color: var(--blanc);
+}
+.iti-abandon-reessayer:focus-visible { outline: none; box-shadow: var(--focus); }
 .iti-actions { display: flex; gap: 7px; flex-wrap: wrap; }
 .iti-actions button {
   padding: 7px 13px; border-radius: 9px;
