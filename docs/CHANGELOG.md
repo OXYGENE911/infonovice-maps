@@ -70,6 +70,27 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   sur la grille, corrigée depuis et vérifiée par un nouveau test de
   régression, mais non revue une troisième fois faute de budget de temps sur
   cette tâche — signalé au chef de cabinet dans le compte rendu de mission).
+## [Non publié] — 2026-09-11 — DEMO-SALON-E2E (rectlR6gVbiWQzUN4)
+
+### Le garde-fou du stand : un test qui rejoue la démo contre les API réelles
+- `tests-e2e/demo-salon.spec.ts` (`npm run e2e:demo`) rejoue les huit étapes du
+  scénario du Mondial de l'Auto (`docs/demo-salon.md`, PR #304) dans l'ordre,
+  **contre les vraies API** — IGN (itinéraire, altimétrie, tuiles WMTS),
+  Open-Meteo, l'index national IRVE — sans aucune route simulée. Le calcul
+  itinéraire + plan de recharge est chronométré (clic → résumé conclu, sondage
+  `raf`, pas de texte transitoire) ; le test échoue au-delà de 5 s.
+- **Deux `test()`**, comme le prescrit `docs/demo-salon.md` : les étapes 1 à 7,
+  puis l'étape 8 (mode avion) dans son propre préambule — la route de contexte
+  qui simulerait les tuiles du service worker casse le parcours hors réseau
+  (mesuré le 09/09, `tests-e2e/tuiles-simulees.ts`), et cette suite ne simule
+  de toute façon aucune tuile.
+- **Résultat mesuré, pas corrigé (hors périmètre de la tâche T2)** : le calcul
+  chronométré dépasse systématiquement les 5 s annoncés au stand — 6 391 ms
+  puis 6 514 ms sur deux exécutions indépendantes, contre les vraies API
+  publiques. Le couloir hors ligne (1 038 tuiles réelles pour Paris → Lyon) a
+  aussi perdu une tuile sur 1 038 lors d'une exécution, absorbée par la
+  reprise (`retries: 1`). Voir le rapport de la tâche T2 pour le détail et la
+  recommandation (statut **Bloqué**).
 
 ## [1.141.0] — 2026-09-10 — COURBES-1
 
