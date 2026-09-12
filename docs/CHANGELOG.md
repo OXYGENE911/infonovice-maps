@@ -29,7 +29,24 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - **Une porte avant le déploiement** (`scripts/verifier-previsualisation.mjs`)
   relit le dossier réellement construit et refuse de livrer s'il manque une
   seule marque sur une seule des sept pages. Contre-épreuve faite : le même
-  script rejette un `dist/` de production avec 32 griefs.
+  script rejette un `dist/` de production avec 40 griefs.
+- **La revue Codex a trouvé six points bloquants, tous corrigés.** Cinq façons
+  de franchir la porte en écrivant les bons mots au mauvais endroit — en-tête
+  en commentaire, en-tête posé sur `/prive/*`, `Disallow` réservé à Bingbot,
+  page dans un sous-dossier, bandeau en `display: none`. La porte ne cherche
+  plus des chaînes : elle lit les groupes de `robots.txt`, les blocs de
+  `_headers`, les règles du CSS, et descend dans les sous-dossiers. Les cinq
+  contournements sont devenus dix tests (`tests/porte-previsualisation.test.ts`).
+  Sixième point : `workflow_dispatch` laissait publier **n'importe quelle
+  branche** sous `--branch=staging` ; une garde de branche est désormais la
+  toute première étape, avant même le `checkout`. En prime, le jeton Cloudflare
+  n'est plus posé au niveau du job — il n'entre que dans les deux étapes qui en
+  ont besoin, plus dans l'environnement de `npm ci`.
+- **Une limite, écrite plutôt que tue** : `Disallow: /` empêche un moteur de
+  LIRE le `noindex` qu'on lui destine. Un lien fuité peut donc encore produire
+  un résultat nu, sans titre. On garde les deux (c'est la consigne, et certains
+  robots ignorent `robots.txt`), et `docs/DEPLOIEMENT.md` propose le seul verrou
+  qui ferme vraiment — une porte Cloudflare Access, décision du CEO.
 - **La contrainte 2 du `CLAUDE.md` est complétée dans le même commit**, pas
   contournée : elle dit désormais ce qui vaut pour la production et ce qui est
   ouvert pour la seule prévisualisation, et ce que l'ouverture ne couvre pas.

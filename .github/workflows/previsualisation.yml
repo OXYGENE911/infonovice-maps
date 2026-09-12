@@ -26,7 +26,8 @@ on:
   push:
     branches: [staging]
   # Pour rejouer un déploiement sans commit — après une panne Cloudflare, ou
-  # juste après que le CEO a déposé le jeton.
+  # juste après que le CEO a déposé le jeton. LA BRANCHE EST VÉRIFIÉE : voir la
+  # toute première étape.
   workflow_dispatch:
 permissions:
   contents: read
@@ -39,13 +40,20 @@ jobs:
   previsualiser:
     runs-on: ubuntu-latest
     env:
-      # LES SECRETS PASSENT PAR `env` PARCE QUE LE CONTEXTE `secrets` N'EST PAS
-      # LISIBLE DANS UN `if:` D'ÉTAPE. C'est le seul moyen de distinguer
-      # « le CEO n'a pas encore déposé le jeton » de « le déploiement a échoué ».
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       PROJET_PAGES: infonovice-maps-previsualisation
     steps:
+      # LA GARDE DE BRANCHE, ET ELLE EST EN PREMIER (revue Codex, 13/09).
+      # `workflow_dispatch` laisse choisir la branche : sans cette garde, un
+      # lancement manuel depuis une branche de fonctionnalité construisait CETTE
+      # branche et la publiait sous `--branch=staging`, donc sur le domaine que
+      # les testeurs de l'AFUVE regardent. Elle est placée AVANT le `checkout` :
+      # rien du dépôt n'est exécuté tant qu'elle n'a pas répondu.
+      - name: N'accepter que la branche staging
+        if: github.ref != 'refs/heads/staging'
+        run: |
+          echo "::error title=Branche interdite::La prévisualisation ne publie que « staging ». Branche demandée : ${{ github.ref }}."
+          exit 1
+
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         # Node 24 comme la CI : le npm 10 de Node 22 appelle un point d'audit
@@ -69,14 +77,27 @@ jobs:
       - name: Porte — la préversion se dit et ne s'indexe pas
         run: node scripts/verifier-previsualisation.mjs dist
 
-      - name: Jeton absent — déploiement remis à plus tard
-        if: env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == ''
+      # LE JETON N'EST DONNÉ QU'AUX DEUX ÉTAPES QUI EN ONT BESOIN (revue Codex).
+      # Posé au niveau du job, il aurait été présent dans l'environnement de
+      # `npm ci`, du lint et des tests : un script d'installation compromis
+      # aurait pu le lire. Ici, cette étape ne fait que constater s'il existe et
+      # publie un « oui » ou un « non » — elle n'imprime jamais sa valeur.
+      - name: Les secrets sont-ils déposés ?
+        id: secrets
+        env:
+          JETON: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          COMPTE: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          echo "::notice title=Préversion construite, non déployée::Les secrets CLOUDFLARE_API_TOKEN et CLOUDFLARE_ACCOUNT_ID ne sont pas encore déposés. La construction est vérifiée ; le déploiement attend les trois gestes décrits dans docs/DEPLOIEMENT.md."
+          if [ -n "$JETON" ] && [ -n "$COMPTE" ]; then
+            echo "prets=oui" >> "$GITHUB_OUTPUT"
+          else
+            echo "prets=non" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Préversion construite, non déployée::Les secrets CLOUDFLARE_API_TOKEN et CLOUDFLARE_ACCOUNT_ID ne sont pas encore déposés. La construction est vérifiée ; le déploiement attend les gestes décrits dans docs/DEPLOIEMENT.md."
+          fi
 
       - name: Déployer sur Cloudflare Pages
         id: deploiement
-        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        if: steps.secrets.outputs.prets == 'oui'
         # ÉPINGLÉE AU COMMIT, PAS AU TAG. Cette action reçoit un jeton d'API
         # Cloudflare ; un tag mobile peut être redirigé vers un autre commit
         # par quiconque a les droits sur le dépôt de l'action. Le commit, lui,
@@ -85,8 +106,8 @@ jobs:
         # commentaire, jamais l'un sans l'autre.
         uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
         with:
-          apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # Version exacte : à trois semaines du Mondial de l'Auto, une montée
           # de version automatique est un risque qu'on ne prend pas.
           wranglerVersion: "4.131.1"

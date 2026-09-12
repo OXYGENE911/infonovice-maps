@@ -123,7 +123,21 @@ export function estPrevisualisation(env: Record<string, string | undefined>): bo
 
 /* LE `robots.txt` DE LA PRÉVERSION. Il remplace celui de `public/`, qui ouvre
    tout et annonce le sitemap de la production. Aucune ligne `Sitemap:` ici :
-   on n'offre pas une carte du site qu'on demande de ne pas lire. */
+   on n'offre pas une carte du site qu'on demande de ne pas lire.
+
+   LA LIMITE, ÉCRITE PLUTÔT QUE TUE (revue Codex, 13/09). `Disallow: /` et
+   `noindex` se gênent l'un l'autre, et c'est documenté par Google : un robot
+   qui n'a pas le droit d'EXPLORER une URL ne lit ni sa balise `robots` ni son
+   en-tête `X-Robots-Tag`. Si un lien fuite, l'URL peut donc apparaître en
+   résultat « nu » — sans titre ni extrait, mais présente.
+   ON GARDE QUAND MÊME LES DEUX, et c'est un choix : la consigne du CEO demande
+   les deux, les robots qui ignorent `robots.txt` (ils existent) butent alors
+   sur l'en-tête, et un résultat sans titre ni extrait vaut mieux qu'une page
+   de préversion indexée en entier.
+   LE VRAI REMÈDE N'EST PAS UN FICHIER : c'est de fermer la porte, par exemple
+   avec Cloudflare Access sur le domaine de préversion — quatre testeurs, quatre
+   adresses. C'est une décision du CEO, écrite comme telle dans
+   docs/DEPLOIEMENT.md, pas quelque chose qu'un agent pose de lui-même. */
 export const ROBOTS_PREVISUALISATION = `# Infonovice Maps — PRÉVISUALISATION.
 # Rien de ce qui vit ici ne doit être indexé : la production est sur
 # https://maps.infonovice.fr/ et c'est elle qui porte le robots.txt ouvert.

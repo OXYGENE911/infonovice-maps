@@ -90,6 +90,21 @@ couvre seul tous les chemins :
 `CNAME` et `sitemap.xml` sont retirés du `dist/` de préversion : le premier
 nomme le domaine de production, le second liste des URL de production.
 
+### La limite de ces trois filets — à connaître, pas à ignorer
+
+`Disallow: /` et `noindex` **se gênent l'un l'autre**, et Google le documente :
+un robot qui n'a pas le droit d'**explorer** une URL ne lit ni sa balise
+`robots` ni son en-tête `X-Robots-Tag`. Si un lien fuite, l'URL peut donc
+apparaître comme un résultat **nu** — sans titre ni extrait, mais présente.
+
+Nous gardons quand même les deux, et c'est un choix assumé : la consigne
+demande les deux ; les robots qui ignorent `robots.txt` (ils existent) butent
+alors sur l'en-tête ; et un résultat sans titre vaut mieux qu'une préversion
+indexée en entier.
+
+**Le vrai remède n'est pas un fichier, c'est une porte.** Voir le Geste 4,
+facultatif, au §4 : il rend l'indexation matériellement impossible.
+
 ---
 
 ## 4. Les trois gestes du CEO — à faire dans cet ordre
@@ -177,7 +192,22 @@ Puis, dans GitHub : *Settings* → *Secrets and variables* → *Actions* →
 - **Ce geste ne touche pas** l'enregistrement `maps` (production). Ne pas le
   modifier.
 
-### Comment savoir que les trois gestes ont pris
+### Geste 4 — FACULTATIF, mais c'est le seul verrou qui ferme vraiment
+
+Les trois filets du §3 demandent aux moteurs de ne pas indexer. Une **porte**,
+elle, les en empêche. **Cloudflare Access** (Zero Trust, palier gratuit)
+protège `staging.maps.infonovice.fr` derrière un code envoyé par courriel, à
+une liste d'adresses : les quatre testeurs de l'AFUVE, le CEO. Un robot
+n'entre pas ; un lien fuité ne mène nulle part.
+
+Ce qu'il en coûte : chaque testeur reçoit un code à la première visite, et
+recommence quand la session expire. À arbitrer — un vrai testeur de terrain
+n'aime pas les portes. **C'est une décision du CEO**, pas un geste que prend un
+agent. Si elle est prise, elle s'applique dans Zero Trust → *Access* →
+*Applications*, sur le seul domaine de préversion, et ne touche en rien
+`maps.infonovice.fr`.
+
+### Comment savoir que les gestes ont pris
 
 Relancer le workflow sans commit : *Actions* → *Prévisualisation* → *Run
 workflow* → branche `staging`. Le résumé du run affiche l'URL du déploiement.
