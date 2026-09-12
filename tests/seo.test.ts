@@ -23,7 +23,7 @@ describe('pages HTML', () => {
        08/09, née avec les trois derniers manquants. */
     expect(PAGES.sort()).toEqual(
       ['a-propos.html', 'index.html', 'mentions-legales.html', 'offre-flottes.html',
-        'pro.html', 'sans-reseau.html', 'vie-privee.html'],
+        'pro.html', 'salon.html', 'sans-reseau.html', 'vie-privee.html'],
     );
   });
 

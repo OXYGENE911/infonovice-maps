@@ -124,3 +124,51 @@ a.page-action:hover, a.page-action:focus-visible { background: var(--bleu-600); 
   a.page-action:hover, a.page-action:focus-visible { background: var(--bleu-100); color: #0E1014; }
 }
 @media (prefers-reduced-motion: reduce) { .page-action { transition: none; } }
+
+/* PAGE SALON (SALON-1, 11/09) — voir docs/infonovice-maps/spec-accueil-salon.md.
+   Réutilise page/page-corps/page-promesses/page-note/a.page-action tels
+   quels ; seules les classes ci-dessous sont neuves. */
+
+.salon-video { margin: 34px 0; }
+.salon-lecteur {
+  display: block; width: 100%; margin: 0; aspect-ratio: 960 / 540;
+  border-radius: var(--rayon); overflow: hidden; background: var(--fond-profond);
+}
+.salon-lecteur img, .salon-lecteur video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.salon-legende { margin: 10px 0 0; color: var(--texte-2); font-size: 14.5px; }
+
+/* Les deux portes : empilées au doigt, côte à côte dès que la largeur le
+   permet — l'ordre du DOM ne bouge pas (le premier bouton garde href="/"). */
+.salon-portes { display: grid; grid-template-columns: 1fr; row-gap: 10px; column-gap: 28px; margin: 38px 0; }
+.salon-portes h2 { grid-column: 1 / -1; }
+.salon-sous { display: block; margin-top: 8px; color: var(--texte-2); font-size: 14px; }
+@media (min-width: 560px) {
+  /* LIGNE *ET* COLONNE POSÉES EN DUR — pas seulement la colonne (revue
+     Codex, 11/09) : laisser la ligne à `auto` faisait dériver le second
+     bouton d'une ligne (l'algorithme d'auto-placement de la grille ne
+     remonte pas au numéro de ligne du premier groupe), et « Installer
+     l'application Android » se retrouvait à côté du sous-titre du premier
+     bouton plutôt qu'à côté de lui — mesuré à 800 px. */
+  .salon-portes { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto; align-items: start; }
+  .salon-portes a.page-action:nth-of-type(1) { grid-column: 1; grid-row: 2; }
+  .salon-sous:nth-of-type(1) { grid-column: 1; grid-row: 3; }
+  .salon-portes a.page-action:nth-of-type(2) { grid-column: 2; grid-row: 2; }
+  .salon-sous:nth-of-type(2) { grid-column: 2; grid-row: 3; }
+}
+/* La seconde porte, en attente du lien Google Play (§6 de la spec) : même
+   gabarit, moins affirmatif — un contour, pas un aplat. */
+a.page-action.salon-action-2, a.page-action.salon-action-2:visited {
+  background: transparent; color: var(--accent); border: 2px solid var(--accent-vif);
+}
+a.page-action.salon-action-2:hover, a.page-action.salon-action-2:focus-visible {
+  background: var(--fond-doux);
+}
+
+.salon-qr, .salon-attente {
+  margin: 38px 0; padding: 24px; border: 1px solid var(--bord);
+  border-radius: var(--rayon); background: var(--fond-doux);
+}
+.salon-qr { text-align: center; }
+.salon-qr h2 { text-align: left; }
+.salon-qr-code { display: block; margin: 4px auto 0; height: auto; max-width: 220px; }
+.salon-qr-libelle { margin: 10px 0 0; font: 650 15px var(--police); color: var(--texte-1); }

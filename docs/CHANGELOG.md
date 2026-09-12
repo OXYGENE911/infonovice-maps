@@ -91,6 +91,47 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   aussi perdu une tuile sur 1 038 lors d'une exécution, absorbée par la
   reprise (`retries: 1`). Voir le rapport de la tâche T2 pour le détail et la
   recommandation (statut **Bloqué**).
+## [1.142.0] — 2026-09-11 — SALON-1
+
+### La page du stand, `/salon.html` — jalon CEO du 18/09
+- **Une huitième page vitrine**, à côté des sept existantes : même gabarit,
+  même CSP (identique caractère pour caractère à `a-propos.html`), zéro
+  JavaScript. Elle n'est liée depuis AUCUNE autre page — on y arrive par le
+  QR du stand ou en tapant l'adresse (spec §1). **Péremption au 18/10/2026**,
+  posée dans `docs/ROADMAP.md`.
+- **Un QR code écrit à la main**, `scripts/generer-qr.mjs` — aucune
+  dépendance nouvelle, dans l'esprit de `png.mjs`. Version 2 (25×25),
+  niveau de correction M, mode octet : les 44 mots-code (28 données + 16
+  correction Reed-Solomon) sont calculés hors ligne et posés en `<svg>`
+  inline, en rectangles fusionnés par ligne. `tests/qr.test.ts` ne se
+  contente PAS de comparer le SVG à lui-même : un décodeur écrit à part
+  (`decoderMatrice`) rejoue l'algorithme dans l'autre sens et vérifie que
+  la correction Reed-Solomon concorde — un bit posé au mauvais endroit fait
+  rougir la CI. Vérifié en plus avec un décodeur indépendant (jsqr, hors
+  dépôt) pendant le développement ; **reste à scanner avec deux téléphones
+  réels au stand**, dit dans la description de PR.
+- **Bloc vidéo en placeholder** (PR A) : une `<figure>` avec l'image
+  d'attente seule, SANS balise `<video>` — la vidéo de démo est la PR B.
+  L'image d'attente est un aplat géométrique généré par code
+  (`scripts/generer-attente.mjs`, même famille que `generer-partage.mjs`) :
+  **ce n'est PAS Bélia**, qui reste une tâche Visuels (GPT puis Nano
+  Banana), cadencée pour la PR B.
+- **Les deux portes de repli** (décisions CEO du 11/09) : liste d'attente en
+  `mailto:contact@infonovice.fr` tant que Framaforms n'est pas approuvé ;
+  bouton « Installer l'application Android » qui pointe sur l'ancre de la
+  liste d'attente tant que la Play Console ne donne pas d'URL de test
+  interne. Dans les deux cas, un `<a>`, jamais un `<form>` —
+  `form-action 'none'` l'interdit, et le raisonnement est le même que sur
+  `/offre-flottes.html`.
+- **Budget de poids propre à la page** (`tests/salon-poids.test.ts`, seul
+  garde-fou : le budget CI ne mesure que les `.js`, invisible à une page
+  sans script) : `salon.html` 9 702 o (≤ 12 000), `qr-maps.svg` 2 470 o
+  (≤ 3 000), `attente.png` 10 419 o (≤ 60 000).
+- **Correction au passage, pas une décision nouvelle** : le manifeste PWA
+  (`vite.config.ts`) portait encore le mot retiré du discours public le
+  06/09 — c'était le seul texte public et non explicatif du dépôt à le
+  porter encore, affiché par le navigateur À L'INSTALLATION. Aligné sur
+  `index.html`. Signalé au CEO dans le compte rendu.
 
 ## [1.141.0] — 2026-09-10 — COURBES-1
 
