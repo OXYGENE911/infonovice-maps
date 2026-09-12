@@ -195,6 +195,17 @@ describe('les pages livrées', () => {
     expect(griefs, griefs.join(' | ')).toEqual([]);
   });
 
+  it('un fragment ou une requête dans le lien ne change pas le fichier demandé', () => {
+    // « previsualisation.css#v1 » charge bien /previsualisation.css : refuser
+    // cette page serait refuser une préversion parfaitement servable.
+    dossierConforme();
+    writeFileSync(join(dossier, 'index.html'),
+      marquerHtmlPrevisualisation(PAGE_SOURCE, 'index.html')
+        .replace('href="previsualisation.css"', 'href="previsualisation.css?v=1#haut"'));
+    const griefs = griefsDe();
+    expect(griefs, griefs.join(' | ')).toEqual([]);
+  });
+
   it('un bandeau privé de sa pastille est refusé', () => {
     dossierConforme();
     const ampute = marquerHtmlPrevisualisation(PAGE_SOURCE, 'index.html')

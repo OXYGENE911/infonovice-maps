@@ -151,9 +151,14 @@ function entetesNoindexPartout(entetes) {
 /** Le fichier visé par un `href`, résolu depuis la page qui le porte. */
 function cibleDuLien(href, pageRelative) {
   if (/^[a-z]+:\/\//i.test(href)) return null; // hors du dossier livré
-  if (href.startsWith('/')) return href.slice(1);
+  // LE NAVIGATEUR NE DEMANDE PAS LE FRAGMENT NI LA REQUÊTE : « feuille.css#v1 »
+  // charge bien /feuille.css. La porte les coupe donc avant de résoudre, sinon
+  // elle refuse une préversion parfaitement servable (relevé en revue).
+  const chemin = href.split('#')[0].split('?')[0];
+  if (chemin === '') return null;
+  if (chemin.startsWith('/')) return chemin.slice(1);
   const dossierPage = posix.dirname(pageRelative);
-  return posix.normalize(dossierPage === '.' ? href : posix.join(dossierPage, href));
+  return posix.normalize(dossierPage === '.' ? chemin : posix.join(dossierPage, chemin));
 }
 
 export function verifierPrevisualisation(dossier) {
