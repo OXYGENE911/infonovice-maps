@@ -182,7 +182,7 @@ mesuré — pas de traiter tous les points chauds possibles du pipeline réseau.
   invalide, retiré).
 - **Une seule campagne, un seul moment de la journée.** Comme pour la
   contre-mesure du 12/09 et pour la mesure hors navigateur ci-dessus : six
-  passages et dix appels ne sont pas une distribution, seulement un ordre de
+  passages et neuf appels ne sont pas une distribution, seulement un ordre de
   grandeur cohérent d'une mesure à l'autre.
 
 ## Ce que le délai de garde coûte en précision du plan
@@ -259,6 +259,41 @@ mesures brutes ci-dessus restent valides pour le comportement mesuré — elles
 n'ont pas été rejouées après ce second commit, seule la CORRECTION d'un bug
 d'affichage et de plusieurs erreurs de rédaction dans ce document justifiait
 un second passage, pas une remesure.
+
+## Suite à la deuxième revue Codex (12/09, VERDICT BLOQUANT à nouveau)
+
+Le second commit corrigeait bien les points 3 et 5 ci-dessus, mais Codex a
+trouvé : (a) deux occurrences oubliées de la coquille sur le nombre d'appels
+(« dix » subsistait dans `docs/CHANGELOG.md` et dans la section « Ce qui n'a
+pas pu être fait » de CE document — corrigées) ; (b) `docs/CHANGELOG.md`
+répétait encore la conclusion causale non soutenue (« ne vient donc PAS de
+l'altimétrie ») que ce document avait, lui, déjà corrigée — reformulé pour
+dire la même chose que ci-dessus (NON VÉRIFIÉ) ; **(c) un bug réel et NOUVEAU,
+introduit par mon propre correctif** : `noteReserveConditions` ne prévoyait
+que trois cas et traitait « relief compté sans température » comme
+« impossible en pratique », affichant alors « Température, relief et vitesse
+[…] sont comptés » — un mensonge, puisque la température n'a PAS été
+comptée. Ce cas est pourtant atteignable : météo et altimétrie sont deux
+appels indépendants, attrapés séparément (`#chargerConditions`), et les deux
+appels météo peuvent échouer pendant que l'altimétrie répond à temps. Pire :
+le test que j'avais écrit consacrait cette phrase fausse comme le
+comportement ATTENDU, avec un commentaire (« cas impossible en pratique »)
+qui masquait le problème plutôt que de le révéler.
+
+**Corrigé dans un troisième commit** : `noteReserveConditions` couvre
+maintenant les QUATRE combinaisons (température/relief × compté/non compté),
+chacune avec sa phrase honnête — la nouvelle, quand le relief est compté sans
+la température, dit « Relief et vitesse du parcours sont comptés ; la
+température n'a PAS pu être relevée […], le plan suppose 20 °C ». Le test
+correspondant affirme maintenant l'inverse de ce qu'il affirmait avant :
+qu'on ne doit JAMAIS lire « Température […] comptée » dans ce cas.
+
+C'est le genre d'erreur que ce document doit aussi aux CEO et au chef de
+cabinet de ne pas cacher : la première correction d'un défaut d'honnêteté en
+a introduit un second, verrouillé par un test qui le validait — la revue
+Codex, appliquée deux fois plutôt qu'une, l'a trouvé avant la mise en
+production. Troisième passage de revue Codex lancé après ce commit ; verdict
+dans `handoffs/2026-09-12-1630-codex-altimetrie.md`.
 
 ## Pourquoi la même PR (#313)
 

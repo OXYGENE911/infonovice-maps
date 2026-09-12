@@ -109,10 +109,16 @@ describe('noteReserveConditions — ALTI-GARDE-1, 12/09/2026, jamais un silence'
     const t = noteReserveConditions(false, false);
     expect(t).toMatch(/à plat, à consommation constante/);
   });
-  it('cas impossible en pratique (dénivelé compté sans température) : privilégie quand même l’aveu complet', () => {
-    // Défensif : si jamais ce cas se produisait, la phrase la plus complète
-    // (les trois comptés) ne doit jamais dire moins que la vérité.
+  it('relief compté mais température NON comptée (les deux appels météo en échec, l’altimétrie répond à temps) : le dit explicitement, jamais « température comptée »', () => {
+    // Scénario réel, pas défensif : météo et altimétrie sont attrapées
+    // séparément dans #chargerConditions, l'une peut échouer sans l'autre
+    // (revue Codex, 2e passage — la version précédente de ce test qualifiait
+    // ce cas d'« impossible en pratique » et exigeait la phrase fausse
+    // « température […] comptée »).
     const t = noteReserveConditions(false, true);
-    expect(t).toMatch(/Température, relief et vitesse.*sont comptés/);
+    expect(t).toMatch(/Relief et vitesse.*sont comptés/);
+    expect(t).toMatch(/température n.*PAS pu être relevée/);
+    // Ne doit JAMAIS prétendre que la température est comptée quand elle ne l'est pas.
+    expect(t).not.toMatch(/Température.*sont? comptée?s/);
   });
 });

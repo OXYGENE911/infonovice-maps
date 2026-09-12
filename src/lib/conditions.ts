@@ -150,20 +150,26 @@ export function plafondThermiqueKw(
 }
 
 /**
- * La note de réserve du volet recharge — TROIS phrases distinctes, PURE,
- * testée à sec (ALTI-GARDE-1, revue Codex du 12/09/2026 : extraite de
- * `panneau-itineraire.ts` où elle vivait en ligne, sans test dédié — un
- * scénario, température connue au SEUL bout arrivée, avait échappé à
- * l'implémentation en ligne, qui ne regardait que `tempDepartC`).
+ * La note de réserve du volet recharge — QUATRE phrases distinctes, PURE,
+ * testée à sec (ALTI-GARDE-1, revue Codex du 12/09/2026, deux passages).
  *
- * Ni le relief ni la température ne doivent jamais être dits « comptés »
- * quand ils ne le sont pas — le mandat du 12/09 interdit le silence par
- * omission autant que le mensonge par excès.
+ * Météo (deux appels) et altimétrie sont attrapées SÉPARÉMENT dans
+ * `#chargerConditions` (voir panneau-itineraire.ts) : chacune peut aboutir
+ * ou échouer SANS l'autre. Les QUATRE combinaisons sont donc atteignables en
+ * pratique, pas seulement les trois qui semblent naturelles — le premier
+ * passage de revue avait extrait une fonction à trois branches en qualifiant
+ * la quatrième (relief compté, température non compté) d'« impossible en
+ * pratique » ; le second passage a montré un scénario réel qui l'atteint
+ * (les deux appels météo en échec, l'altimétrie qui répond à temps) et un
+ * test qui consacrait la phrase fausse « température comptée » comme
+ * comportement attendu. Ni le relief ni la température ne doivent jamais
+ * être dits « comptés » quand ils ne le sont pas — le mandat du 12/09
+ * interdit le silence par omission autant que le mensonge par excès.
  */
 export function noteReserveConditions(
   temperatureCompte: boolean, deniveleCompte: boolean,
 ): string {
-  if (deniveleCompte) {
+  if (temperatureCompte && deniveleCompte) {
     return 'Température, relief et vitesse du parcours sont comptés (détail dans'
       + ' « Pourquoi ce plan ? ») ; restent inconnus le vent, la pluie, le'
       + ' trafic et la vraie courbe de charge de votre véhicule.';
@@ -174,6 +180,13 @@ export function noteReserveConditions(
       + ' indisponible — détail dans « Pourquoi ce plan ? »). Restent'
       + ' inconnus le vent, la pluie, le trafic et la vraie courbe de'
       + ' charge de votre véhicule.';
+  }
+  if (deniveleCompte) {
+    return 'Relief et vitesse du parcours sont comptés ; la température n’a'
+      + ' PAS pu être relevée (service météo indisponible — détail dans'
+      + ' « Pourquoi ce plan ? »), le plan suppose 20 °C. Restent inconnus'
+      + ' le vent, la pluie, le trafic et la vraie courbe de charge de votre'
+      + ' véhicule.';
   }
   return 'Estimation à plat, à consommation constante :'
     + ' ni le relief, ni le vent, ni le trafic, ni la vraie courbe de charge'

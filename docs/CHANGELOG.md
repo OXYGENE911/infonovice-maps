@@ -81,8 +81,8 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   `src/lib/delai-garde.ts`, fonction `avecDelaiDeGarde`, générique et pure,
   testée à sec dans `tests/delai-garde.test.ts`) : au-delà, le plan se
   calcule sans le dénivelé — la promesse sous-jacente n'est NI annulée NI
-  relancée, aucun appel supplémentaire. Justifié par dix appels réels au
-  service (neuf entre 576 et 872 ms, un à 7 277 ms — détail et limites de
+  relancée, aucun appel supplémentaire. Justifié par neuf appels réels au
+  service (cinq entre 576 et 872 ms, un à 7 277 ms — détail et limites de
   cette mesure dans `docs/mesure-paris-lyon.md`). La météo (Open-Meteo),
   mesurée dans la même série (103-150 ms), n'a montré aucun risque
   comparable : elle garde son comportement d'avant, sans délai de garde.
@@ -96,11 +96,13 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   `docs/mesure-paris-lyon.md` (build vérifié par hash du bundle servi) :
   2 364 / 494 / 6 642 / 3 924 / 4 291 / 3 202 ms. Médiane 3 563 ms (< 4 s,
   tenu) ; **p95 = 6 642 ms, au-dessus du seuil de 5 s — critère NON tenu**.
-  Le relief a été compté dans les six sessions (l'altimétrie a toujours
-  répondu sous 2 s aujourd'hui) : la session lente (6 642 ms) ne vient donc
-  PAS de l'altimétrie mais d'ailleurs dans la chaîne réseau (itinéraire ou
-  IRVE), hors du périmètre de cette tâche — dit en clair dans le document de
-  mesure plutôt que masqué.
+  Le relief a été compté dans les six sessions : l'altimétrie n'a jamais
+  dépassé le budget de 2 s que le délai de garde lui impose. Ça ne prouve PAS
+  qu'elle a répondu vite pour autant (un appel à 1 900 ms compte aussi comme
+  « relief pris en compte ») : la cause exacte de la session lente
+  (6 642 ms) reste NON VÉRIFIÉE — la sonde posée ici ne décompose pas le
+  total par poste réseau. Dit en clair, avec ses limites, dans le document
+  de mesure plutôt que résumé de façon trompeuse ici.
 - Bundle : `panneau-itineraire` 123 654 o contre 123 658 o avant la tâche
   (−4 o après extraction de `noteReserveConditions` vers `lib/conditions.ts`),
   bien sous le budget de ±5 Ko. Aucune dépendance nouvelle. 1 691 tests
