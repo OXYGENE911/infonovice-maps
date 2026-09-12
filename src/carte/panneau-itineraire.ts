@@ -1240,12 +1240,25 @@ export class PanneauItineraire extends HTMLElement {
          navigation privée…) — sans elle, un préchargement terminé AVANT le
          calcul (le cas courant, celui que ce préchargement vise) pouvait
          être suivi d'un second téléchargement si le disque avait refusé le
-         premier. Thermique/hybride exclu : ce véhicule ne consulte jamais
-         l'index IRVE. Le `.catch` évite qu'un rejet de promesse non suivi
+         premier. Le `.catch` évite qu'un rejet de promesse non suivi
          (préchargement seul, sans calcul déclenché ensuite) remonte comme
-         une erreur non gérée. */
-      void lirePreference<unknown>(PREF_VEHICULE).then((memo) => {
-        if (!estThermique(memo)) void indexNational().catch(() => { /* voir commentaire ci-dessus */ });
+         une erreur non gérée.
+
+         RÉGRESSION CORRIGÉE (C5, 12/09/2026, `recharge.spec.ts:778`) : ce
+         garde ne testait que « pas thermique », donc TOUT véhicule
+         électrique — y compris celui, par défaut, que `panneau-vehicule.ts`
+         restaure au chargement de la page même quand personne n'a jamais
+         rien saisi (capacité à 0). L'événement `vehicule-change` se
+         déclenche alors sans qu'aucun usager n'ait rien demandé, et
+         l'index se téléchargeait pour un profil que le planificateur
+         aurait de toute façon refusé. `#lireVehicule()` est exactement le
+         filtre qui décide RÉELLEMENT si un plan peut se calculer (batterie
+         ET consommation renseignées, cf. son propre commentaire) :
+         précharger pour un profil qu'il rejetterait n'anticipe rien, ça ne
+         fait que parler au réseau sans demande — la règle même que ce
+         préchargement doit respecter. */
+      void this.#lireVehicule().then((profil) => {
+        if (profil) void indexNational().catch(() => { /* voir commentaire ci-dessus */ });
       });
 
       if (!this.#dernier) return;

@@ -2,7 +2,29 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [Non publié] — 2026-09-12 — E2E-VERT-C4 (recB9dFvq0P1Rzohp)
+## [Non publié] — 2026-09-12 — E2E-VERT-C5 (recB9dFvq0P1Rzohp)
+
+### La régression de la PR #313 sur le plan de recharge, corrigée
+
+- **`recharge.spec.ts:778` (« AUCUN appel tant que la section est repliée »)
+  redevient vert** — la cause était dans `panneau-itineraire.ts` : le
+  préchargement de l'index IRVE sur l'événement `vehicule-change` (PR #313,
+  cible 2) ne testait que « le véhicule n'est pas thermique », si bien qu'un
+  véhicule électrique par défaut — celui que `panneau-vehicule.ts` restaure
+  au chargement de la page même quand personne n'a jamais rien saisi
+  (capacité à 0) — déclenchait le téléchargement sans qu'aucun usager ne
+  l'ait demandé. Le garde utilise désormais `#lireVehicule()`, le même
+  filtre qui décide RÉELLEMENT si un plan de recharge peut se calculer
+  (batterie ET consommation renseignées) : précharger pour un profil que le
+  planificateur rejetterait de toute façon n'anticipe rien, et viole la
+  règle « ne jamais marteler les API publiques sans demande ». Le test
+  préexistant (déjà sur `main` avant la PR #313) sert de test de
+  non-régression : rouge de façon déterministe sur la branche `feat/
+  recgTL2LqMYAZf0mB-optim-paris-lyon` isolée (mesuré ce cycle), vert après
+  correctif. L'optimisation elle-même (précharger dès qu'un véhicule
+  électrique COMPLET est connu, avant même le calcul) reste intacte.
+
+
 
 ### La suite E2E redevient verte de bout en bout
 
