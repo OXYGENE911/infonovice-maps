@@ -34,6 +34,13 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   photo arrive, il affirme que **rien ne part**. Il ÉCOUTE le réseau sans y
   répondre (`page.on('request')`), vérifie qu'aucun nœud `.fb-photo` n'existe,
   et mesure les trous entre blocs du corps de fiche.
+- **PHOTO-0 écoute aussi les VIOLATIONS DE CSP** — défaut relevé par Codex le
+  13/09 : un appel réintroduit vers un hôte absent de la CSP est bloqué par le
+  navigateur AVANT d'être émis, donc `page.on('request')` ne voit rien et le
+  test resterait vert. Contre-épreuve faite : un `fetch` vers
+  `query.wikidata.org` glissé dans `ouvrir()` laisse le compteur réseau à zéro
+  et fait échouer la nouvelle assertion (`tentatives bloquées par la CSP :
+  https://query.wikidata.org/sparql?q=1`).
 - **Ce que l'usager perd, et la phrase qui le dit** : la photographie en tête
   de la fiche d'un monument classé. Le reste ne bouge pas — titre, commune,
   siècle, statut, notice officielle `pop.culture.gouv.fr`, bouton

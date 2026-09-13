@@ -1964,6 +1964,18 @@ test('PHOTO-0 : la fiche d’un lieu n’appelle plus aucun hôte Wikimedia, et 
   page.on('request', (requete) => {
     if (/wikimedia\.org|wikidata\.org/.test(requete.url())) versWikimedia.push(requete.url());
   });
+  /* LE COMPTEUR RÉSEAU SEUL NE SUFFIT PAS, et c'est le défaut que Codex a
+     relevé le 13/09 : un appel réintroduit vers un hôte ABSENT de la CSP est
+     bloqué par le navigateur AVANT d'être émis — aucune requête ne paraît, et
+     un test qui ne regarde que le réseau reste vert. On écoute donc aussi les
+     violations de CSP, qui sont, elles, le signal d'une tentative. */
+  await page.addInitScript(() => {
+    (window as unknown as { __violationsCSP: string[] }).__violationsCSP = [];
+    document.addEventListener('securitypolicyviolation', (e) => {
+      (window as unknown as { __violationsCSP: string[] })
+        .__violationsCSP.push(e.blockedURI);
+    });
+  });
 
   await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
@@ -1995,8 +2007,14 @@ test('PHOTO-0 : la fiche d’un lieu n’appelle plus aucun hôte Wikimedia, et 
   expect(trous.length).toBeGreaterThan(0);
   for (const trou of trous) expect(trou).toBeLessThanOrEqual(12);
 
-  /* LA PREUVE PAR LE RÉSEAU, et elle est en dernier : rien n'est parti. */
+  /* LA PREUVE PAR LE RÉSEAU, et elle est en dernier : rien n'est parti… */
   expect(versWikimedia, versWikimedia.join(' | ')).toHaveLength(0);
+  /* …et rien n'a même été TENTÉ : aucune violation de CSP vers ces hôtes. */
+  const bloques = await page.evaluate(() => (window as unknown as
+    { __violationsCSP: string[] }).__violationsCSP
+    .filter((u) => /wikimedia|wikidata|wikipedia/.test(u)));
+  expect(bloques, `tentatives bloquées par la CSP : ${bloques.join(' | ')}`)
+    .toHaveLength(0);
 });
 
 test('POI : sous le zoom 12, les recherches se DISENT inertes — avant le clic', async ({ page }) => {
