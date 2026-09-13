@@ -139,8 +139,9 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
      PIXELS (`scrollHeight ≤ clientHeight + 1`), c'est-à-dire exactement
      l'assertion d'origine — restituée, et levée seulement quand un plafond
      est RÉELLEMENT posé : deux propriétés calculées, `max-height` ≠ `none`
-     ET `overflow-y` écrêtant. Plus aucune assertion ne s'appuie sur une
-     classe ;
+     ET `overflow-y` écrêtant. Aucune PREUVE GÉOMÉTRIQUE ne s'appuie plus
+     sur une classe — la classe ne sert qu'à dire que le mécanisme s'est
+     déclenché, plus à dire qu'il a marché ;
   2. **la casse laissait encore passer un code** : le motif des codes d'un
      seul tenant était en capitales seules, et **mesuré, un champ « AB12 »
      rend « Ab12 »** après mise en forme du libellé — la voix disait
