@@ -25,6 +25,8 @@ export interface VerdictCalcul {
   /** `null` chaque fois que le plan n'est pas venu : une valeur bornée par la
    *  fenêtre d'observation ne sort jamais sous le nom d'une mesure. */
   dureeCalculMs: number | null;
+  /** Le plan ÉCRIT, voile retiré — pas nécessairement à l'écran. Jalon, pas critère. */
+  dureeCalculInterneMs: number | null;
   dureeItineraireMs: number | null;
   dureeAffichageMs: number | null;
   naturePlan: string | null;

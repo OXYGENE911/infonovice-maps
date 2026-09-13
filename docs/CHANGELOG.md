@@ -22,7 +22,7 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   recharge lisible — la définition mot pour mot de la feuille de relevé mobile, pour que le
   chiffre du poste et celui du téléphone se comparent. Il relevait jusqu'ici `performance.now()`
   après le chargement de la page : **étalonné avec un retard connu de 3 000 ms, l'ancien
-  instrument rendait 746 ms là où le nouveau rend 4 843 ms.** Les six chiffres qu'il aurait
+  instrument rendait 272 ms là où le nouveau rend 4 347 ms.** Les six chiffres qu'il aurait
   produits n'auraient rien dit du critère des 5 s.
 - **Une valeur bornée par la fenêtre d'observation ne sort plus sous le nom d'une mesure.**
   Quand la porte de sortie ne se referme pas — c'est-à-dire quand le correctif de la PR #318
@@ -41,6 +41,12 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   **15 025 ms** mesurés, et pendant ces quinze secondes l'écran est immobile — « Calcul de
   l'itinéraire… » à 6 ms, la ligne de lenteur à 2 513 ms, rien d'autre. Deux valeurs et leurs
   coûts dans `docs/mesure-seuil-porte.md` §14.
+- **Après la revue Codex (verdict initial « NE PAS FUSIONNER ») :** les zombies ne sont plus comptés
+  comme des processus résidents ; la garde refuse aussi quand la borne pessimiste
+  `total + nonResolus` dépasse le plafond (1 processus reconnu et 24 pids illisibles laissaient
+  partir la campagne) ; le critère exige désormais un plan **lisible à l'écran** et non seulement
+  écrit ; deux assertions E2E qui pouvaient rougir sans régression ont été retirées ou rendues
+  déterministes. **Reste ouvert et signalé :** `tests/sonde-bundle.test.ts` est sauté en CI.
 - Nouveaux fichiers : `scripts/chrono-sonde.mjs` (verdicts purs, éprouvés dans les deux sens),
   `scripts/serveur-dist.mjs` (le serveur de la sonde, extrait pour être essayé sans navigateur),
   `tests/chrono-sonde.test.ts`, `tests/sonde-bundle.test.ts`, `tests-e2e/sonde-chrono.spec.ts`.

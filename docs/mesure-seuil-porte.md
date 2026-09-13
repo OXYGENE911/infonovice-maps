@@ -371,7 +371,13 @@ le chiffre du poste et celui du téléphone se comparent :
 
 - le chronomètre **part** au geste qui lance le calcul — un écouteur en phase de CAPTURE posé juste
   avant le clic sur la suggestion de destination, donc horodaté avant le code de l'application ;
-- il **s'arrête** quand le plan de recharge est écrit et le voile d'attente retiré.
+- il **s'arrête** quand le plan de recharge est **lisible à l'écran**, voile d'attente retiré.
+
+> **Corrigé après la revue Codex du 13/09 (constat SÉRIEUX).** La première version de cette passe
+> arrêtait le chronomètre dès que le plan était ÉCRIT — ce qui peut arriver dans une vue cachée. La
+> feuille mobile dit « quand les arrêts sont **affichés et lisibles** ». Le critère est donc le plan
+> LISIBLE ; le plan écrit reste publié sous son propre nom, `dureeCalculInterneMs`, où personne ne
+> peut le prendre pour le critère.
 
 Le profil véhicule (VinFast VF 8 Plus, 87,7 kWh, 80 % au départ) est saisi **par le formulaire, avant
 d'armer le chronomètre** : sans lui le produit répond « Renseignez d'abord votre véhicule », et la
@@ -385,13 +391,15 @@ vérifie que le chronomètre le rend. Relevé le 13/09 sur ce poste (Playwright,
 | grandeur | valeur |
 |---|---|
 | retard injecté | **3 000 ms** |
-| chargement de la page (ce que l'ANCIENNE sonde publiait) | **746 ms** |
-| durée de l'itinéraire seul (jalon) | **3 082 ms** |
-| **durée du calcul, du geste au plan de recharge** | **4 843 ms** |
+| chargement de la page (ce que l'ANCIENNE sonde publiait) | **272 ms** |
+| durée de l'itinéraire seul (jalon) | **3 028 ms** |
+| **durée du calcul, du geste au plan de recharge LISIBLE** | **4 347 ms** |
 | fin du chronomètre | un vrai plan (1 arrêt, 54 min de charge, arrivée à 10 %) |
 
-**746 ms contre 4 843 ms : l'ancien instrument se trompait d'un facteur six, et son chiffre ne
-contenait même pas le retard qu'on venait d'injecter.** C'est cela qu'on aurait présenté comme la
+**272 ms contre 4 347 ms : l'ancien instrument se trompait d'un ordre de grandeur, et son chiffre ne
+contenait même pas le retard qu'on venait d'injecter.** Le rapport exact varie d'une exécution à
+l'autre — c'est le temps de chargement qui bouge ; ce qui ne bouge pas, c'est que l'ancien chiffre
+n'a jamais contenu le retard. C'est cela qu'on aurait présenté comme la
 mesure du critère des 5 s.
 
 Un second parcours du même fichier éprouve le cas inverse : sans véhicule, aucun plan n'arrive, et la
@@ -549,7 +557,7 @@ Mission : « n'y touche pas — mesure-le ». Mesuré le 13/09, service d'itiné
 | **16 524 ms** | `Le calcul d'itinéraire est momentanément indisponible. Réessayez dans un instant.` |
 
 Autres chiffres du même relevé : la porte **ne se referme pas** — toujours ouverte après
-**14 981 ms** observées, `dureeDeVieMs: null` (exigence du CEO : au moins 8 000 ms — tenue, et le
+**10 013 ms** observées (la fenêtre part désormais de l'OUVERTURE de la porte, non du départ), `dureeDeVieMs: null` (exigence du CEO : au moins 8 000 ms — tenue, et le
 nombre publié est nommé pour ce qu'il est). Et le bouton est **sous la ligne de flottaison** (y = 732
 pour une fenêtre de 720).
 
@@ -580,6 +588,24 @@ côté réseau, et le déplacer changerait le comportement de tous les appels, p
 de flottaison. Quel que soit le seuil retenu, une porte de sortie qu'il faut chercher en faisant
 défiler n'est pas une porte de sortie sur un stand.
 
+## 14 bis. Ce que la revue Codex a trouvé, et ce qui en a été fait
+
+Codex a rendu **VERDICT: NE PAS FUSIONNER** sur la première version de cette passe. Quatre constats
+sérieux, tous fondés :
+
+| constat | traitement |
+|---|---|
+| le repli sur `comm` comptait les **zombies** (pid non récolté, `exe` illisible, `comm=node`) — la garde refusait alors une machine au repos | corrigé : l'état lu dans `/proc/<pid>/stat` écarte `Z` et `X` |
+| les pids **non résolus** n'invalidaient pas la campagne : 1 reconnu + 24 illisibles laissait partir la mesure | corrigé : la garde juge aussi la borne pessimiste `total + nonResolus`, et refuse |
+| une durée sortait sous le nom du critère pour un plan **écrit mais jamais lisible** | corrigé : le critère est `planLisibleA` ; le plan écrit sort sous `dureeCalculInterneMs` |
+| deux assertions E2E pouvaient **rougir sans régression** (comparaison de durées indépendantes ; fenêtre d'observation trop courte sur un runner lent) | corrigées : l'assertion non fondée est retirée, la fenêtre part de l'ouverture de la porte |
+| `tests/sonde-bundle.test.ts` est **sauté en CI** (`npm test` y tourne avant `npm run build`) | **NON corrigé** — remettre le workflow en ordre est hors périmètre. Reste ouvert, et Codex a raison de l'appeler un vert de complaisance côté CI. |
+
+**Pourquoi la troisième correction a un coût assumé :** sur une machine où beaucoup de pids
+appartiennent à d'autres utilisateurs, la garde refusera désormais de mesurer. Ce n'est pas un
+défaut — c'est l'aveu qu'on ne peut pas y prouver une machine au repos, et le CEO a demandé qu'on le
+lui dise plutôt que de le contourner.
+
 ## 15. Ce que cette passe n'a PAS pu vérifier
 
 - **Aucune campagne n'a tourné.** La garde refuse sur ce poste : relevé le 13/09 à 05 h 53,
@@ -596,3 +622,7 @@ défiler n'est pas une porte de sortie sur un stand.
   Beraudier. Les deux chiffres se comparent à ce détail près, qui reste à réduire.
 - **Rien n'a été mesuré sur un téléphone.** Le calcul local sera plus lent sur mobile, jamais plus
   rapide.
+- **`tests/sonde-bundle.test.ts` ne tourne pas en CI** : `npm test` y précède `npm run build`, et le
+  bloc se déclare sauté faute de `dist/`. L'essai fait foi en local ; en CI, il ne protège rien.
+- **Les corrections apportées après la revue Codex n'ont pas été re-soumises à une revue complète**
+  au moment où ce document est écrit — voir le §14 bis pour ce qui a été traité et ce qui reste.

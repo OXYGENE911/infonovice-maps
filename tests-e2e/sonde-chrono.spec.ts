@@ -237,14 +237,22 @@ test('le chronomètre de la sonde rend le retard qu’on lui a injecté, pas le 
     `le retard injecté est de ${RETARD_ITINERAIRE_MS} ms : un chronomètre qui rend`
     + ' moins ne chronomètre pas le calcul').toBeGreaterThanOrEqual(RETARD_ITINERAIRE_MS);
 
-  // 3. LA DISCRIMINATION, ET C'EST LE CŒUR DE L'ÉTALONNAGE : l'ancien
-  //    instrument rendait le temps de chargement de la page. Le nouveau doit
-  //    rendre nettement plus, puisqu'il inclut un retard de 3 s qui n'existe
-  //    pas au chargement. Si ces deux nombres se ressemblaient, la correction
-  //    n'aurait rien corrigé.
+  // 3. LA DISCRIMINATION SE FAIT PAR LE RETARD INJECTÉ, PAS PAR UNE COMPARAISON
+  //    AVEC LE CHARGEMENT DE PAGE. Une version précédente exigeait
+  //    `dureeCalculMs > chargementPageMs` : la revue Codex du 13/09 a montré
+  //    que ces deux durées sont INDÉPENDANTES — un runner qui met 6 s à peindre
+  //    la carte aurait fait rougir un chronomètre pourtant exact, et un faux
+  //    rouge est précisément ce qui pousse un futur agent à relâcher une
+  //    assertion. L'assertion n° 2 discrimine déjà : le chargement d'une page
+  //    ne contient pas le retard de 3 s injecté dans le service d'itinéraire.
+  //    Le chiffre reste publié au journal, pour qu'on puisse les comparer à la
+  //    lecture sans en faire une condition de passage.
+
+  // 3 bis. LE CRITÈRE EXIGE UN PLAN LISIBLE À L'ÉCRAN, pas seulement écrit.
+  expect(v.dureeCalculInterneMs, 'le plan doit avoir été écrit').not.toBeNull();
   expect(v.dureeCalculMs as number,
-    `chargement de page ${chargementPageMs} ms — un chronomètre du calcul doit`
-    + ' s’en distinguer par le retard injecté').toBeGreaterThan(chargementPageMs);
+    'le plan lisible ne peut pas précéder le plan écrit')
+    .toBeGreaterThanOrEqual(v.dureeCalculInterneMs as number);
 
   // 4. Le jalon intermédiaire est nommé pour ce qu'il est, et il vient AVANT
   //    la fin du calcul : l'itinéraire n'est pas le plan de recharge.
@@ -323,10 +331,20 @@ test('la porte de sortie : quand elle paraît, ce que l’usager voit avant, et 
   await armerSonde(page);
   await page.getByRole('option', { name: 'Lyon' }).first().click();
 
-  /* ON REGARDE 30 s APRÈS LE DÉPART : au-delà du seuil d'abandon (15 s) et du
-     plafond dur (16,5 s), donc assez pour voir la porte se refermer SI elle se
-     referme. */
-  await page.waitForTimeout(30_000);
+  /* ON ATTEND QUE LA PORTE S'OUVRE, PUIS ON OBSERVE DIX SECONDES DE PLUS.
+     Une version précédente attendait 30 s en tout : la revue Codex du 13/09 a
+     montré qu'un runner lent pouvait n'observer que six secondes après
+     l'ouverture, et faire rougir l'exigence des huit secondes alors que la
+     porte serait restée ouverte indéfiniment. Une fenêtre qui confond
+     « observation trop courte » et « défaut du produit » est un faux rouge, et
+     un faux rouge finit par faire baisser une barre. La fenêtre part donc de
+     l'OUVERTURE, pas du départ. */
+  await page.waitForFunction(
+    () => (window as unknown as { __sonde: { porteOuverteA: number | null } })
+      .__sonde.porteOuverteA !== null,
+    undefined, { timeout: 60_000 },
+  );
+  await page.waitForTimeout(10_000);
   const brut = await lireSonde(page);
   const p = jugerPorte(brut);
 

@@ -30,7 +30,10 @@ describe('la durée du calcul d’itinéraire (défaut n° 1 : on mesurait le ch
       attentes: [],
     });
     expect(v.mesure).toBe(true);
-    expect(v.dureeCalculMs).toBe(3_200);
+    // LE CRITÈRE EST LE PLAN LISIBLE À L'ÉCRAN (revue Codex du 13/09) : 4 400 −
+    // 1 000. Le plan ÉCRIT à 4 200 reste publié, sous son propre nom.
+    expect(v.dureeCalculMs).toBe(3_400);
+    expect(v.dureeCalculInterneMs).toBe(3_200);
     // Les jalons sortent aussi, NOMMÉS pour ce qu'ils sont : l'itinéraire seul
     // n'est pas le critère, et le confondre avec lui est ce qui a produit un
     // chiffre faux.
@@ -64,6 +67,21 @@ describe('la durée du calcul d’itinéraire (défaut n° 1 : on mesurait le ch
     expect(v.mesure).toBe(false);
     expect(v.dureeCalculMs).toBeNull();
     expect(v.motif).toMatch(/jamais été déclenché/);
+  });
+
+  it('un plan ÉCRIT mais jamais lisible à l’écran ne donne AUCUNE durée de critère', () => {
+    // REVUE CODEX DU 13/09, CONSTAT SÉRIEUX : `planPretA` se satisfaisait d'un
+    // plan rendu dans une vue cachée, et publiait une durée sous le nom du
+    // critère. La feuille de relevé mobile mesure jusqu'aux arrêts « affichés
+    // et lisibles ». Le jalon interne reste publié, sous son propre nom.
+    const v = jugerCalcul({
+      departA: 1_000, itiPretA: 3_000, planPretA: 4_000, planLisibleA: null,
+      naturePlan: 'plan', dernierRegard: 20_000, debutObservationA: 0, attentes: [],
+    });
+    expect(v.mesure).toBe(false);
+    expect(v.dureeCalculMs).toBeNull();
+    expect(v.dureeCalculInterneMs).toBe(3_000);
+    expect(v.motif).toMatch(/JAMAIS été lisible à l’écran/);
   });
 
   it('un refus motivé est une fin de calcul, et il est nommé refus — pas plan', () => {

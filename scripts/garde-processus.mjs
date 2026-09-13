@@ -144,6 +144,18 @@ export function nomFiable(pid) {
          `comm`, en le DISANT. Ne pas savoir n'est jamais un feu vert — ici,
          c'est un compte déclaré non résolu, pas un compte silencieusement nul. */
       try {
+        /* UN ZOMBIE N'EST PAS UN PROCESSUS RÉSIDENT (revue Codex du 13/09,
+           constat SÉRIEUX). Un enfant terminé et non récolté garde son pid et
+           son `comm=node`, mais son `exe` est illisible : il serait compté
+           comme une charge qu'il n'exerce pas, et la garde refuserait une
+           machine pourtant au repos — ce qui pousse à relâcher le seuil,
+           c'est-à-dire exactement ce que la règle interdit. Le 3ᵉ champ de
+           `/proc/<pid>/stat` est l'état ; « Z » est un zombie. Le nom du
+           processus y est entre parenthèses et peut contenir des espaces :
+           on coupe après la DERNIÈRE parenthèse fermante. */
+        const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
+        const etat = stat.slice(stat.lastIndexOf(')') + 1).trim().split(/\s+/)[0];
+        if (etat === 'Z' || etat === 'X') return null;
         return { nom: readFileSync(`/proc/${pid}/comm`, 'utf8').trim(), source: 'comm' };
       } catch { return null; }
     }
@@ -264,7 +276,48 @@ export function compterProcessus() {
  * ne fait que trancher — d'où sa testabilité dans les deux sens.
  * @returns {{valide: boolean, motif: string}}
  */
+/* CE QUE LA GARDE FAIT DES PIDS QU'ELLE N'A PAS PU RÉSOUDRE (revue Codex du
+   13/09, constat SÉRIEUX). Le scénario : un `node` visible, et 24 `node`
+   appartenant à un autre utilisateur, renommés, dont `exe` est inaccessible.
+   Leur `comm` ne correspond à aucune famille connue, donc `total = 1`,
+   `nonResolus = 24` — et la garde laissait partir la campagne parce qu'elle ne
+   jugeait que le total. C'est le même principe que partout ailleurs dans ce
+   fichier : **ne pas savoir n'est jamais un feu vert.** La garde juge donc
+   aussi la BORNE PESSIMISTE `total + nonResolus`, et refuse quand elle dépasse
+   le plafond, en le disant autrement qu'un dépassement franc.
+   CONSÉQUENCE ASSUMÉE : sur une machine où beaucoup de pids appartiennent à
+   d'autres utilisateurs, la garde refusera. Ce n'est pas un défaut — c'est
+   l'aveu qu'on ne peut pas y prouver une machine au repos, et le CEO a demandé
+   qu'on le lui dise plutôt que de le contourner. */
 export function deciderValidite(compteDebut, plafond = PLAFOND_PROCESSUS) {
+  /* On accepte le nombre (usage historique, et les parcours qui l'éprouvent)
+     comme l'objet complet rendu par `compterProcessus`. */
+  if (compteDebut && typeof compteDebut === 'object') {
+    const { total, nonResolus } = compteDebut;
+    const franc = deciderValidite(total, plafond);
+    if (!franc.valide) return franc;
+    if (!Number.isFinite(nonResolus)) {
+      return {
+        valide: false,
+        motif: 'nombre de pids non résolus inconnu — une campagne dont on ignore '
+          + 'ce qu’on n’a pas vu n’est pas une campagne gardée.',
+      };
+    }
+    if (total + nonResolus > plafond) {
+      return {
+        valide: false,
+        motif: `${total} processus reconnus, mais ${nonResolus} pids n’ont pas pu être `
+          + `résolus à la source fiable : au pire ${total + nonResolus} processus pour un `
+          + `plafond de ${plafond}. Campagne REJETÉE — on ne peut pas prouver que cette `
+          + 'machine est au repos, et ne pas savoir n’est jamais un feu vert.',
+      };
+    }
+    return {
+      valide: true,
+      motif: `${franc.motif} (${nonResolus} pids non résolus, borne pessimiste `
+        + `${total + nonResolus}, toujours sous le plafond).`,
+    };
+  }
   if (!Number.isFinite(compteDebut)) {
     return {
       valide: false,
@@ -322,9 +375,10 @@ export function jugerDerive(compteDebut, compteFin, hausseSuspecte = HAUSSE_SUSP
  */
 export function exigerMachineAuRepos(journaliser = console.error) {
   const compte = compterProcessus();
-  const verdict = deciderValidite(compte.total);
+  const verdict = deciderValidite(compte);
   journaliser(`[garde] node=${compte.node} chrome=${compte.chrome} `
-    + `total=${compte.total} plafond=${PLAFOND_PROCESSUS} (${compte.horodatage})`);
+    + `total=${compte.total} nonResolus=${compte.nonResolus} `
+    + `plafond=${PLAFOND_PROCESSUS} source=${compte.source} (${compte.horodatage})`);
   if (!verdict.valide) {
     journaliser('');
     journaliser('CAMPAGNE REJETÉE AUTOMATIQUEMENT.');

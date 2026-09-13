@@ -244,6 +244,7 @@ export function jugerCalcul(brut) {
   const socle = {
     mesure: false,
     dureeCalculMs: null,
+    dureeCalculInterneMs: null,
     dureeItineraireMs: null,
     dureeAffichageMs: null,
     naturePlan: brut.naturePlan ?? null,
@@ -258,28 +259,45 @@ export function jugerCalcul(brut) {
     };
   }
   const observeMs = ms((brut.dernierRegard ?? brut.departA) - brut.departA);
-  if (brut.planPretA === null || brut.planPretA === undefined) {
+  /* LE CRITERE EXIGE UN PLAN LISIBLE A L'ECRAN, PAS SEULEMENT ECRIT (revue
+     Codex du 13/09, constat SERIEUX). La feuille de releve mobile dit « quand
+     les arrets sont affiches et lisibles ». Un plan ecrit dans une vue cachee
+     satisfaisait `planPretA` et publiait une duree sous le nom du critere :
+     c'etait la meme faute que celle qu'on vient de corriger, d'un cran plus
+     fine. Le critere est donc `planLisibleA` ; `planPretA` reste publie, mais
+     sous son propre nom, `dureeCalculInterneMs`, et il ne peut pas etre pris
+     pour le critere. */
+  const interneMs = ms(brut.planPretA === null || brut.planPretA === undefined
+    ? null : brut.planPretA - brut.departA);
+  if (brut.planLisibleA === null || brut.planLisibleA === undefined) {
     return {
       ...socle,
       observeSansPlanMs: observeMs,
+      dureeCalculInterneMs: interneMs,
       dureeItineraireMs: ms(brut.itiPretA === null || brut.itiPretA === undefined
         ? null : brut.itiPretA - brut.departA),
-      motif: `aucun plan de recharge lisible après ${observeMs} ms observées. `
-        + 'AUCUNE durée de calcul n’est publiée : elle serait bornée par la fenêtre '
-        + 'd’observation, donc elle dirait la durée de notre regard et non celle du calcul.',
+      motif: interneMs === null
+        ? `aucun plan de recharge lisible après ${observeMs} ms observées. `
+          + 'AUCUNE durée de calcul n’est publiée : elle serait bornée par la fenêtre '
+          + 'd’observation, donc elle dirait la durée de notre regard et non celle du calcul.'
+        : `le plan a été ÉCRIT au bout de ${interneMs} ms mais n’a JAMAIS été lisible à `
+          + `l’écran pendant les ${observeMs} ms observées. Aucune durée n’est publiée sous `
+          + 'le nom du critère : la feuille de relevé mobile mesure jusqu’aux arrêts '
+          + '« affichés et lisibles », pas jusqu’à un plan écrit dans une vue cachée.',
     };
   }
-  const duree = ms(brut.planPretA - brut.departA);
+  const duree = ms(brut.planLisibleA - brut.departA);
   return {
     ...socle,
     mesure: true,
     dureeCalculMs: duree,
+    dureeCalculInterneMs: interneMs,
     dureeItineraireMs: ms(brut.itiPretA === null || brut.itiPretA === undefined
       ? null : brut.itiPretA - brut.departA),
-    dureeAffichageMs: ms(brut.planLisibleA === null || brut.planLisibleA === undefined
-      ? null : brut.planLisibleA - brut.departA),
+    dureeAffichageMs: duree,
     motif: `calcul mesuré du geste de lancement jusqu’au ${brut.naturePlan === 'refus'
-      ? 'refus motivé' : 'plan de recharge'} écrit, voile d’attente retiré : ${duree} ms.`,
+      ? 'refus motivé' : 'plan de recharge'} LISIBLE à l’écran : ${duree} ms `
+      + `(plan écrit à ${interneMs} ms).`,
   };
 }
 
