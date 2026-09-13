@@ -173,6 +173,10 @@ function attributVise(motif, element) {
   }
 }
 
+/* Les pseudo-classes qui décrivent un ÉTAT : elles ne sont pas vraies au repos,
+   donc une règle qui n'existe que sous elles n'éteint rien à l'ouverture. */
+const PSEUDO_DYNAMIQUE = /^:(?:hover|focus|focus-visible|focus-within|active|target|target-within|visited|link|any-link|checked|indeterminate|disabled|enabled|read-only|read-write|placeholder-shown|autofill|default|valid|invalid|in-range|out-of-range|user-valid|user-invalid|open|popover-open|modal|fullscreen|picture-in-picture|playing|paused|muted|buffering|seeking|stalled)\b/i;
+
 const MORCEAU_COMPOUND = /^[a-z][a-z0-9-]*|\.[A-Za-z0-9_-]+|#[A-Za-z0-9_-]+|\[[^\]]*\]|::?[A-Za-z-]+(?:\([^)]*\))?/gi;
 
 function compoundVise(compound, element) {
@@ -187,7 +191,14 @@ function compoundVise(compound, element) {
     } else if (morceau.startsWith('#')) {
       return false; // le bandeau n'a pas d'identifiant
     } else if (morceau.startsWith(':')) {
-      return false; // `:hover` n'est pas l'état au repos, et c'est lui qui compte
+      /* TOUTES LES PSEUDO-CLASSES NE SE VALENT PAS (11e revue Codex). `:hover`
+         n'est pas l'état au repos — et c'est l'état au repos qui compte pour
+         un testeur qui ouvre la page. Un pseudo-élément (`::before`) n'est pas
+         l'élément. Mais `:not(.inactif)` s'applique AU REPOS, et l'écarter
+         laissait passer `.previsualisation-cadre:not(.inactif) { display:none }`.
+         Celles qu'on ne sait pas évaluer sont donc RETENUES. */
+      if (morceau.startsWith('::')) return false;
+      if (PSEUDO_DYNAMIQUE.test(morceau)) return false;
     } else if (morceau.startsWith('[')) {
       if (!attributVise(morceau, element)) return false;
     } else if (morceau.toLowerCase() !== element.balise) {

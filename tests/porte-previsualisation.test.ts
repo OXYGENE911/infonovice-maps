@@ -646,6 +646,16 @@ ${contenu}
     expect(poseCss('.previsualisation-cadre:hover { display: none; }')).toEqual('');
   });
 
+  it('mais « :not(.inactif) », lui, s’applique AU REPOS', () => {
+    // Écarter toutes les pseudo-classes laissait passer celle-ci (11e revue).
+    expect(poseCss('.previsualisation-cadre:not(.inactif) { display: none; }'))
+      .toMatch(/invisible/);
+  });
+
+  it('et « ::before » stylise une boîte engendrée, pas l’élément', () => {
+    expect(poseCss('.previsualisation-cadre::before { display: none; }')).toEqual('');
+  });
+
   it('une règle dans un bloc @media est lue, elle aussi', () => {
     expect(poseCss('@media (min-width: 1px) { .previsualisation-cadre { display: none; } }'))
       .toMatch(/invisible/);
