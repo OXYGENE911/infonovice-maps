@@ -1266,12 +1266,28 @@ export class PanneauItineraire extends HTMLElement {
          navigation privée…) — sans elle, un préchargement terminé AVANT le
          calcul (le cas courant, celui que ce préchargement vise) pouvait
          être suivi d'un second téléchargement si le disque avait refusé le
-         premier. Thermique/hybride exclu : ce véhicule ne consulte jamais
-         l'index IRVE. Le `.catch` évite qu'un rejet de promesse non suivi
+         premier. Le `.catch` évite qu'un rejet de promesse non suivi
          (préchargement seul, sans calcul déclenché ensuite) remonte comme
-         une erreur non gérée. */
-      void lirePreference<unknown>(PREF_VEHICULE).then((memo) => {
-        if (!estThermique(memo)) void indexNational().catch(() => { /* voir commentaire ci-dessus */ });
+         une erreur non gérée.
+
+         LE GARDE EST `#lireVehicule()`, ET NON « pas thermique » (régression
+         introduite par cette PR, corrigée le 13/09/2026 au C10 ; le test qui
+         la tenait est `tests-e2e/recharge.spec.ts:778`, antérieur à la PR) :
+         `panneau-vehicule.ts` restaure un véhicule électrique par défaut au
+         chargement de la page même quand personne n'a jamais rien saisi
+         (capacité à 0), et l'événement `vehicule-change` partait alors tout
+         seul. « Pas thermique » était vrai pour ce profil vide, et l'index
+         se téléchargeait sans qu'aucun usager ne l'ait demandé — en
+         violation de la règle « ne jamais marteler les API publiques sans
+         demande », celle-là même que ce préchargement doit respecter.
+         `#lireVehicule()` est le filtre qui décide RÉELLEMENT si un plan de
+         recharge peut se calculer (batterie ET consommation renseignées) :
+         précharger pour un profil que le planificateur rejetterait de toute
+         façon n'anticipe rien. L'optimisation elle-même — précharger dès
+         qu'un véhicule électrique COMPLET est connu, avant même le calcul —
+         reste entière. */
+      void this.#lireVehicule().then((profil) => {
+        if (profil) void indexNational().catch(() => { /* voir commentaire ci-dessus */ });
       });
 
       if (!this.#dernier) return;

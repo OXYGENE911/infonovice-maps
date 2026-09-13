@@ -4,6 +4,45 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 
 ## [Non publié] — 2026-09-11 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
 
+### 13/09/2026 (C10) — la régression que cette PR introduisait est corrigée ICI
+
+- **`tests-e2e/recharge.spec.ts:778` (« AUCUN appel tant que la section est
+  repliée ») redevient vert.** Le préchargement de l'index IRVE ci-dessous
+  gardait sur « le véhicule n'est pas thermique ». Or `panneau-vehicule.ts`
+  restaure au chargement de la page un véhicule électrique par défaut, même
+  quand personne n'a jamais rien saisi (capacité à 0) : `vehicule-change`
+  partait tout seul, « pas thermique » était vrai, et l'index national se
+  téléchargeait **sans qu'aucun usager ne l'ait demandé** — la violation
+  exacte de la règle « ne jamais marteler les API publiques sans demande »
+  que ce préchargement est censé respecter. Le garde est désormais
+  `#lireVehicule()`, le filtre qui décide RÉELLEMENT si un plan de recharge
+  peut se calculer (batterie ET consommation renseignées) : précharger pour
+  un profil que le planificateur rejetterait n'anticipe rien.
+  L'optimisation, elle, reste entière.
+- **Aucun test affaibli.** Le test qui tenait la régression est antérieur à
+  cette PR (identique au blob près sur `origin/staging`) et n'a pas été
+  touché. Contre-épreuve faite dans les deux sens le 13/09 : garde remis à
+  `estThermique` → `expect(appels).toBe(0)` reçoit 1, test rouge ; garde
+  restauré → vert. Les 35 parcours de `recharge.spec.ts` passent, et les
+  1 705 tests unitaires aussi.
+- **Cette correction vivait jusqu'ici dans la PR #315** (commit `5edacd1`).
+  Elle rentre dans la PR qui a causé la régression : une PR ne laisse pas sa
+  propre régression à corriger par une autre.
+
+### 13/09/2026 — ce que valent les chiffres de performance ci-dessous
+
+**Ils ont été pris sur le poste de développement, sur cette branche, et cette
+branche n'a jamais atteint `staging`.** Vérifié le 13/09 : `src/lib/arrets.ts`
+et `src/carte/panneau-itineraire.ts` sont identiques au blob près entre la
+tête du 10/09 et `origin/staging` — le produit calcule aujourd'hui comme le
+10 septembre. La seule mesure prise sur matériel neutre à ce jour est celle
+de la CI sur la PR #306 (exécution `34744537962`, commit `bbb7a7d`, dont
+`src/` est identique à `origin/staging`) : **5 251 ms, au-dessus du seuil de
+5 s.** Elle mesure donc `staging`, pas cette optimisation. Le chiffre qui
+tranchera est celui que la CI rendra sur CETTE branche, et il est cité dans
+la description de la PR.
+
+
 ### Paris → Lyon, plan de recharge inclus, sous 5 secondes
 - **Le calcul mesuré par le banc T3 (`docs/mesure-paris-lyon.md`) passait
   systématiquement le seuil de 5 s (p95 6 704 à 9 454 ms sur trois passages,
@@ -27,9 +66,10 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   calcul : `indexNational` dédoublonne les appels réellement concurrents et
   sert le cache IndexedDB existant, donc précharger plus tôt le même appel
   unique n'en ajoute aucun. Le premier calcul d'une session payait jusqu'à
-  plusieurs secondes de ce seul téléchargement (~700 Ko). Gate `estThermique` :
-  un véhicule thermique/hybride ne consulte jamais l'index IRVE, aucun
-  préchargement inutile. **`indexNational` (`src/lib/index-bornes.ts`) garde
+  plusieurs secondes de ce seul téléchargement (~700 Ko). **Le garde est
+  `#lireVehicule()`** — batterie ET consommation renseignées — et non « pas
+  thermique » : voir la correction du 13/09 en tête de cette entrée.
+  **`indexNational` (`src/lib/index-bornes.ts`) garde
   aussi, depuis la revue Codex (remarque 2 du second passage), une mémoire de
   session en plus d'IndexedDB** : sans elle, un préchargement terminé AVANT
   le calcul (le cas courant) pouvait être suivi d'un second téléchargement si
