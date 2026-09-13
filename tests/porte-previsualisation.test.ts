@@ -1049,9 +1049,23 @@ describe('les cinq trous que la porte assume, et qu’elle déclare', () => {
     expect(poseCss('.previsualisation-pastille { text-indent: -999px; }')).toEqual([]);
   });
 
-  it('3. un déplacement hors écran passe — il faudrait connaître la fenêtre', () => {
-    expect(poseCss('.previsualisation-cadre { transform: translateX(-99999px); }')).toEqual([]);
-    expect(poseCss('.previsualisation-cadre { left: -9999px; }')).toEqual([]);
+  /* LES HUIT DÉCLARATIONS SONT TESTÉES, PAS DEUX. Écrire huit exemples dans la
+     liste et n'en tenir que deux referait, en plus petit, la faute qu'on vient
+     de corriger : une liste qui affirme plus que ce qu'elle garde. */
+  it('3. la géométrie de la boîte passe — il faudrait connaître la fenêtre et peindre', () => {
+    for (const regle of [
+      '.previsualisation-cadre { transform: translateX(-99999px); }',
+      '.previsualisation-cadre { translate: -99999px; }',
+      '.previsualisation-cadre { left: -9999px; }',
+      '.previsualisation-cadre { top: 100vh; }',
+      '.previsualisation-cadre { inset: 100%; }',
+      '.previsualisation-pastille { margin-left: -9999px; }',
+      '.previsualisation-cadre { position: static; }',
+      '.previsualisation-cadre { contain: strict; }',
+    ]) {
+      const griefs = poseCss(regle);
+      expect(griefs, `${regle} → ${griefs.join(' | ')}`).toEqual([]);
+    }
   });
 
   it('4. « z-index: -1 » passe — la porte ne compose pas les feuilles entre elles', () => {
