@@ -2963,8 +2963,13 @@ export class BandeauGuidage extends HTMLElement {
        l'écusson de la route qu'on quitte comme celui de la route à prendre :
        une information fausse, et sur un panneau de direction c'est pire que
        le silence. Quand la voie visée existe mais ne se lit pas, on se tait. */
-    const brutVisee = e.horsRoute ? '' : (e.manoeuvre?.voie ?? '');
-    const voieVisee = brutVisee === '' ? voieCourante : (voieLisible(brutVisee) ?? '');
+    /* ABSENT N'EST PAS VIDE, et la revue Codex du 13/09 a relevé la nuance :
+       `versEtapes` rend TOUJOURS le champ, parfois à vide. Une chaîne vide
+       dit « cette voie n'a pas de nom » — il n'y a rien à mettre à la
+       place ; seul un champ MANQUANT justifie de retomber sur la voie
+       courante, comme avant TERRAIN-2. */
+    const brutVisee = e.horsRoute ? '' : (e.manoeuvre?.voie ?? null);
+    const voieVisee = brutVisee === null ? voieCourante : (voieLisible(brutVisee) ?? '');
     const classe = classeRoute(voieVisee);
     cartouche.hidden = !e.manoeuvre && !e.horsRoute;
     cartouche.dataset['classe'] = classe;

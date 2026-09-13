@@ -115,8 +115,25 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
      la voie visée était ILLISIBLE : le panneau affichait alors l'écusson de la
      route qu'on QUITTE comme celui de la route à PRENDRE. Le repli ne vaut plus
      que pour un champ absent ; une voie visée illisible fait taire l'écusson.
+- **Trois constats de plus à la seconde revue Codex, corrigés aussi** :
+  1. *(bloquant)* le parcours du critère promettait « la phrase rendue
+     ENTIÈREMENT », et ne vérifiait que le DOM. **Être dans le DOM n'est pas
+     être à l'écran** : `.bg-instruction` hérite d'un `overflow:hidden`, une
+     troisième ligne écrêtée aurait la même hauteur peinte qu'une phrase qui
+     tient. La preuve est désormais l'ÉGALITÉ des deux hauteurs, et le même
+     contrôle s'applique à la ligne secondaire hors coupe ;
+  2. **la casse faisait passer une clé technique**. Le libellé de voie est
+     capitalisé avant d'atteindre la règle — **mesuré : `versEtapes` rend
+     « Osm:name » pour un champ `osm:name`** — et le motif, ancré sur une
+     minuscule, ne le voyait plus. Il traversait alors les quatre sorties,
+     voix comprise. Le motif ne dépend plus de la casse ;
+  3. **absent n'est pas vide** : `versEtapes` rend toujours le champ `voie`,
+     parfois à vide. Le repli sur la voie courante, resserré au premier tour,
+     se déclenchait encore sur une chaîne vide — et affichait l'écusson de la
+     route quittée pour une manœuvre vers une voie sans nom. Il ne vaut plus
+     que pour un champ MANQUANT.
 - **Aucune assertion n'a été affaiblie pour obtenir du vert** : neuf parcours à 360 px
-  et soixante-dix tests unitaires ajoutés, dont un parcours qui FORCE le
+  et quatre-vingts tests unitaires ajoutés, dont un parcours qui FORCE le
   dernier recours sur toute police (un texte qui ne tient sur aucune) et affirme,
   dans le navigateur, que le plafond est bien posé et que la boîte peinte tient.
 

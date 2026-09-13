@@ -40,9 +40,14 @@ const ELEMENT_OSM_COURT = /^[nwr]\/?\d{4,}$/i;
    Relation 12 » n'y ressemble pas, « OSM node 48219 » si. */
 const ELEMENT_OSM_DEDANS = /\b(?:way|node|relation|osm)\b[\s/:#-]{0,2}\d{3,}/i;
 /* UNE CLÉ TECHNIQUE EN TÊTE : « osm:name », « ref=A4 », « addr:street ».
-   Le préfixe est en minuscules ASCII et COLLÉ à son séparateur — « Paris :
-   centre » et « Saint-Étienne » n'y ressemblent pas. */
-const CLE_TECHNIQUE = /^[a-z][a-z0-9-]*[:=]/;
+   Le préfixe est COLLÉ à son séparateur — « Paris : centre » et
+   « Saint-Étienne » n'y ressemblent pas.
+   ET LA CASSE NE COMPTE PAS, relevé par la revue Codex du 13/09 : le libellé
+   de voie est CAPITALISÉ avant d'arriver ici — mesuré, `versEtapes` rend
+   « Osm:name » pour un champ `osm:name` — et un motif ancré sur une
+   minuscule ne le voyait plus. La règle doit juger la même chaîne quelle que
+   soit la main qui l'a mise en forme. */
+const CLE_TECHNIQUE = /^[a-z][a-z0-9-]*[:=]/i;
 /* UNE LONGUE SUITE DE CHIFFRES. LE SEUIL DÉPEND DE CE QU'ON LIT, et c'est la
    revue Codex qui l'a montré : « Impasse des 10000 Martyrs Pinet » existe
    vraiment, à Eyzin-Pinet (38), et la règle l'effaçait. Un nom en plusieurs

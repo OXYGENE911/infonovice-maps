@@ -54,6 +54,14 @@ describe('nomLisible — L’IDENTIFIANT BRUT : on se tait', () => {
     ['motorway_junction', 'valeur technique OSM — le souligné la trahit'],
     ['traffic_signals', 'valeur technique OSM'],
     ['osm:name', 'clé technique en tête'],
+    /* LA CASSE NE SAUVE PAS UNE CLÉ TECHNIQUE — relevé par la revue Codex du
+       13/09. Le libellé de voie est capitalisé avant d'arriver à la règle :
+       MESURÉ, `versEtapes` rend « Osm:name » pour un champ `osm:name`, et le
+       motif ancré sur une minuscule ne le voyait plus. Il traversait alors
+       les quatre sorties — écran, écusson, feuille imprimée, VOIX. */
+    ['Osm:name', 'la même clé, capitalisée par la mise en forme du libellé'],
+    ['Addr:street', 'clé technique capitalisée'],
+    ['REF=A4', 'clé technique en capitales'],
     ['ref=A4', 'clé technique avec égal'],
     ['addr:street', 'clé technique'],
     ['FR75056', 'code d’un seul tenant, capitales et chiffres'],
@@ -188,5 +196,21 @@ describe('motifIdentifiant — LE MOTIF, ET PAS SEULEMENT LE VERDICT', () => {
   it('rend null sur un nom lisible', () => {
     expect(motifIdentifiant('Rue de Rivoli')).toBeNull();
     expect(motifIdentifiant('A6')).toBeNull();
+  });
+});
+
+describe('voieLisible — LA CASSE NE FAIT PAS PASSER UN IDENTIFIANT', () => {
+  /* Le chemin réel : le service rend `osm:name`, `libelleVoie` capitalise,
+     et c’est « Osm:name » qui arrive à la règle. Relevé par Codex le 13/09. */
+  const capitalises = ['Osm:name', 'Addr:street', 'Ref=A4', 'Motorway_junction'];
+  for (const c of capitalises) {
+    it(`efface « ${c} » — la mise en forme du libellé ne le sauve pas`, () => {
+      expect(voieLisible(c)).toBeNull();
+      expect(nomLisible(c)).toBeNull();
+    });
+  }
+
+  it('et ne mange pas un nom qui porte un deux-points détaché', () => {
+    expect(voieLisible('Marseille : port')).toBe('Marseille : port');
   });
 });

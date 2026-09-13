@@ -185,10 +185,18 @@ test('LA PHRASE DU CRITÈRE TIENT ENTIÈREMENT SUR 360 px, EN DEUX LIGNES AU PLU
     { timeout: 5_000 }).toBeLessThanOrEqual(2);
 
   const m = await mesurer(page, '.bg-cartouche .bg-instruction');
-  expect(m.texte, 'la phrase doit être rendue ENTIÈREMENT').toBe(PHRASE);
+  expect(m.texte, 'la phrase doit être rendue ENTIÈREMENT dans le DOM').toBe(PHRASE);
   expect(m.coupe, 'aucune ellipse : la phrase tient par réduction de police').toBe(false);
   expect(m.deborde, 'le texte déborde de sa propre boîte').toBe(false);
   expect(m.lignes, 'jamais une troisième ligne').toBeLessThanOrEqual(2);
+  /* ET RIEN N'EST CACHÉ — relevé par la revue Codex du 13/09. Être dans le
+     DOM n'est pas être À L'ÉCRAN : `.bg-instruction` hérite d'un
+     `overflow:hidden`, et une troisième ligne écrêtée aurait la même
+     `clientHeight` qu'une phrase qui tient. La preuve de « rendue
+     entièrement », c'est l'ÉGALITÉ des deux hauteurs. */
+  expect(m.lignesContenu,
+    'une ligne est écrêtée : la phrase n’est pas entièrement À L’ÉCRAN')
+    .toBe(m.lignes);
 
   /* ET IL NE SORT PAS DU PANNEAU : la boîte du texte tient dans celle du
      cartouche, qui est la tôle. */
@@ -225,6 +233,12 @@ test('UNE LIGNE SECONDAIRE INTERMINABLE S’ARRÊTE À DEUX LIGNES, SANS CHEVAUC
   const d = await mesurer(page, '.bg-destination');
   expect(d.lignes, 'jamais une troisième ligne PEINTE').toBeLessThanOrEqual(2);
   expect(d.deborde, 'la ligne secondaire déborde de sa boîte').toBe(false);
+  /* SANS COUPE POSÉE, RIEN NE DOIT ÊTRE CACHÉ : un écrêtage silencieux
+     serait le défaut d'Armelin, déguisé en réparation. */
+  if (!d.coupe) {
+    expect(d.lignesContenu,
+      'du texte est écrêté sans que la coupe l’ait décidé').toBe(d.lignes);
+  }
   /* ET LA BOÎTE EST MESURÉE EN PIXELS, pas seulement en lignes arrondies. */
   expect(d.boite.hauteur, 'la boîte peinte tient en deux interlignes')
     .toBeLessThanOrEqual(2 * d.interligne + 1);
