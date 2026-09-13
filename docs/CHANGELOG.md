@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.144.0] — 2026-09-13 — TERRAIN-2
+## [1.145.0] — 2026-09-13 — TERRAIN-2
 
 ### Le panneau de guidage se lit : jamais d'identifiant brut, jamais plus de deux lignes
 - **Le défaut vient d'un usager, pas d'un test.** Armelin, son téléphone en
@@ -246,7 +246,7 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   façon d'attendre qui a changé. Contre-épreuve : sans événement de trafic, la
   garde rougit toujours (délai dépassé sur le prédicat).
 
-## [Non publié] — 2026-09-11 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
+## [1.142.1] — 2026-09-13 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
 
 ### 13/09/2026 (C10) — la régression que cette PR introduisait est corrigée ICI
 
