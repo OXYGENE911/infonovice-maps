@@ -59,6 +59,10 @@ export default defineConfig({
         'sans-reseau': resolve(__dirname, 'sans-reseau.html'),
         'mentions-legales': resolve(__dirname, 'mentions-legales.html'),
         pro: resolve(__dirname, 'pro.html'),
+        /* SALON-1 (11/09) : la page du stand. Pas de lien depuis le reste du
+           site (spec-accueil-salon.md §1) — on y arrive par le QR ou en
+           tapant l'adresse, donc rien à câbler dans l'application. */
+        salon: resolve(__dirname, 'salon.html'),
       },
       output: {
         // MapLibre pèse ~230 Ko gzippé à lui seul : il vit dans son propre
@@ -89,8 +93,13 @@ export default defineConfig({
       manifest: {
         name: 'Infonovice Maps',
         short_name: 'Maps',
+        // CORRECTION (SALON-1, 11/09) : dernière trace du mot retiré du
+        // discours public le 06/09 (voir CLAUDE.md) — celle-ci était
+        // affichée par le navigateur À L'INSTALLATION, donc publique et non
+        // explicative. Alignée sur index.html. Ce n'est pas une nouvelle
+        // décision, juste son application oubliée ici ; signalé au CEO.
         description:
-          'Cartographie et itinéraires souverains : l’alternative française à Google Maps.',
+          'Cartographie française et open source : itinéraires, recharge et guidage, sans traceur.',
         lang: 'fr',
         start_url: BASE,
         display: 'standalone',
@@ -162,7 +171,7 @@ export default defineConfig({
            ses motifs à `pathname + search`, pas au seul chemin. Le « (^|/) »
            de tête laisse passer une base autre que la racine. */
         navigateFallbackDenylist: [
-          /(^|\/)(a-propos|offre-flottes|vie-privee|mentions-legales|pro)\.html(\?|$)/,
+          /(^|\/)(a-propos|offre-flottes|vie-privee|mentions-legales|pro|salon)\.html(\?|$)/,
         ],
       },
     }),
