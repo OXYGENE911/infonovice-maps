@@ -437,18 +437,47 @@ le `waitForFunction` de la ligne précédente attend de voir franchir 10 000 ms.
 se referme (une grandeur du PRODUIT, indépendante de notre patience), la fenêtre observée sinon —
 et le contrôle passe **avant** `refermee`, pour que la barre des huit secondes rougisse elle-même.
 
-**La contre-épreuve, rejouée** — poste Windows, port dédié 4193, `npm run build` avant chaque
-passe (`vite preview` ne reconstruit pas) :
+**La commande publiée le 13/09 pour cette contre-épreuve n'était pas rejouable, et elle est
+corrigée** (constat du vérificateur, C9). Elle citait
+`--config=playwright.contre-epreuve.config.ts`, un fichier qui **n'a jamais existé dans ce dépôt** —
+`git log --all -S "contre-epreuve.config"` ne rend rien — parce que la configuration d'alors, sur un
+port dédié 4193, n'a jamais été committée. Un tiers ne pouvait donc pas relancer cette
+contre-épreuve. **La séquence ci-dessous n'utilise que des fichiers committés :**
+
+    # 1. la régression : dans src/carte/panneau-itineraire.ts, le `catch` remasque le bouton
+    #    (comportement d'avant 7361d65) — remplacer, à la ligne du catch du plafond dur,
+    #    `if (this.#abandonAnnonce === jeton) {` par `if (this.#abandonAnnonce === -1) {`
+    npm run build          # OBLIGATOIRE : `vite preview` ne reconstruit pas
+    npx playwright test tests-e2e/sonde-chrono.spec.ts --reporter=line
+    # 2. restaurer la ligne, puis :
+    npm run build
+    npx playwright test tests-e2e/sonde-chrono.spec.ts --reporter=line
+
+Précondition : **aucun autre serveur de prévisualisation ne doit servir le port 4173** — la
+configuration committée pose `reuseExistingServer: !process.env.CI`, et Playwright jugerait alors le
+`dist/` d'un autre arbre de travail. C'est ce piège-là qui avait fait naître le port 4193.
+
+**La contre-épreuve, REJOUÉE le 13/09 (C9) avec cette séquence exacte**, poste Windows :
 
 | passe | source du produit | verdict | ligne rouge |
 |---|---|---|---|
-| 1 | jeton d'abandon neutralisé (`#abandonAnnonce === -1`) — le `catch` du plafond dur remasque le bouton, comportement d'avant `7361d65` | **ROUGE** | `sonde-chrono.spec.ts:411` — « reçu 1 484 ms, attendu ≥ 8 000 », motif « porte ouverte puis REFERMÉE sous nos yeux : durée de vie réelle 1484 ms » |
-| 2 | même régression, **assertion d'origine** remise | ROUGE, mais **ailleurs** | `sonde-chrono.spec.ts:388`, sur `refermee` — la ligne des 8 000 n'est jamais atteinte, et elle n'aurait comparé qu'un `null` à 8 000 |
-| 3 | produit restauré, assertion corrigée | **VERT** | les 4 parcours du fichier en 1,1 min |
+| 1 | jeton d'abandon neutralisé (`#abandonAnnonce === -1`) — le `catch` du plafond dur remasque le bouton, comportement d'avant `7361d65` | **ROUGE** | `sonde-chrono.spec.ts:411` — « Expected: >= 8000 / Received: 1516 », motif « porte ouverte puis REFERMÉE sous nos yeux : durée de vie réelle 1516 ms ». 1 failed, 3 passed (47,9 s) |
+| 2 | produit restauré, assertion corrigée | **VERT** | les 4 parcours du fichier, `4 passed (47,0 s)` |
 
-La passe 2 est le point exact de l'objection : l'ancien parcours attrapait bien cette régression,
-mais **par une autre ligne**. Le nombre 8 000 n'a jamais été confronté à une durée mesurée ; il
-l'est désormais. Aucune barre n'a bougé : 8 000 reste 8 000.
+*La valeur rouge relevée en C9 (1 516 ms) n'est pas exactement celle du 13/09 au matin (1 484 ms) :
+c'est une durée de vie réelle, mesurée sur une machine chargée, et elle varie de quelques dizaines de
+millisecondes d'une passe à l'autre. Ce qui ne varie pas, c'est la ligne qui rougit et l'ordre de
+grandeur — une seconde et demie contre huit exigées.*
+
+**La passe qui manque volontairement, et pourquoi.** Le 13/09 au matin, une passe 2 remettait
+l'assertion d'origine sur le produit régressé pour montrer qu'elle rougissait **ailleurs**
+(`sonde-chrono.spec.ts:388`, sur `refermee`) : c'est le point exact de l'objection, mais il exige de
+remettre une assertion qu'on a justement corrigée. Elle n'est pas rejouée ici — **ce document ne la
+présente donc plus comme un relevé de cette passe**, seulement comme l'histoire de l'objection.
+
+Ce qu'elle établissait : l'ancien parcours attrapait bien cette régression, mais **par une autre
+ligne**. Le nombre 8 000 n'avait jamais été confronté à une durée mesurée ; il l'est désormais, et la
+passe 1 ci-dessus le remontre. Aucune barre n'a bougé : 8 000 reste 8 000.
 
 **CE QUI RESTE VRAI PAR CONSTRUCTION, ET QU'IL FAUT DIRE** (revue Codex du 13/09 sur le commit de
 finition) : dans la branche *porte jamais refermée*, la grandeur comparée reste
@@ -585,39 +614,69 @@ le nom fait 16 caractères n'était jamais reconnu. `chromium-browser` en fait e
 un navigateur que la garde doit compter. Un parcours le fixe désormais. La source du noyau rend le
 chemin complet de l'exécutable : pas de troncature, donc pas cet angle mort.
 
-### Ce que coûte la garde, mesuré
+### Ce que coûte la garde, mesuré — et le relevé RETIRÉ le 13/09 (C9)
 
-Trois appels consécutifs à `compterProcessus()` sur ce poste chargé : **12 637 ms, 10 124 ms,
-3 059 ms**. `tasklist` est lent quand la machine l'est — et une campagne le paye deux fois. Les
-parcours du bloc « le comptage réel » partagent donc une seule lecture.
+**Ce paragraphe annonçait 12 637 ms, 10 124 ms, 3 059 ms pour trois appels consécutifs à
+`compterProcessus()`. Ce relevé est retiré.** Aucune commande ne le produisait — la colonne
+« commande » du tableau ci-dessous portait la mention « relevé du 13/09, reporté tel quel », ce qui
+n'est pas une commande —, et **deux mesures indépendantes le démentent d'un facteur ~28** : le
+vérificateur du 13/09 a relevé 454 / 443 / 424 ms, et la commande rejouable ci-dessous
+420 / 418 / 430 ms. Un chiffre que personne ne peut rejouer n'est pas une mesure : il sort du
+document, et la dérivation qu'il portait sort avec lui.
 
-### Les délais de `tests/garde-processus.test.ts`, dérivés d'un relevé (13/09)
+Ce que coûte réellement une lecture sur ce poste : **420 ms machine peu chargée (`node=24`), jusqu'à
+2 927 ms sous la charge de deux suites simultanées (`node=45` à `48`)** — tous ces nombres sont des
+lignes du journal `[garde]`, reproduites plus bas. `tasklist` liste toute la table des processus, et
+une campagne la lit deux fois. Les parcours du bloc « le comptage réel » partagent donc une seule
+lecture — pour ne pas refaire trois fois le même travail, et non parce que le délai par défaut de
+Vitest serait menacé.
+
+### Les délais de `tests/garde-processus.test.ts` : des plafonds larges, et un journal qui mord
 
 Le vérificateur a relevé trois délais de parcours portés à soixante secondes. Un délai de parcours
 n'est pas une assertion — l'allonger ne déplace aucune barre —, mais il **absorbe en silence** une
-lenteur qu'on aurait voulu voir. Trois relevés, tous rejouables :
+lenteur qu'on aurait voulu voir. **Six relevés, chacun avec la commande qui le produit** :
 
 | relevé | commande qui le produit | machine | valeur |
 |---|---|---|---|
-| trois `compterProcessus()` consécutifs | relevé du 13/09, reporté tel quel | ce poste, CHARGÉ (47 à 57 processus comptés) | 12 637 / 10 124 / 3 059 ms |
+| trois `compterProcessus()` consécutifs | `node --input-type=module -e "import {compterProcessus} from './scripts/garde-processus.mjs'; for (let i = 0; i < 3; i++) { const a = Date.now(); const c = compterProcessus(); console.log(Date.now() - a, 'ms  node=' + c.node, 'chrome=' + c.chrome); }"` | ce poste, 13/09 09 h 05 (node=24, chrome=0) | 420 / 418 / 430 ms, puis 445 / 419 / 421 ms au second passage |
 | `tasklist /NH /FO CSV` complet × 3 | `node -e "const{execFileSync}=require('node:child_process');for(let i=0;i<3;i++){const a=Date.now();execFileSync('tasklist',['/NH','/FO','CSV'],{encoding:'utf8',windowsHide:true,maxBuffer:16*1024*1024});console.log(Date.now()-a)}"` | ce poste, 13/09 07 h 35 (30 node, 0 chrome) | 427 / 504 / 559 ms |
 | `tasklist` filtré par pid × 3 | la même, avec `['/NH','/FO','CSV','/FI','PID eq '+process.pid]` | ce poste, même instant | 281 / 326 / 323 ms |
-| le fichier entier, 23 parcours | `npx vitest run tests/garde-processus.test.ts --reporter=verbose`, ligne `Duration` | ce poste, même instant | 5,09 s |
+| le fichier entier, 23 parcours | `npx vitest run tests/garde-processus.test.ts --reporter=verbose`, ligne `Duration` | ce poste, 13/09 09 h 06 (node=31) | **2,31 s** (2,73 s au passage précédent, 09 h 05) |
+| les trois lectures réelles du fichier, **poste CHARGÉ** | la même commande, lignes `[garde]`, pendant qu'une seconde suite occupait la machine | ce poste, 13/09 (node=45 à 48) | 2 927 / 2 738 / 662 ms, puis 965 / 959 / 757 ms au passage suivant |
 | le fichier entier, 23 parcours | `gh run view 34738395197 --log`, job « Tests unitaires » | CI Ubuntu, commit `a3732db` | **99 ms** — lire `/proc` ne coûte rien |
 
-D'où deux délais nommés au lieu de trois nombres ronds : une lecture de la table vaut 12 637 ms au
-pire connu → **30 000 ms** (× 2,4) ; le parcours de l'enfant renommé enchaîne un `spawn` borné à
-10 000 ms par le test lui-même **puis deux** lectures par pid → 10 000 + 2 × 12 637 = 35 274 ms au
-pire → **45 000 ms**. Et chaque lecture réelle **publie ce qu'elle a coûté** (`[garde] … table des
-processus lue en N ms`) : une dérive se lira dans le journal au lieu de se découvrir par une
-expiration. Relevé après correction sur ce poste par
-`npx vitest run tests/garde-processus.test.ts --reporter=verbose`, ligne recopiée du journal :
+**Ce que sont vraiment les deux plafonds, maintenant qu'ils ne dérivent plus de rien.** Le pire coût
+rejouable d'une lecture relevé ce jour est **2 927 ms** — ce poste sous la charge de deux suites
+simultanées, `node=45` à `48` au journal, contre 418 à 445 ms à `node=24`. La charge multiplie donc
+bien le coût — facteur ~6 entre 24 et 48 processus. C'est ce mécanisme-là que le relevé retiré
+racontait, avec un nombre que rien ne soutient : le mécanisme est réel, le chiffre ne l'était pas.
+Les valeurs retenues — **30 000 ms** pour un parcours qui lit une fois la table, **45 000 ms** pour celui qui
+enchaîne un `spawn` borné à 10 000 ms par le test lui-même *puis* deux lectures par pid — sont donc
+des **plafonds volontairement larges**, d'un ordre de grandeur au-dessus du relevé. Les resserrer au
+plus près transformerait une machine momentanément chargée en parcours rouge, et une porte qui rougit
+au hasard ne garde plus rien. **Mieux vaut le dire ainsi que d'habiller un arrondi en calcul** —
+c'est exactement la faute que le relevé retiré ci-dessus faisait commettre.
 
-    [garde] lecture propre au parcours des champs déclarés : table des processus lue en 470 ms
-    (plafond du parcours 30000 ms) — source « tasklist (nom d’image, noyau) », node=26 chrome=0
+**Ce qui détecte une dérive n'est donc pas le plafond, c'est le journal** : chaque lecture réelle
+publie ce qu'elle a coûté (`[garde] … table des processus lue en N ms`), et une lecture passée de
+500 ms à 5 s se lit dans la sortie, verte, au lieu d'attendre une expiration. **Les trois lectures
+réelles du fichier le publient désormais** — la troisième ne le faisait pas (constat du vérificateur,
+13/09) : elle lisait la table en silence sous le délai par défaut de 5 s de Vitest, à 469 ms mesurés,
+et une dérive l'aurait fait expirer sans que personne sache pourquoi. Sortie de
+`npx vitest run tests/garde-processus.test.ts --reporter=verbose`, 13/09 09 h 06, les trois lignes
+recopiées :
+
+    [garde] lecture partagée du bloc : table des processus lue en 498 ms (plafond du parcours
+    30000 ms) — source « tasklist (nom d’image, noyau) », node=31 chrome=4 nonResolus=0
+    [garde] lecture propre au parcours de la famille « chrome » : table des processus lue en 471 ms
+    (plafond du parcours 30000 ms) — source « tasklist (nom d’image, noyau) », node=31 chrome=4
+    nonResolus=0
+    [garde] lecture propre au parcours des champs déclarés : table des processus lue en 607 ms
+    (plafond du parcours 30000 ms) — source « tasklist (nom d’image, noyau) », node=32 chrome=4
     nonResolus=0
 
-**Ce nombre varie avec la charge de la machine** : c'est un coût observé, pas une garantie.
+**Ces nombres varient avec la charge de la machine** : ce sont des coûts observés, pas des garanties.
 
 ## 14. Tâche 2 — les 15 secondes avant la porte de sortie : le relevé, pas l'arbitrage
 

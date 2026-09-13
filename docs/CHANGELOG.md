@@ -66,6 +66,23 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - **Aucune campagne n'a tourné** : la garde refuse sur ce poste (37 processus résidents relevés
   le 13/09 pour un plafond de 20, sortie en code 2). Ce qui est éprouvé, et comment, est écrit
   au §15 de `docs/mesure-seuil-porte.md`.
+- **UN RELEVÉ PUBLIÉ EST RETIRÉ, et deux commandes non rejouables sont corrigées** (finition du
+  13/09, constats du vérificateur). `docs/mesure-seuil-porte.md` §13 annonçait « trois relevés,
+  tous rejouables » puis en publiait cinq, dont le premier — 12 637 / 10 124 / 3 059 ms pour trois
+  `compterProcessus()` — n'était produit par **aucune commande** et se trouve démenti d'un facteur
+  ~28 par deux mesures indépendantes (454 / 443 / 424 ms et 420 / 418 / 430 ms). Il est retiré, et
+  la dérivation « × 2,4 » qu'il portait avec lui : les délais de parcours 30 000 / 45 000 ms sont
+  désormais annoncés pour ce qu'ils sont, des plafonds volontairement larges, et **ce qui détecte
+  une dérive est le journal, pas le plafond**. §11 citait de son côté
+  `--config=playwright.contre-epreuve.config.ts`, un fichier **jamais committé** : la
+  contre-épreuve du seuil des 8 000 ms a été rejouée avec la configuration du dépôt et publie sa
+  séquence exacte (rouge à `sonde-chrono.spec.ts:411`, « reçu 1 516 ms, attendu ≥ 8 000 » ;
+  produit restauré → `4 passed`).
+- **La troisième lecture réelle de `tests/garde-processus.test.ts` publie enfin son coût.** Le
+  fichier affirmait que « chaque lecture réelle publie ce qu'elle a coûté » ; celle du parcours
+  « ne confond pas chrome… » lisait la table en silence, sous le délai par défaut de 5 s de
+  Vitest, à 469 ms mesurés — et jusqu'à 1 946 ms machine chargée. Trois lignes `[garde]` au
+  journal au lieu de deux, plafond explicite sur le parcours.
 
 ## [1.144.0] — 2026-09-13 — SEUIL-1
 

@@ -182,20 +182,54 @@ describe('la dérive entre le début et la fin d’une campagne', () => {
    PUBLIE le coût de chaque lecture réelle : une dérive se lira dans le journal
    au lieu de se découvrir par une expiration.
 
-   RELEVÉS — tous rejouables, aucun deviné :
-     — 13/09, ce poste CHARGÉ (47 à 57 processus des familles comptées) : trois
-       `compterProcessus()` consécutifs à 12 637 / 10 124 / 3 059 ms ;
+   UN RELEVÉ A ÉTÉ RETIRÉ LE 13/09 (C9), ET C'EST CELUI DONT TOUT DÉPENDAIT.
+   Ce bloc a longtemps cité « trois `compterProcessus()` consécutifs à
+   12 637 / 10 124 / 3 059 ms ». Aucune commande ne le produisait — sa source
+   se lisait « relevé du 13/09, reporté tel quel » —, et DEUX mesures
+   indépendantes le démentent d'un facteur ~28 : le vérificateur indépendant a
+   relevé 454 / 443 / 424 ms, et la commande ci-dessous 420 / 418 / 430 ms puis
+   445 / 419 / 421 ms. Un chiffre que personne ne peut rejouer n'est pas un
+   relevé : il est retiré, et avec lui la dérivation « × 2,4 » qu'il portait.
+
+   RELEVÉS — chacun avec la commande qui le produit, aucun deviné :
+     — 13/09 09 h 05, ce poste (node=24, chrome=0) : trois `compterProcessus()`
+       consécutifs à 420 / 418 / 430 ms, puis 445 / 419 / 421 ms au second
+       passage, par
+         node --input-type=module -e "import {compterProcessus} from
+         './scripts/garde-processus.mjs'; for (let i = 0; i < 3; i++) { const
+         a = Date.now(); const c = compterProcessus(); console.log(Date.now()
+         - a, 'ms node=' + c.node, 'chrome=' + c.chrome); }"
      — 13/09 07 h 35, ce poste (30 node, 0 chrome) : `tasklist /NH /FO CSV`
-       complet à 427 / 504 / 559 ms, filtré par pid à 281 / 326 / 323 ms, et ce
-       fichier entier en 5,09 s pour 23 parcours ;
+       complet à 427 / 504 / 559 ms, filtré par pid à 281 / 326 / 323 ms ;
+     — 13/09 09 h 06, ce fichier entier par `npx vitest run
+       tests/garde-processus.test.ts --reporter=verbose` : 23 parcours en
+       2,31 s, dont les TROIS lectures réelles journalisées — 498, 471 et
+       607 ms. Au passage de 09 h 05, avant la correction de ce jour, deux
+       lectures seulement se journalisaient (589 et 956 ms) et la troisième
+       coûtait 469 ms en silence ;
+     — 13/09, MÊME COMMANDE, POSTE CHARGÉ (node=45 à 48, une seconde suite
+       tournait) : les trois lectures à 2 927 / 2 738 / 662 ms, puis
+       965 / 959 / 757 ms au passage suivant ;
      — CI Ubuntu du commit `a3732db` (run 34738395197) : ce fichier entier,
        23 parcours, 99 ms — lire `/proc` ne coûte rien.
 
-   D'OÙ LES DEUX NOMBRES : une lecture de la table vaut 12 637 ms au pire connu,
-   portée à 30 000 ms (× 2,4). Le parcours de l'enfant renommé enchaîne un
-   `spawn` que le test borne lui-même à 10 000 ms PUIS deux lectures par pid :
-   10 000 + 2 × 12 637 = 35 274 ms au pire, porté à 45 000 ms. */
+   D'OÙ LES DEUX NOMBRES, ET CE QU'ILS SONT VRAIMENT. Le pire coût REJOUABLE
+   d'une lecture est 2 927 ms, relevé poste chargé ; la charge le multiplie par
+   ~6 entre 24 et 48 processus. Les deux plafonds ci-dessous ne sont pas pour
+   autant des dérivations de ce nombre — ce sont des plafonds volontairement
+   larges, un ordre de grandeur au-dessus, et il faut le dire ainsi plutôt que
+   d'habiller un arrondi en calcul. Les resserrer au plus près du relevé
+   transformerait une machine momentanément chargée en échec de parcours, et
+   une porte qui rougit au hasard ne garde plus rien. CE QUI DÉTECTE UNE
+   DÉRIVE N'EST PAS LE PLAFOND MAIS LE JOURNAL : chaque lecture réelle publie
+   son coût, et une lecture passée de 500 ms à 5 s se lit dans la sortie,
+   verte, au lieu d'attendre une expiration. */
+/** Plafond d'un parcours qui lit UNE fois la table des processus. */
 const DELAI_LECTURE_TABLE_MS = 30_000;
+/* L'ÉCART ENTRE LES DEUX EST, LUI, CALCULÉ : le parcours de l'enfant renommé
+   enchaîne un `spawn` que le test borne LUI-MÊME à 10 000 ms (voir
+   `enfantRenomme`) PUIS deux lectures par pid. Son plafond vaut donc celui
+   d'une lecture + les 10 000 ms du spawn + une marge de la même famille. */
 const DELAI_ENFANT_PUIS_DEUX_LECTURES_MS = 45_000;
 
 /** Lit la table des processus EN PUBLIANT ce qu'elle a coûté. */
@@ -209,17 +243,16 @@ function compterEnPubliantLeCout(quoi: string): ReturnType<typeof compterProcess
 }
 
 describe('le comptage réel', () => {
-  /* UNE SEULE LECTURE DE LA TABLE DES PROCESSUS POUR TOUT CE BLOC, et un délai
-     de garde qui vient d'une MESURE, pas d'un tâtonnement. Relevé le 13/09 sur
-     ce poste chargé (47 à 57 processus des familles comptées) : trois appels
-     consécutifs à `compterProcessus()` ont mis 12 637 ms, 10 124 ms et
-     3 059 ms — `tasklist` est lent quand la machine l'est. Trois appels
-     séparés dépassaient donc le délai par défaut de 5 s de Vitest, et la
-     tentation aurait été de rallonger le délai de chaque test. On lit UNE
-     fois, on partage, et le délai porte sur cette lecture-là : c'est trois
-     fois moins de travail, pas une barre déplacée.
-     (À savoir pour la sonde : la garde coûte jusqu'à une douzaine de secondes
-     par relevé sur une machine chargée — deux relevés par campagne.) */
+  /* UNE SEULE LECTURE DE LA TABLE DES PROCESSUS POUR LES ASSERTIONS DE CE
+     BLOC. Ce n'est pas une question de délai — le relevé rejouable du 13/09
+     donne 420 à 956 ms par lecture, loin des 5 s de Vitest — mais de travail
+     inutile : `tasklist` liste toute la table, et trois parcours n'ont pas
+     besoin de trois tables. On lit une fois, on partage, et le plafond porte
+     sur cette lecture-là.
+     LE PARCOURS « ne confond pas chrome… », LUI, RELIT VOLONTAIREMENT : il
+     éprouve la famille « chrome » sur une table fraîche, et publie son coût
+     comme toutes les autres lectures réelles de ce fichier (correction du
+     13/09, C9 — il ne le publiait pas). */
   let compte: ReturnType<typeof compterProcessus>;
   beforeAll(() => { compte = compterEnPubliantLeCout('lecture partagée du bloc'); },
     DELAI_LECTURE_TABLE_MS);
@@ -257,10 +290,18 @@ describe('le comptage réel', () => {
     // `chrome_crashpad_handler` n'est pas `chrome` : la comparaison est stricte
     // sur le nom de base, sinon le total gonflerait sans raison et la garde
     // refuserait des machines pourtant au repos.
-    const c = compterProcessus();
+    //
+    // CETTE LECTURE-LÀ NE PUBLIAIT PAS SON COÛT (vérificateur du 13/09, C9) :
+    // le fichier affirmait que « chaque lecture réelle publie ce qu'elle a
+    // coûté », et celle-ci lisait la table des processus en silence, sous le
+    // délai par défaut de 5 s de Vitest — relevée à 469 ms sur ce poste le
+    // 13/09, donc à quelques centaines de millisecondes d'une expiration que
+    // personne n'aurait su expliquer. Elle passe désormais par le même
+    // journal et le même plafond que les autres.
+    const c = compterEnPubliantLeCout('lecture propre au parcours de la famille « chrome »');
     expect(Number.isFinite(c.chrome)).toBe(true);
     expect(c.chrome).toBeGreaterThanOrEqual(0);
-  });
+  }, DELAI_LECTURE_TABLE_MS);
 });
 
 describe('l’ancien compteur contre le nouveau, sur le même processus au même instant', () => {
