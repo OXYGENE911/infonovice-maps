@@ -168,41 +168,6 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   10 169 en production (−998), mesuré par `wc -c`. Le rapport du cycle annonçait
   10 750 (+581) ; le chiffre juste avant le retrait des métadonnées était
   10 514 (+345).
-## [1.144.0] — 2026-09-13 — TERRAIN-1
-
-### La feuille des parkings se ferme comme tout le reste
-- **Le défaut vient d'un usager, pas d'un test.** Armelin, son téléphone en
-  main le 11/09 : le panneau des parkings « ne se ferme qu'au bouton ». Il
-  n'était pas un `<details>` — un `<div hidden>` posé dans le bandeau de
-  guidage — et passait donc à côté du mécanisme commun de `panneaux.ts`, qui
-  porte depuis le 25/08 l'exclusion mutuelle, Échap et l'appui extérieur.
-- **Aucun second mécanisme de fermeture n'a été écrit.** C'était la tentation,
-  et c'était la prochaine régression : deux jeux d'écouteurs à tenir d'accord.
-  `panneaux.ts` accueille désormais des **surfaces flottantes** qui ne sont
-  pas des volets `<details>`, et qui s'y raccordent en se DÉCLARANT : classe
-  `volet-flottant`, `hidden` pour état, `data-volet-bouton` pour nommer son
-  interrupteur, et l'événement `volet-fermer` pour que la surface fasse son
-  propre ménage — la feuille des parkings retire aussi ses pastilles P de la
-  carte, et le module commun n'a pas à connaître les pastilles.
-- **Le bouton P reste un interrupteur.** Il est explicitement exclu du « à
-  côté » : le compter dedans aurait fermé la feuille à l'appui pour que le
-  clic la rouvre aussitôt — le bouton aurait cessé de fermer. Il porte
-  désormais `aria-expanded`, qui suit l'état réel.
-- **Échap rend le focus au P** (même règle que A11Y-MODALE-1), et la surface
-  flottante passe DEVANT les volets du rail : Échap ferme ce qui est au-dessus.
-- **Un défaut relevé par la revue Codex, et corrigé** : le « P » s'efface dès
-  qu'un fixe GPS tombe hors route, tandis que la feuille reste ouverte.
-  `.focus()` sur un bouton masqué n'échoue pas — il ne fait RIEN, et le focus
-  tombait sur le `<body>`. Le focus est désormais rendu à l'hôte du volet,
-  rendu focalisable au programme seulement (`tabindex="-1"`, hors ordre de
-  tabulation) quand le bouton ne répond pas.
-- **Les parcours tapent AU DOIGT**, et ce n'est pas une coquetterie : la
-  maison a déjà payé un cycle pour l'avoir oublié (FANTOME-1, 03/09). Trois
-  parcours ajoutés à `tests-e2e/parking.spec.ts` — toucher hors panneau,
-  toucher DANS le panneau (qui ne doit rien fermer), Échap + focus + le P qui
-  rouvre et referme, plus le cas du bouton disparu. **Contre-épreuve faite** :
-  sans le mécanisme, deux des trois premiers rougissent ; sans le repli de
-  focus, le quatrième rougit.
 ## [1.146.0] — 2026-09-13 — WIKIMEDIA-0
 
 ### Wikimedia sort de Maps gratuit — Decision D3 du CEO (11/09), appliquée
@@ -264,6 +229,41 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   décision CEO ouverte et sort du périmètre de la tâche — la page annonce
   donc une fonction que l'application n'a plus.
 
+## [1.144.0] — 2026-09-13 — TERRAIN-1
+
+### La feuille des parkings se ferme comme tout le reste
+- **Le défaut vient d'un usager, pas d'un test.** Armelin, son téléphone en
+  main le 11/09 : le panneau des parkings « ne se ferme qu'au bouton ». Il
+  n'était pas un `<details>` — un `<div hidden>` posé dans le bandeau de
+  guidage — et passait donc à côté du mécanisme commun de `panneaux.ts`, qui
+  porte depuis le 25/08 l'exclusion mutuelle, Échap et l'appui extérieur.
+- **Aucun second mécanisme de fermeture n'a été écrit.** C'était la tentation,
+  et c'était la prochaine régression : deux jeux d'écouteurs à tenir d'accord.
+  `panneaux.ts` accueille désormais des **surfaces flottantes** qui ne sont
+  pas des volets `<details>`, et qui s'y raccordent en se DÉCLARANT : classe
+  `volet-flottant`, `hidden` pour état, `data-volet-bouton` pour nommer son
+  interrupteur, et l'événement `volet-fermer` pour que la surface fasse son
+  propre ménage — la feuille des parkings retire aussi ses pastilles P de la
+  carte, et le module commun n'a pas à connaître les pastilles.
+- **Le bouton P reste un interrupteur.** Il est explicitement exclu du « à
+  côté » : le compter dedans aurait fermé la feuille à l'appui pour que le
+  clic la rouvre aussitôt — le bouton aurait cessé de fermer. Il porte
+  désormais `aria-expanded`, qui suit l'état réel.
+- **Échap rend le focus au P** (même règle que A11Y-MODALE-1), et la surface
+  flottante passe DEVANT les volets du rail : Échap ferme ce qui est au-dessus.
+- **Un défaut relevé par la revue Codex, et corrigé** : le « P » s'efface dès
+  qu'un fixe GPS tombe hors route, tandis que la feuille reste ouverte.
+  `.focus()` sur un bouton masqué n'échoue pas — il ne fait RIEN, et le focus
+  tombait sur le `<body>`. Le focus est désormais rendu à l'hôte du volet,
+  rendu focalisable au programme seulement (`tabindex="-1"`, hors ordre de
+  tabulation) quand le bouton ne répond pas.
+- **Les parcours tapent AU DOIGT**, et ce n'est pas une coquetterie : la
+  maison a déjà payé un cycle pour l'avoir oublié (FANTOME-1, 03/09). Trois
+  parcours ajoutés à `tests-e2e/parking.spec.ts` — toucher hors panneau,
+  toucher DANS le panneau (qui ne doit rien fermer), Échap + focus + le P qui
+  rouvre et referme, plus le cas du bouton disparu. **Contre-épreuve faite** :
+  sans le mécanisme, deux des trois premiers rougissent ; sans le repli de
+  focus, le quatrième rougit.
 ## [1.142.1] — 2026-09-13 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
 
 ### 13/09/2026 (C10) — la régression que cette PR introduisait est corrigée ICI
@@ -7666,42 +7666,25 @@ Bundle hors MapLibre : 64 Ko gzippés sur 300 autorisés.
   chargement du style (pose du tracé différée au style.load).
 - E2E : tuiles IGN simulées (déterminisme, zéro quota consommé par la CI).
 
-## [0.1.0] — 2026-08-16 — Fondations
-- Scaffolding Vite + TypeScript strict + PWA (manifeste, service worker,
-  icônes générées par script).
-- Page « en construction » avec CSP stricte (seules origines : data.geopf.fr,
-  api-adresse.data.gouv.fr) et design tokens Infonovice.
-- Première brique de la bibliothèque partagée : `lib/coordonnees` (format
-  français, analyse défensive).
-- CI GitHub Actions : lint + typecheck + Vitest + Playwright + build + audit
-  bloquant (high) + budget bundle (< 300 Ko gzippé hors MapLibre).
-- Déploiement GitHub Pages automatique sur main, CNAME maps.infonovice.fr.
-- Test E2E de souveraineté : la page ne contacte AUCUN domaine externe.
-- Dependabot hebdomadaire (npm + actions).
-
-## [0.2.0] — 2026-08-16 — La carte
-- Carte MapLibre plein écran, fond Plan IGN v2 (WMTS Géoplateforme, sans clé),
-  attribution IGN obligatoire.
-- Contrôles zoom / boussole / géolocalisation / échelle, ENTIÈREMENT en
-  français (locale MapLibre surchargée) — la géolocalisation est un geste de
-  l'utilisateur, jamais demandée à l'arrivée.
-- En-tête flottant, lien d'évitement clavier, page sans JavaScript expliquée.
-- MapLibre isolé dans son propre chunk (252 Ko gzippé) ; code applicatif :
-  4,2 Ko gzippé — budget respecté.
-- E2E : tuiles IGN réellement servies (200), souveraineté mesurée (aucune
-  origine hors liste blanche), contrôles français visibles.
-
-## [0.3.0] — 2026-08-16 — Les fonds
-- Sélecteur de fonds (premier Web Component) : Plan IGN, Satellite,
-  Satellite + routes ; surcouche Parcelles cadastrales (utile à Arpentine).
-- Préférence persistée en IndexedDB (`lib/stockage`, socle des favoris à
-  venir) et rétablie au chargement — prouvé par E2E avec rechargement.
-- Mode sombre automatique du fond Plan (filtre calibré, canevas seul) ;
-  le satellite reste intouché.
-- Topo 25 écarté avec preuve : SCAN25 répond 400 sans clé. À réintroduire
-  après inscription Géoplateforme (gratuite).
-- Deux défauts attrapés par les tests avant l'œil : l'en-tête intercepait
-  les clics du sélecteur ; le panneau se reconstruisait en plein clic.
+## [0.6.0] — 2026-08-16 — Exporter et partager
+- Export GPX 1.1 et KML 2.2 du trajet, fabriqués à la main (20 lignes chacun),
+  nom échappé (il vient des libellés BAN). GPX : lat PUIS lon dans trkpt —
+  l'inverse du GeoJSON, l'erreur classique, verrouillée par test.
+- Partage par URL SANS serveur : l'itinéraire vit dans le fragment (#), qui
+  n'est jamais envoyé au serveur HTTP. Un lien ouvert rejoue le trajet tout
+  seul ; un fragment forgé rend null, jamais une exception.
+- Feuille de route imprimable scindée en PR #8bis (exige getSteps).
+## [0.5.0] — 2026-08-16 — Le planificateur
+- Itinéraire A→B (Géoplateforme bdtopo-osrm, sans clé) : voiture et à pied,
+  tracé bleu à liseré blanc lisible sur tout fond, marqueurs départ/arrivée,
+  distance et durée au format français, vol vers l'emprise du trajet.
+- Les deux champs réutilisent le composant de recherche BAN (rien dupliqué).
+- LE TRACÉ SURVIT AU CHANGEMENT DE FOND : setStyle détruit les sources,
+  le panneau repose le trajet à chaque style.load — prouvé par E2E.
+- Un 404 du service = « aucun itinéraire », sans seconde tentative ;
+  vélo écarté avec preuve (getcapabilities : car et pedestrian seulement).
+- 7 tests unitaires (formats français, 404-est-une-réponse, URL du service),
+  E2E complet Paris→Lyon simulé.
 
 ## [0.4.0] — 2026-08-16 — La recherche
 - Barre de recherche BAN dans l'en-tête : combobox ARIA complète (flèches,
@@ -7716,23 +7699,40 @@ Bundle hors MapLibre : 64 Ko gzippés sur 300 autorisés.
 - E2E : BAN simulée par interception (déterministe, zéro quota consommé) ;
   la sélection se prouve AU CLAVIER.
 
-## [0.5.0] — 2026-08-16 — Le planificateur
-- Itinéraire A→B (Géoplateforme bdtopo-osrm, sans clé) : voiture et à pied,
-  tracé bleu à liseré blanc lisible sur tout fond, marqueurs départ/arrivée,
-  distance et durée au format français, vol vers l'emprise du trajet.
-- Les deux champs réutilisent le composant de recherche BAN (rien dupliqué).
-- LE TRACÉ SURVIT AU CHANGEMENT DE FOND : setStyle détruit les sources,
-  le panneau repose le trajet à chaque style.load — prouvé par E2E.
-- Un 404 du service = « aucun itinéraire », sans seconde tentative ;
-  vélo écarté avec preuve (getcapabilities : car et pedestrian seulement).
-- 7 tests unitaires (formats français, 404-est-une-réponse, URL du service),
-  E2E complet Paris→Lyon simulé.
+## [0.3.0] — 2026-08-16 — Les fonds
+- Sélecteur de fonds (premier Web Component) : Plan IGN, Satellite,
+  Satellite + routes ; surcouche Parcelles cadastrales (utile à Arpentine).
+- Préférence persistée en IndexedDB (`lib/stockage`, socle des favoris à
+  venir) et rétablie au chargement — prouvé par E2E avec rechargement.
+- Mode sombre automatique du fond Plan (filtre calibré, canevas seul) ;
+  le satellite reste intouché.
+- Topo 25 écarté avec preuve : SCAN25 répond 400 sans clé. À réintroduire
+  après inscription Géoplateforme (gratuite).
+- Deux défauts attrapés par les tests avant l'œil : l'en-tête intercepait
+  les clics du sélecteur ; le panneau se reconstruisait en plein clic.
 
-## [0.6.0] — 2026-08-16 — Exporter et partager
-- Export GPX 1.1 et KML 2.2 du trajet, fabriqués à la main (20 lignes chacun),
-  nom échappé (il vient des libellés BAN). GPX : lat PUIS lon dans trkpt —
-  l'inverse du GeoJSON, l'erreur classique, verrouillée par test.
-- Partage par URL SANS serveur : l'itinéraire vit dans le fragment (#), qui
-  n'est jamais envoyé au serveur HTTP. Un lien ouvert rejoue le trajet tout
-  seul ; un fragment forgé rend null, jamais une exception.
-- Feuille de route imprimable scindée en PR #8bis (exige getSteps).
+## [0.2.0] — 2026-08-16 — La carte
+- Carte MapLibre plein écran, fond Plan IGN v2 (WMTS Géoplateforme, sans clé),
+  attribution IGN obligatoire.
+- Contrôles zoom / boussole / géolocalisation / échelle, ENTIÈREMENT en
+  français (locale MapLibre surchargée) — la géolocalisation est un geste de
+  l'utilisateur, jamais demandée à l'arrivée.
+- En-tête flottant, lien d'évitement clavier, page sans JavaScript expliquée.
+- MapLibre isolé dans son propre chunk (252 Ko gzippé) ; code applicatif :
+  4,2 Ko gzippé — budget respecté.
+- E2E : tuiles IGN réellement servies (200), souveraineté mesurée (aucune
+  origine hors liste blanche), contrôles français visibles.
+
+## [0.1.0] — 2026-08-16 — Fondations
+- Scaffolding Vite + TypeScript strict + PWA (manifeste, service worker,
+  icônes générées par script).
+- Page « en construction » avec CSP stricte (seules origines : data.geopf.fr,
+  api-adresse.data.gouv.fr) et design tokens Infonovice.
+- Première brique de la bibliothèque partagée : `lib/coordonnees` (format
+  français, analyse défensive).
+- CI GitHub Actions : lint + typecheck + Vitest + Playwright + build + audit
+  bloquant (high) + budget bundle (< 300 Ko gzippé hors MapLibre).
+- Déploiement GitHub Pages automatique sur main, CNAME maps.infonovice.fr.
+- Test E2E de souveraineté : la page ne contacte AUCUN domaine externe.
+- Dependabot hebdomadaire (npm + actions).
+
