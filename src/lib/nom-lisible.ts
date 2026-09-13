@@ -34,6 +34,11 @@ const VALEURS_TECHNIQUES: ReadonlySet<string> = new Set([
 const ELEMENT_OSM = /^(?:way|node|relation|rel|area)\s*[/:#-]?\s*\d+$/i;
 /* ET SA FORME COURTE, celle des exports et des outils : « w123456 », « n48219 ». */
 const ELEMENT_OSM_COURT = /^[nwr]\/?\d{4,}$/i;
+/* ET LA MÊME CHOSE GLISSÉE DANS UNE PHRASE : « OSM way 482190 ». Les motifs
+   ci-dessus sont ancrés, et la revue Codex a montré qu'un préfixe suffisait à
+   passer dessous. Trois chiffres au moins, collés au mot : « Rue de la
+   Relation 12 » n'y ressemble pas, « OSM node 48219 » si. */
+const ELEMENT_OSM_DEDANS = /\b(?:way|node|relation|osm)\b[\s/:#-]{0,2}\d{3,}/i;
 /* UNE CLÉ TECHNIQUE EN TÊTE : « osm:name », « ref=A4 », « addr:street ».
    Le préfixe est en minuscules ASCII et COLLÉ à son séparateur — « Paris :
    centre » et « Saint-Étienne » n'y ressemblent pas. */
@@ -78,6 +83,7 @@ export function estIdentifiantBrut(texte: string): boolean {
   if (t.includes('_')) return true;
   if (ELEMENT_OSM.test(t)) return true;
   if (ELEMENT_OSM_COURT.test(t)) return true;
+  if (ELEMENT_OSM_DEDANS.test(t)) return true;
   if (CLE_TECHNIQUE.test(t)) return true;
   /* CE QUI SUIT NE VAUT QUE POUR LA FORME. Les motifs précédents disent
      « ceci vient d'une base de données » ; ceux-ci disent seulement « ceci

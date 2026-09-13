@@ -29,6 +29,8 @@ describe('nomLisible — LE CAS NOMINAL : un nom se montre', () => {
     'Impasse des 10000 Martyrs Pinet',
     'Rue du 8 Mai 1945',
     'Place du 14 Juillet 1789',
+    // « relation » est un mot français : sans chiffres collés, il reste un mot.
+    'Rue de la Relation',
   ];
   for (const nom of noms) {
     it(`garde « ${nom} »`, () => {
@@ -63,6 +65,8 @@ describe('nomLisible — L’IDENTIFIANT BRUT : on se tait', () => {
     ['noname', 'dit qu’il n’y a pas de nom — ce n’est pas un nom'],
     ['FIXME', 'note de cartographe'],
     ['Sortie 4821901', 'sept chiffres dans une phrase : plus aucun nom de lieu'],
+    ['OSM way 482190', 'élément OSM derrière un préfixe — relevé par la revue Codex'],
+    ['OSM node 48219', 'même forme, autre type'],
     ['Bretelle TRONROUT0000000352788241', 'un cleabs BD TOPO glissé derrière un mot'],
   ];
   for (const [brut, pourquoi] of bruts) {

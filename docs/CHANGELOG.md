@@ -38,18 +38,22 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   navigateur : « À l'embranchement, restez légèrement à droite vers A4/E54 »
   passe de **3 lignes** (avant) à **2 lignes** à 17,48 px, rendue
   ENTIÈREMENT — `scrollWidth` 286 = `clientWidth` 286, aucune ellipse.
-- **Deux défauts relevés par la revue Codex, et corrigés** :
+- **Trois défauts relevés par la revue Codex, et corrigés** :
   1. la règle effaçait « Impasse des 10000 Martyrs Pinet » — une voie réelle
      d'Eyzin-Pinet (38). Un nom en PLUSIEURS MOTS est une phrase, pas un
      identifiant : on y tolère désormais les nombres qu'un nom de voie porte
      réellement (une date, un code postal) et l'on ne se méfie qu'au-delà de
      **sept** chiffres, longueur qu'aucun nom de lieu ne prend et que toute
      clé technique dépasse. Un mot SEUL reste jugé à cinq ;
+  1bis. le seuil plus souple laissait alors passer « OSM way 482190 » — les
+     motifs d'élément OSM étaient ancrés en début de chaîne. Un motif les
+     reconnaît désormais AU MILIEU d'une phrase, à trois chiffres collés au
+     mot : « Rue de la Relation » reste un nom, « OSM node 48219 » non ;
   2. les observateurs n'étaient jamais coupés au retrait du composant. Un
      `disconnectedCallback` les coupe, et `connectedCallback` les repose même
      lorsque le balisage existe déjà — sans quoi le texte cesserait de tenir
      en deux lignes après un déplacement dans le DOM.
-- 48 tests unitaires pour la règle de détection et le comptage de lignes
+- 51 tests unitaires pour la règle de détection et le comptage de lignes
   (nom lisible, identifiant brut, chaîne vide), 4 parcours à 360 px.
 
 ## [1.142.0] — 2026-09-11 — SALON-1
