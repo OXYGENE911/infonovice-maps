@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.143.0] — 2026-09-13 — STAGING-1
+## [1.147.0] — 2026-09-13 — STAGING-1
 
 ### Une URL de prévisualisation qui porte `staging`
 - **Le motif, mot pour mot (CEO, 13/09)** : « Sans elle je ne peux pas tester
@@ -168,7 +168,7 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   10 169 en production (−998), mesuré par `wc -c`. Le rapport du cycle annonçait
   10 750 (+581) ; le chiffre juste avant le retrait des métadonnées était
   10 514 (+345).
-## [Non publié] — 2026-09-11 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
+## [1.142.1] — 2026-09-13 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
 
 ### 13/09/2026 (C10) — la régression que cette PR introduisait est corrigée ICI
 
