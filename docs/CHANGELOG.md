@@ -37,9 +37,17 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   chronométrée — seulement rendue structurellement non bornée par le code, ce
   qui n'est pas la même chose. Tout est écrit dans `docs/mesure-seuil-porte.md`,
   §5 pour le refus et §7 pour ce que cela ne prouve pas.
-- 17 tests (7 sur l'accord, contre-épreuve faite ; 10 sur la garde, éprouvée des
-  DEUX côtés du seuil — refus à 21, acceptation à 20 pile). 1 698 tests verts.
+- 19 tests (7 sur l'accord, contre-épreuve faite ; 12 sur la garde, éprouvée des
+  DEUX côtés du seuil — refus à 21, acceptation à 20 pile). 1 700 tests verts.
   Bundle : +0,04 Ko gzip (125,45 → 125,62 Ko / 40,57 → 40,61 Ko gzip, mesuré).
+- **Revue Codex (BLOQUANT, corrigé)** : quatre constats, tous fondés. Le comptage
+  de processus n'appelait que `tasklist`, absent de la CI Ubuntu — le test de
+  comptage y aurait rougi à chaque exécution (corrigé, `ps` hors Windows) ; les
+  sélecteurs de la sonde n'existaient pas dans le panneau (réécrits d'après le
+  scénario E2E) ; une dérive incalculable était déclarée « tolérable »
+  (`NaN > 3` vaut false — corrigé, elle est suspecte) ; et la contre-épreuve de
+  régression dépendait de l'indentation (elle compte désormais les fermetures
+  au lieu de les filtrer). Aucune fuite de `#abandonAnnonce` trouvée.
 - **Deux chiffres faux corrigés** dans le CHANGELOG d'ITI-LENT-1 : le ratio
   « sept fois » (2 500 / 380 = 6,58, soit six fois et demie — corrigé aussi dans
   le commentaire du code et dans `docs/mesure-itineraire-lent.md`), et une

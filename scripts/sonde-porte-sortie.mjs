@@ -217,21 +217,49 @@ async function mesurerPorte(page) {
 }
 
 /**
- * Ouvre le panneau d'itinéraire et lance un calcul.
+ * Ouvre le panneau d'itineraire et lance un calcul Paris -> Lyon.
  *
- * CE CHEMIN N'A JAMAIS ÉTÉ EXERCÉ SUR CE POSTE (garde en refus) : les
- * sélecteurs viennent de la lecture de `src/carte/panneau-itineraire.ts`, pas
- * d'une exécution réussie. Le premier qui fera tourner cette sonde sur une
- * machine au repos doit s'attendre à les ajuster, et ne doit surtout pas
- * prendre l'absence d'erreur ici pour une preuve que le calcul est parti :
- * `mesurerPorte` rend `ouverteA: null` dans ce cas, ce qui se lit.
+ * LES SELECTEURS VIENNENT DU SCENARIO E2E EXISTANT (tests-e2e/accueil.spec.ts),
+ * pas d'une lecture approximative du source : la premiere version de cette
+ * sonde visait `.iti-depart input` et `.iti-calculer`, qui n'existent nulle
+ * part dans le panneau (revue Codex du 13/09, constat SERIEUX). Le panneau se
+ * pilote par ses deux champs de recherche et leurs suggestions de geocodage,
+ * et le calcul part TOUT SEUL des que les deux points sont poses : il n'y a pas
+ * de bouton « Calculer » a cliquer.
+ *
+ * LE GEOCODAGE EST SIMULE, L'ITINERAIRE NON. On mesure la porte de sortie du
+ * calcul d'itineraire ; faire dependre la mesure de la latence reelle de la BAN
+ * ajouterait une variable qui n'a rien a voir avec ce qu'on chronometre.
  */
 async function declencherCalcul(page) {
-  const champDepart = page.locator('.iti-depart input, input.iti-depart').first();
-  const champArrivee = page.locator('.iti-arrivee input, input.iti-arrivee').first();
-  await champDepart.fill('2.3522, 48.8566');
-  await champDepart.press('Enter');
-  await champArrivee.fill('4.8357, 45.7640');
-  await champArrivee.press('Enter');
-  await page.locator('.iti-calculer, button.iti-calculer').first().click();
+  await page.route('**/api-adresse.data.gouv.fr/search/**', (route) => {
+    const requete = new URL(route.request().url()).searchParams.get('q') ?? '';
+    const estLyon = /lyon/i.test(requete);
+    const libelle = estLyon ? 'Lyon' : 'Paris';
+    const coords = estLyon ? [4.8357, 45.7640] : [2.3522, 48.8566];
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        features: [{
+          geometry: { coordinates: coords },
+          properties: {
+            label: libelle, type: 'municipality', postcode: '', city: libelle,
+          },
+        }],
+      }),
+    });
+  });
+
+  await page.locator('#carte canvas.maplibregl-canvas').waitFor({ timeout: 20_000 });
+  await page.locator('.iti > summary').click();
+  const champs = page.locator('.iti input[type="search"]');
+  await champs.nth(0).fill('paris');
+  await page.getByRole('option', { name: 'Paris' }).first().click();
+  await champs.nth(1).fill('lyon');
+  await page.getByRole('option', { name: 'Lyon' }).first().click();
+  /* LE CALCUL EST PARTI — on le verifie plutot que de le supposer : sans ce
+     temoin, une sonde qui n'aurait rien declenche rendrait `ouverteA: null` et
+     se lirait comme « la porte ne s'est jamais ouverte », ce qui est un tout
+     autre constat. */
+  await page.locator('.iti-resultat').waitFor({ state: 'visible', timeout: 10_000 });
 }

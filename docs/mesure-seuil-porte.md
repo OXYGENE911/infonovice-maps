@@ -189,11 +189,11 @@ Toutes les commandes ci-dessous ont été lancées sur
 ```
 $ npx vitest run
  Test Files  119 passed (119)
-      Tests  1698 passed (1698)
+      Tests  1700 passed (1700)
 ```
 
-1 681 tests au sommet de la PR #316 + 17 nouveaux (7 pour l'accord, 10 pour la
-garde) = 1 698. Aucun test existant modifié ni supprimé.
+1 681 tests au sommet de la PR #316 + 19 nouveaux (7 pour l'accord, 12 pour la
+garde) = 1 700. Aucun test existant modifié ni supprimé.
 
 ### Contre-épreuve du correctif
 
@@ -212,7 +212,7 @@ ne sont pas verts par construction.
 
 ### La garde, dans les deux sens
 
-`tests/garde-processus.test.ts` (10 tests) éprouve la fonction pure de décision
+`tests/garde-processus.test.ts` (12 tests) éprouve la fonction pure de décision
 des deux côtés du seuil : refus à 21, **acceptation à 20 pile** (« plus de 20 »
 est un dépassement strict), acceptation à 3, refus si le comptage échoue (un
 comptage impossible n'est pas un comptage à zéro), et absence de porte dérobée
@@ -257,11 +257,12 @@ et `npm run build` final.
 - **Aucune mesure en navigateur n'a été prise** : ni la durée de vie du bouton,
   ni le critère des 5 secondes. La garde a refusé, et le refus a été respecté.
 - **Le chemin de mesure de la sonde n'a jamais été exercé** au-delà de la garde.
-  Les sélecteurs de `declencherCalcul` viennent de la lecture du source, pas
-  d'une exécution réussie : le premier qui fera tourner cette sonde sur une
-  machine au repos doit s'attendre à les ajuster. La sonde rend `ouverteA: null`
-  si le calcul n'est pas parti — cela se lit, et ne se confond pas avec un
-  succès.
+  Ses sélecteurs viennent désormais du scénario E2E existant
+  (`tests-e2e/accueil.spec.ts`), qui lui, tourne — mais les avoir empruntés à du
+  code qui marche n'est pas la même chose que d'avoir vu la sonde marcher. Elle
+  attend `.iti-resultat` visible avant de chronométrer : si le calcul n'est pas
+  parti, elle échoue au lieu de rendre un `ouverteA: null` qu'on pourrait lire
+  de travers.
 - **Nous n'avons jamais mesuré sur un téléphone.** Tous les chiffres de ce dépôt
   viennent du poste de développement. Le calcul local (≈ 40 % du total selon les
   relevés antérieurs) sera **plus lent sur mobile, jamais plus rapide** : un
@@ -269,3 +270,57 @@ et `npm run build` final.
 - **Le comportement réel du bouton sous le doigt** n'est pas vérifié. La leçon
   « un test qui clique à la souris ne prouve rien sur le tactile » vaut ici
   aussi, et cette PR ne touche pas aux tests E2E (hors périmètre).
+
+## 8. Revue Codex — `codex exec -s read-only`, 13/09/2026, commit `7361d65`
+
+**Verdict initial : BLOQUANT.** Quatre constats, **tous fondés, tous corrigés.**
+Aucun ne portait sur l'accord des deux mécanismes lui-même : Codex a
+explicitement écrit n'avoir trouvé « aucune fuite de `#abandonAnnonce` entre
+deux calculs », le nouveau calcul et l'effacement le réinitialisant, et les
+réponses obsolètes restant filtrées par le jeton de séquence.
+
+| # | Gravité | Constat | Correction |
+|---|---|---|---|
+| 1 | **BLOQUANT** | `compterProcessus` n'appelait que `tasklist`, **absent de la CI Ubuntu du projet** : le test de comptage réel y aurait échoué à chaque exécution, rougissant la CI de toutes les PR suivantes. | Comptage à deux voies : `tasklist` sous Windows, `ps -A -o comm=` ailleurs, avec comparaison **stricte** sur le nom de base (`chrome_crashpad_handler` n'est pas `chrome`). |
+| 2 | sérieux | La sonde visait `.iti-depart input`, `.iti-arrivee input`, `.iti-calculer` — **aucun de ces sélecteurs n'existe** dans le panneau. La sonde n'aurait jamais lancé de calcul, même sur une machine au repos. | `declencherCalcul` réécrite d'après le scénario E2E existant : deux champs `input[type="search"]`, suggestions de géocodage simulées, et **aucun bouton « Calculer »** — le calcul part tout seul dès que les deux points sont posés. Un témoin (`.iti-resultat` visible) vérifie que le calcul est bien parti. |
+| 3 | sérieux | `jugerDerive(10, NaN)` rendait `suspecte: false` et « Dérive NaN processus, dans le tolérable » : **un comptage de fin impossible blanchissait la campagne** (`NaN > 3` vaut `false`). | Garde explicite : une dérive incalculable est **suspecte**. Même principe que dans `deciderValidite` — ne pas savoir n'est jamais un feu vert. |
+| 4 | mineur | La contre-épreuve de régression cherchait `/^\s{6}abandon\.hidden = true;/m` : **elle dépendait de l'indentation**. La même ligne indentée de huit espaces faisait revenir le défaut sans faire rougir le test. | Le test **compte** au lieu de filtrer : il doit y avoir exactement UNE fermeture du bandeau dans le `catch`, et elle doit se trouver après le `} else {`. |
+
+### La contre-épreuve du constat n° 4, refaite — et une première tentative fausse
+
+Le contournement décrit par Codex (même ligne, huit espaces, en fin de `catch`) a
+été **réellement injecté** pour vérifier que le test durci le voit.
+
+**Première tentative, invalide** : l'injection a été faite par un remplacement de
+chaîne, qui a touché **la première** occurrence de `attenteChien().effacer();`
+dans le fichier (ligne 453, une autre méthode) et non celle du `catch` de
+`#calculer` (ligne 5079). Les tests sont restés verts — ce qui n'établissait
+rien, puisque le défaut n'avait pas été injecté là où on croyait. C'est le genre
+de contre-épreuve vide contre lequel ce dépôt s'est déjà fait avoir.
+
+**Seconde tentative, valide**, injection par numéro de ligne dans le bon `catch` :
+
+```
+contournement 8 espaces injecte DANS LE BON catch
+ × CONTRE-ÉPREUVE DE LA RÉGRESSION : la SEULE fermeture du bandeau dans le
+   catch est celle de la branche « je ne l'ai pas ouvert »
+ Tests  1 failed | 6 passed (7)
+```
+
+Correctif restauré → **7 passed (7)**.
+
+### État après corrections
+
+```
+$ npm run lint      # eslint src tests-e2e && tsc --noEmit   → aucune erreur
+$ npx vitest run
+ Test Files  119 passed (119)
+      Tests  1700 passed (1700)
+```
+
+1 681 tests au sommet de la PR #316 + **19 nouveaux** = 1 700. Bundle inchangé
+par les corrections de revue : **125,62 Ko / 40,61 Ko gzip**.
+
+La garde refuse toujours, dans les deux modes (`--porte` et `--campagne`), avec
+le même compte de 30 processus : **les corrections de revue ne changent rien au
+fait qu'aucune mesure en navigateur n'a pu être prise ce jour.**

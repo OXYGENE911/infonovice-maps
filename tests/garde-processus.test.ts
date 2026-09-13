@@ -69,13 +69,38 @@ describe('la dérive entre le début et la fin d’une campagne', () => {
   it('une baisse n’est jamais suspecte : des processus qui s’arrêtent ne faussent pas une mesure déjà prise', () => {
     expect(jugerDerive(18, 10).suspecte).toBe(false);
   });
+
+  it('une dérive INCALCULABLE est suspecte, pas tolérable (revue Codex du 13/09)', () => {
+    // `NaN > 3` vaut false : sans garde explicite, l'échec du comptage de fin
+    // rendait « Dérive NaN processus, dans le tolérable » et blanchissait une
+    // campagne dont on ne savait rien. Ne pas savoir n'est jamais un feu vert.
+    const d = jugerDerive(10, Number.NaN);
+    expect(d.suspecte).toBe(true);
+    expect(d.motif).toMatch(/incalculable/);
+    expect(jugerDerive(Number.NaN, 10).suspecte).toBe(true);
+  });
 });
 
 describe('le comptage réel', () => {
+  // PORTABILITÉ (revue Codex du 13/09, constat BLOQUANT) : la première version
+  // de `compterProcessus` n'appelait que `tasklist`, absent de la CI Ubuntu du
+  // projet — ce test y échouait donc à CHAQUE exécution, et aurait rougi la CI
+  // de toutes les PR suivantes. Le comptage passe désormais par `ps` hors
+  // Windows.
   it('compte au moins le processus node qui exécute ce test — un comptage qui rendrait zéro serait faux par construction', () => {
     const c = compterProcessus();
-    expect(Number.isFinite(c.node)).toBe(true);
+    expect(Number.isFinite(c.node), 'comptage impossible sur cette plateforme : '
+      + `platform=${process.platform}`).toBe(true);
     expect(c.node).toBeGreaterThanOrEqual(1);
     expect(c.total).toBe(c.node + c.chrome);
+  });
+
+  it('ne confond pas « chrome » avec un exécutable dont le nom commence pareil', () => {
+    // `chrome_crashpad_handler` n'est pas `chrome` : la comparaison est stricte
+    // sur le nom de base, sinon le total gonflerait sans raison et la garde
+    // refuserait des machines pourtant au repos.
+    const c = compterProcessus();
+    expect(Number.isFinite(c.chrome)).toBe(true);
+    expect(c.chrome).toBeGreaterThanOrEqual(0);
   });
 });

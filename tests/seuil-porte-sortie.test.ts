@@ -54,13 +54,31 @@ describe('la porte de sortie ne se referme pas sur l’usager', () => {
     expect(corps).toMatch(/^\s*abandon\.hidden = false;/m);
   });
 
-  it('CONTRE-ÉPREUVE DE LA RÉGRESSION : le catch ne masque plus le bandeau d’abandon inconditionnellement', () => {
-    // C'est EXACTEMENT la ligne qui causait le défaut de la PR #316. Si elle
-    // revient sans garde, ce test rougit et le bouton se remet à vivre 1 500 ms.
+  it('CONTRE-ÉPREUVE DE LA RÉGRESSION : la SEULE fermeture du bandeau dans le catch est celle de la branche « je ne l’ai pas ouvert »', () => {
+    // C'est EXACTEMENT la ligne qui causait le défaut de la PR #316.
+    //
+    // PREMIÈRE VERSION DE CE TEST, REFUSÉE PAR LA REVUE CODEX DU 13/09 : elle
+    // cherchait /^\s{6}abandon\.hidden = true;/m, donc elle dépendait de
+    // l'indentation. Ajouter la même ligne indentée de HUIT espaces en fin de
+    // `catch` faisait revenir le défaut sans faire rougir le test — une
+    // contre-épreuve qui ne tient qu'à un alignement n'est pas une
+    // contre-épreuve.
+    //
+    // ON COMPTE PLUTÔT QU'ON NE FILTRE : il doit y avoir UNE seule fermeture du
+    // bandeau dans tout le `catch`, et elle doit se trouver APRÈS le `} else {`
+    // — c'est-à-dire dans la branche qui n'a pas ouvert la porte. Toute ligne
+    // supplémentaire, à n'importe quelle indentation, commentée ou non, fait
+    // passer le compte à deux et rougir ce test.
     const corps = corpsDuCatch();
-    const inconditionnel = /^\s{6}abandon\.hidden = true;/m.test(corps);
-    expect(inconditionnel, 'le catch masque le bandeau d’abandon sans condition : '
-      + 'le défaut de la PR #316 est revenu').toBe(false);
+    const fermetures = corps.match(/abandon\.hidden = true;/g) ?? [];
+    expect(fermetures.length, 'le catch ferme le bandeau d’abandon plus d’une fois : '
+      + 'le défaut de la PR #316 est revenu par une ligne inconditionnelle').toBe(1);
+
+    const posElse = corps.indexOf('} else {');
+    const posFermeture = corps.indexOf('abandon.hidden = true;');
+    expect(posElse, 'la branche « je n’ai pas ouvert la porte » a disparu').toBeGreaterThan(-1);
+    expect(posFermeture, 'le bandeau est fermé AVANT le else, donc sans condition')
+      .toBeGreaterThan(posElse);
   });
 
   it('l’échec écrit DANS le bandeau ouvert : l’usager garde le message ET le geste', () => {
