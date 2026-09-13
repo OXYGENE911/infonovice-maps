@@ -37,9 +37,9 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   chronométrée — seulement rendue structurellement non bornée par le code, ce
   qui n'est pas la même chose. Tout est écrit dans `docs/mesure-seuil-porte.md`,
   §5 pour le refus et §7 pour ce que cela ne prouve pas.
-- 25 tests (7 sur l'accord, contre-épreuve faite deux fois ; 18 sur la garde,
+- 27 tests (7 sur l'accord, contre-épreuve faite deux fois ; 20 sur la garde,
   éprouvée des DEUX côtés du seuil — refus à 21, acceptation à 20 pile).
-  1 706 tests verts.
+  1 708 tests verts.
   Bundle : +0,04 Ko gzip (125,45 → 125,62 Ko / 40,57 → 40,61 Ko gzip, mesuré).
 - **Revue Codex (BLOQUANT, corrigé)** : quatre constats, tous fondés. Le comptage
   de processus n'appelait que `tasklist`, absent de la CI Ubuntu — le test de
@@ -57,7 +57,11 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   invisible ; et la reconnaissance par préfixe comptait `chromedriver` et
   `nodemon`. Le comptage lit désormais toute la table une fois et filtre sur
   une **liste explicite de noms exacts**, la même sur les deux systèmes.
-  Aucune fuite de `#abandonAnnonce` trouvée aux trois passages.
+  **Quatrième passage : un dernier constat** — la liste exacte ne voyait pas les
+  processus auxiliaires du navigateur sous macOS (« Chromium Helper
+  (Renderer) »), soit 24 processus par navigateur à 24 onglets ; le rôle entre
+  parenthèses est désormais retiré avant comparaison. Aucune fuite de
+  `#abandonAnnonce` trouvée aux quatre passages.
 - **Deux chiffres faux corrigés** dans le CHANGELOG d'ITI-LENT-1 : le ratio
   « sept fois » (2 500 / 380 = 6,58, soit six fois et demie — corrigé aussi dans
   le commentaire du code et dans `docs/mesure-itineraire-lent.md`), et une

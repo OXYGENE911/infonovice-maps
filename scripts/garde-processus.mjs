@@ -72,7 +72,13 @@ const FAMILLES = {
        plateforme — c'est CE processus-là qui charge la machine pendant une
        campagne, donc celui qu'il est vital de compter. */
     'chrome-headless', 'chrome-headless-shell', 'headless_shell',
+    /* macOS : le navigateur lance un processus par onglet et par service, tous
+       nommés « … Helper (Renderer) », « … Helper (GPU) »… Le rôle entre
+       parenthèses est retiré avant la comparaison (voir `estDeLaFamille`), donc
+       ces deux noms-là suffisent à couvrir toute la famille — et c'est elle qui
+       charge la machine : 24 onglets, 24 processus (revue Codex, 4ᵉ passage). */
     'Google Chrome', 'Google Chrome Helper',
+    'Chromium', 'Chromium Helper',
   ],
 };
 
@@ -85,8 +91,17 @@ export function estDeLaFamille(nom, famille) {
   const noms = FAMILLES[famille];
   if (!noms || typeof nom !== 'string') return false;
   /* On retient le nom de base : `ps` peut rendre un chemin, `tasklist` rend
-     toujours un nom d'image avec son extension. */
-  const base = nom.trim().split(/[/\\]/).pop().replace(/\.exe$/i, '').toLowerCase();
+     toujours un nom d'image avec son extension. Puis on retire le RÔLE entre
+     parenthèses que macOS accole aux processus auxiliaires du navigateur
+     (« Google Chrome Helper (Renderer) ») : sans cela, les 24 processus d'un
+     navigateur à 24 onglets ne se comptaient pas du tout. Le retrait ne peut
+     pas faire entrer d'intrus, la comparaison restant une égalité exacte. */
+  const base = nom.trim()
+    .split(/[/\\]/).pop()
+    .replace(/\.exe$/i, '')
+    .replace(/\s*\([^)]*\)\s*$/, '')
+    .trim()
+    .toLowerCase();
   if (!base) return false;
   return noms.some((n) => n.toLowerCase() === base);
 }

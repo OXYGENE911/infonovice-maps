@@ -56,6 +56,30 @@ describe('quels noms de processus comptent (revue Codex du 13/09, 2e passage)', 
     expect(deciderValidite(total).valide, '25 processus doivent être refusés').toBe(false);
   });
 
+  it('LE SCÉNARIO macOS DE LA REVUE : les processus auxiliaires du navigateur comptent', () => {
+    // Sur macOS, un navigateur à 24 onglets, c'est 24 processus « … Helper
+    // (Renderer) » — ceux qui chargent réellement la machine. La liste exacte
+    // ne les voyait pas : 26 processus se comptaient pour 2 (revue Codex,
+    // 4ᵉ passage). Le rôle entre parenthèses est désormais retiré avant la
+    // comparaison.
+    for (const nom of ['Chromium Helper (Renderer)', 'Google Chrome Helper (GPU)',
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome Helper (Renderer)',
+      'Chromium']) {
+      expect(estDeLaFamille(nom, 'chrome'), `« ${nom} » devrait compter`).toBe(true);
+    }
+    const table = ['node', 'Chromium',
+      ...Array.from({ length: 24 }, () => 'Chromium Helper (Renderer)')];
+    const total = table.filter((n) => estDeLaFamille(n, 'node') || estDeLaFamille(n, 'chrome'))
+      .length;
+    expect(total).toBe(26);
+    expect(deciderValidite(total).valide, '26 processus doivent être refusés').toBe(false);
+  });
+
+  it('retirer le rôle entre parenthèses ne fait entrer aucun intrus', () => {
+    expect(estDeLaFamille('chromedriver (Renderer)', 'chrome')).toBe(false);
+    expect(estDeLaFamille('nodemon (watch)', 'node')).toBe(false);
+  });
+
   it('20 node + 1 chromedriver font 20, pas 21 : la campagne passe', () => {
     const table = [...Array.from({ length: 20 }, () => 'node'), 'chromedriver'];
     const total = table.filter((n) => estDeLaFamille(n, 'node') || estDeLaFamille(n, 'chrome'))
