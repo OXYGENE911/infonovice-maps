@@ -264,6 +264,250 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   rouvre et referme, plus le cas du bouton disparu. **Contre-épreuve faite** :
   sans le mécanisme, deux des trois premiers rougissent ; sans le repli de
   focus, le quatrième rougit.
+## [1.145.0] — 2026-09-13 — TERRAIN-2
+
+### Le panneau de guidage se lit : jamais d'identifiant brut, jamais plus de deux lignes
+- **Le défaut vient d'un usager, pas d'un test.** Armelin, son téléphone en
+  main le 11/09 : « un identifiant brut s'affiche à l'écran », et « un texte
+  long déborde du cadre ».
+- **(a) La règle de lisibilité est une fonction pure** — `src/lib/nom-lisible.ts`,
+  et non une rustine dans le rendu : le cartouche a déjà déménagé deux fois
+  depuis le 29/08, une rustine serait partie avec lui. Elle reconnaît ce
+  qu'aucun nom de ville ni de rue ne prend pour forme : élément OSM
+  (`way/123456789`, `n48219`), souligné des valeurs techniques
+  (`motorway_junction`), clé en tête (`osm:name`, `ref=A4`), suite de cinq
+  chiffres, code d'un seul tenant en capitales (`FR75056`), valeurs qui disent
+  l'absence (`noname`, `FIXME`). **Elle penche du côté de l'affichage** :
+  « CHU », « RN7 », « Marseille : port » restent lisibles — effacer un vrai
+  nom par excès de prudence serait le défaut inverse.
+- **Quand rien de lisible ne reste, la ligne secondaire ne paraît pas.**
+  L'instruction et les numéros de route suffisent : mieux vaut moins
+  d'information qu'une information illisible. C'est déjà la règle de SORTIE-1.
+- **(b) Deux lignes au maximum** — `src/carte/tenir-en-lignes.ts`. Dans cet
+  ordre, et l'ordre n'est pas un détail : **on réduit la police par paliers**
+  (1 · 0,92 · 0,84 · 0,76 · 0,68 · 0,6), **puis seulement on coupe à
+  l'ellipse**. Une instruction de navigation coupée est une instruction
+  fausse ; une instruction plus petite reste juste. On ne descend pas sous
+  60 % — en dessous, on ne lit plus au volant.
+- **Des observateurs, pas un appel derrière chaque écriture** : le texte du
+  cartouche s'écrit depuis quatre endroits du bandeau, et un cinquième
+  viendra. La mutation observée est le TEXTE (pas les attributs) et le
+  redimensionnement est filtré sur la LARGEUR du cadre : ni l'un ni l'autre
+  ne peut boucler sur notre propre réglage.
+- **La ligne secondaire n'est plus en `nowrap`** : elle perdait tout sauf son
+  premier mot sur un panneau qui en portait deux lignes.
+- **Mesuré, pas regardé.** Viewport 360 px, boîte englobante relevée dans le
+  navigateur : « À l'embranchement, restez légèrement à droite vers A4/E54 »
+  passe de **3 lignes** (avant) à **2 lignes** à 17,48 px, rendue
+  ENTIÈREMENT — `scrollWidth` 286 = `clientWidth` 286, aucune ellipse.
+- **Trois défauts relevés par la revue Codex, et corrigés** :
+  1. la règle effaçait « Impasse des 10000 Martyrs Pinet » — une voie réelle
+     d'Eyzin-Pinet (38). Un nom en PLUSIEURS MOTS est une phrase, pas un
+     identifiant : on y tolère désormais les nombres qu'un nom de voie porte
+     réellement (une date, un code postal) et l'on ne se méfie qu'au-delà de
+     **sept** chiffres, longueur qu'aucun nom de lieu ne prend et que toute
+     clé technique dépasse. Un mot SEUL reste jugé à cinq ;
+  1bis. le seuil plus souple laissait alors passer « OSM way 482190 » — les
+     motifs d'élément OSM étaient ancrés en début de chaîne. Un motif les
+     reconnaît désormais AU MILIEU d'une phrase, à trois chiffres collés au
+     mot : « Rue de la Relation » reste un nom, « OSM node 48219 » non ;
+  2. les observateurs n'étaient jamais coupés au retrait du composant. Un
+     `disconnectedCallback` les coupe, et `connectedCallback` les repose même
+     lorsque le balisage existe déjà — sans quoi le texte cesserait de tenir
+     en deux lignes après un déplacement dans le DOM.
+- 51 tests unitaires pour la règle de détection et le comptage de lignes
+  (nom lisible, identifiant brut, chaîne vide), 4 parcours à 360 px.
+
+### Reprise du 13/09 — la CI était ROUGE, et le défaut du CEO toujours à l'écran
+
+- **La CI de la PR #320 était rouge, et le rapport l'annonçait « pending ».**
+  Trois exécutions échouées (34732882937, 34733355972, 34733581014), toutes sur
+  le même parcours : « UNE LIGNE SECONDAIRE INTERMINABLE » mesurait **3 lignes**
+  là où deux étaient promises.
+- **La mesure comptait le CONTENU, pas la BOÎTE.** `mesurer()` divisait
+  `scrollHeight` par l'interligne. Dès qu'un texte est coupé — ce que la règle
+  prévoit en dernier recours — `scrollHeight` garde la hauteur du texte ENTIER :
+  la boîte peinte tenait en deux lignes, la mesure en annonçait trois. Sur ce
+  poste, la police est plus étroite, les paliers suffisaient, la coupe n'était
+  jamais atteinte et le parcours était vert ; sur le runner Linux, non.
+  Les DEUX hauteurs sont désormais relevées, et aucune n'est lâchée : la boîte
+  peinte doit tenir en deux lignes, **et** tout écart entre les deux doit être
+  une coupe VOULUE — jamais un débordement qu'on n'aurait pas vu.
+- **Le dernier recours ne reposait sur rien de garanti.** `.texte-coupe` déclare
+  `display:-webkit-box` pour obtenir `-webkit-line-clamp`, mais `.bg-destination`
+  est un **item flex** de `.bg-cartouche` : le mode de boîte d'un item flex est
+  blockifié. **Mesuré dans le navigateur le 13/09 : `display` calculé =
+  `flow-root`**, jamais `-webkit-box`. Une règle CSS écrite n'est pas une règle
+  CSS active. La garantie des deux lignes est donc posée en **pixels mesurés** —
+  `tenir-en-lignes.ts` écrit `max-height = 2 × interligne` au moment où il pose la
+  coupe (relevé : `22.50px` pour un interligne de `11.25px`). Elle ne dépend plus
+  d'aucun mode de boîte ni d'aucun moteur. Le clamp reste pour les trois points.
+- **`nomsLisibles()` n'était branché qu'à UN endroit** — `.bg-destination`.
+  Trois autres chemins menaient le même champ jusqu'à l'usager, et le défaut
+  qu'Armelin a vu passait par le premier :
+  1. **`.bg-voie`**, la voie courante en bas du bandeau, recevait `e.etape.voie`
+     sans filtre ;
+  2. **la VOIX** — `phraseAnnonce` disait « vers … » avec l'identifiant. **Un
+     identifiant prononcé est pire qu'affiché : on ne le masque pas d'un doigt.**
+     Le filtre est posé DANS la formulation, pas chez l'appelant, pour qu'un
+     appelant à venir ne puisse pas l'oublier ;
+  3. **la feuille de route imprimable** (`panneau-itineraire.ts`) écrivait la
+     même donnée noir sur blanc. Une feuille s'emporte : l'identifiant y vit plus
+     longtemps qu'à l'écran.
+- **Un numéro de route est un NOM** — `voieLisible()`. Filtrer le champ « voie »
+  avec la règle des noms de LIEU aurait effacé « A6 », « N7 », « D606 » : on
+  aurait réparé le défaut en supprimant l'information. La seconde règle garde les
+  numéros à leur forme courte (une lettre de réseau, au plus quatre chiffres) et
+  ferme au passage un trou que `classeRoute` seule laissait ouvert : « n48219 »,
+  forme courte d'un nœud OSM, passait pour une nationale et s'affichait en
+  cartouche rouge.
+- **Trois constats de la revue Codex du 13/09, tous corrigés — le verdict était
+  bloquant, et il avait raison** :
+  1. *(bloquant)* le contrôle de débordement excusait la hauteur dès que la
+     CLASSE `texte-coupe` était posée. **Une classe posée ne prouve pas que le
+     navigateur cache quoi que ce soit** — c'est exactement l'erreur qu'on venait
+     de réparer, commise une seconde fois. Le parcours lit désormais
+     `overflow-y` CALCULÉ : sans écrêtage réel, le débordement est un défaut ;
+  2. l'exception des numéros de route repêchée sur la seule FORME laissait
+     repasser « n4821 » — forme courte d'un nœud OSM à QUATRE chiffres, la
+     taille exacte d'un numéro de route. `motifIdentifiant()` nomme désormais la
+     règle déclenchée, et l'exception ne lève que « ressemble à un code »,
+     jamais « est un élément OpenStreetMap » ;
+  3. le repli de la voie visée sur la voie COURANTE se déclenchait aussi quand
+     la voie visée était ILLISIBLE : le panneau affichait alors l'écusson de la
+     route qu'on QUITTE comme celui de la route à PRENDRE. Le repli ne vaut plus
+     que pour un champ absent ; une voie visée illisible fait taire l'écusson.
+- **Trois constats de plus à la seconde revue Codex, corrigés aussi** :
+  1. *(bloquant)* le parcours du critère promettait « la phrase rendue
+     ENTIÈREMENT », et ne vérifiait que le DOM. **Être dans le DOM n'est pas
+     être à l'écran** : `.bg-instruction` hérite d'un `overflow:hidden`, une
+     troisième ligne écrêtée aurait la même hauteur peinte qu'une phrase qui
+     tient. La preuve est désormais l'ÉGALITÉ des deux hauteurs, et le même
+     contrôle s'applique à la ligne secondaire hors coupe ;
+  2. **la casse faisait passer une clé technique**. Le libellé de voie est
+     capitalisé avant d'atteindre la règle — **mesuré : `versEtapes` rend
+     « Osm:name » pour un champ `osm:name`** — et le motif, ancré sur une
+     minuscule, ne le voyait plus. Il traversait alors les quatre sorties,
+     voix comprise. Le motif ne dépend plus de la casse ;
+  3. **absent n'est pas vide** : `versEtapes` rend toujours le champ `voie`,
+     parfois à vide. Le repli sur la voie courante, resserré au premier tour,
+     se déclenchait encore sur une chaîne vide — et affichait l'écusson de la
+     route quittée pour une manœuvre vers une voie sans nom. Il ne vaut plus
+     que pour un champ MANQUANT.
+- **Troisième tour de revue Codex, trois constats de plus** :
+  1. *(bloquant)* **compter des lignes ARRONDIES ne prouve pas qu'il ne manque
+     rien.** Interligne 20 px, contenu 40, boîte 36 : deux lignes de chaque
+     côté, et quatre pixels cachés. La preuve est désormais l'inégalité en
+     PIXELS (`scrollHeight ≤ clientHeight + 1`), c'est-à-dire exactement
+     l'assertion d'origine — restituée, et levée seulement quand un plafond
+     est RÉELLEMENT posé : deux propriétés calculées, `max-height` ≠ `none`
+     ET `overflow-y` écrêtant. Aucune PREUVE GÉOMÉTRIQUE ne s'appuie plus
+     sur une classe — la classe ne sert qu'à dire que le mécanisme s'est
+     déclenché, plus à dire qu'il a marché ;
+  2. **la casse laissait encore passer un code** : le motif des codes d'un
+     seul tenant était en capitales seules, et **mesuré, un champ « AB12 »
+     rend « Ab12 »** après mise en forme du libellé — la voix disait
+     « vers Ab12 ». Le motif ignore la casse ; les lettres accentuées en
+     restent dehors, « Évry75 » est un nom mal saisi, pas un code ;
+  3. **un arbitrage assumé, et épinglé par un test** : une lettre de réseau
+     suivie de quatre chiffres SANS séparateur a deux lectures — « N1004 »,
+     une nationale, et « n4821 », la forme courte d'un nœud OSM. La casse les
+     distinguerait, mais elle est perdue en amont (mesuré : `libelleVoie`
+     capitalise). **On choisit le silence sur cette forme** : afficher un
+     identifiant est le défaut qu'Armelin a vu, taire un nom de route est une
+     information en moins. Les formes non équivoques sont gardées — « N 1004 »,
+     « RN1004 », « D1004 ». Ce test-là existe pour que l'arbitrage se renverse
+     par une décision, pas par accident.
+- **Aucune assertion n'a été affaiblie pour obtenir du vert** : neuf parcours à 360 px
+  et quatre-vingts tests unitaires ajoutés, dont un parcours qui FORCE le
+  dernier recours sur toute police (un texte qui ne tient sur aucune) et affirme,
+  dans le navigateur, que le plafond est bien posé et que la boîte peinte tient.
+
+### Finition du 13/09 — trois des quatre chemins n'avaient pas de garde capable de rougir
+
+- **LA CONTRE-ÉPREUVE, REJOUÉE ICI, ET SON COMPTE ENFIN PUBLIÉ PARCOURS PAR
+  PARCOURS.** Le récit précédent disait « 4 rouges sur 9, 5 verts » sans dire
+  LESQUELS, et ce silence le rendait illisible : « cinq parcours restaient
+  verts » et « trois des quatre chemins sans garde » semblaient se contredire.
+  Ils ne se contredisent pas, et voici pourquoi. Les trois sources remises dans
+  leur état d'avant (`bandeau-guidage.ts`, `panneau-itineraire.ts`,
+  `annonces.ts`), `dist/` reconstruit, les NEUF parcours d'alors : **4 rouges,
+  5 verts** — le compte est reproduit à l'identique. Et parmi les cinq verts,
+  **trois sont des contre-épreuves dont le métier EST de rester vertes**
+  (« un nom de voie LISIBLE s'affiche », « la voie courante lisible s'affiche »,
+  « D606 reste affiché » : l'ancien code n'effaçait rien, il affichait trop),
+  tandis que **deux étaient des gardes qui auraient dû rougir et ne le
+  pouvaient pas** — `.bg-voie` et la voie visée illisible. Un seul des quatre
+  chemins était donc réellement gardé. **Un test qui ne peut pas rougir ne
+  protège rien**, et il fait croire au suivant que le défaut est couvert.
+- **LA CAUSE, MESURÉE ET NON DÉDUITE : on affirmait sur la forme BRUTE, le
+  navigateur peint la forme MISE EN FORME.** `libelleVoie` capitalise avant
+  tout affichage : sondé le 13/09 sur le build d'avant, `.bg-voie` peignait
+  `Tronrout0000000352788241` pendant que le parcours cherchait
+  `TRONROUT0000000352788241` — et passait. Les assertions jugent désormais le
+  texte PEINT, sans égard à la casse, et refusent en plus toute suite de cinq
+  chiffres ou plus : aucun panneau de direction n'en porte.
+- **Deux chemins sur quatre n'avaient AUCUN parcours** — ils n'étaient tenus
+  que par des tests unitaires, qui ne disent rien de ce qui sort à l'écran :
+  1. **la VOIX** : `voix.spec.ts` affirme qu'aucun identifiant ne part à la
+     synthèse, **et** que la manœuvre elle-même est toujours dite — sans cette
+     seconde moitié, on aurait tenu la première en coupant la voix ;
+  2. **la feuille de route imprimable** : la liste imprimée ne porte plus
+     d'identifiant, **et** nomme toujours les voies lisibles.
+- **LES QUATRE CHEMINS SAVENT ROUGIR, ET LE COMPTE EST REFAIT SUR LA SUITE
+  ENTIÈRE.** Mêmes sources d'avant, mais les 22 parcours d'aujourd'hui :
+  **8 rouges, 14 verts.** Les quatre chemins y sont, chacun par son parcours —
+  `.bg-destination` (`guidage-lisible.spec.ts:324`), `.bg-voie` (`:355`), la
+  VOIX (`voix.spec.ts:285`), la feuille imprimable (`:488`) — et les quatre
+  rougissent en citant le texte réellement peint ou dit
+  (`Tournez à droite — Tronrout0000000352788241` sur la feuille,
+  `Dans 400 mètres, tournez à droite, vers Tronrout0000000352788241` à la voix).
+  Les 14 verts sont les trois contre-épreuves d'affichage et les onze AUTRES
+  parcours de `voix.spec.ts`, que rien dans ces trois sources ne touche.
+  Sources restaurées, `dist/` reconstruit : **22 parcours verts sur 22.**
+- **ET LA GARDE DE LA MANŒUVRE ÉTAIT TAUTOLOGIQUE — elle ne pouvait pas
+  rougir.** `voix.spec.ts` ATTENDAIT « tournez à droite », puis AFFIRMAIT
+  « tournez à droite » : l'attente sondait le texte même que l'assertion
+  vérifie. Rejoué ici avec la mutation exacte du vérificateur — `right:
+  'tournez à droite'` remplacé par `'prenez la sortie de droite'` dans
+  `src/lib/annonces.ts` — l'échec tombait sur le SONDAGE (« Timeout 10000ms
+  exceeded while waiting on the predicate »), jamais sur l'assertion, qui
+  n'était pas même atteinte. L'attente porte désormais sur la DISTANCE de
+  l'annonce — « Dans 400 mètres, » vient de `distanceDite()`, pas de la table
+  des manœuvres — et la même mutation fait maintenant rougir l'assertion
+  elle-même, qui cite ce que la voix a réellement dit : « Guidage vocal
+  activé… | Dans 400 mètres, prenez la sortie de droite ». **L'assertion n'a
+  pas été touchée** : seule la façon d'attendre a changé, et ce qu'elle garantit
+  est inchangé — la manœuvre doit être DITE, et dite avec les mots de la route.
+  **Les deux moitiés savent rougir, et c'est mesuré.** Seconde mutation, la ligne
+  `right:` RETIRÉE de `MOTS` — la phrase devient vide, donc silence : c'est
+  l'attente qui rougit alors, en disant pourquoi (« aucune annonce de manœuvre
+  à 400 m n'est partie »). Une garde qui sait rougir des deux côtés ne peut plus
+  être tenue par accident.
+- **La cause racine du 13/09 est rectifiée dans la description de la PR** :
+  ce qui faisait rougir la CI, c'était **la mesure sur `scrollHeight`**, qui
+  décrit le contenu et non la boîte peinte. Le `-webkit-box` blockifié d'un
+  item flex est réel et relevé, mais il n'était pas le facteur limitant.
+- **L'arbitrage « N1004 » est confirmé, et son coût est enfin CHIFFRÉ** —
+  il ne l'avait jamais été. Relevé le 13/09 sur OpenStreetMap, emprise
+  `ISO3166-1=FR` : **53 désignations de nationale** s'écrivent `N` + quatre
+  chiffres (N1001, N1013, N1113, N2007, N9057…), portées par **1 172
+  tronçons**. Sur les **278** désignations en `N` du pays, **223** restent
+  affichées et **53 sont tues, soit 19 %** ; en tronçons, 1 172 sur 39 570,
+  soit **3,0 %**. Les formes non équivoques restent affichées (« N 1004 »,
+  « RN1004 », « D1004 »). **Ce que l'arbitrage protège** : un identifiant
+  affiché est le défaut que le CEO a vu de ses yeux ; un nom de route tu est
+  une information en moins. Le renversement le moins coûteux, si le CEO le
+  décide, est de filtrer AVANT `libelleVoie` : la casse survit, et les deux
+  lectures se séparent d'elles-mêmes.
+- **`voix.spec.ts:243` a rougi chez le vérificateur : c'était un délai fixe,
+  mesuré.** Sur 21 exécutions de ce poste, la phrase de trafic part entre
+  **54 ms et 1 601 ms** après le retour de `suivre()` — l'attente écrite en dur
+  valait 1 500 ms. Une fois sur vingt et une, elle expirait avant la phrase.
+  **L'assertion n'a pas bougé** — la phrase de trafic DOIT partir ; c'est la
+  façon d'attendre qui a changé. Contre-épreuve : sans événement de trafic, la
+  garde rougit toujours (délai dépassé sur le prédicat).
+
 ## [1.142.1] — 2026-09-13 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
 
 ### 13/09/2026 (C10) — la régression que cette PR introduisait est corrigée ICI
