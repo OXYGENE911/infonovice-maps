@@ -81,7 +81,7 @@ import {
 } from '../lib/voies';
 import type { EvenementTrajet } from '../lib/trafic';
 import { flecheManoeuvre } from './icone-manoeuvre';
-import { refermerPanneaux } from './panneaux';
+import { CLASSE_FLOTTANT, refermerPanneaux } from './panneaux';
 import { classeRoute, numeroRoute, libelleClasse } from '../lib/classe-route';
 import { fondPanneau, encreSur, cartoucheNumero } from '../lib/panneau';
 import { pictoMenu } from './icone-menu';
@@ -704,9 +704,18 @@ export class BandeauGuidage extends HTMLElement {
              liste de parkings publics à proximité ». Il ne paraît qu'à
              l'approche, et ne demande RIEN tant qu'on ne le presse pas —
              Overpass est un commun bénévole. -->
-        <button type="button" class="bg-parking-p" hidden
+        <button type="button" class="bg-parking-p" hidden aria-expanded="false"
           aria-label="Suggérer des parkings près de la destination">P</button>
-        <div class="bg-parkings" hidden role="region"
+        <!-- ELLE SE FERME COMME TOUT LE RESTE (TERRAIN-1, 11/09). Armelin, son
+             téléphone en main : la feuille « ne se ferme qu'au bouton ». Elle
+             n'est pas un volet details et passait donc à côté du mécanisme
+             commun. On ne lui en écrit pas un second : elle se DÉCLARE, et
+             panneaux.ts lui applique Échap et l'appui extérieur comme aux
+             volets du rail. L'attribut data-volet-bouton nomme le P —
+             l'interrupteur n'est pas un « à côté », et le focus lui revient
+             après Échap. -->
+        <div class="bg-parkings ${CLASSE_FLOTTANT}" hidden role="region"
+          data-volet-bouton=".bg-parking-p"
           aria-label="Parkings près de la destination">
           <p class="bg-parkings-titre">Se garer près de l’arrivée</p>
           <ul class="bg-parkings-liste"></ul>
@@ -1059,6 +1068,12 @@ export class BandeauGuidage extends HTMLElement {
        rôles que le recalcul hors-route juste au-dessus. */
     this.querySelector('.bg-parking-p')?.addEventListener('click', () => {
       void this.#ouvrirParkings();
+    });
+    /* ÉCHAP ET L'APPUI EXTÉRIEUR ARRIVENT PAR ICI (TERRAIN-1). `panneaux.ts`
+       décide QUAND fermer ; la feuille sait, elle, ce que fermer emporte —
+       les pastilles P posées sur la carte s'en vont avec elle. */
+    this.querySelector('.bg-parkings')?.addEventListener('volet-fermer', () => {
+      this.#fermerParkings();
     });
     this.querySelector('.bg-bilan-garder')?.addEventListener('click', () => {
       void this.#garderLeTrajet();
@@ -1981,6 +1996,7 @@ export class BandeauGuidage extends HTMLElement {
     if (!feuille || !liste || !etat) return;
     if (!feuille.hidden) { this.#fermerParkings(); return; }
     feuille.hidden = false;
+    this.querySelector('.bg-parking-p')?.setAttribute('aria-expanded', 'true');
 
     /* AUTOUR DE LA DESTINATION DEMANDÉE, pas de la fin du tracé : le tracé
        s'arrête sur la route, la destination est l'adresse. Sans destination
@@ -2120,6 +2136,7 @@ export class BandeauGuidage extends HTMLElement {
   #fermerParkings(): void {
     const feuille = this.querySelector<HTMLElement>('.bg-parkings');
     if (feuille) feuille.hidden = true;
+    this.querySelector('.bg-parking-p')?.setAttribute('aria-expanded', 'false');
     this.#retirerParkingsDeCarte();
   }
 

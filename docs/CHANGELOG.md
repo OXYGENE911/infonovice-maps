@@ -168,6 +168,42 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   10 169 en production (−998), mesuré par `wc -c`. Le rapport du cycle annonçait
   10 750 (+581) ; le chiffre juste avant le retrait des métadonnées était
   10 514 (+345).
+## [1.144.0] — 2026-09-13 — TERRAIN-1
+
+### La feuille des parkings se ferme comme tout le reste
+- **Le défaut vient d'un usager, pas d'un test.** Armelin, son téléphone en
+  main le 11/09 : le panneau des parkings « ne se ferme qu'au bouton ». Il
+  n'était pas un `<details>` — un `<div hidden>` posé dans le bandeau de
+  guidage — et passait donc à côté du mécanisme commun de `panneaux.ts`, qui
+  porte depuis le 25/08 l'exclusion mutuelle, Échap et l'appui extérieur.
+- **Aucun second mécanisme de fermeture n'a été écrit.** C'était la tentation,
+  et c'était la prochaine régression : deux jeux d'écouteurs à tenir d'accord.
+  `panneaux.ts` accueille désormais des **surfaces flottantes** qui ne sont
+  pas des volets `<details>`, et qui s'y raccordent en se DÉCLARANT : classe
+  `volet-flottant`, `hidden` pour état, `data-volet-bouton` pour nommer son
+  interrupteur, et l'événement `volet-fermer` pour que la surface fasse son
+  propre ménage — la feuille des parkings retire aussi ses pastilles P de la
+  carte, et le module commun n'a pas à connaître les pastilles.
+- **Le bouton P reste un interrupteur.** Il est explicitement exclu du « à
+  côté » : le compter dedans aurait fermé la feuille à l'appui pour que le
+  clic la rouvre aussitôt — le bouton aurait cessé de fermer. Il porte
+  désormais `aria-expanded`, qui suit l'état réel.
+- **Échap rend le focus au P** (même règle que A11Y-MODALE-1), et la surface
+  flottante passe DEVANT les volets du rail : Échap ferme ce qui est au-dessus.
+- **Un défaut relevé par la revue Codex, et corrigé** : le « P » s'efface dès
+  qu'un fixe GPS tombe hors route, tandis que la feuille reste ouverte.
+  `.focus()` sur un bouton masqué n'échoue pas — il ne fait RIEN, et le focus
+  tombait sur le `<body>`. Le focus est désormais rendu à l'hôte du volet,
+  rendu focalisable au programme seulement (`tabindex="-1"`, hors ordre de
+  tabulation) quand le bouton ne répond pas.
+- **Les parcours tapent AU DOIGT**, et ce n'est pas une coquetterie : la
+  maison a déjà payé un cycle pour l'avoir oublié (FANTOME-1, 03/09). Trois
+  parcours ajoutés à `tests-e2e/parking.spec.ts` — toucher hors panneau,
+  toucher DANS le panneau (qui ne doit rien fermer), Échap + focus + le P qui
+  rouvre et referme, plus le cas du bouton disparu. **Contre-épreuve faite** :
+  sans le mécanisme, deux des trois premiers rougissent ; sans le repli de
+  focus, le quatrième rougit.
+
 ## [1.142.1] — 2026-09-13 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
 
 ### 13/09/2026 (C10) — la régression que cette PR introduisait est corrigée ICI
