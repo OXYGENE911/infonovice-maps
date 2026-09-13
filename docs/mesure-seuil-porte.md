@@ -624,12 +624,14 @@ vérificateur du 13/09 a relevé 454 / 443 / 424 ms, et la commande rejouable ci
 420 / 418 / 430 ms. Un chiffre que personne ne peut rejouer n'est pas une mesure : il sort du
 document, et la dérivation qu'il portait sort avec lui.
 
-Ce que coûte réellement une lecture sur ce poste : **420 ms machine peu chargée (`node=24`), jusqu'à
-2 927 ms sous la charge de deux suites simultanées (`node=45` à `48`)** — tous ces nombres sont des
-lignes du journal `[garde]`, reproduites plus bas. `tasklist` liste toute la table des processus, et
-une campagne la lit deux fois. Les parcours du bloc « le comptage réel » partagent donc une seule
-lecture — pour ne pas refaire trois fois le même travail, et non parce que le délai par défaut de
-Vitest serait menacé.
+Ce que coûte réellement une lecture sur ce poste : **420 ms machine peu chargée (`node=24`), 965 ms
+au pire en relançant la commande publiée, et jusqu'à 2 927 ms OBSERVÉS sous la charge de deux suites
+simultanées (`node=45` à `48`)** — tous ces nombres sont des lignes du journal `[garde]`, reproduites
+plus bas ; le dernier est une observation, pas un état qu'une commande publiée ici sait provoquer.
+`tasklist` liste toute la table des processus, et une campagne la lit deux fois. Les parcours du bloc
+« le comptage réel » partagent donc une seule lecture : c'est trois fois moins de travail, **et sous
+charge ce n'est pas indifférent** — trois lectures séparées à 2 927 ms approcheraient les 5 s du
+délai par défaut de Vitest.
 
 ### Les délais de `tests/garde-processus.test.ts` : des plafonds larges, et un journal qui mord
 
@@ -643,20 +645,29 @@ lenteur qu'on aurait voulu voir. **Six relevés, chacun avec la commande qui le 
 | `tasklist /NH /FO CSV` complet × 3 | `node -e "const{execFileSync}=require('node:child_process');for(let i=0;i<3;i++){const a=Date.now();execFileSync('tasklist',['/NH','/FO','CSV'],{encoding:'utf8',windowsHide:true,maxBuffer:16*1024*1024});console.log(Date.now()-a)}"` | ce poste, 13/09 07 h 35 (30 node, 0 chrome) | 427 / 504 / 559 ms |
 | `tasklist` filtré par pid × 3 | la même, avec `['/NH','/FO','CSV','/FI','PID eq '+process.pid]` | ce poste, même instant | 281 / 326 / 323 ms |
 | le fichier entier, 23 parcours | `npx vitest run tests/garde-processus.test.ts --reporter=verbose`, ligne `Duration` | ce poste, 13/09 09 h 06 (node=31) | **2,31 s** (2,73 s au passage précédent, 09 h 05) |
-| les trois lectures réelles du fichier, **poste CHARGÉ** | la même commande, lignes `[garde]`, pendant qu'une seconde suite occupait la machine | ce poste, 13/09 (node=45 à 48) | 2 927 / 2 738 / 662 ms, puis 965 / 959 / 757 ms au passage suivant |
+| les trois lectures réelles du fichier, **poste CHARGÉ** — *observation, pas relevé commandable* | la même commande, lignes `[garde]` ; **la charge, elle, venait d'une seconde suite lancée en parallèle et rien dans la commande ne la reproduit** | ce poste, 13/09 (node=45 à 48) | 2 927 / 2 738 / 662 ms, puis 965 / 959 / 757 ms au passage suivant |
 | le fichier entier, 23 parcours | `gh run view 34738395197 --log`, job « Tests unitaires » | CI Ubuntu, commit `a3732db` | **99 ms** — lire `/proc` ne coûte rien |
 
-**Ce que sont vraiment les deux plafonds, maintenant qu'ils ne dérivent plus de rien.** Le pire coût
-rejouable d'une lecture relevé ce jour est **2 927 ms** — ce poste sous la charge de deux suites
-simultanées, `node=45` à `48` au journal, contre 418 à 445 ms à `node=24`. La charge multiplie donc
-bien le coût — facteur ~6 entre 24 et 48 processus. C'est ce mécanisme-là que le relevé retiré
-racontait, avec un nombre que rien ne soutient : le mécanisme est réel, le chiffre ne l'était pas.
-Les valeurs retenues — **30 000 ms** pour un parcours qui lit une fois la table, **45 000 ms** pour celui qui
+**Ce que sont vraiment les deux plafonds, maintenant qu'ils ne dérivent plus de rien.** Deux nombres,
+et ils ne disent pas la même chose : le pire coût qu'on obtient **en relançant la commande publiée**
+est **965 ms** ; le pire coût **observé**, sous une charge qu'aucune commande publiée ici ne
+reproduit, est **2 927 ms** (`node=45` à `48` au journal, contre 418 à 445 ms à `node=24`). La charge
+multiplie donc bien le coût — facteur ~6 entre 24 et 48 processus. C'est ce mécanisme-là que le
+relevé retiré racontait, avec un nombre que rien ne soutient : le mécanisme est réel, le chiffre ne
+l'était pas. Les valeurs retenues — **30 000 ms** pour un parcours qui lit une fois la table, **45 000 ms** pour celui qui
 enchaîne un `spawn` borné à 10 000 ms par le test lui-même *puis* deux lectures par pid — sont donc
 des **plafonds volontairement larges**, d'un ordre de grandeur au-dessus du relevé. Les resserrer au
 plus près transformerait une machine momentanément chargée en parcours rouge, et une porte qui rougit
 au hasard ne garde plus rien. **Mieux vaut le dire ainsi que d'habiller un arrondi en calcul** —
 c'est exactement la faute que le relevé retiré ci-dessus faisait commettre.
+
+**UN ÉLARGISSEMENT EST PRIS ICI, ET IL EST DIT** (revue Codex du 13/09 sur cette finition). Le
+parcours « ne confond pas chrome… » n'avait aucun plafond déclaré : il vivait sous le défaut de
+Vitest, 5 000 ms. Il porte désormais les 30 000 ms des deux autres lectures réelles. **C'est bien
+un budget élargi**, pris parce que cette lecture a été mesurée à 1 946 ms machine chargée — un
+facteur 2,5 d'un budget que rien n'annonçait — et parce qu'un parcours qui rougit au hasard sous la
+charge ne garde rien. Ce qui compense l'élargissement, c'est la ligne `[garde]` au journal, pas le
+plafond : elle, elle dit le coût réel à chaque exécution.
 
 **Ce qui détecte une dérive n'est donc pas le plafond, c'est le journal** : chaque lecture réelle
 publie ce qu'elle a coûté (`[garde] … table des processus lue en N ms`), et une lecture passée de
@@ -768,8 +779,10 @@ lui dise plutôt que de le contourner.
   au moment où ce document est écrit — voir le §14 bis pour ce qui a été traité et ce qui reste.
 - **La charge sous laquelle le relevé retiré aurait été pris n'a pas été reproduite** (finition du
   13/09, C9). Le relevé de 12 637 / 10 124 / 3 059 ms disait « 47 à 57 processus des familles
-  comptées » ; les relevés rejouables de cette passe vont de `node=24` à `node=48`, et donnent 420 à
-  2 927 ms. **Rien n'a été mesuré au-delà de 48 processus** : on ne sait donc pas ce que coûte une
+  comptées » ; les relevés de cette passe vont de `node=24` à `node=48`, et donnent 420 à 2 927 ms.
+  **La charge elle-même ne se commande pas** : la commande publiée mesure le coût, elle ne fabrique
+  pas la charge sous laquelle le mesurer. Au-delà de `node=48`, **rien n'a été mesuré** : on ignore
+  donc ce que coûte une
   lecture sur une machine deux fois plus chargée, et les plafonds de 30 000 / 45 000 ms ne sont pas
   justifiés par une mesure à cette charge-là — ils sont larges exprès.
 - **La contre-épreuve « assertion d'origine remise sur le produit régressé » n'a pas été rejouée**

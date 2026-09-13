@@ -173,14 +173,24 @@ describe('la dérive entre le début et la fin d’une campagne', () => {
   });
 });
 
-/* LES DÉLAIS DE CE FICHIER VIENNENT D'UNE MESURE, PAS D'UN ARRONDI (finition du
-   13/09 ; le vérificateur indépendant a relevé « trois délais portés à soixante
-   secondes »). Un délai de parcours n'est pas une assertion — l'allonger ne
-   déplace aucune barre, il change seulement le moment où l'on déclare l'échec.
-   Mais un délai trop large ABSORBE EN SILENCE une lenteur qu'on aurait voulu
-   voir. On le ramène donc à une valeur dérivée du pire relevé connu, et l'on
-   PUBLIE le coût de chaque lecture réelle : une dérive se lira dans le journal
-   au lieu de se découvrir par une expiration.
+/* LES DÉLAIS DE CE FICHIER SONT DES PLAFONDS LARGES, ET C'EST DIT AINSI
+   (finition du 13/09 ; le vérificateur indépendant a relevé « trois délais
+   portés à soixante secondes »). Un délai de parcours n'est pas une assertion —
+   l'allonger ne déplace aucune barre, il change seulement le moment où l'on
+   déclare l'échec. Mais un délai trop large ABSORBE EN SILENCE une lenteur
+   qu'on aurait voulu voir. La réponse n'est donc PAS de prétendre le dériver
+   d'un relevé — c'est ce qu'on faisait, avec un relevé que personne ne pouvait
+   rejouer — mais de PUBLIER le coût de chaque lecture réelle : une dérive se
+   lira dans le journal, verte, au lieu de se découvrir par une expiration.
+
+   ÉLARGISSEMENT ASSUMÉ, ET DIT (revue Codex du 13/09 sur cette finition) : le
+   parcours « ne confond pas chrome… » passait d'un budget IMPLICITE de 5 000 ms
+   (le défaut de Vitest, qu'il ne déclarait nulle part) à ce plafond de
+   30 000 ms. C'est bien un élargissement. Il est pris parce que sa lecture a
+   été mesurée à 1 946 ms machine chargée — un facteur 2,5 d'un budget que rien
+   n'annonçait — et parce que les deux autres lectures réelles du fichier
+   portent déjà ce même plafond. Ce qui compense l'élargissement, c'est le
+   journal, pas le plafond.
 
    UN RELEVÉ A ÉTÉ RETIRÉ LE 13/09 (C9), ET C'EST CELUI DONT TOUT DÉPENDAIT.
    Ce bloc a longtemps cité « trois `compterProcessus()` consécutifs à
@@ -207,16 +217,20 @@ describe('la dérive entre le début et la fin d’une campagne', () => {
        607 ms. Au passage de 09 h 05, avant la correction de ce jour, deux
        lectures seulement se journalisaient (589 et 956 ms) et la troisième
        coûtait 469 ms en silence ;
-     — 13/09, MÊME COMMANDE, POSTE CHARGÉ (node=45 à 48, une seconde suite
-       tournait) : les trois lectures à 2 927 / 2 738 / 662 ms, puis
-       965 / 959 / 757 ms au passage suivant ;
+     — 13/09, même commande, POSTE CHARGÉ (node=45 à 48) : les trois lectures à
+       2 927 / 2 738 / 662 ms, puis 965 / 959 / 757 ms au passage suivant.
+       ATTENTION — c'est une OBSERVATION, pas un relevé rejouable sur commande :
+       la charge venait d'une seconde suite qui tournait en même temps, et rien
+       dans la commande publiée ne la reproduit. Elle dit ce que la charge fait
+       au coût ; elle ne se commande pas ;
      — CI Ubuntu du commit `a3732db` (run 34738395197) : ce fichier entier,
        23 parcours, 99 ms — lire `/proc` ne coûte rien.
 
-   D'OÙ LES DEUX NOMBRES, ET CE QU'ILS SONT VRAIMENT. Le pire coût REJOUABLE
-   d'une lecture est 2 927 ms, relevé poste chargé ; la charge le multiplie par
-   ~6 entre 24 et 48 processus. Les deux plafonds ci-dessous ne sont pas pour
-   autant des dérivations de ce nombre — ce sont des plafonds volontairement
+   D'OÙ LES DEUX NOMBRES, ET CE QU'ILS SONT VRAIMENT. Le pire coût qu'on
+   obtient EN RELANÇANT la commande publiée est 965 ms ; le pire coût OBSERVÉ,
+   sous une charge qu'on ne sait pas commander, est 2 927 ms — la charge
+   multiplie par ~6 entre 24 et 48 processus. Les deux plafonds ci-dessous ne
+   sont des dérivations ni de l'un ni de l'autre — ce sont des plafonds
    larges, un ordre de grandeur au-dessus, et il faut le dire ainsi plutôt que
    d'habiller un arrondi en calcul. Les resserrer au plus près du relevé
    transformerait une machine momentanément chargée en échec de parcours, et
@@ -246,8 +260,9 @@ describe('le comptage réel', () => {
   /* UNE SEULE LECTURE DE LA TABLE DES PROCESSUS POUR LES ASSERTIONS DE CE
      BLOC. `tasklist` liste toute la table, et trois parcours n'ont pas besoin
      de trois tables : c'est trois fois moins de travail. Et ce n'est pas sans
-     effet sur le délai — une lecture coûte 420 ms machine calme mais jusqu'à
-     2 927 ms sous charge (relevés du 13/09), donc trois lectures séparées
+     effet sur le délai — une lecture coûte 420 ms machine calme, 965 ms au pire
+     en relançant la commande publiée, et 2 927 ms OBSERVÉS sous une charge
+     qu'on ne sait pas commander (13/09), donc trois lectures séparées
      approcheraient les 5 s du délai par défaut de Vitest. On lit une fois, on
      partage, et un plafond EXPLICITE porte sur cette lecture-là.
      LE PARCOURS « ne confond pas chrome… », LUI, RELIT VOLONTAIREMENT : il
