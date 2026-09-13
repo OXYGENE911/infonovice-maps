@@ -5,6 +5,15 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 ## [1.145.0] — 2026-09-13 — SONDE-VRAIE-1
 
 ### La sonde ne mesurait pas ce qu'elle annonçait — et une assertion affaiblie est restaurée
+- **UNE SECONDE ASSERTION NE POUVAIT PAS ROUGIR — corrigée.** Dans
+  `tests-e2e/sonde-chrono.spec.ts`, l'exigence « le bouton reste utilisable AU MOINS 8 000 ms »
+  lisait `toujoursOuverteApresMs`, c'est-à-dire `dernierRegard - porteOuverteA` — exactement la
+  quantité que le `waitForFunction` précédent attend de voir franchir 10 000 ms : elle était vraie
+  PAR CONSTRUCTION. Elle lit désormais la **tenue utilisable** du bouton (`dureeDeVieMs` quand la
+  porte se referme, la fenêtre observée sinon) et passe AVANT le contrôle de non-fermeture.
+  Contre-épreuve du 13/09, jeton d'abandon neutralisé dans le produit : **rouge sur cette
+  ligne-là, « reçu 1 484 ms, attendu ≥ 8 000 »** ; produit restauré, les quatre parcours du
+  fichier repassent au vert. Aucune barre n'a bougé : 8 000 reste 8 000.
 - **L'ASSERTION AFFAIBLIE AU COMMIT `3f38cb3` EST RESTAURÉE.**
   `tests/garde-processus.test.ts` : `expect(c.node).toBeGreaterThanOrEqual(0)` redevient
   `toBeGreaterThanOrEqual(1)`, avec son titre d'origine. Elle avait été baissée parce que la
@@ -21,16 +30,20 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - **`--campagne` chronomètre le calcul d'itinéraire**, du geste qui le lance jusqu'au plan de
   recharge lisible — la définition mot pour mot de la feuille de relevé mobile, pour que le
   chiffre du poste et celui du téléphone se comparent. Il relevait jusqu'ici `performance.now()`
-  après le chargement de la page : **étalonné avec un retard connu de 3 000 ms, l'ancien
-  instrument rendait 352 ms là où le nouveau rend 4 326 ms.** Les six chiffres qu'il aurait
-  produits n'auraient rien dit du critère des 5 s.
+  après le chargement de la page : **étalonné avec un retard connu de 3 000 ms sur la CI Ubuntu
+  du commit `a3732db` (run 34738395197, 13/09 05 h 07 UTC), l'ancien instrument aurait publié
+  599 ms là où le vrai calcul en prend 5 456.** Les six chiffres qu'il aurait produits n'auraient
+  rien dit du critère des 5 s. Ces nombres étalonnent l'INSTRUMENT sur une fixture, pas le
+  produit.
 - **Une valeur bornée par la fenêtre d'observation ne sort plus sous le nom d'une mesure.**
   Quand la porte de sortie ne se referme pas — c'est-à-dire quand le correctif de la PR #318
   fonctionne —, la sonde écrit `dureeDeVieMs: null` et `toujoursOuverteApresMs: <N>` au lieu
   d'un nombre qui grandissait avec la patience de l'observateur.
 - **L'empreinte du bundle est contrôlée APRÈS le scénario**, donc après l'import dynamique du
   panneau d'itinéraire — mesuré : ce chunk n'est cité ni dans `dist/index.html` ni dans ses
-  `modulepreload`, et le navigateur ne le demande que 1 243 ms après la fin du chargement. La
+  `modulepreload`, et le navigateur ne le demande que 1 141 ms après le DÉBUT de la navigation —
+  donc bien après le retour de `load` (CI du 13/09, commit `a3732db`, run 34738395197 ; l'écart
+  depuis la FIN du chargement, lui, n'est pas relevé par l'instrument). La
   sonde **exige** en plus de l'avoir vu (sortie en code 5) : un contrôle qui n'a jamais vu le
   fichier n'est pas un contrôle.
 - **Découvert en mesurant :** le prédicat de la porte confondait « le bouton n'existe pas » et

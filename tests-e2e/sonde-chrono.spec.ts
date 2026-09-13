@@ -384,13 +384,36 @@ test('la porte de sortie : quand elle paraît, ce que l’usager voit avant, et 
     'la porte ne peut pas paraître avant le seuil d’abandon de 15 000 ms')
     .toBeGreaterThanOrEqual(15_000);
 
+  /* L'EXIGENCE DES HUIT SECONDES, PORTÉE PAR UNE GRANDEUR QUI PEUT LA DÉMENTIR
+     (finition du 13/09, objection du vérificateur indépendant).
+     AVANT, cette barre lisait `toujoursOuverteApresMs`, c'est-à-dire
+     `dernierRegard - porteOuverteA` — EXACTEMENT la quantité que le
+     `waitForFunction` ci-dessus attend de voir franchir 10 000 ms. Elle était
+     donc VRAIE PAR CONSTRUCTION : aucune régression du produit ne pouvait la
+     faire rougir, et elle laissait croire que le seuil du CEO était gardé. Une
+     assertion incapable de rougir ne protège rien ; c'est la faute du cycle
+     précédent, ici sous une autre forme.
+     MAINTENANT elle lit la TENUE UTILISABLE du bouton, dans les deux branches :
+       — porte refermée     → `dureeDeVieMs`, mesurée sur le PRODUIT et
+         indépendante de notre patience. C'est ce nombre qui rougit si le bouton
+         se referme avant huit secondes — la régression d'avant `4318ca1`, où il
+         vivait 1 500 ms (ouvert à 15 000, masqué par le `catch` à 16 500).
+       — porte non refermée → la fenêtre observée depuis l'ouverture ; qu'elle
+         dépasse huit secondes est alors une propriété de NOTRE mesure, et la
+         preuve est portée par `refermee === false`, juste en dessous.
+     L'ORDRE EST DÉLIBÉRÉ : ce contrôle passe AVANT `refermee`, pour qu'une
+     fermeture prématurée fasse rougir la barre des huit secondes ELLE-MÊME et
+     non une autre ligne. Contre-épreuve rejouée le 13/09 : produit reverté →
+     rouge sur cette ligne à 1 500 ms ; produit restauré → vert. */
+  const tenueUtilisableMs = p.refermee ? p.dureeDeVieMs : p.toujoursOuverteApresMs;
+  expect(tenueUtilisableMs as number,
+    `exigence du CEO du 13/09 : le bouton reste utilisable AU MOINS 8 000 ms — ${p.motif}`)
+    .toBeGreaterThanOrEqual(8_000);
+
   // LA PORTE NE SE REFERME PAS — et la sonde ne publie AUCUNE durée de vie.
   expect(p.refermee, 'la porte s’est refermée : le correctif de la PR #318 aurait cédé').toBe(false);
   expect(p.dureeDeVieMs,
     'une « durée de vie » publiée ici serait celle de notre fenêtre d’observation').toBeNull();
-  expect(p.toujoursOuverteApresMs as number,
-    'exigence du CEO du 13/09 : le bouton reste utilisable AU MOINS 8 000 ms')
-    .toBeGreaterThanOrEqual(8_000);
 
   /* LE FAIT DÉCOUVERT EN MESURANT, et qu'il ne faut pas taire : à 1280 × 720,
      le bouton « Réessayer » est PRÉSENT mais sous la ligne de flottaison du

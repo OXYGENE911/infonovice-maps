@@ -425,6 +425,31 @@ on regardait longtemps, plus il était beau.
 Un parcours unitaire rejoue l'invariant sur des fenêtres de 16 s à 600 s : `dureeDeVieMs` reste
 `null` dans tous les cas. Si le chiffre dépendait encore de notre patience, cette boucle le dirait.
 
+### Le même piège, une ligne plus bas — et la contre-épreuve qui le montre (13/09)
+
+`jugerPorte` ne publiait plus de fausse durée ; mais le parcours qui le vérifie, lui, portait
+encore une assertion **structurellement incapable de rougir**. Elle lisait
+`toujoursOuverteApresMs`, c'est-à-dire `dernierRegard - porteOuverteA` — exactement la quantité que
+le `waitForFunction` de la ligne précédente attend de voir franchir 10 000 ms. Écrire ensuite
+« ≥ 8 000 », c'était vérifier que 10 000 ≥ 8 000.
+
+**Ce qu'elle lit maintenant :** la **tenue utilisable** du bouton — `dureeDeVieMs` quand la porte
+se referme (une grandeur du PRODUIT, indépendante de notre patience), la fenêtre observée sinon —
+et le contrôle passe **avant** `refermee`, pour que la barre des huit secondes rougisse elle-même.
+
+**La contre-épreuve, rejouée** — poste Windows, port dédié 4193, `npm run build` avant chaque
+passe (`vite preview` ne reconstruit pas) :
+
+| passe | source du produit | verdict | ligne rouge |
+|---|---|---|---|
+| 1 | jeton d'abandon neutralisé (`#abandonAnnonce === -1`) — le `catch` du plafond dur remasque le bouton, comportement d'avant `7361d65` | **ROUGE** | `sonde-chrono.spec.ts:411` — « reçu 1 484 ms, attendu ≥ 8 000 », motif « porte ouverte puis REFERMÉE sous nos yeux : durée de vie réelle 1484 ms » |
+| 2 | même régression, **assertion d'origine** remise | ROUGE, mais **ailleurs** | `sonde-chrono.spec.ts:388`, sur `refermee` — la ligne des 8 000 n'est jamais atteinte, et elle n'aurait comparé qu'un `null` à 8 000 |
+| 3 | produit restauré, assertion corrigée | **VERT** | les 4 parcours du fichier en 1,1 min |
+
+La passe 2 est le point exact de l'objection : l'ancien parcours attrapait bien cette régression,
+mais **par une autre ligne**. Le nombre 8 000 n'a jamais été confronté à une durée mesurée ; il
+l'est désormais. Aucune barre n'a bougé : 8 000 reste 8 000.
+
 ### Et un fait découvert EN mesurant, qu'il ne faut pas taire
 
 Le prédicat « la porte est utilisable » confondait deux choses : *le bouton n'existe pas* et *le
@@ -452,8 +477,22 @@ défiler un volet pour trouver une porte de secours.
 
 Le chunk n'est cité **ni** dans `index.html` **ni** dans ses `modulepreload`. Et côté navigateur,
 `tests-e2e/sonde-chrono.spec.ts` relève l'instant de la requête : au retour de
-`page.goto(..., {waitUntil:'load'})` le chunk n'a pas encore été demandé ; il l'est **1 243 ms plus
-tard**, à l'ouverture du panneau. **Le fichier qui porte la mesure n'était jamais empreinté.**
+`page.goto(..., {waitUntil:'load'})` le chunk n'a pas encore été demandé ; il l'est plus tard, à
+l'ouverture du panneau. **Le fichier qui porte la mesure n'était jamais empreinté.**
+
+**CE QUE CE NOMBRE COMPTE, ET DEPUIS QUAND — correction du 13/09.** Une version précédente de ce
+paragraphe écrivait « 1 243 ms après la **fin** du chargement ». C'était faux : le chronomètre de ce
+parcours part à `const depart = Date.now()`, **avant** l'appel à `page.goto`, et l'instrument le dit
+lui-même en toutes lettres — « ms après le **début** ». L'origine est donc le début de la
+navigation, pas la fin du chargement.
+
+| relevé | origine du chronomètre | valeur | source |
+|---|---|---|---|
+| CI Ubuntu, commit `a3732db` | début de la navigation | **1 141 ms** | run `34738395197`, 13/09 05 h 07 UTC |
+
+Le nombre reste au service du même fait — au retour de `load`, le chunk n'est pas encore demandé —
+mais il ne se lit plus comme un écart depuis la fin du chargement. **L'écart depuis la fin du
+chargement n'a pas été mesuré** ; l'instrument ne relève pas cet instant-là.
 
 **Maintenant :** le contrôle tourne **après le scénario**, et la sonde **exige** d'avoir vu le chunk —
 `exigerFichiersAttendus` sort en erreur (code 5) si aucun fichier servi ne correspond. *Un contrôle
@@ -543,6 +582,27 @@ chemin complet de l'exécutable : pas de troncature, donc pas cet angle mort.
 Trois appels consécutifs à `compterProcessus()` sur ce poste chargé : **12 637 ms, 10 124 ms,
 3 059 ms**. `tasklist` est lent quand la machine l'est — et une campagne le paye deux fois. Les
 parcours du bloc « le comptage réel » partagent donc une seule lecture.
+
+### Les délais de `tests/garde-processus.test.ts`, dérivés d'un relevé (13/09)
+
+Le vérificateur a relevé trois délais de parcours portés à soixante secondes. Un délai de parcours
+n'est pas une assertion — l'allonger ne déplace aucune barre —, mais il **absorbe en silence** une
+lenteur qu'on aurait voulu voir. Trois relevés, tous rejouables :
+
+| relevé | machine | valeur |
+|---|---|---|
+| trois `compterProcessus()` consécutifs | ce poste, CHARGÉ (47 à 57 processus comptés) | 12 637 / 10 124 / 3 059 ms |
+| `tasklist /NH /FO CSV` complet × 3 | ce poste, 13/09 07 h 35 (30 node, 0 chrome) | 427 / 504 / 559 ms |
+| `tasklist` filtré par pid × 3 | ce poste, même instant | 281 / 326 / 323 ms |
+| le fichier entier, 23 parcours | ce poste, même instant | 5,09 s |
+| le fichier entier, 23 parcours | CI Ubuntu, commit `a3732db` (run 34738395197) | **99 ms** — lire `/proc` ne coûte rien |
+
+D'où deux délais nommés au lieu de trois nombres ronds : une lecture de la table vaut 12 637 ms au
+pire connu → **30 000 ms** (× 2,4) ; le parcours de l'enfant renommé enchaîne un `spawn` borné à
+10 000 ms par le test lui-même **puis deux** lectures par pid → 10 000 + 2 × 12 637 = 35 274 ms au
+pire → **45 000 ms**. Et chaque lecture réelle **publie ce qu'elle a coûté** (`[garde] … table des
+processus lue en N ms`) : une dérive se lira dans le journal au lieu de se découvrir par une
+expiration. Relevé après correction sur ce poste : 470 ms.
 
 ## 14. Tâche 2 — les 15 secondes avant la porte de sortie : le relevé, pas l'arbitrage
 

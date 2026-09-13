@@ -173,6 +173,41 @@ describe('la dérive entre le début et la fin d’une campagne', () => {
   });
 });
 
+/* LES DÉLAIS DE CE FICHIER VIENNENT D'UNE MESURE, PAS D'UN ARRONDI (finition du
+   13/09 ; le vérificateur indépendant a relevé « trois délais portés à soixante
+   secondes »). Un délai de parcours n'est pas une assertion — l'allonger ne
+   déplace aucune barre, il change seulement le moment où l'on déclare l'échec.
+   Mais un délai trop large ABSORBE EN SILENCE une lenteur qu'on aurait voulu
+   voir. On le ramène donc à une valeur dérivée du pire relevé connu, et l'on
+   PUBLIE le coût de chaque lecture réelle : une dérive se lira dans le journal
+   au lieu de se découvrir par une expiration.
+
+   RELEVÉS — tous rejouables, aucun deviné :
+     — 13/09, ce poste CHARGÉ (47 à 57 processus des familles comptées) : trois
+       `compterProcessus()` consécutifs à 12 637 / 10 124 / 3 059 ms ;
+     — 13/09 07 h 35, ce poste (30 node, 0 chrome) : `tasklist /NH /FO CSV`
+       complet à 427 / 504 / 559 ms, filtré par pid à 281 / 326 / 323 ms, et ce
+       fichier entier en 5,09 s pour 23 parcours ;
+     — CI Ubuntu du commit `a3732db` (run 34738395197) : ce fichier entier,
+       23 parcours, 99 ms — lire `/proc` ne coûte rien.
+
+   D'OÙ LES DEUX NOMBRES : une lecture de la table vaut 12 637 ms au pire connu,
+   portée à 30 000 ms (× 2,4). Le parcours de l'enfant renommé enchaîne un
+   `spawn` que le test borne lui-même à 10 000 ms PUIS deux lectures par pid :
+   10 000 + 2 × 12 637 = 35 274 ms au pire, porté à 45 000 ms. */
+const DELAI_LECTURE_TABLE_MS = 30_000;
+const DELAI_ENFANT_PUIS_DEUX_LECTURES_MS = 45_000;
+
+/** Lit la table des processus EN PUBLIANT ce qu'elle a coûté. */
+function compterEnPubliantLeCout(quoi: string): ReturnType<typeof compterProcessus> {
+  const a = Date.now();
+  const c = compterProcessus();
+  console.error(`[garde] ${quoi} : table des processus lue en ${Date.now() - a} ms `
+    + `(plafond du parcours ${DELAI_LECTURE_TABLE_MS} ms) — source « ${c.source} », `
+    + `node=${c.node} chrome=${c.chrome} nonResolus=${c.nonResolus}`);
+  return c;
+}
+
 describe('le comptage réel', () => {
   /* UNE SEULE LECTURE DE LA TABLE DES PROCESSUS POUR TOUT CE BLOC, et un délai
      de garde qui vient d'une MESURE, pas d'un tâtonnement. Relevé le 13/09 sur
@@ -186,7 +221,8 @@ describe('le comptage réel', () => {
      (À savoir pour la sonde : la garde coûte jusqu'à une douzaine de secondes
      par relevé sur une machine chargée — deux relevés par campagne.) */
   let compte: ReturnType<typeof compterProcessus>;
-  beforeAll(() => { compte = compterProcessus(); }, 60_000);
+  beforeAll(() => { compte = compterEnPubliantLeCout('lecture partagée du bloc'); },
+    DELAI_LECTURE_TABLE_MS);
 
   // PORTABILITÉ (revue Codex du 13/09, constat BLOQUANT) : la première version
   // de `compterProcessus` n'appelait que `tasklist`, absent de la CI Ubuntu du
@@ -297,7 +333,7 @@ describe('l’ancien compteur contre le nouveau, sur le même processus au même
     } finally {
       arreter();
     }
-  }, 60_000);
+  }, DELAI_ENFANT_PUIS_DEUX_LECTURES_MS);
 
   it('la troncature à 15 caractères de « comm » suffisait à elle seule à faire minorer l’ancien comptage', () => {
     /* DÉCOUVERT PAR LA CI DE CETTE PR, et pas deviné : `/proc/<pid>/comm`
@@ -318,10 +354,10 @@ describe('l’ancien compteur contre le nouveau, sur le même processus au même
     /* UN RELEVÉ QUI ANNONCE 12 PROCESSUS DONT 40 NON RÉSOLUS ne se lit pas
        comme un relevé qui en annonce 12 tout court. Les deux champs sortent
        donc dans le JSON de chaque campagne. */
-    const c = compterProcessus();   // une lecture propre à ce bloc
+    const c = compterEnPubliantLeCout('lecture propre au parcours des champs déclarés');
     expect(typeof c.source).toBe('string');
     expect(c.source.length).toBeGreaterThan(0);
     expect(Number.isFinite(c.nonResolus)).toBe(true);
     expect(c.nonResolus).toBeGreaterThanOrEqual(0);
-  }, 60_000);
+  }, DELAI_LECTURE_TABLE_MS);
 });
