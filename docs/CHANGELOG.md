@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.145.0] — 2026-09-13 — SONDE-VRAIE-1
+## [1.149.0] — 2026-09-13 — SONDE-VRAIE-1
 
 ### La sonde ne mesurait pas ce qu'elle annonçait — et une assertion affaiblie est restaurée
 - **UNE SECONDE ASSERTION NE POUVAIT PAS ROUGIR — corrigée.** Dans
