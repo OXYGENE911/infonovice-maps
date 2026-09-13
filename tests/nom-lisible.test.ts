@@ -21,6 +21,14 @@ describe('nomLisible — LE CAS NOMINAL : un nom se montre', () => {
     'RN7',
     // Un deux-points PRÉCÉDÉ d'un espace n'est pas une clé technique.
     'Marseille : port',
+    /* CES DEUX-LÀ VIENNENT DE LA REVUE CODEX, et la règle les effaçait :
+       « Impasse des 10000 Martyrs Pinet » existe vraiment, à Eyzin-Pinet
+       (38). Un nom en plusieurs mots est une PHRASE, pas un identifiant :
+       les nombres qu'un nom de voie porte réellement — une date, un code
+       postal, un millésime — n'en font pas une référence technique. */
+    'Impasse des 10000 Martyrs Pinet',
+    'Rue du 8 Mai 1945',
+    'Place du 14 Juillet 1789',
   ];
   for (const nom of noms) {
     it(`garde « ${nom} »`, () => {
@@ -54,7 +62,8 @@ describe('nomLisible — L’IDENTIFIANT BRUT : on se tait', () => {
     ['yes', 'valeur technique OSM'],
     ['noname', 'dit qu’il n’y a pas de nom — ce n’est pas un nom'],
     ['FIXME', 'note de cartographe'],
-    ['Sortie 4821901', 'un identifiant glissé derrière un mot'],
+    ['Sortie 4821901', 'sept chiffres dans une phrase : plus aucun nom de lieu'],
+    ['Bretelle TRONROUT0000000352788241', 'un cleabs BD TOPO glissé derrière un mot'],
   ];
   for (const [brut, pourquoi] of bruts) {
     it(`efface « ${brut} » — ${pourquoi}`, () => {

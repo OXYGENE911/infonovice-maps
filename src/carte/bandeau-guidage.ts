@@ -619,7 +619,11 @@ export class BandeauGuidage extends HTMLElement {
   get actif(): boolean { return this.#veille !== null; }
 
   connectedCallback(): void {
-    if (this.firstElementChild) return;
+    /* DÉJÀ RENDU : on ne refait pas le balisage, mais les observateurs, eux,
+       ont été coupés au retrait (voir `disconnectedCallback`). Ils se
+       reposent, sans quoi le texte cesserait de tenir en deux lignes après
+       un simple déplacement dans le DOM. Relevé par la revue Codex. */
+    if (this.firstElementChild) { this.#installerTenue(); return; }
     this.hidden = true;
     this.setAttribute('role', 'complementary');
     this.setAttribute('aria-label', 'Suivi de l’itinéraire');
@@ -1067,15 +1071,7 @@ export class BandeauGuidage extends HTMLElement {
        direction : ce qu'il porte tient dedans, quitte à rétrécir par paliers,
        et l'on ne coupe qu'en dernier recours. Le CADRE qui décide est le
        panneau lui-même : c'est sa largeur qui borne les lignes. */
-    const panneauCadre = this.querySelector<HTMLElement>('.bg-cartouche');
-    const instruction = this.querySelector<HTMLElement>('.bg-cartouche .bg-instruction');
-    const destination = this.querySelector<HTMLElement>('.bg-destination');
-    if (panneauCadre && instruction && destination) {
-      /* `connectedCallback` peut rejouer — l'élément déplacé dans le DOM — et
-         deux jeux d'observateurs mesureraient deux fois le même texte. */
-      this.#retirerTenue?.();
-      this.#retirerTenue = installerTenueEnLignes(panneauCadre, [instruction, destination]);
-    }
+    this.#installerTenue();
     this.querySelector('.bg-bilan-garder')?.addEventListener('click', () => {
       void this.#garderLeTrajet();
     });
@@ -1637,6 +1633,27 @@ export class BandeauGuidage extends HTMLElement {
 
   /** Le retrait des observateurs de la tenue en deux lignes (TERRAIN-2). */
   #retirerTenue: (() => void) | null = null;
+
+  /** Pose les observateurs qui tiennent le texte du panneau en deux lignes.
+   *  IDEMPOTENT : deux jeux d'observateurs mesureraient deux fois le même
+   *  texte, et le second ne serait jamais retiré. */
+  #installerTenue(): void {
+    this.#retirerTenue?.();
+    this.#retirerTenue = null;
+    const cadre = this.querySelector<HTMLElement>('.bg-cartouche');
+    const instruction = this.querySelector<HTMLElement>('.bg-cartouche .bg-instruction');
+    const destination = this.querySelector<HTMLElement>('.bg-destination');
+    if (!cadre || !instruction || !destination) return;
+    this.#retirerTenue = installerTenueEnLignes(cadre, [instruction, destination]);
+  }
+
+  /* LES OBSERVATEURS SE COUPENT AU RETRAIT (revue Codex). Un `MutationObserver`
+     survit au détachement de son sous-arbre : laissés en place, les nôtres
+     continueraient de mesurer un panneau que plus personne ne regarde. */
+  disconnectedCallback(): void {
+    this.#retirerTenue?.();
+    this.#retirerTenue = null;
+  }
 
   /* ---- la suggestion de parking (PARK-1, 31/08) ---- */
 

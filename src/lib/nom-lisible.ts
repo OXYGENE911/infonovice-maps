@@ -38,9 +38,16 @@ const ELEMENT_OSM_COURT = /^[nwr]\/?\d{4,}$/i;
    Le préfixe est en minuscules ASCII et COLLÉ à son séparateur — « Paris :
    centre » et « Saint-Étienne » n'y ressemblent pas. */
 const CLE_TECHNIQUE = /^[a-z][a-z0-9-]*[:=]/;
-/* UNE SUITE DE CINQ CHIFFRES OU PLUS : aucun numéro de route ni de sortie
-   n'en compte autant — au-delà, c'est un identifiant. */
-const LONG_NOMBRE = /\d{5,}/;
+/* UNE LONGUE SUITE DE CHIFFRES. LE SEUIL DÉPEND DE CE QU'ON LIT, et c'est la
+   revue Codex qui l'a montré : « Impasse des 10000 Martyrs Pinet » existe
+   vraiment, à Eyzin-Pinet (38), et la règle l'effaçait. Un nom en plusieurs
+   mots est une PHRASE, pas un identifiant : on y tolère les nombres qu'un
+   nom de voie porte réellement — une date, un code postal, un millésime —
+   et l'on ne se méfie qu'au-delà de sept chiffres, longueur qu'aucun nom de
+   lieu ne prend et que toutes les clés techniques dépassent (`cleabs` de la
+   BD TOPO : neuf chiffres). Un mot SEUL, lui, reste jugé à cinq. */
+const LONG_NOMBRE_MOT = /\d{5,}/;
+const LONG_NOMBRE_PHRASE = /\d{7,}/;
 /* UN CODE D'UN SEUL TENANT, EN CAPITALES ET CHIFFRES : « RD1234 », « FR75056 ».
    Quatre caractères au moins, et au moins un chiffre — « CHU » et « RN7 »
    restent lisibles, ce sont des mots qu'on lit sur un panneau. */
@@ -72,7 +79,12 @@ export function estIdentifiantBrut(texte: string): boolean {
   if (ELEMENT_OSM.test(t)) return true;
   if (ELEMENT_OSM_COURT.test(t)) return true;
   if (CLE_TECHNIQUE.test(t)) return true;
-  if (LONG_NOMBRE.test(t)) return true;
+  /* CE QUI SUIT NE VAUT QUE POUR LA FORME. Les motifs précédents disent
+     « ceci vient d'une base de données » ; ceux-ci disent seulement « ceci
+     ressemble à un code », et un nom en plusieurs mots ne ressemble pas à un
+     code. On y est donc plus indulgent — voir LONG_NOMBRE_PHRASE. */
+  const unSeulMot = !/\s/u.test(t);
+  if ((unSeulMot ? LONG_NOMBRE_MOT : LONG_NOMBRE_PHRASE).test(t)) return true;
   if (CODE_SANS_ESPACE.test(t)) return true;
   return false;
 }
