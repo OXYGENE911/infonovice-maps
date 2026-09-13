@@ -1,0 +1,1233 @@
+// LA PORTE AVANT LE DÉPLOIEMENT DE LA PRÉVERSION (STAGING-1, 13/09/2026).
+//
+// POURQUOI UNE PORTE ET PAS UNE CONFIANCE. Le marquage « prévisualisation »
+// et le double verrou d'indexation sont produits par un plugin Vite. Un plugin
+// peut cesser de s'appliquer sans rien casser d'autre : une variable
+// d'environnement mal orthographiée dans le workflow, un `apply: 'build'` qui
+// ne se déclenche pas, une mise à jour de Vite qui change l'ordre des
+// transformations. Le symptôme serait alors une préversion qui ressemble
+// EXACTEMENT à la production et que les moteurs ont le droit d'indexer —
+// c'est-à-dire les deux dégâts que ce travail existe pour empêcher, arrivés en
+// silence.
+//
+// SEPT REVUES CODEX ONT MONTRÉ VINGT-SIX FAÇONS DE LA FRANCHIR (13/09), plus
+// une trouvée par le vérificateur indépendant. Toutes de la même famille : la
+// porte cherchait des CHAÎNES là où il fallait lire une STRUCTURE — une
+// cascade CSS, un nombre, une liste d'attributs.
+//   Un `X-Robots-Tag` en commentaire, sous `/prive/*`, sous le domaine
+// d'un tiers, adressé au seul Bingbot, ou détaché plus bas par `! X-Robots-Tag`.
+// Un `Disallow: /` réservé à un robot, ou annulé par un groupe `Googlebot:
+// Allow: /` placé après. Un bandeau éteint par une SECONDE règle CSS, ou par un
+// `display : none` avec des espaces. Une page dans un sous-dossier. Un lien de
+// feuille qui ne résout nulle part.
+// Puis elle a cherché un MOT là où il fallait lire un NOMBRE :
+// `border: 0 solid` et `font-size: 0` la faisaient sortir en code 0 — en
+// imprimant « cadre visible et pastille visible ».
+// Elle lit donc désormais les GROUPES de robots.txt, les BLOCS de `_headers`,
+// la CASCADE du CSS (dernière déclaration, `!important`, côté par côté) et les
+// VALEURS qu'elle porte, les ATTRIBUTS du HTML avec leurs références de
+// caractères, et elle descend dans les sous-dossiers en vérifiant que le lien
+// de chaque page mène à un fichier qui existe. Chacun des contournements est un
+// test (tests/porte-previsualisation.test.ts).
+//
+// CE QU'ELLE VÉRIFIE AUSSI DEPUIS LE 13/09 : qu'aucune page ne se dise
+// PRODUCTION dans ses métadonnées de partage (`canonical`, `og:url`, JSON-LD,
+// `og:title` non préfixé). Une préversion qui se dit préversion à qui l'ouvre
+// et production à qui reçoit son lien ne remplit qu'à moitié son office.
+//
+// CE QU'ELLE NE SAIT PAS FAIRE, ET IL FAUT LE DIRE : elle lit du texte, elle ne
+// peint pas la page. Elle refuse les façons ÉCRITES de disparaître ; le rendu
+// réel reste jugé à la capture d'écran, en navigateur.
+//
+// Usage : node scripts/verifier-previsualisation.mjs [dossier]  (défaut : dist)
+import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
+import { join, posix } from 'node:path';
+
+/** La SEULE feuille de bandeau admise : celle que le point 3 contrôle. */
+const FEUILLE_ATTENDUE = 'previsualisation.css';
+
+/* LES PLANCHERS, ET POURQUOI CE NE SONT PAS DES NOMBRES CHOISIS AU HASARD
+   (objection du vérificateur indépendant, 13/09).
+   La porte se contentait de refuser le ZÉRO : `border: 0`, `font-size: 0`.
+   Un seul caractère la franchissait — `border: 0.1px`, `font-size: 0.1px` —
+   et elle imprimait alors « cadre visible, pastille visible ». Même défaut que
+   la sonde d'origine, déplacé d'un chiffre.
+   LE PLANCHER N'EST DONC PAS UN NOMBRE QUE J'AI CHOISI : c'est la valeur que
+   la feuille de référence ÉCRIT, celle qui a été dessinée, revue et regardée à
+   la capture d'écran. La porte ne juge pas l'esthétique ; elle refuse un
+   marquage MOINS visible que celui qu'elle est censée trouver. Un changement
+   de design légitime se fait dans `src/lib/previsualisation.ts` ET ici, et le
+   test « les planchers SONT ceux de la feuille » rougit si l'un bouge seul :
+   les deux nombres ne peuvent pas diverger en silence.
+
+   CE QUI RESTE OUVERT, ÉCRIT PLUTÔT QUE TU — ET LA LISTE PRÉCÉDENTE N'ÉTAIT
+   PAS COMPLÈTE. Elle nommait deux seuils lâches et se présentait comme
+   exhaustive ; le vérificateur indépendant en a trouvé un TROISIÈME de la même
+   famille (13/09) : la mise à l'échelle n'était refusée qu'à ZÉRO EXACT, si
+   bien que `transform: scale(0.0001)` franchissait la porte — mot pour mot le
+   défaut « un caractère de plus » que le liseré et la pastille venaient de
+   payer. Une liste qui se dit exhaustive sans l'être rend la porte décorative.
+   Elle est donc refaite ici PAR SONDE et non par lecture : chaque façon
+   d'éteindre le bandeau a été ajoutée à la feuille réellement SERVIE, la porte
+   relancée, et ce qui suit est ce qu'elle laisse encore passer.
+
+   REFERMÉ LE 13/09, CHACUN AVEC SON TEST — DOUZE FAMILLES : le plancher
+   d'échelle ci-dessous (`transform: scale`, la propriété `scale`, ET `zoom`,
+   qui est la même chose sous un autre nom — le premier jet de ce correctif
+   l'avait manqué, ce qui n'aurait rien refermé du tout) ; les transformations
+   non évaluables (`matrix`, `rotateY`, `perspective`…) et la propriété `rotate`
+   hors du plan ; `display: contents` ; les découpes, masques, filtres et
+   `border-image` (`clip-path`, `clip`, `mask`, `filter`, `backdrop-filter`) ;
+   `all: unset`, qui efface tout ce que la porte vient de lire ;
+   `-webkit-text-fill-color: transparent` ; et un interligne qui rogne le texte
+   de la pastille.
+
+   CE QUI RESTE LÂCHE, ET CE N'EST PAS DEUX MAIS CINQ :
+   - `opacity` : refusée à zéro seulement. `opacity: 0.05` passe donc. Le
+     resserrer demanderait de juger un contraste contre un fond inconnu — la
+     porte lit du texte, elle ne peint pas la page — et `opacity: 0.5` a déjà
+     été jugé VISIBLE en revue (faux positif corrigé, test à l'appui). Trancher
+     ici reviendrait à défaire cette décision sans mesure.
+   - `text-indent` : refusé à partir de −1000 px. `text-indent: -999px` passe
+     donc. La pastille est en `overflow: hidden`, mais la porte ignore sa
+     largeur peinte : elle ne sait pas dire à partir de quel décalage le texte
+     sort. Le rendu réel reste jugé à la capture d'écran, comme l'en-tête le
+     dit depuis le premier jour.
+   - LA GÉOMÉTRIE DE LA BOÎTE — DÉPLACEMENT ET REFLUX. Passent :
+     `transform: translateX(-99999px)`, la propriété `translate`, `left: -9999px`,
+     `top: 100vh`, `inset: 100%`, `margin-left: -9999px`, `position: static`
+     (l'`inset: 0` du cadre n'est alors plus honoré) et `contain`. Même raison
+     que `text-indent`, et elle est plus forte encore : il faudrait connaître la
+     fenêtre du visiteur ET la taille peinte du bandeau pour dire à partir de
+     quel décalage il en sort, et il faudrait PEINDRE la page pour dire ce que
+     devient un cadre reflué. La feuille de référence déplace elle-même la
+     pastille (`translateX(-50%)`), donc un refus sec ferait un faux positif sur
+     le dossier conforme, et un plancher chiffré serait un nombre choisi : c'est
+     précisément ce que cette porte s'interdit. CE QUE CES DÉCLARATIONS FONT
+     VRAIMENT À L'ÉCRAN N'A PAS ÉTÉ MESURÉ : la sonde dit seulement que la porte
+     les laisse passer, et c'est déjà assez pour l'écrire.
+   - L'EMPILEMENT : `z-index: -1` sur le cadre, ou n'importe quelle règle de
+     n'importe quelle autre feuille qui peindrait par-dessus lui, passent. La
+     porte ne lit que les règles qui VISENT le bandeau ; juger un recouvrement
+     demanderait de composer toutes les feuilles du dossier et de les peindre.
+   - LA BOÎTE ENTRE UN PIXEL ET LA RÉFÉRENCE : `width: 1px` passe, là où
+     `width: 0.5px` est refusé. Le cadre ne déclare AUCUNE taille (il est en
+     `position: fixed; inset: 0`), donc il n'existe pas de taille de référence à
+     laquelle la comparer — contrairement au liseré et à la pastille, dont la
+     feuille écrit les 4 px et les 13 px. Le seul plancher défendable reste le
+     pixel logique, et il est déjà posé.
+   Ces cinq trous sont dans le compte rendu de la PR, pas seulement ici. */
+const REFERENCE_MARQUAGE = {
+  /* `border: 4px solid #FFB300` dans FEUILLE_PREVISUALISATION. */
+  liserePx: 4,
+  /* `font: 700 13px/1.5 system-ui` dans FEUILLE_PREVISUALISATION. */
+  taillePastillePx: 13,
+  /* Une boîte qui mesure moins d'un pixel logique ne peint rien de lisible sur
+     aucun écran : ce plancher-ci n'est pas un choix de design, c'est la plus
+     petite surface qu'un navigateur ait à peindre. */
+  boitePx: 1,
+  /* L'ÉCHELLE, ET CE 1 N'EST PAS DAVANTAGE UN NOMBRE CHOISI : c'est l'identité.
+     La porte refuse déjà un liseré plus fin que les 4 px de la feuille et une
+     pastille plus petite que ses 13 px. Une mise à l'échelle inférieure à 1 les
+     rend tous deux plus petits que la référence SANS toucher à leurs valeurs —
+     c'était la porte dérobée. Agrandir reste permis : seul le rétrécissement
+     ment sur ce que le testeur verra. */
+  echelle: 1,
+};
+
+/** Une longueur en PIXELS LOGIQUES, ou null si l'unité n'est pas comparable en
+    px. `0` est zéro dans toutes les unités, donc toujours comparable ;
+    `thin|medium|thick` valent 1, 3 et 5 px (valeurs usuelles des navigateurs).
+    UNE UNITÉ QU'ON NE SAIT PAS CONVERTIR REND `null`, et l'appelant refuse
+    plutôt que de comparer des choux et des carottes : `0.5em` vaut 8 px sur la
+    pastille, le comparer à un plancher en px donnerait un faux positif. */
+function pixels(mot) {
+  if (mot === null || mot === undefined) return null;
+  const m = String(mot).trim();
+  if (/^thin$/i.test(m)) return 1;
+  if (/^medium$/i.test(m)) return 3;
+  if (/^thick$/i.test(m)) return 5;
+  const n = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?)(px)?$/i.exec(m);
+  if (n === null) return null;
+  const v = Number.parseFloat(n[1]);
+  if (!Number.isFinite(v)) return null;
+  // Sans unité, seul le zéro a un sens ; « border-width: 4 » n'est pas du CSS.
+  if (n[2] === undefined && v !== 0) return null;
+  return v;
+}
+
+/** Retire le commentaire « # … » d'une ligne de robots.txt ou de _headers. */
+function sansCommentaire(ligne) {
+  const i = ligne.indexOf('#');
+  return i === -1 ? ligne : ligne.slice(0, i);
+}
+
+/** Coupe « nom: valeur » en deux, ou rend null. */
+function paire(ligne) {
+  const i = ligne.indexOf(':');
+  if (i === -1) return null;
+  return [ligne.slice(0, i).trim().toLowerCase(), ligne.slice(i + 1).trim()];
+}
+
+/** Toutes les pages `.html` livrées, sous-dossiers compris, en chemins relatifs. */
+function pagesHtml(racine, prefixe = '') {
+  const trouvees = [];
+  for (const entree of readdirSync(racine)) {
+    const chemin = join(racine, entree);
+    const sous = prefixe === '' ? entree : posix.join(prefixe, entree);
+    if (statSync(chemin).isDirectory()) trouvees.push(...pagesHtml(chemin, sous));
+    else if (entree.endsWith('.html')) trouvees.push(sous);
+  }
+  return trouvees;
+}
+
+/* QUELLES RÈGLES VISENT LE BANDEAU — ET C'EST UNE QUESTION DE SÉLECTEUR, PAS
+   DE CHAÎNE. La version précédente cherchait le texte « .previsualisation-cadre »
+   dans la feuille. Trois défauts en sont sortis, trois revues de suite :
+   `.previsualisation-cadre-inactif` et `.previsualisation-cadre span` faisaient
+   REFUSER un déploiement bon, et `[data-previsualisation="cadre"] { display:
+   none }` — du CSS parfaitement courant, visant l'attribut réel du bandeau —
+   passait sans un grief.
+   On découpe donc la feuille en RÈGLES, on prend le DERNIER compound de chaque
+   sélecteur (c'est lui qui désigne l'élément visé) et on demande s'il vise
+   notre élément. C'est un minuscule moteur de sélecteurs, et c'est la seule
+   façon de fermer cette famille au lieu d'en boucher les trous un par un.
+
+   CE QU'IL NE SAIT PAS FAIRE, ET IL FAUT LE DIRE :
+   - il ignore les combinateurs à gauche du dernier compound. `.autre
+     .previsualisation-cadre { display: none }` est donc RETENU alors qu'il ne
+     s'applique que sous `.autre`. C'est un excès de prudence assumé : la porte
+     refuse, on regarde, on corrige — l'inverse laisserait un bandeau éteint
+     partir en ligne.
+   - un compound qu'il ne sait pas relire entièrement est considéré comme
+     visant l'élément. Même raison. */
+
+const ELEMENT_CADRE = {
+  balise: 'div',
+  classes: ['previsualisation-cadre'],
+  attributs: { class: 'previsualisation-cadre', 'data-previsualisation': 'cadre' },
+};
+const ELEMENT_PASTILLE = {
+  balise: 'p',
+  classes: ['previsualisation-pastille'],
+  attributs: { class: 'previsualisation-pastille' },
+};
+
+/** La feuille découpée en règles { selecteurs, corps }, blocs @media compris. */
+function reglesDeFeuille(css) {
+  const net = css.replace(/\/\*[\s\S]*?\*\//g, ' ');
+  const regles = [];
+  let debut = 0;
+  for (let i = 0; i < net.length; i += 1) {
+    if (net[i] === '}') { debut = i + 1; continue; }
+    if (net[i] !== '{') continue;
+    const prelude = net.slice(debut, i).trim();
+    // Un bloc `@media`/`@supports` : son prélude n'est pas un sélecteur, mais
+    // les règles qu'il contient en sont. On entre dedans au lieu de l'ignorer.
+    if (prelude.startsWith('@')) { debut = i + 1; continue; }
+    const ferme = net.indexOf('}', i);
+    if (ferme === -1) break;
+    regles.push({ prelude, corps: net.slice(i + 1, ferme) });
+    i = ferme;
+    debut = ferme + 1;
+  }
+  return regles;
+}
+
+/** Les sélecteurs d'un prélude, coupés aux virgules de premier niveau. */
+function selecteursDe(prelude) {
+  const trouves = [];
+  let courant = '';
+  let profondeur = 0;
+  for (const c of prelude) {
+    if (c === '(' || c === '[') profondeur += 1;
+    else if (c === ')' || c === ']') profondeur -= 1;
+    if (c === ',' && profondeur === 0) { trouves.push(courant.trim()); courant = ''; continue; }
+    courant += c;
+  }
+  if (courant.trim() !== '') trouves.push(courant.trim());
+  return trouves;
+}
+
+/** Le dernier compound d'un sélecteur complexe : celui qui désigne l'élément. */
+function dernierCompound(selecteur) {
+  const s = selecteur.trim();
+  let profondeur = 0;
+  let coupe = 0;
+  for (let i = 0; i < s.length; i += 1) {
+    const c = s[i];
+    if (c === '(' || c === '[') profondeur += 1;
+    else if (c === ')' || c === ']') profondeur -= 1;
+    else if (profondeur === 0 && /[\s>+~]/.test(c)) coupe = i + 1;
+  }
+  return s.slice(coupe);
+}
+
+/** Un sélecteur d'attribut vise-t-il cet élément ? */
+function attributVise(motif, element) {
+  const m = /^([A-Za-z0-9_:.-]+)\s*(?:([~^$*|]?=)\s*(?:"([^"]*)"|'([^']*)'|([^\s\]]+)))?/
+    .exec(motif.slice(1, -1).trim());
+  if (m === null) return true;
+  const valeur = element.attributs[m[1].toLowerCase()];
+  if (valeur === undefined) return false;
+  if (m[2] === undefined) return true;
+  const attendu = m[3] ?? m[4] ?? m[5] ?? '';
+  switch (m[2]) {
+    case '=': return valeur === attendu;
+    case '~=': return valeur.split(/\s+/).includes(attendu);
+    case '^=': return valeur.startsWith(attendu);
+    case '$=': return valeur.endsWith(attendu);
+    case '*=': return valeur.includes(attendu);
+    case '|=': return valeur === attendu || valeur.startsWith(`${attendu}-`);
+    default: return true;
+  }
+}
+
+/* Les pseudo-classes d'INTERACTION : elles ne sont pas vraies au repos, donc une
+   règle qui n'existe que sous elles n'éteint rien à l'ouverture.
+   LA LISTE EST COURTE À DESSEIN (11e revue Codex). Elle contenait `:read-only`,
+   qui s'applique à TOUT élément non éditable — donc à notre `<div>`, dès
+   l'ouverture : `.previsualisation-cadre:read-only { display: none }` passait.
+   Tout ce qui n'est pas ici est RETENU, faute de savoir l'évaluer. Une porte
+   n'a le droit de se tromper que dans le sens du refus. */
+const PSEUDO_DYNAMIQUE = /^:(?:hover|focus|focus-visible|focus-within|active|target|target-within|visited|link|any-link|checked|indeterminate|placeholder-shown|autofill|user-valid|user-invalid|open|popover-open|modal|fullscreen|picture-in-picture|playing|paused|muted|buffering|seeking|stalled)\b/i;
+
+const MORCEAU_COMPOUND = /^[a-z][a-z0-9-]*|\.[A-Za-z0-9_-]+|#[A-Za-z0-9_-]+|\[[^\]]*\]|::?[A-Za-z-]+(?:\([^)]*\))?/gi;
+
+function compoundVise(compound, element) {
+  if (compound === '' || compound === '*') return true;
+  const morceaux = compound.match(MORCEAU_COMPOUND) ?? [];
+  // Un compound qu'on ne reconstitue pas entièrement, on ne le comprend pas :
+  // on le retient plutôt que de conclure à tort qu'il ne vise rien.
+  if (morceaux.join('') !== compound) return true;
+  for (const morceau of morceaux) {
+    if (morceau.startsWith('.')) {
+      if (!element.classes.includes(morceau.slice(1))) return false;
+    } else if (morceau.startsWith('#')) {
+      return false; // le bandeau n'a pas d'identifiant
+    } else if (morceau.startsWith(':')) {
+      /* TOUTES LES PSEUDO-CLASSES NE SE VALENT PAS (11e revue Codex). `:hover`
+         n'est pas l'état au repos — et c'est l'état au repos qui compte pour
+         un testeur qui ouvre la page. Un pseudo-élément (`::before`) n'est pas
+         l'élément. Mais `:not(.inactif)` s'applique AU REPOS, et l'écarter
+         laissait passer `.previsualisation-cadre:not(.inactif) { display:none }`.
+         Celles qu'on ne sait pas évaluer sont donc RETENUES. */
+      if (morceau.startsWith('::')) return false;
+      if (PSEUDO_DYNAMIQUE.test(morceau)) return false;
+    } else if (morceau.startsWith('[')) {
+      if (!attributVise(morceau, element)) return false;
+    } else if (morceau.toLowerCase() !== element.balise) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** TOUS les corps de règle qui visent cet élément, dans l'ordre du document :
+    en CSS, c'est la DERNIÈRE qui gagne, et c'est par là qu'on éteint un
+    bandeau. */
+function reglesPour(css, element) {
+  const corps = [];
+  for (const regle of reglesDeFeuille(css)) {
+    if (selecteursDe(regle.prelude).some((s) => compoundVise(dernierCompound(s), element))) {
+      corps.push(regle.corps);
+    }
+  }
+  return corps;
+}
+
+/* LIRE LA VALEUR, PAS SEULEMENT LA PRÉSENCE (défaut trouvé par le vérificateur
+   indépendant, 13/09). La porte exigeait qu'une déclaration `border:` EXISTE
+   sans jamais lire son épaisseur : `.previsualisation-cadre { border: 0 solid
+   #FFB300; }` et `.previsualisation-pastille { font-size: 0; }` la faisaient
+   sortir en code 0 — et elle imprimait « cadre visible et pastille visible ».
+   C'est la troisième fois que ce trou se rouvre sous une forme voisine, et
+   c'est le même trou à chaque fois : chercher un MOT là où il faut lire un
+   NOMBRE. Tout ce qui suit lit des nombres. */
+
+/** Les déclarations d'un corps de règle, dans l'ordre, propriété en minuscules.
+    LIMITE ASSUMÉE : la coupe se fait sur « ; », donc une valeur qui en
+    contiendrait un (une `url(data:…;base64,…)`) serait mal lue. La feuille de
+    préversion n'en contient pas, et la porte n'a pas à devenir un analyseur
+    CSS complet — mais il faut le savoir avant d'en mettre une. */
+function declarations(corps) {
+  const paires = [];
+  for (const brute of corps.replace(/\/\*[\s\S]*?\*\//g, ' ').split(';')) {
+    const d = brute.trim();
+    if (d === '') continue;
+    const i = d.indexOf(':');
+    if (i === -1) continue;
+    paires.push([d.slice(0, i).trim().toLowerCase(), d.slice(i + 1).trim()]);
+  }
+  return paires;
+}
+
+/* LA CASCADE, RÉDUITE À CE QUI NOUS CONCERNE. À sélecteur égal, la DERNIÈRE
+   déclaration gagne — sauf qu'une déclaration `!important` ne se laisse pas
+   écraser par une déclaration ordinaire écrite plus bas. Sans cette nuance,
+   `border: 0 !important` placé AVANT la bonne règle repassait. */
+function declarationsEffectives(corpsListe) {
+  const retenues = new Map();
+  let ordre = 0;
+  for (const corps of corpsListe) {
+    for (const [prop, brute] of declarations(corps)) {
+      const important = /!\s*important$/i.test(brute);
+      const valeur = brute.replace(/!\s*important$/i, '').trim();
+      const ancienne = retenues.get(prop);
+      ordre += 1;
+      if (ancienne !== undefined && ancienne.important && !important) continue;
+      retenues.set(prop, { valeur, important, ordre });
+    }
+  }
+  return retenues;
+}
+
+/** Parmi plusieurs propriétés concurrentes (raccourci et propriétés longues),
+    celle qui l'emporte : `!important` d'abord, puis la plus tardive. */
+function gagnante(effectives, proprietes) {
+  let meilleure = null;
+  for (const prop of proprietes) {
+    const d = effectives.get(prop);
+    if (d === undefined) continue;
+    if (meilleure === null
+      || (d.important && !meilleure.important)
+      || (d.important === meilleure.important && d.ordre > meilleure.ordre)) {
+      meilleure = { prop, ...d };
+    }
+  }
+  return meilleure;
+}
+
+/** Les mots d'une valeur, SANS couper à l'intérieur des parenthèses : sinon
+    `rgb(0, 0, 0)` devient trois morceaux dont aucun n'est une couleur — et un
+    texte noir sur fond noir passait la porte (6e revue Codex). */
+function mots(valeur) {
+  const trouves = [];
+  let courant = '';
+  let profondeur = 0;
+  for (const c of valeur) {
+    if (c === '(') profondeur += 1;
+    else if (c === ')') profondeur -= 1;
+    if (/\s/.test(c) && profondeur <= 0) {
+      if (courant !== '') { trouves.push(courant); courant = ''; }
+      continue;
+    }
+    courant += c;
+  }
+  if (courant !== '') trouves.push(courant);
+  return trouves;
+}
+
+/** Les appels de fonction de premier niveau d'une valeur, avec leurs arguments.
+    LES PARENTHÈSES SONT ÉQUILIBRÉES : `scale(calc(0))` échappait à un motif
+    qui s'arrêtait à la première parenthèse fermante (8e revue Codex). */
+function appelsFonction(valeur) {
+  const trouves = [];
+  const motif = /\b([a-z][a-z0-9-]*)\s*\(/gi;
+  for (let m = motif.exec(valeur); m !== null; m = motif.exec(valeur)) {
+    let profondeur = 1;
+    let i = motif.lastIndex;
+    while (i < valeur.length && profondeur > 0) {
+      if (valeur[i] === '(') profondeur += 1;
+      else if (valeur[i] === ')') profondeur -= 1;
+      i += 1;
+    }
+    const interieur = valeur.slice(motif.lastIndex, Math.max(motif.lastIndex, i - 1));
+    const args = [];
+    let courant = '';
+    let niveau = 0;
+    for (const c of interieur) {
+      if (c === '(') niveau += 1;
+      else if (c === ')') niveau -= 1;
+      if (c === ',' && niveau === 0) { args.push(courant.trim()); courant = ''; continue; }
+      courant += c;
+    }
+    if (courant.trim() !== '') args.push(courant.trim());
+    trouves.push({ nom: m[1].toLowerCase(), args });
+    // On ne redescend pas dans les appels imbriqués : seuls comptent les
+    // transformations de premier niveau.
+    motif.lastIndex = i;
+  }
+  return trouves;
+}
+
+/* `1e0` EST UN NOMBRE CSS VALIDE, ET `-1` UNE OPACITÉ QUI VAUT ZÉRO. Les deux
+   ont été trouvés en revue : le premier était refusé à tort, le second passait.
+   La notation exponentielle est admise par css-values-4 ; l'opacité est bornée
+   à [0,1] par css-color-4, donc toute valeur négative éteint. */
+const MOT_NOMBRE = /^[+-]?(\d+(\.\d+)?|\.\d+)(e[+-]?\d+)?%?$/i;
+const MOT_LONGUEUR = /^[+-]?(\d+(\.\d+)?|\.\d+)(e[+-]?\d+)?(px|em|rem|ex|ch|pt|pc|in|cm|mm|q|vw|vh|vmin|vmax|%)?$/i;
+const MOT_STYLE_BORDURE = /^(none|hidden|solid|dashed|dotted|double|groove|ridge|inset|outset)$/i;
+/* LES SEULES TRANSFORMATIONS QUE LA PORTE SAIT JUGER. Un déplacement ne cache
+   rien qu'elle puisse mesurer (trou déclaré en tête de fichier), une échelle se
+   compare à un plancher, une rotation DANS LE PLAN laisse tout peint. Les
+   autres — `matrix`, `rotateX`, `rotateY`, `rotate3d`, `perspective`, `skew` —
+   peuvent mettre le bandeau à plat sans qu'aucun zéro apparaisse ; la porte
+   refuse plutôt que de supposer. */
+const TRANSFORMATIONS_LUES = /^(translate|translatex|translatey|translate3d|scale|scalex|scaley|scale3d|rotate|rotatez)$/;
+
+/** Le nombre de pixels « logiques » d'un mot de longueur, ou null si ce n'en
+    est pas un. `thin|medium|thick` valent 1, 3 et 5 px (valeurs usuelles des
+    navigateurs) : seul le fait qu'elles soient NON NULLES nous importe. */
+function longueur(mot) {
+  if (/^thin$/i.test(mot)) return 1;
+  if (/^medium$/i.test(mot)) return 3;
+  if (/^thick$/i.test(mot)) return 5;
+  return MOT_LONGUEUR.test(mot) ? Number.parseFloat(mot) : null;
+}
+
+const NOMS_COULEURS = {
+  transparent: 'transparent', white: '#ffffff', black: '#000000', red: '#ff0000',
+  lime: '#00ff00', blue: '#0000ff', yellow: '#ffff00', cyan: '#00ffff',
+  aqua: '#00ffff', magenta: '#ff00ff', fuchsia: '#ff00ff', silver: '#c0c0c0',
+  gray: '#808080', grey: '#808080', maroon: '#800000', olive: '#808000',
+  green: '#008000', purple: '#800080', teal: '#008080', navy: '#000080',
+};
+
+/** Une couleur réduite à une forme comparable, ou null si le mot n'en est pas
+    une. Une couleur totalement transparente devient « transparent ». */
+function couleur(mot) {
+  const m = mot.trim().toLowerCase();
+  if (Object.prototype.hasOwnProperty.call(NOMS_COULEURS, m)) return NOMS_COULEURS[m];
+  const hex = /^#([0-9a-f]{3,8})$/.exec(m);
+  if (hex !== null) {
+    const c = hex[1];
+    if (c.length === 3 || c.length === 4) {
+      if (c.length === 4 && c[3] === '0') return 'transparent';
+      return `#${c[0]}${c[0]}${c[1]}${c[1]}${c[2]}${c[2]}`;
+    }
+    if (c.length === 6) return `#${c}`;
+    if (c.length === 8) return c.slice(6) === '00' ? 'transparent' : `#${c.slice(0, 6)}`;
+  }
+  const rgb = /^rgba?\(([^)]*)\)$/.exec(m);
+  if (rgb !== null) {
+    const parts = rgb[1].split(/[,/\s]+/).filter((p) => p !== '');
+    if (parts.length >= 4 && Number.parseFloat(parts[3]) === 0) return 'transparent';
+    if (parts.length >= 3) {
+      /* RAMENÉ À LA MÊME FORME QUE L'HEXADÉCIMAL, ET C'EST LE POINT : sinon
+         `#FFB300` et `rgb(255, 179, 0)` sont deux chaînes différentes pour la
+         même couleur, et le contournement tient en une réécriture. */
+      const octets = parts.slice(0, 3).map((p) => {
+        const n = p.endsWith('%')
+          ? Math.round((Number.parseFloat(p) * 255) / 100)
+          : Math.round(Number.parseFloat(p));
+        return Number.isFinite(n) ? Math.min(255, Math.max(0, n)).toString(16).padStart(2, '0') : null;
+      });
+      if (octets.every((o) => o !== null)) return `#${octets.join('')}`;
+    }
+  }
+  return null;
+}
+
+/** La taille de police EFFECTIVE, `font-size` comme raccourci `font`, ou null
+    si aucune n'est déclarée (elle est alors héritée, donc hors de notre vue). */
+function tailleTexte(effectives) {
+  const d = gagnante(effectives, ['font-size', 'font']);
+  if (d === null) return null;
+  /* LE MOT BRUT EST RENDU AVEC LE NOMBRE, et ce n'est pas du confort : sans
+     lui, `0.5em` et `0.5px` sont le même « 0.5 » pour la porte, et le plancher
+     en pixels refuserait le premier à tort. */
+  if (d.prop === 'font-size') {
+    const mot = mots(d.valeur)[0] ?? '';
+    const v = longueur(mot);
+    return v === null ? null : { valeur: v, brute: mot };
+  }
+  /* DANS LE RACCOURCI `font`, LA TAILLE EST LE DERNIER MOT DE TAILLE AVANT LA
+     FAMILLE : dans « 700 13px/1.5 system-ui », « 700 » est la graisse et
+     « 13px/1.5 » la taille. Prendre le PREMIER mot qui ressemble à un nombre
+     laisserait passer « font: 700 0/1.5 system-ui ». */
+  let taille = null;
+  let brute = null;
+  /* LES ESPACES AUTOUR DE LA BARRE SONT LÉGAUX, ET COÛTAIENT LA PORTE : Codex
+     est passé avec `font: 700 0 / 1.5 system-ui`, où la lecture mot à mot
+     retenait « 1.5 » (l'interligne) comme taille. On recolle la barre d'abord. */
+  const recolle = d.valeur.replace(/\s*\/\s*/g, '/');
+  for (const mot of mots(recolle)) {
+    const avantBarre = mot.split('/')[0];
+    if (mot.includes('/')) {
+      const v = longueur(avantBarre);
+      if (v !== null) { taille = v; brute = avantBarre; }
+      continue;
+    }
+    if (/^(xx-small|x-small|small|large|x-large|xx-large|smaller|larger)$/i.test(mot)) {
+      taille = 16; brute = '16px'; continue;
+    }
+    const v = longueur(mot);
+    if (v !== null) { taille = v; brute = mot; }
+  }
+  return taille === null ? null : { valeur: taille, brute };
+}
+
+/** L'INTERLIGNE EFFECTIF DE LA PASTILLE, EN PIXELS. `line-height` comme la
+    part après la barre du raccourci `font`. Sans unité et en `%`, c'est un
+    MULTIPLE de la taille du texte : `line-height: 0` vaut donc zéro pixel quelle
+    que soit la police. `normal` rend `null` — aucun moteur ne descend sous 1,
+    il n'y a rien à reprocher. Une unité non convertible rend `{ convertible:
+    false }` et l'appelant refuse plutôt que de comparer à tort, comme ailleurs. */
+function interligne(effectives, taillePx) {
+  const d = gagnante(effectives, ['line-height', 'font']);
+  if (d === null || taillePx === null) return null;
+  let mot = null;
+  if (d.prop === 'line-height') mot = mots(d.valeur)[0] ?? null;
+  else {
+    /* Les espaces autour de la barre sont légaux — `font: 700 13px / 1.5` —
+       et la lecture mot à mot les perdrait, exactement comme pour la taille. */
+    const recolle = d.valeur.replace(/\s*\/\s*/g, '/');
+    for (const m of mots(recolle)) if (m.includes('/')) mot = m.split('/')[1] ?? null;
+  }
+  if (mot === null || mot === '' || /^normal$/i.test(mot)) return null;
+  /* `em` EST CONVERTIBLE ICI, ET NULLE PART AILLEURS : sur `line-height`, il se
+     rapporte à la taille de l'élément lui-même, que la porte vient de lire. La
+     refuser ferait un faux positif sur un dessin parfaitement lisible. */
+  const enEm = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))em$/i.exec(mot);
+  if (enEm !== null) return { px: Number.parseFloat(enEm[1]) * taillePx, brute: mot };
+  if (MOT_NOMBRE.test(mot)) {
+    const k = /%$/.test(mot) ? Number.parseFloat(mot) / 100 : Number.parseFloat(mot);
+    return { px: k * taillePx, brute: mot };
+  }
+  const px = pixels(mot);
+  return px === null ? { convertible: false, brute: mot } : { px, brute: mot };
+}
+
+/** Le liseré effectif du cadre : son épaisseur la plus fine, son style et sa
+    couleur. `null` en épaisseur = aucune déclaration de bordure. */
+function liseré(effectives) {
+  const cotes = ['top', 'right', 'bottom', 'left'];
+
+  /* CÔTÉ PAR CÔTÉ, POUR LES TROIS COMPOSANTES, ET C'EST LA SEULE FAÇON
+     CORRECTE. Deux revues successives l'ont montré :
+     - lire le minimum de TOUTES les largeurs sans regarder l'ordre refusait à
+       tort `border-bottom-width: 0; border: 4px solid` (le raccourci, écrit
+       après, redonne 4 px partout) ;
+     - lire le style et la couleur GLOBALEMENT laissait passer
+       `border-style: solid none` et `border-color: #FFB300 transparent`, qui
+       effacent deux côtés sur quatre.
+     Pour chaque côté, on redemande donc qui gagne entre le raccourci, la
+     propriété longue et la propriété de ce côté. */
+  const nValeurs = (liste, index) => {
+    // `a b c d` → haut, droite, bas, gauche ; 1, 2 ou 3 valeurs se répartissent
+    // selon la règle usuelle du CSS.
+    if (liste.length === 0) return null;
+    const carte = [[0, 0, 0, 0], [0, 1, 0, 1], [0, 1, 2, 1], [0, 1, 2, 3]][Math.min(liste.length, 4) - 1];
+    return liste[carte[index]] ?? null;
+  };
+
+  const parCote = cotes.map((cote, index) => {
+    const composante = (longue, reconnait, defautRaccourci) => {
+      const d = gagnante(effectives, ['border', longue, `border-${cote}`, `border-${cote}-${longue.slice(7)}`]);
+      if (d === null) return null;
+      const m = mots(d.valeur);
+      if (d.prop === 'border' || d.prop === `border-${cote}`) {
+        // Raccourci : une composante omise reprend sa valeur initiale.
+        return m.find(reconnait) ?? defautRaccourci;
+      }
+      if (d.prop === longue) return nValeurs(m.filter(reconnait), index);
+      return m.find(reconnait) ?? null;
+    };
+    const largeur = composante('border-width', (x) => longueur(x) !== null, 'medium');
+    const teinte = composante('border-color', (x) => couleur(x) !== null, null);
+    return {
+      epaisseur: largeur === null ? null : longueur(largeur),
+      // LE MOT TEL QU'IL EST ÉCRIT, gardé à côté du nombre : c'est lui qui
+      // porte l'unité, et le plancher se compare en pixels (voir `pixels`).
+      largeurBrute: largeur,
+      // `border-style` vaut `none` par défaut : un raccourci sans style ne
+      // dessine rien, et c'est bien ce que peint le navigateur.
+      style: composante('border-style', (x) => MOT_STYLE_BORDURE.test(x), 'none'),
+      teinte: teinte === null ? null : couleur(teinte),
+    };
+  });
+
+  const connues = parCote.filter((c) => c.epaisseur !== null && c.epaisseur !== undefined);
+  // LE CÔTÉ LE PLUS FIN COMMANDE : un cadre percé d'un côté n'est plus un cadre.
+  const plusFin = connues.length === 0
+    ? null
+    : connues.reduce((a, b) => (b.epaisseur < a.epaisseur ? b : a));
+  const epaisseur = plusFin === null ? null : plusFin.epaisseur;
+  /* UNE LARGEUR SANS STYLE NE PEINT RIEN : la valeur initiale de
+     `border-style` est `none`. Un `border-width: 4px` seul n'est pas un
+     liseré, et la porte ne doit pas le prendre pour tel. */
+  const styleDe = (c) => c.style ?? (epaisseur === null ? null : 'none');
+  const sansStyle = cotes.findIndex((_c, i) => {
+    const s = styleDe(parCote[i]);
+    return s !== null && /^(none|hidden)$/i.test(s);
+  });
+  const invisible = cotes.findIndex((_c, i) => parCote[i].teinte === 'transparent');
+  return {
+    epaisseur,
+    epaisseurBrute: plusFin === null ? null : plusFin.largeurBrute,
+    // On nomme le côté FAUTIF quand il y en a un : c'est lui qu'on corrige.
+    style: sansStyle === -1 ? styleDe(parCote[0]) : styleDe(parCote[sansStyle]),
+    coteSansStyle: sansStyle === -1 ? null : cotes[sansStyle],
+    teinte: invisible === -1 ? (parCote[0].teinte ?? null) : 'transparent',
+    coteTransparent: invisible === -1 ? null : cotes[invisible],
+  };
+}
+
+/* CE QUI FAIT DISPARAÎTRE UN ÉLÉMENT SANS ÉCRIRE `display: none`. Chaque entrée
+   est une façon vue ou plausible d'éteindre le bandeau tout en laissant la
+   porte contente. La fonction rend la RAISON, pas un booléen : un grief qui
+   nomme la règle fautive se corrige, un grief muet se contourne. */
+function raisonInvisible(effectives) {
+  const val = (prop) => (effectives.get(prop)?.valeur ?? null);
+
+  if (/^none$/i.test(val('display') ?? '')) return 'display: none';
+  /* `display: contents` NE FABRIQUE AUCUNE BOÎTE. Les enfants restent dans le
+     flux, mais le liseré, le fond et le remplissage de l'élément ne sont
+     JAMAIS peints : sur le cadre, dont tout le travail EST son liseré, c'est
+     `display: none` écrit autrement — et la porte imprimait « cadre visible ». */
+  if (/^contents$/i.test(val('display') ?? '')) return 'display: contents';
+  if (/^(hidden|collapse)$/i.test(val('visibility') ?? '')) return `visibility: ${val('visibility')}`;
+  if (/^hidden$/i.test(val('content-visibility') ?? '')) return 'content-visibility: hidden';
+
+  /* `opacity: 0` éteint ; `opacity: 0.5` non. Le nombre est LU, pas deviné —
+     la première version rejetait « 0.5 » (faux positif relevé par Codex).
+     ET UNE OPACITÉ QU'ON NE SAIT PAS LIRE EST REFUSÉE, PAS ACCEPTÉE : Codex a
+     franchi la porte avec `opacity: calc(0)`, que `parseFloat` rend NaN. Une
+     garde qui ne comprend pas ce qu'elle lit doit dire non ; c'est le seul sens
+     dans lequel une porte a le droit de se tromper. */
+  const o = val('opacity');
+  if (o !== null) {
+    if (!MOT_NOMBRE.test(o.trim())) return `opacity illisible (${o})`;
+    const n = /%$/.test(o) ? Number.parseFloat(o) / 100 : Number.parseFloat(o);
+    // Bornée à [0,1] : `opacity: -1` est peinte comme `0`, donc invisible.
+    if (n <= 0) return `opacity: ${o}`;
+  }
+
+  /* LA MISE À L'ÉCHELLE — UN PLANCHER, ET PLUS UN TEST DU ZÉRO. C'est le
+     TROISIÈME seuil lâche, celui que la liste « exhaustive » ne nommait pas
+     (vérificateur indépendant, 13/09). `scale(0)` était refusé, `scale(0.0001)`
+     passait, et la porte imprimait alors « cadre visible et pastille visible » :
+     le défaut « un caractère de plus » que le liseré et la pastille venaient de
+     payer, laissé intact une ligne plus bas. Le plancher est `echelle`, c'est
+     l'identité, et il se déduit de ce que la porte refuse DÉJÀ en pixels.
+     LE FACTEUR EST PARSÉ, PAS RECONNU DE FORME : `scale(0e0)` franchissait un
+     motif qui cherchait des zéros écrits en toutes lettres (7e revue Codex).
+     ET CE QU'ELLE NE SAIT PAS ÉVALUER, ELLE LE REFUSE : `matrix(0,0,0,0,0,0)`,
+     `rotateY(90deg)` et `perspective()` mettent le bandeau à plat sans qu'aucun
+     facteur d'échelle apparaisse. Chercher ces formes une à une rejouerait la
+     faute d'origine ; la porte ne connaît donc QUE les déplacements, les
+     échelles et les rotations dans le plan, et refuse tout le reste. */
+  const t = val('transform');
+  if (t !== null && !/^none$/i.test(t.trim())) {
+    for (const appel of appelsFonction(t)) {
+      if (!TRANSFORMATIONS_LUES.test(appel.nom)) {
+        return `transform: ${t} — « ${appel.nom}() » n'est pas évaluable par la porte, qui refuse plutôt que de supposer`;
+      }
+      if (!/^(scale|scalex|scaley|scale3d)$/.test(appel.nom)) continue;
+      // Seuls X et Y aplatissent ce qu'on voit : `scale3d(1, 1, 0)` ne cache rien.
+      for (const facteur of appel.args.slice(0, 2)) {
+        if (!MOT_NOMBRE.test(facteur.trim())) return `transform: ${t} — facteur d'échelle illisible`;
+        const k = /%$/.test(facteur) ? Number.parseFloat(facteur) / 100 : Number.parseFloat(facteur);
+        if (Math.abs(k) < REFERENCE_MARQUAGE.echelle) {
+          return `transform: ${t} — le marquage serait rétréci (|${facteur}| < ${REFERENCE_MARQUAGE.echelle}), donc plus petit que la référence`;
+        }
+      }
+    }
+  }
+  const s = val('scale');
+  // `scale: 1 1 0` ne met à plat que l'axe Z : les deux premiers seuls comptent.
+  if (s !== null && !/^none$/i.test(s.trim())) {
+    for (const m of mots(s).slice(0, 2)) {
+      if (!MOT_NOMBRE.test(m.trim())) return `scale: ${s} — facteur d'échelle illisible`;
+      const k = /%$/.test(m) ? Number.parseFloat(m) / 100 : Number.parseFloat(m);
+      if (Math.abs(k) < REFERENCE_MARQUAGE.echelle) {
+        return `scale: ${s} — le marquage serait rétréci (|${m}| < ${REFERENCE_MARQUAGE.echelle}), donc plus petit que la référence`;
+      }
+    }
+  }
+
+  /* Une boîte de taille nulle — OU SOUS LE PIXEL, ce qui revient au même à
+     l'écran et ne coûtait qu'un caractère (`width: 0` → `width: 0.5px`).
+     Le zéro est refusé dans TOUTES les unités ; le plancher d'un pixel ne
+     s'applique qu'aux longueurs qu'on sait convertir, sinon `0.5em` (8 px,
+     parfaitement peint) serait refusé à tort. */
+  for (const prop of ['width', 'height', 'max-width', 'max-height']) {
+    const v = val(prop);
+    if (v === null) continue;
+    const mot = v.split(/\s+/)[0];
+    if (longueur(mot) === 0) return `${prop}: ${v}`;
+    const px = pixels(mot);
+    if (px !== null && px < REFERENCE_MARQUAGE.boitePx) return `${prop}: ${v} (sous le pixel)`;
+  }
+
+  /* `zoom` EST UNE ÉCHELLE SOUS UN AUTRE NOM, et le premier jet de ce correctif
+     l'avait manqué : il refermait `transform: scale` et la propriété `scale`,
+     et `zoom: 0.0001` passait toujours. Un trou refermé sous un nom et laissé
+     ouvert sous un autre n'est pas refermé. Même plancher, même raison. */
+  const z = val('zoom');
+  if (z !== null && !/^(normal|unset|initial|revert|revert-layer)$/i.test(z.trim())) {
+    if (!MOT_NOMBRE.test(z.trim())) return `zoom: ${z} — facteur illisible`;
+    const k = /%$/.test(z) ? Number.parseFloat(z) / 100 : Number.parseFloat(z);
+    if (Math.abs(k) < REFERENCE_MARQUAGE.echelle) {
+      return `zoom: ${z} — le marquage serait rétréci (|${z}| < ${REFERENCE_MARQUAGE.echelle}), donc plus petit que la référence`;
+    }
+  }
+
+  /* LA PROPRIÉTÉ `rotate` AVEC UN AXE vaut `rotateX`/`rotateY`, que la porte
+     refuse déjà dans `transform` : `rotate: y 90deg` met le bandeau de profil.
+     Un angle seul, ou l'axe Z, tourne DANS le plan et ne cache rien. */
+  const r = val('rotate');
+  if (r !== null) {
+    const parts = mots(r);
+    if (parts.length > 1 && !/^z$/i.test(parts[0])) {
+      return `rotate: ${r} — une rotation hors du plan n'est pas évaluable par la porte, qui refuse plutôt que de supposer`;
+    }
+  }
+
+  /* `all: unset` EFFACE TOUT CE QUE LA PORTE VIENT DE LIRE — le liseré, la
+     position, les couleurs. Après lui, elle n'a plus rien à affirmer sur le
+     bandeau ; elle refuse donc, faute de pouvoir encore le dire visible. */
+  const tout = val('all');
+  if (tout !== null) return `all: ${tout} — efface les déclarations sur lesquelles la porte s'appuie`;
+
+  /* LES DÉCOUPES, LES MASQUES ET LES FILTRES — REFUSÉS, PAS ÉVALUÉS.
+     La porte ne reconnaissait que deux formes ÉCRITES, `inset(100%)` et
+     `rect(0,0,0,0)`. Tout le reste passait, et ce ne sont pas des raretés :
+     `clip-path: inset(50%)` (une seule valeur, donc les quatre côtés à la fois),
+     `circle(0)`, `ellipse(0 0)`, un `polygon` dégénéré, `clip-path: url(#vide)`,
+     `mask: linear-gradient(#0000, #0000)`, `-webkit-mask-image`, et
+     `filter: opacity(0)` — l'opacité entrée par une autre porte que celle que
+     la porte surveille. Les énumérer une à une rejouerait la faute d'origine :
+     lire une CHAÎNE là où il faut lire une géométrie.
+     La porte ne peint pas, donc elle ne sait PAS ce qu'il reste de visible
+     après une découpe, un masque ou un filtre. Elle refuse donc tout ce qui
+     n'est pas la valeur inerte — le seul sens dans lequel une porte a le droit
+     de se tromper. La feuille de référence n'en déclare aucun ; un dessin qui
+     en voudrait un se déclare ici en même temps que dans la feuille. */
+  for (const [prop, inerte] of [
+    ['clip-path', /^none$/i], ['clip', /^auto$/i],
+    ['mask', /^none$/i], ['mask-image', /^none$/i], ['-webkit-mask-image', /^none$/i],
+    ['filter', /^none$/i], ['backdrop-filter', /^none$/i],
+    /* `border-image` REMPLACE le liseré que la porte vient de mesurer : elle
+       lit 4 px solides ambre et l'écran peint une image. Elle ne sait pas
+       peindre, donc elle refuse. */
+    ['border-image', /^none$/i], ['border-image-source', /^none$/i],
+  ]) {
+    const v = val(prop);
+    if (v !== null && !inerte.test(v.trim())) {
+      return `${prop}: ${v} — la porte ne sait pas dire ce qu'il en reste de peint, donc elle refuse`;
+    }
+  }
+
+  // Le texte poussé hors de sa boîte.
+  const ti = val('text-indent');
+  if (ti !== null) { const n = longueur(ti.split(/\s+/)[0]); if (n !== null && n <= -1000) return `text-indent: ${ti}`; }
+
+  return null;
+}
+
+/** La couleur du texte et celle du fond, quand elles sont déclarées. */
+function contrasteNul(effectives) {
+  /* `-webkit-text-fill-color` PEINT LE GLYPHE À LA PLACE DE `color`, et tous
+     les moteurs WebKit et Blink l'honorent : c'est la recette courante pour
+     rendre un texte invisible en le laissant sélectionnable. La porte ne lisait
+     que `color`, donc `-webkit-text-fill-color: transparent` passait alors que
+     `color: transparent` était refusé — la même fin par une autre porte.
+     S'il n'est pas déclaré, ou s'il porte une valeur que la porte ne sait pas
+     lire (`currentColor`), on retombe sur `color` : on ne perd rien. */
+  const remplissage = effectives.get('-webkit-text-fill-color')?.valeur ?? null;
+  const remplissageLu = remplissage === null ? null : couleur(remplissage);
+  const texte = remplissageLu ?? couleur(effectives.get('color')?.valeur ?? '');
+  if (texte === null) return null; // héritée : hors de notre vue, et on le dit
+  if (texte === 'transparent') {
+    return remplissageLu === 'transparent'
+      ? `-webkit-text-fill-color: ${remplissage}`
+      : 'color: transparent';
+  }
+  /* LA CASCADE VAUT ICI AUSSI, ET C'ÉTAIT UN VRAI TROU (Codex) : donner la
+     priorité à `background-color` quel que soit l'ordre laissait passer
+     `background-color: #fff; background: #000` (texte noir sur fond noir) et
+     refusait à tort `background-color: #000; background: #fff`. C'est la
+     DERNIÈRE déclarée qui peint. */
+  const d = gagnante(effectives, ['background-color', 'background']);
+  if (d === null) return null;
+  const fond = d.prop === 'background-color'
+    ? couleur(d.valeur)
+    : (mots(d.valeur).map(couleur).find((c) => c !== null && c !== undefined) ?? null);
+  if (fond === null) return null;
+  if (fond === texte) return `texte et fond à la même couleur (${texte})`;
+  return null;
+}
+
+/* LE ROBOT DE RÉFÉRENCE EST `*`, MAIS IL NE SUFFIT PAS. Un moteur choisit LE
+   groupe le plus spécifique qui le nomme : `User-agent: *` / `Disallow: /`
+   suivi de `User-agent: Googlebot` / `Allow: /` laisse Googlebot tout explorer.
+   D'où la règle simple et vérifiable : il faut un groupe `*`, TOUS les groupes
+   doivent interdire la racine, et aucun `Allow:` ne doit exister nulle part. */
+function robotsInterditTout(robots) {
+  const groupes = [];
+  let courant = null;
+  let dansEnTetes = false;
+  for (const brute of robots.split('\n')) {
+    const ligne = sansCommentaire(brute).trim();
+    if (ligne === '') continue;
+    const p = paire(ligne);
+    if (p === null) continue;
+    const [nom, valeur] = p;
+    if (nom === 'user-agent') {
+      if (!dansEnTetes) { courant = { robots: [], directives: [] }; groupes.push(courant); }
+      dansEnTetes = true;
+      courant.robots.push(valeur);
+      continue;
+    }
+    dansEnTetes = false;
+    // `Sitemap:` est hors groupe ; il est contrôlé ailleurs.
+    if (courant !== null && nom !== 'sitemap') courant.directives.push([nom, valeur]);
+  }
+  if (groupes.length === 0) return false;
+  if (!groupes.some((g) => g.robots.includes('*'))) return false;
+  return groupes.every((g) =>
+    g.directives.some(([nom, valeur]) => nom === 'disallow' && valeur === '/')
+    && !g.directives.some(([nom]) => nom === 'allow'));
+}
+
+/* LE MOTIF DOIT COUVRIR TOUT LE SITE, LA DIRECTIVE DOIT ÊTRE ACTIVE, ET RIEN
+   NE DOIT LA RETIRER PLUS BAS.
+   - Motif : `/*` exactement, en relatif. Un motif en URL absolue ne vaut que
+     pour l'hôte qu'il nomme — `https://ailleurs.example/*` ne protège rien
+     d'ici, et la porte n'a pas à deviner les hôtes servis.
+   - Directive : `noindex` doit être une directive NUE. Cloudflare accepte
+     `X-Robots-Tag: bingbot: noindex`, qui ne dit rien à Google.
+   - `! X-Robots-Tag` DÉTACHE l'en-tête : sa seule présence disqualifie. */
+function entetesNoindexPartout(entetes) {
+  let motif = null;
+  let couvre = false;
+  for (const brute of entetes.split('\n')) {
+    const ligne = sansCommentaire(brute);
+    if (ligne.trim() === '') continue;
+    if (!/^\s/.test(ligne)) { motif = ligne.trim(); continue; }
+    const nue = ligne.trim();
+    if (/^!\s*x-robots-tag\b/i.test(nue)) return false;
+    if (motif !== '/*') continue;
+    const p = paire(nue);
+    if (p === null || p[0] !== 'x-robots-tag') continue;
+    const directives = p[1].split(',').map((d) => d.trim().toLowerCase());
+    // Une directive nue : ni « bingbot: noindex », ni « unavailable_after: … ».
+    if (directives.some((d) => d === 'noindex' || d === 'none')) couvre = true;
+  }
+  return couvre;
+}
+
+/* LES BALISES DE MÉTADONNÉES, LUES COMME DES BALISES. Les alternances
+   `"[^"]*"|'[^']*'` font que la fin de balise n'est pas confondue avec un `>`
+   écrit dans une valeur d'attribut — `title="Carte > accueil"` coupait la
+   balise en deux dans la première version. */
+const BALISE_SIMPLE = /[ \t]*<(link|meta)\b((?:[^>"']|"[^"]*"|'[^']*')*)\/?>[ \t]*\r?\n?/gi;
+const BALISE_SCRIPT = /[ \t]*<script\b((?:[^>"']|"[^"]*"|'[^']*')*)>[\s\S]*?<\/script\s*>[ \t]*\r?\n?/gi;
+const ATTRIBUT = /([a-zA-Z0-9_:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'`=<>]+))/g;
+/** N'importe quel élément ouvrant, avec ses attributs : c'est ainsi qu'on
+    retrouve la balise du cadre et celle de la pastille pour lire ce qu'elles
+    portent. */
+const BALISE_ELEMENT = /<([a-z][a-z0-9-]*)\b((?:[^>"']|"[^"]*"|'[^']*')*)\/?>/gi;
+const PREFIXE_ATTENDU = 'PRÉVISUALISATION — ';
+
+/* LE NAVIGATEUR DÉCODE LES RÉFÉRENCES DE CARACTÈRES DANS LES ATTRIBUTS, DONC
+   NOUS AUSSI. `property="og&#58;title"` est, pour un analyseur HTML, exactement
+   `property="og:title"` — et la porte, qui comparait des chaînes brutes, ne le
+   voyait pas (6e revue Codex). Même chose pour `rel="canonic&#97;l"` et
+   `type="application/ld&#43;json"`. */
+const REFERENCES_NOMMEES = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", colon: ':', plus: '+',
+  sol: '/', equals: '=', period: '.', hyphen: '-', lowbar: '_', num: '#',
+};
+function decoderHtml(valeur) {
+  return valeur.replace(/&(?:#x([0-9a-f]+)|#(\d+)|([a-z][a-z0-9]*));?/gi, (tout, hex, dec, nom) => {
+    const point = hex !== undefined ? Number.parseInt(hex, 16) : (dec !== undefined ? Number(dec) : null);
+    if (point !== null) {
+      if (!Number.isFinite(point) || point < 0 || point > 0x10ffff) return tout;
+      try { return String.fromCodePoint(point); } catch { return tout; }
+    }
+    const cle = nom.toLowerCase();
+    return Object.prototype.hasOwnProperty.call(REFERENCES_NOMMEES, cle) ? REFERENCES_NOMMEES[cle] : tout;
+  });
+}
+
+function attributsHtml(interieur) {
+  const lus = {};
+  for (const m of interieur.matchAll(ATTRIBUT)) {
+    lus[m[1].toLowerCase()] = decoderHtml(m[2] ?? m[3] ?? m[4] ?? '');
+  }
+  return lus;
+}
+
+/** `rel` est une LISTE de relations séparées par des espaces :
+    `rel="alternate canonical"` est un canonical (6e revue Codex). */
+function relations(valeur) {
+  return (valeur ?? '').trim().toLowerCase().split(/\s+/).filter((r) => r !== '');
+}
+
+/* ON NE REGARDE QUE LE `<head>`, ET LES COMMENTAIRES SONT MASQUÉS. Les
+   métadonnées de partage ne valent que là ; hors du `<head>`, un `<textarea>`
+   ou un exemple de code peut contenir ce qui RESSEMBLE à une balise sans en
+   être une. La porte et le transformateur regardent exactement la même zone :
+   une porte qui contrôlerait ailleurs que là où l'on corrige refuserait des
+   pages parfaitement bonnes. */
+function teteSansCommentaires(html) {
+  /* ON MASQUE AVANT DE DÉCOUPER, ET C'EST L'ORDRE QUI COMPTE : un `</head>`
+     cité DANS un commentaire arrêtait la découpe avant la vraie fermeture, et
+     tout ce qui suivait échappait au contrôle (7e revue Codex). Les scripts
+     ordinaires sont masqués aussi — une chaîne JavaScript qui cite une balise
+     n'est pas une balise ; ceux en `ld+json`, eux, restent visibles, puisque
+     c'est justement eux qu'on cherche. */
+  const masque = html
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(BALISE_SCRIPT, (balise, interieur) =>
+      ((attributsHtml(interieur).type ?? '').trim().toLowerCase() === 'application/ld+json' ? balise : ' '));
+  const ouvre = /<head(\s[^>]*)?>/i.exec(masque);
+  if (ouvre === null) return '';
+  const debut = ouvre.index + ouvre[0].length;
+  const ferme = masque.slice(debut).search(/<\/head>/i);
+  return ferme === -1 ? masque.slice(debut) : masque.slice(debut, debut + ferme);
+}
+
+/** Le fichier visé par un `href`, résolu depuis la page qui le porte. */
+function cibleDuLien(href, pageRelative) {
+  if (/^[a-z]+:\/\//i.test(href)) return null; // hors du dossier livré
+  // LE NAVIGATEUR NE DEMANDE PAS LE FRAGMENT NI LA REQUÊTE : « feuille.css#v1 »
+  // charge bien /feuille.css. La porte les coupe donc avant de résoudre, sinon
+  // elle refuse une préversion parfaitement servable (relevé en revue).
+  const chemin = href.split('#')[0].split('?')[0];
+  if (chemin === '') return null;
+  if (chemin.startsWith('/')) return chemin.slice(1);
+  const dossierPage = posix.dirname(pageRelative);
+  return posix.normalize(dossierPage === '.' ? chemin : posix.join(dossierPage, chemin));
+}
+
+/* EXPORTÉE POUR QUE LE TEST PUISSE LA CONFRONTER À LA FEUILLE DE RÉFÉRENCE.
+   C'est ce qui empêche les deux nombres de diverger en silence. */
+export { REFERENCE_MARQUAGE };
+
+export function verifierPrevisualisation(dossier) {
+  const griefs = [];
+  const constats = [];
+  const lire = (nom) => {
+    const chemin = join(dossier, nom);
+    return existsSync(chemin) ? readFileSync(chemin, 'utf-8') : null;
+  };
+
+  // 1. robots.txt — le verrou que lit un robot bien élevé.
+  const robots = lire('robots.txt');
+  if (robots === null) griefs.push('robots.txt absent');
+  else if (!robotsInterditTout(robots)) {
+    griefs.push('robots.txt : il faut un groupe « User-agent: * », un « Disallow: / » dans CHAQUE groupe, et aucun « Allow: »');
+  } else if (/^\s*Sitemap:/im.test(robots)) {
+    griefs.push('robots.txt annonce encore un Sitemap de production');
+  } else constats.push('robots.txt : tous les groupes en Disallow: /, aucun Allow, aucun Sitemap');
+
+  // 2. _headers — le verrou côté serveur, celui qui tient même sur un lien fuité.
+  const entetes = lire('_headers');
+  if (entetes === null) griefs.push('_headers absent (en-tête X-Robots-Tag impossible)');
+  else if (!entetesNoindexPartout(entetes)) {
+    griefs.push('_headers : aucune directive « noindex » nue et active sous le motif « /* »');
+  } else constats.push('_headers : X-Robots-Tag noindex actif sur « /* », jamais détaché');
+
+  // 3. La feuille du bandeau. SANS ELLE, LE BANDEAU EST UN TEXTE NU : les six
+  //    pages de texte portent une CSP `style-src 'self'` qui interdit le style
+  //    en ligne — vu à la capture d'écran, pas deviné.
+  const feuille = lire(FEUILLE_ATTENDUE);
+  if (feuille === null) griefs.push('previsualisation.css absent (le bandeau serait sans style)');
+  else {
+    const cadre = reglesPour(feuille, ELEMENT_CADRE);
+    const pastille = reglesPour(feuille, ELEMENT_PASTILLE);
+    if (cadre.length === 0 || pastille.length === 0) {
+      griefs.push('previsualisation.css : règle du cadre ou de la pastille absente');
+    } else {
+      const effCadre = declarationsEffectives(cadre);
+      const effPastille = declarationsEffectives(pastille);
+      const trait = liseré(effCadre);
+      const taille = tailleTexte(effPastille);
+      // UN BANDEAU INVISIBLE EST PIRE QU'UN BANDEAU ABSENT : il rassure la
+      // porte sans rien dire au testeur. On regarde donc CHAQUE façon connue de
+      // le faire disparaître, et on lit les valeurs.
+      const invisibleCadre = raisonInvisible(effCadre);
+      const invisiblePastille = raisonInvisible(effPastille);
+      const memeCouleur = contrasteNul(effPastille);
+      const avant = griefs.length;
+
+      if (!cadre.some((c) => /pointer-events\s*:\s*none/i.test(c))) {
+        griefs.push('previsualisation.css : le cadre intercepterait les clics');
+      }
+      if (invisibleCadre !== null) {
+        griefs.push(`previsualisation.css : une règle rend le bandeau invisible — cadre, ${invisibleCadre}`);
+      }
+      if (invisiblePastille !== null) {
+        griefs.push(`previsualisation.css : une règle rend le bandeau invisible — pastille, ${invisiblePastille}`);
+      }
+      if (trait.epaisseur === null) {
+        griefs.push('previsualisation.css : le cadre ne dessine aucun liseré');
+      } else if (trait.epaisseur <= 0) {
+        griefs.push(`previsualisation.css : le liseré du cadre a une épaisseur nulle (${trait.epaisseur})`);
+      } else {
+        /* LE PLANCHER, ET IL VIENT DE LA FEUILLE DE RÉFÉRENCE, PAS DE MOI.
+           `border: 0.1px` franchissait le test du zéro et la porte annonçait
+           un cadre visible. */
+        const px = pixels(trait.epaisseurBrute);
+        if (px === null) {
+          griefs.push(`previsualisation.css : épaisseur de liseré « ${trait.epaisseurBrute} » — la porte ne sait pas la convertir en pixels, donc elle refuse de la comparer aux ${REFERENCE_MARQUAGE.liserePx} px de référence`);
+        } else if (px < REFERENCE_MARQUAGE.liserePx) {
+          griefs.push(`previsualisation.css : le liseré du cadre est plus fin que la référence (${px} px < ${REFERENCE_MARQUAGE.liserePx} px)`);
+        }
+      }
+      if (trait.coteSansStyle !== null) {
+        griefs.push(`previsualisation.css : le liseré du cadre n'est pas dessiné côté ${trait.coteSansStyle} (border-style: ${trait.style})`);
+      }
+      if (trait.coteTransparent !== null) {
+        griefs.push(`previsualisation.css : le liseré du cadre est transparent côté ${trait.coteTransparent}`);
+      }
+      if (taille !== null && taille.valeur <= 0) {
+        griefs.push(`previsualisation.css : la pastille a une taille de texte nulle (font-size: ${taille.valeur})`);
+      } else if (taille !== null) {
+        const px = pixels(taille.brute);
+        if (px === null) {
+          griefs.push(`previsualisation.css : taille de pastille « ${taille.brute} » — la porte ne sait pas la convertir en pixels, donc elle refuse de la comparer aux ${REFERENCE_MARQUAGE.taillePastillePx} px de référence`);
+        } else if (px < REFERENCE_MARQUAGE.taillePastillePx) {
+          griefs.push(`previsualisation.css : la pastille est plus petite que la référence (${px} px < ${REFERENCE_MARQUAGE.taillePastillePx} px)`);
+        }
+      }
+      /* ET L'INTERLIGNE ROGNE LE TEXTE QUAND IL DESCEND SOUS LE GLYPHE. La
+         pastille est en `overflow: hidden` et ne déclare AUCUNE hauteur : sa
+         boîte fait la hauteur de sa ligne. `line-height: 0` la réduit donc à
+         ses seuls 2 px de remplissage, le texte est découpé — et la porte, qui
+         ne lisait que la `font-size`, annonçait « pastille à 13 px ».
+         LE PLANCHER N'EST PAS CHOISI ICI NON PLUS : c'est la taille de la
+         pastille elle-même, celle que la feuille écrit. Une ligne plus basse
+         qu'un glyphe le coupe ; la feuille, elle, écrit 1.5 fois cette taille. */
+      const ligne = taille === null ? null : interligne(effPastille, pixels(taille.brute));
+      if (ligne !== null && ligne.convertible === false) {
+        griefs.push(`previsualisation.css : interligne « ${ligne.brute} » — la porte ne sait pas le convertir en pixels, donc elle refuse de le comparer à la taille de la pastille`);
+      } else if (ligne !== null && ligne.px < REFERENCE_MARQUAGE.taillePastillePx) {
+        griefs.push(`previsualisation.css : l'interligne de la pastille rogne son texte (${ligne.px} px < ${REFERENCE_MARQUAGE.taillePastillePx} px)`);
+      }
+      if (memeCouleur !== null) {
+        griefs.push(`previsualisation.css : la pastille est illisible — ${memeCouleur}`);
+      }
+      if (griefs.length === avant) {
+        constats.push(`previsualisation.css : liseré de ${trait.epaisseur} px ${trait.style ?? 'solid'} ${trait.teinte ?? ''}`.trimEnd()
+          + `, cadre inerte, pastille à ${taille === null ? '(hérité)' : taille.valeur} px`);
+      }
+    }
+  }
+
+  // 4. Aucun artefact de production ne doit rester.
+  for (const intrus of ['CNAME', 'sitemap.xml']) {
+    if (existsSync(join(dossier, intrus))) griefs.push(`${intrus} traîne dans la préversion`);
+  }
+
+  // 5. CHAQUE page HTML porte les marques — SOUS-DOSSIERS COMPRIS. Pas « la
+  //    page d'accueil » : un testeur peut arriver par « À propos » depuis un
+  //    lien partagé, et une page oubliée est une page qui ment.
+  const pages = existsSync(dossier) ? pagesHtml(dossier) : [];
+  if (pages.length === 0) griefs.push(`aucune page HTML dans ${dossier}/`);
+  for (const page of pages) {
+    const html = readFileSync(join(dossier, page), 'utf-8');
+    if (!/<html[^>]*data-environnement="previsualisation"/i.test(html)) {
+      griefs.push(`${page} : <html data-environnement="previsualisation"> manquant`);
+    }
+    if (!html.includes('data-previsualisation="cadre"')) {
+      griefs.push(`${page} : bandeau de prévisualisation manquant`);
+    }
+    /* ET LE BANDEAU NE DOIT PAS ÊTRE ÉTEINT SUR SA PROPRE BALISE. La porte
+       lisait la feuille de style et pas le HTML : un simple attribut `hidden`
+       sur le `<div>` du cadre — du HTML courant, pas un raffinement — cachait
+       cadre et pastille sans un grief (9e revue Codex). Même famille que tout
+       le reste : on cherchait une marque, il fallait lire ce qu'elle porte. */
+    for (const m of html.matchAll(BALISE_ELEMENT)) {
+      const interieur = m[2];
+      const a = attributsHtml(interieur);
+      const estCadre = (a['data-previsualisation'] ?? '') === 'cadre';
+      const estPastille = (a.class ?? '').split(/\s+/).includes('previsualisation-pastille');
+      if (!estCadre && !estPastille) continue;
+      const quoi = estCadre ? 'le cadre' : 'la pastille';
+      // Le mot `hidden` doit être un ATTRIBUT, pas un morceau de valeur :
+      // on efface les valeurs entre guillemets avant de le chercher.
+      const sansValeurs = interieur.replace(/"[^"]*"|'[^']*'/g, '=""');
+      if (/(^|\s)hidden(\s|=|\/|$)/i.test(sansValeurs)) {
+        griefs.push(`${page} : ${quoi} du bandeau porte l'attribut « hidden »`);
+      }
+      const enLigne = a.style ?? '';
+      if (enLigne !== '') {
+        const raison = raisonInvisible(declarationsEffectives([enLigne]));
+        if (raison !== null) {
+          griefs.push(`${page} : ${quoi} du bandeau est éteint par son style en ligne — ${raison}`);
+        }
+      }
+    }
+    // LE CADRE SANS SA PASTILLE NE DIT RIEN : un liseré ambre sans phrase
+    // n'apprend pas à un testeur qu'il n'est pas en production.
+    if (!html.includes('previsualisation-pastille') || !html.includes('PRÉVISUALISATION')) {
+      griefs.push(`${page} : la pastille « PRÉVISUALISATION » manque dans le bandeau`);
+    }
+    if (!/<meta name="robots" content="noindex/i.test(html)) {
+      griefs.push(`${page} : <meta name="robots" content="noindex…"> manquant`);
+    }
+    if (!/<title>PRÉVISUALISATION — /.test(html)) {
+      griefs.push(`${page} : le titre ne commence pas par « PRÉVISUALISATION — »`);
+    }
+    /* ET ELLE DOIT SE DIRE AUSSI QUAND ON PARTAGE SON LIEN (vérificateur
+       indépendant, 13/09). Le bandeau ne se voit qu'une fois la page ouverte.
+       Une vignette de partage, elle, se lit AVANT : si `canonical`, `og:url` ou
+       le bloc JSON-LD désignent encore la production, un testeur qui colle
+       l'URL de préversion dans une messagerie fait croire à de la production.
+       Ce sont les trois affirmations machine ; `og:title` est celle que lit un
+       humain. */
+    /* LA PORTE LIT LES ATTRIBUTS, PAS DES CHAÎNES. `rel='canonical'` en
+       guillemets simples, `property = "og:url"` avec des espaces, `content`
+       écrit avant `property`, un `id` de plus sur le `<script>` : Codex a
+       franchi chacune de ces variantes, toutes du HTML valide. */
+    const tete = teteSansCommentaires(html);
+    for (const [balise, nom, interieur] of [...tete.matchAll(BALISE_SIMPLE)]
+      .map((m) => [m[0], m[1].toLowerCase(), m[2]])) {
+      const a = attributsHtml(interieur);
+      if (nom === 'link' && relations(a.rel).includes('canonical')) {
+        griefs.push(`${page} : <link rel="canonical"> désigne encore la production`);
+      }
+      if (nom !== 'meta') continue;
+      const propriete = (a.property ?? '').trim().toLowerCase();
+      if (propriete === 'og:url') {
+        griefs.push(`${page} : <meta property="og:url"> désigne encore la production`);
+      }
+      if (propriete === 'og:title' && !(a.content ?? '').startsWith(PREFIXE_ATTENDU)) {
+        griefs.push(`${page} : og:title ne dit pas la préversion (« ${a.content ?? ''} », balise ${balise.slice(0, 60)})`);
+      }
+    }
+    for (const m of tete.matchAll(BALISE_SCRIPT)) {
+      if ((attributsHtml(m[1]).type ?? '').trim().toLowerCase() === 'application/ld+json') {
+        griefs.push(`${page} : le bloc JSON-LD de production est resté dans la préversion`);
+      }
+    }
+    /* LE LIEN DOIT MENER À LA FEUILLE QU'ON A VÉRIFIÉE, ET À AUCUNE AUTRE.
+       Deux pièges, tous deux trouvés en revue :
+       - depuis `aide/index.html`, un href relatif « previsualisation.css »
+         demande /aide/previsualisation.css, qui n'existe pas ;
+       - une page qui lierait « autre-previsualisation.css » satisfaisait le
+         motif tout en chargeant une feuille que la porte n'a jamais lue — et
+         qui pouvait éteindre le bandeau.
+       D'où : on RÉSOUT chaque lien, et l'un d'eux doit tomber exactement sur
+       le fichier contrôlé au point 3. */
+    const liens = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)]
+      .map((m) => m[1]);
+    const mene = liens.some((href) => cibleDuLien(href, page) === FEUILLE_ATTENDUE);
+    if (!mene) {
+      const vus = liens.length === 0 ? 'aucun lien de feuille' : liens.join(', ');
+      griefs.push(`${page} : aucun lien ne mène à ${FEUILLE_ATTENDUE} (${vus})`);
+    }
+  }
+  if (pages.length > 0) constats.push(`${pages.length} page(s) HTML marquée(s) : ${pages.join(', ')}`);
+
+  return { griefs, constats };
+}
+
+/* Exécution en ligne de commande. Le module reste importable par les tests,
+   qui lui présentent des dossiers volontairement mal fichus. */
+if (process.argv[1] && process.argv[1].endsWith('verifier-previsualisation.mjs')) {
+  const dossier = process.argv[2] ?? 'dist';
+  const { griefs, constats } = verifierPrevisualisation(dossier);
+  for (const c of constats) console.log(`  ok — ${c}`);
+  if (griefs.length > 0) {
+    for (const g of griefs) console.error(`  ÉCHEC — ${g}`);
+    console.error(`\n${griefs.length} défaut(s) : ce dossier ne doit PAS être déployé en préversion.`);
+    process.exit(1);
+  }
+  console.log(`\nPréversion conforme : ${dossier}/ peut être déployé.`);
+}

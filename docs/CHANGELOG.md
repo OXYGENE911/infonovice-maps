@@ -2,7 +2,173 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [Non publié] — 2026-09-11 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
+## [1.147.0] — 2026-09-13 — STAGING-1
+
+### Une URL de prévisualisation qui porte `staging`
+- **Le motif, mot pour mot (CEO, 13/09)** : « Sans elle je ne peux pas tester
+  en conditions réelles ni faire tester par les testeurs AFUVE. » Trois choses
+  en dépendaient : la mesure sur téléphone réel, les quatre testeurs de
+  l'AFUVE, et la répétition du stand du Mondial de l'Auto.
+- **Un workflow `previsualisation.yml`** : chaque poussée sur `staging` relance
+  lint, tests unitaires, construction en mode prévisualisation, puis envoie le
+  `dist/` à un projet Cloudflare Pages (téléversement direct — Cloudflare ne
+  construit rien) qui sert `maps-staging.pages.dev`. La **production ne
+  bouge pas** : `deploiement.yml` et GitHub Pages sont inchangés.
+- **La préversion se DIT.** Liseré ambre sur les quatre bords avec la mention
+  « PRÉVISUALISATION — ce site n'est pas la production », titre d'onglet
+  préfixé, application installée renommée « Maps préviz », attribut
+  `data-environnement` sur `<html>`. Posé dans le HTML à la construction, donc
+  visible avant le bundle et même sans lui ; `pointer-events: none`, donc
+  jamais un clic intercepté. Un retour de testeur qui croit être en production
+  est un retour perdu — c'est cela qu'on achète.
+- **Pas d'indexation, par trois moyens et non par un** : `robots.txt` en
+  `Disallow: /`, en-tête `X-Robots-Tag: noindex, nofollow, noarchive` via le
+  fichier `_headers`, et balise `<meta name="robots">` dans chaque page. Le
+  fichier seul ne suffit pas si un lien fuite ; l'en-tête couvre aussi les URL
+  `*.pages.dev`. `CNAME` et `sitemap.xml` sortent du `dist/` de préversion.
+- **Une porte avant le déploiement** (`scripts/verifier-previsualisation.mjs`)
+  relit le dossier réellement construit et refuse de livrer s'il manque une
+  seule marque sur une seule des huit pages. Contre-épreuve refaite après la
+  fusion de `staging` : le même script rejette le `dist/` de production avec
+  **85 griefs**, code 1 — 10 par page (8 pages) plus 5 sur les fichiers de
+  socle. Le chiffre suit le nombre de pages : il ne se compare qu'à un relevé
+  fait sur le MÊME dossier.
+- **Deux revues Codex ont trouvé dix façons de franchir la porte.** Toutes de la
+  même famille : elle cherchait des CHAÎNES là où il fallait lire une STRUCTURE.
+  Un `X-Robots-Tag` en commentaire, sous `/prive/*`, sous le domaine d'un tiers,
+  adressé au seul Bingbot, ou détaché plus bas par `! X-Robots-Tag`. Un
+  `Disallow: /` réservé à un robot, ou annulé par un groupe `Googlebot: Allow: /`
+  placé après. Un bandeau éteint par une seconde règle CSS ou par un
+  `display : none` avec des espaces. Une page dans un sous-dossier. Un lien de
+  feuille qui ne résout nulle part. La porte lit désormais les groupes, les
+  blocs, toutes les règles d'un sélecteur, et suit les liens jusqu'au fichier.
+  Cent-sept tests la mettent à l'épreuve (`tests/porte-previsualisation.test.ts`),
+  et son témoin « conforme » est bâti avec les constantes de production, pas
+  écrit à la main pour la circonstance.
+- **LE SEUIL QUI SE CONTOURNAIT D'UN CARACTÈRE, FERMÉ** (vérificateur
+  indépendant, 13/09). La porte refusait le ZÉRO : `border: 0`, `font-size: 0`.
+  Un chiffre de plus la franchissait. Mesuré, pas supposé : sur le `dist/` de
+  préversion réellement construit, augmenté de `border: 0.1px` et
+  `font-size: 0.1px`, la porte d'avant sortait en **code 0** en imprimant
+  « liseré de 0.1 px solid #ffb300, cadre inerte, pastille à 0.1 px » puis
+  « Préversion conforme : peut être déployé ». C'est le défaut de la sonde
+  d'origine, décalé d'un chiffre.
+  **Le plancher n'est pas un nombre choisi** : ce sont les valeurs que la
+  feuille de référence écrit (4 px de liseré, 13 px de pastille), et un test
+  rougit si l'une des deux bouge sans l'autre — elles ne peuvent plus diverger
+  en silence. Une épaisseur dans une unité que la porte ne sait pas convertir
+  est refusée plutôt que comparée à tort (`0.5em` vaut 8 px, pas 0,5). Une
+  boîte sous le pixel est traitée comme une boîte nulle. Sur la même sonde, la
+  porte sort désormais en **code 1**, deux griefs chiffrés.
+- **LA LISTE DES TROUS SE DISAIT EXHAUSTIVE ET NE L'ÉTAIT PAS** (vérificateur
+  indépendant, 13/09). La porte nommait « les deux endroits où elle reste
+  lâche » — `opacity`, `text-indent` — et donnait cette liste pour complète. Il
+  en manquait un TROISIÈME de la même famille : **la mise à l'échelle n'était
+  refusée qu'à zéro exact**, si bien que `transform: scale(0.0001)` franchissait
+  la porte, qui imprimait alors « cadre visible et pastille visible ». C'est mot
+  pour mot le défaut « un caractère de plus » que le liseré et la pastille
+  venaient de payer, laissé intact une ligne plus bas. Une liste de trous qui se
+  dit exhaustive sans l'être rend la porte décorative : on la croit sur parole.
+  **La liste a donc été refaite par SONDE et non par lecture** — chaque façon
+  d'éteindre le bandeau ajoutée à la feuille réellement servie, la porte
+  relancée — **et deux fois plutôt qu'une**, parce que la première passe s'est
+  trompée : elle refermait l'échelle sous `transform: scale` et sous `scale` en
+  la laissant ouverte sous `zoom`, qui est la même chose sous un autre nom. Un
+  trou refermé sous un nom et laissé ouvert sous un autre n'est pas refermé.
+  Au total **dix-sept familles** de franchissement : douze refermées ici, cinq
+  déclarées et tenues par des tests.
+  **Refermées, chacune avec son test** : le plancher d'échelle — `transform:
+  scale`, la propriété `scale` et `zoom` — et c'est l'identité, pas un nombre
+  choisi, puisque la porte refuse déjà un marquage plus petit que la
+  référence ; les transformations qu'elle ne sait pas évaluer (`matrix`,
+  `rotateY`, `perspective`) et la propriété `rotate` hors du plan ;
+  `display: contents`, qui ne fabrique aucune boîte et n'a donc aucun liseré à
+  peindre ; les découpes, masques, filtres et `border-image` —
+  `clip-path: inset(50%)`, `circle(0)`, `url(#vide)`, `mask`,
+  `filter: opacity(0)` — désormais refusés en bloc plutôt qu'énumérés, parce que
+  la porte lit du texte et ne saurait pas dire ce qu'il en reste de peint ;
+  `all: unset`, qui efface les déclarations mêmes sur lesquelles elle s'appuie ;
+  `-webkit-text-fill-color: transparent`, qui peint le glyphe à la place de
+  `color` ; et un interligne qui rogne le texte de la pastille
+  (`line-height: 0`), alors que la porte annonçait ses 13 px.
+  **Ce qui reste lâche, et ce n'est pas deux mais CINQ** : une opacité presque
+  nulle (`0.05`), un `text-indent` au-dessus de −1000 px, la géométrie de la
+  boîte — déplacement hors écran et reflux (`translateX(-99999px)`, la propriété
+  `translate`, `left: -9999px`, `top: 100vh`, `inset: 100%`, `position: static`,
+  `contain`) —, l'empilement (`z-index: -1`, ou une autre feuille qui peindrait
+  par-dessus), et une boîte entre le pixel et la référence (`width: 1px`). Les
+  refermer demanderait de connaître la fenêtre du visiteur, de composer toutes
+  les feuilles et de les peindre : la porte lit du texte. **Ce que ces
+  déclarations font vraiment à l'écran n'a pas été mesuré** — la sonde dit
+  seulement que la porte les laisse passer, et c'est déjà assez pour l'écrire.
+  Ces cinq-là ne sont pas seulement écrits : **cinq tests affirment qu'ils
+  passent**, et un sixième relit la liste en tête du script. Si quelqu'un en
+  referme un sans mettre la liste à jour, la CI rougit et le lui demande — ce
+  qui est arrivé pendant l'écriture de ce correctif, et a servi.
+- **Deux trous de sécurité dans le workflow, fermés.** `workflow_dispatch`
+  laissait publier **n'importe quelle branche** sous `--branch=staging` : une
+  garde de branche est maintenant la toute première étape, avant le `checkout`.
+  Et cette garde interpolait `github.ref` dans un script shell — une branche
+  nommée `feat/";exit 0;#` la faisait réussir ; le nom passe désormais par une
+  variable d'environnement, où il reste une donnée. Le jeton Cloudflare, lui,
+  n'est plus posé au niveau du job : il n'entre que dans les deux étapes qui en
+  ont besoin. Réduction d'exposition, pas isolation — c'est écrit tel quel dans
+  le workflow.
+- **Une limite, écrite plutôt que tue** : `Disallow: /` empêche un moteur de
+  LIRE le `noindex` qu'on lui destine. Un lien fuité peut donc encore produire
+  un résultat nu, sans titre. On garde les deux (c'est la consigne, et certains
+  robots ignorent `robots.txt`), et `docs/DEPLOIEMENT.md` §3 dit pourquoi le
+  seul verrou qui fermerait vraiment — une porte Cloudflare Access — n'est PAS
+  posable sur un `*.pages.dev`, et à quelle condition il le redeviendrait.
+- **La contrainte 2 du `CLAUDE.md` est complétée dans le même commit**, pas
+  contournée : elle dit désormais ce qui vaut pour la production et ce qui est
+  ouvert pour la seule prévisualisation, et ce que l'ouverture ne couvre pas.
+  Une règle qu'on contourne en silence se retourne contre nous au premier agent
+  qui la fait respecter correctement.
+- **Ce qui reste à faire, et qui n'appartient pas aux agents** : créer le
+  projet Cloudflare `maps-staging` avec `--production-branch=staging`, et
+  déposer le jeton. **Deux gestes, plus trois** — le DNS a disparu avec le
+  changement de cible. Ils sont écrits prêts à exécuter dans
+  `docs/DEPLOIEMENT.md`, dans l'ordre, avec ce qui se passe si l'un manque.
+  Tant qu'ils ne sont pas faits, le workflow construit, vérifie, et **reste
+  vert** en disant qu'il n'a rien déployé.
+
+### Correction de cible du 13/09 (même version, avant fusion)
+- **La cible devient `maps-staging.pages.dev`.** Un certificat générique
+  `*.infonovice.fr` couvre `maps.infonovice.fr` mais pas ce qui serait un cran
+  plus bas : le sous-domaine de deuxième niveau visé d'abord était donc
+  inatteignable en HTTPS sans certificat dédié, chez OVH comme dans le SSL
+  universel de Cloudflare. Le projet Cloudflare s'appelle désormais
+  `maps-staging` — **c'est le nom du projet qui fabrique l'adresse** — et sa
+  **branche de production doit être `staging`**, faute de quoi chaque envoi
+  devient une préversion Cloudflare et l'adresse reste figée. Le domaine
+  personnalisé `maps-staging.infonovice.fr` est **reporté** : sa procédure est
+  écrite au §4 bis de `docs/DEPLOIEMENT.md` et n'est pas active.
+- **La porte lisait la présence d'une déclaration, pas sa valeur.** Un
+  `border: 0 solid #FFB300` et un `font-size: 0` la faisaient sortir en code 0
+  — et elle imprimait alors « cadre visible et pastille visible ». Le code
+  livré était correct : c'est la garde qui mentait, et une garde qui affirme ce
+  qu'elle n'a pas vérifié est pire qu'une absence de garde. Elle lit désormais
+  des NOMBRES : épaisseur du liseré (raccourci `border` compris, `!important`
+  compris, un seul côté à zéro suffit), `border-style: none|hidden`, liseré
+  transparent, taille de police (y compris celle cachée dans le raccourci
+  `font`), texte de la couleur du fond (`#FFB300` et `rgb(255,179,0)` sont
+  comparés comme des couleurs, pas comme des chaînes), et huit autres façons de
+  disparaître — `scale(0)`, boîte de taille nulle, `clip-path: inset(100%)`,
+  `visibility: collapse`, `text-indent` hors champ… La sonde du vérificateur
+  est devenue un test.
+- **La préversion se disait production quand on partageait son lien.** Chaque
+  page portait `<link rel="canonical">` et `og:url` vers
+  `maps.infonovice.fr`, plus un bloc JSON-LD de production : un testeur AFUVE
+  qui collait l'URL de préversion dans une messagerie produisait une vignette
+  annonçant le site de production. La construction de préversion retire
+  désormais le `canonical`, l'`og:url` et le JSON-LD, et préfixe `og:title` et
+  `og:site_name`. La porte refuse un `dist/` où l'un d'eux subsisterait.
+- **Le poids d'`index.html` est corrigé** : 9 171 octets en préversion contre
+  10 169 en production (−998), mesuré par `wc -c`. Le rapport du cycle annonçait
+  10 750 (+581) ; le chiffre juste avant le retrait des métadonnées était
+  10 514 (+345).
+## [1.142.1] — 2026-09-13 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
 
 ### 13/09/2026 (C10) — la régression que cette PR introduisait est corrigée ICI
 
