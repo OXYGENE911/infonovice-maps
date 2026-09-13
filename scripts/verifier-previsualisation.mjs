@@ -79,16 +79,14 @@ function reglesCss(css, selecteur) {
   for (;;) {
     const debut = css.indexOf(selecteur, depuis);
     if (debut === -1) return corps;
-    /* `.previsualisation-cadre-inactif` N'EST PAS `.previsualisation-cadre`.
-       La porte refusait un déploiement parfaitement bon à cause d'une classe
-       voisine qui ne s'applique à aucun élément (7e revue Codex). Un nom de
-       classe se termine : il n'est pas suivi d'une lettre, d'un chiffre, d'un
-       tiret ni d'un souligné. */
-    /* Et `.previsualisation-cadre span` ne vise PAS le cadre : il vise ses
-       descendants. Le sélecteur ne compte que s'il TERMINE son sélecteur
-       complexe — donc s'il est suivi d'une virgule ou de l'accolade. Cela
-       écarte aussi `.previsualisation-cadre.eteint`, qui ne s'applique qu'à un
-       élément portant en plus cette classe (8e revue Codex). */
+    /* DEUX FAUX POSITIFS PAYÉS EN REVUE, LE MÊME EN RÉALITÉ.
+       `.previsualisation-cadre-inactif` n'est pas `.previsualisation-cadre`, et
+       `.previsualisation-cadre span` vise les DESCENDANTS, pas le cadre. La
+       porte refusait alors un déploiement parfaitement bon — ce qui coûte
+       autant qu'un trou, et se découvre plus tard. Le sélecteur ne compte que
+       s'il TERMINE son sélecteur complexe : suivi d'une virgule ou de
+       l'accolade. Cela écarte aussi `.previsualisation-cadre.eteint`, qui exige
+       une classe que l'élément ne porte pas. */
     if (!/^\s*[,{]/.test(css.slice(debut + selecteur.length))) {
       depuis = debut + selecteur.length;
       continue;
@@ -523,6 +521,10 @@ function entetesNoindexPartout(entetes) {
 const BALISE_SIMPLE = /[ \t]*<(link|meta)\b((?:[^>"']|"[^"]*"|'[^']*')*)\/?>[ \t]*\r?\n?/gi;
 const BALISE_SCRIPT = /[ \t]*<script\b((?:[^>"']|"[^"]*"|'[^']*')*)>[\s\S]*?<\/script\s*>[ \t]*\r?\n?/gi;
 const ATTRIBUT = /([a-zA-Z0-9_:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'`=<>]+))/g;
+/** N'importe quel élément ouvrant, avec ses attributs : c'est ainsi qu'on
+    retrouve la balise du cadre et celle de la pastille pour lire ce qu'elles
+    portent. */
+const BALISE_ELEMENT = /<([a-z][a-z0-9-]*)\b((?:[^>"']|"[^"]*"|'[^']*')*)\/?>/gi;
 const PREFIXE_ATTENDU = 'PRÉVISUALISATION — ';
 
 /* LE NAVIGATEUR DÉCODE LES RÉFÉRENCES DE CARACTÈRES DANS LES ATTRIBUTS, DONC
@@ -694,6 +696,29 @@ export function verifierPrevisualisation(dossier) {
     }
     if (!html.includes('data-previsualisation="cadre"')) {
       griefs.push(`${page} : bandeau de prévisualisation manquant`);
+    }
+    /* ET LE BANDEAU NE DOIT PAS ÊTRE ÉTEINT SUR SA PROPRE BALISE. La porte
+       lisait la feuille de style et pas le HTML : un simple attribut `hidden`
+       sur le `<div>` du cadre — du HTML courant, pas un raffinement — cachait
+       cadre et pastille sans un grief (9e revue Codex). Même famille que tout
+       le reste : on cherchait une marque, il fallait lire ce qu'elle porte. */
+    for (const m of html.matchAll(BALISE_ELEMENT)) {
+      const interieur = m[2];
+      const a = attributsHtml(interieur);
+      const estCadre = (a['data-previsualisation'] ?? '') === 'cadre';
+      const estPastille = (a.class ?? '').split(/\s+/).includes('previsualisation-pastille');
+      if (!estCadre && !estPastille) continue;
+      const quoi = estCadre ? 'le cadre' : 'la pastille';
+      if (/(^|\s)hidden(\s|=|\/|$)/i.test(interieur)) {
+        griefs.push(`${page} : ${quoi} du bandeau porte l'attribut « hidden »`);
+      }
+      const enLigne = a.style ?? '';
+      if (enLigne !== '') {
+        const raison = raisonInvisible(declarationsEffectives([enLigne]));
+        if (raison !== null) {
+          griefs.push(`${page} : ${quoi} du bandeau est éteint par son style en ligne — ${raison}`);
+        }
+      }
     }
     // LE CADRE SANS SA PASTILLE NE DIT RIEN : un liseré ambre sans phrase
     // n'apprend pas à un testeur qu'il n'est pas en production.

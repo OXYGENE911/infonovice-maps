@@ -564,6 +564,44 @@ describe('les quatre contournements de la 9e revue Codex', () => {
   });
 });
 
+describe('le bandeau éteint sur sa PROPRE balise — 10e revue Codex', () => {
+  /* LA PORTE LISAIT LA FEUILLE DE STYLE ET PAS LE HTML. Un simple attribut
+     `hidden` sur le `<div>` du cadre — du HTML courant, pas un raffinement de
+     CSS que personne n'écrit — cachait cadre et pastille sans un grief. */
+  const poseHtml = (html: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'index.html'), html);
+    return griefsDe().join(' ');
+  };
+  const marquee = () => marquerHtmlPrevisualisation(PAGE_SOURCE, 'index.html');
+
+  it('un « hidden » sur le cadre est refusé', () => {
+    expect(poseHtml(marquee().replace('data-previsualisation="cadre"', 'data-previsualisation="cadre" hidden')))
+      .toMatch(/hidden/);
+  });
+
+  it('un « hidden » sur la pastille aussi', () => {
+    expect(poseHtml(marquee().replace('class="previsualisation-pastille"', 'class="previsualisation-pastille" hidden')))
+      .toMatch(/hidden/);
+  });
+
+  it('un style EN LIGNE qui éteint le cadre est refusé', () => {
+    expect(poseHtml(marquee().replace('data-previsualisation="cadre"',
+      'data-previsualisation="cadre" style="display:none"')))
+      .toMatch(/style en ligne/);
+  });
+
+  it('mais un style en ligne inoffensif ne déclenche rien', () => {
+    expect(poseHtml(marquee().replace('data-previsualisation="cadre"',
+      'data-previsualisation="cadre" style="z-index:99"')))
+      .toEqual('');
+  });
+
+  it('et le témoin, qui ne porte ni l’un ni l’autre, passe toujours', () => {
+    expect(poseHtml(marquee())).toEqual('');
+  });
+});
+
 describe('les pages livrées', () => {
   it('une page dans un SOUS-DOSSIER est contrôlée elle aussi', () => {
     dossierConforme();
