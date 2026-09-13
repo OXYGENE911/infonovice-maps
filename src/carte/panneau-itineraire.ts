@@ -15,6 +15,7 @@ import {
   meriteUneAlternative, vautLaPeine, phraseAlternative,
 } from '../lib/detour';
 import { calculerItineraire, itineraireDirect, formaterDistance, formaterDuree, EVITEMENTS, OPTIMISATIONS, ErreurItineraire, MAX_ETAPES, type Profil, type Itineraire, type ItineraireDirect, type Eviter, type Optimisation, type OptionsItineraire } from '../lib/itineraire';
+import { signalerLenteur } from '../lib/service-lent';
 import { formaterCoordonnees, type PointGeo } from '../lib/coordonnees';
 import { lireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { listerFavoris, listerListes } from '../lib/favoris';
@@ -134,6 +135,37 @@ const DEBOUNCE_PLAN_AUTO_MS = 300;
    comportement d'avant (`.catch` sur erreur seul), voir docs/mesure-paris-lyon.md
    pour le détail et la décision de ne pas lui appliquer le même délai. */
 const DELAI_GARDE_ALTIMETRIE_MS = 2000;
+
+/* SEUILS DE LENTEUR DU CALCUL D'ITINÉRAIRE (ITI-LENT-1, 12/09/2026).
+ *
+ * La contre-mesure du 12/09 l'a établi : le délai de garde posé au C4 ne
+ * couvre que l'altimétrie (facultative). L'itinéraire, lui, ne peut PAS
+ * être sauté — sans lui il n'y a pas de trajet — donc pas de repli
+ * silencieux ici, seulement deux seuils qui PRÉVIENNENT (voir
+ * lib/service-lent.ts pour le mécanisme, volontairement différent
+ * d'`avecDelaiDeGarde`).
+ *
+ * SEUIL_LENTEUR_ITINERAIRE_MS = 2 500 ms — mesuré le 12/09/2026 : huit
+ * appels réels consécutifs à ce même service (data.geopf.fr/navigation,
+ * Paris→Lyon) répondent tous entre 246 ms et 380 ms
+ * (docs/mesure-itineraire-lent.md, §1). 2 500 ms, c'est environ SIX FOIS ET
+ * DEMIE ce plafond observé (2 500 / 380 = 6,58 — le commentaire d'origine
+ * disait « sept fois », corrigé le 13/09) :
+ * assez loin de la latence normale pour ne jamais se déclencher sur un aléa
+ * ordinaire, assez tôt pour prévenir avant que l'attente ne devienne
+ * suspecte. Le scénario qui a révélé le problème (IGN ralenti à 3 s →
+ * 5 198 ms au total) franchit ce seuil, comme voulu.
+ *
+ * SEUIL_ABANDON_ITINERAIRE_MS = 15 000 ms — `calculerItineraire`
+ * (lib/itineraire.ts) tente deux fois, 8 s de timeout chacune
+ * (`DELAI_MS = 8000`) et 500 ms d'attente entre les deux essais : la
+ * promesse elle-même ne peut jamais mettre plus de 16 500 ms à trancher.
+ * 15 000 ms tombe SOUS ce plafond dur : l'usager voit la porte de sortie
+ * (« Réessayer ») avant que le mécanisme interne n'ait fini de renoncer
+ * tout seul, jamais après coup sur un calcul déjà résolu.
+ */
+export const SEUIL_LENTEUR_ITINERAIRE_MS = 2500;
+export const SEUIL_ABANDON_ITINERAIRE_MS = 15000;
 
 const SOURCE = 'itineraire';
 /* LES VARIANTES A/B/C — une seule source pour les trois : elles se
@@ -263,6 +295,14 @@ export class PanneauItineraire extends HTMLElement {
   #optimisation: Optimisation = 'fastest';
   /** Jeton anti-réponses-hors-d'ordre de #calculer (voir le commentaire là-bas). */
   #sequence = 0;
+  /* LA PORTE DE SORTIE A ÉTÉ OUVERTE — ET ELLE NE SE REFERME PAS TOUTE SEULE
+     (SEUIL-1, 13/09/2026). Retient le jeton du calcul pour lequel le seuil
+     d'abandon a parlé. Sans lui, l'échec de la promesse d'origine (au plus
+     tard 16 500 ms : deux essais de 8 000 ms et 500 ms d'attente, voir
+     lib/itineraire.ts) refermait « Réessayer » 1 500 ms après son ouverture.
+     Les deux mécanismes s'ignoraient : l'un ouvrait la porte, l'autre la
+     refermait sans savoir qu'elle venait d'être ouverte. Ils s'accordent ici. */
+  #abandonAnnonce = 0;
   #dernier: Itineraire | null = null;
   /** Le cliché complet qui a produit #dernier — il vieillit AVEC lui : un
       recalcul raté laisse les deux cohérents entre eux. Feuille de route,
@@ -729,6 +769,19 @@ export class PanneauItineraire extends HTMLElement {
                 </div>
               </div>
               <p class="iti-erreur" role="alert" hidden></p>
+              <!-- LE SERVICE D'ITINÉRAIRE EST LENT, ET ON LE DIT (ITI-LENT-1,
+                   12/09/2026) : contrairement à l'altimétrie, ce calcul ne
+                   peut pas être sauté — pas de repli silencieux, un message
+                   sur SA PROPRE LIGNE (jamais celle de .iti-resultat, que
+                   #majResume réécrit dès qu'un ancien trajet existe). -->
+              <p class="iti-lenteur-service" role="status" hidden></p>
+              <!-- AU SECOND SEUIL, ON ARRÊTE DE TOURNER EN SILENCE : un geste
+                   explicite, jamais un écran figé sans issue. La promesse
+                   d'origine continue de vivre — voir lib/service-lent.ts. -->
+              <div class="iti-abandon-service" role="alert" hidden>
+                <p class="iti-abandon-texte"></p>
+                <button type="button" class="iti-abandon-reessayer">Réessayer</button>
+              </div>
 
               <div class="iti-actions" hidden>
                 <button type="button" class="iti-demarrer" hidden>Démarrer le suivi</button>
@@ -1122,6 +1175,14 @@ export class PanneauItineraire extends HTMLElement {
       (this.querySelector('.iti-direct') as HTMLElement).hidden = true;
     });
     this.querySelector('.iti-effacer')?.addEventListener('click', () => this.#effacer());
+    /* « RÉESSAYER » EST UN GESTE DE L'USAGER, PAS UNE RELANCE AUTOMATIQUE
+       (ITI-LENT-1) : `#calculer` relance le MÊME calcul, avec son propre
+       jeton de séquence — l'éventuelle réponse tardive de l'essai abandonné
+       sera écartée d'elle-même si elle arrive après. Aucune autre requête ne
+       part d'ici. */
+    this.querySelector('.iti-abandon-reessayer')?.addEventListener('click', () => {
+      void this.#calculer();
+    });
 
     /* L'HEURE DE DÉPART change l'arrivée affichée ET les relevés météo :
        les conditions du trajet sont invalidées, le plan se refera. */
@@ -4968,7 +5029,14 @@ export class PanneauItineraire extends HTMLElement {
     const jeton = (this.#sequence += 1);
     const resultat = this.querySelector('.iti-resultat') as HTMLElement;
     const erreur = this.querySelector('.iti-erreur') as HTMLElement;
+    const lenteur = this.querySelector('.iti-lenteur-service') as HTMLElement;
+    const abandon = this.querySelector('.iti-abandon-service') as HTMLElement;
     erreur.hidden = true;
+    lenteur.hidden = true;
+    abandon.hidden = true;
+    /* Un calcul qui repart referme la porte du calcul précédent : avec
+       « Effacer le trajet », c'est le seul geste qui la referme (SEUIL-1). */
+    this.#abandonAnnonce = 0;
     resultat.hidden = false;
     resultat.textContent = 'Calcul de l’itinéraire…';
     try {
@@ -4984,7 +5052,34 @@ export class PanneauItineraire extends HTMLElement {
       const options: OptionsItineraire = {
         etapes: viaBis ? [viaBis, ...inter] : inter, eviter, optimisation,
       };
-      const brut = await calculerItineraire(depart, arrivee, profil, options);
+      /* L'ITINÉRAIRE NE PEUT PAS ÊTRE SAUTÉ (ITI-LENT-1) : contrairement à
+         l'altimétrie, on ne bascule jamais sans lui — on PRÉVIENT à deux
+         seuils pendant qu'on l'attend, sans jamais abandonner la promesse
+         elle-même (voir lib/service-lent.ts). Les deux actions vérifient le
+         jeton : un calcul plus récent (nouveau clic, nouvelle étape) rend
+         cet essai muet, comme le reste de la fonction. */
+      const brut = await signalerLenteur(
+        calculerItineraire(depart, arrivee, profil, options),
+        { lent: SEUIL_LENTEUR_ITINERAIRE_MS, abandon: SEUIL_ABANDON_ITINERAIRE_MS },
+        {
+          surLenteur: () => {
+            if (jeton !== this.#sequence) return;
+            lenteur.hidden = false;
+            lenteur.textContent = 'Le service d’itinéraire de l’IGN répond '
+              + 'lentement — le calcul continue…';
+          },
+          surAbandon: () => {
+            if (jeton !== this.#sequence) return;
+            this.#abandonAnnonce = jeton;
+            lenteur.hidden = true;
+            resultat.hidden = true;
+            abandon.hidden = false;
+            (abandon.querySelector('.iti-abandon-texte') as HTMLElement).textContent =
+              'Le service d’itinéraire de l’IGN ne répond toujours pas. '
+              + 'Vous pouvez réessayer.';
+          },
+        },
+      );
       /* LA PROVENANCE SE NOTE ICI, au moment de la requête, et non plus tard
          depuis le cliché (CONTRAT-1) : reconstruite ailleurs, elle dirait ce
          qu'on CROIT avoir demandé, pas ce qui est parti. */
@@ -4998,6 +5093,11 @@ export class PanneauItineraire extends HTMLElement {
       const iti = mode === 'velo'
         ? { ...brut, duree: dureeVelo(brut.distance) } : brut;
       if (jeton !== this.#sequence) return;
+      // LE TRAJET A FINALEMENT ABOUTI : les deux bandeaux (lenteur, abandon),
+      // s'ils étaient visibles, n'ont plus lieu d'être — le résumé normal
+      // reprend sa place plus bas (`#majResume`).
+      lenteur.hidden = true;
+      abandon.hidden = true;
       this.#dernier = iti;
       this.#calculPour = {
         depart, arrivee, profil, mode, etapes: inter, eviter, optimisation,
@@ -5059,10 +5159,34 @@ export class PanneauItineraire extends HTMLElement {
       this.#chercherPlusDirect(jeton, depart, arrivee, profil, eviter, iti.distance);
     } catch (e) {
       if (jeton !== this.#sequence) return;
+      lenteur.hidden = true;
       resultat.hidden = true;
-      erreur.textContent = e instanceof ErreurItineraire
+      const message = e instanceof ErreurItineraire
         ? e.message : 'Calcul impossible pour le moment.';
-      erreur.hidden = false;
+      /* LES DEUX MÉCANISMES S'ACCORDENT ICI (SEUIL-1, 13/09/2026).
+         AVANT : la promesse d'origine échouait au plafond dur de 16 500 ms et
+         ce catch masquait « Réessayer », ouvert à 15 000 ms. Le bouton vivait
+         1 500 ms. Personne ne clique un bouton qui vit une seconde et demie.
+         MAINTENANT : si la porte a été ouverte pour CE calcul, l'échec de la
+         promesse ne la referme pas — il ÉCRIT DEDANS. L'usager garde le geste
+         dont il a besoin (il n'a toujours pas d'itinéraire) jusqu'à ce qu'il
+         s'en serve, relance un calcul, ou efface le trajet.
+         POURQUOI PAS SIMPLEMENT BAISSER LE SEUIL : un seuil plus bas ne donne
+         ses huit secondes que dans le seul cas où le service épuise ses deux
+         essais. Si le service échoue de lui-même à 8,2 s, la soustraction
+         redevient courte et le défaut revient, invisible. Ici la durée de vie
+         du bouton ne dépend plus d'une soustraction entre deux constantes
+         étrangères l'une à l'autre : elle est une propriété de l'écran. */
+      if (this.#abandonAnnonce === jeton) {
+        (abandon.querySelector('.iti-abandon-texte') as HTMLElement).textContent =
+          message + ' Vous pouvez réessayer.';
+        abandon.hidden = false;
+        erreur.hidden = true;
+      } else {
+        abandon.hidden = true;
+        erreur.textContent = message;
+        erreur.hidden = false;
+      }
       attenteChien().effacer();
     }
   }
@@ -5146,6 +5270,17 @@ export class PanneauItineraire extends HTMLElement {
     (this.querySelector('.iti-resultat') as HTMLElement).hidden = true;
     (this.querySelector('.iti-actions') as HTMLElement).hidden = true;
     (this.querySelector('.iti-menu:not(.iti-menu-toujours)') as HTMLElement).hidden = true;
+    /* REVUE CODEX (ITI-LENT-1) : le jeton change deux lignes plus haut, donc
+       le succès ou l'échec tardif de #calculer ne nettoiera JAMAIS ces deux
+       bandeaux lui-même (son propre garde de jeton les en empêche) — sans
+       cette ligne, « Effacer le trajet » pendant une attente lente laissait
+       le message affiché sur un panneau vidé. */
+    (this.querySelector('.iti-lenteur-service') as HTMLElement).hidden = true;
+    (this.querySelector('.iti-abandon-service') as HTMLElement).hidden = true;
+    /* SEUIL-1 : la porte survit désormais à l'échec de la promesse, donc elle
+       doit être refermée ICI explicitement — sinon un échec tardif la
+       rouvrirait sur un panneau déjà vidé. */
+    this.#abandonAnnonce = 0;
     /* EFFACER LE TRAJET ARRÊTE LE SUIVI. Un bandeau qui continue de compter
        les kilomètres d'un itinéraire qui n'existe plus consomme le GPS pour
        rien — et ment. */

@@ -2,6 +2,154 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.149.0] — 2026-09-13 — SONDE-VRAIE-1
+
+### La sonde ne mesurait pas ce qu'elle annonçait — et une assertion affaiblie est restaurée
+- **UNE SECONDE ASSERTION NE POUVAIT PAS ROUGIR — corrigée.** Dans
+  `tests-e2e/sonde-chrono.spec.ts`, l'exigence « le bouton reste utilisable AU MOINS 8 000 ms »
+  lisait `toujoursOuverteApresMs`, c'est-à-dire `dernierRegard - porteOuverteA` — exactement la
+  quantité que le `waitForFunction` précédent attend de voir franchir 10 000 ms : elle était vraie
+  PAR CONSTRUCTION. Elle lit désormais la **tenue utilisable** du bouton (`dureeDeVieMs` quand la
+  porte se referme, la fenêtre observée sinon) et passe AVANT le contrôle de non-fermeture.
+  Contre-épreuve du 13/09, jeton d'abandon neutralisé dans le produit : **rouge sur cette
+  ligne-là, « reçu 1 484 ms, attendu ≥ 8 000 »** ; produit restauré, les quatre parcours du
+  fichier repassent au vert. Aucune barre n'a bougé : 8 000 reste 8 000.
+- **L'ASSERTION AFFAIBLIE AU COMMIT `3f38cb3` EST RESTAURÉE.**
+  `tests/garde-processus.test.ts` : `expect(c.node).toBeGreaterThanOrEqual(0)` redevient
+  `toBeGreaterThanOrEqual(1)`, avec son titre d'origine. Elle avait été baissée parce que la
+  CI Ubuntu comptait 0 processus `node` alors que node l'exécutait. **Baisser une barre parce
+  qu'on ne la franchit pas retire à la garde ce qu'elle vérifiait.** Elle passe aujourd'hui
+  parce que le compteur a été réparé, pas parce que la barre a été déplacée.
+- **Le comptage de processus lit désormais la source du NOYAU**
+  (`scripts/garde-processus.mjs`) : `/proc/<pid>/exe` sous Linux, le nom d'image `tasklist`
+  sous Windows, `ps -o comm=` (chemin de l'exécutable) ailleurs. `ps -o comm=` lisait
+  `/proc/<pid>/comm`, alimenté par `process.title` — et Vitest renomme ses processus, donc un
+  processus qui se renomme échappait au comptage. Le relevé dit désormais **d'où** il lit
+  (`source`) et **combien de pids il n'a pas pu résoudre** (`nonResolus`) : un compte de 12
+  dont 40 non résolus ne se lit pas comme un compte de 12 tout court.
+- **`--campagne` chronomètre le calcul d'itinéraire**, du geste qui le lance jusqu'au plan de
+  recharge lisible — la définition mot pour mot de la feuille de relevé mobile, pour que le
+  chiffre du poste et celui du téléphone se comparent. Il relevait jusqu'ici `performance.now()`
+  après le chargement de la page : **étalonné avec un retard connu de 3 000 ms sur la CI Ubuntu
+  du commit `a3732db` (run 34738395197, 13/09 05 h 07 UTC), l'ancien instrument aurait publié
+  599 ms là où le vrai calcul en prend 5 456.** Les six chiffres qu'il aurait produits n'auraient
+  rien dit du critère des 5 s. Ces nombres étalonnent l'INSTRUMENT sur une fixture, pas le
+  produit.
+- **Une valeur bornée par la fenêtre d'observation ne sort plus sous le nom d'une mesure.**
+  Quand la porte de sortie ne se referme pas — c'est-à-dire quand le correctif de la PR #318
+  fonctionne —, la sonde écrit `dureeDeVieMs: null` et `toujoursOuverteApresMs: <N>` au lieu
+  d'un nombre qui grandissait avec la patience de l'observateur.
+- **L'empreinte du bundle est contrôlée APRÈS le scénario**, donc après l'import dynamique du
+  panneau d'itinéraire — mesuré : ce chunk n'est cité ni dans `dist/index.html` ni dans ses
+  `modulepreload`, et le navigateur ne le demande que 1 141 ms après le DÉBUT de la navigation —
+  donc bien après le retour de `load` (CI du 13/09, commit `a3732db`, run 34738395197 ; l'écart
+  depuis la FIN du chargement, lui, n'est pas relevé par l'instrument). La
+  sonde **exige** en plus de l'avoir vu (sortie en code 5) : un contrôle qui n'a jamais vu le
+  fichier n'est pas un contrôle.
+- **Découvert en mesurant :** le prédicat de la porte confondait « le bouton n'existe pas » et
+  « le bouton est hors du champ visible ». À 1 280 × 720, « Réessayer » est à y = 732, sous la
+  ligne de flottaison. Les deux faits sont désormais relevés séparément. Le bouton n'a pas été
+  déplacé : le correctif de la porte est hors périmètre de cette passe.
+- **Relevé pour le CEO, pas tranché :** le délai avant la première porte de sortie vaut
+  **15 025 ms** mesurés, et pendant ces quinze secondes l'écran est immobile — « Calcul de
+  l'itinéraire… » à 6 ms, la ligne de lenteur à 2 513 ms, rien d'autre. Deux valeurs et leurs
+  coûts dans `docs/mesure-seuil-porte.md` §14.
+- **Après la revue Codex (verdict initial « NE PAS FUSIONNER ») :** les zombies ne sont plus comptés
+  comme des processus résidents ; la garde refuse aussi quand la borne pessimiste
+  `total + nonResolus` dépasse le plafond (1 processus reconnu et 24 pids illisibles laissaient
+  partir la campagne) ; le critère exige désormais un plan **lisible à l'écran** et non seulement
+  écrit ; deux assertions E2E qui pouvaient rougir sans régression ont été retirées ou rendues
+  déterministes. Au second passage, quatre trous de plus ont été fermés : l'étalonnage vérifie l'égalité `dureeCalculMs = planLisibleA − departA`, la fenêtre d'observation de la porte est déterministe et lue à l'horloge de l'observateur, et le contrôle de divergence n'est plus sauté en CI.
+- Nouveaux fichiers : `scripts/chrono-sonde.mjs` (verdicts purs, éprouvés dans les deux sens),
+  `scripts/serveur-dist.mjs` (le serveur de la sonde, extrait pour être essayé sans navigateur),
+  `tests/chrono-sonde.test.ts`, `tests/sonde-bundle.test.ts`, `tests-e2e/sonde-chrono.spec.ts`.
+- **Aucune campagne n'a tourné** : la garde refuse sur ce poste (37 processus résidents relevés
+  le 13/09 pour un plafond de 20, sortie en code 2). Ce qui est éprouvé, et comment, est écrit
+  au §15 de `docs/mesure-seuil-porte.md`.
+- **UN RELEVÉ PUBLIÉ EST RETIRÉ, et deux commandes non rejouables sont corrigées** (finition du
+  13/09, constats du vérificateur). `docs/mesure-seuil-porte.md` §13 annonçait « trois relevés,
+  tous rejouables » puis en publiait cinq, dont le premier — 12 637 / 10 124 / 3 059 ms pour trois
+  `compterProcessus()` — n'était produit par **aucune commande** et se trouve démenti d'un facteur
+  ~28 par deux mesures indépendantes (454 / 443 / 424 ms et 420 / 418 / 430 ms). Il est retiré, et
+  la dérivation « × 2,4 » qu'il portait avec lui : les délais de parcours 30 000 / 45 000 ms sont
+  désormais annoncés pour ce qu'ils sont, des plafonds volontairement larges, et **ce qui détecte
+  une dérive est le journal, pas le plafond**. §11 citait de son côté
+  `--config=playwright.contre-epreuve.config.ts`, un fichier **jamais committé** : la
+  contre-épreuve du seuil des 8 000 ms a été rejouée avec la configuration du dépôt et publie sa
+  séquence exacte (rouge à `sonde-chrono.spec.ts:411`, « reçu 1 516 ms, attendu ≥ 8 000 » ;
+  produit restauré → `4 passed`).
+- **La troisième lecture réelle de `tests/garde-processus.test.ts` publie enfin son coût.** Le
+  fichier affirmait que « chaque lecture réelle publie ce qu'elle a coûté » ; celle du parcours
+  « ne confond pas chrome… » lisait la table en silence, sous le délai par défaut de 5 s de
+  Vitest, à 469 ms mesurés — et jusqu'à 1 946 ms machine chargée. Trois lignes `[garde]` au
+  journal au lieu de deux, plafond explicite sur le parcours.
+
+## [1.148.0] — 2026-09-13 — SEUIL-1
+
+### La porte de sortie reste ouverte, et une campagne de mesure se refuse elle-même
+- **Le défaut repris d'ITI-LENT-1 était arithmétique, pas aléatoire.** Le seuil
+  d'abandon ouvrait « Réessayer » à 15 000 ms ; le plafond dur de
+  `calculerItineraire` (2 × 8 000 ms + 500 ms d'attente = 16 500 ms) faisait
+  rejeter la promesse 1 500 ms plus tard, et le `catch` masquait alors le
+  bandeau d'abandon. **Le bouton vivait une seconde et demie.** Personne ne
+  clique un bouton qui vit une seconde et demie.
+- **Correctif retenu : l'ACCORD des deux mécanismes, pas la baisse du seuil.**
+  Quand la porte a été ouverte pour ce calcul, l'échec de la promesse ne la
+  referme plus — il **écrit dedans**. L'usager garde le message ET le geste,
+  jusqu'à ce qu'il s'en serve, relance un calcul, ou efface le trajet.
+  *Pourquoi pas simplement baisser le seuil* : un seuil plus bas ne donne ses
+  huit secondes que dans le seul cas où le service épuise ses deux essais ; si
+  le service échoue de lui-même à 8,2 s, la soustraction redevient courte et le
+  défaut revient, invisible. Ici la durée de vie du bouton n'est plus une
+  soustraction entre deux constantes étrangères l'une à l'autre : elle est une
+  propriété de l'écran. Le seuil d'abandon reste à 15 000 ms — le faire
+  descendre est une question de produit (délai avant la première porte de
+  sortie), distincte, et non tranchée ici.
+- **La sonde de mesure refuse désormais de mesurer sur une machine chargée**
+  (`scripts/garde-processus.mjs`, `scripts/sonde-porte-sortie.mjs`). Elle compte
+  les processus `node` et `chrome` au début et à la fin, journalise les deux,
+  signale une campagne dont le compte de fin dérive, et **sort en erreur
+  (code 2) au-delà de 20 processus résidents**. Règle du CEO du 13/09,
+  implantée dans l'outil plutôt que confiée à la mémoire.
+- **⚠️ AUCUNE MESURE EN NAVIGATEUR N'A PU ÊTRE PRISE CE JOUR.** La garde a
+  rejeté la campagne : **30 processus résidents pour un plafond de 20**, machine
+  au repos, aucune autre mission en cours. L'application de bureau Codex en
+  occupe **16 à elle seule**. **Le critère des 5 secondes n'est donc ni tenu ni
+  non tenu : il n'est pas mesuré**, et la durée de vie du bouton n'est pas
+  chronométrée — seulement rendue structurellement non bornée par le code, ce
+  qui n'est pas la même chose. Tout est écrit dans `docs/mesure-seuil-porte.md`,
+  §5 pour le refus et §7 pour ce que cela ne prouve pas.
+- 27 tests (7 sur l'accord, contre-épreuve faite deux fois ; 20 sur la garde,
+  éprouvée des DEUX côtés du seuil — refus à 21, acceptation à 20 pile).
+  1 708 tests verts.
+  Bundle : +0,04 Ko gzip (125,45 → 125,62 Ko / 40,57 → 40,61 Ko gzip, mesuré).
+- **Revue Codex (BLOQUANT, corrigé)** : quatre constats, tous fondés. Le comptage
+  de processus n'appelait que `tasklist`, absent de la CI Ubuntu — le test de
+  comptage y aurait rougi à chaque exécution (corrigé, `ps` hors Windows) ; les
+  sélecteurs de la sonde n'existaient pas dans le panneau (réécrits d'après le
+  scénario E2E) ; une dérive incalculable était déclarée « tolérable »
+  (`NaN > 3` vaut false — corrigé, elle est suspecte) ; et la contre-épreuve de
+  régression dépendait de l'indentation (elle compte désormais les fermetures
+  au lieu de les filtrer). **Second passage : BLOQUANT, corrigé aussi** — le
+  comptage strict ratait tout le Chromium de Playwright (`chrome-headless`,
+  `headless_shell`), donc 24 navigateurs se comptaient pour zéro ; et la
+  contre-épreuve acceptait encore la fermeture placée APRÈS le bloc `else`.
+  **Troisième passage : BLOQUANT, corrigé aussi** — sous Windows le comptage
+  interrogeait `tasklist` par nom exact, donc `chrome-headless.exe` restait
+  invisible ; et la reconnaissance par préfixe comptait `chromedriver` et
+  `nodemon`. Le comptage lit désormais toute la table une fois et filtre sur
+  une **liste explicite de noms exacts**, la même sur les deux systèmes.
+  **Quatrième passage : un dernier constat** — la liste exacte ne voyait pas les
+  processus auxiliaires du navigateur sous macOS (« Chromium Helper
+  (Renderer) »), soit 24 processus par navigateur à 24 onglets ; le rôle entre
+  parenthèses est désormais retiré avant comparaison. Aucune fuite de
+  `#abandonAnnonce` trouvée aux quatre passages.
+- **Deux chiffres faux corrigés** dans le CHANGELOG d'ITI-LENT-1 : le ratio
+  « sept fois » (2 500 / 380 = 6,58, soit six fois et demie — corrigé aussi dans
+  le commentaire du code et dans `docs/mesure-itineraire-lent.md`), et une
+  taille de bundle périmée (125,34 Ko était la valeur d'AVANT le correctif de la
+  revue Codex du 12/09).
+
 ## [1.147.0] — 2026-09-13 — STAGING-1
 
 ### Une URL de prévisualisation qui porte `staging`
@@ -168,6 +316,47 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   10 169 en production (−998), mesuré par `wc -c`. Le rapport du cycle annonçait
   10 750 (+581) ; le chiffre juste avant le retrait des métadonnées était
   10 514 (+345).
+## [1.143.0] — 2026-09-12 — ITI-LENT-1
+
+### Le calcul d'itinéraire ne fait plus attendre en silence
+- **Le vrai reste de « plafonner l'altimétrie » (C4).** La contre-mesure du
+  12/09 l'a établi : le délai de garde posé au cycle précédent ne couvre que
+  l'altimétrie (facultative). L'itinéraire, lui, ne peut PAS être sauté —
+  sans lui il n'y a pas de trajet — donc pas de repli silencieux ici : deux
+  seuils qui préviennent l'usager, sans jamais annuler ni relancer l'appel.
+- **2 500 ms : « ça répond lentement, le calcul continue ».** Mesuré le
+  12/09 : huit appels réels au service (data.geopf.fr/navigation,
+  Paris→Lyon) répondent tous entre 246 et 380 ms — 2,5 s, c'est environ SIX
+  FOIS ET DEMIE ce plafond observé (2 500 / 380 = 6,58), loin de la latence
+  normale. *Corrigé le 13/09 : cette ligne annonçait « sept fois ».*
+- **15 000 ms : l'écran arrête de tourner en silence**, un bouton
+  « Réessayer » apparaît. `calculerItineraire` (deux essais, 8 s de timeout
+  chacun, 500 ms entre les deux) ne peut jamais dépasser 16,5 s — 15 s tombe
+  sous ce plafond dur : l'usager voit la porte de sortie avant que le
+  mécanisme interne n'ait fini de renoncer tout seul.
+- **Le mécanisme est différent de `delai-garde.ts` (ALTI-GARDE-1), et c'est
+  volontaire** : `avecDelaiDeGarde` jette la valeur tardive et rend
+  `undefined` — juste pour une donnée facultative. Ici (`lib/service-lent.ts`,
+  `signalerLenteur`), la promesse d'origine n'est jamais abandonnée : elle
+  continue de vivre, et sa résolution — même tardive, même après le bouton
+  « Réessayer » affiché — sert normalement à l'appelant, protégée par le
+  jeton de séquence déjà en place.
+- **Aucun appel de plus.** « Réessayer » relance le même calcul comme le
+  ferait n'importe quel geste de l'usager (changer une étape, cocher un
+  évitement) — aucune relance automatique, aucun martèlement du service
+  public. Bundle : +580 o gzip sur le morceau du planificateur (mesuré le 13/09 par
+  deux `npm run build` sur le même poste, 123,62 → 125,45 Ko / 39,99 →
+  40,57 Ko gzip). *Corrigé le 13/09 : cette ligne annonçait 125,34 Ko /
+  40,56 Ko, la taille d'AVANT le correctif de la revue Codex — périmée dès
+  le commit suivant.*
+- 4 tests unitaires sur le mécanisme (`tests/service-lent.test.ts`, dont les
+  deux scénarios du mandat : ralenti à 3 s, ralenti à 20 s) + 4 tests de
+  cohérence (`tests/iti-lent-seuils.test.ts`). 1 681 tests verts.
+- **Revue Codex (BLOQUANT, corrigé)** : « Effacer le trajet » (`#effacer`)
+  n'aurait masqué ni le bandeau de lenteur ni celui d'abandon — le jeton de
+  séquence change dans `#effacer`, donc le succès ou l'échec tardif de
+  `#calculer` ne les nettoie jamais lui-même. Corrigé, verrouillé par un
+  test dédié (contre-épreuve faite : le test rougit sans le correctif).
 ## [1.142.1] — 2026-09-13 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
 
 ### 13/09/2026 (C10) — la régression que cette PR introduisait est corrigée ICI
@@ -7570,42 +7759,25 @@ Bundle hors MapLibre : 64 Ko gzippés sur 300 autorisés.
   chargement du style (pose du tracé différée au style.load).
 - E2E : tuiles IGN simulées (déterminisme, zéro quota consommé par la CI).
 
-## [0.1.0] — 2026-08-16 — Fondations
-- Scaffolding Vite + TypeScript strict + PWA (manifeste, service worker,
-  icônes générées par script).
-- Page « en construction » avec CSP stricte (seules origines : data.geopf.fr,
-  api-adresse.data.gouv.fr) et design tokens Infonovice.
-- Première brique de la bibliothèque partagée : `lib/coordonnees` (format
-  français, analyse défensive).
-- CI GitHub Actions : lint + typecheck + Vitest + Playwright + build + audit
-  bloquant (high) + budget bundle (< 300 Ko gzippé hors MapLibre).
-- Déploiement GitHub Pages automatique sur main, CNAME maps.infonovice.fr.
-- Test E2E de souveraineté : la page ne contacte AUCUN domaine externe.
-- Dependabot hebdomadaire (npm + actions).
-
-## [0.2.0] — 2026-08-16 — La carte
-- Carte MapLibre plein écran, fond Plan IGN v2 (WMTS Géoplateforme, sans clé),
-  attribution IGN obligatoire.
-- Contrôles zoom / boussole / géolocalisation / échelle, ENTIÈREMENT en
-  français (locale MapLibre surchargée) — la géolocalisation est un geste de
-  l'utilisateur, jamais demandée à l'arrivée.
-- En-tête flottant, lien d'évitement clavier, page sans JavaScript expliquée.
-- MapLibre isolé dans son propre chunk (252 Ko gzippé) ; code applicatif :
-  4,2 Ko gzippé — budget respecté.
-- E2E : tuiles IGN réellement servies (200), souveraineté mesurée (aucune
-  origine hors liste blanche), contrôles français visibles.
-
-## [0.3.0] — 2026-08-16 — Les fonds
-- Sélecteur de fonds (premier Web Component) : Plan IGN, Satellite,
-  Satellite + routes ; surcouche Parcelles cadastrales (utile à Arpentine).
-- Préférence persistée en IndexedDB (`lib/stockage`, socle des favoris à
-  venir) et rétablie au chargement — prouvé par E2E avec rechargement.
-- Mode sombre automatique du fond Plan (filtre calibré, canevas seul) ;
-  le satellite reste intouché.
-- Topo 25 écarté avec preuve : SCAN25 répond 400 sans clé. À réintroduire
-  après inscription Géoplateforme (gratuite).
-- Deux défauts attrapés par les tests avant l'œil : l'en-tête intercepait
-  les clics du sélecteur ; le panneau se reconstruisait en plein clic.
+## [0.6.0] — 2026-08-16 — Exporter et partager
+- Export GPX 1.1 et KML 2.2 du trajet, fabriqués à la main (20 lignes chacun),
+  nom échappé (il vient des libellés BAN). GPX : lat PUIS lon dans trkpt —
+  l'inverse du GeoJSON, l'erreur classique, verrouillée par test.
+- Partage par URL SANS serveur : l'itinéraire vit dans le fragment (#), qui
+  n'est jamais envoyé au serveur HTTP. Un lien ouvert rejoue le trajet tout
+  seul ; un fragment forgé rend null, jamais une exception.
+- Feuille de route imprimable scindée en PR #8bis (exige getSteps).
+## [0.5.0] — 2026-08-16 — Le planificateur
+- Itinéraire A→B (Géoplateforme bdtopo-osrm, sans clé) : voiture et à pied,
+  tracé bleu à liseré blanc lisible sur tout fond, marqueurs départ/arrivée,
+  distance et durée au format français, vol vers l'emprise du trajet.
+- Les deux champs réutilisent le composant de recherche BAN (rien dupliqué).
+- LE TRACÉ SURVIT AU CHANGEMENT DE FOND : setStyle détruit les sources,
+  le panneau repose le trajet à chaque style.load — prouvé par E2E.
+- Un 404 du service = « aucun itinéraire », sans seconde tentative ;
+  vélo écarté avec preuve (getcapabilities : car et pedestrian seulement).
+- 7 tests unitaires (formats français, 404-est-une-réponse, URL du service),
+  E2E complet Paris→Lyon simulé.
 
 ## [0.4.0] — 2026-08-16 — La recherche
 - Barre de recherche BAN dans l'en-tête : combobox ARIA complète (flèches,
@@ -7620,23 +7792,40 @@ Bundle hors MapLibre : 64 Ko gzippés sur 300 autorisés.
 - E2E : BAN simulée par interception (déterministe, zéro quota consommé) ;
   la sélection se prouve AU CLAVIER.
 
-## [0.5.0] — 2026-08-16 — Le planificateur
-- Itinéraire A→B (Géoplateforme bdtopo-osrm, sans clé) : voiture et à pied,
-  tracé bleu à liseré blanc lisible sur tout fond, marqueurs départ/arrivée,
-  distance et durée au format français, vol vers l'emprise du trajet.
-- Les deux champs réutilisent le composant de recherche BAN (rien dupliqué).
-- LE TRACÉ SURVIT AU CHANGEMENT DE FOND : setStyle détruit les sources,
-  le panneau repose le trajet à chaque style.load — prouvé par E2E.
-- Un 404 du service = « aucun itinéraire », sans seconde tentative ;
-  vélo écarté avec preuve (getcapabilities : car et pedestrian seulement).
-- 7 tests unitaires (formats français, 404-est-une-réponse, URL du service),
-  E2E complet Paris→Lyon simulé.
+## [0.3.0] — 2026-08-16 — Les fonds
+- Sélecteur de fonds (premier Web Component) : Plan IGN, Satellite,
+  Satellite + routes ; surcouche Parcelles cadastrales (utile à Arpentine).
+- Préférence persistée en IndexedDB (`lib/stockage`, socle des favoris à
+  venir) et rétablie au chargement — prouvé par E2E avec rechargement.
+- Mode sombre automatique du fond Plan (filtre calibré, canevas seul) ;
+  le satellite reste intouché.
+- Topo 25 écarté avec preuve : SCAN25 répond 400 sans clé. À réintroduire
+  après inscription Géoplateforme (gratuite).
+- Deux défauts attrapés par les tests avant l'œil : l'en-tête intercepait
+  les clics du sélecteur ; le panneau se reconstruisait en plein clic.
 
-## [0.6.0] — 2026-08-16 — Exporter et partager
-- Export GPX 1.1 et KML 2.2 du trajet, fabriqués à la main (20 lignes chacun),
-  nom échappé (il vient des libellés BAN). GPX : lat PUIS lon dans trkpt —
-  l'inverse du GeoJSON, l'erreur classique, verrouillée par test.
-- Partage par URL SANS serveur : l'itinéraire vit dans le fragment (#), qui
-  n'est jamais envoyé au serveur HTTP. Un lien ouvert rejoue le trajet tout
-  seul ; un fragment forgé rend null, jamais une exception.
-- Feuille de route imprimable scindée en PR #8bis (exige getSteps).
+## [0.2.0] — 2026-08-16 — La carte
+- Carte MapLibre plein écran, fond Plan IGN v2 (WMTS Géoplateforme, sans clé),
+  attribution IGN obligatoire.
+- Contrôles zoom / boussole / géolocalisation / échelle, ENTIÈREMENT en
+  français (locale MapLibre surchargée) — la géolocalisation est un geste de
+  l'utilisateur, jamais demandée à l'arrivée.
+- En-tête flottant, lien d'évitement clavier, page sans JavaScript expliquée.
+- MapLibre isolé dans son propre chunk (252 Ko gzippé) ; code applicatif :
+  4,2 Ko gzippé — budget respecté.
+- E2E : tuiles IGN réellement servies (200), souveraineté mesurée (aucune
+  origine hors liste blanche), contrôles français visibles.
+
+## [0.1.0] — 2026-08-16 — Fondations
+- Scaffolding Vite + TypeScript strict + PWA (manifeste, service worker,
+  icônes générées par script).
+- Page « en construction » avec CSP stricte (seules origines : data.geopf.fr,
+  api-adresse.data.gouv.fr) et design tokens Infonovice.
+- Première brique de la bibliothèque partagée : `lib/coordonnees` (format
+  français, analyse défensive).
+- CI GitHub Actions : lint + typecheck + Vitest + Playwright + build + audit
+  bloquant (high) + budget bundle (< 300 Ko gzippé hors MapLibre).
+- Déploiement GitHub Pages automatique sur main, CNAME maps.infonovice.fr.
+- Test E2E de souveraineté : la page ne contacte AUCUN domaine externe.
+- Dependabot hebdomadaire (npm + actions).
+
