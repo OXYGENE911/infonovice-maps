@@ -607,6 +607,21 @@ export interface ChargementIndex {
    pendant un chargement ne doit pas rendre l'ancien résultat pour le nouveau. */
 const enCours = new Map<CleEtendue, Promise<ChargementIndex>>();
 
+/* LA MÉMOIRE DE SESSION, EN PLUS D'INDEXEDDB (PERF-PARIS-LYON, 11/09/2026,
+   optim. cible 2 — ajoutée après la revue Codex du préchargement,
+   handoffs/2026-09-11-2100-codex-optim.md, remarque 2 du second passage).
+   `enCours` ne protège que les appels VRAIMENT concurrents ; un
+   préchargement qui a fini avant que le calcul ne démarre (le cas courant,
+   précisément celui que le préchargement vise) sort de `enCours` dès sa
+   résolution. Si l'écriture IndexedDB échoue alors (quota, navigation
+   privée…), le calcul qui suit ne retrouve rien à relire et retélécharge —
+   un second appel que le préchargement a, dans ce cas précis, réellement
+   AJOUTÉ. Cette mémoire, propre à la page (perdue au rechargement, jamais
+   écrite nulle part), couvre cet écart : un téléchargement réussi RESTE
+   utilisable pour le reste de la session même si le disque a refusé de le
+   garder. */
+const memoireSession = new Map<CleEtendue, { stations: StationRapide[]; chargeMs: number }>();
+
 /**
  * L'index, du cache s'il est frais, du réseau sinon.
  *
@@ -628,6 +643,10 @@ export async function indexNational(
   const cleCache = `${CLE_INDEX}:${cle}`;
 
   const travail = (async (): Promise<ChargementIndex> => {
+    const recent = memoireSession.get(cle);
+    if (recent && !perime(recent.chargeMs, maintenant)) {
+      return { stations: recent.stations, local: true };
+    }
     const memo = await lirePreference<unknown>(cleCache);
     const m = (memo ?? {}) as Record<string, unknown>;
     // Frontière système : ce qui revient du stockage se valide (règle du projet).
@@ -639,6 +658,7 @@ export async function indexNational(
     }
     try {
       const stations = await telecharger(quoi.seuilKw, signal);
+      memoireSession.set(cle, { stations, chargeMs: maintenant });
       void ecrirePreference(cleCache, { stations, charge: maintenant });
       return { stations, local: false };
     } catch (e) {
@@ -655,7 +675,9 @@ export async function indexNational(
   }
 }
 
-/** Pour les tests : oublie le verrou de chargement entre deux cas. */
+/** Pour les tests : oublie le verrou de chargement ET la mémoire de session
+    entre deux cas. */
 export function reinitialiserIndex(): void {
+  memoireSession.clear();
   enCours.clear();
 }
