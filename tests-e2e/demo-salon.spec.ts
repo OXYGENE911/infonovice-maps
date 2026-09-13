@@ -132,6 +132,41 @@ test.describe('DÉMO SALON — Paris 15e → Lyon Part-Dieu, VF 8 Plus (T2, rect
   // tierce passagère — voir le rapport pour la décision définitive.
   test.describe.configure({ retries: 1 });
 
+  /* CETTE SUITE SE NOMME, ET C'EST UNE CORRECTION, PAS UN CONTOURNEMENT.
+   *
+   * MESURÉ le 13/09/2026 entre 01 h 39 et 01 h 47, depuis ce poste, même URL,
+   * même `Referer: http://localhost:4173/`, mêmes coordonnées (l'arrêt de
+   * recharge réel du trajet, 47.482415 / 4.351222), appels espacés de 3 s :
+   *
+   *   User-Agent « …HeadlessChrome/151… » (celui que Playwright pose par
+   *   défaut)                                      → HTTP 403, 0 octet
+   *   User-Agent « …Chrome/140… »                   → HTTP 200, 1 élément
+   *   User-Agent « InfonoviceMaps-E2E/1.0 (+…) »    → HTTP 200, 1 élément
+   *   Aucun User-Agent, Referer présent             → HTTP 200, 1 élément
+   *
+   * `overpass.openstreetmap.fr` refuse le jeton « HeadlessChrome », pas
+   * l'automatisation : un client qui se NOMME est servi. L'étape 6 du
+   * scénario (commodités autour du premier arrêt) échouait donc sur
+   * `net::ERR_FAILED` — un 403 sans en-tête CORS — et la démo ne pouvait PAS
+   * devenir verte, ni ici ni en CI, tant que le navigateur s'annonçait comme
+   * un robot Chrome. Trace du 13/09 01 h 43 à l'appui.
+   *
+   * ON NE SE FAIT PAS PASSER POUR UN NAVIGATEUR HUMAIN — ce serait contourner
+   * une protection délibérée d'un service public gratuit, et le CLAUDE.md du
+   * projet range les quotas publics parmi les biens communs. On DIT qui on
+   * est : le nom du projet, sa version, son URL. C'est ce que demande
+   * l'étiquette des API publiques, et c'est accepté (mesure ci-dessus).
+   *
+   * PORTÉE : cette suite seulement. Les autres parcours simulent leur réseau
+   * (`page.route`) et ne touchent jamais Overpass pour de vrai.
+   *
+   * CE QUE ÇA CHANGE POUR LE STAND : rien. La tablette du salon tourne dans un
+   * vrai Chrome et envoie son propre User-Agent ; le produit n'est pas
+   * modifié, seul le harnais de test se nomme. */
+  test.use({
+    userAgent: 'InfonoviceMaps-E2E/1.0 (+https://maps.infonovice.fr)',
+  });
+
   test('DÉMO SALON — étapes 1 à 7', async ({ page }) => {
     test.setTimeout(5 * 60_000);
 
