@@ -84,7 +84,7 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   Vitest, à 469 ms mesurés — et jusqu'à 1 946 ms machine chargée. Trois lignes `[garde]` au
   journal au lieu de deux, plafond explicite sur le parcours.
 
-## [1.144.0] — 2026-09-13 — SEUIL-1
+## [1.148.0] — 2026-09-13 — SEUIL-1
 
 ### La porte de sortie reste ouverte, et une campagne de mesure se refuse elle-même
 - **Le défaut repris d'ITI-LENT-1 était arithmétique, pas aléatoire.** Le seuil
@@ -191,6 +191,325 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   séquence change dans `#effacer`, donc le succès ou l'échec tardif de
   `#calculer` ne les nettoie jamais lui-même. Corrigé, verrouillé par un
   test dédié (contre-épreuve faite : le test rougit sans le correctif).
+## [1.147.0] — 2026-09-13 — STAGING-1
+
+### Une URL de prévisualisation qui porte `staging`
+- **Le motif, mot pour mot (CEO, 13/09)** : « Sans elle je ne peux pas tester
+  en conditions réelles ni faire tester par les testeurs AFUVE. » Trois choses
+  en dépendaient : la mesure sur téléphone réel, les quatre testeurs de
+  l'AFUVE, et la répétition du stand du Mondial de l'Auto.
+- **Un workflow `previsualisation.yml`** : chaque poussée sur `staging` relance
+  lint, tests unitaires, construction en mode prévisualisation, puis envoie le
+  `dist/` à un projet Cloudflare Pages (téléversement direct — Cloudflare ne
+  construit rien) qui sert `maps-staging.pages.dev`. La **production ne
+  bouge pas** : `deploiement.yml` et GitHub Pages sont inchangés.
+- **La préversion se DIT.** Liseré ambre sur les quatre bords avec la mention
+  « PRÉVISUALISATION — ce site n'est pas la production », titre d'onglet
+  préfixé, application installée renommée « Maps préviz », attribut
+  `data-environnement` sur `<html>`. Posé dans le HTML à la construction, donc
+  visible avant le bundle et même sans lui ; `pointer-events: none`, donc
+  jamais un clic intercepté. Un retour de testeur qui croit être en production
+  est un retour perdu — c'est cela qu'on achète.
+- **Pas d'indexation, par trois moyens et non par un** : `robots.txt` en
+  `Disallow: /`, en-tête `X-Robots-Tag: noindex, nofollow, noarchive` via le
+  fichier `_headers`, et balise `<meta name="robots">` dans chaque page. Le
+  fichier seul ne suffit pas si un lien fuite ; l'en-tête couvre aussi les URL
+  `*.pages.dev`. `CNAME` et `sitemap.xml` sortent du `dist/` de préversion.
+- **Une porte avant le déploiement** (`scripts/verifier-previsualisation.mjs`)
+  relit le dossier réellement construit et refuse de livrer s'il manque une
+  seule marque sur une seule des huit pages. Contre-épreuve refaite après la
+  fusion de `staging` : le même script rejette le `dist/` de production avec
+  **85 griefs**, code 1 — 10 par page (8 pages) plus 5 sur les fichiers de
+  socle. Le chiffre suit le nombre de pages : il ne se compare qu'à un relevé
+  fait sur le MÊME dossier.
+- **Deux revues Codex ont trouvé dix façons de franchir la porte.** Toutes de la
+  même famille : elle cherchait des CHAÎNES là où il fallait lire une STRUCTURE.
+  Un `X-Robots-Tag` en commentaire, sous `/prive/*`, sous le domaine d'un tiers,
+  adressé au seul Bingbot, ou détaché plus bas par `! X-Robots-Tag`. Un
+  `Disallow: /` réservé à un robot, ou annulé par un groupe `Googlebot: Allow: /`
+  placé après. Un bandeau éteint par une seconde règle CSS ou par un
+  `display : none` avec des espaces. Une page dans un sous-dossier. Un lien de
+  feuille qui ne résout nulle part. La porte lit désormais les groupes, les
+  blocs, toutes les règles d'un sélecteur, et suit les liens jusqu'au fichier.
+  Cent-sept tests la mettent à l'épreuve (`tests/porte-previsualisation.test.ts`),
+  et son témoin « conforme » est bâti avec les constantes de production, pas
+  écrit à la main pour la circonstance.
+- **LE SEUIL QUI SE CONTOURNAIT D'UN CARACTÈRE, FERMÉ** (vérificateur
+  indépendant, 13/09). La porte refusait le ZÉRO : `border: 0`, `font-size: 0`.
+  Un chiffre de plus la franchissait. Mesuré, pas supposé : sur le `dist/` de
+  préversion réellement construit, augmenté de `border: 0.1px` et
+  `font-size: 0.1px`, la porte d'avant sortait en **code 0** en imprimant
+  « liseré de 0.1 px solid #ffb300, cadre inerte, pastille à 0.1 px » puis
+  « Préversion conforme : peut être déployé ». C'est le défaut de la sonde
+  d'origine, décalé d'un chiffre.
+  **Le plancher n'est pas un nombre choisi** : ce sont les valeurs que la
+  feuille de référence écrit (4 px de liseré, 13 px de pastille), et un test
+  rougit si l'une des deux bouge sans l'autre — elles ne peuvent plus diverger
+  en silence. Une épaisseur dans une unité que la porte ne sait pas convertir
+  est refusée plutôt que comparée à tort (`0.5em` vaut 8 px, pas 0,5). Une
+  boîte sous le pixel est traitée comme une boîte nulle. Sur la même sonde, la
+  porte sort désormais en **code 1**, deux griefs chiffrés.
+- **LA LISTE DES TROUS SE DISAIT EXHAUSTIVE ET NE L'ÉTAIT PAS** (vérificateur
+  indépendant, 13/09). La porte nommait « les deux endroits où elle reste
+  lâche » — `opacity`, `text-indent` — et donnait cette liste pour complète. Il
+  en manquait un TROISIÈME de la même famille : **la mise à l'échelle n'était
+  refusée qu'à zéro exact**, si bien que `transform: scale(0.0001)` franchissait
+  la porte, qui imprimait alors « cadre visible et pastille visible ». C'est mot
+  pour mot le défaut « un caractère de plus » que le liseré et la pastille
+  venaient de payer, laissé intact une ligne plus bas. Une liste de trous qui se
+  dit exhaustive sans l'être rend la porte décorative : on la croit sur parole.
+  **La liste a donc été refaite par SONDE et non par lecture** — chaque façon
+  d'éteindre le bandeau ajoutée à la feuille réellement servie, la porte
+  relancée — **et deux fois plutôt qu'une**, parce que la première passe s'est
+  trompée : elle refermait l'échelle sous `transform: scale` et sous `scale` en
+  la laissant ouverte sous `zoom`, qui est la même chose sous un autre nom. Un
+  trou refermé sous un nom et laissé ouvert sous un autre n'est pas refermé.
+  Au total **dix-sept familles** de franchissement : douze refermées ici, cinq
+  déclarées et tenues par des tests.
+  **Refermées, chacune avec son test** : le plancher d'échelle — `transform:
+  scale`, la propriété `scale` et `zoom` — et c'est l'identité, pas un nombre
+  choisi, puisque la porte refuse déjà un marquage plus petit que la
+  référence ; les transformations qu'elle ne sait pas évaluer (`matrix`,
+  `rotateY`, `perspective`) et la propriété `rotate` hors du plan ;
+  `display: contents`, qui ne fabrique aucune boîte et n'a donc aucun liseré à
+  peindre ; les découpes, masques, filtres et `border-image` —
+  `clip-path: inset(50%)`, `circle(0)`, `url(#vide)`, `mask`,
+  `filter: opacity(0)` — désormais refusés en bloc plutôt qu'énumérés, parce que
+  la porte lit du texte et ne saurait pas dire ce qu'il en reste de peint ;
+  `all: unset`, qui efface les déclarations mêmes sur lesquelles elle s'appuie ;
+  `-webkit-text-fill-color: transparent`, qui peint le glyphe à la place de
+  `color` ; et un interligne qui rogne le texte de la pastille
+  (`line-height: 0`), alors que la porte annonçait ses 13 px.
+  **Ce qui reste lâche, et ce n'est pas deux mais CINQ** : une opacité presque
+  nulle (`0.05`), un `text-indent` au-dessus de −1000 px, la géométrie de la
+  boîte — déplacement hors écran et reflux (`translateX(-99999px)`, la propriété
+  `translate`, `left: -9999px`, `top: 100vh`, `inset: 100%`, `position: static`,
+  `contain`) —, l'empilement (`z-index: -1`, ou une autre feuille qui peindrait
+  par-dessus), et une boîte entre le pixel et la référence (`width: 1px`). Les
+  refermer demanderait de connaître la fenêtre du visiteur, de composer toutes
+  les feuilles et de les peindre : la porte lit du texte. **Ce que ces
+  déclarations font vraiment à l'écran n'a pas été mesuré** — la sonde dit
+  seulement que la porte les laisse passer, et c'est déjà assez pour l'écrire.
+  Ces cinq-là ne sont pas seulement écrits : **cinq tests affirment qu'ils
+  passent**, et un sixième relit la liste en tête du script. Si quelqu'un en
+  referme un sans mettre la liste à jour, la CI rougit et le lui demande — ce
+  qui est arrivé pendant l'écriture de ce correctif, et a servi.
+- **Deux trous de sécurité dans le workflow, fermés.** `workflow_dispatch`
+  laissait publier **n'importe quelle branche** sous `--branch=staging` : une
+  garde de branche est maintenant la toute première étape, avant le `checkout`.
+  Et cette garde interpolait `github.ref` dans un script shell — une branche
+  nommée `feat/";exit 0;#` la faisait réussir ; le nom passe désormais par une
+  variable d'environnement, où il reste une donnée. Le jeton Cloudflare, lui,
+  n'est plus posé au niveau du job : il n'entre que dans les deux étapes qui en
+  ont besoin. Réduction d'exposition, pas isolation — c'est écrit tel quel dans
+  le workflow.
+- **Une limite, écrite plutôt que tue** : `Disallow: /` empêche un moteur de
+  LIRE le `noindex` qu'on lui destine. Un lien fuité peut donc encore produire
+  un résultat nu, sans titre. On garde les deux (c'est la consigne, et certains
+  robots ignorent `robots.txt`), et `docs/DEPLOIEMENT.md` §3 dit pourquoi le
+  seul verrou qui fermerait vraiment — une porte Cloudflare Access — n'est PAS
+  posable sur un `*.pages.dev`, et à quelle condition il le redeviendrait.
+- **La contrainte 2 du `CLAUDE.md` est complétée dans le même commit**, pas
+  contournée : elle dit désormais ce qui vaut pour la production et ce qui est
+  ouvert pour la seule prévisualisation, et ce que l'ouverture ne couvre pas.
+  Une règle qu'on contourne en silence se retourne contre nous au premier agent
+  qui la fait respecter correctement.
+- **Ce qui reste à faire, et qui n'appartient pas aux agents** : créer le
+  projet Cloudflare `maps-staging` avec `--production-branch=staging`, et
+  déposer le jeton. **Deux gestes, plus trois** — le DNS a disparu avec le
+  changement de cible. Ils sont écrits prêts à exécuter dans
+  `docs/DEPLOIEMENT.md`, dans l'ordre, avec ce qui se passe si l'un manque.
+  Tant qu'ils ne sont pas faits, le workflow construit, vérifie, et **reste
+  vert** en disant qu'il n'a rien déployé.
+
+### Correction de cible du 13/09 (même version, avant fusion)
+- **La cible devient `maps-staging.pages.dev`.** Un certificat générique
+  `*.infonovice.fr` couvre `maps.infonovice.fr` mais pas ce qui serait un cran
+  plus bas : le sous-domaine de deuxième niveau visé d'abord était donc
+  inatteignable en HTTPS sans certificat dédié, chez OVH comme dans le SSL
+  universel de Cloudflare. Le projet Cloudflare s'appelle désormais
+  `maps-staging` — **c'est le nom du projet qui fabrique l'adresse** — et sa
+  **branche de production doit être `staging`**, faute de quoi chaque envoi
+  devient une préversion Cloudflare et l'adresse reste figée. Le domaine
+  personnalisé `maps-staging.infonovice.fr` est **reporté** : sa procédure est
+  écrite au §4 bis de `docs/DEPLOIEMENT.md` et n'est pas active.
+- **La porte lisait la présence d'une déclaration, pas sa valeur.** Un
+  `border: 0 solid #FFB300` et un `font-size: 0` la faisaient sortir en code 0
+  — et elle imprimait alors « cadre visible et pastille visible ». Le code
+  livré était correct : c'est la garde qui mentait, et une garde qui affirme ce
+  qu'elle n'a pas vérifié est pire qu'une absence de garde. Elle lit désormais
+  des NOMBRES : épaisseur du liseré (raccourci `border` compris, `!important`
+  compris, un seul côté à zéro suffit), `border-style: none|hidden`, liseré
+  transparent, taille de police (y compris celle cachée dans le raccourci
+  `font`), texte de la couleur du fond (`#FFB300` et `rgb(255,179,0)` sont
+  comparés comme des couleurs, pas comme des chaînes), et huit autres façons de
+  disparaître — `scale(0)`, boîte de taille nulle, `clip-path: inset(100%)`,
+  `visibility: collapse`, `text-indent` hors champ… La sonde du vérificateur
+  est devenue un test.
+- **La préversion se disait production quand on partageait son lien.** Chaque
+  page portait `<link rel="canonical">` et `og:url` vers
+  `maps.infonovice.fr`, plus un bloc JSON-LD de production : un testeur AFUVE
+  qui collait l'URL de préversion dans une messagerie produisait une vignette
+  annonçant le site de production. La construction de préversion retire
+  désormais le `canonical`, l'`og:url` et le JSON-LD, et préfixe `og:title` et
+  `og:site_name`. La porte refuse un `dist/` où l'un d'eux subsisterait.
+- **Le poids d'`index.html` est corrigé** : 9 171 octets en préversion contre
+  10 169 en production (−998), mesuré par `wc -c`. Le rapport du cycle annonçait
+  10 750 (+581) ; le chiffre juste avant le retrait des métadonnées était
+  10 514 (+345).
+## [1.142.1] — 2026-09-13 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
+
+### 13/09/2026 (C10) — la régression que cette PR introduisait est corrigée ICI
+
+- **`tests-e2e/recharge.spec.ts:778` (« AUCUN appel tant que la section est
+  repliée ») redevient vert.** Le préchargement de l'index IRVE ci-dessous
+  gardait sur « le véhicule n'est pas thermique ». Or `panneau-vehicule.ts`
+  restaure au chargement de la page un véhicule électrique par défaut, même
+  quand personne n'a jamais rien saisi (capacité à 0) : `vehicule-change`
+  partait tout seul, « pas thermique » était vrai, et l'index national se
+  téléchargeait **sans qu'aucun usager ne l'ait demandé** — la violation
+  exacte de la règle « ne jamais marteler les API publiques sans demande »
+  que ce préchargement est censé respecter. Le garde est désormais
+  `#lireVehicule()`, le filtre qui décide RÉELLEMENT si un plan de recharge
+  peut se calculer (batterie ET consommation renseignées) : précharger pour
+  un profil que le planificateur rejetterait n'anticipe rien.
+  L'optimisation, elle, reste entière.
+- **Aucun test affaibli.** Le test qui tenait la régression est antérieur à
+  cette PR (identique au blob près sur `origin/staging`) et n'a pas été
+  touché. Contre-épreuve faite dans les deux sens le 13/09 : garde remis à
+  `estThermique` → `expect(appels).toBe(0)` reçoit 1, test rouge ; garde
+  restauré → vert. Les 35 parcours de `recharge.spec.ts` passent, et les
+  1 705 tests unitaires aussi.
+- **Cette correction vivait jusqu'ici dans la PR #315** (commit `5edacd1`).
+  Elle rentre dans la PR qui a causé la régression : une PR ne laisse pas sa
+  propre régression à corriger par une autre.
+
+### 13/09/2026 — ce que valent les chiffres de performance ci-dessous
+
+**Ils ont été pris sur le poste de développement, sur cette branche, et cette
+branche n'a jamais atteint `staging`.** Vérifié le 13/09 : `src/lib/arrets.ts`
+et `src/carte/panneau-itineraire.ts` sont identiques au blob près entre la
+tête du 10/09 et `origin/staging` — le produit calcule aujourd'hui comme le
+10 septembre. La seule mesure prise sur matériel neutre à ce jour est celle
+de la CI sur la PR #306 (exécution `34744537962`, commit `bbb7a7d`, dont
+`src/` est identique à `origin/staging`) : **5 251 ms, au-dessus du seuil de
+5 s.** Elle mesure donc `staging`, pas cette optimisation. Le chiffre qui
+tranchera est celui que la CI rendra sur CETTE branche, et il est cité dans
+la description de la PR.
+
+
+### Paris → Lyon, plan de recharge inclus, sous 5 secondes
+- **Le calcul mesuré par le banc T3 (`docs/mesure-paris-lyon.md`) passait
+  systématiquement le seuil de 5 s (p95 6 704 à 9 454 ms sur trois passages,
+  banc corrigé, réseau réel) ; il tient désormais large (p95 1 410 à 3 494 ms
+  sur les six passages mesurés après optimisation — trois avant la seconde
+  correction Codex, trois après ; médiane 673 à 702 ms).**
+- **Débounce de planification automatique, 1 200 ms → 300 ms**
+  (`panneau-itineraire.ts`, `#minuteurPlanAuto` → `DEBOUNCE_PLAN_AUTO_MS`) :
+  une taxe fixe et garantie sur CHAQUE calcul, mesurée à elle seule entre
+  1 207 et 1 578 ms sur les 30 exécutions de référence. La règle « ne jamais
+  marteler les API publiques » vise le réseau, pas ce minuteur local, et le
+  nombre d'appels ne change pas pour les scénarios mesurés (banc T3, démo
+  salon). Un cas plus étroit reste ouvert, signalé et assumé (revue Codex,
+  remarque 5) : sur un itinéraire déjà calculé, deux modifications du
+  véhicule espacées de 300 ms à 1 200 ms relancent chacune un relevé
+  météo + altimétrie au lieu d'un seul — jamais l'IRVE ni l'itinéraire,
+  jamais dans les parcours exercés ici. Détail dans le commentaire au-dessus
+  de `DEBOUNCE_PLAN_AUTO_MS`.
+- **Préchargement de l'index IRVE dès que le véhicule est renseigné**, pendant
+  la saisie de la destination (`vehicule-change`), au lieu d'attendre le
+  calcul : `indexNational` dédoublonne les appels réellement concurrents et
+  sert le cache IndexedDB existant, donc précharger plus tôt le même appel
+  unique n'en ajoute aucun. Le premier calcul d'une session payait jusqu'à
+  plusieurs secondes de ce seul téléchargement (~700 Ko). **Le garde est
+  `#lireVehicule()`** — batterie ET consommation renseignées — et non « pas
+  thermique » : voir la correction du 13/09 en tête de cette entrée.
+  **`indexNational` (`src/lib/index-bornes.ts`) garde
+  aussi, depuis la revue Codex (remarque 2 du second passage), une mémoire de
+  session en plus d'IndexedDB** : sans elle, un préchargement terminé AVANT
+  le calcul (le cas courant) pouvait être suivi d'un second téléchargement si
+  l'écriture IndexedDB avait échoué (quota, navigation privée) — l'appel
+  réellement AJOUTÉ que la première version ne fermait pas complètement.
+- **Filtrage des 14 133 stations contre le corridor, par grille de cellules**
+  (`stationsDuTrajet`, `src/lib/le-long-du-trajet.ts`) : le pré-filtre par
+  boîte englobante existait déjà, mais chaque candidat retenu était ensuite
+  projeté sur TOUS les segments du trajet — un coût qui grandit avec la
+  LONGUEUR du trajet (plusieurs milliers de segments sur Paris-Lyon), mesuré
+  entre 2,1 et 3,9 s à lui seul. Une grille de cellules ramène cette
+  recherche aux ~9 cellules qui entourent chaque candidat, sans changer le
+  résultat (preuve dans le commentaire du code, contre-épreuve différentielle
+  dans `tests/le-long-du-trajet.test.ts`) — **cellules dimensionnées par axe**
+  (longitude ET latitude séparément, `mLonMinimal`), **latitude de référence
+  élargie de la marge du pré-filtre** : deux passes de revue Codex ont trouvé
+  deux variantes du même défaut — une cellule carrée en degrés, qui
+  sous-couvrait l'axe est-ouest d'un facteur ~1,4-1,5 à latitude française
+  (1ʳᵉ passe), puis une référence de latitude limitée aux seuls sommets du
+  tracé, insuffisante pour une station légèrement plus proche du pôle que le
+  tracé lui-même mais encore dans la marge du pré-filtre (2ᵉ passe) — les
+  deux corrigées et verrouillées par des tests de régression différentiels
+  (`tests/le-long-du-trajet.test.ts`, cas « CODEX #1 » et « CODEX #1bis »).
+  Une égalité exacte départagée par l'ordre des cellules plutôt que l'ordre
+  du trajet, et une grille disproportionnée à rayon nul, ont reçu le même
+  traitement (cas « CODEX #2 » et « CODEX #6 ») — voir
+  `handoffs/2026-09-11-2100-codex-optim.md`.
+- **Altimétrie, météo et IRVE, déjà lancés en parallèle** (`Promise.all`,
+  `#planifierRecharge`) : vérifié en tête de cette tâche, rien à changer —
+  une cible de moins à optimiser n'est pas une cible ratée.
+- Bundle (chunks JS, gzippé) : `panneau-itineraire` inchangé au Ko près,
+  `index` +1,4 Ko brut / gzip stable (grille de cellules + mémoire de
+  session). Aucune dépendance nouvelle, aucun appel réseau de plus dans les
+  scénarios mesurés, « Pourquoi ce plan ? » inchangé.
+- Revue Codex, deux passes : `handoffs/2026-09-11-2100-codex-optim.md` —
+  VERDICT BLOQUANT sur la première (2 remarques bloquantes, 4 sérieuses) ;
+  VERDICT BLOQUANT sur la deuxième également (1 remarque bloquante restante
+  sur la grille, corrigée depuis et vérifiée par un nouveau test de
+  régression, mais non revue une troisième fois faute de budget de temps sur
+  cette tâche — signalé au chef de cabinet dans le compte rendu de mission).
+
+### 2026-09-12 — ALTI-GARDE-1 (recu7iXoI2DPdP5Pr) — le vrai facteur limitant, plafonné
+- **La contre-mesure indépendante du 12/09 (six sessions froides) a donné
+  p95 = 5 376 ms, AU-DESSUS du seuil dur** — après l'optimisation ci-dessus,
+  ce qui reste à dépasser 5 s n'est plus notre code : c'est l'altimétrie de
+  la Géoplateforme (902 ms à ~7 s), attendue dans le `Promise.all` de
+  `#chargerConditions` sans délai de garde ni repli.
+- **Délai de garde de 2 000 ms sur l'altimétrie seule** (nouveau
+  `src/lib/delai-garde.ts`, fonction `avecDelaiDeGarde`, générique et pure,
+  testée à sec dans `tests/delai-garde.test.ts`) : au-delà, le plan se
+  calcule sans le dénivelé — la promesse sous-jacente n'est NI annulée NI
+  relancée, aucun appel supplémentaire. Justifié par neuf appels réels aux
+  services (six à l'altimétrie — cinq entre 576 et 872 ms, un à 7 277 ms —
+  et trois à la météo, 103-150 ms, aucun risque comparable trouvé sur la
+  météo, d'où l'absence de délai de garde pour elle ; détail et limites de
+  cette mesure dans `docs/mesure-paris-lyon.md`).
+- **Jamais un silence** : quand le relief n'a pas pu être pris en compte
+  (délai dépassé ou service en erreur), « Pourquoi ce plan ? » et la note de
+  réserve du volet recharge le disent explicitement — avant cette tâche, un
+  dénivelé manquant se traduisait par une ligne D+/D− simplement absente,
+  sans un mot, quand d'autres conditions (température) avaient, elles,
+  abouti.
+- **Six sessions froides, relevés bruts publiés** dans
+  `docs/mesure-paris-lyon.md` (build vérifié par hash du bundle servi) :
+  2 364 / 494 / 6 642 / 3 924 / 4 291 / 3 202 ms. Médiane 3 563 ms (< 4 s,
+  tenu) ; **p95 = 6 642 ms, au-dessus du seuil de 5 s — critère NON tenu**.
+  Le relief a été compté dans les six sessions : l'altimétrie n'a jamais
+  dépassé le budget de 2 s que le délai de garde lui impose. Ça ne prouve PAS
+  qu'elle a répondu vite pour autant (un appel à 1 900 ms compte aussi comme
+  « relief pris en compte ») : la cause exacte de la session lente
+  (6 642 ms) reste NON VÉRIFIÉE — la sonde posée ici ne décompose pas le
+  total par poste réseau. Dit en clair, avec ses limites, dans le document
+  de mesure plutôt que résumé de façon trompeuse ici.
+- Bundle : `panneau-itineraire` 123 654 o contre 123 658 o avant la tâche
+  (−4 o après extraction de `noteReserveConditions` vers `lib/conditions.ts`),
+  bien sous le budget de ±5 Ko. Aucune dépendance nouvelle. 1 691 tests
+  unitaires verts (`npm test`), aucun test E2E touché (hors périmètre de
+  cette tâche, mission B du même cycle).
+- Revue Codex, deux passages : `handoffs/2026-09-12-1630-codex-altimetrie.md`
+  — VERDICT BLOQUANT sur le premier (4 remarques sérieuses, 1 mineure : un
+  vrai bug d'affichage sur la température d'arrivée seule, un test qui ne
+  prouvait pas tout ce que le document affirmait, une erreur de comptage
+  (« dix » au lieu de neuf appels de mesure) et une conclusion causale non
+  soutenue par les chiffres — toutes corrigées dans un second commit, détail
+  dans `docs/mesure-paris-lyon.md`).
 ## [1.142.0] — 2026-09-11 — SALON-1
 
 ### La page du stand, `/salon.html` — jalon CEO du 18/09
