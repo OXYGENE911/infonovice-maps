@@ -396,7 +396,7 @@ test('la porte de sortie : quand elle paraît, ce que l’usager voit avant, et 
      MAINTENANT elle lit la TENUE UTILISABLE du bouton, dans les deux branches :
        — porte refermée     → `dureeDeVieMs`, mesurée sur le PRODUIT et
          indépendante de notre patience. C'est ce nombre qui rougit si le bouton
-         se referme avant huit secondes — la régression d'avant `4318ca1`, où il
+         se referme avant huit secondes — la régression d'avant `7361d65`, où il
          vivait 1 500 ms (ouvert à 15 000, masqué par le `catch` à 16 500).
        — porte non refermée → la fenêtre observée depuis l'ouverture ; qu'elle
          dépasse huit secondes est alors une propriété de NOTRE mesure, et la
