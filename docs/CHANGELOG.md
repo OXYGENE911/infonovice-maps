@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.143.0] — 2026-09-13 — WIKIMEDIA-0
+## [1.146.0] — 2026-09-13 — WIKIMEDIA-0
 
 ### Wikimedia sort de Maps gratuit — Decision D3 du CEO (11/09), appliquée
 - **Les trois hôtes sont sortis de la CSP d'`index.html`** :
@@ -63,7 +63,7 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   décision CEO ouverte et sort du périmètre de la tâche — la page annonce
   donc une fonction que l'application n'a plus.
 
-## [Non publié] — 2026-09-11 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
+## [1.142.1] — 2026-09-13 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
 
 ### 13/09/2026 (C10) — la régression que cette PR introduisait est corrigée ICI
 
