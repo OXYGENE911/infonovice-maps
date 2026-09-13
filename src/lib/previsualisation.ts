@@ -134,10 +134,15 @@ export function estPrevisualisation(env: Record<string, string | undefined>): bo
    les deux, les robots qui ignorent `robots.txt` (ils existent) butent alors
    sur l'en-tête, et un résultat sans titre ni extrait vaut mieux qu'une page
    de préversion indexée en entier.
-   LE VRAI REMÈDE N'EST PAS UN FICHIER : c'est de fermer la porte, par exemple
-   avec Cloudflare Access sur le domaine de préversion — quatre testeurs, quatre
-   adresses. C'est une décision du CEO, écrite comme telle dans
-   docs/DEPLOIEMENT.md, pas quelque chose qu'un agent pose de lui-même. */
+   LE VRAI REMÈDE N'EST PAS UN FICHIER, c'est une porte — mais elle n'est PAS
+   posable aujourd'hui : la cible est `maps-staging.pages.dev`, et la
+   documentation Cloudflare dit que la politique d'accès des déploiements de
+   préversion ne couvre ni le `*.pages.dev` du projet ni un domaine
+   personnalisé. Une application Access, elle, exige un nom d'hôte d'une zone
+   de NOTRE compte : `pages.dev` n'en est pas une. La porte redevient possible
+   le jour où `maps-staging.infonovice.fr` existe — décision du CEO, écrite
+   comme telle dans docs/DEPLOIEMENT.md §3 et §4 bis. D'ici là, les trois
+   filets sont tout ce qu'il y a, et c'est pour cela qu'on n'en retire aucun. */
 export const ROBOTS_PREVISUALISATION = `# Infonovice Maps — PRÉVISUALISATION.
 # Rien de ce qui vit ici ne doit être indexé : la production est sur
 # https://maps.infonovice.fr/ et c'est elle qui porte le robots.txt ouvert.
@@ -175,6 +180,50 @@ export const META_ROBOTS_PREVISUALISATION =
 export const LIEN_FEUILLE_PREVISUALISATION =
   `<link rel="stylesheet" href="${FICHIER_FEUILLE}">`;
 
+/* LA PRÉVERSION DOIT AUSSI SE DIRE QUAND ON PARTAGE SON LIEN (défaut trouvé
+   par le vérificateur indépendant, 13/09).
+   Le marquage ci-dessus se voit quand on OUVRE la page. Mais les sept pages
+   portent des métadonnées qui affirment, en toutes lettres, être la
+   production : `<link rel="canonical" href="https://maps.infonovice.fr/">`,
+   `<meta property="og:url">` sur le même hôte, et un bloc JSON-LD dont le
+   champ `url` désigne la production. Un testeur de l'AFUVE qui colle l'URL de
+   préversion dans une messagerie produit donc une vignette qui annonce le site
+   de production : le destinataire croit voir la production, et c'est
+   exactement le dégât n° 1 que ce module existe pour empêcher — déplacé du
+   navigateur vers la messagerie.
+   CE QU'ON FAIT, ET POURQUOI CHAQUE GESTE :
+   - `canonical` RETIRÉ. Une préversion n'a pas de version canonique d'
+     elle-même, et désigner la production reviendrait à demander à un moteur de
+     créditer la production pour une page qui n'est pas elle.
+   - `og:url` RETIRÉ, et non réécrit : l'URL de déploiement n'est pas connue à
+     la construction (elle dépend du projet Cloudflare). Absent, le lecteur de
+     vignette retombe sur l'URL RÉELLEMENT partagée — qui, elle, est vraie.
+   - `og:title` et `og:site_name` PRÉFIXÉS. C'est la ligne que lit un humain
+     dans la vignette ; sans elle, le titre de la vignette est celui de la
+     production mot pour mot.
+   - le bloc JSON-LD RETIRÉ. Chacun de ses champs est une affirmation lisible
+     par une machine à propos de la production, et une préversion qu'on demande
+     de ne pas indexer n'a aucun usage pour des données structurées.
+   CE QU'ON NE TOUCHE PAS : `og:image`, qui reste l'image de partage servie par
+   la production. C'est le même dessin, ce n'est pas une affirmation d'être la
+   production, et la préversion n'a pas d'image à elle. */
+const RETRAITS_PARTAGE: readonly RegExp[] = [
+  /[ \t]*<link[^>]+rel="canonical"[^>]*>\r?\n?/gi,
+  /[ \t]*<meta[^>]+property="og:url"[^>]*>\r?\n?/gi,
+  /[ \t]*<script type="application\/ld\+json">[\s\S]*?<\/script>\r?\n?/gi,
+];
+
+export function neutraliserMetadonneesProduction(html: string): string {
+  let sortie = html;
+  for (const motif of RETRAITS_PARTAGE) sortie = sortie.replace(motif, '');
+  return sortie
+    .replace(/(<meta[^>]+property="og:title"[^>]+content=")/gi, `$1${PREFIXE_TITRE}`)
+    .replace(
+      /(<meta[^>]+property="og:site_name"[^>]+content="[^"]*)"/gi,
+      `$1 — ${MENTION_PREVISUALISATION}"`,
+    );
+}
+
 /* PAS DE REPLI SILENCIEUX (même règle que la version dans `vite.config.ts`) :
    une page sans `<head>`, sans `<body>` ou sans `<title>` ARRÊTE la
    construction. Le contraire — déployer une page non marquée en écrivant un
@@ -195,7 +244,7 @@ export function marquerHtmlPrevisualisation(html: string, nomPage: string): stri
     }
   }
 
-  return html
+  return neutraliserMetadonneesProduction(html)
     /* L'ATTRIBUT SUR <html> EST LE POINT D'ANCRAGE DES TESTS. Un parcours E2E
        ou une sonde de la CI l'interroge sans dépendre de la mise en forme du
        bandeau, qui, elle, a le droit de changer. */

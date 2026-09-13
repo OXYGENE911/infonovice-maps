@@ -29,7 +29,7 @@ bibliothèque interne `/src/lib/` réutilisable — pas de backend.
    de l'Auto. C'est le motif écrit de sa directive du 13/09/2026.
    DONC, ET POUR LA SEULE PRÉVISUALISATION : la branche `staging` est déployée
    sur Cloudflare Pages (palier gratuit, téléversement direct depuis GitHub
-   Actions) et sert https://staging.maps.infonovice.fr/.
+   Actions) et sert https://maps-staging.pages.dev/.
    CE QUE CETTE OUVERTURE NE COUVRE PAS, et qui reste interdit sans une
    nouvelle décision écrite : déplacer la production hors de GitHub Pages,
    ajouter un backend, une base de données serveur, ou un service payant. La
@@ -39,7 +39,7 @@ bibliothèque interne `/src/lib/` réutilisable — pas de backend.
    LA PRÉVERSION N'EST PAS LA PRODUCTION et le dit elle-même : bandeau visible
    sur chaque page, et interdiction d'indexation par trois moyens (robots.txt,
    en-tête X-Robots-Tag, balise meta). Tout est décrit dans
-   docs/DEPLOIEMENT.md, y compris les trois gestes du CEO et le retour arrière.
+   docs/DEPLOIEMENT.md, y compris les deux gestes du CEO et le retour arrière.
    Un agent qui ferait respecter « GitHub Pages » contre ce paragraphe ferait
    correctement son travail sur un texte périmé : c'est exactement pour cela
    qu'il est écrit ici, et pas seulement dans une PR.

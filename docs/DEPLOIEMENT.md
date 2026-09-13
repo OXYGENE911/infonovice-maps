@@ -13,8 +13,8 @@ en fin de page.
 |---|---|---|
 | Branche | `main` | `staging` |
 | Workflow | `.github/workflows/deploiement.yml` | `.github/workflows/previsualisation.yml` |
-| Hébergeur | GitHub Pages (source « GitHub Actions ») | Cloudflare Pages, projet `infonovice-maps-previsualisation` |
-| Domaine | https://maps.infonovice.fr/ | https://staging.maps.infonovice.fr/ |
+| Hébergeur | GitHub Pages (source « GitHub Actions ») | Cloudflare Pages, projet `maps-staging` |
+| Domaine | https://maps.infonovice.fr/ | https://maps-staging.pages.dev/ |
 | Construction | `npm run build` | `INFONOVICE_ENVIRONNEMENT=previsualisation npm run build` |
 | Indexation | ouverte (`robots.txt` ouvert, sitemap) | refusée par trois filets — `Disallow: /`, en-tête `X-Robots-Tag: noindex`, balise `meta`. **Ce n'est pas une garantie absolue : voir la limite au §3.** |
 | Qui pousse | le CEO seul fusionne `staging` → `main` | toute fusion de PR sur `staging` |
@@ -102,45 +102,92 @@ demande les deux ; les robots qui ignorent `robots.txt` (ils existent) butent
 alors sur l'en-tête ; et un résultat sans titre vaut mieux qu'une préversion
 indexée en entier.
 
-**Le vrai remède n'est pas un fichier, c'est une porte.** Voir le Geste 4,
-facultatif, au §4 : il rend l'indexation matériellement impossible.
+### Ce que le changement de cible a coûté sur ce point — à savoir
+
+Tant que la préversion vit sur `maps-staging.pages.dev`, **il n'existe aucune
+porte à fermer**, et c'est le seul vrai recul de la nouvelle cible.
+
+Cloudflare Pages propose bien une politique d'accès sur les déploiements de
+préversion, mais sa documentation dit exactement ce qu'elle NE protège pas :
+« this will only protect your preview deployments (for example,
+`373f31e2.user-example.pages.dev` and every other randomly generated preview
+link) and not your `*.pages.dev` domain or custom domain »
+(developers.cloudflare.com/pages/configuration/preview-deployments/, relevé le
+13/09/2026). Or c'est précisément `maps-staging.pages.dev` que regarderont le
+CEO et les testeurs.
+
+Et **Cloudflare Access ne peut pas non plus le couvrir** : une application
+Access se pose sur un nom d'hôte appartenant à une zone active du compte
+Cloudflare ; `pages.dev` est une zone de Cloudflare, pas la nôtre, et on ne
+peut pas l'y ajouter. La porte redevient possible **le jour où le domaine
+personnalisé `maps-staging.infonovice.fr` existe** — c'est-à-dire le jour où
+le CEO décide de le poser (§4 bis).
+
+**Ce qui est gagné sans rien décider, en revanche** : la politique d'accès des
+déploiements de préversion ferme les URL à empreinte
+(`<hash>.maps-staging.pages.dev`), qui sont publiques elles aussi et qu'aucun
+des trois filets ne rend privées. Une case à cocher dans les réglages du
+projet, gratuite, sans effet sur l'adresse que regardent les testeurs. Elle est
+écrite en §4 comme geste facultatif du CEO.
 
 ---
 
-## 4. Les trois gestes du CEO — à faire dans cet ordre
+## 4. Les deux gestes du CEO — à faire dans cet ordre
 
-Ces trois gestes sont en **liste rouge** (création de compte sur un service
-tiers, DNS, secrets) : aucun agent ne les fait. Ils sont écrits ici prêts à
-exécuter. **Aucune préversion n'existe tant que les trois ne sont pas faits.**
+Ils sont en **liste rouge** (création de projet sur un service tiers, secrets) :
+aucun agent ne les fait. Ils sont écrits ici prêts à exécuter. **Aucune
+préversion n'existe tant que les deux ne sont pas faits.**
 
-### Geste 1 — créer le projet Cloudflare Pages
+> **Il n'y en a plus que deux.** Le troisième — poser un enregistrement DNS — a
+> disparu avec le changement de cible du 13/09 : `maps-staging.pages.dev` est
+> servi par Cloudflare sans aucun DNS de notre part. Le domaine personnalisé
+> `maps-staging.infonovice.fr` est **reporté** ; sa procédure est écrite au
+> §4 bis et **n'est pas active**.
+
+### Geste 1 — créer le projet Cloudflare Pages, **branche de production `staging`**
 
 Dans le compte Cloudflare qui héberge déjà la zone `infonovice.fr`.
-Deux voies, au choix.
-
-**En ligne de commande** (la plus sûre : la branche de production est fixée du
-premier coup) :
 
 ```
 npx wrangler@4.131.1 login
-npx wrangler@4.131.1 pages project create infonovice-maps-previsualisation --production-branch=staging
+npx wrangler@4.131.1 pages project create maps-staging --production-branch=staging
 ```
 
-**Ou par le tableau de bord** : *Workers & Pages* → *Create* → *Pages* →
-*Upload assets*, nom exact `infonovice-maps-previsualisation`. Puis, dans les
-réglages du projet, mettre la **branche de production** à `staging`.
+- **Nom exact du projet : `maps-staging`.** C'est lui qui fabrique l'adresse :
+  un projet Pages est servi sur `<nom-du-projet>.pages.dev`. Le nom est aussi
+  écrit dans `previsualisation.yml`, variable `PROJET_PAGES` — le changer ici
+  oblige à le changer là.
+- **Branche de production : `staging`, et ce n'est pas un détail de confort.**
+  La documentation Cloudflare est explicite : `<projet>.pages.dev` sert la
+  **branche de production** ; toute autre branche reçoit un alias dérivé de son
+  nom, `<branche>.<projet>.pages.dev`
+  (developers.cloudflare.com/pages/configuration/preview-deployments/, relevé
+  le 13/09/2026). Si la branche de production du projet était `main`, nos
+  envois deviendraient des préversions Cloudflare et `maps-staging.pages.dev`
+  servirait indéfiniment le tout premier déploiement — ou rien. Le symptôme :
+  une page qui ne bouge plus alors que le workflow est vert.
+- **LA LIGNE DE COMMANDE N'EST PAS UNE PRÉFÉRENCE DE STYLE, C'EST LE SEUL
+  CHEMIN.** Notre projet est un projet de **téléversement direct** (le workflow
+  envoie un `dist/` déjà bâti ; Cloudflare ne construit rien). Or la
+  documentation dit : « if your project is a Direct Upload project, you will not
+  have the option to configure production branch controls in the dashboard, and
+  to update your production branch, you will need to manually call the Update
+  Project endpoint in the API »
+  (developers.cloudflare.com/pages/get-started/direct-upload/, relevé le
+  13/09/2026). **Le tableau de bord n'offrira pas ce réglage.** Fixé de travers
+  à la création, il se rattrape par l'API :
 
-- **Nom exact du projet** : `infonovice-maps-previsualisation`
-  (il est écrit dans `previsualisation.yml`, variable `PROJET_PAGES` — le
-  changer ici oblige à le changer là).
-- **Branche de production : `staging`.** Ce point n'est pas décoratif : si la
-  branche de production du projet est autre chose, chaque envoi devient un
-  déploiement de *préversion Cloudflare*, et le domaine
-  `staging.maps.infonovice.fr` continuera de servir le tout premier
-  déploiement, indéfiniment. Le symptôme est une page qui ne bouge plus alors
-  que le workflow est vert.
+  ```
+  curl -X PATCH \
+    "https://api.cloudflare.com/client/v4/accounts/<ID_DE_COMPTE>/pages/projects/maps-staging" \
+    -H "Authorization: Bearer <JETON>" \
+    -H "Content-Type: application/json" \
+    --data-raw "{\"production_branch\":\"staging\"}"
+  ```
+
 - **Si on oublie ce geste** : le workflow échoue à l'étape de déploiement avec
-  « project not found ». Rien n'est cassé, rien n'est publié.
+  « project not found ». Rien n'est cassé, rien n'est publié, la production ne
+  bouge pas.
 
 ### Geste 2 — fabriquer le jeton d'API et le déposer dans les secrets du dépôt
 
@@ -172,46 +219,15 @@ Puis, dans GitHub : *Settings* → *Secrets and variables* → *Actions* →
 - **Si un seul des deux secrets est posé** : même chose, la condition exige les
   deux.
 
-### Geste 3 — poser l'enregistrement DNS et rattacher le domaine
+### Geste facultatif — fermer les URL à empreinte
 
-**DNS = liste rouge.** Deux moitiés, et il faut les deux :
-
-1. Dans le projet Pages : *Custom domains* → *Set up a custom domain* →
-   `staging.maps.infonovice.fr`. Cloudflare indique alors l'enregistrement à
-   créer.
-2. Dans la zone `infonovice.fr` : enregistrement **CNAME**,
-   nom `staging.maps`, cible `infonovice-maps-previsualisation.pages.dev`,
-   **proxy orange activé** (contrairement au CNAME de la production, qui est
-   en gris parce que GitHub Pages sert son propre certificat ; ici, c'est
-   Cloudflare qui sert et qui a besoin d'être dans le chemin).
-
-- **Si on oublie ce geste** : le déploiement fonctionne, mais l'URL utilisable
-  est `https://infonovice-maps-previsualisation.pages.dev/` — la préversion est
-  en ligne et testable, simplement pas sous le nom prévu. Cette URL est, elle
-  aussi, couverte par les trois filets d'indexation.
-- **Ce geste ne touche pas** l'enregistrement `maps` (production). Ne pas le
-  modifier.
-
-### Geste 4 — FACULTATIF, mais c'est le seul verrou qui ferme vraiment
-
-Les trois filets du §3 demandent aux moteurs de ne pas indexer. Une **porte**,
-elle, les en empêche. **Cloudflare Access** (Zero Trust, palier gratuit)
-protège `staging.maps.infonovice.fr` derrière un code envoyé par courriel, à
-une liste d'adresses : les quatre testeurs de l'AFUVE, le CEO. Un robot
-n'entre pas ; un lien fuité ne mène nulle part.
-
-**Attention, et c'est le piège** : protéger le seul domaine personnalisé ne
-suffit pas. Le contenu reste servi par `infonovice-maps-previsualisation.pages.dev`
-et par l'URL propre à chaque déploiement. Il faut donc couvrir **aussi** ces
-adresses (une politique Access sur `*.pages.dev` du projet), sans quoi la porte
-est posée à côté de l'entrée.
-
-Ce qu'il en coûte : chaque testeur reçoit un code à la première visite, et
-recommence quand la session expire. À arbitrer — un vrai testeur de terrain
-n'aime pas les portes. **C'est une décision du CEO**, pas un geste que prend un
-agent. Si elle est prise, elle s'applique dans Zero Trust → *Access* →
-*Applications*, sur le seul domaine de préversion, et ne touche en rien
-`maps.infonovice.fr`.
+Gratuit, réversible, sans effet sur l'adresse que regardent les testeurs :
+réglages du projet `maps-staging` → *Preview deployments* → exiger
+l'authentification. Cela ferme les URL du type
+`<empreinte>.maps-staging.pages.dev`, publiques et couvertes par les trois
+filets mais par rien d'autre. Cela **ne ferme pas** `maps-staging.pages.dev` :
+la documentation le dit mot pour mot (citée au §3). Il n'existe pas de moyen de
+fermer celle-là tant que le domaine personnalisé n'existe pas.
 
 ### Comment savoir que les gestes ont pris
 
@@ -220,13 +236,55 @@ workflow* → branche `staging`. Le résumé du run affiche l'URL du déploiemen
 Puis, depuis un terminal :
 
 ```
-curl -sI https://staging.maps.infonovice.fr/ | grep -i x-robots-tag
-curl -s  https://staging.maps.infonovice.fr/robots.txt
+curl -sI https://maps-staging.pages.dev/ | grep -i x-robots-tag
+curl -s  https://maps-staging.pages.dev/robots.txt
 ```
 
 La première commande doit répondre `x-robots-tag: noindex, nofollow, noarchive`,
 la seconde `Disallow: /`. Et la page, ouverte dans un navigateur, doit porter le
 liseré ambre et un onglet qui commence par « PRÉVISUALISATION ».
+
+**Le contrôle qui compte vraiment, et qu'on oublierait** : dans le tableau de
+bord, le déploiement doit apparaître comme **Production**, et non comme
+*Preview*. S'il apparaît en *Preview*, la branche de production du projet n'est
+pas `staging` — c'est le PATCH d'API du Geste 1. Autre symptôme du même
+réglage : deux poussées de suite et `maps-staging.pages.dev` ne bouge pas,
+workflow vert.
+
+---
+
+## 4 bis. Le domaine personnalisé — REPORTÉ, écrit mais NON ACTIF
+
+**Cette procédure n'est pas en vigueur.** Elle est écrite pour le jour où le CEO
+en décidera : « domaine personnalisé `maps-staging.infonovice.fr` plus tard si
+besoin » (directive du 13/09/2026). Tant qu'elle n'est pas exécutée, l'adresse
+de la préversion est `https://maps-staging.pages.dev/` et rien d'autre.
+
+**Pourquoi `maps-staging.infonovice.fr` et pas un sous-domaine de
+`maps.infonovice.fr`** : un certificat générique `*.infonovice.fr` couvre
+`maps.infonovice.fr`, mais **pas** ce qui serait encore un cran plus bas — un
+générique ne couvre qu'un seul niveau. La limite est la même chez OVH et dans
+le SSL universel de Cloudflare. `maps-staging.infonovice.fr` reste à un cran et
+l'évite. C'est le motif du changement de cible du 13/09/2026.
+
+Le jour venu, **DNS = liste rouge**, deux moitiés et il faut les deux :
+
+1. Dans le projet Pages : *Custom domains* → *Set up a custom domain* →
+   `maps-staging.infonovice.fr`. Cloudflare indique l'enregistrement à créer.
+2. Dans la zone `infonovice.fr` : enregistrement **CNAME**, nom `maps-staging`,
+   cible `maps-staging.pages.dev`, **proxy orange activé** (contrairement au
+   CNAME de la production, en gris parce que GitHub Pages sert son propre
+   certificat ; ici c'est Cloudflare qui sert et qui doit être dans le chemin).
+
+Ce geste ne touche **pas** l'enregistrement `maps` (production).
+
+**Ce qu'il débloquerait en plus de l'adresse** : c'est seulement à ce moment-là
+qu'une porte **Cloudflare Access** devient possible (voir §3), sur un nom d'hôte
+de notre zone. Elle protégerait la préversion derrière un code envoyé par
+courriel à une liste d'adresses — les quatre testeurs de l'AFUVE, le CEO. Ce
+qu'elle coûte : un code à chaque première visite et à chaque expiration de
+session ; un testeur de terrain n'aime pas les portes. **C'est une décision du
+CEO**, pas un geste d'agent.
 
 ---
 
@@ -235,7 +293,7 @@ liseré ambre et un onglet qui commence par « PRÉVISUALISATION ».
 ### Sur la prévisualisation
 
 1. **Le plus rapide, sans toucher au dépôt** : tableau de bord Cloudflare →
-   projet `infonovice-maps-previsualisation` → *Deployments* → le déploiement
+   projet `maps-staging` → *Deployments* → le déploiement
    précédent → *Rollback to this deployment*. Le domaine bascule en quelques
    secondes.
 2. **Par le dépôt, pour que le code et le site redisent la même chose** :
@@ -262,10 +320,11 @@ Chercher dans cet ordre, du plus fréquent au plus rare.
 | Workflow **vert**, note « Préversion construite, non déployée » | secrets absents | Geste 2 du §4 |
 | Échec à **Lint** ou **Tests unitaires** | la fusion sur `staging` a cassé quelque chose que les PR isolées ne voyaient pas | corriger sur une branche, PR vers `staging` ; la préversion précédente reste en ligne |
 | Échec à **Porte — la préversion se dit et ne s'indexe pas** | le marquage n'a pas été appliqué (variable d'environnement, plugin, ordre des transformations) | **ne pas contourner la porte.** Reproduire en local : `INFONOVICE_ENVIRONNEMENT=previsualisation npm run build` puis `node scripts/verifier-previsualisation.mjs`. Le script nomme chaque marque manquante |
-| `Project not found` | le projet Pages n'existe pas, ou son nom diffère de `PROJET_PAGES` | Geste 1 du §4 |
+| `Project not found` | le projet Pages n'existe pas, ou son nom diffère de `PROJET_PAGES` (`maps-staging`) | Geste 1 du §4 |
 | `Authentication error` (code 10000) | jeton expiré, révoqué, ou fabriqué sans la permission *Cloudflare Pages · Edit* | refaire le Geste 2 ; vérifier le TTL |
-| Le déploiement réussit mais **la page ne change pas** | la branche de production du projet Pages n'est pas `staging` : les envois deviennent des préversions Cloudflare | réglages du projet → branche de production = `staging` |
-| Le domaine répond `522` ou `404` Cloudflare | domaine personnalisé pas encore rattaché, ou CNAME absent | Geste 3 du §4 |
+| Le déploiement réussit mais **la page ne change pas** | la branche de production du projet Pages n'est pas `staging` : les envois deviennent des préversions Cloudflare, et `maps-staging.pages.dev` reste figé | **pas par le tableau de bord** — un projet de téléversement direct n'y expose pas ce réglage : le PATCH d'API du Geste 1 |
+| `maps-staging.pages.dev` répond `404` | aucun déploiement de **production** n'existe encore sur le projet : voir la ligne précédente | PATCH d'API du Geste 1, puis relancer le workflow |
+| Un domaine personnalisé répond `522` ou `404` | sans objet aujourd'hui — aucun domaine personnalisé n'est rattaché | §4 bis, et seulement sur décision du CEO |
 | Erreur de registre npm pendant `npm ci` | panne npmjs (déjà vue, cf. `ci.yml`) | relancer le workflow ; ce n'est pas une vulnérabilité |
 
 **Règle générale** : un échec de déploiement de préversion **ne casse jamais la

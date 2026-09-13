@@ -76,17 +76,247 @@ function reglesCss(css, selecteur) {
   }
 }
 
-/** Une déclaration qui rend l'élément invisible, espaces et variantes comprises. */
-function rendInvisible(corps) {
-  if (/display\s*:\s*none/i.test(corps)) return true;
-  if (/visibility\s*:\s*hidden/i.test(corps)) return true;
-  if (/content-visibility\s*:\s*hidden/i.test(corps)) return true;
+/* LIRE LA VALEUR, PAS SEULEMENT LA PRÉSENCE (défaut trouvé par le vérificateur
+   indépendant, 13/09). La porte exigeait qu'une déclaration `border:` EXISTE
+   sans jamais lire son épaisseur : `.previsualisation-cadre { border: 0 solid
+   #FFB300; }` et `.previsualisation-pastille { font-size: 0; }` la faisaient
+   sortir en code 0 — et elle imprimait « cadre visible et pastille visible ».
+   C'est la troisième fois que ce trou se rouvre sous une forme voisine, et
+   c'est le même trou à chaque fois : chercher un MOT là où il faut lire un
+   NOMBRE. Tout ce qui suit lit des nombres. */
+
+/** Les déclarations d'un corps de règle, dans l'ordre, propriété en minuscules.
+    LIMITE ASSUMÉE : la coupe se fait sur « ; », donc une valeur qui en
+    contiendrait un (une `url(data:…;base64,…)`) serait mal lue. La feuille de
+    préversion n'en contient pas, et la porte n'a pas à devenir un analyseur
+    CSS complet — mais il faut le savoir avant d'en mettre une. */
+function declarations(corps) {
+  const paires = [];
+  for (const brute of corps.replace(/\/\*[\s\S]*?\*\//g, ' ').split(';')) {
+    const d = brute.trim();
+    if (d === '') continue;
+    const i = d.indexOf(':');
+    if (i === -1) continue;
+    paires.push([d.slice(0, i).trim().toLowerCase(), d.slice(i + 1).trim()]);
+  }
+  return paires;
+}
+
+/* LA CASCADE, RÉDUITE À CE QUI NOUS CONCERNE. À sélecteur égal, la DERNIÈRE
+   déclaration gagne — sauf qu'une déclaration `!important` ne se laisse pas
+   écraser par une déclaration ordinaire écrite plus bas. Sans cette nuance,
+   `border: 0 !important` placé AVANT la bonne règle repassait. */
+function declarationsEffectives(corpsListe) {
+  const retenues = new Map();
+  let ordre = 0;
+  for (const corps of corpsListe) {
+    for (const [prop, brute] of declarations(corps)) {
+      const important = /!\s*important$/i.test(brute);
+      const valeur = brute.replace(/!\s*important$/i, '').trim();
+      const ancienne = retenues.get(prop);
+      ordre += 1;
+      if (ancienne !== undefined && ancienne.important && !important) continue;
+      retenues.set(prop, { valeur, important, ordre });
+    }
+  }
+  return retenues;
+}
+
+/** Parmi plusieurs propriétés concurrentes (raccourci et propriétés longues),
+    celle qui l'emporte : `!important` d'abord, puis la plus tardive. */
+function gagnante(effectives, proprietes) {
+  let meilleure = null;
+  for (const prop of proprietes) {
+    const d = effectives.get(prop);
+    if (d === undefined) continue;
+    if (meilleure === null
+      || (d.important && !meilleure.important)
+      || (d.important === meilleure.important && d.ordre > meilleure.ordre)) {
+      meilleure = { prop, ...d };
+    }
+  }
+  return meilleure;
+}
+
+const MOT_LONGUEUR = /^[+-]?(\d+(\.\d+)?|\.\d+)(px|em|rem|ex|ch|pt|pc|in|cm|mm|q|vw|vh|vmin|vmax|%)?$/i;
+const MOT_STYLE_BORDURE = /^(none|hidden|solid|dashed|dotted|double|groove|ridge|inset|outset)$/i;
+
+/** Le nombre de pixels « logiques » d'un mot de longueur, ou null si ce n'en
+    est pas un. `thin|medium|thick` valent 1, 3 et 5 px (valeurs usuelles des
+    navigateurs) : seul le fait qu'elles soient NON NULLES nous importe. */
+function longueur(mot) {
+  if (/^thin$/i.test(mot)) return 1;
+  if (/^medium$/i.test(mot)) return 3;
+  if (/^thick$/i.test(mot)) return 5;
+  return MOT_LONGUEUR.test(mot) ? Number.parseFloat(mot) : null;
+}
+
+const NOMS_COULEURS = {
+  transparent: 'transparent', white: '#ffffff', black: '#000000', red: '#ff0000',
+  lime: '#00ff00', blue: '#0000ff', yellow: '#ffff00', cyan: '#00ffff',
+  aqua: '#00ffff', magenta: '#ff00ff', fuchsia: '#ff00ff', silver: '#c0c0c0',
+  gray: '#808080', grey: '#808080', maroon: '#800000', olive: '#808000',
+  green: '#008000', purple: '#800080', teal: '#008080', navy: '#000080',
+};
+
+/** Une couleur réduite à une forme comparable, ou null si le mot n'en est pas
+    une. Une couleur totalement transparente devient « transparent ». */
+function couleur(mot) {
+  const m = mot.trim().toLowerCase();
+  if (Object.prototype.hasOwnProperty.call(NOMS_COULEURS, m)) return NOMS_COULEURS[m];
+  const hex = /^#([0-9a-f]{3,8})$/.exec(m);
+  if (hex !== null) {
+    const c = hex[1];
+    if (c.length === 3 || c.length === 4) {
+      if (c.length === 4 && c[3] === '0') return 'transparent';
+      return `#${c[0]}${c[0]}${c[1]}${c[1]}${c[2]}${c[2]}`;
+    }
+    if (c.length === 6) return `#${c}`;
+    if (c.length === 8) return c.slice(6) === '00' ? 'transparent' : `#${c.slice(0, 6)}`;
+  }
+  const rgb = /^rgba?\(([^)]*)\)$/.exec(m);
+  if (rgb !== null) {
+    const parts = rgb[1].split(/[,/\s]+/).filter((p) => p !== '');
+    if (parts.length >= 4 && Number.parseFloat(parts[3]) === 0) return 'transparent';
+    if (parts.length >= 3) {
+      /* RAMENÉ À LA MÊME FORME QUE L'HEXADÉCIMAL, ET C'EST LE POINT : sinon
+         `#FFB300` et `rgb(255, 179, 0)` sont deux chaînes différentes pour la
+         même couleur, et le contournement tient en une réécriture. */
+      const octets = parts.slice(0, 3).map((p) => {
+        const n = p.endsWith('%')
+          ? Math.round((Number.parseFloat(p) * 255) / 100)
+          : Math.round(Number.parseFloat(p));
+        return Number.isFinite(n) ? Math.min(255, Math.max(0, n)).toString(16).padStart(2, '0') : null;
+      });
+      if (octets.every((o) => o !== null)) return `#${octets.join('')}`;
+    }
+  }
+  return null;
+}
+
+/** La taille de police EFFECTIVE, `font-size` comme raccourci `font`, ou null
+    si aucune n'est déclarée (elle est alors héritée, donc hors de notre vue). */
+function tailleTexte(effectives) {
+  const d = gagnante(effectives, ['font-size', 'font']);
+  if (d === null) return null;
+  if (d.prop === 'font-size') return longueur(d.valeur.split(/\s+/)[0]);
+  /* DANS LE RACCOURCI `font`, LA TAILLE EST LE DERNIER MOT DE TAILLE AVANT LA
+     FAMILLE : dans « 700 13px/1.5 system-ui », « 700 » est la graisse et
+     « 13px/1.5 » la taille. Prendre le PREMIER mot qui ressemble à un nombre
+     laisserait passer « font: 700 0/1.5 system-ui ». */
+  let taille = null;
+  for (const mot of d.valeur.split(/\s+/).filter((m) => m !== '')) {
+    const avantBarre = mot.split('/')[0];
+    if (mot.includes('/')) { const v = longueur(avantBarre); if (v !== null) taille = v; continue; }
+    if (/^(xx-small|x-small|small|large|x-large|xx-large|smaller|larger)$/i.test(mot)) { taille = 16; continue; }
+    const v = longueur(mot);
+    if (v !== null) taille = v;
+  }
+  return taille;
+}
+
+/** Le liseré effectif du cadre : son épaisseur la plus fine, son style et sa
+    couleur. `null` en épaisseur = aucune déclaration de bordure. */
+function liseré(effectives) {
+  const cotes = ['top', 'right', 'bottom', 'left'];
+  const large = gagnante(effectives, ['border', 'border-width',
+    ...cotes.map((c) => `border-${c}`), ...cotes.map((c) => `border-${c}-width`)]);
+  const styles = gagnante(effectives, ['border', 'border-style',
+    ...cotes.map((c) => `border-${c}`), ...cotes.map((c) => `border-${c}-style`)]);
+  const couleurs = gagnante(effectives, ['border', 'border-color',
+    ...cotes.map((c) => `border-${c}`), ...cotes.map((c) => `border-${c}-color`)]);
+
+  const motsDe = (d) => (d === null ? [] : d.valeur.split(/\s+/).filter((m) => m !== ''));
+
+  let epaisseur = null;
+  if (large !== null) {
+    if (large.prop === 'border' || /^border-(top|right|bottom|left)$/.test(large.prop)) {
+      // Raccourci : la largeur omise vaut `medium`, mais `none`/`hidden` ne
+      // dessine rien quelle que soit la largeur (traité par le style).
+      const trouvees = motsDe(large).map(longueur).filter((v) => v !== null);
+      epaisseur = trouvees.length > 0 ? Math.min(...trouvees) : 3;
+    } else {
+      const trouvees = motsDe(large).map(longueur).filter((v) => v !== null);
+      epaisseur = trouvees.length > 0 ? Math.min(...trouvees) : null;
+    }
+  }
+  // Une largeur nulle posée sur UN SEUL côté fait déjà un cadre percé.
+  for (const cote of cotes) {
+    const d = effectives.get(`border-${cote}-width`);
+    if (d === undefined) continue;
+    const v = longueur(d.valeur.split(/\s+/)[0]);
+    if (v !== null) epaisseur = epaisseur === null ? v : Math.min(epaisseur, v);
+  }
+
+  const style = styles === null
+    ? null
+    : (motsDe(styles).find((m) => MOT_STYLE_BORDURE.test(m)) ?? null);
+  const teinte = couleurs === null
+    ? null
+    : (motsDe(couleurs).map(couleur).find((c) => c !== null && c !== undefined) ?? null);
+  return { epaisseur, style, teinte };
+}
+
+/* CE QUI FAIT DISPARAÎTRE UN ÉLÉMENT SANS ÉCRIRE `display: none`. Chaque entrée
+   est une façon vue ou plausible d'éteindre le bandeau tout en laissant la
+   porte contente. La fonction rend la RAISON, pas un booléen : un grief qui
+   nomme la règle fautive se corrige, un grief muet se contourne. */
+function raisonInvisible(effectives) {
+  const val = (prop) => (effectives.get(prop)?.valeur ?? null);
+
+  if (/^none$/i.test(val('display') ?? '')) return 'display: none';
+  if (/^(hidden|collapse)$/i.test(val('visibility') ?? '')) return `visibility: ${val('visibility')}`;
+  if (/^hidden$/i.test(val('content-visibility') ?? '')) return 'content-visibility: hidden';
+
   // `opacity: 0` éteint ; `opacity: 0.5` non. Le nombre est LU, pas deviné —
   // la première version rejetait « 0.5 » (faux positif relevé par Codex).
-  for (const m of corps.matchAll(/opacity\s*:\s*([0-9.]+)/gi)) {
-    if (Number.parseFloat(m[1]) === 0) return true;
+  const o = val('opacity');
+  if (o !== null && Number.parseFloat(o) === 0) return 'opacity: 0';
+
+  // Une mise à l'échelle nulle : l'élément occupe zéro pixel peint.
+  const t = val('transform');
+  if (t !== null && /\bscale[3dxyz]*\(\s*0*\.?0+\s*[,)]/i.test(t)) return `transform: ${t}`;
+  const s = val('scale');
+  if (s !== null && s.split(/\s+/).some((m) => Number.parseFloat(m) === 0)) return `scale: ${s}`;
+
+  // Une boîte de taille nulle, sur n'importe laquelle des dimensions.
+  for (const prop of ['width', 'height', 'max-width', 'max-height']) {
+    const v = val(prop);
+    if (v === null) continue;
+    const n = longueur(v.split(/\s+/)[0]);
+    if (n === 0) return `${prop}: ${v}`;
   }
-  return false;
+
+  // Les découpes qui ne laissent rien voir.
+  const cp = val('clip-path');
+  if (cp !== null && /inset\(\s*(100%|50%\s+50%)/i.test(cp)) return `clip-path: ${cp}`;
+  const cl = val('clip');
+  if (cl !== null && /^rect\(\s*0[a-z%]*\s*[, ]\s*0[a-z%]*\s*[, ]\s*0[a-z%]*\s*[, ]\s*0[a-z%]*\s*\)$/i.test(cl)) {
+    return `clip: ${cl}`;
+  }
+
+  // Le texte poussé hors de sa boîte.
+  const ti = val('text-indent');
+  if (ti !== null) { const n = longueur(ti.split(/\s+/)[0]); if (n !== null && n <= -1000) return `text-indent: ${ti}`; }
+
+  return null;
+}
+
+/** La couleur du texte et celle du fond, quand elles sont déclarées. */
+function contrasteNul(effectives) {
+  const texte = couleur(effectives.get('color')?.valeur ?? '');
+  if (texte === null) return null; // héritée : hors de notre vue, et on le dit
+  if (texte === 'transparent') return 'color: transparent';
+  const fondDirect = effectives.get('background-color')?.valeur ?? null;
+  const fondRaccourci = effectives.get('background')?.valeur ?? null;
+  const brut = fondDirect ?? fondRaccourci;
+  if (brut === null) return null;
+  const fond = fondDirect !== null
+    ? couleur(fondDirect)
+    : (fondRaccourci.split(/\s+/).map(couleur).find((c) => c !== null && c !== undefined) ?? null);
+  if (fond === null) return null;
+  if (fond === texte) return `texte et fond à la même couleur (${texte})`;
+  return null;
 }
 
 /* LE ROBOT DE RÉFÉRENCE EST `*`, MAIS IL NE SUFFIT PAS. Un moteur choisit LE
@@ -195,15 +425,50 @@ export function verifierPrevisualisation(dossier) {
     const pastille = reglesCss(feuille, '.previsualisation-pastille');
     if (cadre.length === 0 || pastille.length === 0) {
       griefs.push('previsualisation.css : règle du cadre ou de la pastille absente');
-    } else if (!cadre.some((c) => /pointer-events\s*:\s*none/i.test(c))) {
-      griefs.push('previsualisation.css : le cadre intercepterait les clics');
-    } else if ([...cadre, ...pastille].some(rendInvisible)) {
+    } else {
+      const effCadre = declarationsEffectives(cadre);
+      const effPastille = declarationsEffectives(pastille);
+      const trait = liseré(effCadre);
+      const taille = tailleTexte(effPastille);
       // UN BANDEAU INVISIBLE EST PIRE QU'UN BANDEAU ABSENT : il rassure la
-      // porte sans rien dire au testeur.
-      griefs.push('previsualisation.css : une règle rend le bandeau invisible');
-    } else if (!cadre.some((c) => /border\s*:/i.test(c) || /border-width\s*:/i.test(c))) {
-      griefs.push('previsualisation.css : le cadre ne dessine aucun liseré');
-    } else constats.push('previsualisation.css : cadre visible et inerte, pastille visible');
+      // porte sans rien dire au testeur. On regarde donc CHAQUE façon connue de
+      // le faire disparaître, et on lit les valeurs.
+      const invisibleCadre = raisonInvisible(effCadre);
+      const invisiblePastille = raisonInvisible(effPastille);
+      const memeCouleur = contrasteNul(effPastille);
+      const avant = griefs.length;
+
+      if (!cadre.some((c) => /pointer-events\s*:\s*none/i.test(c))) {
+        griefs.push('previsualisation.css : le cadre intercepterait les clics');
+      }
+      if (invisibleCadre !== null) {
+        griefs.push(`previsualisation.css : une règle rend le bandeau invisible — cadre, ${invisibleCadre}`);
+      }
+      if (invisiblePastille !== null) {
+        griefs.push(`previsualisation.css : une règle rend le bandeau invisible — pastille, ${invisiblePastille}`);
+      }
+      if (trait.epaisseur === null) {
+        griefs.push('previsualisation.css : le cadre ne dessine aucun liseré');
+      } else if (trait.epaisseur <= 0) {
+        griefs.push(`previsualisation.css : le liseré du cadre a une épaisseur nulle (${trait.epaisseur})`);
+      }
+      if (trait.style !== null && /^(none|hidden)$/i.test(trait.style)) {
+        griefs.push(`previsualisation.css : le liseré du cadre n'est pas dessiné (border-style: ${trait.style})`);
+      }
+      if (trait.teinte === 'transparent') {
+        griefs.push('previsualisation.css : le liseré du cadre est transparent');
+      }
+      if (taille !== null && taille <= 0) {
+        griefs.push(`previsualisation.css : la pastille a une taille de texte nulle (font-size: ${taille})`);
+      }
+      if (memeCouleur !== null) {
+        griefs.push(`previsualisation.css : la pastille est illisible — ${memeCouleur}`);
+      }
+      if (griefs.length === avant) {
+        constats.push(`previsualisation.css : liseré de ${trait.epaisseur} px ${trait.style ?? 'solid'} ${trait.teinte ?? ''}`.trimEnd()
+          + `, cadre inerte, pastille à ${taille ?? '(hérité)'} px`);
+      }
+    }
   }
 
   // 4. Aucun artefact de production ne doit rester.
@@ -234,6 +499,27 @@ export function verifierPrevisualisation(dossier) {
     }
     if (!/<title>PRÉVISUALISATION — /.test(html)) {
       griefs.push(`${page} : le titre ne commence pas par « PRÉVISUALISATION — »`);
+    }
+    /* ET ELLE DOIT SE DIRE AUSSI QUAND ON PARTAGE SON LIEN (vérificateur
+       indépendant, 13/09). Le bandeau ne se voit qu'une fois la page ouverte.
+       Une vignette de partage, elle, se lit AVANT : si `canonical`, `og:url` ou
+       le bloc JSON-LD désignent encore la production, un testeur qui colle
+       l'URL de préversion dans une messagerie fait croire à de la production.
+       Ce sont les trois affirmations machine ; `og:title` est celle que lit un
+       humain. */
+    if (/<link[^>]+rel="canonical"/i.test(html)) {
+      griefs.push(`${page} : <link rel="canonical"> désigne encore la production`);
+    }
+    if (/<meta[^>]+property="og:url"/i.test(html)) {
+      griefs.push(`${page} : <meta property="og:url"> désigne encore la production`);
+    }
+    if (/application\/ld\+json/i.test(html)) {
+      griefs.push(`${page} : le bloc JSON-LD de production est resté dans la préversion`);
+    }
+    for (const m of html.matchAll(/<meta[^>]+property="og:title"[^>]+content="([^"]*)"/gi)) {
+      if (!m[1].startsWith('PRÉVISUALISATION — ')) {
+        griefs.push(`${page} : og:title ne dit pas la préversion (« ${m[1]} »)`);
+      }
     }
     /* LE LIEN DOIT MENER À LA FEUILLE QU'ON A VÉRIFIÉE, ET À AUCUNE AUTRE.
        Deux pièges, tous deux trouvés en revue :

@@ -12,7 +12,7 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - **Un workflow `previsualisation.yml`** : chaque poussée sur `staging` relance
   lint, tests unitaires, construction en mode prévisualisation, puis envoie le
   `dist/` à un projet Cloudflare Pages (téléversement direct — Cloudflare ne
-  construit rien) qui sert `staging.maps.infonovice.fr`. La **production ne
+  construit rien) qui sert `maps-staging.pages.dev`. La **production ne
   bouge pas** : `deploiement.yml` et GitHub Pages sont inchangés.
 - **La préversion se DIT.** Liseré ambre sur les quatre bords avec la mention
   « PRÉVISUALISATION — ce site n'est pas la production », titre d'onglet
@@ -54,18 +54,57 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - **Une limite, écrite plutôt que tue** : `Disallow: /` empêche un moteur de
   LIRE le `noindex` qu'on lui destine. Un lien fuité peut donc encore produire
   un résultat nu, sans titre. On garde les deux (c'est la consigne, et certains
-  robots ignorent `robots.txt`), et `docs/DEPLOIEMENT.md` propose le seul verrou
-  qui ferme vraiment — une porte Cloudflare Access, décision du CEO.
+  robots ignorent `robots.txt`), et `docs/DEPLOIEMENT.md` §3 dit pourquoi le
+  seul verrou qui fermerait vraiment — une porte Cloudflare Access — n'est PAS
+  posable sur un `*.pages.dev`, et à quelle condition il le redeviendrait.
 - **La contrainte 2 du `CLAUDE.md` est complétée dans le même commit**, pas
   contournée : elle dit désormais ce qui vaut pour la production et ce qui est
   ouvert pour la seule prévisualisation, et ce que l'ouverture ne couvre pas.
   Une règle qu'on contourne en silence se retourne contre nous au premier agent
   qui la fait respecter correctement.
 - **Ce qui reste à faire, et qui n'appartient pas aux agents** : créer le
-  projet Cloudflare, poser le DNS, déposer le jeton. Les trois gestes sont
-  écrits prêts à exécuter dans `docs/DEPLOIEMENT.md`, dans l'ordre, avec ce qui
-  se passe si l'un manque. Tant qu'ils ne sont pas faits, le workflow construit,
-  vérifie, et **reste vert** en disant qu'il n'a rien déployé.
+  projet Cloudflare `maps-staging` avec `--production-branch=staging`, et
+  déposer le jeton. **Deux gestes, plus trois** — le DNS a disparu avec le
+  changement de cible. Ils sont écrits prêts à exécuter dans
+  `docs/DEPLOIEMENT.md`, dans l'ordre, avec ce qui se passe si l'un manque.
+  Tant qu'ils ne sont pas faits, le workflow construit, vérifie, et **reste
+  vert** en disant qu'il n'a rien déployé.
+
+### Correction de cible du 13/09 (même version, avant fusion)
+- **La cible devient `maps-staging.pages.dev`.** Un certificat générique
+  `*.infonovice.fr` couvre `maps.infonovice.fr` mais pas ce qui serait un cran
+  plus bas : le sous-domaine de deuxième niveau visé d'abord était donc
+  inatteignable en HTTPS sans certificat dédié, chez OVH comme dans le SSL
+  universel de Cloudflare. Le projet Cloudflare s'appelle désormais
+  `maps-staging` — **c'est le nom du projet qui fabrique l'adresse** — et sa
+  **branche de production doit être `staging`**, faute de quoi chaque envoi
+  devient une préversion Cloudflare et l'adresse reste figée. Le domaine
+  personnalisé `maps-staging.infonovice.fr` est **reporté** : sa procédure est
+  écrite au §4 bis de `docs/DEPLOIEMENT.md` et n'est pas active.
+- **La porte lisait la présence d'une déclaration, pas sa valeur.** Un
+  `border: 0 solid #FFB300` et un `font-size: 0` la faisaient sortir en code 0
+  — et elle imprimait alors « cadre visible et pastille visible ». Le code
+  livré était correct : c'est la garde qui mentait, et une garde qui affirme ce
+  qu'elle n'a pas vérifié est pire qu'une absence de garde. Elle lit désormais
+  des NOMBRES : épaisseur du liseré (raccourci `border` compris, `!important`
+  compris, un seul côté à zéro suffit), `border-style: none|hidden`, liseré
+  transparent, taille de police (y compris celle cachée dans le raccourci
+  `font`), texte de la couleur du fond (`#FFB300` et `rgb(255,179,0)` sont
+  comparés comme des couleurs, pas comme des chaînes), et huit autres façons de
+  disparaître — `scale(0)`, boîte de taille nulle, `clip-path: inset(100%)`,
+  `visibility: collapse`, `text-indent` hors champ… La sonde du vérificateur
+  est devenue un test.
+- **La préversion se disait production quand on partageait son lien.** Chaque
+  page portait `<link rel="canonical">` et `og:url` vers
+  `maps.infonovice.fr`, plus un bloc JSON-LD de production : un testeur AFUVE
+  qui collait l'URL de préversion dans une messagerie produisait une vignette
+  annonçant le site de production. La construction de préversion retire
+  désormais le `canonical`, l'`og:url` et le JSON-LD, et préfixe `og:title` et
+  `og:site_name`. La porte refuse un `dist/` où l'un d'eux subsisterait.
+- **Le poids d'`index.html` est corrigé** : 9 171 octets en préversion contre
+  10 169 en production (−998), mesuré par `wc -c`. Le rapport du cycle annonçait
+  10 750 (+581) ; le chiffre juste avant le retrait des métadonnées était
+  10 514 (+345).
 
 ## [1.141.0] — 2026-09-10 — COURBES-1
 

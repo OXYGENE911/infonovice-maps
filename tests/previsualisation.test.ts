@@ -58,12 +58,20 @@ describe('marquerHtmlPrevisualisation', () => {
     expect(marquee).toContain('<html lang="fr" data-environnement="previsualisation">');
   });
 
-  it('préfixe le titre de l’onglet, et LUI SEUL', () => {
+  it('préfixe le titre de l’onglet', () => {
     expect(marquee).toContain(`<title>${PREFIXE_TITRE}Infonovice Maps — cartographie française et open source</title>`);
-    // og:title n'est pas le titre de la page : le réécrire changerait la
-    // vignette de partage sans rien apprendre au testeur qui a l'écran devant
-    // lui.
-    expect(marquee).toContain('<meta property="og:title" content="Infonovice Maps">');
+  });
+
+  it('préfixe AUSSI og:title — et la première version avait tort de ne pas le faire', () => {
+    /* RENVERSEMENT ASSUMÉ (vérificateur indépendant, 13/09). Ce test disait
+       exactement le contraire, au motif que « og:title n'est pas le titre de
+       la page : le réécrire changerait la vignette de partage sans rien
+       apprendre au testeur qui a l'écran devant lui ». Le raisonnement
+       s'arrête une personne trop tôt. Le testeur qui a l'écran devant lui voit
+       le bandeau ; c'est celui à qui il ENVOIE le lien qui ne voit qu'une
+       vignette — et cette vignette annonçait la production mot pour mot.
+       Changer la vignette de partage n'est pas un dégât : c'est l'objet. */
+    expect(marquee).toContain(`<meta property="og:title" content="${PREFIXE_TITRE}Infonovice Maps">`);
   });
 
   it('pose la balise robots noindex dans le <head>', () => {
@@ -135,5 +143,66 @@ describe('les deux verrous d’indexation', () => {
     const prod = readFileSync(resolve(__dirname, '../public/robots.txt'), 'utf-8');
     expect(prod).toMatch(/^Allow: \/$/m);
     expect(prod).not.toMatch(/^Disallow: \/$/m);
+  });
+});
+
+describe('la préversion se dit aussi quand on PARTAGE son lien', () => {
+  /* LE DÉFAUT, TROUVÉ PAR LE VÉRIFICATEUR INDÉPENDANT (13/09). Le `dist/` de
+     préversion portait `<link rel="canonical" href="https://maps.infonovice.fr/">`
+     et un `og:url` de production. Autrement dit : la page se disait préversion
+     à qui l'ouvrait, et production à qui recevait son lien. Un testeur AFUVE
+     qui partage l'URL faisait croire à de la production — le dégât n° 1,
+     déplacé du navigateur vers la messagerie. */
+  const PAGE_METADONNEES = [
+    '<!doctype html>',
+    '<html lang="fr">',
+    '<head>',
+    '  <title>Infonovice Maps</title>',
+    '  <link rel="canonical" href="https://maps.infonovice.fr/">',
+    '  <meta property="og:site_name" content="Infonovice Maps">',
+    '  <meta property="og:url" content="https://maps.infonovice.fr/">',
+    '  <meta property="og:title" content="Infonovice Maps — cartographie française">',
+    '  <meta property="og:image" content="https://maps.infonovice.fr/partage-social.png">',
+    '  <script type="application/ld+json">',
+    '  { "@type": "WebApplication", "url": "https://maps.infonovice.fr/" }',
+    '  </script>',
+    '</head>',
+    '<body><h1>Carte</h1></body>',
+    '</html>',
+  ].join('\n');
+
+  const marquee = marquerHtmlPrevisualisation(PAGE_METADONNEES, 'index.html');
+
+  it('retire le canonical de production', () => {
+    expect(marquee).not.toMatch(/rel="canonical"/);
+  });
+
+  it('retire og:url plutôt que d’en inventer un', () => {
+    // L'URL de déploiement n'est pas connue à la construction. Absente, la
+    // vignette retombe sur l'URL réellement partagée — qui, elle, est vraie.
+    expect(marquee).not.toMatch(/property="og:url"/);
+  });
+
+  it('retire le bloc JSON-LD, qui n’affirme que des choses sur la production', () => {
+    expect(marquee).not.toMatch(/ld\+json/);
+    expect(marquee).not.toContain('WebApplication');
+  });
+
+  it('préfixe og:title et og:site_name, les deux lignes que lit un humain', () => {
+    expect(marquee).toContain(`<meta property="og:title" content="${PREFIXE_TITRE}Infonovice Maps — cartographie française">`);
+    expect(marquee).toContain('<meta property="og:site_name" content="Infonovice Maps — PRÉVISUALISATION">');
+  });
+
+  it('laisse og:image tranquille : c’est le même dessin, pas une affirmation', () => {
+    expect(marquee).toContain('<meta property="og:image" content="https://maps.infonovice.fr/partage-social.png">');
+  });
+
+  it('et la production, elle, garde tout : le marquage ne s’applique qu’en préversion', () => {
+    // Garde-fou croisé. `marquerHtmlPrevisualisation` n'est appelée que par le
+    // plugin, et le plugin ne s'allume que sur INFONOVICE_ENVIRONNEMENT ; ce
+    // test vérifie l'autre moitié : le fichier SOURCE n'a pas été amputé.
+    const source = readFileSync(resolve(__dirname, '../index.html'), 'utf-8');
+    expect(source).toContain('<link rel="canonical" href="https://maps.infonovice.fr/">');
+    expect(source).toContain('<meta property="og:url" content="https://maps.infonovice.fr/">');
   });
 });

@@ -2,7 +2,7 @@
 #
 # À QUOI SERT CE WORKFLOW. Chaque poussée sur `staging` construit l'application
 # en mode prévisualisation et l'envoie à un projet Cloudflare Pages qui sert
-# https://staging.maps.infonovice.fr/. Le CEO et les testeurs de l'AFUVE
+# https://maps-staging.pages.dev/. Le CEO et les testeurs de l'AFUVE
 # essaient alors la préversion depuis un vrai téléphone, sans tunnel depuis un
 # poste de développement.
 #
@@ -18,8 +18,11 @@
 # préversion précédente reste en ligne, ce qui est le bon repli.
 #
 # TANT QUE LES SECRETS N'EXISTENT PAS, ce workflow reste VERT et se contente de
-# l'écrire : créer le projet Cloudflare, poser le DNS et déposer le jeton sont
-# trois gestes du CEO (voir docs/DEPLOIEMENT.md). Un workflow qui rougirait à
+# l'écrire : créer le projet Cloudflare `maps-staging` (branche de production
+# `staging`) et déposer le jeton sont DEUX gestes du CEO (voir
+# docs/DEPLOIEMENT.md). Il n'y a plus de DNS à poser : `maps-staging.pages.dev`
+# est servi par Cloudflare sans enregistrement de notre part — le domaine
+# personnalisé est reporté. Un workflow qui rougirait à
 # chaque poussée en attendant ces gestes apprendrait surtout à ignorer le rouge.
 name: Prévisualisation
 on:
@@ -40,7 +43,7 @@ jobs:
   previsualiser:
     runs-on: ubuntu-latest
     env:
-      PROJET_PAGES: infonovice-maps-previsualisation
+      PROJET_PAGES: maps-staging
     steps:
       # LA GARDE DE BRANCHE, ET ELLE EST EN PREMIER (revue Codex, 13/09).
       # `workflow_dispatch` laisse choisir la branche : sans cette garde, un
@@ -127,10 +130,19 @@ jobs:
           # Version exacte : à trois semaines du Mondial de l'Auto, une montée
           # de version automatique est un risque qu'on ne prend pas.
           wranglerVersion: "4.131.1"
-          # `--branch=staging` DOIT être la branche de production du projet
-          # Pages (créé avec `--production-branch=staging`), sinon chaque envoi
-          # devient un déploiement de PRÉVERSION Cloudflare et le domaine
-          # staging.maps.infonovice.fr continue de servir le tout premier.
+          # LE NOM DU PROJET FABRIQUE L'ADRESSE, ET LA BRANCHE DE PRODUCTION
+          # DÉCIDE SI ON LA SERT. Cloudflare sert `<projet>.pages.dev` depuis la
+          # BRANCHE DE PRODUCTION du projet ; toute autre branche reçoit un
+          # alias `<branche>.<projet>.pages.dev` (documentation Pages, relevée
+          # le 13/09/2026). D'où deux conditions liées, et non une :
+          #   - le projet s'appelle `maps-staging` (variable PROJET_PAGES),
+          #     sans quoi l'adresse n'est pas maps-staging.pages.dev ;
+          #   - sa branche de production est `staging`, sans quoi cet envoi
+          #     devient une PRÉVERSION Cloudflare et maps-staging.pages.dev
+          #     reste figé — workflow vert, page immobile.
+          # Le projet étant en téléversement direct, ce réglage ne se corrige
+          # PAS au tableau de bord : voir le PATCH d'API du Geste 1 dans
+          # docs/DEPLOIEMENT.md.
           command: pages deploy dist --project-name=${{ env.PROJET_PAGES }} --branch=staging --commit-hash=${{ github.sha }}
 
       - name: Où regarder
@@ -138,6 +150,6 @@ jobs:
         run: |
           echo "### Préversion déployée" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Domaine : <https://staging.maps.infonovice.fr/>" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Adresse : <https://maps-staging.pages.dev/>" >> "$GITHUB_STEP_SUMMARY"
           echo "- Déploiement : ${{ steps.deploiement.outputs.deployment-url }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Commit : \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"

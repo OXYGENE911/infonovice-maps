@@ -43,7 +43,7 @@ const VERSION = (() => {
 
 /* PRÉVISUALISATION (STAGING-1, 13/09) : la branche `staging` est construite
    avec INFONOVICE_ENVIRONNEMENT=previsualisation et déployée sur
-   staging.maps.infonovice.fr. Le POURQUOI de chaque marque est dans
+   maps-staging.pages.dev. Le POURQUOI de chaque marque est dans
    src/lib/previsualisation.ts ; ici, seulement la plomberie Vite. */
 const PREVISUALISATION = estPrevisualisation(process.env);
 

@@ -153,6 +153,175 @@ describe('le bandeau : présent, visible, inerte', () => {
   });
 });
 
+describe('la porte lit les VALEURS, pas seulement la présence des déclarations', () => {
+  const poseCss = (contenu: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'previsualisation.css'), contenu);
+    return griefsDe().join(' ');
+  };
+  const sortie = (contenu: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'previsualisation.css'), contenu);
+    return verifierPrevisualisation(dossier) as { griefs: string[]; constats: string[] };
+  };
+
+  /* LA SONDE DU VÉRIFICATEUR INDÉPENDANT (13/09), REPRISE TELLE QUELLE.
+     Elle faisait sortir la porte en code 0 — et la porte imprimait alors
+     « cadre visible et pastille visible ». Le code livré était correct : c'est
+     la GARDE qui mentait. Une garde qui affirme une chose qu'elle n'a pas
+     vérifiée est pire qu'une absence de garde, parce qu'on lui fait confiance.
+     Ce test existe pour que cette sonde ne puisse plus jamais repasser. */
+  const SONDE_DU_VERIFICATEUR = `${FEUILLE_PREVISUALISATION}
+.previsualisation-cadre { border: 0 solid #FFB300; }
+.previsualisation-pastille { font-size: 0; }
+`;
+
+  it('LA SONDE : « border: 0 » et « font-size: 0 » sont désormais refusés', () => {
+    const { griefs, constats } = sortie(SONDE_DU_VERIFICATEUR);
+    expect(griefs.join(' ')).toMatch(/épaisseur nulle/);
+    expect(griefs.join(' ')).toMatch(/taille de texte nulle/);
+    // ET LA PORTE NE DOIT PLUS SE FÉLICITER : le pire de l'ancien
+    // comportement n'était pas de laisser passer, c'était de l'ANNONCER.
+    expect(constats.join(' ')).not.toMatch(/pastille/);
+  });
+
+  it('un liseré de zéro pixel, quelle que soit l’unité', () => {
+    expect(poseCss(FEUILLE_PREVISUALISATION.replace('border: 4px solid', 'border: 0em solid')))
+      .toMatch(/épaisseur nulle/);
+  });
+
+  it('« border: none » ne dessine rien non plus', () => {
+    expect(poseCss(`${FEUILLE_PREVISUALISATION}\n.previsualisation-cadre { border: none; }\n`))
+      .toMatch(/liseré|épaisseur/);
+  });
+
+  it('« border-style: hidden » annule un liseré pourtant épais', () => {
+    expect(poseCss(`${FEUILLE_PREVISUALISATION}\n.previsualisation-cadre { border-style: hidden; }\n`))
+      .toMatch(/n'est pas dessiné/);
+  });
+
+  it('« border-width: 0 » écrit plus bas l’emporte, comme en CSS', () => {
+    expect(poseCss(`${FEUILLE_PREVISUALISATION}\n.previsualisation-cadre { border-width: 0; }\n`))
+      .toMatch(/épaisseur nulle/);
+  });
+
+  it('un seul côté à zéro suffit : le cadre est percé', () => {
+    expect(poseCss(`${FEUILLE_PREVISUALISATION}\n.previsualisation-cadre { border-bottom-width: 0; }\n`))
+      .toMatch(/épaisseur nulle/);
+  });
+
+  it('un liseré transparent ne se voit pas davantage', () => {
+    expect(poseCss(FEUILLE_PREVISUALISATION.replace('#FFB300;\n  pointer-events', 'transparent;\n  pointer-events')))
+      .toMatch(/transparent/);
+  });
+
+  it('« !important » posé AVANT ne se laisse pas écraser par la bonne règle', () => {
+    // Sans la notion d'importance, la porte aurait retenu « 4px » — la
+    // dernière déclaration — alors que le navigateur peint zéro.
+    expect(poseCss(`.previsualisation-cadre { border: 0 !important; }\n${FEUILLE_PREVISUALISATION}`))
+      .toMatch(/épaisseur nulle/);
+  });
+
+  it('la taille cachée DANS le raccourci « font » est lue, pas seulement font-size', () => {
+    expect(poseCss(FEUILLE_PREVISUALISATION.replace('font: 700 13px/1.5', 'font: 700 0px/1.5')))
+      .toMatch(/taille de texte nulle/);
+  });
+
+  it('mais 13 px reste 13 px : aucun faux positif sur le témoin', () => {
+    const { griefs, constats } = sortie(FEUILLE_PREVISUALISATION);
+    expect(griefs, griefs.join(' | ')).toEqual([]);
+    expect(constats.join(' ')).toMatch(/liseré de 4 px/);
+    expect(constats.join(' ')).toMatch(/pastille à 13 px/);
+  });
+
+  it('un texte de la couleur du fond est illisible, même à 13 px', () => {
+    expect(poseCss(FEUILLE_PREVISUALISATION.replace('color: #1A1200;', 'color: #FFB300;')))
+      .toMatch(/même couleur/);
+  });
+
+  it('« color: transparent » aussi', () => {
+    expect(poseCss(FEUILLE_PREVISUALISATION.replace('color: #1A1200;', 'color: transparent;')))
+      .toMatch(/transparent/);
+  });
+
+  it('une couleur écrite autrement reste la même couleur', () => {
+    // #FFB300 et rgb(255,179,0) : la porte compare des couleurs, pas des
+    // chaînes — sinon le contournement tient en une réécriture.
+    expect(poseCss(FEUILLE_PREVISUALISATION
+      .replace('background: #FFB300; color: #1A1200;', 'background: #FFB300; color: rgb(255, 179, 0);')))
+      .toMatch(/même couleur/);
+  });
+
+  it('une mise à l’échelle nulle éteint le bandeau', () => {
+    expect(poseCss(`${FEUILLE_PREVISUALISATION}\n.previsualisation-pastille { transform: scale(0); }\n`))
+      .toMatch(/invisible/);
+  });
+
+  it('une boîte de largeur nulle aussi', () => {
+    expect(poseCss(`${FEUILLE_PREVISUALISATION}\n.previsualisation-pastille { max-width: 0; }\n`))
+      .toMatch(/invisible/);
+  });
+
+  it('« visibility: collapse » est la cousine de « hidden »', () => {
+    expect(poseCss(`${FEUILLE_PREVISUALISATION}\n.previsualisation-cadre { visibility: collapse; }\n`))
+      .toMatch(/invisible/);
+  });
+
+  it('une découpe qui ne laisse rien voir est refusée', () => {
+    expect(poseCss(`${FEUILLE_PREVISUALISATION}\n.previsualisation-pastille { clip-path: inset(100%); }\n`))
+      .toMatch(/invisible/);
+  });
+
+  it('le texte poussé hors de sa boîte est refusé', () => {
+    expect(poseCss(`${FEUILLE_PREVISUALISATION}\n.previsualisation-pastille { text-indent: -9999px; }\n`))
+      .toMatch(/invisible/);
+  });
+
+  it('mais « max-width: calc(100% - 8px) » du témoin n’est PAS une boîte nulle', () => {
+    // Faux positif qu'il fallait éviter : la pastille livrée porte exactement
+    // cette déclaration.
+    expect(FEUILLE_PREVISUALISATION).toContain('max-width: calc(100% - 8px)');
+    expect(poseCss(FEUILLE_PREVISUALISATION)).toEqual('');
+  });
+});
+
+describe('la préversion ne doit pas se dire production quand on partage son lien', () => {
+  /* TROUVÉ PAR LE VÉRIFICATEUR INDÉPENDANT (13/09) : le `dist/` de préversion
+     portait un `canonical` et un `og:url` de production. La page se disait
+     préversion à qui l'ouvrait, et production à qui recevait son lien. */
+  const poseHtml = (html: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'index.html'), html);
+    return griefsDe().join(' ');
+  };
+  const marquee = () => marquerHtmlPrevisualisation(PAGE_SOURCE, 'index.html');
+
+  it('un canonical de production est refusé', () => {
+    expect(poseHtml(marquee().replace('</head>', '<link rel="canonical" href="https://maps.infonovice.fr/"></head>')))
+      .toMatch(/canonical/);
+  });
+
+  it('un og:url de production est refusé', () => {
+    expect(poseHtml(marquee().replace('</head>', '<meta property="og:url" content="https://maps.infonovice.fr/"></head>')))
+      .toMatch(/og:url/);
+  });
+
+  it('un bloc JSON-LD de production est refusé', () => {
+    expect(poseHtml(marquee().replace('</head>', '<script type="application/ld+json">{"url":"https://maps.infonovice.fr/"}</script></head>')))
+      .toMatch(/JSON-LD/);
+  });
+
+  it('un og:title non préfixé est refusé', () => {
+    expect(poseHtml(marquee().replace('</head>', '<meta property="og:title" content="Infonovice Maps"></head>')))
+      .toMatch(/og:title/);
+  });
+
+  it('mais un og:title préfixé passe', () => {
+    expect(poseHtml(marquee().replace('</head>', '<meta property="og:title" content="PRÉVISUALISATION — Infonovice Maps"></head>')))
+      .not.toMatch(/og:title/);
+  });
+});
+
 describe('les pages livrées', () => {
   it('une page dans un SOUS-DOSSIER est contrôlée elle aussi', () => {
     dossierConforme();
