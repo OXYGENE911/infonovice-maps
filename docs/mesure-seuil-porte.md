@@ -351,3 +351,223 @@ machine était au moins aussi chargée que cela.
 
 Le remède durable reste le même qu'au §5 : une machine de mesure dédiée ou une
 exécution en CI, où la charge est connue au lieu d'être comptée.
+
+---
+
+# La sonde ne mesurait pas ce qu'elle annonçait (13/09/2026, après la contre-mesure)
+
+Le vérificateur indépendant a conclu : **« NE PAS FUSIONNER LA PR #318 EN L'ÉTAT, et ne pas laisser
+repartir la sonde telle quelle. »** Le correctif de la porte, lui, est sain — il n'a pas été touché.
+C'est l'INSTRUMENT qui était faux. Ce chapitre dit ce qui a été corrigé, et **avec quelle preuve**.
+
+## 10. Ce que `--campagne` mesure désormais
+
+**Avant :** `performance.now()` relevé juste après `page.goto(..., {waitUntil:'load'})`, publié sous
+le nom `chargementMs` et lu comme le critère des 5 s. **Ce n'est pas la durée du calcul
+d'itinéraire.** Six chiffres seraient sortis, et aucun n'aurait parlé du critère.
+
+**Maintenant**, et mot pour mot la définition de `docs/infonovice-maps/mesure-mobile.md` §1, pour que
+le chiffre du poste et celui du téléphone se comparent :
+
+- le chronomètre **part** au geste qui lance le calcul — un écouteur en phase de CAPTURE posé juste
+  avant le clic sur la suggestion de destination, donc horodaté avant le code de l'application ;
+- il **s'arrête** quand le plan de recharge est écrit et le voile d'attente retiré.
+
+Le profil véhicule (VinFast VF 8 Plus, 87,7 kWh, 80 % au départ) est saisi **par le formulaire, avant
+d'armer le chronomètre** : sans lui le produit répond « Renseignez d'abord votre véhicule », et la
+sonde aurait mesuré la vitesse à laquelle on refuse de calculer.
+
+### La preuve : une durée qu'on connaît d'avance
+
+`tests-e2e/sonde-chrono.spec.ts` ralentit le service d'itinéraire d'un **retard connu de 3 000 ms** et
+vérifie que le chronomètre le rend. Relevé le 13/09 sur ce poste (Playwright, Chromium) :
+
+| grandeur | valeur |
+|---|---|
+| retard injecté | **3 000 ms** |
+| chargement de la page (ce que l'ANCIENNE sonde publiait) | **746 ms** |
+| durée de l'itinéraire seul (jalon) | **3 082 ms** |
+| **durée du calcul, du geste au plan de recharge** | **4 843 ms** |
+| fin du chronomètre | un vrai plan (1 arrêt, 54 min de charge, arrivée à 10 %) |
+
+**746 ms contre 4 843 ms : l'ancien instrument se trompait d'un facteur six, et son chiffre ne
+contenait même pas le retard qu'on venait d'injecter.** C'est cela qu'on aurait présenté comme la
+mesure du critère des 5 s.
+
+Un second parcours du même fichier éprouve le cas inverse : sans véhicule, aucun plan n'arrive, et la
+sonde ne publie **aucune** durée — elle écrit ce qu'elle a observé.
+
+> **Ce chiffre n'est pas une mesure du produit.** C'est un étalonnage d'instrument, sur une fixture
+> qui simule l'itinéraire, les bornes, la météo et l'altimétrie. Il dit que le chronomètre est juste ;
+> il ne dit RIEN du critère des 5 s.
+
+## 11. Une valeur bornée par la fenêtre d'observation ne sort jamais sous le nom d'une mesure
+
+**Avant :** `dureeDeVieMs = (fermee ?? dernierRegard) - ouverte`. Si la porte ne se referme pas —
+c'est-à-dire **si le correctif fonctionne** — le nombre rendu était celui de notre observation. Plus
+on regardait longtemps, plus il était beau.
+
+**Maintenant**, `jugerPorte` (fonction pure, `scripts/chrono-sonde.mjs`) :
+
+- porte refermée sous nos yeux → `dureeDeVieMs` réelle ;
+- porte **jamais** refermée → `dureeDeVieMs: null`, `toujoursOuverteApresMs: <N>`, et le motif
+  « TOUJOURS OUVERTE après N ms observées ». Le champ existe et vaut `null` : l'effacer inviterait un
+  lecteur pressé à aller chercher ailleurs un nombre qui ressemble.
+
+Un parcours unitaire rejoue l'invariant sur des fenêtres de 16 s à 600 s : `dureeDeVieMs` reste
+`null` dans tous les cas. Si le chiffre dépendait encore de notre patience, cette boucle le dirait.
+
+### Et un fait découvert EN mesurant, qu'il ne faut pas taire
+
+Le prédicat « la porte est utilisable » confondait deux choses : *le bouton n'existe pas* et *le
+bouton est hors du champ visible*. `elementFromPoint` rend `null` sous la ligne de flottaison.
+**Mesuré le 13/09 : à 1 280 × 720, le bouton « Réessayer » est à y = 732 — sous le bas de la
+fenêtre.** La sonde concluait « la porte ne s'est JAMAIS ouverte » alors qu'elle était ouverte,
+présente et cliquable après un défilement.
+
+La sonde relève désormais les **deux** faits : `ouverte` (présent, actif, non caché) et
+`atteignableSansDefilement`. Le bouton n'a pas été déplacé — **le correctif de la porte est hors du
+périmètre de cette passe** —, mais le fait est écrit, parce qu'un visiteur de stand ne fait pas
+défiler un volet pour trouver une porte de secours.
+
+## 12. L'empreinte du bundle, contrôlée après l'import dynamique
+
+**Avant :** le contrôle servi/`dist` tournait après `page.goto(..., {waitUntil:'load'})` mais **avant**
+`declencherCalcul()`. Or le panneau d'itinéraire arrive par import dynamique.
+
+**Mesuré**, plutôt que supposé — deux commandes rejouables :
+
+    grep -c "panneau-itineraire" dist/index.html
+    → 0
+    grep -o '<link[^>]*rel="modulepreload"[^>]*>' dist/index.html
+    → <link rel="modulepreload" crossorigin href="/assets/maplibre-CYtt0gXg.js">
+
+Le chunk n'est cité **ni** dans `index.html` **ni** dans ses `modulepreload`. Et côté navigateur,
+`tests-e2e/sonde-chrono.spec.ts` relève l'instant de la requête : au retour de
+`page.goto(..., {waitUntil:'load'})` le chunk n'a pas encore été demandé ; il l'est **1 243 ms plus
+tard**, à l'ouverture du panneau. **Le fichier qui porte la mesure n'était jamais empreinté.**
+
+**Maintenant :** le contrôle tourne **après le scénario**, et la sonde **exige** d'avoir vu le chunk —
+`exigerFichiersAttendus` sort en erreur (code 5) si aucun fichier servi ne correspond. *Un contrôle
+qui n'a jamais vu le fichier n'est pas un contrôle.*
+
+### L'essai qui montre que le contrôle mord
+
+`tests/sonde-bundle.test.ts` démarre le **vrai serveur de la sonde** sur les **vrais octets de
+`dist/`**, avec la divergence provoquée sur `panneau-itineraire` (un commentaire ajouté en queue de
+fichier, donc du JavaScript encore valide), et vérifie quatre choses :
+
+1. le chunk n'est pas cité dans `index.html` — la prémisse du défaut ;
+2. un octet changé sur **ce fichier-là** → `conforme: false`, divergence sur ce chemin exact ;
+3. sans altération → `conforme: true` (une garde qui refuse tout ne garde rien) ;
+4. si l'on ne demande que la page, comme le faisait l'ancien contrôle : tout est « conforme », et
+   c'est `exigerFichiersAttendus` qui transforme ce faux vert en sortie en erreur.
+
+L'essai passe **sans navigateur et sans campagne** — la garde de charge refuse toute campagne sur ce
+poste, et le CEO a interdit d'en lancer une. Il a besoin d'un `dist/` : sans build, il se déclare
+sauté avec sa raison au lieu de passer au vert sur une absence. En CI, `npm test` tourne avant
+`npm run build` : il y est donc sauté, et c'est l'essai local ci-dessus qui fait foi.
+
+La même ligne de commande existe sur la sonde : `node scripts/sonde-porte-sortie.mjs --campagne
+--essai-divergence=panneau-itineraire`. Elle n'a **pas** pu être exercée sur ce poste : la garde
+refuse avant d'arriver au serveur.
+
+## 13. La garde comptait avec un compteur aveugle — réparé, pas contourné
+
+**Le défaut n° 5, trouvé par la CI elle-même.** `ps -o comm=` lit `/proc/<pid>/comm`, que Node
+alimente depuis `process.title` — et Vitest renomme ses processus. **La CI Ubuntu a compté 0 processus
+`node` alors que node l'exécutait.** Toute notre règle de validité était adossée à ce compteur.
+
+**La réponse d'hier fut de baisser la barre** : `expect(c.node).toBeGreaterThanOrEqual(1)` est devenu
+`(0)`, et le titre du test a été réécrit. **C'était la faute la plus grave du cycle.**
+
+**La réponse d'aujourd'hui : réparer le compteur.** Le nom d'un processus se lit à la source du
+NOYAU, que le processus ne peut pas réécrire :
+
+| système | source | réécrite par `process.title` ? |
+|---|---|---|
+| Linux | `/proc/<pid>/exe` (lien du noyau) | **non** |
+| Windows | `tasklist`, nom d'image | **non** — cette plateforme n'a jamais été aveugle |
+| macOS, BSD | `ps -o comm=` (chemin de l'exécutable) | non (`uv_set_process_title` n'y touche pas) |
+
+Sous Linux, un pid d'un autre utilisateur rend `EACCES` : on retombe sur `comm` pour celui-là, **et on
+le compte** dans le nouveau champ `nonResolus`. Un relevé qui annonce 12 processus dont 40 non
+résolus ne se lit pas comme un relevé qui en annonce 12 tout court.
+
+**L'assertion est restaurée** (`toBeGreaterThanOrEqual(1)`, titre d'origine), et elle passe parce que
+le compteur voit enfin ce qu'il ratait.
+
+### La preuve : les deux sources, sur le même pid, au même instant
+
+Comparer deux comptes de machine ne prouverait rien — entre deux relevés, des processus naissent et
+meurent. `tests/garde-processus.test.ts` compare donc les **deux sources sur un seul pid** : un enfant
+`node` qu'on lance et à qui l'on impose un faux titre (`sonde-essai-titre-renomme`).
+
+- source du noyau → `node` → **compte** ;
+- source nominative, **sous Linux** → `sonde-essai-titre-renomme` → **ne comptait pas**.
+
+Sous Windows, le parcours affirme l'inverse et le dit : les deux sources voient l'enfant, parce que
+`tasklist` lit déjà le nom d'image. Prétendre le contraire pour faire briller la correction serait
+une mesure inventée. **Le trou réparé ici est celui de Linux, donc celui de la CI — et c'est là que
+la garde sera utile le jour où le CEO donnera une machine de mesure.**
+
+## 14. Tâche 2 — les 15 secondes avant la porte de sortie : le relevé, pas l'arbitrage
+
+Mission : « n'y touche pas — mesure-le ». Mesuré le 13/09, service d'itinéraire arrêté 30 s
+(`tests-e2e/sonde-chrono.spec.ts`, parcours « la porte de sortie ») :
+
+| depuis le geste | ce que l'usager a sous les yeux |
+|---|---|
+| **6 ms** | `Calcul de l'itinéraire…` |
+| **2 513 ms** | `Calcul de l'itinéraire…` **+** `Le service d'itinéraire de l'IGN répond lentement — le calcul continue…` |
+| **15 025 ms** | `Le service d'itinéraire de l'IGN ne répond toujours pas. Vous pouvez réessayer.` **+ le bouton** |
+| **16 524 ms** | `Le calcul d'itinéraire est momentanément indisponible. Réessayez dans un instant.` |
+
+Autres chiffres du même relevé : la porte **ne se referme pas** — toujours ouverte après
+**14 981 ms** observées, `dureeDeVieMs: null` (exigence du CEO : au moins 8 000 ms — tenue, et le
+nombre publié est nommé pour ce qu'il est). Et le bouton est **sous la ligne de flottaison** (y = 732
+pour une fenêtre de 720).
+
+**Ce que voit donc un visiteur de stand pendant quinze secondes :** une ligne qui dit « Calcul… », et
+au bout de deux secondes et demie une seconde ligne qui dit que l'IGN est lent. **Rien ne bouge** — il
+n'y a pas d'animation pendant cette phase ; le chien au volant n'apparaît qu'à l'étape suivante, celle
+des arrêts de recharge. L'écran est honnête et immobile.
+
+### Deux valeurs, et ce que chacune coûte — le CEO tranche
+
+**A. Garder 15 000 ms.** Coût : sur un stand bruyant, quinze secondes d'écran immobile avant la
+première issue, c'est le moment où le visiteur regarde ailleurs. Gain : aucune porte de sortie ne
+paraît sur un service qui allait répondre. Les huit appels réels mesurés le 12/09 répondent entre
+246 ms et 380 ms : à 15 s, une porte de sortie ne peut être qu'un vrai incident.
+
+**B. Descendre à 6 000 ms.** Coût : c'est encore **près de seize fois** le pire des huit appels réels
+mesurés (6 000 / 380 = 15,8), donc le risque de proposer « Réessayer » à quelqu'un que le service
+allait servir reste faible — mais il n'est plus nul, et un « Réessayer » cliqué relance un calcul,
+donc une seconde requête à l'IGN. Gain : neuf secondes de moins d'écran immobile, et la porte paraît
+pendant que la ligne de lenteur est encore fraîche dans l'œil du visiteur. À savoir : **le correctif
+de la PR #318 ne dépend pas du seuil** — la porte reste ouverte quoi qu'il arrive —, donc descendre
+le seuil ne rouvre pas le défaut arithmétique d'ITI-LENT-1.
+
+**Ce que je ne recommande pas :** toucher au plafond dur de 16 500 ms. C'est lui qui borne l'attente
+côté réseau, et le déplacer changerait le comportement de tous les appels, pas seulement l'affichage.
+
+**Troisième voie, hors périmètre de cette tâche et signalée seulement :** le bouton est sous la ligne
+de flottaison. Quel que soit le seuil retenu, une porte de sortie qu'il faut chercher en faisant
+défiler n'est pas une porte de sortie sur un stand.
+
+## 15. Ce que cette passe n'a PAS pu vérifier
+
+- **Aucune campagne n'a tourné.** La garde refuse sur ce poste : relevé le 13/09 à 05 h 53,
+  `node=33 chrome=4 total=37`, plafond 20, sortie en code 2. Le chemin `--campagne` complet
+  (six sessions froides, contextes neufs, port dédié) **n'a jamais été exercé de bout en bout.**
+  Ce qui a été exercé : le chronomètre, contre le vrai produit, par les parcours E2E.
+- **Le trou de comptage n'a pas été observé sous Linux depuis ce poste** — il est affirmé par le
+  mécanisme (`/proc/<pid>/comm` alimenté par `process.title`) et éprouvé par un parcours qui ne
+  tourne que sur Linux. **C'est la CI qui doit le confirmer.**
+- **La sonde n'a jamais mesuré un vrai calcul Paris → Lyon.** Les chiffres du §10 viennent d'une
+  fixture. Ils valident l'instrument, pas le produit.
+- **Le trajet de la sonde n'est pas celui de la feuille mobile.** La sonde géocode « paris » et
+  « lyon » (centres de commune) ; la feuille mobile impose 14 Rue Linois et 5 Place Charles
+  Beraudier. Les deux chiffres se comparent à ce détail près, qui reste à réduire.
+- **Rien n'a été mesuré sur un téléphone.** Le calcul local sera plus lent sur mobile, jamais plus
+  rapide.

@@ -10,10 +10,12 @@
 // rien. D'où ces tests des DEUX CÔTÉS du seuil, sur la fonction pure — qui ne
 // lit pas la machine, et donne donc le même verdict quel que soit l'état du
 // poste qui les exécute.
-import { describe, it, expect } from 'vitest';
+import {
+  describe, it, expect, beforeAll,
+} from 'vitest';
 import {
   deciderValidite, jugerDerive, compterProcessus, estDeLaFamille,
-  PLAFOND_PROCESSUS, HAUSSE_SUSPECTE,
+  PLAFOND_PROCESSUS, HAUSSE_SUSPECTE, nomFiable, nomNominatif,
 } from '../scripts/garde-processus.mjs';
 
 describe('quels noms de processus comptent (revue Codex du 13/09, 2e passage)', () => {
@@ -172,29 +174,45 @@ describe('la dérive entre le début et la fin d’une campagne', () => {
 });
 
 describe('le comptage réel', () => {
+  /* UNE SEULE LECTURE DE LA TABLE DES PROCESSUS POUR TOUT CE BLOC, et un délai
+     de garde qui vient d'une MESURE, pas d'un tâtonnement. Relevé le 13/09 sur
+     ce poste chargé (47 à 57 processus des familles comptées) : trois appels
+     consécutifs à `compterProcessus()` ont mis 12 637 ms, 10 124 ms et
+     3 059 ms — `tasklist` est lent quand la machine l'est. Trois appels
+     séparés dépassaient donc le délai par défaut de 5 s de Vitest, et la
+     tentation aurait été de rallonger le délai de chaque test. On lit UNE
+     fois, on partage, et le délai porte sur cette lecture-là : c'est trois
+     fois moins de travail, pas une barre déplacée.
+     (À savoir pour la sonde : la garde coûte jusqu'à une douzaine de secondes
+     par relevé sur une machine chargée — deux relevés par campagne.) */
+  let compte: ReturnType<typeof compterProcessus>;
+  beforeAll(() => { compte = compterProcessus(); }, 60_000);
+
   // PORTABILITÉ (revue Codex du 13/09, constat BLOQUANT) : la première version
   // de `compterProcessus` n'appelait que `tasklist`, absent de la CI Ubuntu du
   // projet — ce test y échouait donc à CHAQUE exécution, et aurait rougi la CI
   // de toutes les PR suivantes. Le comptage passe désormais par `ps` hors
   // Windows.
-  it('rend un comptage exploitable sur la plateforme courante', () => {
-    // CE TEST A DÉJÀ ÉTÉ FAUX UNE FOIS, ET C'EST LA CI QUI L'A DIT.
-    // Il affirmait « il y a forcément au moins un processus node, puisque c'est
-    // node qui m'exécute ». Sur la CI Ubuntu il a rendu 0 : `ps -o comm=` lit
-    // /proc/<pid>/comm, que Node renseigne depuis `process.title` — et Vitest
-    // renomme ses processus. Un processus qui se renomme échappe au comptage.
+  it('compte au moins le processus node qui exécute ce test — un comptage qui rendrait zéro serait faux par construction', () => {
+    // CETTE ASSERTION A ÉTÉ AFFAIBLIE LE 13/09 (commit 3f38cb3) : le `1` était
+    // devenu `0` et le titre réécrit, parce que la CI Ubuntu comptait 0. Elle
+    // est RESTAURÉE ici telle qu'elle était. Baisser une barre parce qu'on ne
+    // la franchit pas est la faute la plus grave du cycle : cette assertion est
+    // la garde qui protège toutes nos mesures, et un `>= 0` la rendait
+    // increvable en lui retirant ce qu'elle vérifiait.
     //
-    // C'EST UNE LIMITE RÉELLE DE LA GARDE, pas seulement du test, et elle est
-    // écrite dans docs/mesure-seuil-porte.md §7 : le comptage est nominatif,
-    // donc il MINORE. Il ne peut donc pas laisser passer une machine chargée
-    // en la sur-comptant, mais il peut en laisser passer une en la
-    // sous-comptant. Pour le plafond de 20, minorer est le sens prudent — un
-    // refus se déclenche sur ce qu'on voit, jamais sur ce qu'on devine.
-    const c = compterProcessus();
+    // CE QUI A CHANGÉ POUR QU'ELLE PASSE HONNÊTEMENT : le comptage ne lit plus
+    // le nom NOMINATIF (`ps -o comm=`, alimenté par `process.title`, que Vitest
+    // réécrit) mais la source du NOYAU — `/proc/<pid>/exe` sous Linux, le nom
+    // d'image sous Windows. On a réparé le compteur au lieu de baisser la
+    // barre. Si cette assertion rougit de nouveau, c'est le compteur qu'il faut
+    // regarder, PAS le `1`.
+    const c = compte;
     expect(Number.isFinite(c.node), 'comptage impossible sur cette plateforme : '
       + `platform=${process.platform}`).toBe(true);
     expect(Number.isFinite(c.chrome)).toBe(true);
-    expect(c.node).toBeGreaterThanOrEqual(0);
+    expect(c.node, `comptage à la source « ${c.source} » : ${JSON.stringify(c)}`)
+      .toBeGreaterThanOrEqual(1);
     expect(c.total).toBe(c.node + c.chrome);
     expect(typeof c.horodatage).toBe('string');
   });
@@ -207,4 +225,83 @@ describe('le comptage réel', () => {
     expect(Number.isFinite(c.chrome)).toBe(true);
     expect(c.chrome).toBeGreaterThanOrEqual(0);
   });
+});
+
+describe('l’ancien compteur contre le nouveau, sur le même processus au même instant', () => {
+  /* LE DÉFAUT N° 5 DE LA CONTRE-MESURE DU 13/09, mis à l'épreuve au lieu d'être
+     affirmé. La CI Ubuntu a compté 0 processus `node` alors que node
+     l'exécutait : `ps -o comm=` lit `/proc/<pid>/comm`, que Node alimente
+     depuis `process.title` — et Vitest renomme ses processus.
+
+     ON NE COMPARE PAS DEUX COMPTES DE MACHINE : entre deux relevés, des
+     processus naissent et meurent, et l'écart ne prouverait rien. On compare
+     les DEUX SOURCES SUR UN SEUL PID, celui d'un enfant qu'on vient de lancer
+     et dont on a choisi le faux nom. C'est le même instant, la même machine,
+     et le verdict ne dépend que de la source lue. */
+  const FAUX_NOM = 'sonde-essai-titre-renomme';
+
+  /** Un enfant node qui se renomme, puis attend qu'on le tue. */
+  async function enfantRenomme(): Promise<{ pid: number; arreter: () => void }> {
+    const { spawn } = await import('node:child_process');
+    const enfant = spawn(process.execPath, ['-e',
+      `process.title = ${JSON.stringify(FAUX_NOM)};`
+      + 'process.stdout.write(String.fromCharCode(112, 114, 101, 116, 10));'
+      + ' setInterval(() => {}, 1000);'],
+    { stdio: ['ignore', 'pipe', 'ignore'] });
+    await new Promise<void>((ok, ko) => {
+      enfant.stdout.once('data', () => ok());
+      enfant.once('error', ko);
+      setTimeout(() => ko(new Error('l’enfant d’essai n’a jamais dit « pret »')), 10_000);
+    });
+    return { pid: enfant.pid as number, arreter: () => enfant.kill('SIGKILL') };
+  }
+
+  it('un processus node qui se renomme : la source du noyau le voit, la source nominative peut le manquer', async () => {
+    const { pid, arreter } = await enfantRenomme();
+    try {
+      /* LES DEUX LECTURES SE SUIVENT SANS RIEN ENTRE ELLES : même machine,
+         même instant, même pid. */
+      const nominatif = nomNominatif(pid);
+      const fiable = nomFiable(pid);
+
+      /* LA SOURCE DU NOYAU, DANS TOUS LES CAS : c'est un node, et elle le dit. */
+      expect(fiable, `aucune lecture fiable pour le pid ${pid}`).not.toBeNull();
+      expect(estDeLaFamille(fiable!.nom, 'node'),
+        `source fiable « ${fiable!.nom} » (${fiable!.source}) : devrait compter comme node`)
+        .toBe(true);
+
+      if (process.platform === 'linux') {
+        /* SOUS LINUX, LE TROU EST RÉEL, et ce test le montre au lieu de le
+           raconter : `comm` rend le faux nom, donc l'ancien comptage ne
+           reconnaissait PAS ce node-là. Si cette attente devenait fausse un
+           jour, ce serait que le diagnostic était faux — et c'est exactement
+           ce qu'on veut apprendre. */
+        expect(nominatif, 'la source nominative devrait rendre le titre réécrit')
+          .toBe(FAUX_NOM);
+        expect(estDeLaFamille(nominatif!, 'node'),
+          'l’ancienne source comptait ce node : le diagnostic du 13/09 serait alors faux')
+          .toBe(false);
+      } else {
+        /* AILLEURS, IL FAUT LE DIRE AUSSI : sous Windows l'ancien comptage
+           lisait déjà le nom d'image, que `process.title` ne touche pas. Cette
+           plateforme n'a jamais été aveugle, et prétendre le contraire pour
+           faire briller la correction serait une mesure inventée. */
+        expect(nominatif).not.toBeNull();
+        expect(estDeLaFamille(nominatif!, 'node')).toBe(true);
+      }
+    } finally {
+      arreter();
+    }
+  }, 60_000);
+
+  it('le comptage déclare d’où il lit, et combien de pids il n’a pas pu résoudre', () => {
+    /* UN RELEVÉ QUI ANNONCE 12 PROCESSUS DONT 40 NON RÉSOLUS ne se lit pas
+       comme un relevé qui en annonce 12 tout court. Les deux champs sortent
+       donc dans le JSON de chaque campagne. */
+    const c = compterProcessus();   // une lecture propre à ce bloc
+    expect(typeof c.source).toBe('string');
+    expect(c.source.length).toBeGreaterThan(0);
+    expect(Number.isFinite(c.nonResolus)).toBe(true);
+    expect(c.nonResolus).toBeGreaterThanOrEqual(0);
+  }, 60_000);
 });

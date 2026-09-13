@@ -22,6 +22,7 @@
  * incalculable n'est pas une dérive nulle. Les deux cas refusent.
  */
 import { execFileSync } from 'node:child_process';
+import { readFileSync, readdirSync, readlinkSync } from 'node:fs';
 
 /** Au-delà de ce nombre de processus résidents, aucune mesure n'est valide. */
 export const PLAFOND_PROCESSUS = 20;
@@ -106,40 +107,156 @@ export function estDeLaFamille(nom, famille) {
   return noms.some((n) => n.toLowerCase() === base);
 }
 
+/* ─── D'OÙ VIENT LE NOM D'UN PROCESSUS, ET POURQUOI CE N'EST PAS ANODIN ──────
+   (défaut n° 5 de la contre-mesure du 13/09, trouvé par la CI elle-même.)
+
+   v4 de ce comptage. Les trois premières discutaient QUELS noms compter ; la
+   CI Ubuntu a montré que le problème était en amont : D'OÙ on lit le nom.
+
+   `ps -o comm=` lit `/proc/<pid>/comm` sous Linux. Node y écrit `process.title`
+   — et Vitest renomme ses processus. La CI a donc compté **0 processus node
+   alors que node l'exécutait**. Un processus qui se renomme échappait au
+   comptage : notre garde de validité était adossée à un compteur aveugle, et
+   « sous 20 » ne prouvait rien.
+
+   LA SOURCE QUI NE MENT PAS, PAR SYSTÈME :
+     Linux  `/proc/<pid>/exe` — un lien symbolique posé par le NOYAU vers
+            l'exécutable réel. Un processus ne peut pas le réécrire, quoi qu'il
+            fasse de son titre. C'est la source de vérité.
+     Windows `tasklist` rend le NOM D'IMAGE, lu du noyau lui aussi.
+            `process.title` y change le titre de la console, jamais l'image.
+     Autres POSIX (macOS, BSD) : `ps -o comm=` rend le chemin de l'exécutable,
+            que `uv_set_process_title` ne réécrit pas sur ces systèmes.
+
+   CE QUE LA SOURCE FIABLE NE PEUT PAS FAIRE : lire `/proc/<pid>/exe` d'un
+   processus d'un AUTRE utilisateur rend EACCES. On retombe alors sur `comm`
+   pour ce pid-là — et on COMPTE ces retombées dans `nonResolus`, au lieu de
+   faire comme si de rien n'était. Un relevé qui annonce 12 processus dont 40
+   non résolus ne se lit pas comme un relevé qui en annonce 12 tout court. */
+
+/** Le nom d'un processus lu à sa source FIABLE. `null` si le pid a disparu. */
+export function nomFiable(pid) {
+  if (process.platform === 'linux') {
+    try {
+      return { nom: readlinkSync(`/proc/${pid}/exe`).replace(/ \(deleted\)$/, ''), source: 'exe' };
+    } catch {
+      /* EACCES (autre utilisateur) ou ESRCH (processus fini) : on retombe sur
+         `comm`, en le DISANT. Ne pas savoir n'est jamais un feu vert — ici,
+         c'est un compte déclaré non résolu, pas un compte silencieusement nul. */
+      try {
+        return { nom: readFileSync(`/proc/${pid}/comm`, 'utf8').trim(), source: 'comm' };
+      } catch { return null; }
+    }
+  }
+  if (process.platform === 'win32') {
+    /* `tasklist /FI "PID eq <pid>"` rend le NOM D'IMAGE du noyau : `process.title`
+       n'y touche pas — sous Windows il ne change que le titre de la console. */
+    try {
+      const sortie = execFileSync('tasklist', ['/NH', '/FO', 'CSV', '/FI', `PID eq ${pid}`],
+        { encoding: 'utf8', windowsHide: true });
+      const ligne = sortie.split(/\r?\n/).find((l) => l.trim().startsWith('"'));
+      if (!ligne) return null;
+      return { nom: ligne.slice(1, ligne.indexOf('","')), source: 'image' };
+    } catch { return null; }
+  }
+  /* macOS, BSD : `ps -o comm=` rend le chemin de l'exécutable. */
+  try {
+    const sortie = execFileSync('ps', ['-p', String(pid), '-o', 'comm='], { encoding: 'utf8' });
+    const nom = sortie.trim();
+    return nom ? { nom, source: 'comm' } : null;
+  } catch { return null; }
+}
+
+/**
+ * Le nom d'un processus lu à la source NOMINATIVE — celle que ce comptage
+ * employait jusqu'au 13/09, et qu'un processus peut réécrire en changeant son
+ * titre. Exportée POUR ÊTRE COMPARÉE à `nomFiable` sur le même pid au même
+ * instant : c'est la seule façon de montrer ce que l'ancien compteur ratait,
+ * au lieu de l'affirmer.
+ */
+export function nomNominatif(pid) {
+  if (process.platform === 'linux') {
+    /* C'EST ICI QUE L'ANCIEN COMPTEUR ÉTAIT AVEUGLE : `/proc/<pid>/comm` est
+       alimenté par `process.title`, et Vitest renomme ses processus. */
+    try { return readFileSync(`/proc/${pid}/comm`, 'utf8').trim(); } catch { return null; }
+  }
+  if (process.platform === 'win32') {
+    /* Sous Windows, l'ancien comptage lisait DÉJÀ le nom d'image : cette
+       plateforme-là n'a jamais été aveugle, et il faut le dire plutôt que de
+       laisser croire que la correction y change quelque chose. */
+    return nomFiable(pid)?.nom ?? null;
+  }
+  try {
+    const sortie = execFileSync('ps', ['-p', String(pid), '-o', 'comm='], { encoding: 'utf8' });
+    return sortie.trim() || null;
+  } catch { return null; }
+}
+
+/**
+ * Compte les processus `node` et `chrome` résidents, à la source fiable.
+ *
+ * @returns {{node:number, chrome:number, total:number, horodatage:string,
+ *            source:string, nonResolus:number}}
+ */
 export function compterProcessus() {
   /* UNE SEULE LECTURE DE LA TABLE DES PROCESSUS, filtrée ensuite en mémoire.
      Windows v2 interrogeait `tasklist` par nom exact, image par image : les
      noms absents de la requête (`chrome-headless.exe`) n'étaient jamais rendus,
      et le sous-comptage survivait à la correction censée le supprimer (revue
      Codex, 3ᵉ passage). On liste tout, on filtre avec `estDeLaFamille` — la
-     MÊME fonction sur les deux systèmes, donc un seul comportement à éprouver. */
+     MÊME fonction sur les trois chemins, donc un seul comportement à éprouver. */
   const lireNoms = () => {
     if (process.platform === 'win32') {
       const sortie = execFileSync('tasklist', ['/NH', '/FO', 'CSV'],
         { encoding: 'utf8', windowsHide: true, maxBuffer: 16 * 1024 * 1024 });
-      return sortie.split(/\r?\n/)
+      const noms = sortie.split(/\r?\n/)
         .filter((l) => l.trim().startsWith('"'))
         /* CSV de tasklist : "image","pid","session",… — le nom est le 1er champ. */
         .map((l) => l.slice(1, l.indexOf('","')));
+      return { noms, source: 'tasklist (nom d’image, noyau)', nonResolus: 0 };
     }
-    /* `ps -A -o comm=` rend un nom de commande par ligne, sans en-tête. */
-    return execFileSync('ps', ['-A', '-o', 'comm='],
+    if (process.platform === 'linux') {
+      /* LA SOURCE DE VÉRITÉ : le lien `exe` de chaque pid. C'est CE chemin qui
+         voit les processus Vitest que `comm` ratait. */
+      const pids = readdirSync('/proc').filter((e) => /^\d+$/.test(e));
+      const noms = [];
+      let nonResolus = 0;
+      for (const pid of pids) {
+        const lu = nomFiable(pid);
+        if (!lu) continue;              // processus disparu entre-temps
+        if (lu.source !== 'exe') nonResolus += 1;
+        noms.push(lu.nom);
+      }
+      return { noms, source: '/proc/<pid>/exe (lien du noyau)', nonResolus };
+    }
+    /* macOS, BSD : `ps -A -o comm=` rend le chemin de l'exécutable, que
+       `uv_set_process_title` ne réécrit pas sur ces systèmes. */
+    const noms = execFileSync('ps', ['-A', '-o', 'comm='],
       { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).split(/\r?\n/);
+    return { noms, source: 'ps -o comm= (chemin de l’exécutable)', nonResolus: 0 };
   };
-  let noms;
+  let lu;
   try {
-    noms = lireNoms();
+    lu = lireNoms();
   } catch {
     /* Un comptage impossible n'est PAS un comptage à zéro : on ne laisse jamais
        une panne d'outil ouvrir la porte à une campagne non gardée. */
     return {
       node: Number.NaN, chrome: Number.NaN, total: Number.NaN,
       horodatage: new Date().toISOString(),
+      source: 'comptage impossible', nonResolus: Number.NaN,
     };
   }
-  const node = noms.filter((n) => estDeLaFamille(n, 'node')).length;
-  const chrome = noms.filter((n) => estDeLaFamille(n, 'chrome')).length;
-  return { node, chrome, total: node + chrome, horodatage: new Date().toISOString() };
+  const node = lu.noms.filter((n) => estDeLaFamille(n, 'node')).length;
+  const chrome = lu.noms.filter((n) => estDeLaFamille(n, 'chrome')).length;
+  return {
+    node,
+    chrome,
+    total: node + chrome,
+    horodatage: new Date().toISOString(),
+    source: lu.source,
+    nonResolus: lu.nonResolus,
+  };
 }
 
 /**

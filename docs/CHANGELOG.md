@@ -2,6 +2,52 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.145.0] — 2026-09-13 — SONDE-VRAIE-1
+
+### La sonde ne mesurait pas ce qu'elle annonçait — et une assertion affaiblie est restaurée
+- **L'ASSERTION AFFAIBLIE AU COMMIT `3f38cb3` EST RESTAURÉE.**
+  `tests/garde-processus.test.ts` : `expect(c.node).toBeGreaterThanOrEqual(0)` redevient
+  `toBeGreaterThanOrEqual(1)`, avec son titre d'origine. Elle avait été baissée parce que la
+  CI Ubuntu comptait 0 processus `node` alors que node l'exécutait. **Baisser une barre parce
+  qu'on ne la franchit pas retire à la garde ce qu'elle vérifiait.** Elle passe aujourd'hui
+  parce que le compteur a été réparé, pas parce que la barre a été déplacée.
+- **Le comptage de processus lit désormais la source du NOYAU**
+  (`scripts/garde-processus.mjs`) : `/proc/<pid>/exe` sous Linux, le nom d'image `tasklist`
+  sous Windows, `ps -o comm=` (chemin de l'exécutable) ailleurs. `ps -o comm=` lisait
+  `/proc/<pid>/comm`, alimenté par `process.title` — et Vitest renomme ses processus, donc un
+  processus qui se renomme échappait au comptage. Le relevé dit désormais **d'où** il lit
+  (`source`) et **combien de pids il n'a pas pu résoudre** (`nonResolus`) : un compte de 12
+  dont 40 non résolus ne se lit pas comme un compte de 12 tout court.
+- **`--campagne` chronomètre le calcul d'itinéraire**, du geste qui le lance jusqu'au plan de
+  recharge lisible — la définition mot pour mot de la feuille de relevé mobile, pour que le
+  chiffre du poste et celui du téléphone se comparent. Il relevait jusqu'ici `performance.now()`
+  après le chargement de la page : **étalonné avec un retard connu de 3 000 ms, l'ancien
+  instrument rendait 746 ms là où le nouveau rend 4 843 ms.** Les six chiffres qu'il aurait
+  produits n'auraient rien dit du critère des 5 s.
+- **Une valeur bornée par la fenêtre d'observation ne sort plus sous le nom d'une mesure.**
+  Quand la porte de sortie ne se referme pas — c'est-à-dire quand le correctif de la PR #318
+  fonctionne —, la sonde écrit `dureeDeVieMs: null` et `toujoursOuverteApresMs: <N>` au lieu
+  d'un nombre qui grandissait avec la patience de l'observateur.
+- **L'empreinte du bundle est contrôlée APRÈS le scénario**, donc après l'import dynamique du
+  panneau d'itinéraire — mesuré : ce chunk n'est cité ni dans `dist/index.html` ni dans ses
+  `modulepreload`, et le navigateur ne le demande que 1 243 ms après la fin du chargement. La
+  sonde **exige** en plus de l'avoir vu (sortie en code 5) : un contrôle qui n'a jamais vu le
+  fichier n'est pas un contrôle.
+- **Découvert en mesurant :** le prédicat de la porte confondait « le bouton n'existe pas » et
+  « le bouton est hors du champ visible ». À 1 280 × 720, « Réessayer » est à y = 732, sous la
+  ligne de flottaison. Les deux faits sont désormais relevés séparément. Le bouton n'a pas été
+  déplacé : le correctif de la porte est hors périmètre de cette passe.
+- **Relevé pour le CEO, pas tranché :** le délai avant la première porte de sortie vaut
+  **15 025 ms** mesurés, et pendant ces quinze secondes l'écran est immobile — « Calcul de
+  l'itinéraire… » à 6 ms, la ligne de lenteur à 2 513 ms, rien d'autre. Deux valeurs et leurs
+  coûts dans `docs/mesure-seuil-porte.md` §14.
+- Nouveaux fichiers : `scripts/chrono-sonde.mjs` (verdicts purs, éprouvés dans les deux sens),
+  `scripts/serveur-dist.mjs` (le serveur de la sonde, extrait pour être essayé sans navigateur),
+  `tests/chrono-sonde.test.ts`, `tests/sonde-bundle.test.ts`, `tests-e2e/sonde-chrono.spec.ts`.
+- **Aucune campagne n'a tourné** : la garde refuse sur ce poste (37 processus résidents relevés
+  le 13/09 pour un plafond de 20, sortie en code 2). Ce qui est éprouvé, et comment, est écrit
+  au §15 de `docs/mesure-seuil-porte.md`.
+
 ## [1.144.0] — 2026-09-13 — SEUIL-1
 
 ### La porte de sortie reste ouverte, et une campagne de mesure se refuse elle-même
