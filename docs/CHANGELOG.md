@@ -163,12 +163,21 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 
 ### Finition du 13/09 — trois des quatre chemins n'avaient pas de garde capable de rougir
 
-- **LA CONTRE-ÉPREUVE DU VÉRIFICATEUR, REJOUÉE ICI ET CONFIRMÉE.** Les trois
-  sources remises dans leur état d'avant (`bandeau-guidage.ts`,
-  `panneau-itineraire.ts`, `annonces.ts`), `dist/` reconstruit : **4 parcours
-  rouges sur 9, 5 verts** — dont ceux qui prétendaient garder `.bg-voie` et la
-  voie visée. **Un test qui ne peut pas rougir ne protège rien**, et il fait
-  croire au suivant que le défaut est couvert.
+- **LA CONTRE-ÉPREUVE, REJOUÉE ICI, ET SON COMPTE ENFIN PUBLIÉ PARCOURS PAR
+  PARCOURS.** Le récit précédent disait « 4 rouges sur 9, 5 verts » sans dire
+  LESQUELS, et ce silence le rendait illisible : « cinq parcours restaient
+  verts » et « trois des quatre chemins sans garde » semblaient se contredire.
+  Ils ne se contredisent pas, et voici pourquoi. Les trois sources remises dans
+  leur état d'avant (`bandeau-guidage.ts`, `panneau-itineraire.ts`,
+  `annonces.ts`), `dist/` reconstruit, les NEUF parcours d'alors : **4 rouges,
+  5 verts** — le compte est reproduit à l'identique. Et parmi les cinq verts,
+  **trois sont des contre-épreuves dont le métier EST de rester vertes**
+  (« un nom de voie LISIBLE s'affiche », « la voie courante lisible s'affiche »,
+  « D606 reste affiché » : l'ancien code n'effaçait rien, il affichait trop),
+  tandis que **deux étaient des gardes qui auraient dû rougir et ne le
+  pouvaient pas** — `.bg-voie` et la voie visée illisible. Un seul des quatre
+  chemins était donc réellement gardé. **Un test qui ne peut pas rougir ne
+  protège rien**, et il fait croire au suivant que le défaut est couvert.
 - **LA CAUSE, MESURÉE ET NON DÉDUITE : on affirmait sur la forme BRUTE, le
   navigateur peint la forme MISE EN FORME.** `libelleVoie` capitalise avant
   tout affichage : sondé le 13/09 sur le build d'avant, `.bg-voie` peignait
@@ -183,11 +192,31 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
      seconde moitié, on aurait tenu la première en coupant la voix ;
   2. **la feuille de route imprimable** : la liste imprimée ne porte plus
      d'identifiant, **et** nomme toujours les voies lisibles.
-- **Chacun des quatre sait rougir, prouvé par la même manipulation** : sources
-  d'avant remises, les cinq gardes rougissent en citant le texte réellement
-  peint (`Tournez à droite — Tronrout0000000352788241` sur la feuille,
-  `Dans 400 mètres, tournez à droite, vers Tronrout0000000352788241` à la
-  voix) ; sources restaurées, 22 parcours verts.
+- **LES QUATRE CHEMINS SAVENT ROUGIR, ET LE COMPTE EST REFAIT SUR LA SUITE
+  ENTIÈRE.** Mêmes sources d'avant, mais les 22 parcours d'aujourd'hui :
+  **8 rouges, 14 verts.** Les quatre chemins y sont, chacun par son parcours —
+  `.bg-destination` (`guidage-lisible.spec.ts:324`), `.bg-voie` (`:355`), la
+  VOIX (`voix.spec.ts:285`), la feuille imprimable (`:488`) — et les quatre
+  rougissent en citant le texte réellement peint ou dit
+  (`Tournez à droite — Tronrout0000000352788241` sur la feuille,
+  `Dans 400 mètres, tournez à droite, vers Tronrout0000000352788241` à la voix).
+  Les 14 verts sont les trois contre-épreuves d'affichage et les onze parcours
+  de VOIX-1/VOIX-3, que rien dans ces trois sources ne touche. Sources
+  restaurées, `dist/` reconstruit : **22 parcours verts sur 22.**
+- **ET LA GARDE DE LA MANŒUVRE ÉTAIT TAUTOLOGIQUE — elle ne pouvait pas
+  rougir.** `voix.spec.ts` ATTENDAIT « tournez à droite », puis AFFIRMAIT
+  « tournez à droite » : l'attente sondait le texte même que l'assertion
+  vérifie. Rejoué ici avec la mutation exacte du vérificateur — `right:
+  'tournez à droite'` remplacé par `'prenez la sortie de droite'` dans
+  `src/lib/annonces.ts` — l'échec tombait sur le SONDAGE (« Timeout 10000ms
+  exceeded while waiting on the predicate »), jamais sur l'assertion, qui
+  n'était pas même atteinte. L'attente porte désormais sur la DISTANCE de
+  l'annonce — « Dans 400 mètres, » vient de `distanceDite()`, pas de la table
+  des manœuvres — et la même mutation fait maintenant rougir l'assertion
+  elle-même, qui cite ce que la voix a réellement dit : « Guidage vocal
+  activé… | Dans 400 mètres, prenez la sortie de droite ». **L'assertion n'a
+  pas été touchée** : seule la façon d'attendre a changé, et ce qu'elle garantit
+  est inchangé — la manœuvre doit être DITE, et dite avec les mots de la route.
 - **La cause racine du 13/09 est rectifiée dans la description de la PR** :
   ce qui faisait rougir la CI, c'était **la mesure sur `scrollHeight`**, qui
   décrit le contenu et non la boîte peinte. Le `-webkit-box` blockifié d'un

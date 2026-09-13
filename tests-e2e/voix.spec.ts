@@ -291,11 +291,20 @@ test('LA VOIX NE PRONONCE JAMAIS UN IDENTIFIANT BRUT', async ({ page }) => {
      champ du service avant qu’il n’atteigne la voix, et une assertion écrite
      sur « TRONROUT… » resterait verte alors que la phrase le dit. */
   await suivre(page, 400, false, 'TRONROUT0000000352788241');
-  /* ON ATTEND LA PHRASE DE MANŒUVRE ELLE-MÊME, pas un délai : c'est elle qui
-     portait l'identifiant. Un délai fixe ferait dépendre le verdict de la
-     charge du poste — le défaut relevé sur `voix.spec.ts:243`. */
+  /* ON ATTEND CETTE ANNONCE PAR SA DISTANCE, JAMAIS PAR LES MOTS QU'ON JUGE
+     EN DESSOUS (13/09). L'attente précédente sondait « tournez à droite »,
+     c'est-à-dire LE TEXTE MÊME que l'assertion finale vérifie : toute atteinte
+     à ce texte faisait expirer le sondage, et l'assertion, jamais atteinte, ne
+     pouvait pas rougir. Le vérificateur l'a montré en remplaçant `right` par
+     « prenez la sortie de droite » dans `src/lib/annonces.ts` : l'échec tombait
+     ICI, et la garde de la manœuvre n'était jamais jouée.
+     « Dans 400 mètres, » vient de `distanceDite()`, pas de la table `MOTS` :
+     la synchronisation ne peut donc plus préempter le verdict. Et cela reste un
+     sondage, pas un délai fixe — le défaut relevé sur `voix.spec.ts:243`. */
   await expect.poll(async () => (await dites(page)).some(
-    (p) => /tournez à droite/.test(p)), { timeout: 10_000 }).toBe(true);
+    (p) => p.startsWith('Dans 400 mètres,')),
+  { timeout: 10_000, message: 'aucune annonce de manœuvre à 400 m n’est partie' })
+    .toBe(true);
   const phrases = (await dites(page)).join(' | ');
   expect(phrases, 'la voix prononce un identifiant technique')
     .not.toMatch(/tronrout/i);
