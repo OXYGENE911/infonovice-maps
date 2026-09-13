@@ -30,10 +30,38 @@ describe('quels noms de processus comptent (revue Codex du 13/09, 2e passage)', 
     }
   });
 
-  it('ne compte pas les auxiliaires qui ne sont pas des navigateurs', () => {
-    for (const nom of ['chrome_crashpad_handler', 'chrome-sandbox']) {
+  it('ne compte pas ce qui n’est pas un navigateur, meme si le nom commence pareil', () => {
+    // `chromedriver` et `nodemon` sont le contre-exemple qui a fait abandonner
+    // la reconnaissance par PRÉFIXE (revue Codex, 3ᵉ passage) : une garde qui
+    // SUR-compte refuse des machines pourtant au repos, ce qui pousse à
+    // relâcher le seuil — exactement ce que la règle du CEO interdit.
+    for (const nom of ['chrome_crashpad_handler', 'chrome-sandbox', 'chromedriver',
+      'chrome_sandbox']) {
       expect(estDeLaFamille(nom, 'chrome'), `« ${nom} » ne devrait pas compter`).toBe(false);
     }
+    for (const nom of ['nodemon', 'node-gyp', 'nodejs-helper']) {
+      expect(estDeLaFamille(nom, 'node'), `« ${nom} » ne devrait pas compter`).toBe(false);
+    }
+  });
+
+  it('LE SCÉNARIO WINDOWS DE LA REVUE : 24 chrome-headless.exe ne se comptent plus pour zéro', () => {
+    // La version précédente interrogeait `tasklist` image par image, par nom
+    // exact : `chrome-headless.exe` n'était rendu par aucune requête, donc le
+    // sous-comptage survivait à la correction censée le supprimer. Le comptage
+    // lit désormais TOUTE la table une fois et filtre avec cette même fonction.
+    const table = ['node.exe', ...Array.from({ length: 24 }, () => 'chrome-headless.exe')];
+    const total = table.filter((n) => estDeLaFamille(n, 'node') || estDeLaFamille(n, 'chrome'))
+      .length;
+    expect(total).toBe(25);
+    expect(deciderValidite(total).valide, '25 processus doivent être refusés').toBe(false);
+  });
+
+  it('20 node + 1 chromedriver font 20, pas 21 : la campagne passe', () => {
+    const table = [...Array.from({ length: 20 }, () => 'node'), 'chromedriver'];
+    const total = table.filter((n) => estDeLaFamille(n, 'node') || estDeLaFamille(n, 'chrome'))
+      .length;
+    expect(total).toBe(20);
+    expect(deciderValidite(total).valide).toBe(true);
   });
 
   it('compte node, et ne confond pas une famille avec l’autre', () => {

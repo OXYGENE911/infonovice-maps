@@ -50,60 +50,80 @@ export const HAUSSE_SUSPECTE = 3;
    qui sous-compte est pire que pas de garde, parce qu'elle rassure.
    La règle est donc : un préfixe de famille, moins les processus auxiliaires
    qui ne sont pas des navigateurs (crashpad, sandbox, GPU helper). */
+/* DES NOMS EXACTS, PAS DES PRÉFIXES — et c'est la troisième version de ce
+   comptage, chacune corrigeant une faute que la revue a trouvée :
+     v1  `nom === 'chrome'` : ratait tout le Chromium de Playwright, qui ne
+         s'appelle jamais « chrome » (24 navigateurs comptés pour zéro) ;
+     v2  préfixe `chrome` moins quelques exclusions : reconnaissait bien
+         Playwright, mais comptait AUSSI `chromedriver` — et, du côté node,
+         `nodemon` : une garde qui sur-compte refuse des machines pourtant au
+         repos, ce qui pousse à relâcher le seuil, c'est-à-dire exactement ce
+         que la règle interdit ;
+     v3  une LISTE EXPLICITE de noms exacts. Elle se lit, se revoit, et ne
+         surprend personne : ni `chromedriver`, ni `nodemon`, ni
+         `chrome_crashpad_handler`, ni `chrome-sandbox` n'y sont, et aucun ne
+         peut y entrer par accident de préfixe.
+   Si un binaire nouveau doit compter, on l'ajoute ici, et la revue le voit. */
 const FAMILLES = {
-  node: { prefixes: ['node'], exclus: [] },
-  chrome: {
-    prefixes: ['chrome', 'chromium', 'headless_shell', 'Google Chrome'],
-    exclus: ['crashpad', 'sandbox'],
-  },
+  node: ['node'],
+  chrome: [
+    'chrome', 'chromium', 'chromium-browser',
+    /* Les noms sous lesquels Playwright lance Chromium selon la version et la
+       plateforme — c'est CE processus-là qui charge la machine pendant une
+       campagne, donc celui qu'il est vital de compter. */
+    'chrome-headless', 'chrome-headless-shell', 'headless_shell',
+    'Google Chrome', 'Google Chrome Helper',
+  ],
 };
 
 /**
  * Ce nom de processus compte-t-il dans la famille demandée ? Fonction PURE,
- * exportée pour être éprouvée sur des noms réels sans dépendre de la machine.
+ * exportée pour être éprouvée sur des noms réels sans dépendre de la machine —
+ * c'est elle qui porte toute la logique de comptage, et donc tout le risque.
  */
 export function estDeLaFamille(nom, famille) {
-  const f = FAMILLES[famille];
-  if (!f || typeof nom !== 'string') return false;
-  const base = nom.trim().split('/').pop().replace(/\.exe$/i, '');
+  const noms = FAMILLES[famille];
+  if (!noms || typeof nom !== 'string') return false;
+  /* On retient le nom de base : `ps` peut rendre un chemin, `tasklist` rend
+     toujours un nom d'image avec son extension. */
+  const base = nom.trim().split(/[/\\]/).pop().replace(/\.exe$/i, '').toLowerCase();
   if (!base) return false;
-  if (f.exclus.some((x) => base.toLowerCase().includes(x))) return false;
-  return f.prefixes.some((p) => base.toLowerCase().startsWith(p.toLowerCase()));
+  return noms.some((n) => n.toLowerCase() === base);
 }
 
 export function compterProcessus() {
-  const compter = (famille) => {
-    try {
-      if (process.platform === 'win32') {
-        /* Sous Windows on interroge chaque image de la famille : `tasklist` ne
-           sait pas filtrer par préfixe, mais il sait répondre par nom exact. */
-        return FAMILLES[famille].prefixes.reduce((total, prefixe) => {
-          const sortie = execFileSync(
-            'tasklist',
-            ['/FI', `IMAGENAME eq ${prefixe}.exe`, '/NH', '/FO', 'CSV'],
-            { encoding: 'utf8', windowsHide: true },
-          );
-          /* tasklist répond « INFO: No tasks are running… » quand il n'y en a
-             aucun : cette ligne n'est pas une ligne CSV, elle ne compte pas. */
-          return total + sortie.split(/\r?\n/)
-            .filter((l) => l.trim().startsWith('"'))
-            .filter((l) => estDeLaFamille(l.split('","')[0].replace(/^"/, ''), famille))
-            .length;
-        }, 0);
-      }
-      /* `ps -A -o comm=` rend un nom de commande par ligne, sans en-tête. */
-      const sortie = execFileSync('ps', ['-A', '-o', 'comm='], { encoding: 'utf8' });
+  /* UNE SEULE LECTURE DE LA TABLE DES PROCESSUS, filtrée ensuite en mémoire.
+     Windows v2 interrogeait `tasklist` par nom exact, image par image : les
+     noms absents de la requête (`chrome-headless.exe`) n'étaient jamais rendus,
+     et le sous-comptage survivait à la correction censée le supprimer (revue
+     Codex, 3ᵉ passage). On liste tout, on filtre avec `estDeLaFamille` — la
+     MÊME fonction sur les deux systèmes, donc un seul comportement à éprouver. */
+  const lireNoms = () => {
+    if (process.platform === 'win32') {
+      const sortie = execFileSync('tasklist', ['/NH', '/FO', 'CSV'],
+        { encoding: 'utf8', windowsHide: true, maxBuffer: 16 * 1024 * 1024 });
       return sortie.split(/\r?\n/)
-        .filter((nom) => estDeLaFamille(nom, famille))
-        .length;
-    } catch {
-      /* Un comptage impossible n'est PAS un comptage à zéro : on ne laisse
-         jamais une panne d'outil ouvrir la porte à une campagne non gardée. */
-      return Number.NaN;
+        .filter((l) => l.trim().startsWith('"'))
+        /* CSV de tasklist : "image","pid","session",… — le nom est le 1er champ. */
+        .map((l) => l.slice(1, l.indexOf('","')));
     }
+    /* `ps -A -o comm=` rend un nom de commande par ligne, sans en-tête. */
+    return execFileSync('ps', ['-A', '-o', 'comm='],
+      { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).split(/\r?\n/);
   };
-  const node = compter('node');
-  const chrome = compter('chrome');
+  let noms;
+  try {
+    noms = lireNoms();
+  } catch {
+    /* Un comptage impossible n'est PAS un comptage à zéro : on ne laisse jamais
+       une panne d'outil ouvrir la porte à une campagne non gardée. */
+    return {
+      node: Number.NaN, chrome: Number.NaN, total: Number.NaN,
+      horodatage: new Date().toISOString(),
+    };
+  }
+  const node = noms.filter((n) => estDeLaFamille(n, 'node')).length;
+  const chrome = noms.filter((n) => estDeLaFamille(n, 'chrome')).length;
   return { node, chrome, total: node + chrome, horodatage: new Date().toISOString() };
 }
 
