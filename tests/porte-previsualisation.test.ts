@@ -322,6 +322,89 @@ describe('la préversion ne doit pas se dire production quand on partage son lie
   });
 });
 
+describe('les huit contournements de la 6e revue Codex', () => {
+  /* TOUS TROUVÉS SUR LE COMMIT DE CORRECTION, TOUS DU CSS OU DU HTML VALIDE.
+     La leçon est la même que les cinq revues précédentes : la porte lisait des
+     chaînes là où il fallait lire une STRUCTURE — une cascade, un attribut. */
+  const poseCss = (contenu: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'previsualisation.css'), `${FEUILLE_PREVISUALISATION}\n${contenu}\n`);
+    return griefsDe().join(' ');
+  };
+  const poseHtml = (html: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'index.html'), html);
+    return griefsDe().join(' ');
+  };
+  const marquee = () => marquerHtmlPrevisualisation(PAGE_SOURCE, 'index.html');
+
+  it('1. « opacity: calc(0) » : une opacité qu’on ne sait pas lire est REFUSÉE', () => {
+    // `parseFloat('calc(0)')` rend NaN, donc « ce n'est pas zéro », donc la
+    // porte acceptait. Une garde qui ne comprend pas doit dire non.
+    expect(poseCss('.previsualisation-cadre { opacity: calc(0); }')).toMatch(/illisible/);
+  });
+
+  it('et « opacity: 50% » reste lisible et visible', () => {
+    expect(poseCss('.previsualisation-cadre { opacity: 50%; }')).toEqual('');
+  });
+
+  it('2. « font: 700 0 / 1.5 system-ui » : les espaces autour de la barre sont légaux', () => {
+    // Mot à mot, la porte retenait « 1.5 » — l'interligne — comme taille.
+    expect(poseCss('.previsualisation-pastille { font: 700 0 / 1.5 system-ui; }'))
+      .toMatch(/taille de texte nulle/);
+  });
+
+  it('3. « background-color » puis « background » : c’est la DERNIÈRE qui peint', () => {
+    expect(poseCss('.previsualisation-pastille { color: #000; background-color: #fff; background: #000; }'))
+      .toMatch(/même couleur/);
+  });
+
+  it('4. et l’ordre inverse ne doit PAS être refusé : noir sur blanc se lit', () => {
+    expect(poseCss('.previsualisation-pastille { color: #000; background-color: #000; background: #fff; }'))
+      .toEqual('');
+  });
+
+  it('5. « border-bottom-width: 0 » PUIS « border: 4px » : le raccourci écrit après redonne les 4 côtés', () => {
+    expect(poseCss('.previsualisation-cadre { border-bottom-width: 0; border: 4px solid #FFB300; }'))
+      .toEqual('');
+  });
+
+  it('et l’ordre inverse perce bien le cadre', () => {
+    expect(poseCss('.previsualisation-cadre { border: 4px solid #FFB300; border-bottom-width: 0; }'))
+      .toMatch(/épaisseur nulle/);
+  });
+
+  it('un seul côté à zéro dans « border-width: 4px 4px 0 4px » suffit', () => {
+    expect(poseCss('.previsualisation-cadre { border-width: 4px 4px 0 4px; }'))
+      .toMatch(/épaisseur nulle/);
+  });
+
+  it('6. guillemets simples et espaces autour du « = » : du HTML valide', () => {
+    const griefs = poseHtml(marquee().replace('</head>',
+      "<link rel='canonical' href='https://maps.infonovice.fr/'>"
+      + "<meta property = 'og:url' content='https://maps.infonovice.fr/'></head>"));
+    expect(griefs).toMatch(/canonical/);
+    expect(griefs).toMatch(/og:url/);
+  });
+
+  it('7. « content » écrit AVANT « property » contournait le préfixage', () => {
+    expect(poseHtml(marquee().replace('</head>', '<meta content="Infonovice Maps" property="og:title"></head>')))
+      .toMatch(/og:title/);
+  });
+
+  it('8. un attribut de plus sur le <script> n’empêche plus de le reconnaître', () => {
+    expect(poseHtml(marquee().replace('</head>',
+      '<script id="schema" type="application/ld+json">{"url":"https://maps.infonovice.fr/"}</script></head>')))
+      .toMatch(/JSON-LD/);
+  });
+
+  it('un « > » dans une valeur d’attribut ne coupe plus la balise en deux', () => {
+    expect(poseHtml(marquee().replace('</head>',
+      '<link rel="canonical" href="https://maps.infonovice.fr/" title="Carte > accueil"></head>')))
+      .toMatch(/canonical/);
+  });
+});
+
 describe('les pages livrées', () => {
   it('une page dans un SOUS-DOSSIER est contrôlée elle aussi', () => {
     dossierConforme();

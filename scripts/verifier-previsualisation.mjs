@@ -205,7 +205,11 @@ function tailleTexte(effectives) {
      « 13px/1.5 » la taille. Prendre le PREMIER mot qui ressemble à un nombre
      laisserait passer « font: 700 0/1.5 system-ui ». */
   let taille = null;
-  for (const mot of d.valeur.split(/\s+/).filter((m) => m !== '')) {
+  /* LES ESPACES AUTOUR DE LA BARRE SONT LÉGAUX, ET COÛTAIENT LA PORTE : Codex
+     est passé avec `font: 700 0 / 1.5 system-ui`, où la lecture mot à mot
+     retenait « 1.5 » (l'interligne) comme taille. On recolle la barre d'abord. */
+  const recolle = d.valeur.replace(/\s*\/\s*/g, '/');
+  for (const mot of recolle.split(/\s+/).filter((m) => m !== '')) {
     const avantBarre = mot.split('/')[0];
     if (mot.includes('/')) { const v = longueur(avantBarre); if (v !== null) taille = v; continue; }
     if (/^(xx-small|x-small|small|large|x-large|xx-large|smaller|larger)$/i.test(mot)) { taille = 16; continue; }
@@ -219,35 +223,44 @@ function tailleTexte(effectives) {
     couleur. `null` en épaisseur = aucune déclaration de bordure. */
 function liseré(effectives) {
   const cotes = ['top', 'right', 'bottom', 'left'];
-  const large = gagnante(effectives, ['border', 'border-width',
-    ...cotes.map((c) => `border-${c}`), ...cotes.map((c) => `border-${c}-width`)]);
+  const motsDe = (d) => (d === null ? [] : d.valeur.split(/\s+/).filter((m) => m !== ''));
+
+  /* CÔTÉ PAR CÔTÉ, ET C'EST LA SEULE FAÇON CORRECTE. La première version
+     prenait le minimum de TOUTES les largeurs rencontrées, sans regarder
+     l'ordre : `border-bottom-width: 0; border: 4px solid` était refusé alors
+     que le raccourci, écrit après, redonne 4 px aux quatre côtés (faux positif
+     relevé par Codex). Et `border-top-width: 0; border-bottom-width: 4px`
+     aurait été accepté à tort. Pour chaque côté, on redemande donc qui gagne
+     entre le raccourci, la propriété longue, et la propriété de ce côté. */
+  const nValeurs = (mots, index) => {
+    // `border-width: a b c d` → haut, droite, bas, gauche ; 1, 2 ou 3 valeurs
+    // se répartissent selon la règle usuelle du CSS.
+    if (mots.length === 0) return null;
+    const ordre = [[0, 0, 0, 0], [0, 1, 0, 1], [0, 1, 2, 1], [0, 1, 2, 3]][Math.min(mots.length, 4) - 1];
+    return mots[ordre[index]];
+  };
+
+  const parCote = cotes.map((cote, index) => {
+    const d = gagnante(effectives, ['border', 'border-width', `border-${cote}`, `border-${cote}-width`]);
+    if (d === null) return null;
+    const mots = motsDe(d);
+    if (d.prop === 'border' || d.prop === `border-${cote}`) {
+      // Raccourci : la largeur omise vaut `medium` (3 px) ; `none`/`hidden` est
+      // traité par le style, pas par la largeur.
+      const trouvees = mots.map(longueur).filter((v) => v !== null);
+      return trouvees.length > 0 ? trouvees[0] : 3;
+    }
+    const mot = d.prop === 'border-width' ? nValeurs(mots, index) : mots[0];
+    return mot === null ? null : longueur(mot);
+  });
+
+  const connues = parCote.filter((v) => v !== null && v !== undefined);
+  const epaisseur = connues.length === 0 ? null : Math.min(...connues);
+
   const styles = gagnante(effectives, ['border', 'border-style',
     ...cotes.map((c) => `border-${c}`), ...cotes.map((c) => `border-${c}-style`)]);
   const couleurs = gagnante(effectives, ['border', 'border-color',
     ...cotes.map((c) => `border-${c}`), ...cotes.map((c) => `border-${c}-color`)]);
-
-  const motsDe = (d) => (d === null ? [] : d.valeur.split(/\s+/).filter((m) => m !== ''));
-
-  let epaisseur = null;
-  if (large !== null) {
-    if (large.prop === 'border' || /^border-(top|right|bottom|left)$/.test(large.prop)) {
-      // Raccourci : la largeur omise vaut `medium`, mais `none`/`hidden` ne
-      // dessine rien quelle que soit la largeur (traité par le style).
-      const trouvees = motsDe(large).map(longueur).filter((v) => v !== null);
-      epaisseur = trouvees.length > 0 ? Math.min(...trouvees) : 3;
-    } else {
-      const trouvees = motsDe(large).map(longueur).filter((v) => v !== null);
-      epaisseur = trouvees.length > 0 ? Math.min(...trouvees) : null;
-    }
-  }
-  // Une largeur nulle posée sur UN SEUL côté fait déjà un cadre percé.
-  for (const cote of cotes) {
-    const d = effectives.get(`border-${cote}-width`);
-    if (d === undefined) continue;
-    const v = longueur(d.valeur.split(/\s+/)[0]);
-    if (v !== null) epaisseur = epaisseur === null ? v : Math.min(epaisseur, v);
-  }
-
   const style = styles === null
     ? null
     : (motsDe(styles).find((m) => MOT_STYLE_BORDURE.test(m)) ?? null);
@@ -268,10 +281,18 @@ function raisonInvisible(effectives) {
   if (/^(hidden|collapse)$/i.test(val('visibility') ?? '')) return `visibility: ${val('visibility')}`;
   if (/^hidden$/i.test(val('content-visibility') ?? '')) return 'content-visibility: hidden';
 
-  // `opacity: 0` éteint ; `opacity: 0.5` non. Le nombre est LU, pas deviné —
-  // la première version rejetait « 0.5 » (faux positif relevé par Codex).
+  /* `opacity: 0` éteint ; `opacity: 0.5` non. Le nombre est LU, pas deviné —
+     la première version rejetait « 0.5 » (faux positif relevé par Codex).
+     ET UNE OPACITÉ QU'ON NE SAIT PAS LIRE EST REFUSÉE, PAS ACCEPTÉE : Codex a
+     franchi la porte avec `opacity: calc(0)`, que `parseFloat` rend NaN. Une
+     garde qui ne comprend pas ce qu'elle lit doit dire non ; c'est le seul sens
+     dans lequel une porte a le droit de se tromper. */
   const o = val('opacity');
-  if (o !== null && Number.parseFloat(o) === 0) return 'opacity: 0';
+  if (o !== null) {
+    const n = /%$/.test(o) ? Number.parseFloat(o) / 100 : Number.parseFloat(o);
+    if (!/^[+-]?(\d+(\.\d+)?|\.\d+)%?$/.test(o.trim())) return `opacity illisible (${o})`;
+    if (n === 0) return `opacity: ${o}`;
+  }
 
   // Une mise à l'échelle nulle : l'élément occupe zéro pixel peint.
   const t = val('transform');
@@ -307,13 +328,16 @@ function contrasteNul(effectives) {
   const texte = couleur(effectives.get('color')?.valeur ?? '');
   if (texte === null) return null; // héritée : hors de notre vue, et on le dit
   if (texte === 'transparent') return 'color: transparent';
-  const fondDirect = effectives.get('background-color')?.valeur ?? null;
-  const fondRaccourci = effectives.get('background')?.valeur ?? null;
-  const brut = fondDirect ?? fondRaccourci;
-  if (brut === null) return null;
-  const fond = fondDirect !== null
-    ? couleur(fondDirect)
-    : (fondRaccourci.split(/\s+/).map(couleur).find((c) => c !== null && c !== undefined) ?? null);
+  /* LA CASCADE VAUT ICI AUSSI, ET C'ÉTAIT UN VRAI TROU (Codex) : donner la
+     priorité à `background-color` quel que soit l'ordre laissait passer
+     `background-color: #fff; background: #000` (texte noir sur fond noir) et
+     refusait à tort `background-color: #000; background: #fff`. C'est la
+     DERNIÈRE déclarée qui peint. */
+  const d = gagnante(effectives, ['background-color', 'background']);
+  if (d === null) return null;
+  const fond = d.prop === 'background-color'
+    ? couleur(d.valeur)
+    : (d.valeur.split(/\s+/).map(couleur).find((c) => c !== null && c !== undefined) ?? null);
   if (fond === null) return null;
   if (fond === texte) return `texte et fond à la même couleur (${texte})`;
   return null;
@@ -376,6 +400,23 @@ function entetesNoindexPartout(entetes) {
     if (directives.some((d) => d === 'noindex' || d === 'none')) couvre = true;
   }
   return couvre;
+}
+
+/* LES BALISES DE MÉTADONNÉES, LUES COMME DES BALISES. Les alternances
+   `"[^"]*"|'[^']*'` font que la fin de balise n'est pas confondue avec un `>`
+   écrit dans une valeur d'attribut — `title="Carte > accueil"` coupait la
+   balise en deux dans la première version. */
+const BALISE_SIMPLE = /[ \t]*<(link|meta)\b((?:[^>"']|"[^"]*"|'[^']*')*)\/?>[ \t]*\r?\n?/gi;
+const BALISE_SCRIPT = /[ \t]*<script\b((?:[^>"']|"[^"]*"|'[^']*')*)>[\s\S]*?<\/script\s*>[ \t]*\r?\n?/gi;
+const ATTRIBUT = /([a-zA-Z0-9_:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'`=<>]+))/g;
+const PREFIXE_ATTENDU = 'PRÉVISUALISATION — ';
+
+function attributsHtml(interieur) {
+  const lus = {};
+  for (const m of interieur.matchAll(ATTRIBUT)) {
+    lus[m[1].toLowerCase()] = m[2] ?? m[3] ?? m[4] ?? '';
+  }
+  return lus;
 }
 
 /** Le fichier visé par un `href`, résolu depuis la page qui le porte. */
@@ -507,18 +548,28 @@ export function verifierPrevisualisation(dossier) {
        l'URL de préversion dans une messagerie fait croire à de la production.
        Ce sont les trois affirmations machine ; `og:title` est celle que lit un
        humain. */
-    if (/<link[^>]+rel="canonical"/i.test(html)) {
-      griefs.push(`${page} : <link rel="canonical"> désigne encore la production`);
+    /* LA PORTE LIT LES ATTRIBUTS, PAS DES CHAÎNES. `rel='canonical'` en
+       guillemets simples, `property = "og:url"` avec des espaces, `content`
+       écrit avant `property`, un `id` de plus sur le `<script>` : Codex a
+       franchi chacune de ces variantes, toutes du HTML valide. */
+    for (const [balise, nom, interieur] of [...html.matchAll(BALISE_SIMPLE)]
+      .map((m) => [m[0], m[1].toLowerCase(), m[2]])) {
+      const a = attributsHtml(interieur);
+      if (nom === 'link' && (a.rel ?? '').trim().toLowerCase() === 'canonical') {
+        griefs.push(`${page} : <link rel="canonical"> désigne encore la production`);
+      }
+      if (nom !== 'meta') continue;
+      const propriete = (a.property ?? '').trim().toLowerCase();
+      if (propriete === 'og:url') {
+        griefs.push(`${page} : <meta property="og:url"> désigne encore la production`);
+      }
+      if (propriete === 'og:title' && !(a.content ?? '').startsWith(PREFIXE_ATTENDU)) {
+        griefs.push(`${page} : og:title ne dit pas la préversion (« ${a.content ?? ''} », balise ${balise.slice(0, 60)})`);
+      }
     }
-    if (/<meta[^>]+property="og:url"/i.test(html)) {
-      griefs.push(`${page} : <meta property="og:url"> désigne encore la production`);
-    }
-    if (/application\/ld\+json/i.test(html)) {
-      griefs.push(`${page} : le bloc JSON-LD de production est resté dans la préversion`);
-    }
-    for (const m of html.matchAll(/<meta[^>]+property="og:title"[^>]+content="([^"]*)"/gi)) {
-      if (!m[1].startsWith('PRÉVISUALISATION — ')) {
-        griefs.push(`${page} : og:title ne dit pas la préversion (« ${m[1]} »)`);
+    for (const m of html.matchAll(BALISE_SCRIPT)) {
+      if ((attributsHtml(m[1]).type ?? '').trim().toLowerCase() === 'application/ld+json') {
+        griefs.push(`${page} : le bloc JSON-LD de production est resté dans la préversion`);
       }
     }
     /* LE LIEN DOIT MENER À LA FEUILLE QU'ON A VÉRIFIÉE, ET À AUCUNE AUTRE.

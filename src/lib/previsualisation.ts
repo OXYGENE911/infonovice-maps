@@ -207,21 +207,59 @@ export const LIEN_FEUILLE_PREVISUALISATION =
    CE QU'ON NE TOUCHE PAS : `og:image`, qui reste l'image de partage servie par
    la production. C'est le même dessin, ce n'est pas une affirmation d'être la
    production, et la préversion n'a pas d'image à elle. */
-const RETRAITS_PARTAGE: readonly RegExp[] = [
-  /[ \t]*<link[^>]+rel="canonical"[^>]*>\r?\n?/gi,
-  /[ \t]*<meta[^>]+property="og:url"[^>]*>\r?\n?/gi,
-  /[ \t]*<script type="application\/ld\+json">[\s\S]*?<\/script>\r?\n?/gi,
-];
+/* ON LIT DES ATTRIBUTS, PAS DES CHAÎNES — ET C'EST LA MÊME LEÇON QUE LA PORTE.
+   Le premier jet cherchait `rel="canonical"` littéralement. Codex l'a franchi
+   de quatre façons, toutes du HTML parfaitement valide : guillemets simples
+   (`rel='canonical'`), espaces autour du `=`, attributs dans un autre ordre
+   (`content` avant `property`), un attribut de plus sur le `<script>`. Et un
+   `>` dans une valeur d'attribut coupait la balise en deux, laissant un
+   fragment de texte dans la page. On balaie donc les balises en respectant les
+   guillemets, et on lit leurs attributs. */
+const BALISE_SIMPLE = /[ \t]*<(link|meta)\b((?:[^>"']|"[^"]*"|'[^']*')*)\/?>[ \t]*\r?\n?/gi;
+const BALISE_SCRIPT = /[ \t]*<script\b((?:[^>"']|"[^"]*"|'[^']*')*)>[\s\S]*?<\/script\s*>[ \t]*\r?\n?/gi;
+const ATTRIBUT = /([a-zA-Z0-9_:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'`=<>]+))/g;
+
+function attributs(interieur: string): Record<string, string> {
+  const lus: Record<string, string> = {};
+  for (const m of interieur.matchAll(ATTRIBUT)) {
+    const nom = m[1];
+    if (nom === undefined) continue;
+    lus[nom.toLowerCase()] = m[2] ?? m[3] ?? m[4] ?? '';
+  }
+  return lus;
+}
+
+/** Réécrit la valeur de `content` en gardant les guillemets d'origine. */
+function reecrireContenu(balise: string, transforme: (v: string) => string): string {
+  return balise.replace(
+    /(\bcontent\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s"'`=<>]+))/i,
+    (_tout, avant: string, dq?: string, sq?: string, nu?: string) => {
+      if (sq !== undefined) return `${avant}'${transforme(sq)}'`;
+      return `${avant}"${transforme(dq ?? nu ?? '')}"`;
+    },
+  );
+}
 
 export function neutraliserMetadonneesProduction(html: string): string {
-  let sortie = html;
-  for (const motif of RETRAITS_PARTAGE) sortie = sortie.replace(motif, '');
-  return sortie
-    .replace(/(<meta[^>]+property="og:title"[^>]+content=")/gi, `$1${PREFIXE_TITRE}`)
-    .replace(
-      /(<meta[^>]+property="og:site_name"[^>]+content="[^"]*)"/gi,
-      `$1 — ${MENTION_PREVISUALISATION}"`,
-    );
+  const sansScripts = html.replace(BALISE_SCRIPT, (balise, interieur: string) =>
+    (attributs(interieur).type ?? '').trim().toLowerCase() === 'application/ld+json' ? '' : balise);
+
+  return sansScripts.replace(BALISE_SIMPLE, (balise, nom: string, interieur: string) => {
+    const a = attributs(interieur);
+    if (nom.toLowerCase() === 'link') {
+      return (a.rel ?? '').trim().toLowerCase() === 'canonical' ? '' : balise;
+    }
+    const propriete = (a.property ?? '').trim().toLowerCase();
+    if (propriete === 'og:url') return '';
+    if (propriete === 'og:title') {
+      return reecrireContenu(balise, (v) => (v.startsWith(PREFIXE_TITRE) ? v : PREFIXE_TITRE + v));
+    }
+    if (propriete === 'og:site_name') {
+      const suffixe = ` — ${MENTION_PREVISUALISATION}`;
+      return reecrireContenu(balise, (v) => (v.endsWith(suffixe) ? v : v + suffixe));
+    }
+    return balise;
+  });
 }
 
 /* PAS DE REPLI SILENCIEUX (même règle que la version dans `vite.config.ts`) :

@@ -8,6 +8,7 @@ import {
   ROBOTS_PREVISUALISATION,
   estPrevisualisation,
   marquerHtmlPrevisualisation,
+  neutraliserMetadonneesProduction,
 } from '../src/lib/previsualisation';
 
 /* LE MARQUAGE DE LA PRÉVERSION (STAGING-1, 13/09/2026).
@@ -195,6 +196,45 @@ describe('la préversion se dit aussi quand on PARTAGE son lien', () => {
 
   it('laisse og:image tranquille : c’est le même dessin, pas une affirmation', () => {
     expect(marquee).toContain('<meta property="og:image" content="https://maps.infonovice.fr/partage-social.png">');
+  });
+
+  it('retire et préfixe aussi quand le HTML est écrit autrement — 6e revue Codex', () => {
+    /* QUATRE VARIANTES, TOUTES DU HTML VALIDE, TOUTES PASSÉES EN REVUE :
+       guillemets simples, espaces autour du `=`, `content` avant `property`,
+       un attribut de plus sur le `<script>`. Et un `>` dans une valeur
+       d'attribut, qui coupait la balise en deux et laissait un fragment de
+       texte dans la page. */
+    const varie = [
+      '<!doctype html>',
+      '<html lang="fr">',
+      '<head>',
+      '  <title>Infonovice Maps</title>',
+      "  <link rel='canonical' href='https://maps.infonovice.fr/' title='Carte > accueil'>",
+      '  <meta content="Infonovice Maps" property="og:title">',
+      "  <meta property = 'og:url' content='https://maps.infonovice.fr/'>",
+      '  <script id="schema" type="application/ld+json">{"url":"https://maps.infonovice.fr/"}</script>',
+      '</head>',
+      '<body><h1>Carte</h1></body>',
+      '</html>',
+    ].join('\n');
+    const sortie = marquerHtmlPrevisualisation(varie, 'index.html');
+    expect(sortie).not.toMatch(/canonical/);
+    expect(sortie).not.toMatch(/og:url/);
+    expect(sortie).not.toMatch(/ld\+json/);
+    expect(sortie).toContain(`property="og:title"`);
+    expect(sortie).toContain(`content="${PREFIXE_TITRE}Infonovice Maps"`);
+    // Le fragment de texte parasite : la balise est retirée ENTIÈREMENT.
+    expect(sortie).not.toMatch(/accueil/);
+  });
+
+  it('et un marquage rejoué deux fois ne double pas le préfixe', () => {
+    const une = marquerHtmlPrevisualisation(
+      '<html><head><title>T</title><meta property="og:title" content="M"></head><body></body></html>',
+      'index.html',
+    );
+    // La ré-entrée est déjà gardée par `data-previsualisation="cadre"`, mais la
+    // neutralisation, elle, doit rester idempotente si on l'appelle seule.
+    expect(neutraliserMetadonneesProduction(une)).toBe(une);
   });
 
   it('et la production, elle, garde tout : le marquage ne s’applique qu’en préversion', () => {
