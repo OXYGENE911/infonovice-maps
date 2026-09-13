@@ -1683,10 +1683,10 @@ Si un visiteur demande pourquoi les fiches de monuments n'ont pas de photo :
 > assez, pas avant. »
 
 Variante courte, si le visiteur est pressé :
-« Quinze des dix-huit services que cette carte interroge sont en `.fr` :
-services publics et communs français. Les trois autres, nous les nommons au
-lieu de promettre « sans exception » — la météo allemande, le commun
-français d'imagerie Panoramax (en `.xyz`), et la plateforme qui sert le
+« Sur les dix-huit services que cette carte déclare pouvoir appeler, quinze
+sont en `.fr` : services publics et communs français. Les trois autres, nous
+les nommons au lieu de promettre « sans exception » — la météo allemande, le
+commun français d'imagerie Panoramax (en `.xyz`), et la plateforme qui sert le
 fichier Etalab des bornes de recharge. Et l'exception photo que « À propos »
 annonce encore, cette version la retire. »
 

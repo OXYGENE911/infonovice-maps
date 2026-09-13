@@ -55,7 +55,9 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   l. 164, fichier identique sur `origin/main`, `origin/staging` et cette
   branche. Les deux variantes **comptent** désormais (**15 hôtes en `.fr` sur
   les 18 de la CSP servie**) et **nomment** les deux exceptions, au lieu d'en
-  promettre une seule. Documentation seule : aucun code, aucun test touché.
+  promettre une seule — « déclare pouvoir appeler », et non
+  « interroge » : la CSP autorise, elle ne prouve pas qu'une session les
+  contacte tous. Documentation seule : aucun code, aucun test touché.
 - **Non fait, et dit** : `a-propos.html` décrit encore la « seconde
   exception » Wikimedia (l. 166 et 171). Cette page fait l'objet d'une
   décision CEO ouverte et sort du périmètre de la tâche — la page annonce
