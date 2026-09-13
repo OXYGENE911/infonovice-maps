@@ -1626,9 +1626,14 @@ emplacement réservé qui n'attendait plus rien. Effet de bord mesuré : la fich
 illustrée débordait et se laissait défiler (652 px de contenu pour 451 px de
 fenêtre) ; sans photo, elle tient entière.
 
-**Poids du bundle** : `dist/assets/index-*.js` passe de 361,85 ko à 359,44 ko
-(gzip 116,89 → 115,98 ko), builds reproductibles (`index-CKaEWQhM.js` avant,
-`index-Dgu8MxWE.js` après).
+**Poids du bundle**, remesuré le 13/09/2026 par deux `npm run build` propres
+(`rm -rf dist`), l'un sur `e453a48` (avant), l'autre sur `c50f5a4` (après) :
+`dist/assets/index-*.js` passe de **361,85 ko à 359,44 ko** (gzip **116,89 →
+115,99 ko**). Empreintes réellement produites : **`index-CKaEWQhM.js` avant**,
+**`index-FF7fm51B.js` après** — cette dernière vérifiée reproductible sur deux
+builds consécutifs. *Une version antérieure de cette page citait
+`index-Dgu8MxWE.js` pour l'état « après » : aucun commit de la branche ne produit
+cette empreinte, elle était fausse et est corrigée ici.*
 
 #### La porte laissée ouverte — Panoramax, et à quelles conditions
 
@@ -1667,16 +1672,48 @@ courses d'une reprise après le 18/10.
 
 Si un visiteur demande pourquoi les fiches de monuments n'ont pas de photo :
 
-> « Parce que la seule base d'images qui couvrait nos monuments est américaine,
-> et qu'ici tout vient de sources françaises — sans exception. On a préféré
-> retirer la photo plutôt que faire une entorse à la règle. L'équivalent
-> français, Panoramax, ne couvre aujourd'hui qu'un monument sur trois : on le
-> remettra le jour où il en couvrira assez, pas avant. »
+> « Parce que la seule photothèque qui couvrait nos monuments appartient à une
+> fondation américaine. Nous nous autorisons **une** exception, et elle est
+> écrite dans notre page « À propos » : la météo, qui vient d'un service
+> allemand, faute d'équivalent français interrogeable sans clé. Nous n'en avons
+> pas ouvert une deuxième pour une photo. L'équivalent français, Panoramax, ne
+> couvre aujourd'hui qu'un monument sur trois : il reviendra quand il en
+> couvrira assez, pas avant. »
 
-Elle est vraie, elle est courte, elle ne s'excuse pas : c'est une règle tenue,
-pas une fonction ratée. Variante en une phrase, si le visiteur est pressé :
-« On ne sert que des sources françaises, et la photo n'en avait pas — elle
-sortira quand Panoramax couvrira assez de monuments. »
+Variante en une phrase, si le visiteur est pressé :
+« Nos données viennent des services publics français, à une exception près que
+nous écrivons nous-mêmes — la météo. Nous n'en avons pas ouvert une seconde
+pour une photo. »
+
+**Ce que cette phrase ne dit plus, et pourquoi.** La version précédente disait
+« ici tout vient de sources françaises — sans exception ». C'était faux, et faux
+dans le document que le visiteur peut ouvrir sur son téléphone pendant qu'on lui
+parle : `a-propos.html`, en ligne, annonce lui-même une exception météo
+(Open-Meteo, allemand). Relevé le 13/09/2026 sur l'`index.html` de `c50f5a4` :
+la CSP servie compte **18 hôtes externes distincts**, dont
+**`api.open-meteo.com`**. Une phrase de stand que l'application contredit à
+l'écran ne tient pas dix secondes devant une caméra.
+
+**Les trois pièges de la page « À propos », et la réponse vraie à chacun.**
+
+| Ce que le visiteur lit dans « À propos » | Ce qu'on répond |
+|---|---|
+| « Première exception : la météo » (Open-Meteo, allemand) | Vrai, assumé, et c'est nous qui l'avons écrit. Elle tombera le jour où une donnée publique française sera interrogeable sans clé. |
+| « Seconde exception : les photos des monuments » (Wikimedia) | **La page a une version de retard : la fonction est retirée du produit par cette tâche.** Sa reprise fait l'objet d'une décision CEO ouverte. À dire tel quel, pas à esquiver. |
+| « le code est hébergé sur GitHub … trois sociétés américaines » | Vrai, et écrit par nous. La chaîne qui livre la page n'est pas française ; les **données**, elles, viennent des services publics français. Ne jamais promettre la première en parlant des secondes. |
+
+**Tant que `a-propos.html` n'est pas repris, la phrase du stand doit devancer la
+page, jamais la contredire** : on dit l'exception avant que le visiteur la
+trouve.
+
+*Précision d'honnêteté sur le décompte.* Sur les 18 hôtes, 15 sont en `.fr`
+(services publics et communs français) ; `api.panoramax.xyz` est le commun
+français d'imagerie que la page « À propos » décrit déjà ;
+`public.opendatasoft.com` sert le fichier consolidé Etalab des bornes IRVE
+(donnée publique française) — **la nationalité de l'éditeur de cette plateforme
+n'a pas été vérifiée ici** ; `api.open-meteo.com` est l'exception météo. C'est
+pourquoi la phrase parle de *nos données* et d'une exception écrite, et jamais
+d'un « sans exception ».
 
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.
