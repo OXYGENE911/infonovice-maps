@@ -22,7 +22,7 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   recharge lisible — la définition mot pour mot de la feuille de relevé mobile, pour que le
   chiffre du poste et celui du téléphone se comparent. Il relevait jusqu'ici `performance.now()`
   après le chargement de la page : **étalonné avec un retard connu de 3 000 ms, l'ancien
-  instrument rendait 272 ms là où le nouveau rend 4 347 ms.** Les six chiffres qu'il aurait
+  instrument rendait 352 ms là où le nouveau rend 4 326 ms.** Les six chiffres qu'il aurait
   produits n'auraient rien dit du critère des 5 s.
 - **Une valeur bornée par la fenêtre d'observation ne sort plus sous le nom d'une mesure.**
   Quand la porte de sortie ne se referme pas — c'est-à-dire quand le correctif de la PR #318
@@ -46,7 +46,7 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   `total + nonResolus` dépasse le plafond (1 processus reconnu et 24 pids illisibles laissaient
   partir la campagne) ; le critère exige désormais un plan **lisible à l'écran** et non seulement
   écrit ; deux assertions E2E qui pouvaient rougir sans régression ont été retirées ou rendues
-  déterministes. **Reste ouvert et signalé :** `tests/sonde-bundle.test.ts` est sauté en CI.
+  déterministes. Au second passage, quatre trous de plus ont été fermés : l'étalonnage vérifie l'égalité `dureeCalculMs = planLisibleA − departA`, la fenêtre d'observation de la porte est déterministe et lue à l'horloge de l'observateur, et le contrôle de divergence n'est plus sauté en CI.
 - Nouveaux fichiers : `scripts/chrono-sonde.mjs` (verdicts purs, éprouvés dans les deux sens),
   `scripts/serveur-dist.mjs` (le serveur de la sonde, extrait pour être essayé sans navigateur),
   `tests/chrono-sonde.test.ts`, `tests/sonde-bundle.test.ts`, `tests-e2e/sonde-chrono.spec.ts`.

@@ -248,7 +248,15 @@ test('le chronomètre de la sonde rend le retard qu’on lui a injecté, pas le 
   //    Le chiffre reste publié au journal, pour qu'on puisse les comparer à la
   //    lecture sans en faire une condition de passage.
 
-  // 3 bis. LE CRITÈRE EXIGE UN PLAN LISIBLE À L'ÉCRAN, pas seulement écrit.
+  // 3 bis. LE CHIFFRE PUBLIÉ EST EXACTEMENT « plan lisible moins geste », et rien
+  //    d'autre. C'est ce qui ferme le trou laissé par le retrait de la
+  //    comparaison au chargement (revue Codex, 2e passage) : une régression qui
+  //    publierait la durée de chargement sous le nom du critère passerait des
+  //    bornes larges, mais pas cette égalité, qui recalcule la durée depuis les
+  //    horodatages bruts de l'observateur.
+  expect(v.dureeCalculMs,
+    'la durée publiée doit être planLisibleA moins departA, et rien d’autre')
+    .toBe(Math.round((brut.planLisibleA as number) - (brut.departA as number)));
   expect(v.dureeCalculInterneMs, 'le plan doit avoir été écrit').not.toBeNull();
   expect(v.dureeCalculMs as number,
     'le plan lisible ne peut pas précéder le plan écrit')
@@ -344,7 +352,26 @@ test('la porte de sortie : quand elle paraît, ce que l’usager voit avant, et 
       .__sonde.porteOuverteA !== null,
     undefined, { timeout: 60_000 },
   );
-  await page.waitForTimeout(10_000);
+  /* DEUX CONDITIONS, ET C'EST L'OBSERVATEUR LUI-MEME QUI LES CONSTATE (revue
+     Codex, 2e passage). Attendre dix secondes cote Playwright ne garantit pas
+     dix secondes RELEVEES : si le rendu de la page est interrompu, la boucle
+     requestAnimationFrame ne tourne plus, toujoursOuverteApresMs reste petit,
+     et l'exigence des huit secondes rougirait sans regression. On attend donc
+     que l'observateur ait vu dix secondes s'ecouler depuis l'ouverture. Et
+     l'on conserve AUSSI la fenetre totale de 30 s depuis le geste : la version
+     precedente pouvait rendre la main vers 25 s et manquer une fermeture
+     regressive survenant a 27 s. */
+  await page.waitForFunction(
+    () => {
+      const w = (window as unknown as {
+        __sonde: { porteOuverteA: number | null; dernierRegard: number; departA: number | null };
+      }).__sonde;
+      if (w.porteOuverteA === null || w.departA === null) return false;
+      return w.dernierRegard - w.porteOuverteA >= 10_000
+        && w.dernierRegard - w.departA >= 30_000;
+    },
+    undefined, { timeout: 120_000 },
+  );
   const brut = await lireSonde(page);
   const p = jugerPorte(brut);
 

@@ -391,12 +391,12 @@ vérifie que le chronomètre le rend. Relevé le 13/09 sur ce poste (Playwright,
 | grandeur | valeur |
 |---|---|
 | retard injecté | **3 000 ms** |
-| chargement de la page (ce que l'ANCIENNE sonde publiait) | **272 ms** |
-| durée de l'itinéraire seul (jalon) | **3 028 ms** |
-| **durée du calcul, du geste au plan de recharge LISIBLE** | **4 347 ms** |
+| chargement de la page (ce que l'ANCIENNE sonde publiait) | **352 ms** |
+| durée de l'itinéraire seul (jalon) | **3 034 ms** |
+| **durée du calcul, du geste au plan de recharge LISIBLE** | **4 326 ms** |
 | fin du chronomètre | un vrai plan (1 arrêt, 54 min de charge, arrivée à 10 %) |
 
-**272 ms contre 4 347 ms : l'ancien instrument se trompait d'un ordre de grandeur, et son chiffre ne
+**352 ms contre 4 326 ms : l'ancien instrument se trompait d'un ordre de grandeur, et son chiffre ne
 contenait même pas le retard qu'on venait d'injecter.** Le rapport exact varie d'une exécution à
 l'autre — c'est le temps de chargement qui bouge ; ce qui ne bouge pas, c'est que l'ancien chiffre
 n'a jamais contenu le retard. C'est cela qu'on aurait présenté comme la
@@ -553,11 +553,11 @@ Mission : « n'y touche pas — mesure-le ». Mesuré le 13/09, service d'itiné
 |---|---|
 | **6 ms** | `Calcul de l'itinéraire…` |
 | **2 513 ms** | `Calcul de l'itinéraire…` **+** `Le service d'itinéraire de l'IGN répond lentement — le calcul continue…` |
-| **15 025 ms** | `Le service d'itinéraire de l'IGN ne répond toujours pas. Vous pouvez réessayer.` **+ le bouton** |
+| **15 029 ms** | `Le service d'itinéraire de l'IGN ne répond toujours pas. Vous pouvez réessayer.` **+ le bouton** |
 | **16 524 ms** | `Le calcul d'itinéraire est momentanément indisponible. Réessayez dans un instant.` |
 
 Autres chiffres du même relevé : la porte **ne se referme pas** — toujours ouverte après
-**10 013 ms** observées (la fenêtre part désormais de l'OUVERTURE de la porte, non du départ), `dureeDeVieMs: null` (exigence du CEO : au moins 8 000 ms — tenue, et le
+**14 980 ms** observées (la fenêtre part désormais de l'OUVERTURE de la porte, non du départ), `dureeDeVieMs: null` (exigence du CEO : au moins 8 000 ms — tenue, et le
 nombre publié est nommé pour ce qu'il est). Et le bouton est **sous la ligne de flottaison** (y = 732
 pour une fenêtre de 720).
 
@@ -599,7 +599,14 @@ sérieux, tous fondés :
 | les pids **non résolus** n'invalidaient pas la campagne : 1 reconnu + 24 illisibles laissait partir la mesure | corrigé : la garde juge aussi la borne pessimiste `total + nonResolus`, et refuse |
 | une durée sortait sous le nom du critère pour un plan **écrit mais jamais lisible** | corrigé : le critère est `planLisibleA` ; le plan écrit sort sous `dureeCalculInterneMs` |
 | deux assertions E2E pouvaient **rougir sans régression** (comparaison de durées indépendantes ; fenêtre d'observation trop courte sur un runner lent) | corrigées : l'assertion non fondée est retirée, la fenêtre part de l'ouverture de la porte |
-| `tests/sonde-bundle.test.ts` est **sauté en CI** (`npm test` y tourne avant `npm run build`) | **NON corrigé** — remettre le workflow en ordre est hors périmètre. Reste ouvert, et Codex a raison de l'appeler un vert de complaisance côté CI. |
+| `tests/sonde-bundle.test.ts` est **sauté en CI** (`npm test` y tourne avant `npm run build`) | corrigé au 2ᵉ passage : le fichier est scindé. Le contrôle lui-même s'éprouve sur une arborescence d'essai bâtie dans le test, **sans build, donc en CI aussi** ; seule la question « le vrai chunk est-il absent d'`index.html` ? » reste sautée sans `dist/`, et elle est établie en CI par le parcours E2E. |
+
+**Second passage Codex** — points 1 à 3 confirmés corrigés, quatre trous restants, tous
+traités : l'étalonnage vérifie désormais l'ÉGALITÉ `dureeCalculMs = planLisibleA − departA`
+(une régression ne peut plus publier autre chose sous ce nom) ; la fenêtre d'observation de la
+porte exige dix secondes depuis l'ouverture **et** trente depuis le geste ; l'attente porte sur
+l'horloge de l'observateur, pas sur celle de Playwright ; le contrôle de divergence n'est plus
+sauté en CI.
 
 **Pourquoi la troisième correction a un coût assumé :** sur une machine où beaucoup de pids
 appartiennent à d'autres utilisateurs, la garde refusera désormais de mesurer. Ce n'est pas un
@@ -622,7 +629,5 @@ lui dise plutôt que de le contourner.
   Beraudier. Les deux chiffres se comparent à ce détail près, qui reste à réduire.
 - **Rien n'a été mesuré sur un téléphone.** Le calcul local sera plus lent sur mobile, jamais plus
   rapide.
-- **`tests/sonde-bundle.test.ts` ne tourne pas en CI** : `npm test` y précède `npm run build`, et le
-  bloc se déclare sauté faute de `dist/`. L'essai fait foi en local ; en CI, il ne protège rien.
 - **Les corrections apportées après la revue Codex n'ont pas été re-soumises à une revue complète**
   au moment où ce document est écrit — voir le §14 bis pour ce qui a été traité et ce qui reste.
