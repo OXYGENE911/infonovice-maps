@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error — script de construction en JS, hors du périmètre de tsc.
-import { verifierPrevisualisation } from '../scripts/verifier-previsualisation.mjs';
+import { verifierPrevisualisation, REFERENCE_MARQUAGE } from '../scripts/verifier-previsualisation.mjs';
 import {
   BANDEAU_PREVISUALISATION,
   ENTETES_PREVISUALISATION,
@@ -746,5 +746,71 @@ describe('les pages livrées', () => {
 
   it('un dossier vide est refusé, pas « conforme par défaut »', () => {
     expect(griefsDe().length).toBeGreaterThan(0);
+  });
+});
+
+/* LE SEUIL QUI SE CONTOURNAIT D'UN CARACTÈRE (objection du vérificateur
+ * indépendant, 13/09 — dernier point de la PR #317).
+ *
+ * La porte refusait le ZÉRO. `border: 0` et `font-size: 0` étaient donc
+ * couverts… et `border: 0.1px` / `font-size: 0.1px` passaient, en faisant
+ * imprimer à la porte « cadre inerte, pastille à 0.1 px » — c'est-à-dire la
+ * même fausse assurance que la sonde d'origine, décalée d'un chiffre.
+ *
+ * LE PLANCHER N'EST PAS UN NOMBRE CHOISI : c'est la valeur que la feuille de
+ * référence écrit. Le premier test ci-dessous est celui qui le garantit : si
+ * quelqu'un change le liseré dans `previsualisation.ts` sans toucher au
+ * plancher (ou l'inverse), il rougit. Sans lui, les deux nombres dériveraient
+ * en silence et le plancher redeviendrait arbitraire. */
+describe('les planchers de la porte SONT ceux de la feuille de référence', () => {
+  const ref = REFERENCE_MARQUAGE as { liserePx: number; taillePastillePx: number; boitePx: number };
+  const poseCss = (contenu: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'previsualisation.css'), contenu);
+    return griefsDe().join(' ');
+  };
+
+  it('les deux nombres ne peuvent pas diverger de la feuille en silence', () => {
+    expect(FEUILLE_PREVISUALISATION).toContain(`border: ${ref.liserePx}px solid`);
+    expect(FEUILLE_PREVISUALISATION).toContain(`font: 700 ${ref.taillePastillePx}px/1.5`);
+  });
+
+  it('« border: 0.1px » ne suffit plus à franchir la porte', () => {
+    expect(poseCss(FEUILLE_PREVISUALISATION.replace('border: 4px solid', 'border: 0.1px solid')))
+      .toMatch(/plus fin que la référence/);
+  });
+
+  it('« font-size: 0.1px » non plus', () => {
+    expect(poseCss(`${FEUILLE_PREVISUALISATION}
+.previsualisation-pastille { font-size: 0.1px; }
+`))
+      .toMatch(/plus petite que la référence/);
+  });
+
+  it('un liseré de 3 px — « medium », la valeur par défaut d’un raccourci sans largeur', () => {
+    expect(poseCss(FEUILLE_PREVISUALISATION.replace('border: 4px solid #FFB300;', 'border: solid #FFB300;')))
+      .toMatch(/plus fin que la référence/);
+  });
+
+  it('une largeur de boîte sous le pixel est une boîte vide à l’écran', () => {
+    expect(poseCss(`${FEUILLE_PREVISUALISATION}
+.previsualisation-cadre { width: 0.5px; }
+`))
+      .toMatch(/sous le pixel/);
+  });
+
+  /* ET CE QUE LA PORTE NE SAIT PAS CONVERTIR, ELLE LE REFUSE. Sans cela, le
+     plancher se contournerait en changeant d'unité : `0.5em` vaut 0.5 pour un
+     `parseFloat` naïf, donc « moins de 4 » — mais 8 px à l'écran. La porte
+     dirait alors une chose fausse dans un sens comme dans l'autre. */
+  it('une épaisseur dans une unité non convertible est refusée, pas comparée à tort', () => {
+    expect(poseCss(FEUILLE_PREVISUALISATION.replace('border: 4px solid', 'border: 0.5em solid')))
+      .toMatch(/ne sait pas la convertir/);
+  });
+
+  it('et la feuille de référence, elle, passe toujours sans le moindre grief', () => {
+    dossierConforme();
+    const griefs = griefsDe();
+    expect(griefs, griefs.join(' | ')).toEqual([]);
   });
 });

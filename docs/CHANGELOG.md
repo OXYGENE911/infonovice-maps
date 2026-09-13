@@ -28,8 +28,11 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   `*.pages.dev`. `CNAME` et `sitemap.xml` sortent du `dist/` de préversion.
 - **Une porte avant le déploiement** (`scripts/verifier-previsualisation.mjs`)
   relit le dossier réellement construit et refuse de livrer s'il manque une
-  seule marque sur une seule des sept pages. Contre-épreuve faite : le même
-  script rejette un `dist/` de production avec 40 griefs.
+  seule marque sur une seule des huit pages. Contre-épreuve refaite après la
+  fusion de `staging` : le même script rejette le `dist/` de production avec
+  **85 griefs**, code 1 — 10 par page (8 pages) plus 5 sur les fichiers de
+  socle. Le chiffre suit le nombre de pages : il ne se compare qu'à un relevé
+  fait sur le MÊME dossier.
 - **Deux revues Codex ont trouvé dix façons de franchir la porte.** Toutes de la
   même famille : elle cherchait des CHAÎNES là où il fallait lire une STRUCTURE.
   Un `X-Robots-Tag` en commentaire, sous `/prive/*`, sous le domaine d'un tiers,
@@ -39,9 +42,29 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   `display : none` avec des espaces. Une page dans un sous-dossier. Un lien de
   feuille qui ne résout nulle part. La porte lit désormais les groupes, les
   blocs, toutes les règles d'un sélecteur, et suit les liens jusqu'au fichier.
-  Vingt tests la mettent à l'épreuve (`tests/porte-previsualisation.test.ts`), et
-  son témoin « conforme » est bâti avec les constantes de production, pas écrit
-  à la main pour la circonstance.
+  Cent-sept tests la mettent à l'épreuve (`tests/porte-previsualisation.test.ts`),
+  et son témoin « conforme » est bâti avec les constantes de production, pas
+  écrit à la main pour la circonstance.
+- **LE SEUIL QUI SE CONTOURNAIT D'UN CARACTÈRE, FERMÉ** (vérificateur
+  indépendant, 13/09). La porte refusait le ZÉRO : `border: 0`, `font-size: 0`.
+  Un chiffre de plus la franchissait. Mesuré, pas supposé : sur le `dist/` de
+  préversion réellement construit, augmenté de `border: 0.1px` et
+  `font-size: 0.1px`, la porte d'avant sortait en **code 0** en imprimant
+  « liseré de 0.1 px solid #ffb300, cadre inerte, pastille à 0.1 px » puis
+  « Préversion conforme : peut être déployé ». C'est le défaut de la sonde
+  d'origine, décalé d'un chiffre.
+  **Le plancher n'est pas un nombre choisi** : ce sont les valeurs que la
+  feuille de référence écrit (4 px de liseré, 13 px de pastille), et un test
+  rougit si l'une des deux bouge sans l'autre — elles ne peuvent plus diverger
+  en silence. Une épaisseur dans une unité que la porte ne sait pas convertir
+  est refusée plutôt que comparée à tort (`0.5em` vaut 8 px, pas 0,5). Une
+  boîte sous le pixel est traitée comme une boîte nulle. Sur la même sonde, la
+  porte sort désormais en **code 1**, deux griefs chiffrés.
+  **Et ce qui reste ouvert est écrit, dans le script et ici** : `opacity` n'est
+  refusée qu'à zéro (`opacity: 0.05` passe) et `text-indent` qu'à partir de
+  −1000 px (`-999px` passe). Les resserrer demanderait de juger un rendu contre
+  un fond et une largeur inconnus — la porte lit du texte, elle ne peint pas la
+  page — et `opacity: 0.5` a déjà été jugé visible en revue, test à l'appui.
 - **Deux trous de sécurité dans le workflow, fermés.** `workflow_dispatch`
   laissait publier **n'importe quelle branche** sous `--branch=staging` : une
   garde de branche est maintenant la toute première étape, avant le `checkout`.

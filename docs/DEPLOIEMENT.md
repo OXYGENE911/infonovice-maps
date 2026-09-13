@@ -33,7 +33,7 @@ autre construction, autre hébergeur, autre domaine, autre workflow. Modifier
    forcément identique aux PR qui l'ont formée ;
 3. construction avec `INFONOVICE_ENVIRONNEMENT=previsualisation` ;
 4. **la porte** : `node scripts/verifier-previsualisation.mjs dist` relit le
-   dossier construit et exige, sur **chacune** des sept pages, le bandeau,
+   dossier construit et exige, sur **chacune** des huit pages, le bandeau,
    l'attribut `data-environnement`, la balise `robots` et le titre préfixé —
    plus `robots.txt` fermé, `_headers` présent, `CNAME` et `sitemap.xml`
    absents. **Un `dist/` non conforme ne part pas** ;

@@ -46,6 +46,65 @@ import { join, posix } from 'node:path';
 /** La SEULE feuille de bandeau admise : celle que le point 3 contrôle. */
 const FEUILLE_ATTENDUE = 'previsualisation.css';
 
+/* LES PLANCHERS, ET POURQUOI CE NE SONT PAS DES NOMBRES CHOISIS AU HASARD
+   (objection du vérificateur indépendant, 13/09).
+   La porte se contentait de refuser le ZÉRO : `border: 0`, `font-size: 0`.
+   Un seul caractère la franchissait — `border: 0.1px`, `font-size: 0.1px` —
+   et elle imprimait alors « cadre visible, pastille visible ». Même défaut que
+   la sonde d'origine, déplacé d'un chiffre.
+   LE PLANCHER N'EST DONC PAS UN NOMBRE QUE J'AI CHOISI : c'est la valeur que
+   la feuille de référence ÉCRIT, celle qui a été dessinée, revue et regardée à
+   la capture d'écran. La porte ne juge pas l'esthétique ; elle refuse un
+   marquage MOINS visible que celui qu'elle est censée trouver. Un changement
+   de design légitime se fait dans `src/lib/previsualisation.ts` ET ici, et le
+   test « les planchers SONT ceux de la feuille » rougit si l'un bouge seul :
+   les deux nombres ne peuvent pas diverger en silence.
+
+   CE QUI RESTE OUVERT, ÉCRIT PLUTÔT QUE TU. Deux seuils ne sont PAS resserrés,
+   et il faut dire lesquels :
+   - `opacity` : refusée à zéro seulement. `opacity: 0.05` passe donc. Le
+     resserrer demanderait de juger un contraste contre un fond inconnu — la
+     porte lit du texte, elle ne peint pas la page — et `opacity: 0.5` a déjà
+     été jugé VISIBLE en revue (faux positif corrigé, test à l'appui). Trancher
+     ici reviendrait à défaire cette décision sans mesure.
+   - `text-indent` : refusé à partir de −1000 px. `text-indent: -999px` passe
+     donc. La pastille est en `overflow: hidden`, mais la porte ignore sa
+     largeur peinte : elle ne sait pas dire à partir de quel décalage le texte
+     sort. Le rendu réel reste jugé à la capture d'écran, comme l'en-tête le
+     dit depuis le premier jour.
+   Ces deux trous sont dans le compte rendu de la PR, pas seulement ici. */
+const REFERENCE_MARQUAGE = {
+  /* `border: 4px solid #FFB300` dans FEUILLE_PREVISUALISATION. */
+  liserePx: 4,
+  /* `font: 700 13px/1.5 system-ui` dans FEUILLE_PREVISUALISATION. */
+  taillePastillePx: 13,
+  /* Une boîte qui mesure moins d'un pixel logique ne peint rien de lisible sur
+     aucun écran : ce plancher-ci n'est pas un choix de design, c'est la plus
+     petite surface qu'un navigateur ait à peindre. */
+  boitePx: 1,
+};
+
+/** Une longueur en PIXELS LOGIQUES, ou null si l'unité n'est pas comparable en
+    px. `0` est zéro dans toutes les unités, donc toujours comparable ;
+    `thin|medium|thick` valent 1, 3 et 5 px (valeurs usuelles des navigateurs).
+    UNE UNITÉ QU'ON NE SAIT PAS CONVERTIR REND `null`, et l'appelant refuse
+    plutôt que de comparer des choux et des carottes : `0.5em` vaut 8 px sur la
+    pastille, le comparer à un plancher en px donnerait un faux positif. */
+function pixels(mot) {
+  if (mot === null || mot === undefined) return null;
+  const m = String(mot).trim();
+  if (/^thin$/i.test(m)) return 1;
+  if (/^medium$/i.test(m)) return 3;
+  if (/^thick$/i.test(m)) return 5;
+  const n = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?)(px)?$/i.exec(m);
+  if (n === null) return null;
+  const v = Number.parseFloat(n[1]);
+  if (!Number.isFinite(v)) return null;
+  // Sans unité, seul le zéro a un sens ; « border-width: 4 » n'est pas du CSS.
+  if (n[2] === undefined && v !== 0) return null;
+  return v;
+}
+
 /** Retire le commentaire « # … » d'une ligne de robots.txt ou de _headers. */
 function sansCommentaire(ligne) {
   const i = ligne.indexOf('#');
@@ -407,24 +466,38 @@ function couleur(mot) {
 function tailleTexte(effectives) {
   const d = gagnante(effectives, ['font-size', 'font']);
   if (d === null) return null;
-  if (d.prop === 'font-size') return longueur(mots(d.valeur)[0] ?? '');
+  /* LE MOT BRUT EST RENDU AVEC LE NOMBRE, et ce n'est pas du confort : sans
+     lui, `0.5em` et `0.5px` sont le même « 0.5 » pour la porte, et le plancher
+     en pixels refuserait le premier à tort. */
+  if (d.prop === 'font-size') {
+    const mot = mots(d.valeur)[0] ?? '';
+    const v = longueur(mot);
+    return v === null ? null : { valeur: v, brute: mot };
+  }
   /* DANS LE RACCOURCI `font`, LA TAILLE EST LE DERNIER MOT DE TAILLE AVANT LA
      FAMILLE : dans « 700 13px/1.5 system-ui », « 700 » est la graisse et
      « 13px/1.5 » la taille. Prendre le PREMIER mot qui ressemble à un nombre
      laisserait passer « font: 700 0/1.5 system-ui ». */
   let taille = null;
+  let brute = null;
   /* LES ESPACES AUTOUR DE LA BARRE SONT LÉGAUX, ET COÛTAIENT LA PORTE : Codex
      est passé avec `font: 700 0 / 1.5 system-ui`, où la lecture mot à mot
      retenait « 1.5 » (l'interligne) comme taille. On recolle la barre d'abord. */
   const recolle = d.valeur.replace(/\s*\/\s*/g, '/');
   for (const mot of mots(recolle)) {
     const avantBarre = mot.split('/')[0];
-    if (mot.includes('/')) { const v = longueur(avantBarre); if (v !== null) taille = v; continue; }
-    if (/^(xx-small|x-small|small|large|x-large|xx-large|smaller|larger)$/i.test(mot)) { taille = 16; continue; }
+    if (mot.includes('/')) {
+      const v = longueur(avantBarre);
+      if (v !== null) { taille = v; brute = avantBarre; }
+      continue;
+    }
+    if (/^(xx-small|x-small|small|large|x-large|xx-large|smaller|larger)$/i.test(mot)) {
+      taille = 16; brute = '16px'; continue;
+    }
     const v = longueur(mot);
-    if (v !== null) taille = v;
+    if (v !== null) { taille = v; brute = mot; }
   }
-  return taille;
+  return taille === null ? null : { valeur: taille, brute };
 }
 
 /** Le liseré effectif du cadre : son épaisseur la plus fine, son style et sa
@@ -466,6 +539,9 @@ function liseré(effectives) {
     const teinte = composante('border-color', (x) => couleur(x) !== null, null);
     return {
       epaisseur: largeur === null ? null : longueur(largeur),
+      // LE MOT TEL QU'IL EST ÉCRIT, gardé à côté du nombre : c'est lui qui
+      // porte l'unité, et le plancher se compare en pixels (voir `pixels`).
+      largeurBrute: largeur,
       // `border-style` vaut `none` par défaut : un raccourci sans style ne
       // dessine rien, et c'est bien ce que peint le navigateur.
       style: composante('border-style', (x) => MOT_STYLE_BORDURE.test(x), 'none'),
@@ -473,8 +549,12 @@ function liseré(effectives) {
     };
   });
 
-  const connues = parCote.map((c) => c.epaisseur).filter((v) => v !== null && v !== undefined);
-  const epaisseur = connues.length === 0 ? null : Math.min(...connues);
+  const connues = parCote.filter((c) => c.epaisseur !== null && c.epaisseur !== undefined);
+  // LE CÔTÉ LE PLUS FIN COMMANDE : un cadre percé d'un côté n'est plus un cadre.
+  const plusFin = connues.length === 0
+    ? null
+    : connues.reduce((a, b) => (b.epaisseur < a.epaisseur ? b : a));
+  const epaisseur = plusFin === null ? null : plusFin.epaisseur;
   /* UNE LARGEUR SANS STYLE NE PEINT RIEN : la valeur initiale de
      `border-style` est `none`. Un `border-width: 4px` seul n'est pas un
      liseré, et la porte ne doit pas le prendre pour tel. */
@@ -486,6 +566,7 @@ function liseré(effectives) {
   const invisible = cotes.findIndex((_c, i) => parCote[i].teinte === 'transparent');
   return {
     epaisseur,
+    epaisseurBrute: plusFin === null ? null : plusFin.largeurBrute,
     // On nomme le côté FAUTIF quand il y en a un : c'est lui qu'on corrige.
     style: sansStyle === -1 ? styleDe(parCote[0]) : styleDe(parCote[sansStyle]),
     coteSansStyle: sansStyle === -1 ? null : cotes[sansStyle],
@@ -539,12 +620,18 @@ function raisonInvisible(effectives) {
   // `scale: 1 1 0` ne met à plat que l'axe Z : les deux premiers seuls comptent.
   if (s !== null && mots(s).slice(0, 2).some((m) => Number.parseFloat(m) === 0)) return `scale: ${s}`;
 
-  // Une boîte de taille nulle, sur n'importe laquelle des dimensions.
+  /* Une boîte de taille nulle — OU SOUS LE PIXEL, ce qui revient au même à
+     l'écran et ne coûtait qu'un caractère (`width: 0` → `width: 0.5px`).
+     Le zéro est refusé dans TOUTES les unités ; le plancher d'un pixel ne
+     s'applique qu'aux longueurs qu'on sait convertir, sinon `0.5em` (8 px,
+     parfaitement peint) serait refusé à tort. */
   for (const prop of ['width', 'height', 'max-width', 'max-height']) {
     const v = val(prop);
     if (v === null) continue;
-    const n = longueur(v.split(/\s+/)[0]);
-    if (n === 0) return `${prop}: ${v}`;
+    const mot = v.split(/\s+/)[0];
+    if (longueur(mot) === 0) return `${prop}: ${v}`;
+    const px = pixels(mot);
+    if (px !== null && px < REFERENCE_MARQUAGE.boitePx) return `${prop}: ${v} (sous le pixel)`;
   }
 
   // Les découpes qui ne laissent rien voir.
@@ -726,6 +813,10 @@ function cibleDuLien(href, pageRelative) {
   return posix.normalize(dossierPage === '.' ? chemin : posix.join(dossierPage, chemin));
 }
 
+/* EXPORTÉE POUR QUE LE TEST PUISSE LA CONFRONTER À LA FEUILLE DE RÉFÉRENCE.
+   C'est ce qui empêche les deux nombres de diverger en silence. */
+export { REFERENCE_MARQUAGE };
+
 export function verifierPrevisualisation(dossier) {
   const griefs = [];
   const constats = [];
@@ -786,6 +877,16 @@ export function verifierPrevisualisation(dossier) {
         griefs.push('previsualisation.css : le cadre ne dessine aucun liseré');
       } else if (trait.epaisseur <= 0) {
         griefs.push(`previsualisation.css : le liseré du cadre a une épaisseur nulle (${trait.epaisseur})`);
+      } else {
+        /* LE PLANCHER, ET IL VIENT DE LA FEUILLE DE RÉFÉRENCE, PAS DE MOI.
+           `border: 0.1px` franchissait le test du zéro et la porte annonçait
+           un cadre visible. */
+        const px = pixels(trait.epaisseurBrute);
+        if (px === null) {
+          griefs.push(`previsualisation.css : épaisseur de liseré « ${trait.epaisseurBrute} » — la porte ne sait pas la convertir en pixels, donc elle refuse de la comparer aux ${REFERENCE_MARQUAGE.liserePx} px de référence`);
+        } else if (px < REFERENCE_MARQUAGE.liserePx) {
+          griefs.push(`previsualisation.css : le liseré du cadre est plus fin que la référence (${px} px < ${REFERENCE_MARQUAGE.liserePx} px)`);
+        }
       }
       if (trait.coteSansStyle !== null) {
         griefs.push(`previsualisation.css : le liseré du cadre n'est pas dessiné côté ${trait.coteSansStyle} (border-style: ${trait.style})`);
@@ -793,15 +894,22 @@ export function verifierPrevisualisation(dossier) {
       if (trait.coteTransparent !== null) {
         griefs.push(`previsualisation.css : le liseré du cadre est transparent côté ${trait.coteTransparent}`);
       }
-      if (taille !== null && taille <= 0) {
-        griefs.push(`previsualisation.css : la pastille a une taille de texte nulle (font-size: ${taille})`);
+      if (taille !== null && taille.valeur <= 0) {
+        griefs.push(`previsualisation.css : la pastille a une taille de texte nulle (font-size: ${taille.valeur})`);
+      } else if (taille !== null) {
+        const px = pixels(taille.brute);
+        if (px === null) {
+          griefs.push(`previsualisation.css : taille de pastille « ${taille.brute} » — la porte ne sait pas la convertir en pixels, donc elle refuse de la comparer aux ${REFERENCE_MARQUAGE.taillePastillePx} px de référence`);
+        } else if (px < REFERENCE_MARQUAGE.taillePastillePx) {
+          griefs.push(`previsualisation.css : la pastille est plus petite que la référence (${px} px < ${REFERENCE_MARQUAGE.taillePastillePx} px)`);
+        }
       }
       if (memeCouleur !== null) {
         griefs.push(`previsualisation.css : la pastille est illisible — ${memeCouleur}`);
       }
       if (griefs.length === avant) {
         constats.push(`previsualisation.css : liseré de ${trait.epaisseur} px ${trait.style ?? 'solid'} ${trait.teinte ?? ''}`.trimEnd()
-          + `, cadre inerte, pastille à ${taille ?? '(hérité)'} px`);
+          + `, cadre inerte, pastille à ${taille === null ? '(hérité)' : taille.valeur} px`);
       }
     }
   }
