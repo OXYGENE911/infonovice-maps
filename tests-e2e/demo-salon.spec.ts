@@ -289,7 +289,20 @@ test.describe('DÉMO SALON — Paris 15e → Lyon Part-Dieu, VF 8 Plus (T2, rect
      * CE QU'ELLE NE GARANTIT PLUS : qu'un exploitant NOMMÉ (Ionity, IZIVIA ou
      * un autre) soit présent sur le couloir. C'est assumé — ce fait appartient
      * à la donnée publique, pas au produit, et la veille hebdomadaire du
-     * corridor est l'endroit où il se surveille. */
+     * corridor est l'endroit où il se surveille.
+     *
+     * DEUX LIMITES QU'IL FAUT DIRE, relevées par la revue Codex du 13/09 et
+     * classées NON BLOQUANTES — elles sont écrites ici pour que personne ne
+     * croie ce parcours plus large qu'il n'est :
+     *   a) `.poi-filtres-effacer` prouve l'ÉTAT des filtres appliqués, pas
+     *      leur EFFET sur les bornes peintes. Un chargement qui ignorerait
+     *      `#filtres.itinerance` laisserait ce parcours vert. L'effet est
+     *      couvert ailleurs, à sec : `tests/index-bornes.test.ts` sur
+     *      `enItinerance` et le filtrage de `#chargerDepuisIndex` ;
+     *   b) compter les étiquettes ne prouve pas que la liste vienne DU TRAJET
+     *      plutôt que d'un catalogue national. Le prouver demanderait de
+     *      nommer un exploitant — exactement ce que la décision du 13/09
+     *      interdit. C'est le prix assumé de la décision, pas un oubli. */
     await test.step('4. L’itinérance, sans nommer aucun réseau', async () => {
       await allerA(page, 'recharge');
       const corps = page.locator('.vue[data-vue="recharge"]');
@@ -316,9 +329,15 @@ test.describe('DÉMO SALON — Paris 15e → Lyon Part-Dieu, VF 8 Plus (T2, rect
       await expect(etiquettes,
         `le résumé annonce ${annonces} réseaux, le corps devrait en montrer ${attendus}`)
         .toHaveCount(attendus);
+      /* UN NOM, PUIS UN COMPTE NON NUL. La revue Codex du 13/09 a relevé que
+         `/\([1-9]\d*\)$/` seul laissait passer quinze étiquettes ne portant
+         QUE « (1) » : le format documenté est `NOM (n)`, on l'exige. Le premier
+         caractère non blanc ne peut pas être une parenthèse — mais le NOM,
+         lui, a le droit d'en contenir : certains exploitants IRVE s'écrivent
+         « IZIVIA (SODETREL) ». */
       for (const texte of await etiquettes.allTextContents()) {
-        expect(texte, `« ${texte.trim()} » ne porte pas de compte non nul`)
-          .toMatch(/\([1-9]\d*\)\s*$/);
+        expect(texte, `« ${texte.trim()} » n'est pas de la forme NOM (n) avec n ≥ 1`)
+          .toMatch(/^\s*[^\s(][\s\S]*\([1-9]\d*\)\s*$/);
       }
       // ON NE COCHE AUCUN RÉSEAU — le dépliant est montré, pas utilisé.
 
