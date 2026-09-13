@@ -2,6 +2,159 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [Non publié] — 2026-09-12 — E2E-VERT-C5 (recB9dFvq0P1Rzohp)
+
+### La régression de la PR #313 sur le plan de recharge, corrigée
+
+- **`recharge.spec.ts:778` (« AUCUN appel tant que la section est repliée »)
+  redevient vert** — la cause était dans `panneau-itineraire.ts` : le
+  préchargement de l'index IRVE sur l'événement `vehicule-change` (PR #313,
+  cible 2) ne testait que « le véhicule n'est pas thermique », si bien qu'un
+  véhicule électrique par défaut — celui que `panneau-vehicule.ts` restaure
+  au chargement de la page même quand personne n'a jamais rien saisi
+  (capacité à 0) — déclenchait le téléchargement sans qu'aucun usager ne
+  l'ait demandé. Le garde utilise désormais `#lireVehicule()`, le même
+  filtre qui décide RÉELLEMENT si un plan de recharge peut se calculer
+  (batterie ET consommation renseignées) : précharger pour un profil que le
+  planificateur rejetterait de toute façon n'anticipe rien, et viole la
+  règle « ne jamais marteler les API publiques sans demande ». Le test
+  préexistant (déjà sur `main` avant la PR #313) sert de test de
+  non-régression : rouge de façon déterministe sur la branche `feat/
+  recgTL2LqMYAZf0mB-optim-paris-lyon` isolée (mesuré ce cycle), vert après
+  correctif. L'optimisation elle-même (précharger dès qu'un véhicule
+  électrique COMPLET est connu, avant même le calcul) reste intacte.
+
+
+
+### La suite E2E redevient verte de bout en bout
+
+- **`npm run e2e:demo` accepte enfin l'arrivée du lendemain.** L'assertion du
+  résumé (`.iti-resultat`) ne reconnaissait que la forme « arrivée vers
+  HH:MM » ; `#majResume` (panneau-itineraire.ts) dit « arrivée vers demain
+  HH:MM » quand le calcul fait franchir minuit — le cas du trajet simulé,
+  tard le soir, 5 h 22 de route. Regex corrigée pour accepter les deux formes
+  SANS relâcher la rigueur (heure et minutes restent deux chiffres chacune) —
+  `tests-e2e/demo-salon.spec.ts`. Verrouillé par un test unitaire dédié du
+  franchissement de minuit (`formaterHeureArrivee`, `src/lib/itineraire.ts`,
+  4 cas dont l'arrivée pile à 00:00) : cette fonction est un MIROIR de la
+  fermeture privée `heureArriveeReelle` de `#majResume` — pas une extraction,
+  `panneau-itineraire.ts` étant hors périmètre de cette tâche (mission A du
+  même cycle y travaille).
+- **Une régression réelle de la PR #313 est identifiée et isolée, PAS
+  corrigée ici** (hors périmètre — `panneau-itineraire.ts`, plan de
+  recharge, mission A) : `recharge.spec.ts:778` (« AUCUN appel tant que la
+  section est repliée ») échoue de façon déterministe dès la seule PR #313
+  (confirmé par bissection : vert sur `main`, rouge sur `978e685` isolément,
+  hors de toute interaction avec les PR #306/#314). Cause : le préchargement
+  de l'index IRVE sur l'événement `vehicule-change` (cible 2 de la PR #313)
+  se déclenche aussi quand `panneau-vehicule.ts` restaure le véhicule
+  sauvegardé au chargement de la page — pas seulement sur un changement
+  explicite de l'usager — et le véhicule par défaut est électrique. Une
+  recherche de bornes part donc alors que personne ne l'a demandée, en
+  contradiction avec la règle « ne jamais marteler les API publiques sans
+  demande ». Décrit en détail dans le rapport de tâche pour la mission A.
+- **Les échecs E2E locaux dits « préexistants » (PR #314 : 4 nommés ;
+  reproduits ici : 5 à 7 selon le run, jamais le même ensemble) sont
+  confirmés comme de la contention entre workers Playwright en parallèle,
+  PAS des régressions.** Méthode : chaque échec observé sur `npm run e2e`
+  (parallèle, machine partagée) a été rejoué isolément avec `--workers=1`
+  (2 à 3 répétitions chacun) — TOUS passent alors à 100 %, sur la branche
+  combinée comme sur la PR #313 seule. `playwright.config.ts` le documentait
+  déjà (workers:1 forcé en CI, jamais en local) ; ce cycle en apporte la
+  contre-épreuve chiffrée. `npm run e2e` en local reste donc sujet à un
+  sous-ensemble non déterministe et VARIABLE de faux rouges sous charge —
+  caractéristique préexistante de la machine partagée, pas du code — quand
+  la CI (workers:1) est stable.
+
+## [Non publié] — 2026-09-11 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
+
+### Paris → Lyon, plan de recharge inclus, sous 5 secondes
+- **Le calcul mesuré par le banc T3 (`docs/mesure-paris-lyon.md`) passait
+  systématiquement le seuil de 5 s (p95 6 704 à 9 454 ms sur trois passages,
+  banc corrigé, réseau réel) ; il tient désormais large (p95 1 410 à 3 494 ms
+  sur les six passages mesurés après optimisation — trois avant la seconde
+  correction Codex, trois après ; médiane 673 à 702 ms).**
+- **Débounce de planification automatique, 1 200 ms → 300 ms**
+  (`panneau-itineraire.ts`, `#minuteurPlanAuto` → `DEBOUNCE_PLAN_AUTO_MS`) :
+  une taxe fixe et garantie sur CHAQUE calcul, mesurée à elle seule entre
+  1 207 et 1 578 ms sur les 30 exécutions de référence. La règle « ne jamais
+  marteler les API publiques » vise le réseau, pas ce minuteur local, et le
+  nombre d'appels ne change pas pour les scénarios mesurés (banc T3, démo
+  salon). Un cas plus étroit reste ouvert, signalé et assumé (revue Codex,
+  remarque 5) : sur un itinéraire déjà calculé, deux modifications du
+  véhicule espacées de 300 ms à 1 200 ms relancent chacune un relevé
+  météo + altimétrie au lieu d'un seul — jamais l'IRVE ni l'itinéraire,
+  jamais dans les parcours exercés ici. Détail dans le commentaire au-dessus
+  de `DEBOUNCE_PLAN_AUTO_MS`.
+- **Préchargement de l'index IRVE dès que le véhicule est renseigné**, pendant
+  la saisie de la destination (`vehicule-change`), au lieu d'attendre le
+  calcul : `indexNational` dédoublonne les appels réellement concurrents et
+  sert le cache IndexedDB existant, donc précharger plus tôt le même appel
+  unique n'en ajoute aucun. Le premier calcul d'une session payait jusqu'à
+  plusieurs secondes de ce seul téléchargement (~700 Ko). Gate `estThermique` :
+  un véhicule thermique/hybride ne consulte jamais l'index IRVE, aucun
+  préchargement inutile. **`indexNational` (`src/lib/index-bornes.ts`) garde
+  aussi, depuis la revue Codex (remarque 2 du second passage), une mémoire de
+  session en plus d'IndexedDB** : sans elle, un préchargement terminé AVANT
+  le calcul (le cas courant) pouvait être suivi d'un second téléchargement si
+  l'écriture IndexedDB avait échoué (quota, navigation privée) — l'appel
+  réellement AJOUTÉ que la première version ne fermait pas complètement.
+- **Filtrage des 14 133 stations contre le corridor, par grille de cellules**
+  (`stationsDuTrajet`, `src/lib/le-long-du-trajet.ts`) : le pré-filtre par
+  boîte englobante existait déjà, mais chaque candidat retenu était ensuite
+  projeté sur TOUS les segments du trajet — un coût qui grandit avec la
+  LONGUEUR du trajet (plusieurs milliers de segments sur Paris-Lyon), mesuré
+  entre 2,1 et 3,9 s à lui seul. Une grille de cellules ramène cette
+  recherche aux ~9 cellules qui entourent chaque candidat, sans changer le
+  résultat (preuve dans le commentaire du code, contre-épreuve différentielle
+  dans `tests/le-long-du-trajet.test.ts`) — **cellules dimensionnées par axe**
+  (longitude ET latitude séparément, `mLonMinimal`), **latitude de référence
+  élargie de la marge du pré-filtre** : deux passes de revue Codex ont trouvé
+  deux variantes du même défaut — une cellule carrée en degrés, qui
+  sous-couvrait l'axe est-ouest d'un facteur ~1,4-1,5 à latitude française
+  (1ʳᵉ passe), puis une référence de latitude limitée aux seuls sommets du
+  tracé, insuffisante pour une station légèrement plus proche du pôle que le
+  tracé lui-même mais encore dans la marge du pré-filtre (2ᵉ passe) — les
+  deux corrigées et verrouillées par des tests de régression différentiels
+  (`tests/le-long-du-trajet.test.ts`, cas « CODEX #1 » et « CODEX #1bis »).
+  Une égalité exacte départagée par l'ordre des cellules plutôt que l'ordre
+  du trajet, et une grille disproportionnée à rayon nul, ont reçu le même
+  traitement (cas « CODEX #2 » et « CODEX #6 ») — voir
+  `handoffs/2026-09-11-2100-codex-optim.md`.
+- **Altimétrie, météo et IRVE, déjà lancés en parallèle** (`Promise.all`,
+  `#planifierRecharge`) : vérifié en tête de cette tâche, rien à changer —
+  une cible de moins à optimiser n'est pas une cible ratée.
+- Bundle (chunks JS, gzippé) : `panneau-itineraire` inchangé au Ko près,
+  `index` +1,4 Ko brut / gzip stable (grille de cellules + mémoire de
+  session). Aucune dépendance nouvelle, aucun appel réseau de plus dans les
+  scénarios mesurés, « Pourquoi ce plan ? » inchangé.
+- Revue Codex, deux passes : `handoffs/2026-09-11-2100-codex-optim.md` —
+  VERDICT BLOQUANT sur la première (2 remarques bloquantes, 4 sérieuses) ;
+  VERDICT BLOQUANT sur la deuxième également (1 remarque bloquante restante
+  sur la grille, corrigée depuis et vérifiée par un nouveau test de
+  régression, mais non revue une troisième fois faute de budget de temps sur
+  cette tâche — signalé au chef de cabinet dans le compte rendu de mission).
+## [Non publié] — 2026-09-11 — DEMO-SALON-E2E (rectlR6gVbiWQzUN4)
+
+### Le garde-fou du stand : un test qui rejoue la démo contre les API réelles
+- `tests-e2e/demo-salon.spec.ts` (`npm run e2e:demo`) rejoue les huit étapes du
+  scénario du Mondial de l'Auto (`docs/demo-salon.md`, PR #304) dans l'ordre,
+  **contre les vraies API** — IGN (itinéraire, altimétrie, tuiles WMTS),
+  Open-Meteo, l'index national IRVE — sans aucune route simulée. Le calcul
+  itinéraire + plan de recharge est chronométré (clic → résumé conclu, sondage
+  `raf`, pas de texte transitoire) ; le test échoue au-delà de 5 s.
+- **Deux `test()`**, comme le prescrit `docs/demo-salon.md` : les étapes 1 à 7,
+  puis l'étape 8 (mode avion) dans son propre préambule — la route de contexte
+  qui simulerait les tuiles du service worker casse le parcours hors réseau
+  (mesuré le 09/09, `tests-e2e/tuiles-simulees.ts`), et cette suite ne simule
+  de toute façon aucune tuile.
+- **Résultat mesuré, pas corrigé (hors périmètre de la tâche T2)** : le calcul
+  chronométré dépasse systématiquement les 5 s annoncés au stand — 6 391 ms
+  puis 6 514 ms sur deux exécutions indépendantes, contre les vraies API
+  publiques. Le couloir hors ligne (1 038 tuiles réelles pour Paris → Lyon) a
+  aussi perdu une tuile sur 1 038 lors d'une exécution, absorbée par la
+  reprise (`retries: 1`). Voir le rapport de la tâche T2 pour le détail et la
+  recommandation (statut **Bloqué**).
 ## [1.142.0] — 2026-09-11 — SALON-1
 
 ### La page du stand, `/salon.html` — jalon CEO du 18/09
