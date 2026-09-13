@@ -938,6 +938,49 @@ describe('le troisième seuil lâche, et la liste rendue complète', () => {
     expect(poseCss('.previsualisation-cadre { clip-path: none; filter: none; clip: auto; }')).toEqual('');
   });
 
+  /* 4 bis. CE QU'UN PREMIER JET AVAIT ENCORE MANQUÉ. Refermer l'échelle sous
+       `transform` et sous `scale` et la laisser ouverte sous `zoom` n'aurait rien
+       refermé du tout : la deuxième sonde l'a rendu, et c'est la raison pour
+       laquelle cette liste a été passée DEUX fois avant d'être publiée. */
+  it('« zoom: 0.0001 » est la même échelle sous un autre nom', () => {
+    expect(poseCss('.previsualisation-cadre { zoom: 0.0001; }'))
+      .toMatch(/zoom: 0\.0001.*rétréci.*plus petit que la référence/);
+  });
+
+  it('mais « zoom: 2 » agrandit, et « zoom: normal » ne dit rien', () => {
+    expect(poseCss('.previsualisation-cadre { zoom: 2; }')).toEqual('');
+    expect(poseCss('.previsualisation-cadre { zoom: normal; }')).toEqual('');
+  });
+
+  it('la propriété « rotate » avec un axe vaut « rotateY » : refusée aussi', () => {
+    expect(poseCss('.previsualisation-cadre { rotate: y 90deg; }'))
+      .toMatch(/rotate: y 90deg.*hors du plan.*pas évaluable/);
+    expect(poseCss('.previsualisation-cadre { rotate: x 90deg; }'))
+      .toMatch(/hors du plan/);
+  });
+
+  it('mais un angle seul, ou l’axe Z, tourne DANS le plan et ne cache rien', () => {
+    expect(poseCss('.previsualisation-cadre { rotate: 45deg; }')).toEqual('');
+    expect(poseCss('.previsualisation-cadre { rotate: z 45deg; }')).toEqual('');
+    expect(poseCss('.previsualisation-cadre { rotate: none; }')).toEqual('');
+  });
+
+  it('« all: unset » efface tout ce que la porte vient de lire', () => {
+    expect(poseCss('.previsualisation-cadre { all: unset; }'))
+      .toMatch(/all: unset.*efface les déclarations/);
+    expect(poseCss('.previsualisation-cadre { all: initial; }'))
+      .toMatch(/efface les déclarations/);
+  });
+
+  it('« border-image » remplace le liseré que la porte vient de mesurer', () => {
+    expect(poseCss('.previsualisation-cadre { border-image: linear-gradient(#0000, #0000) 1 fill; }'))
+      .toMatch(/border-image:.*refuse/);
+  });
+
+  it('et « border-image: none », la valeur inerte, passe', () => {
+    expect(poseCss('.previsualisation-cadre { border-image: none; }')).toEqual('');
+  });
+
   /* 5. `-webkit-text-fill-color` PEINT LE GLYPHE À LA PLACE DE `color`. */
   it('« -webkit-text-fill-color: transparent » rend la pastille illisible', () => {
     expect(poseCss('.previsualisation-pastille { -webkit-text-fill-color: transparent; }'))
@@ -1024,7 +1067,7 @@ describe('les cinq trous que la porte assume, et qu’elle déclare', () => {
   it('et la tête du script déclare ces cinq-là, nommément', () => {
     const source = readFileSync(new URL('../scripts/verifier-previsualisation.mjs', import.meta.url), 'utf-8');
     const entete = source.slice(0, source.indexOf('const REFERENCE_MARQUAGE'));
-    for (const mot of ['opacity', 'text-indent', 'HORS ÉCRAN', 'EMPILEMENT', 'ENTRE UN PIXEL ET LA RÉFÉRENCE']) {
+    for (const mot of ['opacity', 'text-indent', 'GÉOMÉTRIE DE LA BOÎTE', 'EMPILEMENT', 'ENTRE UN PIXEL ET LA RÉFÉRENCE']) {
       expect(entete, `« ${mot} » manque à la liste déclarée`).toContain(mot);
     }
   });

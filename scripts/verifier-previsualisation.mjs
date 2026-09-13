@@ -71,11 +71,16 @@ const FEUILLE_ATTENDUE = 'previsualisation.css';
    d'éteindre le bandeau a été ajoutée à la feuille réellement SERVIE, la porte
    relancée, et ce qui suit est ce qu'elle laisse encore passer.
 
-   REFERMÉ LE 13/09, CHACUN AVEC SON TEST : le plancher d'échelle ci-dessous,
-   les transformations non évaluables (`matrix`, `rotateY`, `perspective`…),
-   `display: contents`, les découpes, masques et filtres (`clip-path`, `clip`,
-   `mask`, `filter`, `backdrop-filter`), `-webkit-text-fill-color: transparent`,
-   et un interligne qui rogne le texte de la pastille.
+   REFERMÉ LE 13/09, CHACUN AVEC SON TEST — DOUZE FAMILLES : le plancher
+   d'échelle ci-dessous (`transform: scale`, la propriété `scale`, ET `zoom`,
+   qui est la même chose sous un autre nom — le premier jet de ce correctif
+   l'avait manqué, ce qui n'aurait rien refermé du tout) ; les transformations
+   non évaluables (`matrix`, `rotateY`, `perspective`…) et la propriété `rotate`
+   hors du plan ; `display: contents` ; les découpes, masques, filtres et
+   `border-image` (`clip-path`, `clip`, `mask`, `filter`, `backdrop-filter`) ;
+   `all: unset`, qui efface tout ce que la porte vient de lire ;
+   `-webkit-text-fill-color: transparent` ; et un interligne qui rogne le texte
+   de la pastille.
 
    CE QUI RESTE LÂCHE, ET CE N'EST PAS DEUX MAIS CINQ :
    - `opacity` : refusée à zéro seulement. `opacity: 0.05` passe donc. Le
@@ -88,14 +93,19 @@ const FEUILLE_ATTENDUE = 'previsualisation.css';
      largeur peinte : elle ne sait pas dire à partir de quel décalage le texte
      sort. Le rendu réel reste jugé à la capture d'écran, comme l'en-tête le
      dit depuis le premier jour.
-   - LE DÉPLACEMENT HORS ÉCRAN : `transform: translateX(-99999px)`,
-     `left: -9999px`, `margin-left: -9999px` passent. Même raison que
-     `text-indent`, et elle est plus forte encore : il faudrait connaître la
+   - LA GÉOMÉTRIE DE LA BOÎTE — DÉPLACEMENT ET REFLUX. Passent :
+     `transform: translateX(-99999px)`, la propriété `translate`, `left: -9999px`,
+     `top: 100vh`, `inset: 100%`, `margin-left: -9999px`, `position: static`
+     (l'`inset: 0` du cadre n'est alors plus honoré) et `contain`. Même raison
+     que `text-indent`, et elle est plus forte encore : il faudrait connaître la
      fenêtre du visiteur ET la taille peinte du bandeau pour dire à partir de
-     quel décalage il en sort. La feuille de référence déplace elle-même la
+     quel décalage il en sort, et il faudrait PEINDRE la page pour dire ce que
+     devient un cadre reflué. La feuille de référence déplace elle-même la
      pastille (`translateX(-50%)`), donc un refus sec ferait un faux positif sur
-     le dossier conforme, et un plancher chiffré serait un nombre choisi :
-     c'est précisément ce que cette porte s'interdit.
+     le dossier conforme, et un plancher chiffré serait un nombre choisi : c'est
+     précisément ce que cette porte s'interdit. CE QUE CES DÉCLARATIONS FONT
+     VRAIMENT À L'ÉCRAN N'A PAS ÉTÉ MESURÉ : la sonde dit seulement que la porte
+     les laisse passer, et c'est déjà assez pour l'écrire.
    - L'EMPILEMENT : `z-index: -1` sur le cadre, ou n'importe quelle règle de
      n'importe quelle autre feuille qui peindrait par-dessus lui, passent. La
      porte ne lit que les règles qui VISENT le bandeau ; juger un recouvrement
@@ -741,6 +751,36 @@ function raisonInvisible(effectives) {
     if (px !== null && px < REFERENCE_MARQUAGE.boitePx) return `${prop}: ${v} (sous le pixel)`;
   }
 
+  /* `zoom` EST UNE ÉCHELLE SOUS UN AUTRE NOM, et le premier jet de ce correctif
+     l'avait manqué : il refermait `transform: scale` et la propriété `scale`,
+     et `zoom: 0.0001` passait toujours. Un trou refermé sous un nom et laissé
+     ouvert sous un autre n'est pas refermé. Même plancher, même raison. */
+  const z = val('zoom');
+  if (z !== null && !/^(normal|unset|initial|revert|revert-layer)$/i.test(z.trim())) {
+    if (!MOT_NOMBRE.test(z.trim())) return `zoom: ${z} — facteur illisible`;
+    const k = /%$/.test(z) ? Number.parseFloat(z) / 100 : Number.parseFloat(z);
+    if (Math.abs(k) < REFERENCE_MARQUAGE.echelle) {
+      return `zoom: ${z} — le marquage serait rétréci (|${z}| < ${REFERENCE_MARQUAGE.echelle}), donc plus petit que la référence`;
+    }
+  }
+
+  /* LA PROPRIÉTÉ `rotate` AVEC UN AXE vaut `rotateX`/`rotateY`, que la porte
+     refuse déjà dans `transform` : `rotate: y 90deg` met le bandeau de profil.
+     Un angle seul, ou l'axe Z, tourne DANS le plan et ne cache rien. */
+  const r = val('rotate');
+  if (r !== null) {
+    const parts = mots(r);
+    if (parts.length > 1 && !/^z$/i.test(parts[0])) {
+      return `rotate: ${r} — une rotation hors du plan n'est pas évaluable par la porte, qui refuse plutôt que de supposer`;
+    }
+  }
+
+  /* `all: unset` EFFACE TOUT CE QUE LA PORTE VIENT DE LIRE — le liseré, la
+     position, les couleurs. Après lui, elle n'a plus rien à affirmer sur le
+     bandeau ; elle refuse donc, faute de pouvoir encore le dire visible. */
+  const tout = val('all');
+  if (tout !== null) return `all: ${tout} — efface les déclarations sur lesquelles la porte s'appuie`;
+
   /* LES DÉCOUPES, LES MASQUES ET LES FILTRES — REFUSÉS, PAS ÉVALUÉS.
      La porte ne reconnaissait que deux formes ÉCRITES, `inset(100%)` et
      `rect(0,0,0,0)`. Tout le reste passait, et ce ne sont pas des raretés :
@@ -759,6 +799,10 @@ function raisonInvisible(effectives) {
     ['clip-path', /^none$/i], ['clip', /^auto$/i],
     ['mask', /^none$/i], ['mask-image', /^none$/i], ['-webkit-mask-image', /^none$/i],
     ['filter', /^none$/i], ['backdrop-filter', /^none$/i],
+    /* `border-image` REMPLACE le liseré que la porte vient de mesurer : elle
+       lit 4 px solides ambre et l'écran peint une image. Elle ne sait pas
+       peindre, donc elle refuse. */
+    ['border-image', /^none$/i], ['border-image-source', /^none$/i],
   ]) {
     const v = val(prop);
     if (v !== null && !inerte.test(v.trim())) {

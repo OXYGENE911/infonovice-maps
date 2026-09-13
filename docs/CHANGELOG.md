@@ -71,29 +71,40 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   dit exhaustive sans l'être rend la porte décorative : on la croit sur parole.
   **La liste a donc été refaite par SONDE et non par lecture** — chaque façon
   d'éteindre le bandeau ajoutée à la feuille réellement servie, la porte
-  relancée. Elle a rendu **quatorze familles** de franchissement, pas une :
-  neuf refermées ici, cinq déclarées et tenues par des tests.
-  **Refermés, chacun avec son test** : le plancher d'échelle (et c'est
-  l'identité, pas un nombre choisi — la porte refuse déjà un marquage plus petit
-  que la référence) ; les transformations qu'elle ne sait pas évaluer
-  (`matrix`, `rotateY`, `perspective`) ; `display: contents`, qui ne fabrique
-  aucune boîte et n'a donc aucun liseré à peindre ; les découpes, masques et
-  filtres — `clip-path: inset(50%)`, `circle(0)`, `url(#vide)`, `mask`,
+  relancée — **et deux fois plutôt qu'une**, parce que la première passe s'est
+  trompée : elle refermait l'échelle sous `transform: scale` et sous `scale` en
+  la laissant ouverte sous `zoom`, qui est la même chose sous un autre nom. Un
+  trou refermé sous un nom et laissé ouvert sous un autre n'est pas refermé.
+  Au total **dix-sept familles** de franchissement : douze refermées ici, cinq
+  déclarées et tenues par des tests.
+  **Refermées, chacune avec son test** : le plancher d'échelle — `transform:
+  scale`, la propriété `scale` et `zoom` — et c'est l'identité, pas un nombre
+  choisi, puisque la porte refuse déjà un marquage plus petit que la
+  référence ; les transformations qu'elle ne sait pas évaluer (`matrix`,
+  `rotateY`, `perspective`) et la propriété `rotate` hors du plan ;
+  `display: contents`, qui ne fabrique aucune boîte et n'a donc aucun liseré à
+  peindre ; les découpes, masques, filtres et `border-image` —
+  `clip-path: inset(50%)`, `circle(0)`, `url(#vide)`, `mask`,
   `filter: opacity(0)` — désormais refusés en bloc plutôt qu'énumérés, parce que
   la porte lit du texte et ne saurait pas dire ce qu'il en reste de peint ;
+  `all: unset`, qui efface les déclarations mêmes sur lesquelles elle s'appuie ;
   `-webkit-text-fill-color: transparent`, qui peint le glyphe à la place de
   `color` ; et un interligne qui rogne le texte de la pastille
   (`line-height: 0`), alors que la porte annonçait ses 13 px.
   **Ce qui reste lâche, et ce n'est pas deux mais CINQ** : une opacité presque
-  nulle (`0.05`), un `text-indent` au-dessus de −1000 px, un déplacement hors
-  écran (`translateX(-99999px)`, `left: -9999px`), l'empilement (`z-index: -1`,
-  ou une autre feuille qui peindrait par-dessus), et une boîte entre le pixel et
-  la référence (`width: 1px`). Les refermer demanderait de connaître la fenêtre
-  du visiteur, de composer toutes les feuilles et de les peindre : la porte lit
-  du texte. Ces cinq-là ne sont pas seulement écrits — **cinq tests affirment
-  qu'ils passent**, et un sixième relit la liste en tête du script. Si quelqu'un
-  en referme un sans mettre la liste à jour, la CI rougit et le lui demande :
-  c'est ainsi qu'une liste de trous cesse d'être décorative.
+  nulle (`0.05`), un `text-indent` au-dessus de −1000 px, la géométrie de la
+  boîte — déplacement hors écran et reflux (`translateX(-99999px)`, la propriété
+  `translate`, `left: -9999px`, `top: 100vh`, `inset: 100%`, `position: static`,
+  `contain`) —, l'empilement (`z-index: -1`, ou une autre feuille qui peindrait
+  par-dessus), et une boîte entre le pixel et la référence (`width: 1px`). Les
+  refermer demanderait de connaître la fenêtre du visiteur, de composer toutes
+  les feuilles et de les peindre : la porte lit du texte. **Ce que ces
+  déclarations font vraiment à l'écran n'a pas été mesuré** — la sonde dit
+  seulement que la porte les laisse passer, et c'est déjà assez pour l'écrire.
+  Ces cinq-là ne sont pas seulement écrits : **cinq tests affirment qu'ils
+  passent**, et un sixième relit la liste en tête du script. Si quelqu'un en
+  referme un sans mettre la liste à jour, la CI rougit et le lui demande — ce
+  qui est arrivé pendant l'écriture de ce correctif, et a servi.
 - **Deux trous de sécurité dans le workflow, fermés.** `workflow_dispatch`
   laissait publier **n'importe quelle branche** sous `--branch=staging` : une
   garde de branche est maintenant la toute première étape, avant le `checkout`.
