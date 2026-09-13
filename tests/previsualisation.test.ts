@@ -262,6 +262,29 @@ describe('la préversion se dit aussi quand on PARTAGE son lien', () => {
     expect(sortie).toContain('<textarea><link rel="canonical"');
   });
 
+  it('8e revue Codex : un « </head> » en commentaire, une balise citée en JavaScript', () => {
+    const piege = [
+      '<!doctype html>',
+      '<html lang="fr">',
+      '<head>',
+      '  <title>Infonovice Maps</title>',
+      '  <!-- </head> -->',
+      '  <link rel="canonical" href="https://maps.infonovice.fr/">',
+      `  <script>const exemple = '<link rel="canonical" href="https://x/">';</script>`,
+      '</head>',
+      '<body><h1>Carte</h1></body>',
+      '</html>',
+    ].join('\n');
+    const sortie = marquerHtmlPrevisualisation(piege, 'index.html');
+
+    // Le vrai canonical, écrit APRÈS un « </head> » cité, est bien retiré.
+    expect(sortie).not.toContain('href="https://maps.infonovice.fr/"');
+    // Et la chaîne JavaScript est intacte : amputer un script en silence est
+    // pire que le défaut qu'on répare.
+    expect(sortie).toContain(`const exemple = '<link rel="canonical" href="https://x/">';`);
+    expect(sortie).toContain('<!-- </head> -->');
+  });
+
   it('et un marquage rejoué deux fois ne double pas le préfixe', () => {
     const une = marquerHtmlPrevisualisation(
       '<html><head><title>T</title><meta property="og:title" content="M"></head><body></body></html>',

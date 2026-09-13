@@ -479,6 +479,51 @@ describe('les huit contournements de la 7e revue Codex', () => {
   });
 });
 
+describe('les quatre contournements de la 8e revue Codex', () => {
+  const poseCss = (contenu: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'previsualisation.css'), `${FEUILLE_PREVISUALISATION}\n${contenu}\n`);
+    return griefsDe().join(' ');
+  };
+  const poseHtml = (html: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'index.html'), html);
+    return griefsDe().join(' ');
+  };
+  const marquee = () => marquerHtmlPrevisualisation(PAGE_SOURCE, 'index.html');
+
+  it('1. « scale(0e0) » est un zéro : le facteur est parsé, pas reconnu de forme', () => {
+    expect(poseCss('.previsualisation-cadre { transform: scale(0e0); }')).toMatch(/invisible/);
+  });
+
+  it('et « scale(1) » ne doit rien déclencher', () => {
+    expect(poseCss('.previsualisation-cadre { transform: scale(1); }')).toEqual('');
+  });
+
+  it('2. « .previsualisation-cadre-inactif » n’est PAS « .previsualisation-cadre »', () => {
+    // Faux positif grave : la porte refusait un déploiement bon à cause d'une
+    // classe voisine ne s'appliquant à aucun élément.
+    expect(poseCss('.previsualisation-cadre-inactif { display: none; }')).toEqual('');
+  });
+
+  it('mais la vraie classe, elle, reste lue même écrite après une voisine', () => {
+    expect(poseCss('.previsualisation-cadre-inactif { color: red; }\n.previsualisation-cadre { display: none; }'))
+      .toMatch(/invisible/);
+  });
+
+  it('3. un « </head> » cité en commentaire n’arrête pas le contrôle', () => {
+    expect(poseHtml(marquee().replace('</head>',
+      '<!-- </head> --><link rel="canonical" href="https://maps.infonovice.fr/"></head>')))
+      .toMatch(/canonical/);
+  });
+
+  it('4. une balise citée dans une chaîne JavaScript n’est pas une balise', () => {
+    const page = marquee().replace('</head>',
+      `<script>const exemple = '<link rel="canonical" href="https://x/">';</script></head>`);
+    expect(poseHtml(page)).toEqual('');
+  });
+});
+
 describe('les pages livrées', () => {
   it('une page dans un SOUS-DOSSIER est contrôlée elle aussi', () => {
     dossierConforme();

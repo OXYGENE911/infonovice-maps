@@ -79,6 +79,13 @@ function reglesCss(css, selecteur) {
   for (;;) {
     const debut = css.indexOf(selecteur, depuis);
     if (debut === -1) return corps;
+    /* `.previsualisation-cadre-inactif` N'EST PAS `.previsualisation-cadre`.
+       La porte refusait un déploiement parfaitement bon à cause d'une classe
+       voisine qui ne s'applique à aucun élément (7e revue Codex). Un nom de
+       classe se termine : il n'est pas suivi d'une lettre, d'un chiffre, d'un
+       tiret ni d'un souligné. */
+    const suivant = css[debut + selecteur.length] ?? '';
+    if (/^[A-Za-z0-9_-]$/.test(suivant)) { depuis = debut + selecteur.length; continue; }
     const ouvre = css.indexOf('{', debut);
     const ferme = css.indexOf('}', ouvre);
     if (ouvre === -1 || ferme === -1) return corps;
@@ -347,9 +354,20 @@ function raisonInvisible(effectives) {
     if (n <= 0) return `opacity: ${o}`;
   }
 
-  // Une mise à l'échelle nulle : l'élément occupe zéro pixel peint.
+  /* Une mise à l'échelle nulle : l'élément occupe zéro pixel peint. LE FACTEUR
+     EST PARSÉ, PAS RECONNU DE FORME : `scale(0e0)` franchissait un motif qui
+     cherchait des zéros écrits en toutes lettres (7e revue Codex). */
   const t = val('transform');
-  if (t !== null && /\bscale[3dxyz]*\(\s*0*\.?0+\s*[,)]/i.test(t)) return `transform: ${t}`;
+  if (t !== null) {
+    for (const m of t.matchAll(/\b(scale3d|scalex|scaley|scale)\s*\(([^)]*)\)/gi)) {
+      const facteurs = m[2].split(',').map((x) => x.trim()).filter((x) => x !== '')
+        // `scale3d(1, 1, 0)` n'aplatit rien en deux dimensions : seuls X et Y comptent.
+        .slice(0, m[1].toLowerCase() === 'scale3d' ? 2 : 2);
+      if (facteurs.some((x) => (/%$/.test(x) ? Number.parseFloat(x) / 100 : Number.parseFloat(x)) === 0)) {
+        return `transform: ${t}`;
+      }
+    }
+  }
   const s = val('scale');
   if (s !== null && s.split(/\s+/).some((m) => Number.parseFloat(m) === 0)) return `scale: ${s}`;
 
@@ -506,12 +524,21 @@ function relations(valeur) {
    une porte qui contrôlerait ailleurs que là où l'on corrige refuserait des
    pages parfaitement bonnes. */
 function teteSansCommentaires(html) {
-  const ouvre = /<head(\s[^>]*)?>/i.exec(html);
+  /* ON MASQUE AVANT DE DÉCOUPER, ET C'EST L'ORDRE QUI COMPTE : un `</head>`
+     cité DANS un commentaire arrêtait la découpe avant la vraie fermeture, et
+     tout ce qui suivait échappait au contrôle (7e revue Codex). Les scripts
+     ordinaires sont masqués aussi — une chaîne JavaScript qui cite une balise
+     n'est pas une balise ; ceux en `ld+json`, eux, restent visibles, puisque
+     c'est justement eux qu'on cherche. */
+  const masque = html
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(BALISE_SCRIPT, (balise, interieur) =>
+      ((attributsHtml(interieur).type ?? '').trim().toLowerCase() === 'application/ld+json' ? balise : ' '));
+  const ouvre = /<head(\s[^>]*)?>/i.exec(masque);
   if (ouvre === null) return '';
   const debut = ouvre.index + ouvre[0].length;
-  const ferme = html.slice(debut).search(/<\/head>/i);
-  const tete = ferme === -1 ? html.slice(debut) : html.slice(debut, debut + ferme);
-  return tete.replace(/<!--[\s\S]*?-->/g, ' ');
+  const ferme = masque.slice(debut).search(/<\/head>/i);
+  return ferme === -1 ? masque.slice(debut) : masque.slice(debut, debut + ferme);
 }
 
 /** Le fichier visé par un `href`, résolu depuis la page qui le porte. */

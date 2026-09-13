@@ -269,33 +269,53 @@ function reecrireContenu(balise: string, transforme: (v: string) => string): str
   );
 }
 
-/* ON NE TOUCHE QU'AU `<head>`, ET LES COMMENTAIRES SONT ÉPARGNÉS. Hors du
+/* ON NE TOUCHE QU'AU `<head>`, ET LE CONTENU CITÉ EST ÉPARGNÉ. Hors du
    `<head>`, ce qui RESSEMBLE à une balise n'en est pas forcément une : appliqué
    à tout le document, le balayage effaçait le contenu d'un `<textarea>` qui
-   citait un `<link rel="canonical">` (6e revue Codex). Une transformation qui
-   supprime silencieusement du contenu de page est pire que le défaut qu'elle
-   répare. La porte contrôle exactement la même zone. */
-function surLaTete(html: string, transforme: (tete: string) => string): string {
-  const ouvre = /<head(\s[^>]*)?>/i.exec(html);
-  if (ouvre === null) return html;
-  const debut = ouvre.index + ouvre[0].length;
-  const relatif = html.slice(debut).search(/<\/head>/i);
-  const fin = relatif === -1 ? html.length : debut + relatif;
+   citait un `<link rel="canonical">` (6e revue Codex), et amputait une chaîne
+   JavaScript qui en citait un (7e revue). Une transformation qui supprime
+   silencieusement du contenu de page est pire que le défaut qu'elle répare.
+   La porte contrôle exactement la même zone.
 
-  const commentaires: string[] = [];
-  const masquee = html.slice(debut, fin).replace(/<!--[\s\S]*?-->/g, (c) => {
-    commentaires.push(c);
-    return ` ${commentaires.length - 1} `;
-  });
-  const rendue = transforme(masquee)
-    .replace(/ (\d+) /g, (tout, i: string) => commentaires[Number(i)] ?? tout);
-  return html.slice(0, debut) + rendue + html.slice(fin);
+   ON MASQUE D'ABORD, SUR TOUT LE DOCUMENT, PUIS ON DÉCOUPE, ET L'ORDRE COMPTE :
+   un `</head>` cité dans un commentaire arrêtait la découpe avant la vraie
+   fermeture — et le marquage posait alors la feuille de style À L'INTÉRIEUR du
+   commentaire (7e revue Codex). Le masque couvre donc TOUT le marquage, pas
+   seulement le retrait des métadonnées. */
+const MARQUE = '\u0000';
+
+function sousMasque(html: string, transforme: (masque: string) => string): string {
+  const gardes: string[] = [];
+  const garder = (bloc: string): string => {
+    gardes.push(bloc);
+    return `${MARQUE}${gardes.length - 1}${MARQUE}`;
+  };
+  const masque = html
+    .replace(/<!--[\s\S]*?-->/g, garder)
+    .replace(BALISE_SCRIPT, (balise: string, interieur: string) =>
+      ((attributs(interieur).type ?? '').trim().toLowerCase() === 'application/ld+json'
+        ? balise
+        : garder(balise)));
+  return transforme(masque)
+    .replace(/\u0000(\d+)\u0000/g, (tout, i: string) => gardes[Number(i)] ?? tout);
 }
 
-export function neutraliserMetadonneesProduction(html: string): string {
-  return surLaTete(html, (tete) => tete
-    .replace(BALISE_SCRIPT, (balise, interieur: string) =>
-      (attributs(interieur).type ?? '').trim().toLowerCase() === 'application/ld+json' ? '' : balise)
+/** Le `<head>` d'un document déjà masqué, transformé ; le reste est intact. */
+function surLaTete(masque: string, transforme: (tete: string) => string): string {
+  const ouvre = /<head(\s[^>]*)?>/i.exec(masque);
+  if (ouvre === null) return masque;
+  const debut = ouvre.index + ouvre[0].length;
+  const relatif = masque.slice(debut).search(/<\/head>/i);
+  const fin = relatif === -1 ? masque.length : debut + relatif;
+  return masque.slice(0, debut) + transforme(masque.slice(debut, fin)) + masque.slice(fin);
+}
+
+/** Le retrait et le préfixage, sur un `<head>` déjà masqué. */
+function neutraliserTete(tete: string): string {
+  return tete
+    // Ce qui reste de `<script>` ici est forcément du `ld+json` : le masque a
+    // mis les autres à l'abri.
+    .replace(BALISE_SCRIPT, () => '')
     .replace(BALISE_SIMPLE, (balise, nom: string, interieur: string) => {
       const a = attributs(interieur);
       if (nom.toLowerCase() === 'link') {
@@ -311,8 +331,17 @@ export function neutraliserMetadonneesProduction(html: string): string {
         return reecrireContenu(balise, (v) => (decoderHtml(v).endsWith(suffixe) ? v : v + suffixe));
       }
       return balise;
-    }));
+    });
 }
+
+export function neutraliserMetadonneesProduction(html: string): string {
+  return sousMasque(html, (masque) => surLaTete(masque, neutraliserTete));
+}
+
+const OUVERTURE_TETE = /<head(\s[^>]*)?>/i;
+const FERMETURE_TETE = /<\/head>/i;
+const OUVERTURE_CORPS = /<body(\s[^>]*)?>/i;
+const BALISE_TITRE = /<title>([\s\S]*?)<\/title>/i;
 
 /* PAS DE REPLI SILENCIEUX (même règle que la version dans `vite.config.ts`) :
    une page sans `<head>`, sans `<body>` ou sans `<title>` ARRÊTE la
@@ -322,31 +351,32 @@ export function neutraliserMetadonneesProduction(html: string): string {
 export function marquerHtmlPrevisualisation(html: string, nomPage: string): string {
   if (html.includes('data-previsualisation="cadre"')) return html; // déjà marqué
 
-  const tete = /<head(\s[^>]*)?>/i;
-  const finTete = /<\/head>/i;
-  const corps = /<body(\s[^>]*)?>/i;
-  const titre = /<title>([\s\S]*?)<\/title>/i;
-  for (const [quoi, motif] of [
-    ['<head>', tete], ['</head>', finTete], ['<body>', corps], ['<title>', titre],
-  ] as const) {
-    if (!motif.test(html)) {
-      throw new Error(`previsualisation : ${quoi} introuvable dans ${nomPage}`);
+  return sousMasque(html, (masque) => {
+    /* LA VÉRIFICATION PORTE SUR LE TEXTE MASQUÉ : un `<body>` cité en
+       commentaire ne prouve pas qu'une page en a un. */
+    for (const [quoi, motif] of [
+      ['<head>', OUVERTURE_TETE], ['</head>', FERMETURE_TETE],
+      ['<body>', OUVERTURE_CORPS], ['<title>', BALISE_TITRE],
+    ] as const) {
+      if (!motif.test(masque)) {
+        throw new Error(`previsualisation : ${quoi} introuvable dans ${nomPage}`);
+      }
     }
-  }
 
-  return neutraliserMetadonneesProduction(html)
-    /* L'ATTRIBUT SUR <html> EST LE POINT D'ANCRAGE DES TESTS. Un parcours E2E
-       ou une sonde de la CI l'interroge sans dépendre de la mise en forme du
-       bandeau, qui, elle, a le droit de changer. */
-    .replace(/<html(\s[^>]*)?>/i, (balise) =>
-      balise.replace(/>$/, ` data-environnement="${ENVIRONNEMENT_PREVISUALISATION}">`))
-    .replace(tete, (balise) => `${balise}\n  ${META_ROBOTS_PREVISUALISATION}`)
-    /* LA FEUILLE EN DERNIER DANS LE <head>, et pas juste après son ouverture :
-       Vite y injecte les feuilles de l'application, et une règle de même
-       spécificité perd contre celle qui vient après elle. Ceinture (ici) et
-       bretelles (`html:root` dans la feuille) : ni l'une ni l'autre ne suffit
-       à elle seule à rendre le résultat indifférent à l'ordre d'injection. */
-    .replace(finTete, `  ${LIEN_FEUILLE_PREVISUALISATION}\n</head>`)
-    .replace(titre, (_t, texte: string) => `<title>${PREFIXE_TITRE}${texte.trim()}</title>`)
-    .replace(corps, (balise) => `${balise}\n${BANDEAU_PREVISUALISATION}`);
+    return surLaTete(masque, neutraliserTete)
+      /* L'ATTRIBUT SUR <html> EST LE POINT D'ANCRAGE DES TESTS. Un parcours E2E
+         ou une sonde de la CI l'interroge sans dépendre de la mise en forme du
+         bandeau, qui, elle, a le droit de changer. */
+      .replace(/<html(\s[^>]*)?>/i, (balise) =>
+        balise.replace(/>$/, ` data-environnement="${ENVIRONNEMENT_PREVISUALISATION}">`))
+      .replace(OUVERTURE_TETE, (balise) => `${balise}\n  ${META_ROBOTS_PREVISUALISATION}`)
+      /* LA FEUILLE EN DERNIER DANS LE <head>, et pas juste après son ouverture :
+         Vite y injecte les feuilles de l'application, et une règle de même
+         spécificité perd contre celle qui vient après elle. Ceinture (ici) et
+         bretelles (`html:root` dans la feuille) : ni l'une ni l'autre ne suffit
+         à elle seule à rendre le résultat indifférent à l'ordre d'injection. */
+      .replace(FERMETURE_TETE, `  ${LIEN_FEUILLE_PREVISUALISATION}\n</head>`)
+      .replace(BALISE_TITRE, (_t, texte: string) => `<title>${PREFIXE_TITRE}${texte.trim()}</title>`)
+      .replace(OUVERTURE_CORPS, (balise) => `${balise}\n${BANDEAU_PREVISUALISATION}`);
+  });
 }
