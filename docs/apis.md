@@ -1673,17 +1673,22 @@ courses d'une reprise après le 18/10.
 Si un visiteur demande pourquoi les fiches de monuments n'ont pas de photo :
 
 > « Parce que la seule photothèque qui couvrait nos monuments appartient à une
-> fondation américaine. Nous nous autorisons **une** exception, et elle est
-> écrite dans notre page « À propos » : la météo, qui vient d'un service
-> allemand, faute d'équivalent français interrogeable sans clé. Nous n'en avons
-> pas ouvert une deuxième pour une photo. L'équivalent français, Panoramax, ne
-> couvre aujourd'hui qu'un monument sur trois : il reviendra quand il en
-> couvrira assez, pas avant. »
+> fondation américaine. Notre page « À propos » écrit elle-même **deux**
+> exceptions à nos sources françaises : la météo, qui vient d'un service
+> allemand faute d'équivalent français interrogeable sans clé, et la photo des
+> monuments — celle-là, **cette version la retire du produit**, et la page
+> sera reprise derrière. Il reste donc la météo, et nous n'en ouvrons pas de
+> nouvelle pour une photo. L'équivalent français, Panoramax, ne couvre
+> aujourd'hui qu'un monument sur trois : il reviendra quand il en couvrira
+> assez, pas avant. »
 
-Variante en une phrase, si le visiteur est pressé :
-« Nos données viennent des services publics français, à une exception près que
-nous écrivons nous-mêmes — la météo. Nous n'en avons pas ouvert une seconde
-pour une photo. »
+Variante courte, si le visiteur est pressé :
+« Quinze des dix-huit services que cette carte interroge sont en `.fr` :
+services publics et communs français. Les trois autres, nous les nommons au
+lieu de promettre « sans exception » — la météo allemande, le commun
+français d'imagerie Panoramax (en `.xyz`), et la plateforme qui sert le
+fichier Etalab des bornes de recharge. Et l'exception photo que « À propos »
+annonce encore, cette version la retire. »
 
 **Ce que cette phrase ne dit plus, et pourquoi.** La version précédente disait
 « ici tout vient de sources françaises — sans exception ». C'était faux, et faux
@@ -1693,6 +1698,42 @@ parle : `a-propos.html`, en ligne, annonce lui-même une exception météo
 la CSP servie compte **18 hôtes externes distincts**, dont
 **`api.open-meteo.com`**. Une phrase de stand que l'application contredit à
 l'écran ne tient pas dix secondes devant une caméra.
+
+**Deuxième passe, 13/09/2026 : la variante COURTE disait encore « une
+exception ».** La phrase longue avait été reprise, la courte non : elle
+promettait « à une exception près que nous écrivons nous-mêmes — la météo »,
+et le document se contredisait lui-même vingt-cinq lignes plus bas, où la note
+du décompte écrit « 15 sont en `.fr` ». Deux choses la démentaient ensemble.
+
+1. **La page réellement servie.** `curl -sS https://maps.infonovice.fr/a-propos.html`
+   le 13/09/2026 (HTTP 200, 14 273 octets) rend une page qui porte
+   `<h2>Première exception : la météo</h2>` **et**
+   `<h2>Seconde exception : les photos des monuments</h2>`. **C'est sur cette
+   seconde ligne que les deux variantes s'alignent désormais : `a-propos.html`
+   l. 164** (l. 163 du HTML servi, qui perd une ligne à la construction). Le
+   fichier est le même partout —
+   `git rev-parse origin/main:a-propos.html origin/staging:a-propos.html HEAD:a-propos.html`
+   rend trois fois `ccaca3bb921e438e534bd8e4a028e67c9c33ad7b` : la page servie
+   en production, celle de `staging` et celle de cette branche sont
+   identiques. Une phrase de stand qui dit « une exception » est donc
+   démentie par le titre de section que le visiteur voit en faisant défiler.
+2. **La CSP servie.**
+   `awk '/Content-Security-Policy/,/form-action/' index.html | grep -o 'https://[A-Za-z0-9.-]*' | sed 's|https://||' | sort -u`
+   rend **18 hôtes distincts, dont 15 en `.fr`** ; les trois autres sont
+   `api.open-meteo.com`, `api.panoramax.xyz` et `public.opendatasoft.com`.
+   « Une exception » était donc faux une seconde fois, et sur un terrain
+   vérifiable en trente secondes par un journaliste.
+
+**Ce que les deux variantes garantissent maintenant, et ce qu'elles ne
+garantissent plus.** Elles garantissent un décompte que l'on peut refaire sur
+la page servie (15 sur 18) et l'aveu des **deux** exceptions que « À propos »
+nomme, dans l'ordre où le visiteur les trouvera. Elles ne garantissent plus —
+et ne doivent plus laisser croire — ni que la nationalité de l'éditeur de
+`public.opendatasoft.com` a été vérifiée (elle ne l'est toujours pas), ni que
+« À propos » est à jour : la page annonce encore l'exception photo que cette
+version retire, **et elle se contredit elle-même** — son chapô (l. 61) et son
+« D'où viennent les données » (l. 93) disent « à une exception près » pendant
+que la l. 164 en nomme une seconde. La reprise de la page n'est pas faite ici.
 
 **Les trois pièges de la page « À propos », et la réponse vraie à chacun.**
 
@@ -1712,8 +1753,9 @@ français d'imagerie que la page « À propos » décrit déjà ;
 `public.opendatasoft.com` sert le fichier consolidé Etalab des bornes IRVE
 (donnée publique française) — **la nationalité de l'éditeur de cette plateforme
 n'a pas été vérifiée ici** ; `api.open-meteo.com` est l'exception météo. C'est
-pourquoi la phrase parle de *nos données* et d'une exception écrite, et jamais
-d'un « sans exception ».
+pourquoi les deux variantes **comptent** (15 sur 18) et **nomment** les
+exceptions écrites, au lieu de promettre un « sans exception » — ou une
+exception unique, que la l. 164 de `a-propos.html` dément.
 
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.
