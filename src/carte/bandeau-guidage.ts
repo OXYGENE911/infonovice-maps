@@ -2956,8 +2956,15 @@ export class BandeauGuidage extends HTMLElement {
     const voieCourante = e.horsRoute ? '' : (voieLisible(e.etape?.voie) ?? '');
     /* LA VOIE VISÉE EST FILTRÉE AUSSI : elle nourrit `numeroRoute`, donc
        l'écusson. Sans filtre, « n48219 » — la forme courte d'un nœud OSM —
-       passait pour une nationale et s'affichait en cartouche rouge. */
-    const voieVisee = e.horsRoute ? '' : (voieLisible(e.manoeuvre?.voie) ?? voieCourante);
+       passait pour une nationale et s'affichait en cartouche rouge.
+       ET LE REPLI NE VAUT QUE POUR UN CHAMP ABSENT, jamais pour un champ
+       ILLISIBLE — relevé par la revue Codex du 13/09. Se rabattre sur la voie
+       COURANTE parce que la voie VISÉE est un identifiant afficherait
+       l'écusson de la route qu'on quitte comme celui de la route à prendre :
+       une information fausse, et sur un panneau de direction c'est pire que
+       le silence. Quand la voie visée existe mais ne se lit pas, on se tait. */
+    const brutVisee = e.horsRoute ? '' : (e.manoeuvre?.voie ?? '');
+    const voieVisee = brutVisee === '' ? voieCourante : (voieLisible(brutVisee) ?? '');
     const classe = classeRoute(voieVisee);
     cartouche.hidden = !e.manoeuvre && !e.horsRoute;
     cartouche.dataset['classe'] = classe;

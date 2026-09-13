@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { estIdentifiantBrut, nomLisible, nomsLisibles, voieLisible } from '../src/lib/nom-lisible';
+import { estIdentifiantBrut, motifIdentifiant, nomLisible, nomsLisibles, voieLisible } from '../src/lib/nom-lisible';
 
 /* LA RÈGLE DE TERRAIN-2 (retour du CEO, 11/09) : jamais d'identifiant brut à
  * l'écran. Elle se teste À SEC, ici, et non dans le rendu — le rendu change,
@@ -143,6 +143,14 @@ describe('voieLisible — L’IDENTIFIANT BRUT SE TAIT, MÊME DÉGUISÉ EN ROUTE
        « N » puis un chiffre et conclut « nationale ». Cinq chiffres : aucune
        route nationale française n’en porte autant. */
     ['n48219', 'forme courte d’un nœud OSM, que classeRoute prenait pour une nationale'],
+    /* CELUI-CI VIENT DE LA REVUE CODEX DU 13/09 : à QUATRE chiffres, la forme
+       courte d’un nœud OSM avait exactement la taille d’un numéro de route, et
+       l’exception posée sur la seule FORME la repêchait — jusqu’à l’écusson,
+       la voix et la feuille imprimée. L’exception ne vaut plus que contre le
+       motif « ressemble à un code », jamais contre « est un élément OSM ». */
+    ['n4821', 'forme courte d’un nœud OSM à quatre chiffres — relevé par Codex'],
+    ['w4821', 'forme courte d’un chemin OSM à quatre chiffres'],
+    ['r4821', 'forme courte d’une relation OSM à quatre chiffres'],
     ['w1234567', 'forme courte d’un chemin OSM'],
     ['N123456', 'six chiffres derrière une lettre de réseau — ce n’est plus une route'],
   ];
@@ -157,5 +165,28 @@ describe('voieLisible — L’IDENTIFIANT BRUT SE TAIT, MÊME DÉGUISÉ EN ROUTE
     expect(voieLisible('   ')).toBeNull();
     expect(voieLisible(null)).toBeNull();
     expect(voieLisible(undefined)).toBeNull();
+  });
+});
+
+describe('motifIdentifiant — LE MOTIF, ET PAS SEULEMENT LE VERDICT', () => {
+  /* La distinction porte tout `voieLisible` : « vient d’une base de données »
+     n’est pas « ressemble à un code ». Sans elle, l’exception des numéros de
+     route rouvrait la porte aux éléments OSM. */
+  it('nomme le motif « forme de code » — celui que l’exception des routes lève', () => {
+    expect(motifIdentifiant('D606')).toBe('forme-de-code');
+    expect(motifIdentifiant('AB12')).toBe('forme-de-code');
+    /* « FR75056 » porte CINQ chiffres : c'est le motif du long nombre qui
+       parle en premier, et il n'est pas levable. Mesuré, pas supposé. */
+    expect(motifIdentifiant('FR75056')).toBe('long-nombre');
+  });
+
+  it('nomme le motif « élément OSM » — celui que rien ne lève', () => {
+    expect(motifIdentifiant('n4821')).toBe('element-osm-court');
+    expect(motifIdentifiant('way/123456789')).toBe('element-osm');
+  });
+
+  it('rend null sur un nom lisible', () => {
+    expect(motifIdentifiant('Rue de Rivoli')).toBeNull();
+    expect(motifIdentifiant('A6')).toBeNull();
   });
 });

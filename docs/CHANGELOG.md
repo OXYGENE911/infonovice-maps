@@ -99,8 +99,24 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   ferme au passage un trou que `classeRoute` seule laissait ouvert : « n48219 »,
   forme courte d'un nœud OSM, passait pour une nationale et s'affichait en
   cartouche rouge.
-- **Aucune assertion n'a été affaiblie pour obtenir du vert** : quatre parcours
-  et cinquante-deux tests unitaires ajoutés, dont un parcours qui FORCE le
+- **Trois constats de la revue Codex du 13/09, tous corrigés — le verdict était
+  bloquant, et il avait raison** :
+  1. *(bloquant)* le contrôle de débordement excusait la hauteur dès que la
+     CLASSE `texte-coupe` était posée. **Une classe posée ne prouve pas que le
+     navigateur cache quoi que ce soit** — c'est exactement l'erreur qu'on venait
+     de réparer, commise une seconde fois. Le parcours lit désormais
+     `overflow-y` CALCULÉ : sans écrêtage réel, le débordement est un défaut ;
+  2. l'exception des numéros de route repêchée sur la seule FORME laissait
+     repasser « n4821 » — forme courte d'un nœud OSM à QUATRE chiffres, la
+     taille exacte d'un numéro de route. `motifIdentifiant()` nomme désormais la
+     règle déclenchée, et l'exception ne lève que « ressemble à un code »,
+     jamais « est un élément OpenStreetMap » ;
+  3. le repli de la voie visée sur la voie COURANTE se déclenchait aussi quand
+     la voie visée était ILLISIBLE : le panneau affichait alors l'écusson de la
+     route qu'on QUITTE comme celui de la route à PRENDRE. Le repli ne vaut plus
+     que pour un champ absent ; une voie visée illisible fait taire l'écusson.
+- **Aucune assertion n'a été affaiblie pour obtenir du vert** : neuf parcours à 360 px
+  et soixante-dix tests unitaires ajoutés, dont un parcours qui FORCE le
   dernier recours sur toute police (un texte qui ne tient sur aucune) et affirme,
   dans le navigateur, que le plafond est bien posé et que la boîte peinte tient.
 

@@ -74,25 +74,45 @@ const UNE_LETTRE = /\p{L}/u;
  * exactement le défaut inverse de celui qu'on répare.
  */
 export function estIdentifiantBrut(texte: string): boolean {
+  return motifIdentifiant(texte) !== null;
+}
+
+/**
+ * POURQUOI LE MOTIF, ET PAS SEULEMENT LE VERDICT.
+ *
+ * Les règles ci-dessous ne disent pas toutes la même chose. Les premières
+ * affirment « CECI VIENT D'UNE BASE DE DONNÉES » : un élément OSM, une clé
+ * technique, un souligné. Les dernières disent seulement « CECI RESSEMBLE
+ * À UN CODE » — et « D606 » ressemble à un code parce que c'en est un, ce
+ * qui ne l'empêche pas d'être peint sur les panneaux.
+ *
+ * `voieLisible` a besoin de cette distinction pour garder les numéros de
+ * route SANS rouvrir la porte aux identifiants : la revue Codex du 13/09 a
+ * montré qu'une exception posée sur la seule FORME laissait repasser
+ * « n4821 » — forme courte d'un nœud OSM à quatre chiffres.
+ *
+ * @returns le nom du motif déclenché, ou `null` si le texte est lisible.
+ */
+export function motifIdentifiant(texte: string): string | null {
   const t = texte.trim();
-  if (t === '') return false;
-  if (!UNE_LETTRE.test(t)) return true;
-  if (VALEURS_TECHNIQUES.has(t.toLowerCase())) return true;
+  if (t === '') return null;
+  if (!UNE_LETTRE.test(t)) return 'aucune-lettre';
+  if (VALEURS_TECHNIQUES.has(t.toLowerCase())) return 'valeur-technique';
   /* LE SOULIGNÉ EST LA SIGNATURE DES VALEURS OSM : `motorway_junction`,
      `traffic_signals`. Aucun nom de lieu français n'en porte. */
-  if (t.includes('_')) return true;
-  if (ELEMENT_OSM.test(t)) return true;
-  if (ELEMENT_OSM_COURT.test(t)) return true;
-  if (ELEMENT_OSM_DEDANS.test(t)) return true;
-  if (CLE_TECHNIQUE.test(t)) return true;
+  if (t.includes('_')) return 'souligne';
+  if (ELEMENT_OSM.test(t)) return 'element-osm';
+  if (ELEMENT_OSM_COURT.test(t)) return 'element-osm-court';
+  if (ELEMENT_OSM_DEDANS.test(t)) return 'element-osm-dedans';
+  if (CLE_TECHNIQUE.test(t)) return 'cle-technique';
   /* CE QUI SUIT NE VAUT QUE POUR LA FORME. Les motifs précédents disent
      « ceci vient d'une base de données » ; ceux-ci disent seulement « ceci
      ressemble à un code », et un nom en plusieurs mots ne ressemble pas à un
      code. On y est donc plus indulgent — voir LONG_NOMBRE_PHRASE. */
   const unSeulMot = !/\s/u.test(t);
-  if ((unSeulMot ? LONG_NOMBRE_MOT : LONG_NOMBRE_PHRASE).test(t)) return true;
-  if (CODE_SANS_ESPACE.test(t)) return true;
-  return false;
+  if ((unSeulMot ? LONG_NOMBRE_MOT : LONG_NOMBRE_PHRASE).test(t)) return 'long-nombre';
+  if (CODE_SANS_ESPACE.test(t)) return 'forme-de-code';
+  return null;
 }
 
 /**
@@ -156,6 +176,14 @@ export function voieLisible(brut: string | null | undefined): string | null {
   if (typeof brut !== 'string') return null;
   const t = brut.replace(/\s+/gu, ' ').trim();
   if (t === '') return null;
-  if (NUMERO_DE_ROUTE.test(t.toUpperCase())) return t;
-  return nomLisible(t);
+  const motif = motifIdentifiant(t);
+  if (motif === null) return t;
+  /* L'EXCEPTION NE VAUT QUE CONTRE LE MOTIF DE FORME, et c'est tout son
+     intérêt. « D606 » n'est écarté que parce qu'il RESSEMBLE à un code ;
+     « n4821 » est écarté parce qu'il EST un élément OpenStreetMap, et
+     aucune forme de numéro ne doit le repêcher — relevé par la revue Codex
+     du 13/09, où une exception posée sur la seule forme le laissait passer
+     jusqu'à l'écusson, la voix et la feuille imprimée. */
+  if (motif === 'forme-de-code' && NUMERO_DE_ROUTE.test(t.toUpperCase())) return t;
+  return null;
 }

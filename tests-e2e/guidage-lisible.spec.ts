@@ -114,6 +114,8 @@ interface Mesure {
   displayParent: string;
   /** Le plafond de hauteur réellement posé, ou `none`. */
   hauteurMax: string;
+  /** Le `overflow-y` CALCULÉ : c'est LUI qui cache, pas la classe. */
+  overflowY: string;
   interligne: number;
   texte: string; boite: { x: number; y: number; largeur: number; hauteur: number };
 }
@@ -137,20 +139,25 @@ async function mesurer(page: Page, selecteur: string): Promise<Mesure> {
     const inter = Number.parseFloat(style.lineHeight) || Number.parseFloat(style.fontSize) * 1.2;
     const r = el.getBoundingClientRect();
     const coupe = el.classList.contains('texte-coupe');
+    const ecrase = style.overflowY;
     const parent = el.parentElement;
     return {
       lignes: Math.max(1, Math.round(el.clientHeight / inter)),
       lignesContenu: Math.max(1, Math.round(el.scrollHeight / inter)),
       coupe,
-      /* DÉBORDER, C'EST AVOIR DU CONTENU HORS DE SA BOÎTE SANS L'AVOIR
-         DÉCIDÉ. En largeur, jamais — rien ne l'autorise. En hauteur, la
-         coupe l'autorise ET SEULE la coupe : sans elle, c'est le défaut
-         qu'Armelin a vu. Un pixel de tolérance pour les sous-pixels. */
+      /* DÉBORDER, C'EST AVOIR DU CONTENU PEINT HORS DE SA BOÎTE. En largeur,
+         jamais — rien ne l'autorise. En hauteur, seul un ÉCRÊTAGE RÉEL
+         l'excuse, et la revue Codex du 13/09 a eu raison de refuser qu'on le
+         déduise d'une CLASSE : une classe posée ne prouve pas que le
+         navigateur cache quoi que ce soit. On lit donc `overflow-y` CALCULÉ.
+         Un pixel de tolérance pour les sous-pixels du rendu. */
       deborde: el.scrollWidth > el.clientWidth + 1
-        || (!coupe && el.scrollHeight > el.clientHeight + 1),
+        || (el.scrollHeight > el.clientHeight + 1
+          && !(ecrase === 'hidden' || ecrase === 'clip')),
       display: style.display,
       displayParent: parent ? getComputedStyle(parent).display : '',
       hauteurMax: style.maxHeight,
+      overflowY: ecrase,
       interligne: inter,
       texte: el.textContent ?? '',
       boite: { x: r.x, y: r.y, largeur: r.width, hauteur: r.height },
@@ -241,6 +248,11 @@ test('UNE LIGNE SECONDAIRE INTERMINABLE S’ARRÊTE À DEUX LIGNES, SANS CHEVAUC
     expect(Number.isFinite(plafond), `plafond illisible : ${d.hauteurMax}`).toBe(true);
     expect(plafond, 'le plafond vaut deux interlignes au plus')
       .toBeLessThanOrEqual(2 * d.interligne + 0.5);
+    /* ET LE SURPLUS EST RÉELLEMENT CACHÉ, pas seulement classé : `overflow-y`
+       calculé écrête. Sans cette ligne, un plafond posé sur une boîte qui
+       laisse voir le débordement passerait pour une réparation. */
+    expect(d.overflowY, 'le surplus n’est pas écrêté : il se peint hors du cadre')
+      .toMatch(/^(hidden|clip)$/);
     /* ET LA COUPE COUPE VRAIMENT : du contenu est retenu hors de la boîte.
        Sans cette ligne, un plafond posé sur un texte qui tenait déjà
        passerait pour une réparation. */
@@ -385,6 +397,8 @@ test('QUAND AUCUN PALIER NE SUFFIT, LA COUPE TIENT VRAIMENT LES DEUX LIGNES', as
   expect(Number.isFinite(plafond), `plafond illisible : ${d.hauteurMax}`).toBe(true);
   expect(plafond, 'le plafond vaut deux interlignes au plus')
     .toBeLessThanOrEqual(2 * d.interligne + 0.5);
+  expect(d.overflowY, 'le surplus n’est pas écrêté : il se peint hors du cadre')
+    .toMatch(/^(hidden|clip)$/);
 
   /* ET LE PANNEAU RESTE UN PANNEAU : rien ne sort de la tôle, rien ne
      chevauche l’instruction. */
@@ -399,4 +413,25 @@ test('QUAND AUCUN PALIER NE SUFFIT, LA COUPE TIENT VRAIMENT LES DEUX LIGNES', as
     && i.boite.y < d.boite.y + d.boite.hauteur
     && i.boite.y + i.boite.hauteur > d.boite.y;
   expect(seCroisent, 'l’instruction et la ligne secondaire se chevauchent').toBe(false);
+});
+
+test('UNE VOIE VISÉE ILLISIBLE NE DEVIENT PAS LA ROUTE QU’ON QUITTE', async ({ page }) => {
+  /* RELEVÉ PAR LA REVUE CODEX DU 13/09, et c’est le pire des trois : le repli
+     sur la voie COURANTE ne doit valoir que pour un champ ABSENT. Si la voie
+     visée existe mais ne se lit pas, s’y rabattre afficherait l’écusson de
+     l’autoroute qu’on QUITTE comme celui de la route à PRENDRE — une
+     information fausse sur un panneau de direction, pire que le silence. */
+  await suivre(page, IDENTIFIANT_BRUT, 'A6');
+  await rouler(page, TRACE[7]![0], TRACE[7]![1]);
+  await expect(page.locator('.bg-cartouche')).toBeVisible({ timeout: 15_000 });
+  await rouler(page, TRACE[8]![0], TRACE[8]![1]);
+
+  /* LA ROUTE COURANTE RESTE DITE EN BAS — elle, on la connaît. */
+  await expect(page.locator('.bg-voie')).toContainText('A6');
+  /* MAIS LE PANNEAU DE MANŒUVRE NE PRÉTEND PAS QU’ON VA VERS « A6 ». */
+  await expect(page.locator('.bg-ecusson')).toBeHidden();
+  const cartouche = await page.locator('.bg-cartouche').textContent();
+  expect(cartouche ?? '', 'le cartouche affiche la route qu’on quitte')
+    .not.toContain('A6');
+  expect(cartouche ?? '').not.toContain(IDENTIFIANT_BRUT);
 });
