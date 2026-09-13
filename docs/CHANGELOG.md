@@ -2,6 +2,45 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.144.0] — 2026-09-13 — TERRAIN-2
+
+### Le panneau de guidage se lit : jamais d'identifiant brut, jamais plus de deux lignes
+- **Le défaut vient d'un usager, pas d'un test.** Armelin, son téléphone en
+  main le 11/09 : « un identifiant brut s'affiche à l'écran », et « un texte
+  long déborde du cadre ».
+- **(a) La règle de lisibilité est une fonction pure** — `src/lib/nom-lisible.ts`,
+  et non une rustine dans le rendu : le cartouche a déjà déménagé deux fois
+  depuis le 29/08, une rustine serait partie avec lui. Elle reconnaît ce
+  qu'aucun nom de ville ni de rue ne prend pour forme : élément OSM
+  (`way/123456789`, `n48219`), souligné des valeurs techniques
+  (`motorway_junction`), clé en tête (`osm:name`, `ref=A4`), suite de cinq
+  chiffres, code d'un seul tenant en capitales (`FR75056`), valeurs qui disent
+  l'absence (`noname`, `FIXME`). **Elle penche du côté de l'affichage** :
+  « CHU », « RN7 », « Marseille : port » restent lisibles — effacer un vrai
+  nom par excès de prudence serait le défaut inverse.
+- **Quand rien de lisible ne reste, la ligne secondaire ne paraît pas.**
+  L'instruction et les numéros de route suffisent : mieux vaut moins
+  d'information qu'une information illisible. C'est déjà la règle de SORTIE-1.
+- **(b) Deux lignes au maximum** — `src/carte/tenir-en-lignes.ts`. Dans cet
+  ordre, et l'ordre n'est pas un détail : **on réduit la police par paliers**
+  (1 · 0,92 · 0,84 · 0,76 · 0,68 · 0,6), **puis seulement on coupe à
+  l'ellipse**. Une instruction de navigation coupée est une instruction
+  fausse ; une instruction plus petite reste juste. On ne descend pas sous
+  60 % — en dessous, on ne lit plus au volant.
+- **Des observateurs, pas un appel derrière chaque écriture** : le texte du
+  cartouche s'écrit depuis quatre endroits du bandeau, et un cinquième
+  viendra. La mutation observée est le TEXTE (pas les attributs) et le
+  redimensionnement est filtré sur la LARGEUR du cadre : ni l'un ni l'autre
+  ne peut boucler sur notre propre réglage.
+- **La ligne secondaire n'est plus en `nowrap`** : elle perdait tout sauf son
+  premier mot sur un panneau qui en portait deux lignes.
+- **Mesuré, pas regardé.** Viewport 360 px, boîte englobante relevée dans le
+  navigateur : « À l'embranchement, restez légèrement à droite vers A4/E54 »
+  passe de **3 lignes** (avant) à **2 lignes** à 17,48 px, rendue
+  ENTIÈREMENT — `scrollWidth` 286 = `clientWidth` 286, aucune ellipse.
+- 44 tests unitaires pour la règle de détection et le comptage de lignes
+  (nom lisible, identifiant brut, chaîne vide), 4 parcours à 360 px.
+
 ## [1.142.0] — 2026-09-11 — SALON-1
 
 ### La page du stand, `/salon.html` — jalon CEO du 18/09

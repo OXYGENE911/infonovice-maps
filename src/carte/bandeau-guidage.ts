@@ -82,6 +82,8 @@ import {
 import type { EvenementTrajet } from '../lib/trafic';
 import { flecheManoeuvre } from './icone-manoeuvre';
 import { refermerPanneaux } from './panneaux';
+import { installerTenueEnLignes } from './tenir-en-lignes';
+import { nomsLisibles } from '../lib/nom-lisible';
 import { classeRoute, numeroRoute, libelleClasse } from '../lib/classe-route';
 import { fondPanneau, encreSur, cartoucheNumero } from '../lib/panneau';
 import { pictoMenu } from './icone-menu';
@@ -1060,6 +1062,20 @@ export class BandeauGuidage extends HTMLElement {
     this.querySelector('.bg-parking-p')?.addEventListener('click', () => {
       void this.#ouvrirParkings();
     });
+    /* LE TEXTE DU PANNEAU TIENT EN DEUX LIGNES (TERRAIN-2, 11/09). Armelin :
+       « un texte long déborde du cadre ». Le cartouche est un panneau de
+       direction : ce qu'il porte tient dedans, quitte à rétrécir par paliers,
+       et l'on ne coupe qu'en dernier recours. Le CADRE qui décide est le
+       panneau lui-même : c'est sa largeur qui borne les lignes. */
+    const panneauCadre = this.querySelector<HTMLElement>('.bg-cartouche');
+    const instruction = this.querySelector<HTMLElement>('.bg-cartouche .bg-instruction');
+    const destination = this.querySelector<HTMLElement>('.bg-destination');
+    if (panneauCadre && instruction && destination) {
+      /* `connectedCallback` peut rejouer — l'élément déplacé dans le DOM — et
+         deux jeux d'observateurs mesureraient deux fois le même texte. */
+      this.#retirerTenue?.();
+      this.#retirerTenue = installerTenueEnLignes(panneauCadre, [instruction, destination]);
+    }
     this.querySelector('.bg-bilan-garder')?.addEventListener('click', () => {
       void this.#garderLeTrajet();
     });
@@ -1618,6 +1634,9 @@ export class BandeauGuidage extends HTMLElement {
     this.#marqueurArrivee?.remove();
     this.#marqueurArrivee = null;
   }
+
+  /** Le retrait des observateurs de la tenue en deux lignes (TERRAIN-2). */
+  #retirerTenue: (() => void) | null = null;
 
   /* ---- la suggestion de parking (PARK-1, 31/08) ---- */
 
@@ -2458,7 +2477,17 @@ export class BandeauGuidage extends HTMLElement {
        cartouche rouge, le répéter en toutes lettres serait du bruit. */
     const rueVisee = !e.horsRoute && e.manoeuvre?.voie && numeroRoute(e.manoeuvre.voie) === ''
       ? [e.manoeuvre.voie] : [];
-    const villes = bretelle?.villes ?? (sortie?.nom ? [sortie.nom] : rueVisee);
+    /* JAMAIS D'IDENTIFIANT BRUT (TERRAIN-2, retour du CEO du 11/09). Ces
+       trois sources sont des champs de DONNÉES — `destination` et `name`
+       d'OpenStreetMap, `nom_1_gauche` du service d'itinéraire — et elles
+       portent, à côté des noms de villes, des références techniques qui
+       n'ont jamais été écrites pour être lues au volant. La règle vit dans
+       `lib/nom-lisible.ts`, testée à sec : le rendu change, la règle reste.
+       S'IL NE RESTE RIEN DE LISIBLE, la ligne ne paraît pas — l'instruction
+       et les numéros de route suffisent. C'est déjà la règle de SORTIE-1 :
+       on affiche ce qu'on a, on se tait sur le reste. */
+    const villes = nomsLisibles(
+      bretelle?.villes ?? (sortie?.nom ? [sortie.nom] : rueVisee));
     const texte = villes.join(' · ');
     if (texte === '') {
       ligne.hidden = true;
