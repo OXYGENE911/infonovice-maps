@@ -200,9 +200,9 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   rougissent en citant le texte réellement peint ou dit
   (`Tournez à droite — Tronrout0000000352788241` sur la feuille,
   `Dans 400 mètres, tournez à droite, vers Tronrout0000000352788241` à la voix).
-  Les 14 verts sont les trois contre-épreuves d'affichage et les onze parcours
-  de VOIX-1/VOIX-3, que rien dans ces trois sources ne touche. Sources
-  restaurées, `dist/` reconstruit : **22 parcours verts sur 22.**
+  Les 14 verts sont les trois contre-épreuves d'affichage et les onze AUTRES
+  parcours de `voix.spec.ts`, que rien dans ces trois sources ne touche.
+  Sources restaurées, `dist/` reconstruit : **22 parcours verts sur 22.**
 - **ET LA GARDE DE LA MANŒUVRE ÉTAIT TAUTOLOGIQUE — elle ne pouvait pas
   rougir.** `voix.spec.ts` ATTENDAIT « tournez à droite », puis AFFIRMAIT
   « tournez à droite » : l'attente sondait le texte même que l'assertion
@@ -217,6 +217,11 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   activé… | Dans 400 mètres, prenez la sortie de droite ». **L'assertion n'a
   pas été touchée** : seule la façon d'attendre a changé, et ce qu'elle garantit
   est inchangé — la manœuvre doit être DITE, et dite avec les mots de la route.
+  **Les deux moitiés savent rougir, et c'est mesuré.** Seconde mutation, la ligne
+  `right:` RETIRÉE de `MOTS` — la phrase devient vide, donc silence : c'est
+  l'attente qui rougit alors, en disant pourquoi (« aucune annonce de manœuvre
+  à 400 m n'est partie »). Une garde qui sait rougir des deux côtés ne peut plus
+  être tenue par accident.
 - **La cause racine du 13/09 est rectifiée dans la description de la PR** :
   ce qui faisait rougir la CI, c'était **la mesure sur `scrollHeight`**, qui
   décrit le contenu et non la boîte peinte. Le `-webkit-box` blockifié d'un
