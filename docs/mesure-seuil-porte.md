@@ -766,3 +766,12 @@ lui dise plutôt que de le contourner.
   rapide.
 - **Les corrections apportées après la revue Codex n'ont pas été re-soumises à une revue complète**
   au moment où ce document est écrit — voir le §14 bis pour ce qui a été traité et ce qui reste.
+- **La charge sous laquelle le relevé retiré aurait été pris n'a pas été reproduite** (finition du
+  13/09, C9). Le relevé de 12 637 / 10 124 / 3 059 ms disait « 47 à 57 processus des familles
+  comptées » ; les relevés rejouables de cette passe vont de `node=24` à `node=48`, et donnent 420 à
+  2 927 ms. **Rien n'a été mesuré au-delà de 48 processus** : on ne sait donc pas ce que coûte une
+  lecture sur une machine deux fois plus chargée, et les plafonds de 30 000 / 45 000 ms ne sont pas
+  justifiés par une mesure à cette charge-là — ils sont larges exprès.
+- **La contre-épreuve « assertion d'origine remise sur le produit régressé » n'a pas été rejouée**
+  en C9 : elle exigerait de remettre en place l'assertion qu'on vient justement de corriger. Les
+  deux autres passes du §11, elles, ont été rejouées avec la configuration committée.
