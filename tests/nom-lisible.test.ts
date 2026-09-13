@@ -214,3 +214,36 @@ describe('voieLisible — LA CASSE NE FAIT PAS PASSER UN IDENTIFIANT', () => {
     expect(voieLisible('Marseille : port')).toBe('Marseille : port');
   });
 });
+
+describe('voieLisible — CE QU’ON PERD, ET POURQUOI : l’arbitrage est épinglé', () => {
+  /* RELEVÉ PAR LA REVUE CODEX DU 13/09. Une lettre de réseau suivie de quatre
+     chiffres SANS séparateur a deux lectures : « N1004 », une nationale, et
+     « n4821 », la forme courte d’un nœud OpenStreetMap. La casse les
+     distinguerait, mais elle est perdue en amont — MESURÉ : `libelleVoie`
+     capitalise, et « n4821 » arrive en « N4821 ».
+     On choisit le SILENCE sur cette forme : afficher un identifiant est le
+     défaut qu’Armelin a vu, taire un nom de route est une information en
+     moins. Ce test épingle l’arbitrage pour qu’il se renverse par une
+     décision, jamais par accident. */
+  it('se tait sur « N1004 » — indiscernable d’un nœud OSM une fois capitalisé', () => {
+    expect(voieLisible('N1004')).toBeNull();
+    expect(voieLisible('n4821')).toBeNull();
+  });
+
+  it('garde les formes NON équivoques de la même route', () => {
+    expect(voieLisible('N 1004')).toBe('N 1004');
+    expect(voieLisible('RN1004')).toBe('RN1004');
+    expect(voieLisible('D1004')).toBe('D1004');
+  });
+
+  it('efface « AB12 » et sa forme capitalisée « Ab12 » — un code reste un code', () => {
+    /* Relevé par Codex : la voix disait « vers Ab12 ». */
+    expect(voieLisible('AB12')).toBeNull();
+    expect(voieLisible('Ab12')).toBeNull();
+    expect(nomLisible('Ab12')).toBeNull();
+  });
+
+  it('et ne prend pas un nom accentué pour un code', () => {
+    expect(nomLisible('Évry75')).toBe('Évry75');
+  });
+});

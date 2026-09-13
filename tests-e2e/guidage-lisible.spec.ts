@@ -116,6 +116,9 @@ interface Mesure {
   hauteurMax: string;
   /** Le `overflow-y` CALCULÉ : c'est LUI qui cache, pas la classe. */
   overflowY: string;
+  /** Les hauteurs BRUTES, en pixels — les lignes arrondies ne prouvent rien. */
+  hauteurContenu: number;
+  hauteurBoite: number;
   interligne: number;
   texte: string; boite: { x: number; y: number; largeur: number; hauteur: number };
 }
@@ -140,6 +143,11 @@ async function mesurer(page: Page, selecteur: string): Promise<Mesure> {
     const r = el.getBoundingClientRect();
     const coupe = el.classList.contains('texte-coupe');
     const ecrase = style.overflowY;
+    /* PLAFONNÉ, C'EST DEUX PROPRIÉTÉS MESURÉES, PAS UNE CLASSE : une hauteur
+       maximale réellement posée ET un écrêtage réel. Une classe est une
+       étiquette ; celles-ci sont ce que le navigateur fait. */
+    const plafonne = style.maxHeight !== 'none'
+      && (ecrase === 'hidden' || ecrase === 'clip');
     const parent = el.parentElement;
     return {
       lignes: Math.max(1, Math.round(el.clientHeight / inter)),
@@ -152,12 +160,13 @@ async function mesurer(page: Page, selecteur: string): Promise<Mesure> {
          navigateur cache quoi que ce soit. On lit donc `overflow-y` CALCULÉ.
          Un pixel de tolérance pour les sous-pixels du rendu. */
       deborde: el.scrollWidth > el.clientWidth + 1
-        || (el.scrollHeight > el.clientHeight + 1
-          && !(ecrase === 'hidden' || ecrase === 'clip')),
+        || (el.scrollHeight > el.clientHeight + 1 && !plafonne),
       display: style.display,
       displayParent: parent ? getComputedStyle(parent).display : '',
       hauteurMax: style.maxHeight,
       overflowY: ecrase,
+      hauteurContenu: el.scrollHeight,
+      hauteurBoite: el.clientHeight,
       interligne: inter,
       texte: el.textContent ?? '',
       boite: { x: r.x, y: r.y, largeur: r.width, hauteur: r.height },
@@ -194,9 +203,9 @@ test('LA PHRASE DU CRITÈRE TIENT ENTIÈREMENT SUR 360 px, EN DEUX LIGNES AU PLU
      `overflow:hidden`, et une troisième ligne écrêtée aurait la même
      `clientHeight` qu'une phrase qui tient. La preuve de « rendue
      entièrement », c'est l'ÉGALITÉ des deux hauteurs. */
-  expect(m.lignesContenu,
-    'une ligne est écrêtée : la phrase n’est pas entièrement À L’ÉCRAN')
-    .toBe(m.lignes);
+  expect(m.hauteurContenu,
+    'du texte est écrêté : la phrase n’est pas entièrement À L’ÉCRAN')
+    .toBeLessThanOrEqual(m.hauteurBoite + 1);
 
   /* ET IL NE SORT PAS DU PANNEAU : la boîte du texte tient dans celle du
      cartouche, qui est la tôle. */
@@ -235,9 +244,10 @@ test('UNE LIGNE SECONDAIRE INTERMINABLE S’ARRÊTE À DEUX LIGNES, SANS CHEVAUC
   expect(d.deborde, 'la ligne secondaire déborde de sa boîte').toBe(false);
   /* SANS COUPE POSÉE, RIEN NE DOIT ÊTRE CACHÉ : un écrêtage silencieux
      serait le défaut d'Armelin, déguisé en réparation. */
-  if (!d.coupe) {
-    expect(d.lignesContenu,
-      'du texte est écrêté sans que la coupe l’ait décidé').toBe(d.lignes);
+  if (d.hauteurMax === 'none') {
+    expect(d.hauteurContenu,
+      'du texte est écrêté sans qu’aucun plafond ne l’ait décidé')
+      .toBeLessThanOrEqual(d.hauteurBoite + 1);
   }
   /* ET LA BOÎTE EST MESURÉE EN PIXELS, pas seulement en lignes arrondies. */
   expect(d.boite.hauteur, 'la boîte peinte tient en deux interlignes')

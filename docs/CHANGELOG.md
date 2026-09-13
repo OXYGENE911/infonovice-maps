@@ -132,6 +132,29 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
      se déclenchait encore sur une chaîne vide — et affichait l'écusson de la
      route quittée pour une manœuvre vers une voie sans nom. Il ne vaut plus
      que pour un champ MANQUANT.
+- **Troisième tour de revue Codex, trois constats de plus** :
+  1. *(bloquant)* **compter des lignes ARRONDIES ne prouve pas qu'il ne manque
+     rien.** Interligne 20 px, contenu 40, boîte 36 : deux lignes de chaque
+     côté, et quatre pixels cachés. La preuve est désormais l'inégalité en
+     PIXELS (`scrollHeight ≤ clientHeight + 1`), c'est-à-dire exactement
+     l'assertion d'origine — restituée, et levée seulement quand un plafond
+     est RÉELLEMENT posé : deux propriétés calculées, `max-height` ≠ `none`
+     ET `overflow-y` écrêtant. Plus aucune assertion ne s'appuie sur une
+     classe ;
+  2. **la casse laissait encore passer un code** : le motif des codes d'un
+     seul tenant était en capitales seules, et **mesuré, un champ « AB12 »
+     rend « Ab12 »** après mise en forme du libellé — la voix disait
+     « vers Ab12 ». Le motif ignore la casse ; les lettres accentuées en
+     restent dehors, « Évry75 » est un nom mal saisi, pas un code ;
+  3. **un arbitrage assumé, et épinglé par un test** : une lettre de réseau
+     suivie de quatre chiffres SANS séparateur a deux lectures — « N1004 »,
+     une nationale, et « n4821 », la forme courte d'un nœud OSM. La casse les
+     distinguerait, mais elle est perdue en amont (mesuré : `libelleVoie`
+     capitalise). **On choisit le silence sur cette forme** : afficher un
+     identifiant est le défaut qu'Armelin a vu, taire un nom de route est une
+     information en moins. Les formes non équivoques sont gardées — « N 1004 »,
+     « RN1004 », « D1004 ». Ce test-là existe pour que l'arbitrage se renverse
+     par une décision, pas par accident.
 - **Aucune assertion n'a été affaiblie pour obtenir du vert** : neuf parcours à 360 px
   et quatre-vingts tests unitaires ajoutés, dont un parcours qui FORCE le
   dernier recours sur toute police (un texte qui ne tient sur aucune) et affirme,

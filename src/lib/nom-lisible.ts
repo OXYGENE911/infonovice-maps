@@ -58,10 +58,15 @@ const CLE_TECHNIQUE = /^[a-z][a-z0-9-]*[:=]/i;
    BD TOPO : neuf chiffres). Un mot SEUL, lui, reste jugé à cinq. */
 const LONG_NOMBRE_MOT = /\d{5,}/;
 const LONG_NOMBRE_PHRASE = /\d{7,}/;
-/* UN CODE D'UN SEUL TENANT, EN CAPITALES ET CHIFFRES : « RD1234 », « FR75056 ».
+/* UN CODE D'UN SEUL TENANT, LETTRES ET CHIFFRES : « RD1234 », « FR75056 ».
    Quatre caractères au moins, et au moins un chiffre — « CHU » et « RN7 »
-   restent lisibles, ce sont des mots qu'on lit sur un panneau. */
-const CODE_SANS_ESPACE = /^(?=.*\d)[A-Z0-9]{4,}$/;
+   restent lisibles, ce sont des mots qu'on lit sur un panneau.
+   LA CASSE NE COMPTE PAS, relevé par la revue Codex du 13/09 : le libellé de
+   voie est CAPITALISÉ avant d'arriver ici — mesuré, un champ « AB12 » rend
+   « Ab12 » — et un motif en capitales seules ne le voyait plus. Il passait
+   jusqu'à la voix : « vers Ab12 ». Les lettres accentuées restent HORS du
+   motif : « Évry75 » n'est pas un code, c'est un nom mal saisi. */
+const CODE_SANS_ESPACE = /^(?=.*\d)[A-Za-z0-9]{4,}$/;
 /** Au moins une lettre, quelle que soit la langue. Sinon, ce n'est pas un nom. */
 const UNE_LETTRE = /\p{L}/u;
 
@@ -190,5 +195,17 @@ export function voieLisible(brut: string | null | undefined): string | null {
      du 13/09, où une exception posée sur la seule forme le laissait passer
      jusqu'à l'écusson, la voix et la feuille imprimée. */
   if (motif === 'forme-de-code' && NUMERO_DE_ROUTE.test(t.toUpperCase())) return t;
+  /* CE QU'ON PERD ICI, ET POURQUOI ON L'ACCEPTE — relevé par la revue Codex du
+     13/09. Une lettre de réseau suivie de quatre chiffres SANS séparateur a
+     exactement deux lectures : « N1004 », une nationale, et « n4821 », la
+     forme courte d'un nœud OpenStreetMap. LA CASSE LES DISTINGUERAIT — mais
+     elle est perdue en amont : MESURÉ, `libelleVoie` capitalise, et « n4821 »
+     arrive ici en « N4821 ». Aucun signal ne reste.
+     ON CHOISIT DONC LE SILENCE sur cette forme-là : afficher un identifiant
+     est le défaut qu'Armelin a vu, taire un nom de route est une information
+     en moins. Les formes NON équivoques, elles, sont gardées : « N 1004 »
+     (un séparateur), « RN1004 » (un préfixe de réseau), « D1004 » (une
+     lettre qu'OpenStreetMap n'emploie pas). Arbitrage assumé, épinglé par un
+     test : il se renverse par une décision, pas par accident. */
   return null;
 }
