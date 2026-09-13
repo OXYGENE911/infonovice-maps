@@ -1725,9 +1725,12 @@ du décompte écrit « 15 sont en `.fr` ». Deux choses la démentaient ensemble
    vérifiable en trente secondes par un journaliste.
 
 **Ce que les deux variantes garantissent maintenant, et ce qu'elles ne
-garantissent plus.** Elles garantissent un décompte que l'on peut refaire sur
-la page servie (15 sur 18) et l'aveu des **deux** exceptions que « À propos »
-nomme, dans l'ordre où le visiteur les trouvera. Elles ne garantissent plus —
+garantissent plus.** Toutes deux garantissent l'aveu des **deux** exceptions
+que « À propos » nomme, dans l'ordre où le visiteur les trouvera. **La seule
+qui porte le décompte est la courte** (15 sur 18) ; la longue répond à la
+question de la photo et ne compte rien — c'est voulu, on ne récite pas une
+CSP à quelqu'un qui demande pourquoi une fiche n'a pas d'image, mais il ne
+faut pas non plus lui prêter ce chiffre. Elles ne garantissent plus —
 et ne doivent plus laisser croire — ni que la nationalité de l'éditeur de
 `public.opendatasoft.com` a été vérifiée (elle ne l'est toujours pas), ni que
 « À propos » est à jour : la page annonce encore l'exception photo que cette
@@ -1753,9 +1756,10 @@ français d'imagerie que la page « À propos » décrit déjà ;
 `public.opendatasoft.com` sert le fichier consolidé Etalab des bornes IRVE
 (donnée publique française) — **la nationalité de l'éditeur de cette plateforme
 n'a pas été vérifiée ici** ; `api.open-meteo.com` est l'exception météo. C'est
-pourquoi les deux variantes **comptent** (15 sur 18) et **nomment** les
-exceptions écrites, au lieu de promettre un « sans exception » — ou une
-exception unique, que la l. 164 de `a-propos.html` dément.
+pourquoi la variante courte **compte** (15 sur 18) et pourquoi les deux
+**nomment** les exceptions écrites, au lieu de promettre un « sans
+exception » — ou une exception unique, que la l. 164 de `a-propos.html`
+dément.
 
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.

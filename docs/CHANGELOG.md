@@ -53,11 +53,11 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   13/09/2026, porte `<h2>Première exception : la météo</h2>` **et**
   `<h2>Seconde exception : les photos des monuments</h2>` — `a-propos.html`
   l. 164, fichier identique sur `origin/main`, `origin/staging` et cette
-  branche. Les deux variantes **comptent** désormais (**15 hôtes en `.fr` sur
-  les 18 de la CSP servie**) et **nomment** les deux exceptions, au lieu d'en
-  promettre une seule — « déclare pouvoir appeler », et non
-  « interroge » : la CSP autorise, elle ne prouve pas qu'une session les
-  contacte tous. Documentation seule : aucun code, aucun test touché.
+  branche. Les deux variantes **nomment** désormais les deux exceptions au lieu
+  d'en promettre une seule ; **la courte y ajoute le décompte** (**15 hôtes en
+  `.fr` sur les 18 de la CSP servie**), la longue n'en porte aucun. Elle dit
+  « déclare pouvoir appeler », et non « interroge » : la CSP autorise, elle
+  ne prouve pas qu'une session les contacte tous. Documentation seule : aucun code, aucun test touché.
 - **Non fait, et dit** : `a-propos.html` décrit encore la « seconde
   exception » Wikimedia (l. 166 et 171). Cette page fait l'objet d'une
   décision CEO ouverte et sort du périmètre de la tâche — la page annonce
