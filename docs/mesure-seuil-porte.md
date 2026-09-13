@@ -450,6 +450,14 @@ La passe 2 est le point exact de l'objection : l'ancien parcours attrapait bien 
 mais **par une autre ligne**. Le nombre 8 000 n'a jamais été confronté à une durée mesurée ; il
 l'est désormais. Aucune barre n'a bougé : 8 000 reste 8 000.
 
+**CE QUI RESTE VRAI PAR CONSTRUCTION, ET QU'IL FAUT DIRE** (revue Codex du 13/09 sur le commit de
+finition) : dans la branche *porte jamais refermée*, la grandeur comparée reste
+`dernierRegard - porteOuverteA`, déjà garantie ≥ 10 000 ms par l'attente. C'est **inévitable** —
+un bouton qui ne se referme pas n'a pas de durée de vie à confronter à un seuil — et c'est
+pourquoi la preuve de cette branche-là est portée par `refermee === false`, pas par les 8 000 ms.
+Ce qui a changé : dans l'AUTRE branche, celle où la régression vit, la ligne des 8 000 ms n'est
+plus vide.
+
 ### Et un fait découvert EN mesurant, qu'il ne faut pas taire
 
 Le prédicat « la porte est utilisable » confondait deux choses : *le bouton n'existe pas* et *le
@@ -589,20 +597,27 @@ Le vérificateur a relevé trois délais de parcours portés à soixante seconde
 n'est pas une assertion — l'allonger ne déplace aucune barre —, mais il **absorbe en silence** une
 lenteur qu'on aurait voulu voir. Trois relevés, tous rejouables :
 
-| relevé | machine | valeur |
-|---|---|---|
-| trois `compterProcessus()` consécutifs | ce poste, CHARGÉ (47 à 57 processus comptés) | 12 637 / 10 124 / 3 059 ms |
-| `tasklist /NH /FO CSV` complet × 3 | ce poste, 13/09 07 h 35 (30 node, 0 chrome) | 427 / 504 / 559 ms |
-| `tasklist` filtré par pid × 3 | ce poste, même instant | 281 / 326 / 323 ms |
-| le fichier entier, 23 parcours | ce poste, même instant | 5,09 s |
-| le fichier entier, 23 parcours | CI Ubuntu, commit `a3732db` (run 34738395197) | **99 ms** — lire `/proc` ne coûte rien |
+| relevé | commande qui le produit | machine | valeur |
+|---|---|---|---|
+| trois `compterProcessus()` consécutifs | relevé du 13/09, reporté tel quel | ce poste, CHARGÉ (47 à 57 processus comptés) | 12 637 / 10 124 / 3 059 ms |
+| `tasklist /NH /FO CSV` complet × 3 | `node -e "const{execFileSync}=require('node:child_process');for(let i=0;i<3;i++){const a=Date.now();execFileSync('tasklist',['/NH','/FO','CSV'],{encoding:'utf8',windowsHide:true,maxBuffer:16*1024*1024});console.log(Date.now()-a)}"` | ce poste, 13/09 07 h 35 (30 node, 0 chrome) | 427 / 504 / 559 ms |
+| `tasklist` filtré par pid × 3 | la même, avec `['/NH','/FO','CSV','/FI','PID eq '+process.pid]` | ce poste, même instant | 281 / 326 / 323 ms |
+| le fichier entier, 23 parcours | `npx vitest run tests/garde-processus.test.ts --reporter=verbose`, ligne `Duration` | ce poste, même instant | 5,09 s |
+| le fichier entier, 23 parcours | `gh run view 34738395197 --log`, job « Tests unitaires » | CI Ubuntu, commit `a3732db` | **99 ms** — lire `/proc` ne coûte rien |
 
 D'où deux délais nommés au lieu de trois nombres ronds : une lecture de la table vaut 12 637 ms au
 pire connu → **30 000 ms** (× 2,4) ; le parcours de l'enfant renommé enchaîne un `spawn` borné à
 10 000 ms par le test lui-même **puis deux** lectures par pid → 10 000 + 2 × 12 637 = 35 274 ms au
 pire → **45 000 ms**. Et chaque lecture réelle **publie ce qu'elle a coûté** (`[garde] … table des
 processus lue en N ms`) : une dérive se lira dans le journal au lieu de se découvrir par une
-expiration. Relevé après correction sur ce poste : 470 ms.
+expiration. Relevé après correction sur ce poste par
+`npx vitest run tests/garde-processus.test.ts --reporter=verbose`, ligne recopiée du journal :
+
+    [garde] lecture propre au parcours des champs déclarés : table des processus lue en 470 ms
+    (plafond du parcours 30000 ms) — source « tasklist (nom d’image, noyau) », node=26 chrome=0
+    nonResolus=0
+
+**Ce nombre varie avec la charge de la machine** : c'est un coût observé, pas une garantie.
 
 ## 14. Tâche 2 — les 15 secondes avant la porte de sortie : le relevé, pas l'arbitrage
 
