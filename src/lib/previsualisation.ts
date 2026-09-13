@@ -219,20 +219,49 @@ const BALISE_SIMPLE = /[ \t]*<(link|meta)\b((?:[^>"']|"[^"]*"|'[^']*')*)\/?>[ \t
 const BALISE_SCRIPT = /[ \t]*<script\b((?:[^>"']|"[^"]*"|'[^']*')*)>[\s\S]*?<\/script\s*>[ \t]*\r?\n?/gi;
 const ATTRIBUT = /([a-zA-Z0-9_:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'`=<>]+))/g;
 
+/* LE NAVIGATEUR DÉCODE LES RÉFÉRENCES DE CARACTÈRES DANS LES ATTRIBUTS, DONC
+   NOUS AUSSI. `property="og&#58;title"` vaut `property="og:title"` pour un
+   analyseur HTML ; comparé brut, il échappait au retrait ET à la porte. */
+const REFERENCES_NOMMEES: Record<string, string> = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", colon: ':', plus: '+',
+  sol: '/', equals: '=', period: '.', hyphen: '-', lowbar: '_', num: '#',
+};
+function decoderHtml(valeur: string): string {
+  return valeur.replace(
+    /&(?:#x([0-9a-f]+)|#(\d+)|([a-z][a-z0-9]*));?/gi,
+    (tout: string, hex?: string, dec?: string, nom?: string) => {
+      const point = hex !== undefined ? Number.parseInt(hex, 16)
+        : (dec !== undefined ? Number(dec) : null);
+      if (point !== null) {
+        if (!Number.isFinite(point) || point < 0 || point > 0x10ffff) return tout;
+        try { return String.fromCodePoint(point); } catch { return tout; }
+      }
+      return REFERENCES_NOMMEES[(nom ?? '').toLowerCase()] ?? tout;
+    },
+  );
+}
+
 function attributs(interieur: string): Record<string, string> {
   const lus: Record<string, string> = {};
   for (const m of interieur.matchAll(ATTRIBUT)) {
     const nom = m[1];
     if (nom === undefined) continue;
-    lus[nom.toLowerCase()] = m[2] ?? m[3] ?? m[4] ?? '';
+    lus[nom.toLowerCase()] = decoderHtml(m[2] ?? m[3] ?? m[4] ?? '');
   }
   return lus;
 }
 
-/** Réécrit la valeur de `content` en gardant les guillemets d'origine. */
+/** `rel` est une LISTE : `rel="alternate canonical"` est un canonical. */
+function relations(valeur: string | undefined): string[] {
+  return (valeur ?? '').trim().toLowerCase().split(/\s+/).filter((r) => r !== '');
+}
+
+/** Réécrit la valeur de `content` en gardant les guillemets d'origine.
+    `(?<![-\w])` ET NON `\b` : sans cela, `data-content` était réécrit à la
+    place de `content`, et le vrai titre restait celui de la production. */
 function reecrireContenu(balise: string, transforme: (v: string) => string): string {
   return balise.replace(
-    /(\bcontent\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s"'`=<>]+))/i,
+    /((?<![-\w])content\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s"'`=<>]+))/i,
     (_tout, avant: string, dq?: string, sq?: string, nu?: string) => {
       if (sq !== undefined) return `${avant}'${transforme(sq)}'`;
       return `${avant}"${transforme(dq ?? nu ?? '')}"`;
@@ -240,26 +269,49 @@ function reecrireContenu(balise: string, transforme: (v: string) => string): str
   );
 }
 
-export function neutraliserMetadonneesProduction(html: string): string {
-  const sansScripts = html.replace(BALISE_SCRIPT, (balise, interieur: string) =>
-    (attributs(interieur).type ?? '').trim().toLowerCase() === 'application/ld+json' ? '' : balise);
+/* ON NE TOUCHE QU'AU `<head>`, ET LES COMMENTAIRES SONT ÉPARGNÉS. Hors du
+   `<head>`, ce qui RESSEMBLE à une balise n'en est pas forcément une : appliqué
+   à tout le document, le balayage effaçait le contenu d'un `<textarea>` qui
+   citait un `<link rel="canonical">` (6e revue Codex). Une transformation qui
+   supprime silencieusement du contenu de page est pire que le défaut qu'elle
+   répare. La porte contrôle exactement la même zone. */
+function surLaTete(html: string, transforme: (tete: string) => string): string {
+  const ouvre = /<head(\s[^>]*)?>/i.exec(html);
+  if (ouvre === null) return html;
+  const debut = ouvre.index + ouvre[0].length;
+  const relatif = html.slice(debut).search(/<\/head>/i);
+  const fin = relatif === -1 ? html.length : debut + relatif;
 
-  return sansScripts.replace(BALISE_SIMPLE, (balise, nom: string, interieur: string) => {
-    const a = attributs(interieur);
-    if (nom.toLowerCase() === 'link') {
-      return (a.rel ?? '').trim().toLowerCase() === 'canonical' ? '' : balise;
-    }
-    const propriete = (a.property ?? '').trim().toLowerCase();
-    if (propriete === 'og:url') return '';
-    if (propriete === 'og:title') {
-      return reecrireContenu(balise, (v) => (v.startsWith(PREFIXE_TITRE) ? v : PREFIXE_TITRE + v));
-    }
-    if (propriete === 'og:site_name') {
-      const suffixe = ` — ${MENTION_PREVISUALISATION}`;
-      return reecrireContenu(balise, (v) => (v.endsWith(suffixe) ? v : v + suffixe));
-    }
-    return balise;
+  const commentaires: string[] = [];
+  const masquee = html.slice(debut, fin).replace(/<!--[\s\S]*?-->/g, (c) => {
+    commentaires.push(c);
+    return ` ${commentaires.length - 1} `;
   });
+  const rendue = transforme(masquee)
+    .replace(/ (\d+) /g, (tout, i: string) => commentaires[Number(i)] ?? tout);
+  return html.slice(0, debut) + rendue + html.slice(fin);
+}
+
+export function neutraliserMetadonneesProduction(html: string): string {
+  return surLaTete(html, (tete) => tete
+    .replace(BALISE_SCRIPT, (balise, interieur: string) =>
+      (attributs(interieur).type ?? '').trim().toLowerCase() === 'application/ld+json' ? '' : balise)
+    .replace(BALISE_SIMPLE, (balise, nom: string, interieur: string) => {
+      const a = attributs(interieur);
+      if (nom.toLowerCase() === 'link') {
+        return relations(a.rel).includes('canonical') ? '' : balise;
+      }
+      const propriete = (a.property ?? '').trim().toLowerCase();
+      if (propriete === 'og:url') return '';
+      if (propriete === 'og:title') {
+        return reecrireContenu(balise, (v) => (decoderHtml(v).startsWith(PREFIXE_TITRE) ? v : PREFIXE_TITRE + v));
+      }
+      if (propriete === 'og:site_name') {
+        const suffixe = ` — ${MENTION_PREVISUALISATION}`;
+        return reecrireContenu(balise, (v) => (decoderHtml(v).endsWith(suffixe) ? v : v + suffixe));
+      }
+      return balise;
+    }));
 }
 
 /* PAS DE REPLI SILENCIEUX (même règle que la version dans `vite.config.ts`) :

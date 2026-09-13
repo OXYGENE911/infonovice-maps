@@ -405,6 +405,80 @@ describe('les huit contournements de la 6e revue Codex', () => {
   });
 });
 
+describe('les huit contournements de la 7e revue Codex', () => {
+  const poseCss = (contenu: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'previsualisation.css'), `${FEUILLE_PREVISUALISATION}\n${contenu}\n`);
+    return griefsDe().join(' ');
+  };
+  const poseHtml = (html: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'index.html'), html);
+    return griefsDe().join(' ');
+  };
+  const marquee = () => marquerHtmlPrevisualisation(PAGE_SOURCE, 'index.html');
+
+  it('1. « opacity: -1 » vaut zéro : l’opacité est bornée à [0,1]', () => {
+    expect(poseCss('.previsualisation-cadre { opacity: -1; }')).toMatch(/invisible/);
+  });
+
+  it('2. « opacity: 1e0 » est un nombre CSS valide et parfaitement visible', () => {
+    // Faux positif : la notation exponentielle était jugée « illisible ».
+    expect(poseCss('.previsualisation-cadre { opacity: 1e0; }')).toEqual('');
+  });
+
+  it('3. « border-style: solid none » efface deux côtés sur quatre', () => {
+    expect(poseCss('.previsualisation-cadre { border-style: solid none; }'))
+      .toMatch(/n'est pas dessiné côté right/);
+  });
+
+  it('et « border-color: #FFB300 transparent » aussi', () => {
+    expect(poseCss('.previsualisation-cadre { border-color: #FFB300 transparent; }'))
+      .toMatch(/transparent côté right/);
+  });
+
+  it('mais « border-style: solid » sur les quatre côtés reste bon', () => {
+    expect(poseCss('.previsualisation-cadre { border-style: solid; }')).toEqual('');
+  });
+
+  it('4. « rgb(0, 0, 0) » : les espaces dans une couleur ne la découpent plus', () => {
+    expect(poseCss('.previsualisation-pastille { color: rgb(0, 0, 0); background: rgb(0, 0, 0); }'))
+      .toMatch(/même couleur/);
+  });
+
+  it('5. « rel="alternate canonical" » est un canonical : rel est une LISTE', () => {
+    expect(poseHtml(marquee().replace('</head>',
+      '<link rel="alternate canonical" href="https://maps.infonovice.fr/"></head>')))
+      .toMatch(/canonical/);
+  });
+
+  it('6. les références de caractères sont décodées, comme le fait un navigateur', () => {
+    const griefs = poseHtml(marquee().replace('</head>',
+      '<meta property="og&#58;title" content="Maps">'
+      + '<link rel="canonic&#97;l" href="https://maps.infonovice.fr/">'
+      + '<meta property="og&#58;url" content="https://maps.infonovice.fr/">'
+      + '<script type="application/ld&#43;json">{}</script></head>'));
+    expect(griefs).toMatch(/og:title/);
+    expect(griefs).toMatch(/canonical/);
+    expect(griefs).toMatch(/og:url/);
+    expect(griefs).toMatch(/JSON-LD/);
+  });
+
+  it('7. ce qui est dans un COMMENTAIRE du head n’est pas une balise', () => {
+    // Faux positif à éviter : les pages du dépôt commentent abondamment leur
+    // <head>, et un exemple cité en commentaire ne doit rien déclencher.
+    expect(poseHtml(marquee().replace('</head>',
+      '<!-- exemple : <link rel="canonical" href="https://maps.infonovice.fr/"> --></head>')))
+      .toEqual('');
+  });
+
+  it('8. et ce qui est dans le <body> non plus : la porte ne lit que le <head>', () => {
+    expect(poseHtml(marquee().replace('</body>',
+      '<textarea><link rel="canonical" href="https://maps.infonovice.fr/"></textarea></body>')))
+      .toEqual('');
+  });
+});
+
 describe('les pages livrées', () => {
   it('une page dans un SOUS-DOSSIER est contrôlée elle aussi', () => {
     dossierConforme();

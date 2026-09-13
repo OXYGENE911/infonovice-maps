@@ -227,6 +227,41 @@ describe('la préversion se dit aussi quand on PARTAGE son lien', () => {
     expect(sortie).not.toMatch(/accueil/);
   });
 
+  it('7e revue Codex : références de caractères, rel en liste, data-content, textarea', () => {
+    const retors = [
+      '<!doctype html>',
+      '<html lang="fr">',
+      '<head>',
+      '  <title>Infonovice Maps</title>',
+      '  <link rel="alternate canonical" href="https://maps.infonovice.fr/">',
+      '  <meta property="og&#58;url" content="https://maps.infonovice.fr/">',
+      '  <meta data-content="ancien" property="og:title" content="Maps">',
+      '  <script id="s" type="application/ld&#43;json">{"url":"x"}</script>',
+      '  <!-- exemple : <link rel="canonical" href="https://maps.infonovice.fr/"> -->',
+      '</head>',
+      '<body>',
+      '  <textarea><link rel="canonical" href="https://maps.infonovice.fr/"></textarea>',
+      '</body>',
+      '</html>',
+    ].join('\n');
+    const sortie = marquerHtmlPrevisualisation(retors, 'index.html');
+
+    // `rel` est une liste ; `&#58;` et `&#43;` sont décodés comme par un
+    // navigateur ; le retrait porte bien sur les balises du <head>.
+    expect(sortie).not.toContain('rel="alternate canonical"');
+    expect(sortie).not.toContain('og&#58;url');
+    expect(sortie).not.toContain('ld&#43;json');
+
+    // `data-content` n'est PAS `content` : c'est le vrai titre qui est préfixé.
+    expect(sortie).toContain('data-content="ancien"');
+    expect(sortie).toContain(`content="${PREFIXE_TITRE}Maps"`);
+
+    // Le commentaire du <head> et le <textarea> du <body> sont intacts : une
+    // transformation qui efface du contenu de page est pire que le défaut.
+    expect(sortie).toContain('<!-- exemple : <link rel="canonical"');
+    expect(sortie).toContain('<textarea><link rel="canonical"');
+  });
+
   it('et un marquage rejoué deux fois ne double pas le préfixe', () => {
     const une = marquerHtmlPrevisualisation(
       '<html><head><title>T</title><meta property="og:title" content="M"></head><body></body></html>',
