@@ -2,6 +2,48 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.143.0] — 2026-09-13 — WIKIMEDIA-0
+
+### Wikimedia sort de Maps gratuit — Decision D3 du CEO (11/09), appliquée
+- **Les trois hôtes sont sortis de la CSP d'`index.html`** :
+  `upload.wikimedia.org` (`img-src`), `query.wikidata.org` et
+  `commons.wikimedia.org` (`connect-src`). La `connect-src` passe de 19 à 17
+  hôtes déclarés, l'`img-src` de 3 à 2. C'est le point qui manquait : la
+  décision datait du 11/09 et les trois hôtes étaient encore en production le
+  12/09 à 22 h 11 UTC.
+- **Le code est parti avec** : `src/lib/photos-monuments.ts` supprimé,
+  et dans `src/carte/fiche-lieu.ts` l'import, le champ `#photoEnCours`, la
+  `<figure class="fb-photo">` et la méthode `#chargerPhoto`. Le crédit sous
+  l'image (`figcaption.fb-photo-credit`, « auteur — licence · Wikimedia
+  Commons ») disparaît avec elle, ainsi que le bloc `PHOTO-1` de
+  `src/styles/carte.css`.
+- **AUCUN EMPLACEMENT RÉSERVÉ NE RESTE.** Avant, une fiche sans photo portait
+  quand même une `<figure hidden>` : un cadre qui attendait. Mesuré au
+  viewport 1280×720, la boîte de la fiche est **identique au pixel** avant et
+  après — cadre `.fb` 360 × 455,89 px, corps qui ne défile pas (403 / 403),
+  gouttières inchangées (10 / 9,99 px), ordonnées des quatre blocs
+  identiques. Ce qui change : un nœud de moins, et **zéro requête** vers
+  Wikimedia contre une avant (`query.wikidata.org`).
+- **La fiche illustrée débordait**, elle : 652 px de contenu pour 451 px de
+  fenêtre, plafonnée à 504 px. Sans photo, la fiche tient entière.
+- **Deux portes anti-retour** dans `tests/csp-connect-src.test.ts` : aucun
+  hôte `wikimedia`/`wikidata`/`wikipedia` dans la CSP, aucun dans `src/`.
+  Contre-épreuve faite — réintroduire `upload.wikimedia.org` dans `img-src`
+  fait rougir le test.
+- **Le parcours E2E `PHOTO-1` devient `PHOTO-0`** : il n'affirme plus que la
+  photo arrive, il affirme que **rien ne part**. Il ÉCOUTE le réseau sans y
+  répondre (`page.on('request')`), vérifie qu'aucun nœud `.fb-photo` n'existe,
+  et mesure les trous entre blocs du corps de fiche.
+- **Ce que l'usager perd, et la phrase qui le dit** : la photographie en tête
+  de la fiche d'un monument classé. Le reste ne bouge pas — titre, commune,
+  siècle, statut, notice officielle `pop.culture.gouv.fr`, bouton
+  d'itinéraire. La phrase pour le stand et les cinq conditions d'un retour par
+  Panoramax (37 %, mesuré le 11/09/2026) sont dans `docs/apis.md`, §5.
+- **Non fait, et dit** : `a-propos.html` décrit encore la « seconde
+  exception » Wikimedia (l. 166 et 171). Cette page fait l'objet d'une
+  décision CEO ouverte et sort du périmètre de la tâche — la page annonce
+  donc une fonction que l'application n'a plus.
+
 ## [1.142.0] — 2026-09-11 — SALON-1
 
 ### La page du stand, `/salon.html` — jalon CEO du 18/09

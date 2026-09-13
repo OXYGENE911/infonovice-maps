@@ -1582,5 +1582,101 @@ Préalable obligatoire, dans les deux cas : élargir le motif d'hôte de
 `src/lib/panoramax.ts` **et** ajouter `panoramax.ign.fr` à `img-src`, sans
 quoi une photo sur deux restera écartée.
 
+### 5. Retrait APPLIQUÉ le 13/09/2026 — ce qui est parti, et la porte laissée ouverte
+
+La Decision D3 du 11/09/2026 dormait depuis deux jours : Growth a mesuré le
+12/09 à 22 h 11 UTC que les trois hôtes étaient toujours dans la CSP de
+production. Ils n'y sont plus.
+
+**Ce qui est parti** (branche `feat/rec46S36kE181IeJE-wikimedia-retrait`) :
+
+| Canal | Ce qui a été retiré |
+|---|---|
+| CSP (`index.html`) | `https://upload.wikimedia.org` d'`img-src` ; `https://query.wikidata.org` et `https://commons.wikimedia.org` de `connect-src` |
+| Code | `src/lib/photos-monuments.ts` supprimé ; dans `src/carte/fiche-lieu.ts` : l'import, le champ `#photoEnCours`, la `<figure class="fb-photo">` et la méthode `#chargerPhoto` |
+| Crédit | la ligne `«  auteur — licence · Wikimedia Commons »` (`figcaption.fb-photo-credit`), partie avec la figure |
+| Feuille de style | le bloc `PHOTO-1` de `src/styles/carte.css` (`.fb-photo`, `.fb-photo-image`, `.fb-photo-credit`) |
+| Tests | `tests/photos-monuments.test.ts` supprimé ; le parcours E2E `PHOTO-1` remplacé par `PHOTO-0`, qui ÉCOUTE le réseau sans y répondre et échoue si une requête part |
+| Porte anti-retour | deux cas ajoutés à `tests/csp-connect-src.test.ts` : aucun hôte `wikimedia/wikidata/wikipedia` dans la CSP, aucun dans `src/` |
+
+**Service worker : rien à retirer.** Le `sw.js` engendré par `vite-plugin-pwa`
+ne connaît que les réserves de tuiles (`RESERVES_TUILES` dans `vite.config.ts`)
+— `grep -ci wikimedia dist/sw.js` rend `0`.
+
+**Page « À propos » : NON TOUCHÉE, et c'est délibéré.** `a-propos.html` porte
+encore la « seconde exception » qui explique la photo Wikimedia (l. 166 et
+171). Elle fait l'objet d'une décision CEO ouverte et sort du périmètre de
+cette tâche : tant qu'elle n'est pas reprise, la page décrit une fonction que
+l'application n'a plus.
+
+**Le rendu, mesuré — pas jugé à l'œil.** Viewport 1280×720, fiche d'un
+monument d'essai, `vite preview` sur un port dédié, empreinte du bundle servi
+comparée à `dist/` :
+
+| Cas | Cadre `.fb` | `.fb-corps` défile ? | Trous entre blocs | Requêtes Wikimedia |
+|---|---|---|---|---|
+| AVANT, fiche **sans** photo | 360 × 455,89 px | non (403 / 403) | 10 / 10 / 9,99 px | 1 (SPARQL) |
+| APRÈS, fiche **sans** photo | 360 × 455,89 px | non (403 / 403) | 10 / 10 / 9,99 px | **0** |
+| AVANT, fiche **avec** photo | 360 × 504 px (plafond) | **oui** (652 / 451) | — | 3 |
+
+La boîte d'une fiche sans photo est **identique au pixel** avant et après, et
+les ordonnées des quatre blocs visibles ne bougent pas (280,11 / 325,61 /
+454,61 / 526,73). Ce qui disparaît, c'est le nœud `<figure hidden>` — un
+emplacement réservé qui n'attendait plus rien. Effet de bord mesuré : la fiche
+illustrée débordait et se laissait défiler (652 px de contenu pour 451 px de
+fenêtre) ; sans photo, elle tient entière.
+
+**Poids du bundle** : `dist/assets/index-*.js` passe de 361,85 ko à 359,44 ko
+(gzip 116,89 → 115,98 ko), builds reproductibles (`index-CKaEWQhM.js` avant,
+`index-Dgu8MxWE.js` après).
+
+#### La porte laissée ouverte — Panoramax, et à quelles conditions
+
+**Le chiffre et sa date : Panoramax illustre 11 fiches sur 30, soit 37 %, de
+l'échantillon du §3, mesuré le 11/09/2026** (le brief du cycle du 13/09 date
+la même mesure du 12/09 ; elle n'a pas été refaite ici). Face aux **93 %
+(28/30) de Wikimedia, mesurés le même jour sur le même échantillon**, c'est
+l'écart qui a fondé le retrait. **Un chiffre sans sa date redevient faux tout
+seul : celui-ci vaut pour le 11/09/2026 et pour cet échantillon de 30.**
+
+Ce qu'il faudrait pour revenir, après le salon, sans redemander de dérogation :
+
+1. **Remesurer.** Le 37 % a une date. Toute reprise commence par un nouveau
+   comptage sur le même échantillon de 30, publié avec sa date — sinon on
+   décide sur un chiffre périmé.
+2. **Élargir le motif d'hôte de `src/lib/panoramax.ts`.** Le filtre actuel
+   (`/^https:\/\/[a-z0-9.-]*panoramax\.(openstreetmap\.fr|xyz)\//`) écarte
+   `panoramax.ign.fr`, qui sert **388 des 794 photos relevées le 11/09 (49 %)**.
+   Sans cela, près d'une photo sur deux reste jetée avant l'affichage.
+3. **Ajouter `panoramax.ign.fr` à `img-src`** dans le même commit que le point
+   2 — un hôte absent de la CSP ne donne pas d'échec réseau visible, seulement
+   une image qui ne vient pas.
+4. **Assumer le libellé.** Une photo Panoramax est une vue **de rue**, pas un
+   cadrage du monument : le bouton doit dire « voir la rue », jamais « photo du
+   monument », et porter producteur, licence et date sous l'image. Une mention
+   globale « photos Panoramax » ne suffit pas.
+5. **Seuil d'acceptation à écrire AVANT de recommencer.** En dessous de quel
+   taux de couverture la fonction ne vaut pas d'exister ? Ce seuil n'est pas
+   fixé à ce jour ; le poser évite de relivrer une fonction qui rend une image
+   une fois sur trois.
+
+Aucun de ces cinq points n'est engagé par cette tâche ; ils sont la liste de
+courses d'une reprise après le 18/10.
+
+#### La phrase pour le stand
+
+Si un visiteur demande pourquoi les fiches de monuments n'ont pas de photo :
+
+> « Parce que la seule base d'images qui couvrait nos monuments est américaine,
+> et qu'ici tout vient de sources françaises — sans exception. On a préféré
+> retirer la photo plutôt que faire une entorse à la règle. L'équivalent
+> français, Panoramax, ne couvre aujourd'hui qu'un monument sur trois : on le
+> remettra le jour où il en couvrira assez, pas avant. »
+
+Elle est vraie, elle est courte, elle ne s'excuse pas : c'est une règle tenue,
+pas une fonction ratée. Variante en une phrase, si le visiteur est pressé :
+« On ne sert que des sources françaises, et la photo n'en avait pas — elle
+sortira quand Panoramax couvrira assez de monuments. »
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.
