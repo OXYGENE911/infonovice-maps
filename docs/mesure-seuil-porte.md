@@ -662,8 +662,9 @@ c'est exactement la faute que le relevé retiré ci-dessus faisait commettre.
 publie ce qu'elle a coûté (`[garde] … table des processus lue en N ms`), et une lecture passée de
 500 ms à 5 s se lit dans la sortie, verte, au lieu d'attendre une expiration. **Les trois lectures
 réelles du fichier le publient désormais** — la troisième ne le faisait pas (constat du vérificateur,
-13/09) : elle lisait la table en silence sous le délai par défaut de 5 s de Vitest, à 469 ms mesurés,
-et une dérive l'aurait fait expirer sans que personne sache pourquoi. Sortie de
+13/09) : elle lisait la table en silence sous le délai par défaut de 5 s de Vitest, mesurée à 469 ms
+machine calme et **1 946 ms machine chargée**, soit un facteur 2,5 d'un délai qu'elle ne déclarait
+nulle part — une dérive l'aurait fait expirer sans que personne sache pourquoi. Sortie de
 `npx vitest run tests/garde-processus.test.ts --reporter=verbose`, 13/09 09 h 06, les trois lignes
 recopiées :
 

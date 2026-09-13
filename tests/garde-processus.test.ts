@@ -244,11 +244,12 @@ function compterEnPubliantLeCout(quoi: string): ReturnType<typeof compterProcess
 
 describe('le comptage réel', () => {
   /* UNE SEULE LECTURE DE LA TABLE DES PROCESSUS POUR LES ASSERTIONS DE CE
-     BLOC. Ce n'est pas une question de délai — le relevé rejouable du 13/09
-     donne 420 à 956 ms par lecture, loin des 5 s de Vitest — mais de travail
-     inutile : `tasklist` liste toute la table, et trois parcours n'ont pas
-     besoin de trois tables. On lit une fois, on partage, et le plafond porte
-     sur cette lecture-là.
+     BLOC. `tasklist` liste toute la table, et trois parcours n'ont pas besoin
+     de trois tables : c'est trois fois moins de travail. Et ce n'est pas sans
+     effet sur le délai — une lecture coûte 420 ms machine calme mais jusqu'à
+     2 927 ms sous charge (relevés du 13/09), donc trois lectures séparées
+     approcheraient les 5 s du délai par défaut de Vitest. On lit une fois, on
+     partage, et un plafond EXPLICITE porte sur cette lecture-là.
      LE PARCOURS « ne confond pas chrome… », LUI, RELIT VOLONTAIREMENT : il
      éprouve la famille « chrome » sur une table fraîche, et publie son coût
      comme toutes les autres lectures réelles de ce fichier (correction du
@@ -294,10 +295,10 @@ describe('le comptage réel', () => {
     // CETTE LECTURE-LÀ NE PUBLIAIT PAS SON COÛT (vérificateur du 13/09, C9) :
     // le fichier affirmait que « chaque lecture réelle publie ce qu'elle a
     // coûté », et celle-ci lisait la table des processus en silence, sous le
-    // délai par défaut de 5 s de Vitest — relevée à 469 ms sur ce poste le
-    // 13/09, donc à quelques centaines de millisecondes d'une expiration que
-    // personne n'aurait su expliquer. Elle passe désormais par le même
-    // journal et le même plafond que les autres.
+    // délai par défaut de 5 s de Vitest — mesurée à 469 ms machine calme et
+    // 1 946 ms machine chargée le 13/09, soit à un facteur 2,5 de ce délai
+    // qu'elle ne déclarait nulle part. Elle passe désormais par le même
+    // journal et le même plafond explicite que les autres.
     const c = compterEnPubliantLeCout('lecture propre au parcours de la famille « chrome »');
     expect(Number.isFinite(c.chrome)).toBe(true);
     expect(c.chrome).toBeGreaterThanOrEqual(0);
