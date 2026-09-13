@@ -150,47 +150,6 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   taille de bundle périmée (125,34 Ko était la valeur d'AVANT le correctif de la
   revue Codex du 12/09).
 
-## [1.143.0] — 2026-09-12 — ITI-LENT-1
-
-### Le calcul d'itinéraire ne fait plus attendre en silence
-- **Le vrai reste de « plafonner l'altimétrie » (C4).** La contre-mesure du
-  12/09 l'a établi : le délai de garde posé au cycle précédent ne couvre que
-  l'altimétrie (facultative). L'itinéraire, lui, ne peut PAS être sauté —
-  sans lui il n'y a pas de trajet — donc pas de repli silencieux ici : deux
-  seuils qui préviennent l'usager, sans jamais annuler ni relancer l'appel.
-- **2 500 ms : « ça répond lentement, le calcul continue ».** Mesuré le
-  12/09 : huit appels réels au service (data.geopf.fr/navigation,
-  Paris→Lyon) répondent tous entre 246 et 380 ms — 2,5 s, c'est environ SIX
-  FOIS ET DEMIE ce plafond observé (2 500 / 380 = 6,58), loin de la latence
-  normale. *Corrigé le 13/09 : cette ligne annonçait « sept fois ».*
-- **15 000 ms : l'écran arrête de tourner en silence**, un bouton
-  « Réessayer » apparaît. `calculerItineraire` (deux essais, 8 s de timeout
-  chacun, 500 ms entre les deux) ne peut jamais dépasser 16,5 s — 15 s tombe
-  sous ce plafond dur : l'usager voit la porte de sortie avant que le
-  mécanisme interne n'ait fini de renoncer tout seul.
-- **Le mécanisme est différent de `delai-garde.ts` (ALTI-GARDE-1), et c'est
-  volontaire** : `avecDelaiDeGarde` jette la valeur tardive et rend
-  `undefined` — juste pour une donnée facultative. Ici (`lib/service-lent.ts`,
-  `signalerLenteur`), la promesse d'origine n'est jamais abandonnée : elle
-  continue de vivre, et sa résolution — même tardive, même après le bouton
-  « Réessayer » affiché — sert normalement à l'appelant, protégée par le
-  jeton de séquence déjà en place.
-- **Aucun appel de plus.** « Réessayer » relance le même calcul comme le
-  ferait n'importe quel geste de l'usager (changer une étape, cocher un
-  évitement) — aucune relance automatique, aucun martèlement du service
-  public. Bundle : +580 o gzip sur le morceau du planificateur (mesuré le 13/09 par
-  deux `npm run build` sur le même poste, 123,62 → 125,45 Ko / 39,99 →
-  40,57 Ko gzip). *Corrigé le 13/09 : cette ligne annonçait 125,34 Ko /
-  40,56 Ko, la taille d'AVANT le correctif de la revue Codex — périmée dès
-  le commit suivant.*
-- 4 tests unitaires sur le mécanisme (`tests/service-lent.test.ts`, dont les
-  deux scénarios du mandat : ralenti à 3 s, ralenti à 20 s) + 4 tests de
-  cohérence (`tests/iti-lent-seuils.test.ts`). 1 681 tests verts.
-- **Revue Codex (BLOQUANT, corrigé)** : « Effacer le trajet » (`#effacer`)
-  n'aurait masqué ni le bandeau de lenteur ni celui d'abandon — le jeton de
-  séquence change dans `#effacer`, donc le succès ou l'échec tardif de
-  `#calculer` ne les nettoie jamais lui-même. Corrigé, verrouillé par un
-  test dédié (contre-épreuve faite : le test rougit sans le correctif).
 ## [1.147.0] — 2026-09-13 — STAGING-1
 
 ### Une URL de prévisualisation qui porte `staging`
@@ -357,6 +316,47 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   10 169 en production (−998), mesuré par `wc -c`. Le rapport du cycle annonçait
   10 750 (+581) ; le chiffre juste avant le retrait des métadonnées était
   10 514 (+345).
+## [1.143.0] — 2026-09-12 — ITI-LENT-1
+
+### Le calcul d'itinéraire ne fait plus attendre en silence
+- **Le vrai reste de « plafonner l'altimétrie » (C4).** La contre-mesure du
+  12/09 l'a établi : le délai de garde posé au cycle précédent ne couvre que
+  l'altimétrie (facultative). L'itinéraire, lui, ne peut PAS être sauté —
+  sans lui il n'y a pas de trajet — donc pas de repli silencieux ici : deux
+  seuils qui préviennent l'usager, sans jamais annuler ni relancer l'appel.
+- **2 500 ms : « ça répond lentement, le calcul continue ».** Mesuré le
+  12/09 : huit appels réels au service (data.geopf.fr/navigation,
+  Paris→Lyon) répondent tous entre 246 et 380 ms — 2,5 s, c'est environ SIX
+  FOIS ET DEMIE ce plafond observé (2 500 / 380 = 6,58), loin de la latence
+  normale. *Corrigé le 13/09 : cette ligne annonçait « sept fois ».*
+- **15 000 ms : l'écran arrête de tourner en silence**, un bouton
+  « Réessayer » apparaît. `calculerItineraire` (deux essais, 8 s de timeout
+  chacun, 500 ms entre les deux) ne peut jamais dépasser 16,5 s — 15 s tombe
+  sous ce plafond dur : l'usager voit la porte de sortie avant que le
+  mécanisme interne n'ait fini de renoncer tout seul.
+- **Le mécanisme est différent de `delai-garde.ts` (ALTI-GARDE-1), et c'est
+  volontaire** : `avecDelaiDeGarde` jette la valeur tardive et rend
+  `undefined` — juste pour une donnée facultative. Ici (`lib/service-lent.ts`,
+  `signalerLenteur`), la promesse d'origine n'est jamais abandonnée : elle
+  continue de vivre, et sa résolution — même tardive, même après le bouton
+  « Réessayer » affiché — sert normalement à l'appelant, protégée par le
+  jeton de séquence déjà en place.
+- **Aucun appel de plus.** « Réessayer » relance le même calcul comme le
+  ferait n'importe quel geste de l'usager (changer une étape, cocher un
+  évitement) — aucune relance automatique, aucun martèlement du service
+  public. Bundle : +580 o gzip sur le morceau du planificateur (mesuré le 13/09 par
+  deux `npm run build` sur le même poste, 123,62 → 125,45 Ko / 39,99 →
+  40,57 Ko gzip). *Corrigé le 13/09 : cette ligne annonçait 125,34 Ko /
+  40,56 Ko, la taille d'AVANT le correctif de la revue Codex — périmée dès
+  le commit suivant.*
+- 4 tests unitaires sur le mécanisme (`tests/service-lent.test.ts`, dont les
+  deux scénarios du mandat : ralenti à 3 s, ralenti à 20 s) + 4 tests de
+  cohérence (`tests/iti-lent-seuils.test.ts`). 1 681 tests verts.
+- **Revue Codex (BLOQUANT, corrigé)** : « Effacer le trajet » (`#effacer`)
+  n'aurait masqué ni le bandeau de lenteur ni celui d'abandon — le jeton de
+  séquence change dans `#effacer`, donc le succès ou l'échec tardif de
+  `#calculer` ne les nettoie jamais lui-même. Corrigé, verrouillé par un
+  test dédié (contre-épreuve faite : le test rougit sans le correctif).
 ## [1.142.1] — 2026-09-13 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
 
 ### 13/09/2026 (C10) — la régression que cette PR introduisait est corrigée ICI
@@ -7759,42 +7759,25 @@ Bundle hors MapLibre : 64 Ko gzippés sur 300 autorisés.
   chargement du style (pose du tracé différée au style.load).
 - E2E : tuiles IGN simulées (déterminisme, zéro quota consommé par la CI).
 
-## [0.1.0] — 2026-08-16 — Fondations
-- Scaffolding Vite + TypeScript strict + PWA (manifeste, service worker,
-  icônes générées par script).
-- Page « en construction » avec CSP stricte (seules origines : data.geopf.fr,
-  api-adresse.data.gouv.fr) et design tokens Infonovice.
-- Première brique de la bibliothèque partagée : `lib/coordonnees` (format
-  français, analyse défensive).
-- CI GitHub Actions : lint + typecheck + Vitest + Playwright + build + audit
-  bloquant (high) + budget bundle (< 300 Ko gzippé hors MapLibre).
-- Déploiement GitHub Pages automatique sur main, CNAME maps.infonovice.fr.
-- Test E2E de souveraineté : la page ne contacte AUCUN domaine externe.
-- Dependabot hebdomadaire (npm + actions).
-
-## [0.2.0] — 2026-08-16 — La carte
-- Carte MapLibre plein écran, fond Plan IGN v2 (WMTS Géoplateforme, sans clé),
-  attribution IGN obligatoire.
-- Contrôles zoom / boussole / géolocalisation / échelle, ENTIÈREMENT en
-  français (locale MapLibre surchargée) — la géolocalisation est un geste de
-  l'utilisateur, jamais demandée à l'arrivée.
-- En-tête flottant, lien d'évitement clavier, page sans JavaScript expliquée.
-- MapLibre isolé dans son propre chunk (252 Ko gzippé) ; code applicatif :
-  4,2 Ko gzippé — budget respecté.
-- E2E : tuiles IGN réellement servies (200), souveraineté mesurée (aucune
-  origine hors liste blanche), contrôles français visibles.
-
-## [0.3.0] — 2026-08-16 — Les fonds
-- Sélecteur de fonds (premier Web Component) : Plan IGN, Satellite,
-  Satellite + routes ; surcouche Parcelles cadastrales (utile à Arpentine).
-- Préférence persistée en IndexedDB (`lib/stockage`, socle des favoris à
-  venir) et rétablie au chargement — prouvé par E2E avec rechargement.
-- Mode sombre automatique du fond Plan (filtre calibré, canevas seul) ;
-  le satellite reste intouché.
-- Topo 25 écarté avec preuve : SCAN25 répond 400 sans clé. À réintroduire
-  après inscription Géoplateforme (gratuite).
-- Deux défauts attrapés par les tests avant l'œil : l'en-tête intercepait
-  les clics du sélecteur ; le panneau se reconstruisait en plein clic.
+## [0.6.0] — 2026-08-16 — Exporter et partager
+- Export GPX 1.1 et KML 2.2 du trajet, fabriqués à la main (20 lignes chacun),
+  nom échappé (il vient des libellés BAN). GPX : lat PUIS lon dans trkpt —
+  l'inverse du GeoJSON, l'erreur classique, verrouillée par test.
+- Partage par URL SANS serveur : l'itinéraire vit dans le fragment (#), qui
+  n'est jamais envoyé au serveur HTTP. Un lien ouvert rejoue le trajet tout
+  seul ; un fragment forgé rend null, jamais une exception.
+- Feuille de route imprimable scindée en PR #8bis (exige getSteps).
+## [0.5.0] — 2026-08-16 — Le planificateur
+- Itinéraire A→B (Géoplateforme bdtopo-osrm, sans clé) : voiture et à pied,
+  tracé bleu à liseré blanc lisible sur tout fond, marqueurs départ/arrivée,
+  distance et durée au format français, vol vers l'emprise du trajet.
+- Les deux champs réutilisent le composant de recherche BAN (rien dupliqué).
+- LE TRACÉ SURVIT AU CHANGEMENT DE FOND : setStyle détruit les sources,
+  le panneau repose le trajet à chaque style.load — prouvé par E2E.
+- Un 404 du service = « aucun itinéraire », sans seconde tentative ;
+  vélo écarté avec preuve (getcapabilities : car et pedestrian seulement).
+- 7 tests unitaires (formats français, 404-est-une-réponse, URL du service),
+  E2E complet Paris→Lyon simulé.
 
 ## [0.4.0] — 2026-08-16 — La recherche
 - Barre de recherche BAN dans l'en-tête : combobox ARIA complète (flèches,
@@ -7809,23 +7792,40 @@ Bundle hors MapLibre : 64 Ko gzippés sur 300 autorisés.
 - E2E : BAN simulée par interception (déterministe, zéro quota consommé) ;
   la sélection se prouve AU CLAVIER.
 
-## [0.5.0] — 2026-08-16 — Le planificateur
-- Itinéraire A→B (Géoplateforme bdtopo-osrm, sans clé) : voiture et à pied,
-  tracé bleu à liseré blanc lisible sur tout fond, marqueurs départ/arrivée,
-  distance et durée au format français, vol vers l'emprise du trajet.
-- Les deux champs réutilisent le composant de recherche BAN (rien dupliqué).
-- LE TRACÉ SURVIT AU CHANGEMENT DE FOND : setStyle détruit les sources,
-  le panneau repose le trajet à chaque style.load — prouvé par E2E.
-- Un 404 du service = « aucun itinéraire », sans seconde tentative ;
-  vélo écarté avec preuve (getcapabilities : car et pedestrian seulement).
-- 7 tests unitaires (formats français, 404-est-une-réponse, URL du service),
-  E2E complet Paris→Lyon simulé.
+## [0.3.0] — 2026-08-16 — Les fonds
+- Sélecteur de fonds (premier Web Component) : Plan IGN, Satellite,
+  Satellite + routes ; surcouche Parcelles cadastrales (utile à Arpentine).
+- Préférence persistée en IndexedDB (`lib/stockage`, socle des favoris à
+  venir) et rétablie au chargement — prouvé par E2E avec rechargement.
+- Mode sombre automatique du fond Plan (filtre calibré, canevas seul) ;
+  le satellite reste intouché.
+- Topo 25 écarté avec preuve : SCAN25 répond 400 sans clé. À réintroduire
+  après inscription Géoplateforme (gratuite).
+- Deux défauts attrapés par les tests avant l'œil : l'en-tête intercepait
+  les clics du sélecteur ; le panneau se reconstruisait en plein clic.
 
-## [0.6.0] — 2026-08-16 — Exporter et partager
-- Export GPX 1.1 et KML 2.2 du trajet, fabriqués à la main (20 lignes chacun),
-  nom échappé (il vient des libellés BAN). GPX : lat PUIS lon dans trkpt —
-  l'inverse du GeoJSON, l'erreur classique, verrouillée par test.
-- Partage par URL SANS serveur : l'itinéraire vit dans le fragment (#), qui
-  n'est jamais envoyé au serveur HTTP. Un lien ouvert rejoue le trajet tout
-  seul ; un fragment forgé rend null, jamais une exception.
-- Feuille de route imprimable scindée en PR #8bis (exige getSteps).
+## [0.2.0] — 2026-08-16 — La carte
+- Carte MapLibre plein écran, fond Plan IGN v2 (WMTS Géoplateforme, sans clé),
+  attribution IGN obligatoire.
+- Contrôles zoom / boussole / géolocalisation / échelle, ENTIÈREMENT en
+  français (locale MapLibre surchargée) — la géolocalisation est un geste de
+  l'utilisateur, jamais demandée à l'arrivée.
+- En-tête flottant, lien d'évitement clavier, page sans JavaScript expliquée.
+- MapLibre isolé dans son propre chunk (252 Ko gzippé) ; code applicatif :
+  4,2 Ko gzippé — budget respecté.
+- E2E : tuiles IGN réellement servies (200), souveraineté mesurée (aucune
+  origine hors liste blanche), contrôles français visibles.
+
+## [0.1.0] — 2026-08-16 — Fondations
+- Scaffolding Vite + TypeScript strict + PWA (manifeste, service worker,
+  icônes générées par script).
+- Page « en construction » avec CSP stricte (seules origines : data.geopf.fr,
+  api-adresse.data.gouv.fr) et design tokens Infonovice.
+- Première brique de la bibliothèque partagée : `lib/coordonnees` (format
+  français, analyse défensive).
+- CI GitHub Actions : lint + typecheck + Vitest + Playwright + build + audit
+  bloquant (high) + budget bundle (< 300 Ko gzippé hors MapLibre).
+- Déploiement GitHub Pages automatique sur main, CNAME maps.infonovice.fr.
+- Test E2E de souveraineté : la page ne contacte AUCUN domaine externe.
+- Dependabot hebdomadaire (npm + actions).
+
