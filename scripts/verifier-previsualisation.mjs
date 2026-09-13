@@ -84,8 +84,15 @@ function reglesCss(css, selecteur) {
        voisine qui ne s'applique à aucun élément (7e revue Codex). Un nom de
        classe se termine : il n'est pas suivi d'une lettre, d'un chiffre, d'un
        tiret ni d'un souligné. */
-    const suivant = css[debut + selecteur.length] ?? '';
-    if (/^[A-Za-z0-9_-]$/.test(suivant)) { depuis = debut + selecteur.length; continue; }
+    /* Et `.previsualisation-cadre span` ne vise PAS le cadre : il vise ses
+       descendants. Le sélecteur ne compte que s'il TERMINE son sélecteur
+       complexe — donc s'il est suivi d'une virgule ou de l'accolade. Cela
+       écarte aussi `.previsualisation-cadre.eteint`, qui ne s'applique qu'à un
+       élément portant en plus cette classe (8e revue Codex). */
+    if (!/^\s*[,{]/.test(css.slice(debut + selecteur.length))) {
+      depuis = debut + selecteur.length;
+      continue;
+    }
     const ouvre = css.indexOf('{', debut);
     const ferme = css.indexOf('}', ouvre);
     if (ouvre === -1 || ferme === -1) return corps;
@@ -173,6 +180,39 @@ function mots(valeur) {
     courant += c;
   }
   if (courant !== '') trouves.push(courant);
+  return trouves;
+}
+
+/** Les appels de fonction de premier niveau d'une valeur, avec leurs arguments.
+    LES PARENTHÈSES SONT ÉQUILIBRÉES : `scale(calc(0))` échappait à un motif
+    qui s'arrêtait à la première parenthèse fermante (8e revue Codex). */
+function appelsFonction(valeur) {
+  const trouves = [];
+  const motif = /\b([a-z][a-z0-9-]*)\s*\(/gi;
+  for (let m = motif.exec(valeur); m !== null; m = motif.exec(valeur)) {
+    let profondeur = 1;
+    let i = motif.lastIndex;
+    while (i < valeur.length && profondeur > 0) {
+      if (valeur[i] === '(') profondeur += 1;
+      else if (valeur[i] === ')') profondeur -= 1;
+      i += 1;
+    }
+    const interieur = valeur.slice(motif.lastIndex, Math.max(motif.lastIndex, i - 1));
+    const args = [];
+    let courant = '';
+    let niveau = 0;
+    for (const c of interieur) {
+      if (c === '(') niveau += 1;
+      else if (c === ')') niveau -= 1;
+      if (c === ',' && niveau === 0) { args.push(courant.trim()); courant = ''; continue; }
+      courant += c;
+    }
+    if (courant.trim() !== '') args.push(courant.trim());
+    trouves.push({ nom: m[1].toLowerCase(), args });
+    // On ne redescend pas dans les appels imbriqués : seuls comptent les
+    // transformations de premier niveau.
+    motif.lastIndex = i;
+  }
   return trouves;
 }
 
@@ -359,17 +399,20 @@ function raisonInvisible(effectives) {
      cherchait des zéros écrits en toutes lettres (7e revue Codex). */
   const t = val('transform');
   if (t !== null) {
-    for (const m of t.matchAll(/\b(scale3d|scalex|scaley|scale)\s*\(([^)]*)\)/gi)) {
-      const facteurs = m[2].split(',').map((x) => x.trim()).filter((x) => x !== '')
-        // `scale3d(1, 1, 0)` n'aplatit rien en deux dimensions : seuls X et Y comptent.
-        .slice(0, m[1].toLowerCase() === 'scale3d' ? 2 : 2);
-      if (facteurs.some((x) => (/%$/.test(x) ? Number.parseFloat(x) / 100 : Number.parseFloat(x)) === 0)) {
-        return `transform: ${t}`;
+    for (const appel of appelsFonction(t)) {
+      if (!/^(scale|scalex|scaley|scale3d)$/.test(appel.nom)) continue;
+      // Seuls X et Y aplatissent ce qu'on voit : `scale3d(1, 1, 0)` ne cache rien.
+      for (const facteur of appel.args.slice(0, 2)) {
+        if (!MOT_NOMBRE.test(facteur.trim())) return `transform: ${t} — facteur d'échelle illisible`;
+        if ((/%$/.test(facteur) ? Number.parseFloat(facteur) / 100 : Number.parseFloat(facteur)) === 0) {
+          return `transform: ${t}`;
+        }
       }
     }
   }
   const s = val('scale');
-  if (s !== null && s.split(/\s+/).some((m) => Number.parseFloat(m) === 0)) return `scale: ${s}`;
+  // `scale: 1 1 0` ne met à plat que l'axe Z : les deux premiers seuls comptent.
+  if (s !== null && mots(s).slice(0, 2).some((m) => Number.parseFloat(m) === 0)) return `scale: ${s}`;
 
   // Une boîte de taille nulle, sur n'importe laquelle des dimensions.
   for (const prop of ['width', 'height', 'max-width', 'max-height']) {

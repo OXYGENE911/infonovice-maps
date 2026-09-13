@@ -296,8 +296,17 @@ function sousMasque(html: string, transforme: (masque: string) => string): strin
       ((attributs(interieur).type ?? '').trim().toLowerCase() === 'application/ld+json'
         ? balise
         : garder(balise)));
-  return transforme(masque)
-    .replace(/\u0000(\d+)\u0000/g, (tout, i: string) => gardes[Number(i)] ?? tout);
+  /* ON RESTITUE EN BOUCLE, PARCE QUE LES MASQUES S'IMBRIQUENT : un commentaire
+     cité DANS une chaîne JavaScript est masqué d'abord, et le script qui le
+     contient ensuite. Une seule passe rendait le script avec, à l'intérieur, un
+     jeton de masque jamais restitué — une chaîne corrompue en silence (8e revue
+     Codex). Un masque ne peut contenir que des jetons d'indice inférieur : la
+     boucle termine, et la borne le garantit. */
+  let sortie = transforme(masque);
+  for (let passe = 0; passe <= gardes.length && sortie.includes(MARQUE); passe += 1) {
+    sortie = sortie.replace(/\u0000(\d+)\u0000/g, (tout, i: string) => gardes[Number(i)] ?? tout);
+  }
+  return sortie;
 }
 
 /** Le `<head>` d'un document déjà masqué, transformé ; le reste est intact. */

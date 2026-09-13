@@ -285,6 +285,25 @@ describe('la préversion se dit aussi quand on PARTAGE son lien', () => {
     expect(sortie).toContain('<!-- </head> -->');
   });
 
+  it('9e revue Codex : un commentaire cité DANS un script est rendu intact', () => {
+    /* MASQUES IMBRIQUÉS. Le commentaire est masqué le premier, le script qui le
+       contient ensuite : une seule passe de restitution rendait le script avec,
+       à l'intérieur, un jeton de masque jamais remplacé. */
+    const imbrique = [
+      '<!doctype html>',
+      '<html lang="fr">',
+      '<head>',
+      '  <title>Infonovice Maps</title>',
+      `  <script>const exemple = '<!-- exemple -->';</script>`,
+      '</head>',
+      '<body><h1>Carte</h1></body>',
+      '</html>',
+    ].join('\n');
+    const sortie = marquerHtmlPrevisualisation(imbrique, 'index.html');
+    expect(sortie).toContain(`const exemple = '<!-- exemple -->';`);
+    expect(sortie).not.toContain('\u0000');
+  });
+
   it('et un marquage rejoué deux fois ne double pas le préfixe', () => {
     const une = marquerHtmlPrevisualisation(
       '<html><head><title>T</title><meta property="og:title" content="M"></head><body></body></html>',

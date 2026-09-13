@@ -524,6 +524,46 @@ describe('les quatre contournements de la 8e revue Codex', () => {
   });
 });
 
+describe('les quatre contournements de la 9e revue Codex', () => {
+  /* TROIS SUR QUATRE SONT DES FAUX POSITIFS, et c'est le bon signe : une porte
+     qui refuse un déploiement légitime à trois semaines du salon coûte autant
+     qu'un trou, et se découvre plus tard. */
+  const poseCss = (contenu: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'previsualisation.css'), `${FEUILLE_PREVISUALISATION}\n${contenu}\n`);
+    return griefsDe().join(' ');
+  };
+
+  it('1. « .previsualisation-cadre span » vise les DESCENDANTS, pas le cadre', () => {
+    expect(poseCss('.previsualisation-cadre span { display: none; }')).toEqual('');
+  });
+
+  it('et « .previsualisation-cadre.eteint » ne s’applique pas non plus à lui seul', () => {
+    expect(poseCss('.previsualisation-cadre.eteint { display: none; }')).toEqual('');
+  });
+
+  it('mais « .autre, .previsualisation-cadre » le vise bien', () => {
+    expect(poseCss('.autre, .previsualisation-cadre { display: none; }')).toMatch(/invisible/);
+  });
+
+  it('2. « scale: 1 1 0 » n’aplatit que l’axe Z : rien n’est caché', () => {
+    expect(poseCss('.previsualisation-cadre { scale: 1 1 0; }')).toEqual('');
+  });
+
+  it('et « scale: 0 1 1 » cache bien', () => {
+    expect(poseCss('.previsualisation-cadre { scale: 0 1 1; }')).toMatch(/invisible/);
+  });
+
+  it('3. « transform: scale(calc(0)) » : les parenthèses sont équilibrées', () => {
+    // Le motif s'arrêtait à la première parenthèse fermante et ne voyait rien.
+    expect(poseCss('.previsualisation-cadre { transform: scale(calc(0)); }')).toMatch(/invisible/);
+  });
+
+  it('et « transform: translateX(-50%) scale(1) » ne déclenche rien', () => {
+    expect(poseCss('.previsualisation-cadre { transform: translateX(-50%) scale(1); }')).toEqual('');
+  });
+});
+
 describe('les pages livrées', () => {
   it('une page dans un SOUS-DOSSIER est contrôlée elle aussi', () => {
     dossierConforme();
