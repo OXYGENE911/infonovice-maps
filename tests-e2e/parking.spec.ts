@@ -501,3 +501,95 @@ test('LA FEUILLE DES PARKINGS NE PASSE PAS SOUS LE DISQUE DE LIMITATION (RETOUR-
   /* Et la feuille garde une largeur utile : un nom et le bouton « Se garer ». */
   expect(f.width).toBeGreaterThan(280);
 });
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * LA FEUILLE SE FERME AUTREMENT QU'AU BOUTON (TERRAIN-1, retour du 11/09).
+ *
+ * ARMELIN, SON TÉLÉPHONE EN MAIN : « le panneau parkings ne se ferme qu'au
+ * bouton ». Le défaut ne vient pas d'une analyse, il vient d'un usager.
+ *
+ * CES PARCOURS TAPENT AU DOIGT, et ce n'est pas une coquetterie : la maison a
+ * déjà payé un cycle pour l'avoir oublié (FANTOME-1, 03/09) — « un test qui
+ * clique à la souris ne prouve rien sur le tactile ». Le geste (1) du critère
+ * est un TOUCHER, il se teste donc avec `page.touchscreen`.
+ * ───────────────────────────────────────────────────────────────────────── */
+test.describe('fermeture de la feuille des parkings', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  /** Un point de la carte, hors de la feuille et hors du bouton P.
+   *  On le DEMANDE au DOM plutôt que de l'écrire en dur : une feuille qui
+   *  grandit d'une ligne périmerait une coordonnée devinée, et le parcours
+   *  taperait alors DANS la feuille en croyant taper à côté. */
+  async function pointSurLaCarte(page: Page): Promise<{ x: number; y: number }> {
+    const point = await page.evaluate(() => {
+      const largeur = window.innerWidth, hauteur = window.innerHeight;
+      for (let y = 60; y < hauteur - 40; y += 12) {
+        for (let x = 20; x < largeur - 20; x += 24) {
+          const el = document.elementFromPoint(x, y);
+          if (!el) continue;
+          if (el.closest('.bg-parkings') || el.closest('.bg-parking-p')) continue;
+          if (!el.closest('#carte canvas.maplibregl-canvas')) continue;
+          return { x, y };
+        }
+      }
+      return null;
+    });
+    expect(point, 'aucun point de carte libre : le parcours ne prouverait rien').not.toBeNull();
+    return point as { x: number; y: number };
+  }
+
+  test('UN TOUCHER HORS DU PANNEAU LE FERME — au doigt, pas à la souris', async ({ page }) => {
+    await suivre(page);
+    await rouler(page, 2.3600, 48.8500);
+    const feuille = page.locator('.bg-parkings');
+    await expect(feuille).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.bg-parkings-liste li')).toHaveCount(2, { timeout: 15_000 });
+
+    const { x, y } = await pointSurLaCarte(page);
+    await page.touchscreen.tap(x, y);
+    await expect(feuille).toBeHidden();
+
+    /* ET LE BOUTON P LA RAPPELLE — critère (3) : il n'a rien perdu. */
+    await page.locator('.bg-parking-p').tap();
+    await expect(feuille).toBeVisible();
+  });
+
+  test('UN TOUCHER DANS LE PANNEAU NE LE FERME PAS', async ({ page }) => {
+    /* Le pendant du précédent, et il compte autant : une feuille qui se
+       referme sous le doigt qui la lit serait un défaut de plus, pas un de
+       moins. On touche son titre — une zone sans action. */
+    await suivre(page);
+    await rouler(page, 2.3600, 48.8500);
+    const feuille = page.locator('.bg-parkings');
+    await expect(page.locator('.bg-parkings-liste li')).toHaveCount(2, { timeout: 15_000 });
+    const titre = await page.locator('.bg-parkings-titre').boundingBox();
+    expect(titre).not.toBeNull();
+    const t = titre as { x: number; y: number; width: number; height: number };
+    await page.touchscreen.tap(t.x + t.width / 2, t.y + t.height / 2);
+    await expect(feuille).toBeVisible();
+  });
+
+  test('ÉCHAP LA FERME ET REND LE FOCUS AU BOUTON P', async ({ page }) => {
+    /* Critères (2) et (5). Même règle que les modales (A11Y-MODALE-1) : le
+       focus ne tombe pas sur le `<body>`, il revient là où le geste a
+       commencé — sans quoi le parcours clavier repart du haut de la page. */
+    await suivre(page);
+    await rouler(page, 2.3600, 48.8500);
+    const feuille = page.locator('.bg-parkings');
+    await expect(feuille).toBeVisible({ timeout: 15_000 });
+
+    await page.keyboard.press('Escape');
+    await expect(feuille).toBeHidden();
+    await expect(page.locator('.bg-parking-p')).toBeFocused();
+    await expect(page.locator('.bg-parking-p')).toHaveAttribute('aria-expanded', 'false');
+
+    /* LE BOUTON ROUVRE, ET IL REFERME (critère 3) : c'est un interrupteur, et
+       il l'est resté. Au doigt, là encore — l'appui extérieur et le bouton se
+       disputeraient la fermeture si le bouton comptait pour « à côté ». */
+    await page.locator('.bg-parking-p').tap();
+    await expect(feuille).toBeVisible();
+    await expect(page.locator('.bg-parking-p')).toHaveAttribute('aria-expanded', 'true');
+    await page.locator('.bg-parking-p').tap();
+    await expect(feuille).toBeHidden();
+  });
+});

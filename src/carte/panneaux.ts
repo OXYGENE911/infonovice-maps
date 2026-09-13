@@ -65,6 +65,61 @@ function estSurfaceDeTravail(details: HTMLDetailsElement): boolean {
     || details.classList.contains(CLASSE_SURFACE);
 }
 
+/* LES SURFACES FLOTTANTES QUI NE SONT PAS DES `<details>` (TERRAIN-1, 11/09).
+ *
+ * Armelin, son téléphone en main : la feuille des parkings « ne se ferme
+ * qu'au bouton ». Elle n'est pas un `<details>` — c'est un `<div hidden>`
+ * posé dans le bandeau de guidage — et rien de ce qui précède ne la voyait.
+ *
+ * ON NE LUI ÉCRIT PAS UN SECOND MÉCANISME DE FERMETURE. Échap et l'appui
+ * extérieur vivent ici, une fois, pour tout le monde : un deuxième jeu
+ * d'écouteurs à côté du premier, c'est deux règles à tenir d'accord, et la
+ * prochaine régression. Une surface s'y raccorde en se DÉCLARANT :
+ *
+ *   1. la classe `volet-flottant` la désigne ;
+ *   2. `hidden` dit si elle est ouverte — c'est déjà son état réel ;
+ *   3. `data-volet-bouton` nomme, par un sélecteur cherché chez son PARENT,
+ *      le bouton qui la commande : il est un interrupteur, jamais un
+ *      « à côté », et c'est à lui que le focus revient après Échap ;
+ *   4. l'événement `volet-fermer`, reçu sur la surface, lui dit que c'est le
+ *      moment. Elle se ferme elle-même, avec ce que la fermeture emporte —
+ *      la feuille des parkings retire aussi ses pastilles de la carte, et ce
+ *      module n'a pas à connaître les pastilles.
+ */
+/** La marque d'une surface flottante : voir le bloc ci-dessus. */
+export const CLASSE_FLOTTANT = 'volet-flottant';
+
+function flottantsOuverts(racine: ParentNode): HTMLElement[] {
+  return [...racine.querySelectorAll<HTMLElement>(`.${CLASSE_FLOTTANT}`)]
+    .filter((surface) => !surface.hidden);
+}
+
+/** Le bouton qui commande la surface, cherché chez son parent — jamais dans
+ *  tout le document : deux bandeaux à l'écran ne doivent pas se voler leur
+ *  bouton, et un `id` global se serait périmé au premier doublon. */
+function boutonDe(surface: HTMLElement): HTMLElement | null {
+  const selecteur = surface.dataset['voletBouton'];
+  if (!selecteur) return null;
+  return surface.parentElement?.querySelector<HTMLElement>(selecteur) ?? null;
+}
+
+/**
+ * Demande à une surface flottante de se fermer.
+ *
+ * @param rendreLeFocus vrai pour Échap seulement. Au clavier, laisser le
+ *   focus sur une surface qui vient de disparaître renverrait le parcours au
+ *   `<body>` ; au doigt, aller chercher le focus serait au contraire une
+ *   surprise — on ne déplace rien.
+ */
+function fermerFlottant(surface: HTMLElement, rendreLeFocus: boolean): void {
+  surface.dispatchEvent(new CustomEvent('volet-fermer'));
+  /* LE FILET : une surface qui oublierait d'écouter resterait ouverte, et le
+     défaut serait exactement celui qu'on répare. Elle se ferme alors sans son
+     ménage — visible, donc corrigible, plutôt que muet. */
+  if (!surface.hidden) surface.hidden = true;
+  if (rendreLeFocus) boutonDe(surface)?.focus();
+}
+
 /* CE QUI EST HÉBERGÉ N'EST PAS PRINCIPAL, MÊME SANS `<details>` AU-DESSUS
    (ERGO-7, 02/09). Le volet « Recharge et services » vit à l'intérieur de
    l'entonnoir des filtres depuis ERGO-3, et depuis ERGO-7 il en occupe une
@@ -166,6 +221,15 @@ export function installerPanneaux(racine: Document | HTMLElement = document): ()
      gestion et vit hors du rail. */
   const surTouche = (e: KeyboardEvent): void => {
     if (e.key !== 'Escape') return;
+    /* LA SURFACE FLOTTANTE PASSE DEVANT : elle se pose PAR-DESSUS le reste,
+       et Échap ferme ce qui est au-dessus — refermer le volet du rail caché
+       derrière elle, en la laissant, serait le contraire du geste attendu. */
+    const flottants = flottantsOuverts(cible);
+    if (flottants.length > 0) {
+      e.stopPropagation();
+      for (const surface of flottants) fermerFlottant(surface, true);
+      return;
+    }
     const ouverts = panneauxPrincipauxOuverts(cible);
     if (ouverts.length === 0) return;
     e.stopPropagation();
@@ -186,6 +250,21 @@ export function installerPanneaux(racine: Document | HTMLElement = document): ()
     const cibleAppui = e.target;
     if (!(cibleAppui instanceof Node)) return;
     const element = cibleAppui instanceof Element ? cibleAppui : cibleAppui.parentElement;
+
+    /* LES SURFACES FLOTTANTES SE FERMENT AVANT TOUT LE RESTE, et leur « à
+       côté » est plus large que celui des volets du rail : elles flottent
+       au-dessus de la carte ET au-dessus de nos propres bandeaux, si bien
+       qu'un appui n'importe où ailleurs les referme. Deux exceptions, et
+       elles suffisent : l'intérieur de la surface, et le bouton qui la
+       commande — le compter comme « à côté » la fermerait à l'appui pour que
+       le clic la rouvre aussitôt, et le bouton cesserait de fermer. */
+    for (const surface of flottantsOuverts(cible)) {
+      if (element?.closest(`.${CLASSE_FLOTTANT}`) === surface) continue;
+      const bouton = boutonDe(surface);
+      if (bouton && element && bouton.contains(element)) continue;
+      fermerFlottant(surface, false);
+    }
+
     /* « À CÔTÉ » VEUT DIRE SUR LA CARTE, PAS SUR UNE AUTRE DE NOS SURFACES.
        La règle exigeait auparavant un `<details>` sous une balise à trait
        d'union. Elle a tenu tant que TOUTES nos surfaces étaient des volets ;
