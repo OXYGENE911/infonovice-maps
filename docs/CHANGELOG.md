@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.143.0] — 2026-09-13 — SEUIL-1
+## [1.144.0] — 2026-09-13 — SEUIL-1
 
 ### La porte de sortie reste ouverte, et une campagne de mesure se refuse elle-même
 - **Le défaut repris d'ITI-LENT-1 était arithmétique, pas aléatoire.** Le seuil
@@ -68,7 +68,7 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   taille de bundle périmée (125,34 Ko était la valeur d'AVANT le correctif de la
   revue Codex du 12/09).
 
-## [1.142.0] — 2026-09-12 — ITI-LENT-1
+## [1.143.0] — 2026-09-12 — ITI-LENT-1
 
 ### Le calcul d'itinéraire ne fait plus attendre en silence
 - **Le vrai reste de « plafonner l'altimétrie » (C4).** La contre-mesure du
