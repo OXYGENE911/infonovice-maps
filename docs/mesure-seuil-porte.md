@@ -511,6 +511,31 @@ Sous Windows, le parcours affirme l'inverse et le dit : les deux sources voient 
 une mesure inventée. **Le trou réparé ici est celui de Linux, donc celui de la CI — et c'est là que
 la garde sera utile le jour où le CEO donnera une machine de mesure.**
 
+Mesuré le 13/09 sur ce poste Windows, les deux compteurs dos à dos :
+
+    ANCIEN  (2 475 ms)  node=32 chrome=8  total=40
+    NOUVEAU (3 519 ms)  node=32 chrome=9  total=41  source=tasklist  nonResolus=0
+
+Écart sur `node` : **0**. L'écart de 1 sur `chrome` est la machine qui vit entre les deux lectures,
+pas une différence de méthode. **Sous Windows, la correction ne change rien — et c'est le résultat
+honnête.**
+
+### La CI a appris une SECONDE chose, en faisant rougir ce parcours
+
+La première version du test attendait le faux titre entier. La CI a rendu `sonde-essai-tit` :
+**`/proc/<pid>/comm` est tronqué à 15 caractères** (`TASK_COMM_LEN = 16`, terminateur compris).
+
+C'est un **deuxième angle mort de l'ancien comptage, indépendant du renommage** : un exécutable dont
+le nom fait 16 caractères n'était jamais reconnu. `chromium-browser` en fait exactement 16 — et c'est
+un navigateur que la garde doit compter. Un parcours le fixe désormais. La source du noyau rend le
+chemin complet de l'exécutable : pas de troncature, donc pas cet angle mort.
+
+### Ce que coûte la garde, mesuré
+
+Trois appels consécutifs à `compterProcessus()` sur ce poste chargé : **12 637 ms, 10 124 ms,
+3 059 ms**. `tasklist` est lent quand la machine l'est — et une campagne le paye deux fois. Les
+parcours du bloc « le comptage réel » partagent donc une seule lecture.
+
 ## 14. Tâche 2 — les 15 secondes avant la porte de sortie : le relevé, pas l'arbitrage
 
 Mission : « n'y touche pas — mesure-le ». Mesuré le 13/09, service d'itinéraire arrêté 30 s

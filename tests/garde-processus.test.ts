@@ -276,8 +276,13 @@ describe('l’ancien compteur contre le nouveau, sur le même processus au même
            reconnaissait PAS ce node-là. Si cette attente devenait fausse un
            jour, ce serait que le diagnostic était faux — et c'est exactement
            ce qu'on veut apprendre. */
-        expect(nominatif, 'la source nominative devrait rendre le titre réécrit')
-          .toBe(FAUX_NOM);
+        /* ET LA CI NOUS A APPRIS UNE SECONDE CHOSE, le 13/09, en faisant
+           rougir ce parcours : `/proc/<pid>/comm` est TRONQUÉ À 15 CARACTÈRES
+           (TASK_COMM_LEN = 16, terminateur compris). La source nominative a
+           rendu « sonde-essai-tit ». C'est un DEUXIÈME angle mort de l'ancien
+           comptage, indépendant du renommage — voir le parcours suivant. */
+        expect(nominatif, 'la source nominative rend le titre réécrit, tronqué à 15 caractères')
+          .toBe(FAUX_NOM.slice(0, 15));
         expect(estDeLaFamille(nominatif!, 'node'),
           'l’ancienne source comptait ce node : le diagnostic du 13/09 serait alors faux')
           .toBe(false);
@@ -293,6 +298,21 @@ describe('l’ancien compteur contre le nouveau, sur le même processus au même
       arreter();
     }
   }, 60_000);
+
+  it('la troncature à 15 caractères de « comm » suffisait à elle seule à faire minorer l’ancien comptage', () => {
+    /* DÉCOUVERT PAR LA CI DE CETTE PR, et pas deviné : `/proc/<pid>/comm`
+       tronque à 15 caractères. Un exécutable dont le nom en fait 16 n'était
+       donc JAMAIS reconnu par l'ancienne source — même sans aucun renommage.
+       `chromium-browser` est exactement dans ce cas, et c'est un navigateur
+       que la garde doit compter. */
+    expect(estDeLaFamille('chromium-browser', 'chrome'),
+      'le nom entier doit compter').toBe(true);
+    expect('chromium-browser'.length).toBe(16);
+    expect(estDeLaFamille('chromium-browser'.slice(0, 15), 'chrome'),
+      'tronqué par « comm », ce navigateur échappait au comptage').toBe(false);
+    /* La source du noyau, elle, rend le chemin complet de l'exécutable : pas
+       de troncature, donc pas cet angle mort. */
+  });
 
   it('le comptage déclare d’où il lit, et combien de pids il n’a pas pu résoudre', () => {
     /* UN RELEVÉ QUI ANNONCE 12 PROCESSUS DONT 40 NON RÉSOLUS ne se lit pas
