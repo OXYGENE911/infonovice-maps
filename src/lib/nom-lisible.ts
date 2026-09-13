@@ -126,3 +126,36 @@ export function nomsLisibles(bruts: readonly (string | null | undefined)[]): str
   }
   return sortie;
 }
+
+/* UN NUMÉRO DE ROUTE EST UN NOM — il est même LE nom qu'on lit sur la tôle.
+ *
+ * POURQUOI UNE SECONDE RÈGLE. `estIdentifiantBrut` juge des NOMS DE LIEU :
+ * dans ce registre, « D606 » ressemble à un code, et c'en est un. Mais le
+ * champ « voie » du guidage ne porte pas un nom de lieu, il porte une
+ * DÉSIGNATION DE ROUTE, et là « D606 » est exactement ce qu'Armelin veut
+ * lire en bas de l'écran — c'est ce qui est peint sur les panneaux. Passer
+ * ce champ à `nomLisible` effacerait « A6 », « N7 », « D606 » : on aurait
+ * réparé le défaut en supprimant l'information.
+ *
+ * LE NUMÉRO EST RECONNU À SA FORME COURTE, et c'est ce qui le distingue d'un
+ * identifiant : une lettre de réseau, au plus quatre chiffres, un suffixe de
+ * branche facultatif. « n48219 » — la forme courte d'un nœud OpenStreetMap —
+ * porte cinq chiffres et ne passe donc pas, alors que `classeRoute` seule
+ * l'aurait pris pour une nationale. C'est le trou qu'on ferme ici.
+ */
+const NUMERO_DE_ROUTE = /^R?[AND]\s?\d{1,4}\s?[A-Z]{0,2}$/;
+
+/**
+ * La désignation de voie telle qu'on peut l'écrire sur un panneau, ou `null`.
+ *
+ * Trois sorties, comme `nomLisible` : un numéro de route (rendu tel quel), un
+ * nom de rue ou de lieu lisible, `null` quand il ne reste qu'un identifiant
+ * ou rien du tout.
+ */
+export function voieLisible(brut: string | null | undefined): string | null {
+  if (typeof brut !== 'string') return null;
+  const t = brut.replace(/\s+/gu, ' ').trim();
+  if (t === '') return null;
+  if (NUMERO_DE_ROUTE.test(t.toUpperCase())) return t;
+  return nomLisible(t);
+}

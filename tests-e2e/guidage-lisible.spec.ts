@@ -30,7 +30,8 @@ const TRACE: [number, number][] = Array.from({ length: 21 }, (_, i) =>
   [2.3400 + i * 0.0014, 48.8500]);
 
 /** Démarre un suivi dont la manœuvre à venir est un embranchement. */
-async function suivre(page: Page, nomDeVoie: string): Promise<void> {
+async function suivre(page: Page, nomDeVoie: string,
+  nomCourant = 'R DE RIVOLI'): Promise<void> {
   await simulerTuiles(page);
   await simulerCommunes(page);
   await page.context().grantPermissions(['geolocation']);
@@ -61,7 +62,7 @@ async function suivre(page: Page, nomDeVoie: string): Promise<void> {
              étapes sans voie, et le parcours accuserait le code. */
           portions: [{ steps: [
             { instruction: { type: 'depart' }, distance: 1_500,
-              attributes: { name: { nom_1_gauche: 'R DE RIVOLI' } } },
+              attributes: { name: { nom_1_gauche: nomCourant } } },
             { instruction: { type: 'fork', modifier: 'slight right' }, distance: 550,
               attributes: { name: { nom_1_gauche: nomDeVoie } } },
           ] }],
@@ -100,10 +101,34 @@ async function rouler(page: Page, lon: number, lat: number): Promise<void> {
 
 /** Ce que le navigateur mesure vraiment sur un élément de texte. */
 interface Mesure {
-  lignes: number; coupe: boolean; deborde: boolean;
+  /** Les lignes PEINTES — la hauteur de la boîte que l'œil voit. */
+  lignes: number;
+  /** Les lignes que le CONTENU occuperait sans plafond. */
+  lignesContenu: number;
+  coupe: boolean;
+  /** Du contenu hors de la boîte SANS que la coupe l'ait décidé. */
+  deborde: boolean;
+  /** Le `display` CALCULÉ : une règle CSS écrite n'est pas une règle active. */
+  display: string;
+  /** Le `display` calculé du PARENT — c'est lui qui blockifie l'item flex. */
+  displayParent: string;
+  /** Le plafond de hauteur réellement posé, ou `none`. */
+  hauteurMax: string;
+  interligne: number;
   texte: string; boite: { x: number; y: number; largeur: number; hauteur: number };
 }
 
+/* ON MESURE LA BOÎTE PEINTE, PAS LE CONTENU (13/09).
+ *
+ * LA PASSE PRÉCÉDENTE COMPTAIT LES LIGNES SUR `scrollHeight`, qui décrit le
+ * CONTENU et non la boîte : dès qu'un texte est coupé — ce que la règle
+ * prévoit en dernier recours — `scrollHeight` garde la hauteur du texte
+ * entier, et la mesure rendait trois lignes pour une boîte de deux. C'est ce
+ * qui a fait rougir la CI.
+ * LES DEUX SONT DONC RELEVÉES, ET AUCUNE N'EST LÂCHÉE : la boîte peinte doit
+ * tenir en deux lignes, ET tout écart entre les deux doit être une COUPE
+ * VOULUE — jamais un débordement qu'on n'aurait pas vu.
+ */
 async function mesurer(page: Page, selecteur: string): Promise<Mesure> {
   return page.evaluate((sel) => {
     const el = document.querySelector<HTMLElement>(sel);
@@ -111,12 +136,22 @@ async function mesurer(page: Page, selecteur: string): Promise<Mesure> {
     const style = getComputedStyle(el);
     const inter = Number.parseFloat(style.lineHeight) || Number.parseFloat(style.fontSize) * 1.2;
     const r = el.getBoundingClientRect();
+    const coupe = el.classList.contains('texte-coupe');
+    const parent = el.parentElement;
     return {
-      lignes: Math.max(1, Math.round(el.scrollHeight / inter)),
-      coupe: el.classList.contains('texte-coupe'),
-      /* DÉBORDER, C'EST AVOIR DU CONTENU HORS DE SA PROPRE BOÎTE : un pixel
-         de tolérance pour les sous-pixels du rendu, pas davantage. */
-      deborde: el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1,
+      lignes: Math.max(1, Math.round(el.clientHeight / inter)),
+      lignesContenu: Math.max(1, Math.round(el.scrollHeight / inter)),
+      coupe,
+      /* DÉBORDER, C'EST AVOIR DU CONTENU HORS DE SA BOÎTE SANS L'AVOIR
+         DÉCIDÉ. En largeur, jamais — rien ne l'autorise. En hauteur, la
+         coupe l'autorise ET SEULE la coupe : sans elle, c'est le défaut
+         qu'Armelin a vu. Un pixel de tolérance pour les sous-pixels. */
+      deborde: el.scrollWidth > el.clientWidth + 1
+        || (!coupe && el.scrollHeight > el.clientHeight + 1),
+      display: style.display,
+      displayParent: parent ? getComputedStyle(parent).display : '',
+      hauteurMax: style.maxHeight,
+      interligne: inter,
       texte: el.textContent ?? '',
       boite: { x: r.x, y: r.y, largeur: r.width, hauteur: r.height },
     };
@@ -181,8 +216,37 @@ test('UNE LIGNE SECONDAIRE INTERMINABLE S’ARRÊTE À DEUX LIGNES, SANS CHEVAUC
     { timeout: 5_000 }).toBeLessThanOrEqual(2);
 
   const d = await mesurer(page, '.bg-destination');
-  expect(d.lignes, 'jamais une troisième ligne').toBeLessThanOrEqual(2);
+  expect(d.lignes, 'jamais une troisième ligne PEINTE').toBeLessThanOrEqual(2);
   expect(d.deborde, 'la ligne secondaire déborde de sa boîte').toBe(false);
+  /* ET LA BOÎTE EST MESURÉE EN PIXELS, pas seulement en lignes arrondies. */
+  expect(d.boite.hauteur, 'la boîte peinte tient en deux interlignes')
+    .toBeLessThanOrEqual(2 * d.interligne + 1);
+
+  /* LE MÉCANISME S'APPLIQUE-T-IL VRAIMENT ? C'est la question que la passe
+     précédente n'a pas posée, et elle a coûté un cycle.
+     `.texte-coupe` déclare `display:-webkit-box` pour obtenir
+     `-webkit-line-clamp`. Mais `.bg-destination` est un ITEM FLEX de
+     `.bg-cartouche` : le mode de boîte d'un item flex est BLOCKIFIÉ, et le
+     `display` calculé ne vaut donc jamais `-webkit-box`. On l'affirme ici,
+     dans le navigateur, pour que personne ne rebâtisse la garantie dessus. */
+  if (d.coupe) {
+    expect(d.displayParent, 'le cartouche est bien un conteneur flex').toBe('flex');
+    expect(d.display,
+      'un item flex ne rend pas un -webkit-box : le clamp seul ne garantit rien')
+      .not.toBe('-webkit-box');
+    /* CE QUI GARANTIT LES DEUX LIGNES : un plafond de hauteur MESURÉ, posé
+       en pixels par `tenir-en-lignes.ts`. Sans lui, la boîte dépassait. */
+    expect(d.hauteurMax, 'aucun plafond de hauteur n’est posé').not.toBe('none');
+    const plafond = Number.parseFloat(d.hauteurMax);
+    expect(Number.isFinite(plafond), `plafond illisible : ${d.hauteurMax}`).toBe(true);
+    expect(plafond, 'le plafond vaut deux interlignes au plus')
+      .toBeLessThanOrEqual(2 * d.interligne + 0.5);
+    /* ET LA COUPE COUPE VRAIMENT : du contenu est retenu hors de la boîte.
+       Sans cette ligne, un plafond posé sur un texte qui tenait déjà
+       passerait pour une réparation. */
+    expect(d.lignesContenu,
+      'la coupe est posée alors que rien ne dépassait').toBeGreaterThan(d.lignes);
+  }
   /* ICI L'ELLIPSE EST LÉGITIME : cinq villes ne tiennent pas, et un nom de
      ville tronqué vaut mieux qu'un panneau crevé. C'est le DERNIER recours,
      et on vérifie qu'il n'arrive qu'après les paliers de police. */
@@ -230,4 +294,109 @@ test('UN NOM DE VOIE LISIBLE, LUI, S’AFFICHE — la contre-épreuve', async ({
   await rouler(page, TRACE[7]![0], TRACE[7]![1]);
   await expect(page.locator('.bg-destination')).toBeVisible({ timeout: 10_000 });
   await expect(page.locator('.bg-destination')).toContainText('Rue des Pyr');
+});
+
+test('LA VOIE COURANTE, EN BAS DU BANDEAU, NE MONTRE PAS D’IDENTIFIANT BRUT', async ({ page }) => {
+  /* LA LIGNE QUE LE CEO A VUE, ET QUI N’AVAIT PAS ÉTÉ RÉPARÉE. `.bg-voie`
+     affiche « le nom de la rue sur laquelle on se déplace actuellement » ;
+     elle recevait `e.etape.voie` SANS AUCUN FILTRE — le champ que le service
+     remplit avec `cpx_numero`, à défaut `nom_1_gauche`, à défaut
+     `cpx_toponyme`. Quand les deux noms manquent, c’est la référence
+     technique qui s’affichait, et elle s’affichait encore le 13/09.
+     `nomsLisibles()` n’était branché qu’à UN endroit : `.bg-destination`. */
+  await suivre(page, 'R DE RIVOLI', IDENTIFIANT_BRUT);
+  await rouler(page, TRACE[3]![0], TRACE[3]![1]);
+  await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
+  await rouler(page, TRACE[4]![0], TRACE[4]![1]);
+
+  const voie = await page.locator('.bg-voie').textContent();
+  expect(voie ?? '', 'la voie courante affiche un identifiant brut')
+    .not.toContain(IDENTIFIANT_BRUT);
+  /* ET NULLE PART AILLEURS DANS LE BANDEAU : l’écusson lit la même donnée. */
+  const tout = await page.locator('bandeau-guidage').textContent();
+  expect(tout ?? '').not.toContain(IDENTIFIANT_BRUT);
+  expect(tout ?? '').not.toContain('TRONROUT');
+});
+
+test('LA VOIE COURANTE LISIBLE, ELLE, S’AFFICHE — la contre-épreuve', async ({ page }) => {
+  /* Sans ce parcours, le précédent serait tenu par une ligne qui ne paraît
+     jamais : on aurait effacé le défaut en effaçant l’information. */
+  await suivre(page, 'R DE RIVOLI', 'AVENUE DE LA REPUBLIQUE');
+  await rouler(page, TRACE[3]![0], TRACE[3]![1]);
+  /* LE LIBELLÉ EST MIS EN FORME EN AMONT (`libelleVoie`) : le service écrit
+     en capitales sans accents, le bandeau affiche « Avenue de la République ».
+     On attend donc la forme RÉELLEMENT peinte — mesurée, pas supposée. */
+  await expect(page.locator('.bg-voie')).toContainText('Avenue de la République',
+    { timeout: 10_000 });
+});
+
+test('UN NUMÉRO DE ROUTE RESTE AFFICHÉ — « D606 » est un nom, pas un identifiant', async ({ page }) => {
+  /* LE PIÈGE DE LA RÉPARATION : filtrer la voie courante avec la règle des
+     NOMS DE LIEU aurait effacé « A6 », « N7 », « D606 » — ce qui est peint
+     sur la tôle. La seconde règle, `voieLisible`, les garde. */
+  await suivre(page, 'R DE RIVOLI', 'D606');
+  await rouler(page, TRACE[3]![0], TRACE[3]![1]);
+  await expect(page.locator('.bg-voie')).toContainText('D606', { timeout: 10_000 });
+});
+
+test('QUAND AUCUN PALIER NE SUFFIT, LA COUPE TIENT VRAIMENT LES DEUX LIGNES', async ({ page }) => {
+  /* LE PARCOURS QUI MANQUAIT, ET C’EST LUI QUI A FAIT ROUGIR LA CI.
+     Les autres parcours tiennent par la RÉDUCTION DE POLICE : sur ce poste,
+     cinq villes finissent par tenir à 60 %, et le dernier recours n’est
+     jamais atteint. Sur le runner Linux, la police est plus large, aucun
+     palier ne suffit, la coupe est posée — et là elle ne coupait rien.
+     Ce texte-ci ne tient sur AUCUNE police : la coupe est donc exercée
+     partout, et ce que l’on affirme dessous est affirmé partout. */
+  await suivre(page, 'R DE RIVOLI');
+  await rouler(page, TRACE[7]![0], TRACE[7]![1]);
+  await expect(page.locator('.bg-cartouche')).toBeVisible({ timeout: 15_000 });
+
+  await page.evaluate(() => {
+    const inst = document.querySelector<HTMLElement>('.bg-cartouche .bg-instruction');
+    if (inst) inst.textContent = 'À l’embranchement, restez légèrement à droite';
+    const dest = document.querySelector<HTMLElement>('.bg-destination');
+    if (dest) {
+      dest.hidden = false;
+      dest.textContent = Array.from({ length: 14 },
+        () => 'Villeneuve-Saint-Georges').join(' · ');
+    }
+  });
+  await expect.poll(async () => (await mesurer(page, '.bg-destination')).coupe,
+    { timeout: 5_000 }).toBe(true);
+
+  const d = await mesurer(page, '.bg-destination');
+  /* LA BOÎTE PEINTE : deux lignes, pas une de plus. */
+  expect(d.lignes, 'jamais une troisième ligne peinte').toBeLessThanOrEqual(2);
+  expect(d.boite.hauteur, 'la boîte peinte tient en deux interlignes')
+    .toBeLessThanOrEqual(2 * d.interligne + 1);
+  /* ET IL Y AVAIT BIEN QUELQUE CHOSE À COUPER. */
+  expect(d.lignesContenu, 'le texte de contrôle doit réellement déborder')
+    .toBeGreaterThan(2);
+
+  /* LE MÉCANISME EST-IL ACTIF, ET LEQUEL ? Mesuré, pas déclaré.
+     `.bg-destination` est un item flex : son `display` calculé n’est pas le
+     `-webkit-box` que `.texte-coupe` déclare, donc `-webkit-line-clamp` ne
+     peut rien garantir. La garantie est le plafond de hauteur, posé en
+     pixels MESURÉS par `tenir-en-lignes.ts`. */
+  expect(d.displayParent, 'le cartouche est bien un conteneur flex').toBe('flex');
+  expect(d.display, 'un item flex ne rend pas un -webkit-box').not.toBe('-webkit-box');
+  expect(d.hauteurMax, 'aucun plafond de hauteur n’est posé').not.toBe('none');
+  const plafond = Number.parseFloat(d.hauteurMax);
+  expect(Number.isFinite(plafond), `plafond illisible : ${d.hauteurMax}`).toBe(true);
+  expect(plafond, 'le plafond vaut deux interlignes au plus')
+    .toBeLessThanOrEqual(2 * d.interligne + 0.5);
+
+  /* ET LE PANNEAU RESTE UN PANNEAU : rien ne sort de la tôle, rien ne
+     chevauche l’instruction. */
+  const c = await page.locator('.bg-cartouche').boundingBox();
+  expect(c).not.toBeNull();
+  const cadre = c as { x: number; y: number; width: number; height: number };
+  expect(d.boite.y + d.boite.hauteur).toBeLessThanOrEqual(cadre.y + cadre.height + 1);
+  expect(cadre.x + cadre.width).toBeLessThanOrEqual(360);
+  const i = await mesurer(page, '.bg-cartouche .bg-instruction');
+  const seCroisent = i.boite.x < d.boite.x + d.boite.largeur
+    && i.boite.x + i.boite.largeur > d.boite.x
+    && i.boite.y < d.boite.y + d.boite.hauteur
+    && i.boite.y + i.boite.hauteur > d.boite.y;
+  expect(seCroisent, 'l’instruction et la ligne secondaire se chevauchent').toBe(false);
 });

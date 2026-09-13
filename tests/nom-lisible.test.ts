@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { estIdentifiantBrut, nomLisible, nomsLisibles } from '../src/lib/nom-lisible';
+import { estIdentifiantBrut, nomLisible, nomsLisibles, voieLisible } from '../src/lib/nom-lisible';
 
 /* LA RÈGLE DE TERRAIN-2 (retour du CEO, 11/09) : jamais d'identifiant brut à
  * l'écran. Elle se teste À SEC, ici, et non dans le rendu — le rendu change,
@@ -105,5 +105,57 @@ describe('nomsLisibles', () => {
   it('garde l’ordre du panneau', () => {
     expect(nomsLisibles(['Troyes', 'Corbeil-Essonnes', 'Sénart', 'Melun']))
       .toEqual(['Troyes', 'Corbeil-Essonnes', 'Sénart', 'Melun']);
+  });
+});
+
+/* LA DÉSIGNATION DE VOIE — un registre différent de celui des noms de lieu.
+ *
+ * POURQUOI UNE SECONDE RÈGLE, ET PAS UN ASSOUPLISSEMENT DE LA PREMIÈRE :
+ * `nomLisible` juge des NOMS DE LIEU, et dans ce registre « D606 » est bien
+ * un code. Mais le champ `voie` du guidage porte une DÉSIGNATION DE ROUTE,
+ * et là « D606 » est ce qui est peint sur la tôle. Les deux règles restent
+ * donc séparées : aucune assertion de la première n'est affaiblie.
+ */
+describe('voieLisible — LE NUMÉRO DE ROUTE EST UN NOM', () => {
+  const numeros = ['A6', 'A 6', 'A104', 'N7', 'RN7', 'D606', 'RD906', 'D14E', 'D1234'];
+  for (const n of numeros) {
+    it(`garde « ${n} » — c’est ce qu’on lit sur le panneau`, () => {
+      expect(voieLisible(n)).toBe(n);
+    });
+  }
+
+  const rues = ['Rue de Rivoli', 'Avenue des Champs-Élysées', 'Châtillon-la-Borde'];
+  for (const r of rues) {
+    it(`garde « ${r} » — un nom de rue reste un nom`, () => {
+      expect(voieLisible(r)).toBe(r);
+    });
+  }
+});
+
+describe('voieLisible — L’IDENTIFIANT BRUT SE TAIT, MÊME DÉGUISÉ EN ROUTE', () => {
+  const bruts: [string, string][] = [
+    ['TRONROUT0000000352788241', 'cleabs de la BD TOPO — la forme vue par le CEO'],
+    ['way/123456789', 'élément OSM'],
+    ['motorway_junction', 'valeur technique OSM'],
+    ['osm:name', 'clé technique'],
+    ['FR75056', 'code INSEE d’un seul tenant'],
+    /* CELUI-CI EST LE TROU QUE LA SECONDE RÈGLE FERME : `classeRoute` lit
+       « N » puis un chiffre et conclut « nationale ». Cinq chiffres : aucune
+       route nationale française n’en porte autant. */
+    ['n48219', 'forme courte d’un nœud OSM, que classeRoute prenait pour une nationale'],
+    ['w1234567', 'forme courte d’un chemin OSM'],
+    ['N123456', 'six chiffres derrière une lettre de réseau — ce n’est plus une route'],
+  ];
+  for (const [brut, pourquoi] of bruts) {
+    it(`efface « ${brut} » — ${pourquoi}`, () => {
+      expect(voieLisible(brut)).toBeNull();
+    });
+  }
+
+  it('rend null sur le vide, null et undefined', () => {
+    expect(voieLisible('')).toBeNull();
+    expect(voieLisible('   ')).toBeNull();
+    expect(voieLisible(null)).toBeNull();
+    expect(voieLisible(undefined)).toBeNull();
   });
 });

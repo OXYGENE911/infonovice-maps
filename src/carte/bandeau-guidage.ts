@@ -83,7 +83,7 @@ import type { EvenementTrajet } from '../lib/trafic';
 import { flecheManoeuvre } from './icone-manoeuvre';
 import { refermerPanneaux } from './panneaux';
 import { installerTenueEnLignes } from './tenir-en-lignes';
-import { nomsLisibles } from '../lib/nom-lisible';
+import { nomsLisibles, voieLisible } from '../lib/nom-lisible';
 import { classeRoute, numeroRoute, libelleClasse } from '../lib/classe-route';
 import { fondPanneau, encreSur, cartoucheNumero } from '../lib/panneau';
 import { pictoMenu } from './icone-menu';
@@ -2943,8 +2943,21 @@ export class BandeauGuidage extends HTMLElement {
        où l'on VA (la voie de la manœuvre à venir), la barre du bas nomme
        celle où l'on EST. Les confondre, c'est afficher le nom de la rue
        qu'on quitte au-dessus de la flèche qui en sort. */
-    const voieCourante = e.horsRoute ? '' : (e.etape?.voie ?? '');
-    const voieVisee = e.horsRoute ? '' : (e.manoeuvre?.voie ?? voieCourante);
+    /* JAMAIS D'IDENTIFIANT BRUT, ICI NON PLUS (TERRAIN-2, 13/09). C'est LA
+       LIGNE QUE LE CEO A VUE : `.bg-voie`, en bas du bandeau, recevait
+       `e.etape.voie` sans aucun filtre — le champ que `versEtapes` remplit
+       avec `cpx_numero`, à défaut `nom_1_gauche`, à défaut `cpx_toponyme`.
+       Quand les deux noms manquent, c'est une référence technique qui
+       s'affiche, et elle s'affichait.
+       ET C'EST `voieLisible`, PAS `nomLisible` : dans ce champ, « D606 » est
+       un nom — c'est ce qui est peint sur la tôle. `nomLisible` seule, qui
+       juge des noms de LIEU, l'aurait effacé avec les identifiants, et l'on
+       aurait réparé le défaut en supprimant l'information. */
+    const voieCourante = e.horsRoute ? '' : (voieLisible(e.etape?.voie) ?? '');
+    /* LA VOIE VISÉE EST FILTRÉE AUSSI : elle nourrit `numeroRoute`, donc
+       l'écusson. Sans filtre, « n48219 » — la forme courte d'un nœud OSM —
+       passait pour une nationale et s'affichait en cartouche rouge. */
+    const voieVisee = e.horsRoute ? '' : (voieLisible(e.manoeuvre?.voie) ?? voieCourante);
     const classe = classeRoute(voieVisee);
     cartouche.hidden = !e.manoeuvre && !e.horsRoute;
     cartouche.dataset['classe'] = classe;

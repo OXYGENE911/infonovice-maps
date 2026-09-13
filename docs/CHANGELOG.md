@@ -56,6 +56,54 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - 51 tests unitaires pour la règle de détection et le comptage de lignes
   (nom lisible, identifiant brut, chaîne vide), 4 parcours à 360 px.
 
+### Reprise du 13/09 — la CI était ROUGE, et le défaut du CEO toujours à l'écran
+
+- **La CI de la PR #320 était rouge, et le rapport l'annonçait « pending ».**
+  Trois exécutions échouées (34732882937, 34733355972, 34733581014), toutes sur
+  le même parcours : « UNE LIGNE SECONDAIRE INTERMINABLE » mesurait **3 lignes**
+  là où deux étaient promises.
+- **La mesure comptait le CONTENU, pas la BOÎTE.** `mesurer()` divisait
+  `scrollHeight` par l'interligne. Dès qu'un texte est coupé — ce que la règle
+  prévoit en dernier recours — `scrollHeight` garde la hauteur du texte ENTIER :
+  la boîte peinte tenait en deux lignes, la mesure en annonçait trois. Sur ce
+  poste, la police est plus étroite, les paliers suffisaient, la coupe n'était
+  jamais atteinte et le parcours était vert ; sur le runner Linux, non.
+  Les DEUX hauteurs sont désormais relevées, et aucune n'est lâchée : la boîte
+  peinte doit tenir en deux lignes, **et** tout écart entre les deux doit être
+  une coupe VOULUE — jamais un débordement qu'on n'aurait pas vu.
+- **Le dernier recours ne reposait sur rien de garanti.** `.texte-coupe` déclare
+  `display:-webkit-box` pour obtenir `-webkit-line-clamp`, mais `.bg-destination`
+  est un **item flex** de `.bg-cartouche` : le mode de boîte d'un item flex est
+  blockifié. **Mesuré dans le navigateur le 13/09 : `display` calculé =
+  `flow-root`**, jamais `-webkit-box`. Une règle CSS écrite n'est pas une règle
+  CSS active. La garantie des deux lignes est donc posée en **pixels mesurés** —
+  `tenir-en-lignes.ts` écrit `max-height = 2 × interligne` au moment où il pose la
+  coupe (relevé : `22.50px` pour un interligne de `11.25px`). Elle ne dépend plus
+  d'aucun mode de boîte ni d'aucun moteur. Le clamp reste pour les trois points.
+- **`nomsLisibles()` n'était branché qu'à UN endroit** — `.bg-destination`.
+  Trois autres chemins menaient le même champ jusqu'à l'usager, et le défaut
+  qu'Armelin a vu passait par le premier :
+  1. **`.bg-voie`**, la voie courante en bas du bandeau, recevait `e.etape.voie`
+     sans filtre ;
+  2. **la VOIX** — `phraseAnnonce` disait « vers … » avec l'identifiant. **Un
+     identifiant prononcé est pire qu'affiché : on ne le masque pas d'un doigt.**
+     Le filtre est posé DANS la formulation, pas chez l'appelant, pour qu'un
+     appelant à venir ne puisse pas l'oublier ;
+  3. **la feuille de route imprimable** (`panneau-itineraire.ts`) écrivait la
+     même donnée noir sur blanc. Une feuille s'emporte : l'identifiant y vit plus
+     longtemps qu'à l'écran.
+- **Un numéro de route est un NOM** — `voieLisible()`. Filtrer le champ « voie »
+  avec la règle des noms de LIEU aurait effacé « A6 », « N7 », « D606 » : on
+  aurait réparé le défaut en supprimant l'information. La seconde règle garde les
+  numéros à leur forme courte (une lettre de réseau, au plus quatre chiffres) et
+  ferme au passage un trou que `classeRoute` seule laissait ouvert : « n48219 »,
+  forme courte d'un nœud OSM, passait pour une nationale et s'affichait en
+  cartouche rouge.
+- **Aucune assertion n'a été affaiblie pour obtenir du vert** : quatre parcours
+  et cinquante-deux tests unitaires ajoutés, dont un parcours qui FORCE le
+  dernier recours sur toute police (un texte qui ne tient sur aucune) et affirme,
+  dans le navigateur, que le plafond est bien posé et que la boîte peinte tient.
+
 ## [1.142.0] — 2026-09-11 — SALON-1
 
 ### La page du stand, `/salon.html` — jalon CEO du 18/09

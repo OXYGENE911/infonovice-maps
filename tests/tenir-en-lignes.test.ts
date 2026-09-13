@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { nombreDeLignes, PALIERS } from '../src/carte/tenir-en-lignes';
+import { hauteurMax, nombreDeLignes, PALIERS } from '../src/carte/tenir-en-lignes';
 
 /* CE QUI SE TESTE À SEC DANS TERRAIN-2 (b) : le comptage de lignes et la
  * forme de l'échelle. La MESURE, elle, vit dans le navigateur et se prouve
@@ -42,5 +42,35 @@ describe('PALIERS', () => {
 
   it('ne descend pas sous 60 % — en dessous, on ne lit plus au volant', () => {
     expect(Math.min(...PALIERS)).toBeGreaterThanOrEqual(0.6);
+  });
+});
+
+/* LE PLAFOND DE HAUTEUR — la part qui GARANTIT les deux lignes.
+ *
+ * IL EXISTE PARCE QUE LE CLAMP CSS NE S’APPLIQUAIT PAS. Mesuré dans le
+ * navigateur le 13/09 : `.bg-destination` est un item flex, son `display`
+ * calculé vaut `flow-root` alors que `.texte-coupe` déclare `-webkit-box` —
+ * `-webkit-line-clamp` n’avait donc aucune boîte sur quoi s’appliquer, et la
+ * CI a mesuré trois lignes là où deux étaient promises.
+ * Le plafond, lui, ne dépend d’aucun mode de boîte.
+ */
+describe('hauteurMax', () => {
+  it('pose deux interlignes mesurés', () => {
+    expect(hauteurMax(2, 11.25)).toBe('22.50px');
+  });
+
+  it('suit le nombre de lignes demandé', () => {
+    expect(hauteurMax(3, 20)).toBe('60.00px');
+  });
+
+  it('NE POSE RIEN quand l’interligne n’a pas pu être mesuré — un plafond faux couperait un texte qui tenait', () => {
+    expect(hauteurMax(2, 0)).toBe('');
+    expect(hauteurMax(2, Number.NaN)).toBe('');
+    expect(hauteurMax(2, -3)).toBe('');
+  });
+
+  it('ne pose rien pour un nombre de lignes absurde', () => {
+    expect(hauteurMax(0, 11.25)).toBe('');
+    expect(hauteurMax(Number.NaN, 11.25)).toBe('');
   });
 });

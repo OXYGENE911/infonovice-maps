@@ -65,21 +65,50 @@ function interligne(style: CSSStyleDeclaration, taillePx: number): number {
 export function ajusterEnLignes(element: HTMLElement, maxLignes = 2): void {
   element.classList.remove(CLASSE_COUPE);
   element.style.removeProperty('font-size');
+  element.style.removeProperty('max-height');
   if (element.hidden) return;
   if ((element.textContent ?? '').trim() === '') return;
 
   const base = Number.parseFloat(getComputedStyle(element).fontSize);
   if (!Number.isFinite(base) || base <= 0) return;
 
+  let dernierInterligne = 0;
   for (const facteur of PALIERS) {
     if (facteur !== 1) element.style.fontSize = (base * facteur).toFixed(2) + 'px';
     const style = getComputedStyle(element);
     const taille = Number.parseFloat(style.fontSize);
-    if (nombreDeLignes(element.scrollHeight, interligne(style, taille)) <= maxLignes) return;
+    dernierInterligne = interligne(style, taille);
+    if (nombreDeLignes(element.scrollHeight, dernierInterligne) <= maxLignes) return;
   }
   /* AUCUN PALIER N'A SUFFI. On garde le plus petit ET on coupe : mieux vaut
      un nom de ville tronqué qu'un panneau dont le texte sort de la tôle. */
   element.classList.add(CLASSE_COUPE);
+  /* ET LA COUPE EST POSÉE EN PIXELS MESURÉS, PAS SEULEMENT DÉCLARÉE EN CSS.
+     C'est le piège où la première passe est tombée, et la CI l'a payé :
+     `.texte-coupe` posait `display:-webkit-box` pour obtenir `-webkit-line-
+     clamp`, mais `.bg-destination` est un ITEM FLEX — le `display` d'un item
+     flex est blockifié, et le `display` calculé relevé dans le navigateur
+     vaut `flow-root`, jamais `-webkit-box`. Une règle CSS écrite n'est pas
+     une règle CSS active.
+     LA HAUTEUR MAXIMALE, ELLE, NE DÉPEND D'AUCUN MODE DE BOÎTE : deux
+     interlignes MESURÉS au dernier palier, et `overflow:hidden` de la classe.
+     Le clamp reste en CSS pour les trois points là où le moteur le rend ;
+     la garantie des deux lignes, elle, est ici. */
+  element.style.maxHeight = hauteurMax(maxLignes, dernierInterligne);
+}
+
+/**
+ * La hauteur d'un texte borné à `maxLignes` lignes, telle qu'on la pose en
+ * style — PURE, et c'est la part qui se teste à sec.
+ *
+ * Rend `''` quand l'interligne n'a pas pu être mesuré : on ne pose alors
+ * AUCUN plafond plutôt qu'un plafond inventé — un plafond faux couperait un
+ * texte qui tenait.
+ */
+export function hauteurMax(maxLignes: number, interlignePx: number): string {
+  if (!Number.isFinite(interlignePx) || interlignePx <= 0) return '';
+  if (!Number.isFinite(maxLignes) || maxLignes < 1) return '';
+  return (maxLignes * interlignePx).toFixed(2) + 'px';
 }
 
 /**

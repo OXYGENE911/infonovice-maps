@@ -3608,6 +3608,15 @@ summary .picto-menu {
    `carte/tenir-en-lignes.ts` quand aucun palier de police n'a suffi. Elle
    coupe À LA DEUXIÈME LIGNE, avec les trois points : un panneau dont le texte
    sort de la tôle est pire qu'un nom de ville tronqué. */
+/* CE QUI GARANTIT LES DEUX LIGNES EST LE `max-height` POSÉ EN PIXELS
+   MESURÉS par `tenir-en-lignes.ts`, PAS le clamp ci-dessous. Relevé dans le
+   navigateur le 13/09 sur `.bg-destination`, qui est un ITEM FLEX de
+   `.bg-cartouche` : `display` déclaré `-webkit-box`, `display` CALCULÉ
+   `flow-root` — le mode de boîte d'un item flex est blockifié, et
+   `-webkit-line-clamp` n'a jamais eu de `-webkit-box` sur quoi s'appliquer.
+   La CI l'a payé : trois lignes mesurées là où deux étaient promises.
+   LE CLAMP RESTE, pour les TROIS POINTS : là où le moteur les rend, ils
+   disent que le texte continue. C'est un agrément, plus une promesse. */
 .texte-coupe {
   display: -webkit-box; -webkit-box-orient: vertical;
   -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
