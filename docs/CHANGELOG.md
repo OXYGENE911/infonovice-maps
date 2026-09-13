@@ -60,11 +60,40 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   est refusée plutôt que comparée à tort (`0.5em` vaut 8 px, pas 0,5). Une
   boîte sous le pixel est traitée comme une boîte nulle. Sur la même sonde, la
   porte sort désormais en **code 1**, deux griefs chiffrés.
-  **Et ce qui reste ouvert est écrit, dans le script et ici** : `opacity` n'est
-  refusée qu'à zéro (`opacity: 0.05` passe) et `text-indent` qu'à partir de
-  −1000 px (`-999px` passe). Les resserrer demanderait de juger un rendu contre
-  un fond et une largeur inconnus — la porte lit du texte, elle ne peint pas la
-  page — et `opacity: 0.5` a déjà été jugé visible en revue, test à l'appui.
+- **LA LISTE DES TROUS SE DISAIT EXHAUSTIVE ET NE L'ÉTAIT PAS** (vérificateur
+  indépendant, 13/09). La porte nommait « les deux endroits où elle reste
+  lâche » — `opacity`, `text-indent` — et donnait cette liste pour complète. Il
+  en manquait un TROISIÈME de la même famille : **la mise à l'échelle n'était
+  refusée qu'à zéro exact**, si bien que `transform: scale(0.0001)` franchissait
+  la porte, qui imprimait alors « cadre visible et pastille visible ». C'est mot
+  pour mot le défaut « un caractère de plus » que le liseré et la pastille
+  venaient de payer, laissé intact une ligne plus bas. Une liste de trous qui se
+  dit exhaustive sans l'être rend la porte décorative : on la croit sur parole.
+  **La liste a donc été refaite par SONDE et non par lecture** — chaque façon
+  d'éteindre le bandeau ajoutée à la feuille réellement servie, la porte
+  relancée. Elle a rendu **quatorze familles** de franchissement, pas une :
+  neuf refermées ici, cinq déclarées et tenues par des tests.
+  **Refermés, chacun avec son test** : le plancher d'échelle (et c'est
+  l'identité, pas un nombre choisi — la porte refuse déjà un marquage plus petit
+  que la référence) ; les transformations qu'elle ne sait pas évaluer
+  (`matrix`, `rotateY`, `perspective`) ; `display: contents`, qui ne fabrique
+  aucune boîte et n'a donc aucun liseré à peindre ; les découpes, masques et
+  filtres — `clip-path: inset(50%)`, `circle(0)`, `url(#vide)`, `mask`,
+  `filter: opacity(0)` — désormais refusés en bloc plutôt qu'énumérés, parce que
+  la porte lit du texte et ne saurait pas dire ce qu'il en reste de peint ;
+  `-webkit-text-fill-color: transparent`, qui peint le glyphe à la place de
+  `color` ; et un interligne qui rogne le texte de la pastille
+  (`line-height: 0`), alors que la porte annonçait ses 13 px.
+  **Ce qui reste lâche, et ce n'est pas deux mais CINQ** : une opacité presque
+  nulle (`0.05`), un `text-indent` au-dessus de −1000 px, un déplacement hors
+  écran (`translateX(-99999px)`, `left: -9999px`), l'empilement (`z-index: -1`,
+  ou une autre feuille qui peindrait par-dessus), et une boîte entre le pixel et
+  la référence (`width: 1px`). Les refermer demanderait de connaître la fenêtre
+  du visiteur, de composer toutes les feuilles et de les peindre : la porte lit
+  du texte. Ces cinq-là ne sont pas seulement écrits — **cinq tests affirment
+  qu'ils passent**, et un sixième relit la liste en tête du script. Si quelqu'un
+  en referme un sans mettre la liste à jour, la CI rougit et le lui demande :
+  c'est ainsi qu'une liste de trous cesse d'être décorative.
 - **Deux trous de sécurité dans le workflow, fermés.** `workflow_dispatch`
   laissait publier **n'importe quelle branche** sous `--branch=staging` : une
   garde de branche est maintenant la toute première étape, avant le `checkout`.

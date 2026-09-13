@@ -60,8 +60,24 @@ const FEUILLE_ATTENDUE = 'previsualisation.css';
    test « les planchers SONT ceux de la feuille » rougit si l'un bouge seul :
    les deux nombres ne peuvent pas diverger en silence.
 
-   CE QUI RESTE OUVERT, ÉCRIT PLUTÔT QUE TU. Deux seuils ne sont PAS resserrés,
-   et il faut dire lesquels :
+   CE QUI RESTE OUVERT, ÉCRIT PLUTÔT QUE TU — ET LA LISTE PRÉCÉDENTE N'ÉTAIT
+   PAS COMPLÈTE. Elle nommait deux seuils lâches et se présentait comme
+   exhaustive ; le vérificateur indépendant en a trouvé un TROISIÈME de la même
+   famille (13/09) : la mise à l'échelle n'était refusée qu'à ZÉRO EXACT, si
+   bien que `transform: scale(0.0001)` franchissait la porte — mot pour mot le
+   défaut « un caractère de plus » que le liseré et la pastille venaient de
+   payer. Une liste qui se dit exhaustive sans l'être rend la porte décorative.
+   Elle est donc refaite ici PAR SONDE et non par lecture : chaque façon
+   d'éteindre le bandeau a été ajoutée à la feuille réellement SERVIE, la porte
+   relancée, et ce qui suit est ce qu'elle laisse encore passer.
+
+   REFERMÉ LE 13/09, CHACUN AVEC SON TEST : le plancher d'échelle ci-dessous,
+   les transformations non évaluables (`matrix`, `rotateY`, `perspective`…),
+   `display: contents`, les découpes, masques et filtres (`clip-path`, `clip`,
+   `mask`, `filter`, `backdrop-filter`), `-webkit-text-fill-color: transparent`,
+   et un interligne qui rogne le texte de la pastille.
+
+   CE QUI RESTE LÂCHE, ET CE N'EST PAS DEUX MAIS CINQ :
    - `opacity` : refusée à zéro seulement. `opacity: 0.05` passe donc. Le
      resserrer demanderait de juger un contraste contre un fond inconnu — la
      porte lit du texte, elle ne peint pas la page — et `opacity: 0.5` a déjà
@@ -72,7 +88,25 @@ const FEUILLE_ATTENDUE = 'previsualisation.css';
      largeur peinte : elle ne sait pas dire à partir de quel décalage le texte
      sort. Le rendu réel reste jugé à la capture d'écran, comme l'en-tête le
      dit depuis le premier jour.
-   Ces deux trous sont dans le compte rendu de la PR, pas seulement ici. */
+   - LE DÉPLACEMENT HORS ÉCRAN : `transform: translateX(-99999px)`,
+     `left: -9999px`, `margin-left: -9999px` passent. Même raison que
+     `text-indent`, et elle est plus forte encore : il faudrait connaître la
+     fenêtre du visiteur ET la taille peinte du bandeau pour dire à partir de
+     quel décalage il en sort. La feuille de référence déplace elle-même la
+     pastille (`translateX(-50%)`), donc un refus sec ferait un faux positif sur
+     le dossier conforme, et un plancher chiffré serait un nombre choisi :
+     c'est précisément ce que cette porte s'interdit.
+   - L'EMPILEMENT : `z-index: -1` sur le cadre, ou n'importe quelle règle de
+     n'importe quelle autre feuille qui peindrait par-dessus lui, passent. La
+     porte ne lit que les règles qui VISENT le bandeau ; juger un recouvrement
+     demanderait de composer toutes les feuilles du dossier et de les peindre.
+   - LA BOÎTE ENTRE UN PIXEL ET LA RÉFÉRENCE : `width: 1px` passe, là où
+     `width: 0.5px` est refusé. Le cadre ne déclare AUCUNE taille (il est en
+     `position: fixed; inset: 0`), donc il n'existe pas de taille de référence à
+     laquelle la comparer — contrairement au liseré et à la pastille, dont la
+     feuille écrit les 4 px et les 13 px. Le seul plancher défendable reste le
+     pixel logique, et il est déjà posé.
+   Ces cinq trous sont dans le compte rendu de la PR, pas seulement ici. */
 const REFERENCE_MARQUAGE = {
   /* `border: 4px solid #FFB300` dans FEUILLE_PREVISUALISATION. */
   liserePx: 4,
@@ -82,6 +116,13 @@ const REFERENCE_MARQUAGE = {
      aucun écran : ce plancher-ci n'est pas un choix de design, c'est la plus
      petite surface qu'un navigateur ait à peindre. */
   boitePx: 1,
+  /* L'ÉCHELLE, ET CE 1 N'EST PAS DAVANTAGE UN NOMBRE CHOISI : c'est l'identité.
+     La porte refuse déjà un liseré plus fin que les 4 px de la feuille et une
+     pastille plus petite que ses 13 px. Une mise à l'échelle inférieure à 1 les
+     rend tous deux plus petits que la référence SANS toucher à leurs valeurs —
+     c'était la porte dérobée. Agrandir reste permis : seul le rétrécissement
+     ment sur ce que le testeur verra. */
+  echelle: 1,
 };
 
 /** Une longueur en PIXELS LOGIQUES, ou null si l'unité n'est pas comparable en
@@ -407,6 +448,13 @@ function appelsFonction(valeur) {
 const MOT_NOMBRE = /^[+-]?(\d+(\.\d+)?|\.\d+)(e[+-]?\d+)?%?$/i;
 const MOT_LONGUEUR = /^[+-]?(\d+(\.\d+)?|\.\d+)(e[+-]?\d+)?(px|em|rem|ex|ch|pt|pc|in|cm|mm|q|vw|vh|vmin|vmax|%)?$/i;
 const MOT_STYLE_BORDURE = /^(none|hidden|solid|dashed|dotted|double|groove|ridge|inset|outset)$/i;
+/* LES SEULES TRANSFORMATIONS QUE LA PORTE SAIT JUGER. Un déplacement ne cache
+   rien qu'elle puisse mesurer (trou déclaré en tête de fichier), une échelle se
+   compare à un plancher, une rotation DANS LE PLAN laisse tout peint. Les
+   autres — `matrix`, `rotateX`, `rotateY`, `rotate3d`, `perspective`, `skew` —
+   peuvent mettre le bandeau à plat sans qu'aucun zéro apparaisse ; la porte
+   refuse plutôt que de supposer. */
+const TRANSFORMATIONS_LUES = /^(translate|translatex|translatey|translate3d|scale|scalex|scaley|scale3d|rotate|rotatez)$/;
 
 /** Le nombre de pixels « logiques » d'un mot de longueur, ou null si ce n'en
     est pas un. `thin|medium|thick` valent 1, 3 et 5 px (valeurs usuelles des
@@ -500,6 +548,37 @@ function tailleTexte(effectives) {
   return taille === null ? null : { valeur: taille, brute };
 }
 
+/** L'INTERLIGNE EFFECTIF DE LA PASTILLE, EN PIXELS. `line-height` comme la
+    part après la barre du raccourci `font`. Sans unité et en `%`, c'est un
+    MULTIPLE de la taille du texte : `line-height: 0` vaut donc zéro pixel quelle
+    que soit la police. `normal` rend `null` — aucun moteur ne descend sous 1,
+    il n'y a rien à reprocher. Une unité non convertible rend `{ convertible:
+    false }` et l'appelant refuse plutôt que de comparer à tort, comme ailleurs. */
+function interligne(effectives, taillePx) {
+  const d = gagnante(effectives, ['line-height', 'font']);
+  if (d === null || taillePx === null) return null;
+  let mot = null;
+  if (d.prop === 'line-height') mot = mots(d.valeur)[0] ?? null;
+  else {
+    /* Les espaces autour de la barre sont légaux — `font: 700 13px / 1.5` —
+       et la lecture mot à mot les perdrait, exactement comme pour la taille. */
+    const recolle = d.valeur.replace(/\s*\/\s*/g, '/');
+    for (const m of mots(recolle)) if (m.includes('/')) mot = m.split('/')[1] ?? null;
+  }
+  if (mot === null || mot === '' || /^normal$/i.test(mot)) return null;
+  /* `em` EST CONVERTIBLE ICI, ET NULLE PART AILLEURS : sur `line-height`, il se
+     rapporte à la taille de l'élément lui-même, que la porte vient de lire. La
+     refuser ferait un faux positif sur un dessin parfaitement lisible. */
+  const enEm = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))em$/i.exec(mot);
+  if (enEm !== null) return { px: Number.parseFloat(enEm[1]) * taillePx, brute: mot };
+  if (MOT_NOMBRE.test(mot)) {
+    const k = /%$/.test(mot) ? Number.parseFloat(mot) / 100 : Number.parseFloat(mot);
+    return { px: k * taillePx, brute: mot };
+  }
+  const px = pixels(mot);
+  return px === null ? { convertible: false, brute: mot } : { px, brute: mot };
+}
+
 /** Le liseré effectif du cadre : son épaisseur la plus fine, son style et sa
     couleur. `null` en épaisseur = aucune déclaration de bordure. */
 function liseré(effectives) {
@@ -583,6 +662,11 @@ function raisonInvisible(effectives) {
   const val = (prop) => (effectives.get(prop)?.valeur ?? null);
 
   if (/^none$/i.test(val('display') ?? '')) return 'display: none';
+  /* `display: contents` NE FABRIQUE AUCUNE BOÎTE. Les enfants restent dans le
+     flux, mais le liseré, le fond et le remplissage de l'élément ne sont
+     JAMAIS peints : sur le cadre, dont tout le travail EST son liseré, c'est
+     `display: none` écrit autrement — et la porte imprimait « cadre visible ». */
+  if (/^contents$/i.test(val('display') ?? '')) return 'display: contents';
   if (/^(hidden|collapse)$/i.test(val('visibility') ?? '')) return `visibility: ${val('visibility')}`;
   if (/^hidden$/i.test(val('content-visibility') ?? '')) return 'content-visibility: hidden';
 
@@ -600,25 +684,48 @@ function raisonInvisible(effectives) {
     if (n <= 0) return `opacity: ${o}`;
   }
 
-  /* Une mise à l'échelle nulle : l'élément occupe zéro pixel peint. LE FACTEUR
-     EST PARSÉ, PAS RECONNU DE FORME : `scale(0e0)` franchissait un motif qui
-     cherchait des zéros écrits en toutes lettres (7e revue Codex). */
+  /* LA MISE À L'ÉCHELLE — UN PLANCHER, ET PLUS UN TEST DU ZÉRO. C'est le
+     TROISIÈME seuil lâche, celui que la liste « exhaustive » ne nommait pas
+     (vérificateur indépendant, 13/09). `scale(0)` était refusé, `scale(0.0001)`
+     passait, et la porte imprimait alors « cadre visible et pastille visible » :
+     le défaut « un caractère de plus » que le liseré et la pastille venaient de
+     payer, laissé intact une ligne plus bas. Le plancher est `echelle`, c'est
+     l'identité, et il se déduit de ce que la porte refuse DÉJÀ en pixels.
+     LE FACTEUR EST PARSÉ, PAS RECONNU DE FORME : `scale(0e0)` franchissait un
+     motif qui cherchait des zéros écrits en toutes lettres (7e revue Codex).
+     ET CE QU'ELLE NE SAIT PAS ÉVALUER, ELLE LE REFUSE : `matrix(0,0,0,0,0,0)`,
+     `rotateY(90deg)` et `perspective()` mettent le bandeau à plat sans qu'aucun
+     facteur d'échelle apparaisse. Chercher ces formes une à une rejouerait la
+     faute d'origine ; la porte ne connaît donc QUE les déplacements, les
+     échelles et les rotations dans le plan, et refuse tout le reste. */
   const t = val('transform');
-  if (t !== null) {
+  if (t !== null && !/^none$/i.test(t.trim())) {
     for (const appel of appelsFonction(t)) {
+      if (!TRANSFORMATIONS_LUES.test(appel.nom)) {
+        return `transform: ${t} — « ${appel.nom}() » n'est pas évaluable par la porte, qui refuse plutôt que de supposer`;
+      }
       if (!/^(scale|scalex|scaley|scale3d)$/.test(appel.nom)) continue;
       // Seuls X et Y aplatissent ce qu'on voit : `scale3d(1, 1, 0)` ne cache rien.
       for (const facteur of appel.args.slice(0, 2)) {
         if (!MOT_NOMBRE.test(facteur.trim())) return `transform: ${t} — facteur d'échelle illisible`;
-        if ((/%$/.test(facteur) ? Number.parseFloat(facteur) / 100 : Number.parseFloat(facteur)) === 0) {
-          return `transform: ${t}`;
+        const k = /%$/.test(facteur) ? Number.parseFloat(facteur) / 100 : Number.parseFloat(facteur);
+        if (Math.abs(k) < REFERENCE_MARQUAGE.echelle) {
+          return `transform: ${t} — le marquage serait rétréci (|${facteur}| < ${REFERENCE_MARQUAGE.echelle}), donc plus petit que la référence`;
         }
       }
     }
   }
   const s = val('scale');
   // `scale: 1 1 0` ne met à plat que l'axe Z : les deux premiers seuls comptent.
-  if (s !== null && mots(s).slice(0, 2).some((m) => Number.parseFloat(m) === 0)) return `scale: ${s}`;
+  if (s !== null && !/^none$/i.test(s.trim())) {
+    for (const m of mots(s).slice(0, 2)) {
+      if (!MOT_NOMBRE.test(m.trim())) return `scale: ${s} — facteur d'échelle illisible`;
+      const k = /%$/.test(m) ? Number.parseFloat(m) / 100 : Number.parseFloat(m);
+      if (Math.abs(k) < REFERENCE_MARQUAGE.echelle) {
+        return `scale: ${s} — le marquage serait rétréci (|${m}| < ${REFERENCE_MARQUAGE.echelle}), donc plus petit que la référence`;
+      }
+    }
+  }
 
   /* Une boîte de taille nulle — OU SOUS LE PIXEL, ce qui revient au même à
      l'écran et ne coûtait qu'un caractère (`width: 0` → `width: 0.5px`).
@@ -634,12 +741,29 @@ function raisonInvisible(effectives) {
     if (px !== null && px < REFERENCE_MARQUAGE.boitePx) return `${prop}: ${v} (sous le pixel)`;
   }
 
-  // Les découpes qui ne laissent rien voir.
-  const cp = val('clip-path');
-  if (cp !== null && /inset\(\s*(100%|50%\s+50%)/i.test(cp)) return `clip-path: ${cp}`;
-  const cl = val('clip');
-  if (cl !== null && /^rect\(\s*0[a-z%]*\s*[, ]\s*0[a-z%]*\s*[, ]\s*0[a-z%]*\s*[, ]\s*0[a-z%]*\s*\)$/i.test(cl)) {
-    return `clip: ${cl}`;
+  /* LES DÉCOUPES, LES MASQUES ET LES FILTRES — REFUSÉS, PAS ÉVALUÉS.
+     La porte ne reconnaissait que deux formes ÉCRITES, `inset(100%)` et
+     `rect(0,0,0,0)`. Tout le reste passait, et ce ne sont pas des raretés :
+     `clip-path: inset(50%)` (une seule valeur, donc les quatre côtés à la fois),
+     `circle(0)`, `ellipse(0 0)`, un `polygon` dégénéré, `clip-path: url(#vide)`,
+     `mask: linear-gradient(#0000, #0000)`, `-webkit-mask-image`, et
+     `filter: opacity(0)` — l'opacité entrée par une autre porte que celle que
+     la porte surveille. Les énumérer une à une rejouerait la faute d'origine :
+     lire une CHAÎNE là où il faut lire une géométrie.
+     La porte ne peint pas, donc elle ne sait PAS ce qu'il reste de visible
+     après une découpe, un masque ou un filtre. Elle refuse donc tout ce qui
+     n'est pas la valeur inerte — le seul sens dans lequel une porte a le droit
+     de se tromper. La feuille de référence n'en déclare aucun ; un dessin qui
+     en voudrait un se déclare ici en même temps que dans la feuille. */
+  for (const [prop, inerte] of [
+    ['clip-path', /^none$/i], ['clip', /^auto$/i],
+    ['mask', /^none$/i], ['mask-image', /^none$/i], ['-webkit-mask-image', /^none$/i],
+    ['filter', /^none$/i], ['backdrop-filter', /^none$/i],
+  ]) {
+    const v = val(prop);
+    if (v !== null && !inerte.test(v.trim())) {
+      return `${prop}: ${v} — la porte ne sait pas dire ce qu'il en reste de peint, donc elle refuse`;
+    }
   }
 
   // Le texte poussé hors de sa boîte.
@@ -651,9 +775,22 @@ function raisonInvisible(effectives) {
 
 /** La couleur du texte et celle du fond, quand elles sont déclarées. */
 function contrasteNul(effectives) {
-  const texte = couleur(effectives.get('color')?.valeur ?? '');
+  /* `-webkit-text-fill-color` PEINT LE GLYPHE À LA PLACE DE `color`, et tous
+     les moteurs WebKit et Blink l'honorent : c'est la recette courante pour
+     rendre un texte invisible en le laissant sélectionnable. La porte ne lisait
+     que `color`, donc `-webkit-text-fill-color: transparent` passait alors que
+     `color: transparent` était refusé — la même fin par une autre porte.
+     S'il n'est pas déclaré, ou s'il porte une valeur que la porte ne sait pas
+     lire (`currentColor`), on retombe sur `color` : on ne perd rien. */
+  const remplissage = effectives.get('-webkit-text-fill-color')?.valeur ?? null;
+  const remplissageLu = remplissage === null ? null : couleur(remplissage);
+  const texte = remplissageLu ?? couleur(effectives.get('color')?.valeur ?? '');
   if (texte === null) return null; // héritée : hors de notre vue, et on le dit
-  if (texte === 'transparent') return 'color: transparent';
+  if (texte === 'transparent') {
+    return remplissageLu === 'transparent'
+      ? `-webkit-text-fill-color: ${remplissage}`
+      : 'color: transparent';
+  }
   /* LA CASCADE VAUT ICI AUSSI, ET C'ÉTAIT UN VRAI TROU (Codex) : donner la
      priorité à `background-color` quel que soit l'ordre laissait passer
      `background-color: #fff; background: #000` (texte noir sur fond noir) et
@@ -903,6 +1040,20 @@ export function verifierPrevisualisation(dossier) {
         } else if (px < REFERENCE_MARQUAGE.taillePastillePx) {
           griefs.push(`previsualisation.css : la pastille est plus petite que la référence (${px} px < ${REFERENCE_MARQUAGE.taillePastillePx} px)`);
         }
+      }
+      /* ET L'INTERLIGNE ROGNE LE TEXTE QUAND IL DESCEND SOUS LE GLYPHE. La
+         pastille est en `overflow: hidden` et ne déclare AUCUNE hauteur : sa
+         boîte fait la hauteur de sa ligne. `line-height: 0` la réduit donc à
+         ses seuls 2 px de remplissage, le texte est découpé — et la porte, qui
+         ne lisait que la `font-size`, annonçait « pastille à 13 px ».
+         LE PLANCHER N'EST PAS CHOISI ICI NON PLUS : c'est la taille de la
+         pastille elle-même, celle que la feuille écrit. Une ligne plus basse
+         qu'un glyphe le coupe ; la feuille, elle, écrit 1.5 fois cette taille. */
+      const ligne = taille === null ? null : interligne(effPastille, pixels(taille.brute));
+      if (ligne !== null && ligne.convertible === false) {
+        griefs.push(`previsualisation.css : interligne « ${ligne.brute} » — la porte ne sait pas le convertir en pixels, donc elle refuse de le comparer à la taille de la pastille`);
+      } else if (ligne !== null && ligne.px < REFERENCE_MARQUAGE.taillePastillePx) {
+        griefs.push(`previsualisation.css : l'interligne de la pastille rogne son texte (${ligne.px} px < ${REFERENCE_MARQUAGE.taillePastillePx} px)`);
       }
       if (memeCouleur !== null) {
         griefs.push(`previsualisation.css : la pastille est illisible — ${memeCouleur}`);

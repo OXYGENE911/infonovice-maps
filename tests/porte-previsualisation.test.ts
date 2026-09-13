@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error — script de construction en JS, hors du périmètre de tsc.
@@ -812,5 +812,220 @@ describe('les planchers de la porte SONT ceux de la feuille de référence', () 
     dossierConforme();
     const griefs = griefsDe();
     expect(griefs, griefs.join(' | ')).toEqual([]);
+  });
+});
+
+/* LE TROISIÈME TROU, ET LES AUTRES QU'IL CACHAIT — vérificateur indépendant,
+ * 13/09/2026.
+ *
+ * La porte annonçait « les deux endroits où elle reste lâche » (`opacity`,
+ * `text-indent`) et donnait cette liste pour exhaustive. Elle ne l'était pas :
+ * la MISE À L'ÉCHELLE n'était refusée qu'à zéro exact, si bien que
+ * `transform: scale(0.0001)` passait — mot pour mot le défaut « un caractère de
+ * plus » que le liseré et la pastille venaient de payer, laissé une ligne plus
+ * bas. Une liste qui se dit exhaustive sans l'être rend la porte décorative.
+ *
+ * La liste a donc été refaite PAR SONDE : chaque façon d'éteindre le bandeau a
+ * été ajoutée à la feuille réellement servie, la porte relancée. Ce bloc tient
+ * les deux bouts de ce qu'elle a rendu — ce qui est désormais refusé, ce qui
+ * passe encore ET DOIT ÊTRE DÉCLARÉ, et ce qui doit continuer de passer parce
+ * qu'un refus y serait un faux positif. */
+describe('le troisième seuil lâche, et la liste rendue complète', () => {
+  const ref = REFERENCE_MARQUAGE as {
+    liserePx: number; taillePastillePx: number; boitePx: number; echelle: number;
+  };
+  const poseCss = (ajout: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'previsualisation.css'), `${FEUILLE_PREVISUALISATION}\n${ajout}\n`);
+    return griefsDe().join(' ');
+  };
+
+  /* 1. LE TROISIÈME, CELUI QUI N'ÉTAIT PAS DÉCLARÉ. */
+  it('« transform: scale(0.0001) » ne franchit plus la porte', () => {
+    expect(poseCss('.previsualisation-cadre { transform: scale(0.0001); }'))
+      .toMatch(/rétréci .*< 1.*plus petit que la référence/);
+  });
+
+  it('« scale: 0.0001 », la propriété autonome, non plus', () => {
+    expect(poseCss('.previsualisation-cadre { scale: 0.0001; }'))
+      .toMatch(/rétréci .*< 1.*plus petit que la référence/);
+  });
+
+  it('et le plancher d’échelle n’est pas un nombre choisi : c’est l’identité', () => {
+    expect(ref.echelle).toBe(1);
+  });
+
+  /* LE PLANCHER NE PEUT PAS FAIRE DE FAUX POSITIF SUR LA FEUILLE CONFORME, et
+     ce n'est pas une opinion : la feuille de référence ne met le bandeau à
+     aucune échelle. Si un dessin futur en ajoutait une, ce test rougirait — et
+     c'est exactement ce qu'on veut : le plancher et la feuille ne peuvent pas
+     diverger en silence, comme les 4 px et les 13 px. */
+  it('la feuille de référence ne met le bandeau à aucune échelle', () => {
+    expect(FEUILLE_PREVISUALISATION).not.toMatch(/scale\s*[:(]/);
+  });
+
+  it('agrandir n’est pas cacher : « scale(2) » ne déclenche rien', () => {
+    expect(poseCss('.previsualisation-cadre { transform: scale(2); }')).toEqual('');
+  });
+
+  it('et « scale3d(1, 1, 0) » n’aplatit que l’axe Z : rien n’est caché', () => {
+    expect(poseCss('.previsualisation-cadre { transform: scale3d(1, 1, 0); }')).toEqual('');
+  });
+
+  /* 2. CE QU'ELLE NE SAIT PAS ÉVALUER, ELLE LE REFUSE. Trois façons d'aplatir
+       le bandeau sans qu'aucun facteur d'échelle apparaisse. */
+  it('« matrix(0, 0, 0, 0, 0, 0) » est refusée faute d’être évaluable', () => {
+    expect(poseCss('.previsualisation-cadre { transform: matrix(0, 0, 0, 0, 0, 0); }'))
+      .toMatch(/« matrix\(\) » n’est pas évaluable|« matrix\(\) » n'est pas évaluable/);
+  });
+
+  it('« rotateY(90deg) » met le bandeau de profil : refusée aussi', () => {
+    expect(poseCss('.previsualisation-cadre { transform: rotateY(90deg); }'))
+      .toMatch(/rotatey\(\).*pas évaluable/);
+  });
+
+  it('« perspective(1px) translateZ(-999px) » : refusée', () => {
+    expect(poseCss('.previsualisation-cadre { transform: perspective(1px) translateZ(-999px); }'))
+      .toMatch(/perspective\(\).*pas évaluable/);
+  });
+
+  it('mais une rotation DANS LE PLAN ne cache rien, et passe', () => {
+    expect(poseCss('.previsualisation-cadre { transform: rotate(2deg); }')).toEqual('');
+  });
+
+  /* 3. `display: contents` — AUCUNE BOÎTE, DONC AUCUN LISERÉ PEINT. */
+  it('« display: contents » sur le cadre efface le liseré sans dire « none »', () => {
+    expect(poseCss('.previsualisation-cadre { display: contents; }'))
+      .toMatch(/invisible — cadre, display: contents/);
+  });
+
+  it('et sur la pastille, qui perdrait fond et remplissage', () => {
+    expect(poseCss('.previsualisation-pastille { display: contents; }'))
+      .toMatch(/invisible — pastille, display: contents/);
+  });
+
+  /* 4. DÉCOUPES, MASQUES ET FILTRES : la porte ne peint pas, donc elle refuse
+       tout ce qui n'est pas la valeur inerte. La version d'avant ne connaissait
+       que deux formes écrites. */
+  it('« clip-path: inset(50%) » — une seule valeur, donc les quatre côtés', () => {
+    expect(poseCss('.previsualisation-cadre { clip-path: inset(50%); }'))
+      .toMatch(/clip-path: inset\(50%\).*refuse/);
+  });
+
+  it('« clip-path: circle(0) » aussi, et « url(#vide) » que rien ne peut lire', () => {
+    expect(poseCss('.previsualisation-cadre { clip-path: circle(0); }')).toMatch(/refuse/);
+    expect(poseCss('.previsualisation-cadre { clip-path: url(#vide); }')).toMatch(/refuse/);
+  });
+
+  it('« clip: rect(1px, 1px, 1px, 1px) » — le zéro décalé d’un caractère', () => {
+    expect(poseCss('.previsualisation-cadre { clip: rect(1px, 1px, 1px, 1px); }'))
+      .toMatch(/clip: rect.*refuse/);
+  });
+
+  it('« filter: opacity(0) » : l’opacité entrée par une autre porte', () => {
+    expect(poseCss('.previsualisation-cadre { filter: opacity(0); }'))
+      .toMatch(/filter: opacity\(0\).*refuse/);
+  });
+
+  it('« mask » et « -webkit-mask-image » effacent aussi bien', () => {
+    expect(poseCss('.previsualisation-cadre { mask: linear-gradient(#0000, #0000); }'))
+      .toMatch(/mask:.*refuse/);
+    expect(poseCss('.previsualisation-cadre { -webkit-mask-image: linear-gradient(#0000, #0000); }'))
+      .toMatch(/-webkit-mask-image:.*refuse/);
+  });
+
+  it('mais les valeurs inertes, elles, passent : « clip-path: none », « filter: none »', () => {
+    expect(poseCss('.previsualisation-cadre { clip-path: none; filter: none; clip: auto; }')).toEqual('');
+  });
+
+  /* 5. `-webkit-text-fill-color` PEINT LE GLYPHE À LA PLACE DE `color`. */
+  it('« -webkit-text-fill-color: transparent » rend la pastille illisible', () => {
+    expect(poseCss('.previsualisation-pastille { -webkit-text-fill-color: transparent; }'))
+      .toMatch(/illisible — -webkit-text-fill-color: transparent/);
+  });
+
+  it('et « currentColor » retombe sur « color », sans faux positif', () => {
+    expect(poseCss('.previsualisation-pastille { -webkit-text-fill-color: currentColor; }')).toEqual('');
+  });
+
+  /* 6. L'INTERLIGNE ROGNE LE TEXTE : la pastille est en `overflow: hidden` et
+       ne déclare aucune hauteur, donc sa boîte fait la hauteur de sa ligne. */
+  it('« line-height: 0 » découpe le texte que la porte annonçait à 13 px', () => {
+    expect(poseCss('.previsualisation-pastille { line-height: 0; }'))
+      .toMatch(/interligne de la pastille rogne son texte \(0 px < 13 px\)/);
+  });
+
+  it('par le raccourci aussi : « font: 700 13px/0 system-ui »', () => {
+    expect(poseCss('.previsualisation-pastille { font: 700 13px/0 system-ui; }'))
+      .toMatch(/rogne son texte \(0 px < 13 px\)/);
+  });
+
+  it('et en pourcentage : « line-height: 50% » vaut 6.5 px pour 13 px de texte', () => {
+    expect(poseCss('.previsualisation-pastille { line-height: 50%; }'))
+      .toMatch(/rogne son texte \(6\.5 px < 13 px\)/);
+  });
+
+  it('« 2em » se convertit — il se rapporte à la taille lue — et passe', () => {
+    expect(poseCss('.previsualisation-pastille { line-height: 2em; }')).toEqual('');
+  });
+
+  it('« 3rem » ne se convertit pas : refusé plutôt que comparé à tort', () => {
+    expect(poseCss('.previsualisation-pastille { line-height: 3rem; }'))
+      .toMatch(/ne sait pas le convertir/);
+  });
+
+  it('et l’interligne de la feuille, 1.5 fois la taille, ne déclenche rien', () => {
+    expect(FEUILLE_PREVISUALISATION).toContain(`font: 700 ${ref.taillePastillePx}px/1.5`);
+    dossierConforme();
+    expect(griefsDe()).toEqual([]);
+  });
+});
+
+/* LES CINQ TROUS QUI RESTENT, TENUS PAR UN TEST PLUTÔT QUE PAR UNE PHRASE.
+ *
+ * Ce bloc affirme que la porte LAISSE PASSER ces cinq-là. C'est volontaire, et
+ * c'est la seule façon d'empêcher la liste de redevenir fausse : si quelqu'un
+ * en referme un sans mettre la liste à jour, le test rougit et lui demande de
+ * l'écrire. Une liste de trous non gardée redevient décorative en un cycle —
+ * c'est exactement ce qui vient d'arriver à la précédente.
+ * Les raisons de ne PAS les refermer sont en tête de
+ * `scripts/verifier-previsualisation.mjs` ; en deux mots : il faudrait peindre
+ * la page, et la porte lit du texte. */
+describe('les cinq trous que la porte assume, et qu’elle déclare', () => {
+  const poseCss = (ajout: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'previsualisation.css'), `${FEUILLE_PREVISUALISATION}\n${ajout}\n`);
+    return griefsDe();
+  };
+
+  it('1. une opacité presque nulle passe — juger un contraste demanderait un fond', () => {
+    expect(poseCss('.previsualisation-cadre { opacity: 0.05; }')).toEqual([]);
+  });
+
+  it('2. « text-indent: -999px » passe — la porte ignore la largeur peinte', () => {
+    expect(poseCss('.previsualisation-pastille { text-indent: -999px; }')).toEqual([]);
+  });
+
+  it('3. un déplacement hors écran passe — il faudrait connaître la fenêtre', () => {
+    expect(poseCss('.previsualisation-cadre { transform: translateX(-99999px); }')).toEqual([]);
+    expect(poseCss('.previsualisation-cadre { left: -9999px; }')).toEqual([]);
+  });
+
+  it('4. « z-index: -1 » passe — la porte ne compose pas les feuilles entre elles', () => {
+    expect(poseCss('.previsualisation-cadre { z-index: -1; }')).toEqual([]);
+  });
+
+  it('5. une boîte d’un pixel passe — le cadre ne déclare aucune taille de référence', () => {
+    expect(poseCss('.previsualisation-cadre { width: 1px; }')).toEqual([]);
+    // Et le plancher du pixel, lui, tient toujours un cran plus bas.
+    expect(poseCss('.previsualisation-cadre { width: 0.5px; }').join(' ')).toMatch(/sous le pixel/);
+  });
+
+  it('et la tête du script déclare ces cinq-là, nommément', () => {
+    const source = readFileSync(new URL('../scripts/verifier-previsualisation.mjs', import.meta.url), 'utf-8');
+    const entete = source.slice(0, source.indexOf('const REFERENCE_MARQUAGE'));
+    for (const mot of ['opacity', 'text-indent', 'HORS ÉCRAN', 'EMPILEMENT', 'ENTRE UN PIXEL ET LA RÉFÉRENCE']) {
+      expect(entete, `« ${mot} » manque à la liste déclarée`).toContain(mot);
+    }
   });
 });
