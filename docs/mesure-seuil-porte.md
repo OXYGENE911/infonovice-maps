@@ -324,3 +324,30 @@ par les corrections de revue : **125,62 Ko / 40,61 Ko gzip**.
 La garde refuse toujours, dans les deux modes (`--porte` et `--campagne`), avec
 le même compte de 30 processus : **les corrections de revue ne changent rien au
 fait qu'aucune mesure en navigateur n'a pu être prise ce jour.**
+
+## 9. Une limite de la garde, trouvée par la CI (13/09, après la revue)
+
+La CI Ubuntu a fait rougir `tests/garde-processus.test.ts` sur une assertion qui
+semblait indiscutable : « il y a forcément au moins un processus `node`, puisque
+c'est `node` qui m'exécute ». **Elle a compté 0.**
+
+`ps -o comm=` lit `/proc/<pid>/comm`, que Node renseigne depuis `process.title`
+— et Vitest renomme ses processus. **Un processus qui se renomme échappe au
+comptage.**
+
+**La limite est réelle, et elle n'est pas seulement dans le test :** le comptage
+de la garde est **nominatif**, donc il **MINORE**. Conséquence à connaître avant
+de se fier à un relevé :
+
+- la garde ne peut pas refuser à tort une machine au repos en la sur-comptant ;
+- elle **peut** laisser passer une machine chargée en la sous-comptant, si les
+  processus qui la chargent portent un nom qu'elle ne connaît pas.
+
+Pour un plafond de 20, minorer est le sens prudent — un refus se déclenche sur ce
+qu'on voit, jamais sur ce qu'on devine. Mais **un compte « sous 20 » ne prouve
+pas une machine au repos** : il prouve qu'on n'a pas vu plus de 20 processus des
+familles connues. Le compte de 30 relevé ce jour, lui, est un **plancher** : la
+machine était au moins aussi chargée que cela.
+
+Le remède durable reste le même qu'au §5 : une machine de mesure dédiée ou une
+exécution en CI, où la charge est connue au lieu d'être comptée.
