@@ -23,6 +23,19 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   aussi perdu une tuile sur 1 038 lors d'une exécution, absorbée par la
   reprise (`retries: 1`). Voir le rapport de la tâche T2 pour le détail et la
   recommandation (statut **Bloqué**).
+- **L’étape 4 ne nomme plus aucun exploitant** (décision du 13/09/2026, et
+  `docs/demo-salon.md` étape 4, tel que staging le porte depuis la PR #314).
+  La rédaction d’origine exigeait une étiquette « Ionity » puis une étiquette
+  « IZIVIA » : elle mesurait le fichier national IRVE du jour, pas le produit,
+  et a tenu ce parcours rouge trois cycles. À la place le parcours exige que le
+  dépliant annonce au moins un réseau, que le corps en montre exactement
+  `min(N, 15)` — le plafond réel de `#majListeReseaux` —, que chaque étiquette
+  soit de la forme `NOM (n)` avec n ≥ 1, qu’aucun réseau ne soit coché, et que
+  le résumé des filtres appliqués vaille EXACTEMENT « Tout afficher — retirer :
+  itinérance (badges) ». **Ce qu’il ne garantit plus** : qu’un exploitant NOMMÉ
+  soit présent sur le couloir Paris → Lyon — ce fait appartient à la donnée
+  publique, pas au code.
+
 ## [1.142.0] — 2026-09-11 — SALON-1
 
 ### La page du stand, `/salon.html` — jalon CEO du 18/09
