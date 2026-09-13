@@ -39,26 +39,62 @@ export const HAUSSE_SUSPECTE = 3;
  * de démarrer un interpréteur (PowerShell, shell) — en démarrer un fausserait
  * le compte qu'on est justement en train de prendre.
  */
+/* LES DEUX FAMILLES COMPTÉES, ET POURQUOI CE N'EST PAS UNE ÉGALITÉ SIMPLE
+   (revue Codex du 13/09, second passage, constat SÉRIEUX).
+   La version précédente comparait le nom de base à l'égalité (`nom === 'chrome'`)
+   pour éviter de compter `chrome_crashpad_handler`. Elle ratait du même coup
+   TOUT le Chromium de Playwright, qui ne s'appelle pas `chrome` : selon la
+   plateforme et la version, c'est `chrome-headless`, `headless_shell` ou
+   `chromium`. Sortie `ps` simulée par la revue : 1 `node` + 24
+   `chrome-headless` donnait un total de 1, et la campagne repartait — une garde
+   qui sous-compte est pire que pas de garde, parce qu'elle rassure.
+   La règle est donc : un préfixe de famille, moins les processus auxiliaires
+   qui ne sont pas des navigateurs (crashpad, sandbox, GPU helper). */
+const FAMILLES = {
+  node: { prefixes: ['node'], exclus: [] },
+  chrome: {
+    prefixes: ['chrome', 'chromium', 'headless_shell', 'Google Chrome'],
+    exclus: ['crashpad', 'sandbox'],
+  },
+};
+
+/**
+ * Ce nom de processus compte-t-il dans la famille demandée ? Fonction PURE,
+ * exportée pour être éprouvée sur des noms réels sans dépendre de la machine.
+ */
+export function estDeLaFamille(nom, famille) {
+  const f = FAMILLES[famille];
+  if (!f || typeof nom !== 'string') return false;
+  const base = nom.trim().split('/').pop().replace(/\.exe$/i, '');
+  if (!base) return false;
+  if (f.exclus.some((x) => base.toLowerCase().includes(x))) return false;
+  return f.prefixes.some((p) => base.toLowerCase().startsWith(p.toLowerCase()));
+}
+
 export function compterProcessus() {
-  const compter = (motif) => {
+  const compter = (famille) => {
     try {
       if (process.platform === 'win32') {
-        const sortie = execFileSync(
-          'tasklist',
-          ['/FI', `IMAGENAME eq ${motif}.exe`, '/NH', '/FO', 'CSV'],
-          { encoding: 'utf8', windowsHide: true },
-        );
-        /* tasklist répond « INFO: No tasks are running… » quand il n'y en a
-           aucun : cette ligne n'est pas une ligne CSV, elle ne compte pas. */
-        return sortie.split(/\r?\n/).filter((l) => l.trim().startsWith('"')).length;
+        /* Sous Windows on interroge chaque image de la famille : `tasklist` ne
+           sait pas filtrer par préfixe, mais il sait répondre par nom exact. */
+        return FAMILLES[famille].prefixes.reduce((total, prefixe) => {
+          const sortie = execFileSync(
+            'tasklist',
+            ['/FI', `IMAGENAME eq ${prefixe}.exe`, '/NH', '/FO', 'CSV'],
+            { encoding: 'utf8', windowsHide: true },
+          );
+          /* tasklist répond « INFO: No tasks are running… » quand il n'y en a
+             aucun : cette ligne n'est pas une ligne CSV, elle ne compte pas. */
+          return total + sortie.split(/\r?\n/)
+            .filter((l) => l.trim().startsWith('"'))
+            .filter((l) => estDeLaFamille(l.split('","')[0].replace(/^"/, ''), famille))
+            .length;
+        }, 0);
       }
-      /* `ps -A -o comm=` rend un nom de commande par ligne, sans en-tête. La
-         comparaison est STRICTE sur le nom de base : « chrome_crashpad_handler »
-         n'est pas « chrome », et le compter gonflerait le total sans raison. */
+      /* `ps -A -o comm=` rend un nom de commande par ligne, sans en-tête. */
       const sortie = execFileSync('ps', ['-A', '-o', 'comm='], { encoding: 'utf8' });
       return sortie.split(/\r?\n/)
-        .map((l) => l.trim().split('/').pop())
-        .filter((nom) => nom === motif)
+        .filter((nom) => estDeLaFamille(nom, famille))
         .length;
     } catch {
       /* Un comptage impossible n'est PAS un comptage à zéro : on ne laisse

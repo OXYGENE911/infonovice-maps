@@ -12,9 +12,47 @@
 // poste qui les exécute.
 import { describe, it, expect } from 'vitest';
 import {
-  deciderValidite, jugerDerive, compterProcessus,
+  deciderValidite, jugerDerive, compterProcessus, estDeLaFamille,
   PLAFOND_PROCESSUS, HAUSSE_SUSPECTE,
 } from '../scripts/garde-processus.mjs';
+
+describe('quels noms de processus comptent (revue Codex du 13/09, 2e passage)', () => {
+  // LE TROU QU'ON BOUCHE ICI : la comparaison était `nom === 'chrome'`, pour ne
+  // pas compter `chrome_crashpad_handler`. Elle ratait du même coup TOUT le
+  // Chromium de Playwright, qui ne s'appelle jamais « chrome ». Sortie `ps`
+  // simulée par la revue : 1 node + 24 chrome-headless donnait un total de 1,
+  // et la campagne repartait. Une garde qui sous-compte est pire que pas de
+  // garde : elle rassure.
+  it('compte le Chromium de Playwright, quel que soit le nom qu’il porte', () => {
+    for (const nom of ['chrome', 'chromium', 'chromium-browser', 'chrome-headless',
+      'headless_shell', 'chrome.exe', '/opt/google/chrome/chrome']) {
+      expect(estDeLaFamille(nom, 'chrome'), `« ${nom} » devrait compter`).toBe(true);
+    }
+  });
+
+  it('ne compte pas les auxiliaires qui ne sont pas des navigateurs', () => {
+    for (const nom of ['chrome_crashpad_handler', 'chrome-sandbox']) {
+      expect(estDeLaFamille(nom, 'chrome'), `« ${nom} » ne devrait pas compter`).toBe(false);
+    }
+  });
+
+  it('compte node, et ne confond pas une famille avec l’autre', () => {
+    expect(estDeLaFamille('node', 'node')).toBe(true);
+    expect(estDeLaFamille('node.exe', 'node')).toBe(true);
+    expect(estDeLaFamille('chrome', 'node')).toBe(false);
+    expect(estDeLaFamille('node', 'chrome')).toBe(false);
+    expect(estDeLaFamille('', 'node')).toBe(false);
+    expect(estDeLaFamille(undefined, 'node')).toBe(false);
+  });
+
+  it('LE SCÉNARIO EXACT DE LA REVUE : 24 chrome-headless ne se comptent plus pour zéro', () => {
+    const sortiePs = ['node', ...Array.from({ length: 24 }, () => 'chrome-headless')];
+    const total = sortiePs.filter((n) => estDeLaFamille(n, 'node') || estDeLaFamille(n, 'chrome'))
+      .length;
+    expect(total).toBe(25);
+    expect(deciderValidite(total).valide, '25 processus doivent être refusés').toBe(false);
+  });
+});
 
 describe('la garde de charge d’une campagne de mesure', () => {
   it('le plafond est 20, celui posé par le CEO le 13/09 — et il est lu, pas recopié', () => {

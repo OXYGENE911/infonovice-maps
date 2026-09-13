@@ -74,11 +74,30 @@ describe('la porte de sortie ne se referme pas sur l’usager', () => {
     expect(fermetures.length, 'le catch ferme le bandeau d’abandon plus d’une fois : '
       + 'le défaut de la PR #316 est revenu par une ligne inconditionnelle').toBe(1);
 
+    // ET ELLE DOIT ÊTRE *DANS* LE `else`, PAS SEULEMENT APRÈS SON DÉBUT
+    // (revue Codex du 13/09, second passage) : la version précédente comparait
+    // deux positions, donc déplacer la ligne APRÈS l'accolade fermante du
+    // `else` — toujours dans le `catch`, donc de nouveau inconditionnelle — la
+    // laissait passer. On délimite le bloc `else` en équilibrant les accolades.
     const posElse = corps.indexOf('} else {');
-    const posFermeture = corps.indexOf('abandon.hidden = true;');
     expect(posElse, 'la branche « je n’ai pas ouvert la porte » a disparu').toBeGreaterThan(-1);
-    expect(posFermeture, 'le bandeau est fermé AVANT le else, donc sans condition')
-      .toBeGreaterThan(posElse);
+    const debutBloc = corps.indexOf('{', posElse + 1);
+    let profondeur = 0;
+    let finBloc = -1;
+    for (let i = debutBloc; i < corps.length; i += 1) {
+      if (corps[i] === '{') profondeur += 1;
+      if (corps[i] === '}') {
+        profondeur -= 1;
+        if (profondeur === 0) { finBloc = i; break; }
+      }
+    }
+    expect(finBloc, 'accolade fermante du else introuvable').toBeGreaterThan(debutBloc);
+
+    const posFermeture = corps.indexOf('abandon.hidden = true;');
+    expect(posFermeture, 'le bandeau est fermé AVANT le bloc else, donc sans condition')
+      .toBeGreaterThan(debutBloc);
+    expect(posFermeture, 'le bandeau est fermé APRÈS le bloc else, donc sans condition — '
+      + 'le défaut de la PR #316 est revenu').toBeLessThan(finBloc);
   });
 
   it('l’échec écrit DANS le bandeau ouvert : l’usager garde le message ET le geste', () => {
