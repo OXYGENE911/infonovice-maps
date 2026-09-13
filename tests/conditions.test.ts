@@ -134,8 +134,20 @@ describe('noteReserveConditions — ALTI-GARDE-1, 12/09/2026, jamais un silence'
   it('rien compté : « à plat, à consommation constante » — le comportement d’avant', () => {
     expect(noteReserveConditions(false, false)).toBe(RIEN_COMPTE);
   });
-  it('les quatre phrases sont bien distinctes deux à deux (aucun doublon qui cacherait un cas)', () => {
-    const phrases = [TOUT_COMPTE, RELIEF_SEUL_MANQUANT, TEMPERATURE_SEULE_MANQUANTE, RIEN_COMPTE];
-    expect(new Set(phrases).size).toBe(phrases.length);
+  it('les quatre cas RENDENT quatre phrases distinctes (aucun doublon qui cacherait un cas)', () => {
+    /* CE TEST INTERROGE LA FONCTION, PAS SES PROPRES CONSTANTES (revue Codex
+       du 13/09, C10). La version précédente comparait les quatre littéraux de
+       ce fichier entre eux : elle restait verte même si
+       `noteReserveConditions` rendait la MÊME phrase dans deux branches — un
+       test qui ne peut pas rougir sur une mutation du code de production ne
+       garde rien. On appelle donc la fonction pour les quatre combinaisons, et
+       l'on exige quatre réponses distinctes. */
+    const rendues = [
+      noteReserveConditions(true, true),
+      noteReserveConditions(true, false),
+      noteReserveConditions(false, true),
+      noteReserveConditions(false, false),
+    ];
+    expect(new Set(rendues).size).toBe(rendues.length);
   });
 });
