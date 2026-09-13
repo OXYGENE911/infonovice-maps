@@ -2,6 +2,50 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.143.0] — 2026-09-13 — SEUIL-1
+
+### La porte de sortie reste ouverte, et une campagne de mesure se refuse elle-même
+- **Le défaut repris d'ITI-LENT-1 était arithmétique, pas aléatoire.** Le seuil
+  d'abandon ouvrait « Réessayer » à 15 000 ms ; le plafond dur de
+  `calculerItineraire` (2 × 8 000 ms + 500 ms d'attente = 16 500 ms) faisait
+  rejeter la promesse 1 500 ms plus tard, et le `catch` masquait alors le
+  bandeau d'abandon. **Le bouton vivait une seconde et demie.** Personne ne
+  clique un bouton qui vit une seconde et demie.
+- **Correctif retenu : l'ACCORD des deux mécanismes, pas la baisse du seuil.**
+  Quand la porte a été ouverte pour ce calcul, l'échec de la promesse ne la
+  referme plus — il **écrit dedans**. L'usager garde le message ET le geste,
+  jusqu'à ce qu'il s'en serve, relance un calcul, ou efface le trajet.
+  *Pourquoi pas simplement baisser le seuil* : un seuil plus bas ne donne ses
+  huit secondes que dans le seul cas où le service épuise ses deux essais ; si
+  le service échoue de lui-même à 8,2 s, la soustraction redevient courte et le
+  défaut revient, invisible. Ici la durée de vie du bouton n'est plus une
+  soustraction entre deux constantes étrangères l'une à l'autre : elle est une
+  propriété de l'écran. Le seuil d'abandon reste à 15 000 ms — le faire
+  descendre est une question de produit (délai avant la première porte de
+  sortie), distincte, et non tranchée ici.
+- **La sonde de mesure refuse désormais de mesurer sur une machine chargée**
+  (`scripts/garde-processus.mjs`, `scripts/sonde-porte-sortie.mjs`). Elle compte
+  les processus `node` et `chrome` au début et à la fin, journalise les deux,
+  signale une campagne dont le compte de fin dérive, et **sort en erreur
+  (code 2) au-delà de 20 processus résidents**. Règle du CEO du 13/09,
+  implantée dans l'outil plutôt que confiée à la mémoire.
+- **⚠️ AUCUNE MESURE EN NAVIGATEUR N'A PU ÊTRE PRISE CE JOUR.** La garde a
+  rejeté la campagne : **30 processus résidents pour un plafond de 20**, machine
+  au repos, aucune autre mission en cours. L'application de bureau Codex en
+  occupe **16 à elle seule**. **Le critère des 5 secondes n'est donc ni tenu ni
+  non tenu : il n'est pas mesuré**, et la durée de vie du bouton n'est pas
+  chronométrée — seulement rendue structurellement non bornée par le code, ce
+  qui n'est pas la même chose. Tout est écrit dans `docs/mesure-seuil-porte.md`,
+  §5 pour le refus et §7 pour ce que cela ne prouve pas.
+- 17 tests (7 sur l'accord, contre-épreuve faite ; 10 sur la garde, éprouvée des
+  DEUX côtés du seuil — refus à 21, acceptation à 20 pile). 1 698 tests verts.
+  Bundle : +0,04 Ko gzip (125,45 → 125,62 Ko / 40,57 → 40,61 Ko gzip, mesuré).
+- **Deux chiffres faux corrigés** dans le CHANGELOG d'ITI-LENT-1 : le ratio
+  « sept fois » (2 500 / 380 = 6,58, soit six fois et demie — corrigé aussi dans
+  le commentaire du code et dans `docs/mesure-itineraire-lent.md`), et une
+  taille de bundle périmée (125,34 Ko était la valeur d'AVANT le correctif de la
+  revue Codex du 12/09).
+
 ## [1.142.0] — 2026-09-12 — ITI-LENT-1
 
 ### Le calcul d'itinéraire ne fait plus attendre en silence
@@ -12,8 +56,9 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   seuils qui préviennent l'usager, sans jamais annuler ni relancer l'appel.
 - **2 500 ms : « ça répond lentement, le calcul continue ».** Mesuré le
   12/09 : huit appels réels au service (data.geopf.fr/navigation,
-  Paris→Lyon) répondent tous entre 246 et 380 ms — 2,5 s, c'est environ sept
-  fois ce plafond observé, loin de la latence normale.
+  Paris→Lyon) répondent tous entre 246 et 380 ms — 2,5 s, c'est environ SIX
+  FOIS ET DEMIE ce plafond observé (2 500 / 380 = 6,58), loin de la latence
+  normale. *Corrigé le 13/09 : cette ligne annonçait « sept fois ».*
 - **15 000 ms : l'écran arrête de tourner en silence**, un bouton
   « Réessayer » apparaît. `calculerItineraire` (deux essais, 8 s de timeout
   chacun, 500 ms entre les deux) ne peut jamais dépasser 16,5 s — 15 s tombe
@@ -29,8 +74,11 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - **Aucun appel de plus.** « Réessayer » relance le même calcul comme le
   ferait n'importe quel geste de l'usager (changer une étape, cocher un
   évitement) — aucune relance automatique, aucun martèlement du service
-  public. Bundle : +570 o gzip sur le morceau du planificateur (mesuré,
-  123,62 → 125,34 Ko / 39,99 → 40,56 Ko gzip).
+  public. Bundle : +580 o gzip sur le morceau du planificateur (mesuré le 13/09 par
+  deux `npm run build` sur le même poste, 123,62 → 125,45 Ko / 39,99 →
+  40,57 Ko gzip). *Corrigé le 13/09 : cette ligne annonçait 125,34 Ko /
+  40,56 Ko, la taille d'AVANT le correctif de la revue Codex — périmée dès
+  le commit suivant.*
 - 4 tests unitaires sur le mécanisme (`tests/service-lent.test.ts`, dont les
   deux scénarios du mandat : ralenti à 3 s, ralenti à 20 s) + 4 tests de
   cohérence (`tests/iti-lent-seuils.test.ts`). 1 681 tests verts.

@@ -43,8 +43,9 @@ déclenche à tort sur un usage normal.
 ## 2. D'où viennent les deux seuils
 
 **`SEUIL_LENTEUR_ITINERAIRE_MS = 2500`** (constante exportée,
-`src/carte/panneau-itineraire.ts`) — environ SEPT FOIS le pire des huit temps
-mesurés ci-dessus (380 ms). Assez loin de la latence normale pour ne jamais se
+`src/carte/panneau-itineraire.ts`) — environ SIX FOIS ET DEMIE le pire des huit
+temps mesurés ci-dessus : 2 500 / 380 = 6,58. *(Cette page annonçait « sept
+fois » ; corrigé le 13/09/2026 — l'arrondi était faux dans le sens flatteur.)* Assez loin de la latence normale pour ne jamais se
 déclencher sur un aléa ordinaire ; assez tôt pour prévenir avant que l'attente ne
 devienne suspecte. Le scénario qui a révélé le problème (IGN ralenti à 3 s, total
 5 198 ms) franchit ce seuil, comme voulu — voir §3.

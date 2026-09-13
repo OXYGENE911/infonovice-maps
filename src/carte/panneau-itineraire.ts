@@ -103,8 +103,9 @@ const PICTO_MODE: Record<Mode, NomPicto> = {
  * SEUIL_LENTEUR_ITINERAIRE_MS = 2 500 ms — mesuré le 12/09/2026 : huit
  * appels réels consécutifs à ce même service (data.geopf.fr/navigation,
  * Paris→Lyon) répondent tous entre 246 ms et 380 ms
- * (docs/mesure-itineraire-lent.md, §1). 2 500 ms, c'est environ SEPT FOIS ce
- * plafond observé :
+ * (docs/mesure-itineraire-lent.md, §1). 2 500 ms, c'est environ SIX FOIS ET
+ * DEMIE ce plafond observé (2 500 / 380 = 6,58 — le commentaire d'origine
+ * disait « sept fois », corrigé le 13/09) :
  * assez loin de la latence normale pour ne jamais se déclencher sur un aléa
  * ordinaire, assez tôt pour prévenir avant que l'attente ne devienne
  * suspecte. Le scénario qui a révélé le problème (IGN ralenti à 3 s →
@@ -249,6 +250,14 @@ export class PanneauItineraire extends HTMLElement {
   #optimisation: Optimisation = 'fastest';
   /** Jeton anti-réponses-hors-d'ordre de #calculer (voir le commentaire là-bas). */
   #sequence = 0;
+  /* LA PORTE DE SORTIE A ÉTÉ OUVERTE — ET ELLE NE SE REFERME PAS TOUTE SEULE
+     (SEUIL-1, 13/09/2026). Retient le jeton du calcul pour lequel le seuil
+     d'abandon a parlé. Sans lui, l'échec de la promesse d'origine (au plus
+     tard 16 500 ms : deux essais de 8 000 ms et 500 ms d'attente, voir
+     lib/itineraire.ts) refermait « Réessayer » 1 500 ms après son ouverture.
+     Les deux mécanismes s'ignoraient : l'un ouvrait la porte, l'autre la
+     refermait sans savoir qu'elle venait d'être ouverte. Ils s'accordent ici. */
+  #abandonAnnonce = 0;
   #dernier: Itineraire | null = null;
   /** Le cliché complet qui a produit #dernier — il vieillit AVEC lui : un
       recalcul raté laisse les deux cohérents entre eux. Feuille de route,
@@ -4914,6 +4923,9 @@ export class PanneauItineraire extends HTMLElement {
     erreur.hidden = true;
     lenteur.hidden = true;
     abandon.hidden = true;
+    /* Un calcul qui repart referme la porte du calcul précédent : avec
+       « Effacer le trajet », c'est le seul geste qui la referme (SEUIL-1). */
+    this.#abandonAnnonce = 0;
     resultat.hidden = false;
     resultat.textContent = 'Calcul de l’itinéraire…';
     try {
@@ -4947,6 +4959,7 @@ export class PanneauItineraire extends HTMLElement {
           },
           surAbandon: () => {
             if (jeton !== this.#sequence) return;
+            this.#abandonAnnonce = jeton;
             lenteur.hidden = true;
             resultat.hidden = true;
             abandon.hidden = false;
@@ -5036,11 +5049,33 @@ export class PanneauItineraire extends HTMLElement {
     } catch (e) {
       if (jeton !== this.#sequence) return;
       lenteur.hidden = true;
-      abandon.hidden = true;
       resultat.hidden = true;
-      erreur.textContent = e instanceof ErreurItineraire
+      const message = e instanceof ErreurItineraire
         ? e.message : 'Calcul impossible pour le moment.';
-      erreur.hidden = false;
+      /* LES DEUX MÉCANISMES S'ACCORDENT ICI (SEUIL-1, 13/09/2026).
+         AVANT : la promesse d'origine échouait au plafond dur de 16 500 ms et
+         ce catch masquait « Réessayer », ouvert à 15 000 ms. Le bouton vivait
+         1 500 ms. Personne ne clique un bouton qui vit une seconde et demie.
+         MAINTENANT : si la porte a été ouverte pour CE calcul, l'échec de la
+         promesse ne la referme pas — il ÉCRIT DEDANS. L'usager garde le geste
+         dont il a besoin (il n'a toujours pas d'itinéraire) jusqu'à ce qu'il
+         s'en serve, relance un calcul, ou efface le trajet.
+         POURQUOI PAS SIMPLEMENT BAISSER LE SEUIL : un seuil plus bas ne donne
+         ses huit secondes que dans le seul cas où le service épuise ses deux
+         essais. Si le service échoue de lui-même à 8,2 s, la soustraction
+         redevient courte et le défaut revient, invisible. Ici la durée de vie
+         du bouton ne dépend plus d'une soustraction entre deux constantes
+         étrangères l'une à l'autre : elle est une propriété de l'écran. */
+      if (this.#abandonAnnonce === jeton) {
+        (abandon.querySelector('.iti-abandon-texte') as HTMLElement).textContent =
+          message + ' Vous pouvez réessayer.';
+        abandon.hidden = false;
+        erreur.hidden = true;
+      } else {
+        abandon.hidden = true;
+        erreur.textContent = message;
+        erreur.hidden = false;
+      }
       attenteChien().effacer();
     }
   }
@@ -5131,6 +5166,10 @@ export class PanneauItineraire extends HTMLElement {
        le message affiché sur un panneau vidé. */
     (this.querySelector('.iti-lenteur-service') as HTMLElement).hidden = true;
     (this.querySelector('.iti-abandon-service') as HTMLElement).hidden = true;
+    /* SEUIL-1 : la porte survit désormais à l'échec de la promesse, donc elle
+       doit être refermée ICI explicitement — sinon un échec tardif la
+       rouvrirait sur un panneau déjà vidé. */
+    this.#abandonAnnonce = 0;
     /* EFFACER LE TRAJET ARRÊTE LE SUIVI. Un bandeau qui continue de compter
        les kilomètres d'un itinéraire qui n'existe plus consomme le GPS pour
        rien — et ment. */
