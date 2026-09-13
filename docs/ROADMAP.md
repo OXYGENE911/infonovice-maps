@@ -349,6 +349,20 @@ celui qu'il concurrence.
       publique sur un site statique dans un dépôt public. Les deux voies
       possibles (extrait au build, ou dérogation avec mention publique) ont été
       présentées et écartées. Mesure conservée dans docs/apis.md.
+- [x] Photographie des monuments par Wikimedia Commons (via Wikidata) :
+      **RETIRÉE le 13/09/2026**, Decision D3 du CEO du 11/09/2026 — Maps
+      gratuit s'en tient aux sources FRANÇAISES, sans dérogation. La
+      dérogation du 29/08 (« OK pour Wikimedia ») tombe. Trois hôtes sortis de
+      la CSP, `src/lib/photos-monuments.ts` supprimé, crédit et feuille de
+      style avec. **Pourquoi on ne remplace pas** : sur le même échantillon de
+      30 monuments, mesuré le 11/09/2026, Wikimedia illustrait 28 fiches
+      (93 %) et Panoramax en illustre 11 (37 %) — et ce sont des vues de rue,
+      pas des cadrages du monument. **La porte reste ouverte pour l'après-
+      salon** : les cinq conditions d'un retour par Panoramax — remesurer
+      d'abord, élargir le motif d'hôte de `src/lib/panoramax.ts`, déclarer
+      `panoramax.ign.fr` dans `img-src`, dire « voir la rue » et non « photo du
+      monument », écrire le seuil d'acceptation AVANT — sont dans
+      `docs/apis.md` §5, avec leurs chiffres et leurs dates.
 
 ## Le mandat du 27/08/2026 — session en autonomie, retours triés
 Armelin a mandaté une session « en autonomie, dans cet ordre » avec une

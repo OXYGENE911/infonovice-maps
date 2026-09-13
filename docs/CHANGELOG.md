@@ -203,6 +203,66 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   rouvre et referme, plus le cas du bouton disparu. **Contre-épreuve faite** :
   sans le mécanisme, deux des trois premiers rougissent ; sans le repli de
   focus, le quatrième rougit.
+## [1.146.0] — 2026-09-13 — WIKIMEDIA-0
+
+### Wikimedia sort de Maps gratuit — Decision D3 du CEO (11/09), appliquée
+- **Les trois hôtes sont sortis de la CSP d'`index.html`** :
+  `upload.wikimedia.org` (`img-src`), `query.wikidata.org` et
+  `commons.wikimedia.org` (`connect-src`). La `connect-src` passe de 19 à 17
+  hôtes déclarés, l'`img-src` de 3 à 2. C'est le point qui manquait : la
+  décision datait du 11/09 et les trois hôtes étaient encore en production le
+  12/09 à 22 h 11 UTC.
+- **Le code est parti avec** : `src/lib/photos-monuments.ts` supprimé,
+  et dans `src/carte/fiche-lieu.ts` l'import, le champ `#photoEnCours`, la
+  `<figure class="fb-photo">` et la méthode `#chargerPhoto`. Le crédit sous
+  l'image (`figcaption.fb-photo-credit`, « auteur — licence · Wikimedia
+  Commons ») disparaît avec elle, ainsi que le bloc `PHOTO-1` de
+  `src/styles/carte.css`.
+- **AUCUN EMPLACEMENT RÉSERVÉ NE RESTE.** Avant, une fiche sans photo portait
+  quand même une `<figure hidden>` : un cadre qui attendait. Mesuré au
+  viewport 1280×720, la boîte de la fiche est **identique au pixel** avant et
+  après — cadre `.fb` 360 × 455,89 px, corps qui ne défile pas (403 / 403),
+  gouttières inchangées (10 / 9,99 px), ordonnées des quatre blocs
+  identiques. Ce qui change : un nœud de moins, et **zéro requête** vers
+  Wikimedia contre une avant (`query.wikidata.org`).
+- **La fiche illustrée débordait**, elle : 652 px de contenu pour 451 px de
+  fenêtre, plafonnée à 504 px. Sans photo, la fiche tient entière.
+- **Deux portes anti-retour** dans `tests/csp-connect-src.test.ts` : aucun
+  hôte `wikimedia`/`wikidata`/`wikipedia` dans la CSP, aucun dans `src/`.
+  Contre-épreuve faite — réintroduire `upload.wikimedia.org` dans `img-src`
+  fait rougir le test.
+- **Le parcours E2E `PHOTO-1` devient `PHOTO-0`** : il n'affirme plus que la
+  photo arrive, il affirme que **rien ne part**. Il ÉCOUTE le réseau sans y
+  répondre (`page.on('request')`), vérifie qu'aucun nœud `.fb-photo` n'existe,
+  et mesure les trous entre blocs du corps de fiche.
+- **PHOTO-0 écoute aussi les VIOLATIONS DE CSP** — défaut relevé par Codex le
+  13/09 : un appel réintroduit vers un hôte absent de la CSP est bloqué par le
+  navigateur AVANT d'être émis, donc `page.on('request')` ne voit rien et le
+  test resterait vert. Contre-épreuve faite : un `fetch` vers
+  `query.wikidata.org` glissé dans `ouvrir()` laisse le compteur réseau à zéro
+  et fait échouer la nouvelle assertion (`tentatives bloquées par la CSP :
+  https://query.wikidata.org/sparql?q=1`).
+- **Ce que l'usager perd, et la phrase qui le dit** : la photographie en tête
+  de la fiche d'un monument classé. Le reste ne bouge pas — titre, commune,
+  siècle, statut, notice officielle `pop.culture.gouv.fr`, bouton
+  d'itinéraire. La phrase pour le stand et les cinq conditions d'un retour par
+  Panoramax (37 %, mesuré le 11/09/2026) sont dans `docs/apis.md`, §5.
+- **Les DEUX variantes de la phrase du stand disent maintenant la même chose,
+  et la même chose que la page servie.** La variante courte promettait encore
+  « à une exception près… la météo », alors que
+  `https://maps.infonovice.fr/a-propos.html`, telle qu'elle est servie le
+  13/09/2026, porte `<h2>Première exception : la météo</h2>` **et**
+  `<h2>Seconde exception : les photos des monuments</h2>` — `a-propos.html`
+  l. 164, fichier identique sur `origin/main`, `origin/staging` et cette
+  branche. Les deux variantes **nomment** désormais les deux exceptions au lieu
+  d'en promettre une seule ; **la courte y ajoute le décompte** (**15 hôtes en
+  `.fr` sur les 18 de la CSP servie**), la longue n'en porte aucun. Elle dit
+  « déclare pouvoir appeler », et non « interroge » : la CSP autorise, elle
+  ne prouve pas qu'une session les contacte tous. Documentation seule : aucun code, aucun test touché.
+- **Non fait, et dit** : `a-propos.html` décrit encore la « seconde
+  exception » Wikimedia (l. 166 et 171). Cette page fait l'objet d'une
+  décision CEO ouverte et sort du périmètre de la tâche — la page annonce
+  donc une fonction que l'application n'a plus.
 
 ## [1.142.1] — 2026-09-13 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
 
