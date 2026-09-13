@@ -656,6 +656,18 @@ ${contenu}
     expect(poseCss('.previsualisation-cadre::before { display: none; }')).toEqual('');
   });
 
+  it('« :read-only » s’applique à tout élément non éditable — donc à notre div', () => {
+    // Il figurait à tort parmi les pseudo-classes « d'état » : un div est en
+    // lecture seule dès l'ouverture, la règle s'applique tout de suite.
+    expect(poseCss('.previsualisation-cadre:read-only { display: none; }'))
+      .toMatch(/invisible/);
+  });
+
+  it('et « :first-child » aussi, qui n’est pas un état', () => {
+    expect(poseCss('.previsualisation-cadre:first-child { display: none; }'))
+      .toMatch(/invisible/);
+  });
+
   it('une règle dans un bloc @media est lue, elle aussi', () => {
     expect(poseCss('@media (min-width: 1px) { .previsualisation-cadre { display: none; } }'))
       .toMatch(/invisible/);

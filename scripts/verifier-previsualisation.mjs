@@ -173,9 +173,14 @@ function attributVise(motif, element) {
   }
 }
 
-/* Les pseudo-classes qui décrivent un ÉTAT : elles ne sont pas vraies au repos,
-   donc une règle qui n'existe que sous elles n'éteint rien à l'ouverture. */
-const PSEUDO_DYNAMIQUE = /^:(?:hover|focus|focus-visible|focus-within|active|target|target-within|visited|link|any-link|checked|indeterminate|disabled|enabled|read-only|read-write|placeholder-shown|autofill|default|valid|invalid|in-range|out-of-range|user-valid|user-invalid|open|popover-open|modal|fullscreen|picture-in-picture|playing|paused|muted|buffering|seeking|stalled)\b/i;
+/* Les pseudo-classes d'INTERACTION : elles ne sont pas vraies au repos, donc une
+   règle qui n'existe que sous elles n'éteint rien à l'ouverture.
+   LA LISTE EST COURTE À DESSEIN (11e revue Codex). Elle contenait `:read-only`,
+   qui s'applique à TOUT élément non éditable — donc à notre `<div>`, dès
+   l'ouverture : `.previsualisation-cadre:read-only { display: none }` passait.
+   Tout ce qui n'est pas ici est RETENU, faute de savoir l'évaluer. Une porte
+   n'a le droit de se tromper que dans le sens du refus. */
+const PSEUDO_DYNAMIQUE = /^:(?:hover|focus|focus-visible|focus-within|active|target|target-within|visited|link|any-link|checked|indeterminate|placeholder-shown|autofill|user-valid|user-invalid|open|popover-open|modal|fullscreen|picture-in-picture|playing|paused|muted|buffering|seeking|stalled)\b/i;
 
 const MORCEAU_COMPOUND = /^[a-z][a-z0-9-]*|\.[A-Za-z0-9_-]+|#[A-Za-z0-9_-]+|\[[^\]]*\]|::?[A-Za-z-]+(?:\([^)]*\))?/gi;
 
