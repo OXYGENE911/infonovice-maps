@@ -2,7 +2,7 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
-## [1.143.0] — 2026-09-13 — TERRAIN-1
+## [1.144.0] — 2026-09-13 — TERRAIN-1
 
 ### La feuille des parkings se ferme comme tout le reste
 - **Le défaut vient d'un usager, pas d'un test.** Armelin, son téléphone en
@@ -38,7 +38,7 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   sans le mécanisme, deux des trois premiers rougissent ; sans le repli de
   focus, le quatrième rougit.
 
-## [Non publié] — 2026-09-11 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
+## [1.142.1] — 2026-09-13 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
 
 ### 13/09/2026 (C10) — la régression que cette PR introduisait est corrigée ICI
 
