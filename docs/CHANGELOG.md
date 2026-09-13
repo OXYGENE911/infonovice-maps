@@ -161,6 +161,57 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   dernier recours sur toute police (un texte qui ne tient sur aucune) et affirme,
   dans le navigateur, que le plafond est bien posé et que la boîte peinte tient.
 
+### Finition du 13/09 — trois des quatre chemins n'avaient pas de garde capable de rougir
+
+- **LA CONTRE-ÉPREUVE DU VÉRIFICATEUR, REJOUÉE ICI ET CONFIRMÉE.** Les trois
+  sources remises dans leur état d'avant (`bandeau-guidage.ts`,
+  `panneau-itineraire.ts`, `annonces.ts`), `dist/` reconstruit : **4 parcours
+  rouges sur 9, 5 verts** — dont ceux qui prétendaient garder `.bg-voie` et la
+  voie visée. **Un test qui ne peut pas rougir ne protège rien**, et il fait
+  croire au suivant que le défaut est couvert.
+- **LA CAUSE, MESURÉE ET NON DÉDUITE : on affirmait sur la forme BRUTE, le
+  navigateur peint la forme MISE EN FORME.** `libelleVoie` capitalise avant
+  tout affichage : sondé le 13/09 sur le build d'avant, `.bg-voie` peignait
+  `Tronrout0000000352788241` pendant que le parcours cherchait
+  `TRONROUT0000000352788241` — et passait. Les assertions jugent désormais le
+  texte PEINT, sans égard à la casse, et refusent en plus toute suite de cinq
+  chiffres ou plus : aucun panneau de direction n'en porte.
+- **Deux chemins sur quatre n'avaient AUCUN parcours** — ils n'étaient tenus
+  que par des tests unitaires, qui ne disent rien de ce qui sort à l'écran :
+  1. **la VOIX** : `voix.spec.ts` affirme qu'aucun identifiant ne part à la
+     synthèse, **et** que la manœuvre elle-même est toujours dite — sans cette
+     seconde moitié, on aurait tenu la première en coupant la voix ;
+  2. **la feuille de route imprimable** : la liste imprimée ne porte plus
+     d'identifiant, **et** nomme toujours les voies lisibles.
+- **Chacun des quatre sait rougir, prouvé par la même manipulation** : sources
+  d'avant remises, les cinq gardes rougissent en citant le texte réellement
+  peint (`Tournez à droite — Tronrout0000000352788241` sur la feuille,
+  `Dans 400 mètres, tournez à droite, vers Tronrout0000000352788241` à la
+  voix) ; sources restaurées, 22 parcours verts.
+- **La cause racine du 13/09 est rectifiée dans la description de la PR** :
+  ce qui faisait rougir la CI, c'était **la mesure sur `scrollHeight`**, qui
+  décrit le contenu et non la boîte peinte. Le `-webkit-box` blockifié d'un
+  item flex est réel et relevé, mais il n'était pas le facteur limitant.
+- **L'arbitrage « N1004 » est confirmé, et son coût est enfin CHIFFRÉ** —
+  il ne l'avait jamais été. Relevé le 13/09 sur OpenStreetMap, emprise
+  `ISO3166-1=FR` : **53 désignations de nationale** s'écrivent `N` + quatre
+  chiffres (N1001, N1013, N1113, N2007, N9057…), portées par **1 172
+  tronçons**. Sur les **278** désignations en `N` du pays, **223** restent
+  affichées et **53 sont tues, soit 19 %** ; en tronçons, 1 172 sur 39 570,
+  soit **3,0 %**. Les formes non équivoques restent affichées (« N 1004 »,
+  « RN1004 », « D1004 »). **Ce que l'arbitrage protège** : un identifiant
+  affiché est le défaut que le CEO a vu de ses yeux ; un nom de route tu est
+  une information en moins. Le renversement le moins coûteux, si le CEO le
+  décide, est de filtrer AVANT `libelleVoie` : la casse survit, et les deux
+  lectures se séparent d'elles-mêmes.
+- **`voix.spec.ts:243` a rougi chez le vérificateur : c'était un délai fixe,
+  mesuré.** Sur 21 exécutions de ce poste, la phrase de trafic part entre
+  **54 ms et 1 601 ms** après le retour de `suivre()` — l'attente écrite en dur
+  valait 1 500 ms. Une fois sur vingt et une, elle expirait avant la phrase.
+  **L'assertion n'a pas bougé** — la phrase de trafic DOIT partir ; c'est la
+  façon d'attendre qui a changé. Contre-épreuve : sans événement de trafic, la
+  garde rougit toujours (délai dépassé sur le prédicat).
+
 ## [1.142.0] — 2026-09-11 — SALON-1
 
 ### La page du stand, `/salon.html` — jalon CEO du 18/09

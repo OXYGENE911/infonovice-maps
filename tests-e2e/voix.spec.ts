@@ -245,9 +245,16 @@ test('LE TRAFIC PARLE DANS LES BLANCS, jamais par-dessus une manœuvre', async (
      proposée : on n'interrompt pas, on attend. Ici la manœuvre est à huit
      kilomètres — la voie est libre pour annoncer les travaux. */
   await suivre(page, 8_000, true);
-  await page.waitForTimeout(1_500);
-  const phrases = await dites(page);
-  expect(phrases.some((p) => p.includes('signalé')), JSON.stringify(phrases)).toBe(true);
+  /* CE PARCOURS A ROUGI CHEZ LE VÉRIFICATEUR LE 13/09, ET LE DÉLAI FIXE EN
+     ÉTAIT LA CAUSE. Mesuré ici sur 21 exécutions : la phrase de trafic part
+     entre 54 ms et 1 601 ms après le retour de `suivre()` — la course entre
+     le relevé Bison Futé du corridor et une attente de 1 500 ms écrite en dur.
+     Une fois sur vingt et une, l'attente expirait AVANT la phrase.
+     L'ASSERTION NE CHANGE PAS — la phrase de trafic DOIT partir ; c'est la
+     façon d'attendre qui change. Un verdict ne doit pas dépendre de la charge
+     du poste : une porte qui rougit au hasard cesse d'être crue. */
+  await expect.poll(async () => (await dites(page)).some(
+    (p) => p.includes('signalé')), { timeout: 10_000 }).toBe(true);
 });
 
 test('IL SE TAIT quand une manœuvre approche', async ({ page }) => {
@@ -273,4 +280,30 @@ test('LA VOIX PRONONCE LES ACCENTS que la source a perdus', async ({ page }) => 
   expect(phrases, 'la voix doit prononcer l’accent').toContain('Prophète');
   expect(phrases, 'plus aucune forme sans accent ne part à la voix')
     .not.toContain('Prophete');
+});
+
+test('LA VOIX NE PRONONCE JAMAIS UN IDENTIFIANT BRUT', async ({ page }) => {
+  /* LE TROISIÈME CHEMIN DE TERRAIN-2, ET IL N’AVAIT AUCUN PARCOURS (13/09).
+     Un identifiant PRONONCÉ est pire qu’affiché : on ne peut pas le masquer
+     d’un doigt, et « vers Tronrout zéro zéro zéro zéro… » épuise la phrase que
+     le conducteur écoutait pour savoir où aller.
+     ON JUGE LA FORME PEINTE, PAS LA FORME BRUTE : `libelleVoie` capitalise le
+     champ du service avant qu’il n’atteigne la voix, et une assertion écrite
+     sur « TRONROUT… » resterait verte alors que la phrase le dit. */
+  await suivre(page, 400, false, 'TRONROUT0000000352788241');
+  /* ON ATTEND LA PHRASE DE MANŒUVRE ELLE-MÊME, pas un délai : c'est elle qui
+     portait l'identifiant. Un délai fixe ferait dépendre le verdict de la
+     charge du poste — le défaut relevé sur `voix.spec.ts:243`. */
+  await expect.poll(async () => (await dites(page)).some(
+    (p) => /tournez à droite/.test(p)), { timeout: 10_000 }).toBe(true);
+  const phrases = (await dites(page)).join(' | ');
+  expect(phrases, 'la voix prononce un identifiant technique')
+    .not.toMatch(/tronrout/i);
+  expect(phrases, 'la voix égrène une suite technique de chiffres')
+    .not.toMatch(/\d{5,}/);
+  /* ET LA PHRASE RESTE UNE INSTRUCTION : on se tait sur la destination,
+     jamais sur la manœuvre. Sans cette moitié, on aurait tenu la première en
+     coupant la voix. */
+  expect(phrases, 'la manœuvre elle-même a disparu de l’oreille')
+    .toContain('tournez à droite');
 });

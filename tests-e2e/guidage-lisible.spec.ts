@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { simulerTuiles, simulerCommunes } from './tuiles-simulees';
+import { allerA } from './planificateur';
 
 /* LE PANNEAU DE GUIDAGE SE LIT (TERRAIN-2, retour du CEO du 11/09).
  *
@@ -24,6 +25,26 @@ const PHRASE = 'À l’embranchement, restez légèrement à droite vers A4/E54'
    qu'Armelin a vue à l'écran — une référence technique, jamais écrite pour
    être lue au volant. */
 const IDENTIFIANT_BRUT = 'TRONROUT0000000352788241';
+
+/* ON JUGE CE QUI EST PEINT, PAS CE QUE LE SERVICE A ENVOYÉ (13/09).
+ *
+ * LE DÉFAUT QUE LA CONTRE-ÉPREUVE DU VÉRIFICATEUR A MIS À NU : `libelleVoie`
+ * met le champ en forme AVANT tout affichage, et « TRONROUT0000000352788241 »
+ * arrive à l'écran en « Tronrout0000000352788241 ». Deux parcours affirmaient
+ * `not.toContain('TRONROUT…')` — la forme BRUTE, que rien ne peint jamais :
+ * ils restaient VERTS avec l'identifiant SOUS LES YEUX. Mesuré le 13/09,
+ * sources d'avant remises : `.bg-voie` peignait « Tronrout0000000352788241 »
+ * et les deux parcours passaient.
+ *
+ * Une assertion qui ne peut pas rougir ne protège rien. Celle-ci juge la forme
+ * PEINTE, sans égard à la casse, et refuse en plus toute suite de cinq
+ * chiffres ou plus — aucun panneau de direction n'en porte. */
+function sansIdentifiantBrut(texte: string | null, ou: string): void {
+  const t = texte ?? '';
+  expect(t, `${ou} : un identifiant brut est peint`).not.toMatch(/tronrout/i);
+  expect(t, `${ou} : une suite technique de chiffres est peinte`)
+    .not.toMatch(/\d{5,}/);
+}
 
 /* Un trajet court et plein est : 2 km le long du 48,85e parallèle. */
 const TRACE: [number, number][] = Array.from({ length: 21 }, (_, i) =>
@@ -319,8 +340,7 @@ test('UN IDENTIFIANT BRUT NE S’AFFICHE PAS — la ligne secondaire se tait', a
   await rouler(page, TRACE[8]![0], TRACE[8]![1]);
   await expect(page.locator('.bg-destination')).toBeHidden();
   const texte = await page.locator('bandeau-guidage').textContent();
-  expect(texte ?? '').not.toContain(IDENTIFIANT_BRUT);
-  expect(texte ?? '').not.toContain('Tronrout');
+  sansIdentifiantBrut(texte, 'le bandeau');
 });
 
 test('UN NOM DE VOIE LISIBLE, LUI, S’AFFICHE — la contre-épreuve', async ({ page }) => {
@@ -345,13 +365,15 @@ test('LA VOIE COURANTE, EN BAS DU BANDEAU, NE MONTRE PAS D’IDENTIFIANT BRUT', 
   await expect(page.locator('bandeau-guidage')).toBeVisible({ timeout: 15_000 });
   await rouler(page, TRACE[4]![0], TRACE[4]![1]);
 
+  /* CE PARCOURS NE SAVAIT PAS ROUGIR JUSQU'AU 13/09 : il cherchait la forme
+     BRUTE, que `libelleVoie` a déjà capitalisée avant l'affichage. Sources
+     d'avant remises, il passait avec « Tronrout0000000352788241 » peint en
+     bas du bandeau. Il juge désormais le texte PEINT. */
   const voie = await page.locator('.bg-voie').textContent();
-  expect(voie ?? '', 'la voie courante affiche un identifiant brut')
-    .not.toContain(IDENTIFIANT_BRUT);
+  sansIdentifiantBrut(voie, 'la voie courante');
   /* ET NULLE PART AILLEURS DANS LE BANDEAU : l’écusson lit la même donnée. */
   const tout = await page.locator('bandeau-guidage').textContent();
-  expect(tout ?? '').not.toContain(IDENTIFIANT_BRUT);
-  expect(tout ?? '').not.toContain('TRONROUT');
+  sansIdentifiantBrut(tout, 'le bandeau');
 });
 
 test('LA VOIE COURANTE LISIBLE, ELLE, S’AFFICHE — la contre-épreuve', async ({ page }) => {
@@ -457,5 +479,55 @@ test('UNE VOIE VISÉE ILLISIBLE NE DEVIENT PAS LA ROUTE QU’ON QUITTE', async (
   const cartouche = await page.locator('.bg-cartouche').textContent();
   expect(cartouche ?? '', 'le cartouche affiche la route qu’on quitte')
     .not.toContain('A6');
-  expect(cartouche ?? '').not.toContain(IDENTIFIANT_BRUT);
+  /* MÊME CORRECTION QU'AU-DESSUS (13/09) : sources d'avant remises, le
+     cartouche peignait « Tronrout0000000352788241 » dans sa ligne secondaire
+     et ce parcours restait vert. Il juge le texte peint. */
+  sansIdentifiantBrut(cartouche, 'le cartouche');
+});
+
+test('LA FEUILLE DE ROUTE IMPRIMABLE N’IMPRIME PAS D’IDENTIFIANT BRUT', async ({ page }) => {
+  /* LE QUATRIÈME CHEMIN, ET IL N’AVAIT AUCUN PARCOURS (13/09). La feuille de
+     route écrit la MÊME donnée `EtapeRoute.voie` que le bandeau : sans filtre,
+     elle imprimait l’identifiant noir sur blanc. Une feuille s’emporte, se
+     montre et se garde — l’identifiant y vit plus longtemps qu’à l’écran.
+     CE PARCOURS PORTE SA PROPRE CONTRE-ÉPREUVE : la même feuille doit encore
+     nommer les voies LISIBLES. Sans elle, on l’aurait tenue en effaçant la
+     colonne entière. */
+  await simulerTuiles(page);
+  await simulerCommunes(page);
+  await page.route('**/data.geopf.fr/navigation/itineraire**', (route) => {
+    const url = route.request().url();
+    if (/getSteps=true/i.test(url)) {
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+        portions: [{ steps: [
+          { instruction: { type: 'depart', modifier: 'left' }, distance: 98.2, duration: 40,
+            attributes: { name: { nom_1_gauche: 'R DE RIVOLI' } } },
+          /* L’ÉTAPE MALADE : le service n’a pas de nom pour cette voie et rend
+             son `cleabs`. C’est le cas qu’Armelin a vu à l’écran. */
+          { instruction: { type: 'turn', modifier: 'right' }, distance: 19.6, duration: 8,
+            attributes: { name: { nom_1_gauche: IDENTIFIANT_BRUT } } },
+          { instruction: { type: 'arrive', modifier: 'straight' }, distance: 0, duration: 0,
+            attributes: { name: { nom_1_gauche: '' } } },
+        ] }],
+      }) });
+    }
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      geometry: { type: 'LineString', coordinates: [[2.3522, 48.8566], [2.3530, 48.8570]] },
+      distance: 117.8, duration: 48,
+    }) });
+  });
+  await page.goto('/#iti=2.35220,48.85660;2.35300,48.85700;car');
+  await page.locator('.iti-actions').waitFor({ state: 'visible', timeout: 15_000 });
+  await allerA(page, 'feuille');
+  const etapes = page.locator('.feuille-etapes li');
+  await expect(etapes).toHaveCount(3, { timeout: 10_000 });
+
+  /* RIEN D’ILLISIBLE SUR LA FEUILLE… */
+  sansIdentifiantBrut(await page.locator('.feuille-etapes').textContent(),
+    'la feuille de route');
+  /* …ET L’ÉTAPE MALADE RESTE UNE ÉTAPE : on se tait sur la voie, jamais sur
+     l’instruction. Qui tient la feuille doit encore savoir quoi faire. */
+  await expect(etapes.nth(1)).toContainText('Tournez à droite');
+  /* LA CONTRE-ÉPREUVE : la voie qui se LIT est toujours imprimée. */
+  await expect(etapes.nth(0)).toContainText('Rue de Rivoli');
 });
