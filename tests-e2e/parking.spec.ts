@@ -569,6 +569,36 @@ test.describe('fermeture de la feuille des parkings', () => {
     await expect(feuille).toBeVisible();
   });
 
+  test('LE BOUTON P A DISPARU : ÉCHAP NE LAISSE PAS LE FOCUS TOMBER SUR LE BODY', async ({ page }) => {
+    /* RELEVÉ PAR LA REVUE CODEX, et c'est un vrai défaut : le « P » s'efface
+       dès qu'un fixe tombe hors route, tandis que la feuille reste ouverte.
+       `.focus()` sur un bouton masqué n'échoue pas — il ne fait RIEN. Le
+       focus tombait alors sur le `<body>`, et le parcours clavier repartait
+       du haut de la page : exactement ce que le critère (5) interdit.
+       ON MASQUE LE BOUTON DIRECTEMENT : le chemin hors route déclenche aussi
+       un recalcul qui refait tout l'écran, et l'on veut ici mesurer LA
+       FERMETURE, pas le recalcul. La condition testée — « le bouton ne peut
+       pas prendre le focus » — est la même. */
+    await suivre(page);
+    await rouler(page, 2.3600, 48.8500);
+    const feuille = page.locator('.bg-parkings');
+    await expect(feuille).toBeVisible({ timeout: 15_000 });
+
+    await page.evaluate(() => {
+      const b = document.querySelector<HTMLElement>('.bg-parking-p');
+      if (b) b.hidden = true;
+    });
+    await page.keyboard.press('Escape');
+    await expect(feuille).toBeHidden();
+
+    const ou = await page.evaluate(() => {
+      const a = document.activeElement;
+      return { corps: a === document.body || a === null, dansLeBandeau: !!a?.closest('bandeau-guidage') };
+    });
+    expect(ou.corps, 'le focus est tombé sur le body').toBe(false);
+    expect(ou.dansLeBandeau, 'le focus a quitté le bandeau de guidage').toBe(true);
+  });
+
   test('ÉCHAP LA FERME ET REND LE FOCUS AU BOUTON P', async ({ page }) => {
     /* Critères (2) et (5). Même règle que les modales (A11Y-MODALE-1) : le
        focus ne tombe pas sur le `<body>`, il revient là où le geste a

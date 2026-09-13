@@ -112,12 +112,39 @@ function boutonDe(surface: HTMLElement): HTMLElement | null {
  *   surprise — on ne déplace rien.
  */
 function fermerFlottant(surface: HTMLElement, rendreLeFocus: boolean): void {
+  const hote = surface.parentElement;
   surface.dispatchEvent(new CustomEvent('volet-fermer'));
   /* LE FILET : une surface qui oublierait d'écouter resterait ouverte, et le
      défaut serait exactement celui qu'on répare. Elle se ferme alors sans son
      ménage — visible, donc corrigible, plutôt que muet. */
   if (!surface.hidden) surface.hidden = true;
-  if (rendreLeFocus) boutonDe(surface)?.focus();
+  if (rendreLeFocus) rendreLeFocusA(surface, hote);
+}
+
+/**
+ * Rend le focus au bouton qui commande la surface — ou, à défaut, à l'hôte.
+ *
+ * LE BOUTON PEUT AVOIR DISPARU AVANT ELLE, et ce n'est pas un cas d'école :
+ * le « P » des parkings s'efface dès qu'un fixe GPS tombe hors route, tandis
+ * que la feuille, elle, reste ouverte. Presser Échap à cet instant appelait
+ * `.focus()` sur un bouton masqué — qui n'échoue pas, qui ne fait RIEN : le
+ * focus tombait sur le `<body>` et le parcours clavier repartait du haut de
+ * la page. C'est exactement le défaut que le critère (5) interdit, et il
+ * n'aurait paru qu'au clavier, hors route. Relevé par la revue Codex.
+ *
+ * L'HÔTE N'EST RENDU FOCALISABLE QU'AU BESOIN, et au programme seulement
+ * (`tabindex="-1"`) : il n'entre pas dans l'ordre de tabulation, et le DOM
+ * ne change pas tant que le bouton répond.
+ */
+function rendreLeFocusA(surface: HTMLElement, hote: HTMLElement | null): void {
+  const bouton = boutonDe(surface);
+  if (bouton) {
+    bouton.focus();
+    if (document.activeElement === bouton) return;
+  }
+  if (!hote) return;
+  if (!hote.hasAttribute('tabindex')) hote.setAttribute('tabindex', '-1');
+  hote.focus();
 }
 
 /* CE QUI EST HÉBERGÉ N'EST PAS PRINCIPAL, MÊME SANS `<details>` AU-DESSUS

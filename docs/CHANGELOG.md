@@ -24,12 +24,19 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   désormais `aria-expanded`, qui suit l'état réel.
 - **Échap rend le focus au P** (même règle que A11Y-MODALE-1), et la surface
   flottante passe DEVANT les volets du rail : Échap ferme ce qui est au-dessus.
+- **Un défaut relevé par la revue Codex, et corrigé** : le « P » s'efface dès
+  qu'un fixe GPS tombe hors route, tandis que la feuille reste ouverte.
+  `.focus()` sur un bouton masqué n'échoue pas — il ne fait RIEN, et le focus
+  tombait sur le `<body>`. Le focus est désormais rendu à l'hôte du volet,
+  rendu focalisable au programme seulement (`tabindex="-1"`, hors ordre de
+  tabulation) quand le bouton ne répond pas.
 - **Les parcours tapent AU DOIGT**, et ce n'est pas une coquetterie : la
   maison a déjà payé un cycle pour l'avoir oublié (FANTOME-1, 03/09). Trois
   parcours ajoutés à `tests-e2e/parking.spec.ts` — toucher hors panneau,
   toucher DANS le panneau (qui ne doit rien fermer), Échap + focus + le P qui
-  rouvre et referme. **Contre-épreuve faite** : sans le mécanisme, deux des
-  trois rougissent.
+  rouvre et referme, plus le cas du bouton disparu. **Contre-épreuve faite** :
+  sans le mécanisme, deux des trois premiers rougissent ; sans le repli de
+  focus, le quatrième rougit.
 
 ## [1.142.0] — 2026-09-11 — SALON-1
 
