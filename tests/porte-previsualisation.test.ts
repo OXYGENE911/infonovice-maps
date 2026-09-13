@@ -600,6 +600,56 @@ describe('le bandeau éteint sur sa PROPRE balise — 10e revue Codex', () => {
   it('et le témoin, qui ne porte ni l’un ni l’autre, passe toujours', () => {
     expect(poseHtml(marquee())).toEqual('');
   });
+
+  it('et « hidden » écrit dans la VALEUR d’un attribut ne compte pas', () => {
+    expect(poseHtml(marquee().replace('data-previsualisation="cadre"',
+      'data-previsualisation="cadre" title="rien de hidden ici"')))
+      .toEqual('');
+  });
+});
+
+describe('la porte visait une CHAÎNE, elle vise désormais un SÉLECTEUR — 11e revue Codex', () => {
+  const poseCss = (contenu: string) => {
+    dossierConforme();
+    writeFileSync(join(dossier, 'previsualisation.css'), `${FEUILLE_PREVISUALISATION}
+${contenu}
+`);
+    return griefsDe().join(' ');
+  };
+
+  it('« [data-previsualisation="cadre"] » vise bien le cadre', () => {
+    expect(poseCss('[data-previsualisation="cadre"] { display: none; }')).toMatch(/invisible/);
+  });
+
+  it('et « [data-previsualisation=cadre] » sans guillemets aussi', () => {
+    expect(poseCss('[data-previsualisation=cadre] { display: none; }')).toMatch(/invisible/);
+  });
+
+  it('mais « [data-previsualisation="autre"] » ne vise rien de chez nous', () => {
+    expect(poseCss('[data-previsualisation="autre"] { display: none; }')).toEqual('');
+  });
+
+  it('« div[data-previsualisation="cadre"] » aussi, balise comprise', () => {
+    expect(poseCss('div[data-previsualisation="cadre"] { display: none; }')).toMatch(/invisible/);
+  });
+
+  it('et « span[data-previsualisation="cadre"] » non : le cadre est un div', () => {
+    expect(poseCss('span[data-previsualisation="cadre"] { display: none; }')).toEqual('');
+  });
+
+  it('« [class~="previsualisation-pastille"] » vise la pastille', () => {
+    expect(poseCss('[class~="previsualisation-pastille"] { font-size: 0; }'))
+      .toMatch(/taille de texte nulle/);
+  });
+
+  it('un « :hover » n’est pas l’état au repos et ne compte pas', () => {
+    expect(poseCss('.previsualisation-cadre:hover { display: none; }')).toEqual('');
+  });
+
+  it('une règle dans un bloc @media est lue, elle aussi', () => {
+    expect(poseCss('@media (min-width: 1px) { .previsualisation-cadre { display: none; } }'))
+      .toMatch(/invisible/);
+  });
 });
 
 describe('les pages livrées', () => {

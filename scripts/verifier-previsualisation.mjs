@@ -71,32 +71,143 @@ function pagesHtml(racine, prefixe = '') {
   return trouvees;
 }
 
-/** TOUTES les règles portant ce sélecteur, pas seulement la première : en CSS,
-    c'est la DERNIÈRE qui gagne, et c'est par là qu'on éteint un bandeau. */
-function reglesCss(css, selecteur) {
-  const corps = [];
-  let depuis = 0;
-  for (;;) {
-    const debut = css.indexOf(selecteur, depuis);
-    if (debut === -1) return corps;
-    /* DEUX FAUX POSITIFS PAYÉS EN REVUE, LE MÊME EN RÉALITÉ.
-       `.previsualisation-cadre-inactif` n'est pas `.previsualisation-cadre`, et
-       `.previsualisation-cadre span` vise les DESCENDANTS, pas le cadre. La
-       porte refusait alors un déploiement parfaitement bon — ce qui coûte
-       autant qu'un trou, et se découvre plus tard. Le sélecteur ne compte que
-       s'il TERMINE son sélecteur complexe : suivi d'une virgule ou de
-       l'accolade. Cela écarte aussi `.previsualisation-cadre.eteint`, qui exige
-       une classe que l'élément ne porte pas. */
-    if (!/^\s*[,{]/.test(css.slice(debut + selecteur.length))) {
-      depuis = debut + selecteur.length;
-      continue;
-    }
-    const ouvre = css.indexOf('{', debut);
-    const ferme = css.indexOf('}', ouvre);
-    if (ouvre === -1 || ferme === -1) return corps;
-    corps.push(css.slice(ouvre + 1, ferme));
-    depuis = ferme + 1;
+/* QUELLES RÈGLES VISENT LE BANDEAU — ET C'EST UNE QUESTION DE SÉLECTEUR, PAS
+   DE CHAÎNE. La version précédente cherchait le texte « .previsualisation-cadre »
+   dans la feuille. Trois défauts en sont sortis, trois revues de suite :
+   `.previsualisation-cadre-inactif` et `.previsualisation-cadre span` faisaient
+   REFUSER un déploiement bon, et `[data-previsualisation="cadre"] { display:
+   none }` — du CSS parfaitement courant, visant l'attribut réel du bandeau —
+   passait sans un grief.
+   On découpe donc la feuille en RÈGLES, on prend le DERNIER compound de chaque
+   sélecteur (c'est lui qui désigne l'élément visé) et on demande s'il vise
+   notre élément. C'est un minuscule moteur de sélecteurs, et c'est la seule
+   façon de fermer cette famille au lieu d'en boucher les trous un par un.
+
+   CE QU'IL NE SAIT PAS FAIRE, ET IL FAUT LE DIRE :
+   - il ignore les combinateurs à gauche du dernier compound. `.autre
+     .previsualisation-cadre { display: none }` est donc RETENU alors qu'il ne
+     s'applique que sous `.autre`. C'est un excès de prudence assumé : la porte
+     refuse, on regarde, on corrige — l'inverse laisserait un bandeau éteint
+     partir en ligne.
+   - un compound qu'il ne sait pas relire entièrement est considéré comme
+     visant l'élément. Même raison. */
+
+const ELEMENT_CADRE = {
+  balise: 'div',
+  classes: ['previsualisation-cadre'],
+  attributs: { class: 'previsualisation-cadre', 'data-previsualisation': 'cadre' },
+};
+const ELEMENT_PASTILLE = {
+  balise: 'p',
+  classes: ['previsualisation-pastille'],
+  attributs: { class: 'previsualisation-pastille' },
+};
+
+/** La feuille découpée en règles { selecteurs, corps }, blocs @media compris. */
+function reglesDeFeuille(css) {
+  const net = css.replace(/\/\*[\s\S]*?\*\//g, ' ');
+  const regles = [];
+  let debut = 0;
+  for (let i = 0; i < net.length; i += 1) {
+    if (net[i] === '}') { debut = i + 1; continue; }
+    if (net[i] !== '{') continue;
+    const prelude = net.slice(debut, i).trim();
+    // Un bloc `@media`/`@supports` : son prélude n'est pas un sélecteur, mais
+    // les règles qu'il contient en sont. On entre dedans au lieu de l'ignorer.
+    if (prelude.startsWith('@')) { debut = i + 1; continue; }
+    const ferme = net.indexOf('}', i);
+    if (ferme === -1) break;
+    regles.push({ prelude, corps: net.slice(i + 1, ferme) });
+    i = ferme;
+    debut = ferme + 1;
   }
+  return regles;
+}
+
+/** Les sélecteurs d'un prélude, coupés aux virgules de premier niveau. */
+function selecteursDe(prelude) {
+  const trouves = [];
+  let courant = '';
+  let profondeur = 0;
+  for (const c of prelude) {
+    if (c === '(' || c === '[') profondeur += 1;
+    else if (c === ')' || c === ']') profondeur -= 1;
+    if (c === ',' && profondeur === 0) { trouves.push(courant.trim()); courant = ''; continue; }
+    courant += c;
+  }
+  if (courant.trim() !== '') trouves.push(courant.trim());
+  return trouves;
+}
+
+/** Le dernier compound d'un sélecteur complexe : celui qui désigne l'élément. */
+function dernierCompound(selecteur) {
+  const s = selecteur.trim();
+  let profondeur = 0;
+  let coupe = 0;
+  for (let i = 0; i < s.length; i += 1) {
+    const c = s[i];
+    if (c === '(' || c === '[') profondeur += 1;
+    else if (c === ')' || c === ']') profondeur -= 1;
+    else if (profondeur === 0 && /[\s>+~]/.test(c)) coupe = i + 1;
+  }
+  return s.slice(coupe);
+}
+
+/** Un sélecteur d'attribut vise-t-il cet élément ? */
+function attributVise(motif, element) {
+  const m = /^([A-Za-z0-9_:.-]+)\s*(?:([~^$*|]?=)\s*(?:"([^"]*)"|'([^']*)'|([^\s\]]+)))?/
+    .exec(motif.slice(1, -1).trim());
+  if (m === null) return true;
+  const valeur = element.attributs[m[1].toLowerCase()];
+  if (valeur === undefined) return false;
+  if (m[2] === undefined) return true;
+  const attendu = m[3] ?? m[4] ?? m[5] ?? '';
+  switch (m[2]) {
+    case '=': return valeur === attendu;
+    case '~=': return valeur.split(/\s+/).includes(attendu);
+    case '^=': return valeur.startsWith(attendu);
+    case '$=': return valeur.endsWith(attendu);
+    case '*=': return valeur.includes(attendu);
+    case '|=': return valeur === attendu || valeur.startsWith(`${attendu}-`);
+    default: return true;
+  }
+}
+
+const MORCEAU_COMPOUND = /^[a-z][a-z0-9-]*|\.[A-Za-z0-9_-]+|#[A-Za-z0-9_-]+|\[[^\]]*\]|::?[A-Za-z-]+(?:\([^)]*\))?/gi;
+
+function compoundVise(compound, element) {
+  if (compound === '' || compound === '*') return true;
+  const morceaux = compound.match(MORCEAU_COMPOUND) ?? [];
+  // Un compound qu'on ne reconstitue pas entièrement, on ne le comprend pas :
+  // on le retient plutôt que de conclure à tort qu'il ne vise rien.
+  if (morceaux.join('') !== compound) return true;
+  for (const morceau of morceaux) {
+    if (morceau.startsWith('.')) {
+      if (!element.classes.includes(morceau.slice(1))) return false;
+    } else if (morceau.startsWith('#')) {
+      return false; // le bandeau n'a pas d'identifiant
+    } else if (morceau.startsWith(':')) {
+      return false; // `:hover` n'est pas l'état au repos, et c'est lui qui compte
+    } else if (morceau.startsWith('[')) {
+      if (!attributVise(morceau, element)) return false;
+    } else if (morceau.toLowerCase() !== element.balise) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** TOUS les corps de règle qui visent cet élément, dans l'ordre du document :
+    en CSS, c'est la DERNIÈRE qui gagne, et c'est par là qu'on éteint un
+    bandeau. */
+function reglesPour(css, element) {
+  const corps = [];
+  for (const regle of reglesDeFeuille(css)) {
+    if (selecteursDe(regle.prelude).some((s) => compoundVise(dernierCompound(s), element))) {
+      corps.push(regle.corps);
+    }
+  }
+  return corps;
 }
 
 /* LIRE LA VALEUR, PAS SEULEMENT LA PRÉSENCE (défaut trouvé par le vérificateur
@@ -629,8 +740,8 @@ export function verifierPrevisualisation(dossier) {
   const feuille = lire(FEUILLE_ATTENDUE);
   if (feuille === null) griefs.push('previsualisation.css absent (le bandeau serait sans style)');
   else {
-    const cadre = reglesCss(feuille, '.previsualisation-cadre');
-    const pastille = reglesCss(feuille, '.previsualisation-pastille');
+    const cadre = reglesPour(feuille, ELEMENT_CADRE);
+    const pastille = reglesPour(feuille, ELEMENT_PASTILLE);
     if (cadre.length === 0 || pastille.length === 0) {
       griefs.push('previsualisation.css : règle du cadre ou de la pastille absente');
     } else {
@@ -709,7 +820,10 @@ export function verifierPrevisualisation(dossier) {
       const estPastille = (a.class ?? '').split(/\s+/).includes('previsualisation-pastille');
       if (!estCadre && !estPastille) continue;
       const quoi = estCadre ? 'le cadre' : 'la pastille';
-      if (/(^|\s)hidden(\s|=|\/|$)/i.test(interieur)) {
+      // Le mot `hidden` doit être un ATTRIBUT, pas un morceau de valeur :
+      // on efface les valeurs entre guillemets avant de le chercher.
+      const sansValeurs = interieur.replace(/"[^"]*"|'[^']*'/g, '=""');
+      if (/(^|\s)hidden(\s|=|\/|$)/i.test(sansValeurs)) {
         griefs.push(`${page} : ${quoi} du bandeau porte l'attribut « hidden »`);
       }
       const enLigne = a.style ?? '';
