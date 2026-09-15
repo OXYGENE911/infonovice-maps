@@ -34,6 +34,7 @@ import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
 import { apprendreTrajet, lireHabitudes, oublierHabitude, suggerer } from '../lib/routines';
 import { attenteChien, laisserPeindre } from './attente-chien';
+import { voieLisible } from '../lib/nom-lisible';
 import {
   profilCarburant, planifierCarburant, pastillesPleins, pleinsAAnnoncer, euros, prixLitre, LIBELLE_PRIX, LIBELLES_CARBURANT,
   type StationCarburant, type PlanCarburant,
@@ -4799,7 +4800,13 @@ export class PanneauItineraire extends HTMLElement {
       const item = document.createElement('li');
       const texte = document.createElement('span');
       texte.className = 'etape-texte';
-      texte.textContent = e.voie ? `${e.texte} — ${e.voie}` : e.texte;
+      /* LE QUATRIÈME CHEMIN (TERRAIN-2, 13/09) — celui qu'on n'avait pas
+         recensé. La feuille de route imprimable écrit la MÊME donnée
+         `EtapeRoute.voie` que le bandeau, et sans filtre elle imprimait
+         l'identifiant brut noir sur blanc. Une feuille s'emporte et se
+         montre : l'identifiant y vit plus longtemps qu'à l'écran. */
+      const voie = voieLisible(e.voie);
+      texte.textContent = voie !== null ? `${e.texte} — ${voie}` : e.texte;
       item.append(texte);
       if (e.distance >= 10) {
         const dist = document.createElement('span');

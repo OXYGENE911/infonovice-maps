@@ -3624,6 +3624,23 @@ summary .picto-menu {
 .bg-cartouche .bg-fleche { color: var(--panneau-encre); }
 .bg-cartouche .bg-fleche svg { width: 58px; height: 58px; }
 .bg-cartouche-texte { flex: 1 1 auto; min-width: 0; }
+/* L'ELLIPSE, EN DERNIER RECOURS (TERRAIN-2, 11/09) — posée par
+   `carte/tenir-en-lignes.ts` quand aucun palier de police n'a suffi. Elle
+   coupe À LA DEUXIÈME LIGNE, avec les trois points : un panneau dont le texte
+   sort de la tôle est pire qu'un nom de ville tronqué. */
+/* CE QUI GARANTIT LES DEUX LIGNES EST LE `max-height` POSÉ EN PIXELS
+   MESURÉS par `tenir-en-lignes.ts`, PAS le clamp ci-dessous. Relevé dans le
+   navigateur le 13/09 sur `.bg-destination`, qui est un ITEM FLEX de
+   `.bg-cartouche` : `display` déclaré `-webkit-box`, `display` CALCULÉ
+   `flow-root` — le mode de boîte d'un item flex est blockifié, et
+   `-webkit-line-clamp` n'a jamais eu de `-webkit-box` sur quoi s'appliquer.
+   La CI l'a payé : trois lignes mesurées là où deux étaient promises.
+   LE CLAMP RESTE, pour les TROIS POINTS : là où le moteur les rend, ils
+   disent que le texte continue. C'est un agrément, plus une promesse. */
+.texte-coupe {
+  display: -webkit-box; -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
 .bg-cartouche .bg-instruction {
   /* PLUS GROS DE TROIS POINTS ET DEMI : mesuré sur la capture d'Armelin, à
      bout de bras sur un support de pare-brise. */
@@ -3683,24 +3700,6 @@ body.en-guidage #carte .maplibregl-ctrl-bottom-right,
 body.en-guidage #carte .maplibregl-ctrl-bottom-left {
   padding-bottom: calc(var(--hauteur-bandeau, 120px) + 10px);
 }
-/* ==========================================================================
-   PHOTO-1 — LA PHOTO D'UN LIEU D'EXCEPTION (décision d'Armelin du 29/08 :
-   « OK pour Wikimedia »)
-   --------------------------------------------------------------------------
-   L'attribution vit SOUS l'image, jamais ailleurs : ces photos sont libres,
-   elles ne sont pas anonymes. Elle est petite, mais elle est là.
-   ========================================================================== */
-.fb-photo { margin: 0 0 10px; }
-.fb-photo[hidden] { display: none; }
-.fb-photo-image {
-  display: block; width: 100%; height: auto; max-height: 210px;
-  object-fit: cover; border-radius: 10px; background: var(--fond-doux);
-}
-.fb-photo-credit {
-  margin: 4px 0 0; font: 400 10.5px/1.45 var(--police); color: var(--texte-3);
-}
-.fb-photo-credit a { color: inherit; }
-
 /* ==========================================================================
    NAV-3 — LA BARRE DE SUIVI, RÉDUITE À CE QU'ON LIT EN ROULANT
    --------------------------------------------------------------------------
@@ -4075,7 +4074,12 @@ bandeau-guidage.bg-deploye .bg-deplier::after { transform: rotate(45deg); }
 .bg-destination {
   flex-basis: 100%; order: 8; margin: 4px 0 0 48px;
   font: 600 15px/1.25 var(--police); color: var(--panneau-encre);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* DEUX LIGNES, PLUS UNE SEULE (TERRAIN-2, 11/09). Elle était en
+     `white-space: nowrap` : une liste de villes un peu longue perdait tout
+     sauf son premier mot, sur un panneau dont la largeur en aurait porté
+     deux lignes. Le texte revient donc à la ligne ; c'est `tenir-en-lignes`
+     qui le BORNE à deux, en réduisant la police par paliers avant de couper. */
+  overflow: hidden; min-width: 0;
 }
 .bg-destination[hidden] { display: none; }
 

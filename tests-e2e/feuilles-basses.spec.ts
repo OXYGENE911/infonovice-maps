@@ -249,11 +249,6 @@ test('FEN-3 : un cartouche de détail est une fenêtre — au-dessus de son voil
       distance: 5_000, duration: 600,
     }),
   }));
-  // Wikidata muet : la fiche vit sans photo, et ce parcours ne parle pas d'elle.
-  await page.route('**query.wikidata.org/**', (route) => route.fulfill({
-    headers: { 'Access-Control-Allow-Origin': '*' },
-    contentType: 'application/json', body: '{"results":{"bindings":[]}}',
-  }));
   await page.goto('/#iti=2.35220,48.85660;2.40000,48.87000;car');
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.iti-resultat')).toContainText('5,0 km', { timeout: 15_000 });

@@ -1582,5 +1582,184 @@ Préalable obligatoire, dans les deux cas : élargir le motif d'hôte de
 `src/lib/panoramax.ts` **et** ajouter `panoramax.ign.fr` à `img-src`, sans
 quoi une photo sur deux restera écartée.
 
+### 5. Retrait APPLIQUÉ le 13/09/2026 — ce qui est parti, et la porte laissée ouverte
+
+La Decision D3 du 11/09/2026 dormait depuis deux jours : Growth a mesuré le
+12/09 à 22 h 11 UTC que les trois hôtes étaient toujours dans la CSP de
+production. Ils n'y sont plus.
+
+**Ce qui est parti** (branche `feat/rec46S36kE181IeJE-wikimedia-retrait`) :
+
+| Canal | Ce qui a été retiré |
+|---|---|
+| CSP (`index.html`) | `https://upload.wikimedia.org` d'`img-src` ; `https://query.wikidata.org` et `https://commons.wikimedia.org` de `connect-src` |
+| Code | `src/lib/photos-monuments.ts` supprimé ; dans `src/carte/fiche-lieu.ts` : l'import, le champ `#photoEnCours`, la `<figure class="fb-photo">` et la méthode `#chargerPhoto` |
+| Crédit | la ligne `«  auteur — licence · Wikimedia Commons »` (`figcaption.fb-photo-credit`), partie avec la figure |
+| Feuille de style | le bloc `PHOTO-1` de `src/styles/carte.css` (`.fb-photo`, `.fb-photo-image`, `.fb-photo-credit`) |
+| Tests | `tests/photos-monuments.test.ts` supprimé ; le parcours E2E `PHOTO-1` remplacé par `PHOTO-0`, qui ÉCOUTE le réseau sans y répondre et échoue si une requête part |
+| Porte anti-retour | deux cas ajoutés à `tests/csp-connect-src.test.ts` : aucun hôte `wikimedia/wikidata/wikipedia` dans la CSP, aucun dans `src/` |
+
+**Service worker : rien à retirer.** Le `sw.js` engendré par `vite-plugin-pwa`
+ne connaît que les réserves de tuiles (`RESERVES_TUILES` dans `vite.config.ts`)
+— `grep -ci wikimedia dist/sw.js` rend `0`.
+
+**Page « À propos » : NON TOUCHÉE, et c'est délibéré.** `a-propos.html` porte
+encore la « seconde exception » qui explique la photo Wikimedia (l. 166 et
+171). Elle fait l'objet d'une décision CEO ouverte et sort du périmètre de
+cette tâche : tant qu'elle n'est pas reprise, la page décrit une fonction que
+l'application n'a plus.
+
+**Le rendu, mesuré — pas jugé à l'œil.** Viewport 1280×720, fiche d'un
+monument d'essai, `vite preview` sur un port dédié, empreinte du bundle servi
+comparée à `dist/` :
+
+| Cas | Cadre `.fb` | `.fb-corps` défile ? | Trous entre blocs | Requêtes Wikimedia |
+|---|---|---|---|---|
+| AVANT, fiche **sans** photo | 360 × 455,89 px | non (403 / 403) | 10 / 10 / 9,99 px | 1 (SPARQL) |
+| APRÈS, fiche **sans** photo | 360 × 455,89 px | non (403 / 403) | 10 / 10 / 9,99 px | **0** |
+| AVANT, fiche **avec** photo | 360 × 504 px (plafond) | **oui** (652 / 451) | — | 3 |
+
+La boîte d'une fiche sans photo est **identique au pixel** avant et après, et
+les ordonnées des quatre blocs visibles ne bougent pas (280,11 / 325,61 /
+454,61 / 526,73). Ce qui disparaît, c'est le nœud `<figure hidden>` — un
+emplacement réservé qui n'attendait plus rien. Effet de bord mesuré : la fiche
+illustrée débordait et se laissait défiler (652 px de contenu pour 451 px de
+fenêtre) ; sans photo, elle tient entière.
+
+**Poids du bundle**, remesuré le 13/09/2026 par deux `npm run build` propres
+(`rm -rf dist`), l'un sur `e453a48` (avant), l'autre sur `c50f5a4` (après) :
+`dist/assets/index-*.js` passe de **361,85 ko à 359,44 ko** (gzip **116,89 →
+115,99 ko**). Empreintes réellement produites : **`index-CKaEWQhM.js` avant**,
+**`index-FF7fm51B.js` après** — cette dernière vérifiée reproductible sur deux
+builds consécutifs. *Une version antérieure de cette page citait
+`index-Dgu8MxWE.js` pour l'état « après » : aucun commit de la branche ne produit
+cette empreinte, elle était fausse et est corrigée ici.*
+
+#### La porte laissée ouverte — Panoramax, et à quelles conditions
+
+**Le chiffre et sa date : Panoramax illustre 11 fiches sur 30, soit 37 %, de
+l'échantillon du §3, mesuré le 11/09/2026** (le brief du cycle du 13/09 date
+la même mesure du 12/09 ; elle n'a pas été refaite ici). Face aux **93 %
+(28/30) de Wikimedia, mesurés le même jour sur le même échantillon**, c'est
+l'écart qui a fondé le retrait. **Un chiffre sans sa date redevient faux tout
+seul : celui-ci vaut pour le 11/09/2026 et pour cet échantillon de 30.**
+
+Ce qu'il faudrait pour revenir, après le salon, sans redemander de dérogation :
+
+1. **Remesurer.** Le 37 % a une date. Toute reprise commence par un nouveau
+   comptage sur le même échantillon de 30, publié avec sa date — sinon on
+   décide sur un chiffre périmé.
+2. **Élargir le motif d'hôte de `src/lib/panoramax.ts`.** Le filtre actuel
+   (`/^https:\/\/[a-z0-9.-]*panoramax\.(openstreetmap\.fr|xyz)\//`) écarte
+   `panoramax.ign.fr`, qui sert **388 des 794 photos relevées le 11/09 (49 %)**.
+   Sans cela, près d'une photo sur deux reste jetée avant l'affichage.
+3. **Ajouter `panoramax.ign.fr` à `img-src`** dans le même commit que le point
+   2 — un hôte absent de la CSP ne donne pas d'échec réseau visible, seulement
+   une image qui ne vient pas.
+4. **Assumer le libellé.** Une photo Panoramax est une vue **de rue**, pas un
+   cadrage du monument : le bouton doit dire « voir la rue », jamais « photo du
+   monument », et porter producteur, licence et date sous l'image. Une mention
+   globale « photos Panoramax » ne suffit pas.
+5. **Seuil d'acceptation à écrire AVANT de recommencer.** En dessous de quel
+   taux de couverture la fonction ne vaut pas d'exister ? Ce seuil n'est pas
+   fixé à ce jour ; le poser évite de relivrer une fonction qui rend une image
+   une fois sur trois.
+
+Aucun de ces cinq points n'est engagé par cette tâche ; ils sont la liste de
+courses d'une reprise après le 18/10.
+
+#### La phrase pour le stand
+
+Si un visiteur demande pourquoi les fiches de monuments n'ont pas de photo :
+
+> « Parce que la seule photothèque qui couvrait nos monuments appartient à une
+> fondation américaine. Notre page « À propos » écrit elle-même **deux**
+> exceptions à nos sources françaises : la météo, qui vient d'un service
+> allemand faute d'équivalent français interrogeable sans clé, et la photo des
+> monuments — celle-là, **cette version la retire du produit**, et la page
+> sera reprise derrière. Il reste donc la météo, et nous n'en ouvrons pas de
+> nouvelle pour une photo. L'équivalent français, Panoramax, ne couvre
+> aujourd'hui qu'un monument sur trois : il reviendra quand il en couvrira
+> assez, pas avant. »
+
+Variante courte, si le visiteur est pressé :
+« Sur les dix-huit services que cette carte déclare pouvoir appeler, quinze
+sont en `.fr` : services publics et communs français. Les trois autres, nous
+les nommons au lieu de promettre « sans exception » — la météo allemande, le
+commun français d'imagerie Panoramax (en `.xyz`), et la plateforme qui sert le
+fichier Etalab des bornes de recharge. Et l'exception photo que « À propos »
+annonce encore, cette version la retire. »
+
+**Ce que cette phrase ne dit plus, et pourquoi.** La version précédente disait
+« ici tout vient de sources françaises — sans exception ». C'était faux, et faux
+dans le document que le visiteur peut ouvrir sur son téléphone pendant qu'on lui
+parle : `a-propos.html`, en ligne, annonce lui-même une exception météo
+(Open-Meteo, allemand). Relevé le 13/09/2026 sur l'`index.html` de `c50f5a4` :
+la CSP servie compte **18 hôtes externes distincts**, dont
+**`api.open-meteo.com`**. Une phrase de stand que l'application contredit à
+l'écran ne tient pas dix secondes devant une caméra.
+
+**Deuxième passe, 13/09/2026 : la variante COURTE disait encore « une
+exception ».** La phrase longue avait été reprise, la courte non : elle
+promettait « à une exception près que nous écrivons nous-mêmes — la météo »,
+et le document se contredisait lui-même vingt-cinq lignes plus bas, où la note
+du décompte écrit « 15 sont en `.fr` ». Deux choses la démentaient ensemble.
+
+1. **La page réellement servie.** `curl -sS https://maps.infonovice.fr/a-propos.html`
+   le 13/09/2026 (HTTP 200, 14 273 octets) rend une page qui porte
+   `<h2>Première exception : la météo</h2>` **et**
+   `<h2>Seconde exception : les photos des monuments</h2>`. **C'est sur cette
+   seconde ligne que les deux variantes s'alignent désormais : `a-propos.html`
+   l. 164** (l. 163 du HTML servi, qui perd une ligne à la construction). Le
+   fichier est le même partout —
+   `git rev-parse origin/main:a-propos.html origin/staging:a-propos.html HEAD:a-propos.html`
+   rend trois fois `ccaca3bb921e438e534bd8e4a028e67c9c33ad7b` : la page servie
+   en production, celle de `staging` et celle de cette branche sont
+   identiques. Une phrase de stand qui dit « une exception » est donc
+   démentie par le titre de section que le visiteur voit en faisant défiler.
+2. **La CSP servie.**
+   `awk '/Content-Security-Policy/,/form-action/' index.html | grep -o 'https://[A-Za-z0-9.-]*' | sed 's|https://||' | sort -u`
+   rend **18 hôtes distincts, dont 15 en `.fr`** ; les trois autres sont
+   `api.open-meteo.com`, `api.panoramax.xyz` et `public.opendatasoft.com`.
+   « Une exception » était donc faux une seconde fois, et sur un terrain
+   vérifiable en trente secondes par un journaliste.
+
+**Ce que les deux variantes garantissent maintenant, et ce qu'elles ne
+garantissent plus.** Toutes deux garantissent l'aveu des **deux** exceptions
+que « À propos » nomme, dans l'ordre où le visiteur les trouvera. **La seule
+qui porte le décompte est la courte** (15 sur 18) ; la longue répond à la
+question de la photo et ne compte rien — c'est voulu, on ne récite pas une
+CSP à quelqu'un qui demande pourquoi une fiche n'a pas d'image, mais il ne
+faut pas non plus lui prêter ce chiffre. Elles ne garantissent plus —
+et ne doivent plus laisser croire — ni que la nationalité de l'éditeur de
+`public.opendatasoft.com` a été vérifiée (elle ne l'est toujours pas), ni que
+« À propos » est à jour : la page annonce encore l'exception photo que cette
+version retire, **et elle se contredit elle-même** — son chapô (l. 61) et son
+« D'où viennent les données » (l. 93) disent « à une exception près » pendant
+que la l. 164 en nomme une seconde. La reprise de la page n'est pas faite ici.
+
+**Les trois pièges de la page « À propos », et la réponse vraie à chacun.**
+
+| Ce que le visiteur lit dans « À propos » | Ce qu'on répond |
+|---|---|
+| « Première exception : la météo » (Open-Meteo, allemand) | Vrai, assumé, et c'est nous qui l'avons écrit. Elle tombera le jour où une donnée publique française sera interrogeable sans clé. |
+| « Seconde exception : les photos des monuments » (Wikimedia) | **La page a une version de retard : la fonction est retirée du produit par cette tâche.** Sa reprise fait l'objet d'une décision CEO ouverte. À dire tel quel, pas à esquiver. |
+| « le code est hébergé sur GitHub … trois sociétés américaines » | Vrai, et écrit par nous. La chaîne qui livre la page n'est pas française ; les **données**, elles, viennent des services publics français. Ne jamais promettre la première en parlant des secondes. |
+
+**Tant que `a-propos.html` n'est pas repris, la phrase du stand doit devancer la
+page, jamais la contredire** : on dit l'exception avant que le visiteur la
+trouve.
+
+*Précision d'honnêteté sur le décompte.* Sur les 18 hôtes, 15 sont en `.fr`
+(services publics et communs français) ; `api.panoramax.xyz` est le commun
+français d'imagerie que la page « À propos » décrit déjà ;
+`public.opendatasoft.com` sert le fichier consolidé Etalab des bornes IRVE
+(donnée publique française) — **la nationalité de l'éditeur de cette plateforme
+n'a pas été vérifiée ici** ; `api.open-meteo.com` est l'exception météo. C'est
+pourquoi la variante courte **compte** (15 sur 18) et pourquoi les deux
+**nomment** les exceptions écrites, au lieu de promettre un « sans
+exception » — ou une exception unique, que la l. 164 de `a-propos.html`
+dément.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.
