@@ -55,18 +55,28 @@
   </header>
 
   <main class="page-corps">
-    <h1>Vos données ne quittent jamais ce navigateur</h1>
-    <p class="page-chapo">Cette page dit exactement ce qui est stocké, où, et
-      comment le récupérer ou l’effacer. Elle est courte parce qu’il y a peu à
-      dire : Infonovice Maps n’a pas de serveur qui vous connaisse.</p>
+    <h1>Vos données restent sur votre appareil</h1>
+    <p class="page-chapo">Rien de ce que vous enregistrez ne nous parvient :
+      nous n’avons aucun serveur pour le recevoir. Quelques requêtes partent
+      quand même vers les services qui calculent la route ou fournissent la
+      carte — cette page dit lesquelles, ce qu’elles emportent, et comment
+      tout effacer.</p>
 
     <h2>Y a-t-il des cookies ?</h2>
     <p><strong>Non — aucun.</strong> Pas même un cookie dit « nécessaire ».
       C’est pourquoi vous n’avez jamais vu de bandeau de consentement ici :
       il n’y a rien à consentir.</p>
+    <p>Il faut être précis, parce que la loi l’est : l’article 82 de la loi
+      Informatique et Libertés ne vise pas que les cookies, mais
+      <strong>toute inscription d’informations dans votre appareil</strong> —
+      donc aussi le stockage local que cette page décrit plus bas. Ce stockage
+      est <strong>strictement nécessaire au service que vous demandez</strong>
+      (garder vos favoris, vos réglages, la carte à emporter) : à ce titre, il
+      est exempté de consentement. Il ne sert à rien d’autre — ni mesure, ni
+      publicité, ni profil — et rien n’en sort.</p>
 
     <h2>Qu’est-ce qui est enregistré, alors ?</h2>
-    <p>Quatre choses, toutes dans le <strong>stockage local de votre
+    <p>Cinq choses, toutes dans le <strong>stockage local de votre
       navigateur</strong>, sur votre appareil :</p>
     <ul>
       <li><strong>Vos réglages d’affichage</strong> : le fond de carte choisi,
@@ -90,7 +100,6 @@
         entière est plafonnée aux alentours de 110 Mo, chiffre atteint
         seulement si vous emportez de longs trajets. Sans ce geste, elle reste
         de l’ordre de quelques dizaines de mégaoctets.</li>
-    </ul>
       <li><strong>Les parcours que vous avez choisi de garder</strong>, et
         seulement ceux-là. À la fin d’un trajet suivi, le bilan propose de
         l’enregistrer ; tant que vous n’appuyez pas, rien n’est gardé. Ce qui
@@ -100,7 +109,7 @@
 
     <h3>Ce que contient un parcours gardé</h3>
     <p>Un parcours enregistré contient <strong>le tracé GPS de votre
-      trajet</strong> : un point tous les trente secondes, avec sa vitesse et
+      trajet</strong> : un point toutes les trente secondes, avec sa vitesse et
       son altitude, plus la destination que vous aviez saisie, la durée, les
       arrêts, le dénivelé et la température à l’arrivée. Disons-le sans
       détour : <em>c’est la donnée la plus révélatrice que cette application
@@ -159,22 +168,39 @@
         gardons pas de copie, puisque nous n’en avons jamais eu.</li>
     </ul>
 
+    <!-- ===== BLOC « SERVICES INTERROGÉS » — VOIR §5 POUR LA VARIANTE B ===== -->
     <h2>Que voient les services interrogés ?</h2>
-    <p>Quand vous cherchez une adresse ou calculez un itinéraire, votre
-      navigateur interroge directement des services publics français (IGN,
-      Base Adresse Nationale, portails de données ouvertes) — et, pour les
-      seules prévisions météo, le service européen Open-Meteo, exception
-      expliquée dans la page <a href="/a-propos.html">À propos</a>. Ces services
-      reçoivent donc ce que toute requête web transmet : votre adresse IP et
-      les paramètres de la requête (le texte cherché, les coordonnées du
-      trajet). Nous ne pouvons pas parler à leur place : leurs propres
-      politiques s’appliquent, et nous les citons dans la page
-      <a href="/a-propos.html">À propos</a>.</p>
-    <p>Ce que nous pouvons affirmer : <strong>aucune requête ne passe par un
-      serveur qui nous appartiendrait</strong>, et l’application ne contacte
-      aucune autre origine que ces services publics. Cette liste est
-      verrouillée dans le code par une politique de sécurité du contenu, et un
-      test automatisé échoue si une origine non déclarée est contactée.</p>
+    <p>Quand vous cherchez une adresse, calculez un itinéraire ou ouvrez la
+      fiche d’un lieu, votre navigateur interroge directement des services
+      tiers. Aucun n’est un serveur qui nous appartiendrait — nous n’en avons
+      aucun — mais chacun reçoit ce que toute requête web transmet :
+      <strong>votre adresse IP</strong> et les paramètres de la requête (le
+      texte cherché, les coordonnées du trajet). Les voici, sans exception :</p>
+    <ul>
+      <li><strong>Services publics français</strong> — Géoplateforme (IGN),
+        Base Adresse Nationale, découpage administratif, prix des carburants,
+        bornes de recharge, Bison Futé, annuaires de l’Éducation nationale et
+        de l’administration, recherche d’entreprises, plateforme ouverte du
+        patrimoine.</li>
+      <li><strong>Collectivités</strong> — Métropole Aix-Marseille-Provence et
+        Nantes Métropole, pour les places de parking en direct.</li>
+      <li><strong>OpenStreetMap France</strong>, association loi 1901 —
+        l’instance Overpass (panneaux, feux, limites, lieux alentour) et les
+        photos de rue Panoramax. C’est, en nombre d’appels, le service le plus
+        sollicité de l’application.</li>
+      <li><strong>Open-Meteo</strong>, service européen établi en
+        <strong>Allemagne</strong>, pour les prévisions météo. Seules les
+        coordonnées de votre destination lui sont transmises — jamais votre
+        position, jamais votre identité.</li>
+    </ul>
+    <p>Nous ne pouvons pas parler à la place de ces services : leurs propres
+      politiques de confidentialité s’appliquent. Ce que nous pouvons
+      affirmer : <strong>aucune requête ne passe par un serveur qui nous
+      appartiendrait</strong>, et l’application ne contacte aucune autre
+      origine que celles listées ci-dessus. Cette liste est verrouillée dans le
+      code par une politique de sécurité du contenu, et un test automatisé
+      échoue si une origine non déclarée est contactée.</p>
+    <!-- ===== FIN DU BLOC « SERVICES INTERROGÉS » ===== -->
 
     <h2>Et le partage d’itinéraire ?</h2>
     <p>Le lien de partage contient tout le trajet après le signe
@@ -229,10 +255,59 @@
       navigateur, comme pour n’importe quelle page qui parle. Le guidage vocal
       est de toute façon éteint tant que vous ne l’allumez pas.</p>
 
+    <h2>Et si je laisse mon adresse pour être prévenu ?</h2>
+    <p>Une page de ce site propose de <strong>laisser votre adresse
+      électronique</strong> pour être prévenu des nouveautés. Ce n’est pas un
+      formulaire de ce site : c’est un <strong>lien</strong> vers un service
+      tiers, et rien ne part tant que vous ne l’ouvrez pas et ne l’envoyez pas
+      vous-même. Ce que nous en faisons est écrit à côté du lien, et le
+      voici :</p>
+    <ul>
+      <li><strong>Ce que nous demandons</strong> : votre adresse électronique,
+        et rien d’autre. Aucun champ n’est obligatoire en dehors d’elle.</li>
+      <li><strong>À quoi elle sert</strong> : vous écrire quand Infonovice
+        Maps sort une version notable ou ouvre son offre professionnelle.
+        <strong>Pas de lettre d’information régulière</strong>, pas de
+        publicité, aucune revente, aucun partage.</li>
+      <li><strong>Sur quelle base</strong> : votre consentement, donné en
+        envoyant le formulaire — et retirable à tout moment, d’un mot à
+        <a href="mailto:contact@infonovice.fr">contact@infonovice.fr</a>, sans
+        justification.</li>
+      <li><strong>Combien de temps</strong> : jusqu’à votre retrait, et au
+        plus <strong>trois ans</strong> après le dernier message envoyé, après
+        quoi l’adresse est effacée.</li>
+      <li><strong>Où elle est</strong> : chez l’hébergeur du formulaire, que
+        la page de la liste d’attente nomme, avec un lien vers ses propres
+        conditions. Elle n’est recopiée dans aucun autre outil.</li>
+    </ul>
+    <p>Vos droits d’accès, de rectification et d’effacement s’exercent par un
+      courriel à la même adresse. Ils sont décrits juste en dessous.</p>
+
+    <h2>Qui est responsable, et quels sont vos droits</h2>
+    <p>Le responsable du traitement est <strong>Armelin ASIMANE</strong>,
+      entrepreneur individuel (INFONOVICE), éditeur d’Infonovice Maps —
+      23 bis avenue du Prophète, 94420 Le Plessis-Trévise —
+      <a href="mailto:contact@infonovice.fr">contact@infonovice.fr</a>.</p>
+    <p>Le règlement général sur la protection des données vous ouvre des
+      droits d’<strong>accès</strong>, de <strong>rectification</strong>,
+      d’<strong>effacement</strong>, de <strong>limitation</strong>,
+      d’<strong>opposition</strong> et de <strong>portabilité</strong>.
+      Pour ce que l’application garde, vous les exercez <strong>vous-même et
+      immédiatement</strong>, sans nous écrire et sans attendre : le bouton
+      « Exporter mes données » vous rend tout ce qu’elle détient (c’est la
+      portabilité), « Oublier » efface un parcours, et les réglages de votre
+      navigateur effacent le reste. Nous n’en gardons aucune copie, puisque
+      nous n’en avons jamais eu.</p>
+    <p>Vous pouvez nous écrire malgré tout, et nous répondrons. Et si une
+      réponse ne vous satisfait pas, vous avez le droit d’introduire une
+      réclamation auprès de la <strong>Commission nationale de l’informatique
+      et des libertés (CNIL)</strong>, 3 place de Fontenoy, TSA 80715,
+      75334 Paris Cedex 07 — <a href="https://www.cnil.fr/">cnil.fr</a>.</p>
+
     <div class="page-note">Vous n’avez pas besoin de nous écrire pour exercer
-      un droit d’accès ou d’effacement : le bouton d’export vous donne tout ce
-      que l’application détient, et les réglages de votre navigateur
-      l’effacent. C’est le sens de « ne rien collecter ».</div>
+      un droit d’accès ou d’effacement sur ce que l’application garde : le
+      bouton d’export vous donne tout ce qu’elle détient, et les réglages de
+      votre navigateur l’effacent. C’est le sens de « ne rien collecter ».</div>
 
     <footer class="page-pied">
       <nav>
@@ -244,6 +319,8 @@
         <a href="https://github.com/OXYGENE911/infonovice-maps">Code source</a>
       </nav>
       <p>Infonovice Maps — aucune donnée personnelle collectée, aucun cookie.</p>
+      <p class="page-maj">Dernière mise à jour de cette page :
+        11 septembre 2026.</p>
     </footer>
   </main>
 </body>
