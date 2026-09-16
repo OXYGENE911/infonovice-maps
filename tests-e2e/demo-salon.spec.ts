@@ -200,8 +200,36 @@ test.describe('DÉMO SALON — Paris 15e → Lyon Part-Dieu, VF 8 Plus (T2, rect
       // eslint-disable-next-line no-console
       console.log(`\n=== DÉMO SALON — calcul itinéraire + plan de recharge : ${dureeMs} ms ===\n`);
 
-      expect(dureeMs, `le calcul a pris ${dureeMs} ms, au-delà des 5 s annoncées au stand`)
-        .toBeLessThan(5_000);
+      /* SEUIL PORTÉ DE 5 À 10 S — DÉCISION CEO DU 16/09/2026, mot pour mot :
+         « La règle des 5 s semble impossible à tenir avec cette architecture. Il faut
+         augmenter le délai avec une tolérance comprise entre 6 à 10 secondes de calcul
+         acceptable pour être réaliste. »
+
+         Le plafond DUR est donc 10 000 ms. Entre 6 000 et 10 000 ms le test passe mais
+         AVERTIT : une tolérance est une tolérance, pas une cible, et une dégradation qui
+         reste sous le plafond doit rester VISIBLE au lieu d'être absorbée en silence —
+         sinon le seuil remonte tout seul, un relevé après l'autre.
+
+         Relevés connus : 5,8 à 7,8 s le 11/09 (deux bancs indépendants) ; 11 478 puis
+         10 665 ms le 16/09 à 03 h sur `staging`, machine chargée (node=7, chrome=10) et
+         banc instable ce soir-là — ce dernier chiffre n'est donc pas un verdict produit.
+
+         CE SEUIL N'EST PAS SEULEMENT UN SEUIL DE TEST. Le message disait « les 5 s
+         ANNONCÉES AU STAND » : le nombre est aussi une promesse faite à un prospect, et
+         elle vit dans le kit salon, pas dans ce fichier. Changer le seuil sans changer la
+         promesse ferait dire au stand une chose que le produit ne fait pas. */
+      const PLAFOND_MS = 10_000;
+      const CIBLE_MS = 6_000;
+      if (dureeMs >= CIBLE_MS) {
+        console.warn(
+          `[demo] calcul en ${dureeMs} ms : au-delà de la cible de ${CIBLE_MS} ms, `
+          + `sous le plafond de ${PLAFOND_MS} ms. Toléré, pas satisfaisant.`,
+        );
+      }
+      expect(dureeMs,
+        `le calcul a pris ${dureeMs} ms, au-delà du plafond de ${PLAFOND_MS / 1_000} s `
+        + `(décision CEO du 16/09/2026 ; cible ${CIBLE_MS / 1_000} s)`)
+        .toBeLessThan(PLAFOND_MS);
 
       await expect(champArrivee).toHaveValue(ARRIVEE_ATTENDUE);
       await expect(resultat).toHaveText(/^\d+ km — .+ · arrivée vers \d\d:\d\d/);
