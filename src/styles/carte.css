@@ -59,6 +59,24 @@ body { font-family: var(--police); background: var(--fond); }
 .entete-marque:hover strong, .entete-marque:focus-visible strong { text-decoration: underline; }
 .entete-marque:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 6px; }
 .entete-marque strong { color: var(--accent); font-weight: 750; }
+/* LE LIEN VERS LE COMPTE (PRO-LIENS-2, 16/09) — À DROITE PAR `order`, PAS PAR
+   `margin-left: auto` : le champ de recherche porte `flex: 1` et mange tout
+   l'espace libre, une marge automatique n'aurait donc rien poussé. `order`
+   place le lien APRÈS le champ sans toucher à l'ordre du document, où il reste
+   avant la coquille de recherche — celle-ci est remplacée par le vrai
+   composant au chargement, et un lien posé après elle aurait été déplacé avec
+   elle. Discret par défaut, accentué au survol : c'est une porte, pas une
+   réclame. */
+.entete-compte {
+  order: 9;
+  font: 600 13px var(--police);
+  color: var(--texte-2); text-decoration: none;
+  padding: 5px 11px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  white-space: nowrap;
+}
+.entete-compte:hover, .entete-compte:focus-visible { color: var(--accent); border-color: var(--accent); }
+.entete-compte:focus-visible { outline: none; box-shadow: var(--focus); }
 .entete-note { font-size: 11.5px; color: var(--texte-3); }
 .entete recherche-adresse { flex: 1; min-width: 200px; }
 /* LA COQUILLE D'ATTENTE (PERF-1) a la géométrie EXACTE de la barre — même
@@ -379,6 +397,12 @@ body.recherche-ouverte .pied-carte { display: none; }
     flex-wrap: nowrap; align-items: center;
   }
   .entete-marque { font-size: 13px; white-space: nowrap; }
+  /* LE LIEN VERS LE COMPTE SORT DE L'EN-TÊTE SUR TÉLÉPHONE (PRO-LIENS-2) :
+     l'en-tête y tient sur UNE rangée en `flex-wrap: nowrap`, entre le bord
+     gauche et les 130 px réservés au Menu. Une troisième boîte volait au champ
+     de recherche la largeur qu'il lui reste — or c'est lui, le produit, à cet
+     endroit. La porte vers le compte reste Menu → « Découvrir Maps Pro ». */
+  .entete-compte { display: none; }
   /* LA MARQUE CÈDE DÈS QUE L'EN-TÊTE SE CHARGE (A11Y-CIBLE-1, 07/09).
      Cette règle existait, mais sous 400 px seulement — et le défaut vivait
      JUSTE AU-DESSUS. Mesuré par Lighthouse sur son écran de référence
