@@ -15,6 +15,7 @@ import {
   meriteUneAlternative, vautLaPeine, phraseAlternative,
 } from '../lib/detour';
 import { calculerItineraire, itineraireDirect, formaterDistance, formaterDuree, EVITEMENTS, OPTIMISATIONS, ErreurItineraire, MAX_ETAPES, type Profil, type Itineraire, type ItineraireDirect, type Eviter, type Optimisation, type OptionsItineraire } from '../lib/itineraire';
+import { signalerLenteur } from '../lib/service-lent';
 import { formaterCoordonnees, type PointGeo } from '../lib/coordonnees';
 import { lireRepere, REPERES, type CleRepere } from '../lib/reperes';
 import { listerFavoris, listerListes } from '../lib/favoris';
@@ -28,10 +29,12 @@ import { versFragment, depuisFragment } from '../lib/partage-url';
 import { installerFeuilleBasse } from './feuille-basse';
 import { pictoMenu, type NomPicto } from './icone-menu';
 import type { ConditionsTrajet, ProfilConditions } from '../lib/conditions';
+import { noteReserveConditions } from '../lib/conditions';
 import { PROFILS_PAUSE, chercherAgrements, ErreurPauses } from '../lib/pauses';
 import { PREF_FILTRES } from './panneau-poi';
 import { apprendreTrajet, lireHabitudes, oublierHabitude, suggerer } from '../lib/routines';
 import { attenteChien, laisserPeindre } from './attente-chien';
+import { voieLisible } from '../lib/nom-lisible';
 import {
   profilCarburant, planifierCarburant, pastillesPleins, pleinsAAnnoncer, euros, prixLitre, LIBELLE_PRIX, LIBELLES_CARBURANT,
   type StationCarburant, type PlanCarburant,
@@ -40,6 +43,7 @@ import { chercherLeLongDuTrajet } from '../lib/le-long-du-trajet';
 import type { PoiCarburant } from '../lib/poi';
 import { chargerEnseignes, apparierEnseignes, enseignesDuTrajet } from '../lib/enseignes';
 import { profilItineraire, denivele } from '../lib/altimetrie';
+import { avecDelaiDeGarde } from '../lib/delai-garde';
 import { chargerGrille, estimerPeages } from '../lib/peages-tarifs';
 import { pointLateral, choisirBis, traceDevant } from '../lib/bis';
 import { chargerVoies, recoudreVoies, recoudreEurope } from '../lib/voies';
@@ -89,6 +93,80 @@ import type { BandeauGuidage, ArretAAnnoncer } from './bandeau-guidage';
 const PICTO_MODE: Record<Mode, NomPicto> = {
   voiture: 'vehicule', moto: 'moto', velo: 'velo', pied: 'pieton',
 };
+
+/* LE PLAN PART TOUT SEUL, un court instant après le calme (PERF-PARIS-LYON,
+   11/09/2026, optim.) — 300 ms, pas zéro : les rafales de recalcul (cases
+   cochées, étapes déplacées) ne doivent déclencher qu'UN calcul de plan, donc
+   UN relevé de conditions (règle « ne jamais marteler les API publiques »,
+   qui vise le RÉSEAU, pas ce minuteur local). Le débounce était fixé à
+   1200 ms — vérifié par mesure (docs/mesure-paris-lyon.md) : une taxe
+   garantie sur chaque calcul, sans rapport avec la taille des rafales
+   réelles observées (quelques centaines de ms entre deux cases cochées à la
+   main). 300 ms absorbe toujours ces rafales-là tout en rendant le débounce
+   quasi imperceptible sur un calcul isolé.
+   CE QUE 300 MS NE COUVRE PLUS (revue Codex du 11/09/2026, remarque 5,
+   signalé et assumé, non corrigé) : sur un itinéraire déjà calculé, deux
+   modifications du véhicule espacées de PLUS de 300 ms mais de MOINS de
+   1200 ms (le cas illustré : 600 ms) relancent chacune leur propre relevé de
+   conditions — MÉTÉO DÉPART, MÉTÉO ARRIVÉE ET ALTIMÉTRIE, les trois en
+   `Promise.all` (`#chargerConditions`), donc jusqu'à trois appels de plus si
+   le premier relevé n'a pas eu le temps d'aboutir — jamais l'IRVE ni
+   l'itinéraire. Un coût réel mais borné (les trois appels les plus légers,
+   pas les deux plus lourds), absent des scénarios mesurés par cette tâche
+   (banc T3, démo salon) où le véhicule se règle UNE fois avant tout calcul.
+   Réduire ce risque à zéro demanderait de garder un débounce plus large que
+   ce qu'un calcul isolé peut se permettre de payer : arbitrage du chef si ce
+   coût borné n'est pas acceptable. */
+const DEBOUNCE_PLAN_AUTO_MS = 300;
+
+/* LE DÉLAI DE GARDE SUR L'ALTIMÉTRIE (ALTI-GARDE-1, tâche recu7iXoI2DPdP5Pr,
+   12/09/2026) — LE FACTEUR LIMITANT DU CYCLE C4.
+   La contre-mesure du 12/09 (six sessions froides) a chiffré l'altimétrie de
+   la Géoplateforme entre 902 ms et environ 7 s, attendue en plein milieu du
+   `Promise.all` de `#chargerConditions` SANS aucun délai de garde : un
+   service public lent bloquait le plan aussi longtemps qu'il voulait, et le
+   critère (p95 < 5 s) dépendait alors d'un tiers hors de notre contrôle.
+   MESURE DE CETTE TÂCHE (12/09, dix appels réels au service, hors
+   navigateur — voir docs/mesure-paris-lyon.md) : neuf réponses entre
+   576 ms et 872 ms (médiane ≈ 700 ms), UNE à 7 277 ms — cohérent avec la
+   contre-mesure. 2 000 ms laisse une marge large (≈ ×2,9) sur le cas normal
+   tout en coupant la queue de latence AVANT qu'elle ne menace le seuil de
+   5 s. La météo (Open-Meteo), mesurée dans la même session (3 appels,
+   103-150 ms), n'a montré aucun risque comparable : elle garde son
+   comportement d'avant (`.catch` sur erreur seul), voir docs/mesure-paris-lyon.md
+   pour le détail et la décision de ne pas lui appliquer le même délai. */
+const DELAI_GARDE_ALTIMETRIE_MS = 2000;
+
+/* SEUILS DE LENTEUR DU CALCUL D'ITINÉRAIRE (ITI-LENT-1, 12/09/2026).
+ *
+ * La contre-mesure du 12/09 l'a établi : le délai de garde posé au C4 ne
+ * couvre que l'altimétrie (facultative). L'itinéraire, lui, ne peut PAS
+ * être sauté — sans lui il n'y a pas de trajet — donc pas de repli
+ * silencieux ici, seulement deux seuils qui PRÉVIENNENT (voir
+ * lib/service-lent.ts pour le mécanisme, volontairement différent
+ * d'`avecDelaiDeGarde`).
+ *
+ * SEUIL_LENTEUR_ITINERAIRE_MS = 2 500 ms — mesuré le 12/09/2026 : huit
+ * appels réels consécutifs à ce même service (data.geopf.fr/navigation,
+ * Paris→Lyon) répondent tous entre 246 ms et 380 ms
+ * (docs/mesure-itineraire-lent.md, §1). 2 500 ms, c'est environ SIX FOIS ET
+ * DEMIE ce plafond observé (2 500 / 380 = 6,58 — le commentaire d'origine
+ * disait « sept fois », corrigé le 13/09) :
+ * assez loin de la latence normale pour ne jamais se déclencher sur un aléa
+ * ordinaire, assez tôt pour prévenir avant que l'attente ne devienne
+ * suspecte. Le scénario qui a révélé le problème (IGN ralenti à 3 s →
+ * 5 198 ms au total) franchit ce seuil, comme voulu.
+ *
+ * SEUIL_ABANDON_ITINERAIRE_MS = 15 000 ms — `calculerItineraire`
+ * (lib/itineraire.ts) tente deux fois, 8 s de timeout chacune
+ * (`DELAI_MS = 8000`) et 500 ms d'attente entre les deux essais : la
+ * promesse elle-même ne peut jamais mettre plus de 16 500 ms à trancher.
+ * 15 000 ms tombe SOUS ce plafond dur : l'usager voit la porte de sortie
+ * (« Réessayer ») avant que le mécanisme interne n'ait fini de renoncer
+ * tout seul, jamais après coup sur un calcul déjà résolu.
+ */
+export const SEUIL_LENTEUR_ITINERAIRE_MS = 2500;
+export const SEUIL_ABANDON_ITINERAIRE_MS = 15000;
 
 const SOURCE = 'itineraire';
 /* LES VARIANTES A/B/C — une seule source pour les trois : elles se
@@ -218,6 +296,14 @@ export class PanneauItineraire extends HTMLElement {
   #optimisation: Optimisation = 'fastest';
   /** Jeton anti-réponses-hors-d'ordre de #calculer (voir le commentaire là-bas). */
   #sequence = 0;
+  /* LA PORTE DE SORTIE A ÉTÉ OUVERTE — ET ELLE NE SE REFERME PAS TOUTE SEULE
+     (SEUIL-1, 13/09/2026). Retient le jeton du calcul pour lequel le seuil
+     d'abandon a parlé. Sans lui, l'échec de la promesse d'origine (au plus
+     tard 16 500 ms : deux essais de 8 000 ms et 500 ms d'attente, voir
+     lib/itineraire.ts) refermait « Réessayer » 1 500 ms après son ouverture.
+     Les deux mécanismes s'ignoraient : l'un ouvrait la porte, l'autre la
+     refermait sans savoir qu'elle venait d'être ouverte. Ils s'accordent ici. */
+  #abandonAnnonce = 0;
   #dernier: Itineraire | null = null;
   /** Le cliché complet qui a produit #dernier — il vieillit AVEC lui : un
       recalcul raté laisse les deux cohérents entre eux. Feuille de route,
@@ -299,6 +385,12 @@ export class PanneauItineraire extends HTMLElement {
   #conditions: ConditionsTrajet | null = null;
 
   #conditionsPour: Itineraire | null = null;
+
+  /* LE DÉNIVELÉ N'A PAS PU ÊTRE PRIS EN COMPTE (ALTI-GARDE-1, 12/09) — délai
+     de garde dépassé OU service en erreur, les deux se traitent pareil.
+     Jamais de silence : « Pourquoi ce plan ? » et la note de réserve le
+     disent en toutes lettres plutôt que d'omettre la ligne D+/D- sans un mot. */
+  #deniveleIndisponible = false;
 
   /** Masse et bridages thermiques du véhicule courant. */
   #profilConditions: ProfilConditions = {};
@@ -678,6 +770,19 @@ export class PanneauItineraire extends HTMLElement {
                 </div>
               </div>
               <p class="iti-erreur" role="alert" hidden></p>
+              <!-- LE SERVICE D'ITINÉRAIRE EST LENT, ET ON LE DIT (ITI-LENT-1,
+                   12/09/2026) : contrairement à l'altimétrie, ce calcul ne
+                   peut pas être sauté — pas de repli silencieux, un message
+                   sur SA PROPRE LIGNE (jamais celle de .iti-resultat, que
+                   #majResume réécrit dès qu'un ancien trajet existe). -->
+              <p class="iti-lenteur-service" role="status" hidden></p>
+              <!-- AU SECOND SEUIL, ON ARRÊTE DE TOURNER EN SILENCE : un geste
+                   explicite, jamais un écran figé sans issue. La promesse
+                   d'origine continue de vivre — voir lib/service-lent.ts. -->
+              <div class="iti-abandon-service" role="alert" hidden>
+                <p class="iti-abandon-texte"></p>
+                <button type="button" class="iti-abandon-reessayer">Réessayer</button>
+              </div>
 
               <div class="iti-actions" hidden>
                 <button type="button" class="iti-demarrer" hidden>Démarrer le suivi</button>
@@ -1064,13 +1169,21 @@ export class PanneauItineraire extends HTMLElement {
       this.#reinitialiserSections(false);
       this.#tracer(direct);
       clearTimeout(this.#minuteurPlanAuto);
-      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, 1200);
+      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, DEBOUNCE_PLAN_AUTO_MS);
     });
     this.querySelector('.iti-direct-ignorer')?.addEventListener('click', () => {
       this.#direct = null;
       (this.querySelector('.iti-direct') as HTMLElement).hidden = true;
     });
     this.querySelector('.iti-effacer')?.addEventListener('click', () => this.#effacer());
+    /* « RÉESSAYER » EST UN GESTE DE L'USAGER, PAS UNE RELANCE AUTOMATIQUE
+       (ITI-LENT-1) : `#calculer` relance le MÊME calcul, avec son propre
+       jeton de séquence — l'éventuelle réponse tardive de l'essai abandonné
+       sera écartée d'elle-même si elle arrive après. Aucune autre requête ne
+       part d'ici. */
+    this.querySelector('.iti-abandon-reessayer')?.addEventListener('click', () => {
+      void this.#calculer();
+    });
 
     /* L'HEURE DE DÉPART change l'arrivée affichée ET les relevés météo :
        les conditions du trajet sont invalidées, le plan se refera. */
@@ -1201,12 +1314,50 @@ export class PanneauItineraire extends HTMLElement {
     });
 
     document.addEventListener('vehicule-change', () => {
+      /* PRÉCHARGE DE L'INDEX IRVE, DÈS QUE LE VÉHICULE EST CONNU
+         (PERF-PARIS-LYON, 11/09/2026, optim., cible 2) — pas seulement au
+         calcul. Le premier calcul de la session payait jusqu'à plusieurs
+         secondes du seul téléchargement de l'index (docs/mesure-paris-lyon.md,
+         ~700 Ko gzippés), alors que rien n'empêche de le lancer PENDANT que
+         l'usager tape encore l'adresse d'arrivée. Lancer PLUS TÔT le même
+         appel unique n'en ajoute aucun : `indexNational` dédoublonne les
+         appels réellement concurrents (`enCours`, lib/index-bornes.ts) ET
+         garde, depuis la revue Codex de cette tâche (remarque 2 du second
+         passage, handoffs/2026-09-11-2100-codex-optim.md), une mémoire de
+         session qui survit à un échec d'écriture IndexedDB (quota,
+         navigation privée…) — sans elle, un préchargement terminé AVANT le
+         calcul (le cas courant, celui que ce préchargement vise) pouvait
+         être suivi d'un second téléchargement si le disque avait refusé le
+         premier. Le `.catch` évite qu'un rejet de promesse non suivi
+         (préchargement seul, sans calcul déclenché ensuite) remonte comme
+         une erreur non gérée.
+
+         LE GARDE EST `#lireVehicule()`, ET NON « pas thermique » (régression
+         introduite par cette PR, corrigée le 13/09/2026 au C10 ; le test qui
+         la tenait est `tests-e2e/recharge.spec.ts:778`, antérieur à la PR) :
+         `panneau-vehicule.ts` restaure un véhicule électrique par défaut au
+         chargement de la page même quand personne n'a jamais rien saisi
+         (capacité à 0), et l'événement `vehicule-change` partait alors tout
+         seul. « Pas thermique » était vrai pour ce profil vide, et l'index
+         se téléchargeait sans qu'aucun usager ne l'ait demandé — en
+         violation de la règle « ne jamais marteler les API publiques sans
+         demande », celle-là même que ce préchargement doit respecter.
+         `#lireVehicule()` est le filtre qui décide RÉELLEMENT si un plan de
+         recharge peut se calculer (batterie ET consommation renseignées) :
+         précharger pour un profil que le planificateur rejetterait de toute
+         façon n'anticipe rien. L'optimisation elle-même — précharger dès
+         qu'un véhicule électrique COMPLET est connu, avant même le calcul —
+         reste entière. */
+      void this.#lireVehicule().then((profil) => {
+        if (profil) void indexNational().catch(() => { /* voir commentaire ci-dessus */ });
+      });
+
       if (!this.#dernier) return;
       this.#rechargePour = null;
       clearTimeout(this.#minuteurPlanAuto);
       this.#minuteurPlanAuto = setTimeout(() => {
         void this.#planifierRecharge(this.#vue !== 'recharge');
-      }, 1200);
+      }, DEBOUNCE_PLAN_AUTO_MS);
     });
 
     /* SUR TÉLÉPHONE, LE VOLET EST UNE FEUILLE BASSE (décision d'Armelin du
@@ -1882,6 +2033,12 @@ export class PanneauItineraire extends HTMLElement {
    * (le même service que le profil de la page « alti »), et la vitesse
    * moyenne qui ne coûte RIEN : distance/durée du moteur — c'est le graphe
    * routier qui a déjà compté les limites tronçon par tronçon.
+   *
+   * L'ALTIMÉTRIE A UN DÉLAI DE GARDE (ALTI-GARDE-1, 12/09) : au-delà de
+   * `DELAI_GARDE_ALTIMETRIE_MS`, on arrête d'ATTENDRE plutôt que de laisser
+   * un service public lent dicter la durée du calcul — voir delai-garde.ts.
+   * La météo n'en a pas : mesurée dans la même session, elle n'a montré
+   * aucun risque comparable (docs/mesure-paris-lyon.md).
    */
   async #chargerConditions(iti: Itineraire, signal: AbortSignal): Promise<void> {
     if (this.#conditionsPour === iti && this.#conditions) return;
@@ -1894,6 +2051,7 @@ export class PanneauItineraire extends HTMLElement {
     const arriveeEstimee = new Date(maintenant.getTime() + iti.duree * 1000);
     const sommets = iti.geometrie.coordinates;
     const [pDep, pArr] = [sommets[0], sommets[sommets.length - 1]];
+    let deniveleIndisponible = false;
     await Promise.all([
       pDep
         ? meteoA(pDep[0]!, pDep[1]!, maintenant, signal)
@@ -1905,17 +2063,20 @@ export class PanneauItineraire extends HTMLElement {
           .then((m) => { conditions.tempArriveeC = m.temperature; })
           .catch(() => { /* idem */ })
         : Promise.resolve(),
-      profilItineraire(iti.geometrie)
+      avecDelaiDeGarde(profilItineraire(iti.geometrie), DELAI_GARDE_ALTIMETRIE_MS)
         .then((points) => {
+          // `undefined` : délai de garde dépassé OU service en erreur — les
+          // deux se traitent pareil, honnêtement (voir #deniveleIndisponible).
+          if (!points) { deniveleIndisponible = true; return; }
           const d = denivele(points);
           conditions.monteeM = d.montee;
           conditions.descenteM = d.descente;
-        })
-        .catch(() => { /* le plan vivra à plat, et le dira */ }),
+        }),
     ]);
     if (signal.aborted) return;
     this.#conditions = conditions;
     this.#conditionsPour = iti;
+    this.#deniveleIndisponible = deniveleIndisponible;
   }
 
   /**
@@ -3962,6 +4123,13 @@ export class PanneauItineraire extends HTMLElement {
       if (typeof releve.monteeM === 'number') {
         bouts.push(`D+ ${Math.round(releve.monteeM)} m / D− ${Math.round(releve.descenteM ?? 0)} m`
           + ` (${cond.deniveleKwh >= 0 ? '+' : '−'}${Math.abs(cond.deniveleKwh).toFixed(1)} kWh)`);
+      } else if (this.#deniveleIndisponible) {
+        /* JAMAIS UN SILENCE (ALTI-GARDE-1, 12/09) : d'autres conditions ont
+           pu être relevées (température, vitesse) pendant que l'altimétrie
+           dépassait le délai de garde ou échouait — le dire ici plutôt que
+           de simplement omettre la ligne D+/D-. */
+        bouts.push('relief non pris en compte — le service altimétrique était'
+          + ' trop lent ou indisponible');
       }
       if (cond.plafondThermiqueKw !== null) {
         bouts.push(`charge bridée à ${cond.plafondThermiqueKw} kW — le bridage`
@@ -4365,19 +4533,24 @@ export class PanneauItineraire extends HTMLElement {
        un <p> sans `.options` : elle s'interrompait là, laissant les réglages
        suivants à leur valeur par défaut. Une classe ne nomme qu'une chose. */
     reserve.className = 'recharge-note-reserve';
-    /* LA NOTE SUIT LE CALCUL (28/08) : quand météo et relief sont relevés,
-       « à plat, à consommation constante » serait un mensonge — et quand ils
-       ne le sont pas, l'ancien aveu reste le bon. */
-    const releves = this.#conditionsPour === this.#dernier
+    /* LA NOTE SUIT LE CALCUL (28/08, affinée le 12/09 — ALTI-GARDE-1) : quand
+       météo et relief sont relevés, « à plat, à consommation constante »
+       serait un mensonge ; quand SEUL le relief manque (délai de garde
+       dépassé ou service en panne, la météo ayant abouti), dire qu'il est
+       « compté » serait tout autant un mensonge — un silence par omission
+       que le mandat du 12/09 interdit explicitement. Trois cas, trois
+       phrases (`noteReserveConditions`, testée à sec dans
+       tests/conditions.test.ts), jamais une approximation qui les couvre.
+       TEMPÉRATURE COMPTÉE : au DÉPART ou à L'ARRIVÉE, pas seulement au
+       départ (revue Codex du 12/09 — l'ancienne version ne regardait que
+       `tempDepartC` et disait « à plat » alors qu'une météo d'arrivée
+       seule avait bien été retenue dans le calcul). */
+    const pourCeTrajet = this.#conditionsPour === this.#dernier;
+    const temperatureCompte = pourCeTrajet
       && (this.#conditions?.tempDepartC !== undefined
-        || this.#conditions?.monteeM !== undefined);
-    reserve.textContent = (releves
-      ? 'Température, relief et vitesse du parcours sont comptés (détail dans'
-        + ' « Pourquoi ce plan ? ») ; restent inconnus le vent, la pluie, le'
-        + ' trafic et la vraie courbe de charge de votre véhicule.'
-      : 'Estimation à plat, à consommation constante :'
-        + ' ni le relief, ni le vent, ni le trafic, ni la vraie courbe de charge'
-        + ' de votre véhicule ne sont pris en compte.')
+        || this.#conditions?.tempArriveeC !== undefined);
+    const deniveleCompte = pourCeTrajet && this.#conditions?.monteeM !== undefined;
+    reserve.textContent = noteReserveConditions(temperatureCompte, deniveleCompte)
       + ` Bornes de ${SEUIL_RAPIDE} kW et plus, depuis le fichier national IRVE.`;
     corps.append(reserve);
   }
@@ -4627,7 +4800,13 @@ export class PanneauItineraire extends HTMLElement {
       const item = document.createElement('li');
       const texte = document.createElement('span');
       texte.className = 'etape-texte';
-      texte.textContent = e.voie ? `${e.texte} — ${e.voie}` : e.texte;
+      /* LE QUATRIÈME CHEMIN (TERRAIN-2, 13/09) — celui qu'on n'avait pas
+         recensé. La feuille de route imprimable écrit la MÊME donnée
+         `EtapeRoute.voie` que le bandeau, et sans filtre elle imprimait
+         l'identifiant brut noir sur blanc. Une feuille s'emporte et se
+         montre : l'identifiant y vit plus longtemps qu'à l'écran. */
+      const voie = voieLisible(e.voie);
+      texte.textContent = voie !== null ? `${e.texte} — ${voie}` : e.texte;
       item.append(texte);
       if (e.distance >= 10) {
         const dist = document.createElement('span');
@@ -4857,7 +5036,14 @@ export class PanneauItineraire extends HTMLElement {
     const jeton = (this.#sequence += 1);
     const resultat = this.querySelector('.iti-resultat') as HTMLElement;
     const erreur = this.querySelector('.iti-erreur') as HTMLElement;
+    const lenteur = this.querySelector('.iti-lenteur-service') as HTMLElement;
+    const abandon = this.querySelector('.iti-abandon-service') as HTMLElement;
     erreur.hidden = true;
+    lenteur.hidden = true;
+    abandon.hidden = true;
+    /* Un calcul qui repart referme la porte du calcul précédent : avec
+       « Effacer le trajet », c'est le seul geste qui la referme (SEUIL-1). */
+    this.#abandonAnnonce = 0;
     resultat.hidden = false;
     resultat.textContent = 'Calcul de l’itinéraire…';
     try {
@@ -4873,7 +5059,34 @@ export class PanneauItineraire extends HTMLElement {
       const options: OptionsItineraire = {
         etapes: viaBis ? [viaBis, ...inter] : inter, eviter, optimisation,
       };
-      const brut = await calculerItineraire(depart, arrivee, profil, options);
+      /* L'ITINÉRAIRE NE PEUT PAS ÊTRE SAUTÉ (ITI-LENT-1) : contrairement à
+         l'altimétrie, on ne bascule jamais sans lui — on PRÉVIENT à deux
+         seuils pendant qu'on l'attend, sans jamais abandonner la promesse
+         elle-même (voir lib/service-lent.ts). Les deux actions vérifient le
+         jeton : un calcul plus récent (nouveau clic, nouvelle étape) rend
+         cet essai muet, comme le reste de la fonction. */
+      const brut = await signalerLenteur(
+        calculerItineraire(depart, arrivee, profil, options),
+        { lent: SEUIL_LENTEUR_ITINERAIRE_MS, abandon: SEUIL_ABANDON_ITINERAIRE_MS },
+        {
+          surLenteur: () => {
+            if (jeton !== this.#sequence) return;
+            lenteur.hidden = false;
+            lenteur.textContent = 'Le service d’itinéraire de l’IGN répond '
+              + 'lentement — le calcul continue…';
+          },
+          surAbandon: () => {
+            if (jeton !== this.#sequence) return;
+            this.#abandonAnnonce = jeton;
+            lenteur.hidden = true;
+            resultat.hidden = true;
+            abandon.hidden = false;
+            (abandon.querySelector('.iti-abandon-texte') as HTMLElement).textContent =
+              'Le service d’itinéraire de l’IGN ne répond toujours pas. '
+              + 'Vous pouvez réessayer.';
+          },
+        },
+      );
       /* LA PROVENANCE SE NOTE ICI, au moment de la requête, et non plus tard
          depuis le cliché (CONTRAT-1) : reconstruite ailleurs, elle dirait ce
          qu'on CROIT avoir demandé, pas ce qui est parti. */
@@ -4887,6 +5100,11 @@ export class PanneauItineraire extends HTMLElement {
       const iti = mode === 'velo'
         ? { ...brut, duree: dureeVelo(brut.distance) } : brut;
       if (jeton !== this.#sequence) return;
+      // LE TRAJET A FINALEMENT ABOUTI : les deux bandeaux (lenteur, abandon),
+      // s'ils étaient visibles, n'ont plus lieu d'être — le résumé normal
+      // reprend sa place plus bas (`#majResume`).
+      lenteur.hidden = true;
+      abandon.hidden = true;
       this.#dernier = iti;
       this.#calculPour = {
         depart, arrivee, profil, mode, etapes: inter, eviter, optimisation,
@@ -4929,7 +5147,7 @@ export class PanneauItineraire extends HTMLElement {
          recalcul (cases cochées, étapes déplacées) ne déclenchent qu'UN
          calcul de plan — et donc UN relevé de conditions. */
       clearTimeout(this.#minuteurPlanAuto);
-      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, 1200);
+      this.#minuteurPlanAuto = setTimeout(() => { void this.#planifierRecharge(true); }, DEBOUNCE_PLAN_AUTO_MS);
       const etatPause = this.querySelector<HTMLElement>('.recharge-pause-etat');
       if (etatPause) etatPause.textContent = '';
       this.#rechercheReseau = '';
@@ -4948,10 +5166,34 @@ export class PanneauItineraire extends HTMLElement {
       this.#chercherPlusDirect(jeton, depart, arrivee, profil, eviter, iti.distance);
     } catch (e) {
       if (jeton !== this.#sequence) return;
+      lenteur.hidden = true;
       resultat.hidden = true;
-      erreur.textContent = e instanceof ErreurItineraire
+      const message = e instanceof ErreurItineraire
         ? e.message : 'Calcul impossible pour le moment.';
-      erreur.hidden = false;
+      /* LES DEUX MÉCANISMES S'ACCORDENT ICI (SEUIL-1, 13/09/2026).
+         AVANT : la promesse d'origine échouait au plafond dur de 16 500 ms et
+         ce catch masquait « Réessayer », ouvert à 15 000 ms. Le bouton vivait
+         1 500 ms. Personne ne clique un bouton qui vit une seconde et demie.
+         MAINTENANT : si la porte a été ouverte pour CE calcul, l'échec de la
+         promesse ne la referme pas — il ÉCRIT DEDANS. L'usager garde le geste
+         dont il a besoin (il n'a toujours pas d'itinéraire) jusqu'à ce qu'il
+         s'en serve, relance un calcul, ou efface le trajet.
+         POURQUOI PAS SIMPLEMENT BAISSER LE SEUIL : un seuil plus bas ne donne
+         ses huit secondes que dans le seul cas où le service épuise ses deux
+         essais. Si le service échoue de lui-même à 8,2 s, la soustraction
+         redevient courte et le défaut revient, invisible. Ici la durée de vie
+         du bouton ne dépend plus d'une soustraction entre deux constantes
+         étrangères l'une à l'autre : elle est une propriété de l'écran. */
+      if (this.#abandonAnnonce === jeton) {
+        (abandon.querySelector('.iti-abandon-texte') as HTMLElement).textContent =
+          message + ' Vous pouvez réessayer.';
+        abandon.hidden = false;
+        erreur.hidden = true;
+      } else {
+        abandon.hidden = true;
+        erreur.textContent = message;
+        erreur.hidden = false;
+      }
       attenteChien().effacer();
     }
   }
@@ -5035,6 +5277,17 @@ export class PanneauItineraire extends HTMLElement {
     (this.querySelector('.iti-resultat') as HTMLElement).hidden = true;
     (this.querySelector('.iti-actions') as HTMLElement).hidden = true;
     (this.querySelector('.iti-menu:not(.iti-menu-toujours)') as HTMLElement).hidden = true;
+    /* REVUE CODEX (ITI-LENT-1) : le jeton change deux lignes plus haut, donc
+       le succès ou l'échec tardif de #calculer ne nettoiera JAMAIS ces deux
+       bandeaux lui-même (son propre garde de jeton les en empêche) — sans
+       cette ligne, « Effacer le trajet » pendant une attente lente laissait
+       le message affiché sur un panneau vidé. */
+    (this.querySelector('.iti-lenteur-service') as HTMLElement).hidden = true;
+    (this.querySelector('.iti-abandon-service') as HTMLElement).hidden = true;
+    /* SEUIL-1 : la porte survit désormais à l'échec de la promesse, donc elle
+       doit être refermée ICI explicitement — sinon un échec tardif la
+       rouvrirait sur un panneau déjà vidé. */
+    this.#abandonAnnonce = 0;
     /* EFFACER LE TRAJET ARRÊTE LE SUIVI. Un bandeau qui continue de compter
        les kilomètres d'un itinéraire qui n'existe plus consomme le GPS pour
        rien — et ment. */

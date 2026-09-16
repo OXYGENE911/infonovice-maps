@@ -263,3 +263,65 @@ describe('phraseRecharge', () => {
       .toBe('Arrêt recharge dans 900 mètres, Borne du bourg');
   });
 });
+
+/* LA VOIX NE PRONONCE JAMAIS UN IDENTIFIANT BRUT (TERRAIN-2, 13/09).
+ *
+ * LE DÉFAUT QUE LE CEO A VU LE 11/09 PASSAIT AUSSI PAR LA VOIX, et c'est le
+ * pire des deux : un identifiant affiché, on le masque d'un doigt ; prononcé,
+ * il occupe la seconde où l'on attendait le nom de la ville. La sonde du
+ * vérificateur rendait « Dans 300 mètres, serrez à droite, vers … » avec la
+ * référence technique lue en toutes lettres.
+ *
+ * LE FILTRE EST DANS LA FORMULATION, donc il se teste ici, à sec.
+ */
+describe('phraseAnnonce — AUCUN IDENTIFIANT BRUT DANS L’OREILLE', () => {
+  const BRUTS: [string, string][] = [
+    ['TRONROUT0000000352788241', 'cleabs de la BD TOPO — la forme vue à l’écran'],
+    ['way/123456789', 'élément OpenStreetMap'],
+    ['n48219', 'forme courte d’un nœud OSM — que classeRoute prenait pour une nationale'],
+    ['motorway_junction', 'valeur technique OSM'],
+    ['osm:name', 'clé technique'],
+  ];
+
+  for (const [brut, pourquoi] of BRUTS) {
+    it(`ne dit jamais « ${brut} » comme voie — ${pourquoi}`, () => {
+      const phrase = phraseAnnonce('proche', 300, { manoeuvre: 'slight right', voie: brut });
+      expect(phrase).not.toContain(brut);
+      expect(phrase.toLowerCase()).not.toContain(brut.toLowerCase());
+      /* ET LA PHRASE RESTE UNE INSTRUCTION : on se tait sur la destination,
+         pas sur la manœuvre. Un GPS muet est un défaut, pas une réparation. */
+      expect(phrase).toBe('Dans 300 mètres, serrez à droite');
+    });
+
+    it(`ne dit jamais « ${brut} » comme ville desservie`, () => {
+      const phrase = phraseAnnonce('proche', 300, {
+        manoeuvre: 'slight right', villes: [brut],
+      });
+      expect(phrase).not.toContain(brut);
+      expect(phrase).toBe('Dans 300 mètres, serrez à droite');
+    });
+  }
+
+  it('garde la ville lisible et jette l’identifiant qui la suit', () => {
+    expect(phraseAnnonce('proche', 300, {
+      manoeuvre: 'slight right', villes: ['Lyon', 'way/1234', 'Évry'],
+    })).toBe('Dans 300 mètres, serrez à droite, vers Lyon, Évry');
+  });
+
+  it('DIT ENCORE LE NUMÉRO DE ROUTE — c’est un nom, pas un identifiant', () => {
+    /* LA CONTRE-ÉPREUVE, sans laquelle on aurait « réparé » en supprimant
+       l’information : « vers A7 » est exactement ce qu’un passager dirait. */
+    expect(phraseAnnonce('proche', 300, { manoeuvre: 'slight right', voie: 'A7' }))
+      .toBe('Dans 300 mètres, serrez à droite, vers A7');
+    expect(phraseAnnonce('proche', 300, { manoeuvre: 'slight right', voie: 'D606' }))
+      .toBe('Dans 300 mètres, serrez à droite, vers D606');
+    expect(phraseAnnonce('proche', 300, { manoeuvre: 'slight right', voie: 'Rue de Rivoli' }))
+      .toBe('Dans 300 mètres, serrez à droite, vers Rue de Rivoli');
+  });
+
+  it('DIT ENCORE LE NUMÉRO DE SORTIE — « 14 » n’a pas de lettre, et c’est normal', () => {
+    expect(phraseAnnonce('proche', 300, {
+      manoeuvre: 'slight right', sortie: '14', voie: 'way/999999',
+    })).toBe('Dans 300 mètres, serrez à droite, sortie 14');
+  });
+});

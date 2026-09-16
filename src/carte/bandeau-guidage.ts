@@ -81,7 +81,9 @@ import {
 } from '../lib/voies';
 import type { EvenementTrajet } from '../lib/trafic';
 import { flecheManoeuvre } from './icone-manoeuvre';
-import { refermerPanneaux } from './panneaux';
+import { CLASSE_FLOTTANT, refermerPanneaux } from './panneaux';
+import { installerTenueEnLignes } from './tenir-en-lignes';
+import { nomsLisibles, voieLisible } from '../lib/nom-lisible';
 import { classeRoute, numeroRoute, libelleClasse } from '../lib/classe-route';
 import { fondPanneau, encreSur, cartoucheNumero } from '../lib/panneau';
 import { pictoMenu } from './icone-menu';
@@ -617,7 +619,11 @@ export class BandeauGuidage extends HTMLElement {
   get actif(): boolean { return this.#veille !== null; }
 
   connectedCallback(): void {
-    if (this.firstElementChild) return;
+    /* DÉJÀ RENDU : on ne refait pas le balisage, mais les observateurs, eux,
+       ont été coupés au retrait (voir `disconnectedCallback`). Ils se
+       reposent, sans quoi le texte cesserait de tenir en deux lignes après
+       un simple déplacement dans le DOM. Relevé par la revue Codex. */
+    if (this.firstElementChild) { this.#installerTenue(); return; }
     this.hidden = true;
     this.setAttribute('role', 'complementary');
     this.setAttribute('aria-label', 'Suivi de l’itinéraire');
@@ -704,9 +710,18 @@ export class BandeauGuidage extends HTMLElement {
              liste de parkings publics à proximité ». Il ne paraît qu'à
              l'approche, et ne demande RIEN tant qu'on ne le presse pas —
              Overpass est un commun bénévole. -->
-        <button type="button" class="bg-parking-p" hidden
+        <button type="button" class="bg-parking-p" hidden aria-expanded="false"
           aria-label="Suggérer des parkings près de la destination">P</button>
-        <div class="bg-parkings" hidden role="region"
+        <!-- ELLE SE FERME COMME TOUT LE RESTE (TERRAIN-1, 11/09). Armelin, son
+             téléphone en main : la feuille « ne se ferme qu'au bouton ». Elle
+             n'est pas un volet details et passait donc à côté du mécanisme
+             commun. On ne lui en écrit pas un second : elle se DÉCLARE, et
+             panneaux.ts lui applique Échap et l'appui extérieur comme aux
+             volets du rail. L'attribut data-volet-bouton nomme le P —
+             l'interrupteur n'est pas un « à côté », et le focus lui revient
+             après Échap. -->
+        <div class="bg-parkings ${CLASSE_FLOTTANT}" hidden role="region"
+          data-volet-bouton=".bg-parking-p"
           aria-label="Parkings près de la destination">
           <p class="bg-parkings-titre">Se garer près de l’arrivée</p>
           <ul class="bg-parkings-liste"></ul>
@@ -1060,6 +1075,19 @@ export class BandeauGuidage extends HTMLElement {
     this.querySelector('.bg-parking-p')?.addEventListener('click', () => {
       void this.#ouvrirParkings();
     });
+    /* ÉCHAP ET L'APPUI EXTÉRIEUR ARRIVENT PAR ICI (TERRAIN-1). `panneaux.ts`
+       décide QUAND fermer ; la feuille sait, elle, ce que fermer emporte —
+       les pastilles P posées sur la carte s'en vont avec elle. */
+    this.querySelector('.bg-parkings')?.addEventListener('volet-fermer', () => {
+      this.#fermerParkings();
+    });
+
+    /* LE TEXTE DU PANNEAU TIENT EN DEUX LIGNES (TERRAIN-2, 11/09). Armelin :
+       « un texte long déborde du cadre ». Le cartouche est un panneau de
+       direction : ce qu'il porte tient dedans, quitte à rétrécir par paliers,
+       et l'on ne coupe qu'en dernier recours. Le CADRE qui décide est le
+       panneau lui-même : c'est sa largeur qui borne les lignes. */
+    this.#installerTenue();
     this.querySelector('.bg-bilan-garder')?.addEventListener('click', () => {
       void this.#garderLeTrajet();
     });
@@ -1619,6 +1647,30 @@ export class BandeauGuidage extends HTMLElement {
     this.#marqueurArrivee = null;
   }
 
+  /** Le retrait des observateurs de la tenue en deux lignes (TERRAIN-2). */
+  #retirerTenue: (() => void) | null = null;
+
+  /** Pose les observateurs qui tiennent le texte du panneau en deux lignes.
+   *  IDEMPOTENT : deux jeux d'observateurs mesureraient deux fois le même
+   *  texte, et le second ne serait jamais retiré. */
+  #installerTenue(): void {
+    this.#retirerTenue?.();
+    this.#retirerTenue = null;
+    const cadre = this.querySelector<HTMLElement>('.bg-cartouche');
+    const instruction = this.querySelector<HTMLElement>('.bg-cartouche .bg-instruction');
+    const destination = this.querySelector<HTMLElement>('.bg-destination');
+    if (!cadre || !instruction || !destination) return;
+    this.#retirerTenue = installerTenueEnLignes(cadre, [instruction, destination]);
+  }
+
+  /* LES OBSERVATEURS SE COUPENT AU RETRAIT (revue Codex). Un `MutationObserver`
+     survit au détachement de son sous-arbre : laissés en place, les nôtres
+     continueraient de mesurer un panneau que plus personne ne regarde. */
+  disconnectedCallback(): void {
+    this.#retirerTenue?.();
+    this.#retirerTenue = null;
+  }
+
   /* ---- la suggestion de parking (PARK-1, 31/08) ---- */
 
   /** Vrai une fois « Se garer » pressé : la suggestion ne revient pas. */
@@ -1981,6 +2033,7 @@ export class BandeauGuidage extends HTMLElement {
     if (!feuille || !liste || !etat) return;
     if (!feuille.hidden) { this.#fermerParkings(); return; }
     feuille.hidden = false;
+    this.querySelector('.bg-parking-p')?.setAttribute('aria-expanded', 'true');
 
     /* AUTOUR DE LA DESTINATION DEMANDÉE, pas de la fin du tracé : le tracé
        s'arrête sur la route, la destination est l'adresse. Sans destination
@@ -2120,6 +2173,7 @@ export class BandeauGuidage extends HTMLElement {
   #fermerParkings(): void {
     const feuille = this.querySelector<HTMLElement>('.bg-parkings');
     if (feuille) feuille.hidden = true;
+    this.querySelector('.bg-parking-p')?.setAttribute('aria-expanded', 'false');
     this.#retirerParkingsDeCarte();
   }
 
@@ -2458,7 +2512,17 @@ export class BandeauGuidage extends HTMLElement {
        cartouche rouge, le répéter en toutes lettres serait du bruit. */
     const rueVisee = !e.horsRoute && e.manoeuvre?.voie && numeroRoute(e.manoeuvre.voie) === ''
       ? [e.manoeuvre.voie] : [];
-    const villes = bretelle?.villes ?? (sortie?.nom ? [sortie.nom] : rueVisee);
+    /* JAMAIS D'IDENTIFIANT BRUT (TERRAIN-2, retour du CEO du 11/09). Ces
+       trois sources sont des champs de DONNÉES — `destination` et `name`
+       d'OpenStreetMap, `nom_1_gauche` du service d'itinéraire — et elles
+       portent, à côté des noms de villes, des références techniques qui
+       n'ont jamais été écrites pour être lues au volant. La règle vit dans
+       `lib/nom-lisible.ts`, testée à sec : le rendu change, la règle reste.
+       S'IL NE RESTE RIEN DE LISIBLE, la ligne ne paraît pas — l'instruction
+       et les numéros de route suffisent. C'est déjà la règle de SORTIE-1 :
+       on affiche ce qu'on a, on se tait sur le reste. */
+    const villes = nomsLisibles(
+      bretelle?.villes ?? (sortie?.nom ? [sortie.nom] : rueVisee));
     const texte = villes.join(' · ');
     if (texte === '') {
       ligne.hidden = true;
@@ -2897,8 +2961,33 @@ export class BandeauGuidage extends HTMLElement {
        où l'on VA (la voie de la manœuvre à venir), la barre du bas nomme
        celle où l'on EST. Les confondre, c'est afficher le nom de la rue
        qu'on quitte au-dessus de la flèche qui en sort. */
-    const voieCourante = e.horsRoute ? '' : (e.etape?.voie ?? '');
-    const voieVisee = e.horsRoute ? '' : (e.manoeuvre?.voie ?? voieCourante);
+    /* JAMAIS D'IDENTIFIANT BRUT, ICI NON PLUS (TERRAIN-2, 13/09). C'est LA
+       LIGNE QUE LE CEO A VUE : `.bg-voie`, en bas du bandeau, recevait
+       `e.etape.voie` sans aucun filtre — le champ que `versEtapes` remplit
+       avec `cpx_numero`, à défaut `nom_1_gauche`, à défaut `cpx_toponyme`.
+       Quand les deux noms manquent, c'est une référence technique qui
+       s'affiche, et elle s'affichait.
+       ET C'EST `voieLisible`, PAS `nomLisible` : dans ce champ, « D606 » est
+       un nom — c'est ce qui est peint sur la tôle. `nomLisible` seule, qui
+       juge des noms de LIEU, l'aurait effacé avec les identifiants, et l'on
+       aurait réparé le défaut en supprimant l'information. */
+    const voieCourante = e.horsRoute ? '' : (voieLisible(e.etape?.voie) ?? '');
+    /* LA VOIE VISÉE EST FILTRÉE AUSSI : elle nourrit `numeroRoute`, donc
+       l'écusson. Sans filtre, « n48219 » — la forme courte d'un nœud OSM —
+       passait pour une nationale et s'affichait en cartouche rouge.
+       ET LE REPLI NE VAUT QUE POUR UN CHAMP ABSENT, jamais pour un champ
+       ILLISIBLE — relevé par la revue Codex du 13/09. Se rabattre sur la voie
+       COURANTE parce que la voie VISÉE est un identifiant afficherait
+       l'écusson de la route qu'on quitte comme celui de la route à prendre :
+       une information fausse, et sur un panneau de direction c'est pire que
+       le silence. Quand la voie visée existe mais ne se lit pas, on se tait. */
+    /* ABSENT N'EST PAS VIDE, et la revue Codex du 13/09 a relevé la nuance :
+       `versEtapes` rend TOUJOURS le champ, parfois à vide. Une chaîne vide
+       dit « cette voie n'a pas de nom » — il n'y a rien à mettre à la
+       place ; seul un champ MANQUANT justifie de retomber sur la voie
+       courante, comme avant TERRAIN-2. */
+    const brutVisee = e.horsRoute ? '' : (e.manoeuvre?.voie ?? null);
+    const voieVisee = brutVisee === null ? voieCourante : (voieLisible(brutVisee) ?? '');
     const classe = classeRoute(voieVisee);
     cartouche.hidden = !e.manoeuvre && !e.horsRoute;
     cartouche.dataset['classe'] = classe;

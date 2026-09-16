@@ -18,6 +18,7 @@
  * « la deuxième sortie ».
  */
 import type { Manoeuvre } from './feuille-de-route';
+import { nomsLisibles, voieLisible } from './nom-lisible';
 import { libelleRang } from './giratoire';
 
 /** Un palier d'annonce, du plus lointain au plus proche. */
@@ -130,9 +131,20 @@ export function phraseAnnonce(
   }
 
   if (contexte.sortie) morceaux.push(`sortie ${contexte.sortie}`);
-  const villes = (contexte.villes ?? []).slice(0, 2);
+  /* JAMAIS D'IDENTIFIANT BRUT DANS L'OREILLE (TERRAIN-2, 13/09).
+     UN IDENTIFIANT PRONONCÉ EST PIRE QU'AFFICHÉ : on ne peut pas le masquer
+     d'un doigt, et « vers TRONROUT0000000352788241 » épuise la phrase que le
+     conducteur écoutait pour savoir où aller. Le filtre vit ICI, dans la
+     formulation, et non chez l'appelant : le bandeau n'est pas le seul à
+     construire un contexte, et un appelant à venir oublierait le filtre.
+     LE NUMÉRO DE SORTIE N'EST PAS FILTRÉ, et c'est voulu : « 14 » n'a aucune
+     lettre, il serait effacé par une règle qui juge des NOMS — alors que
+     c'est exactement ce qui est peint sur le panneau. Il vient d'un champ
+     `ref` de sortie, pas d'un champ de nom. */
+  const villes = nomsLisibles(contexte.villes ?? []).slice(0, 2);
+  const voie = voieLisible(contexte.voie);
   if (villes.length > 0) morceaux.push(`vers ${villes.join(', ')}`);
-  else if (contexte.voie) morceaux.push(`vers ${contexte.voie}`);
+  else if (voie !== null) morceaux.push(`vers ${voie}`);
 
   const phrase = morceaux.join(', ');
   return phrase.charAt(0).toUpperCase() + phrase.slice(1);

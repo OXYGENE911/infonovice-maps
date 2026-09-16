@@ -1,0 +1,155 @@
+# PRÉVISUALISATION DE `staging` (STAGING-1, 13/09/2026).
+#
+# À QUOI SERT CE WORKFLOW. Chaque poussée sur `staging` construit l'application
+# en mode prévisualisation et l'envoie à un projet Cloudflare Pages qui sert
+# https://maps-staging.pages.dev/. Le CEO et les testeurs de l'AFUVE
+# essaient alors la préversion depuis un vrai téléphone, sans tunnel depuis un
+# poste de développement.
+#
+# CE WORKFLOW NE TOUCHE PAS À LA PRODUCTION. `deploiement.yml` publie `main`
+# sur GitHub Pages et reste inchangé. Les deux chemins sont séparés de bout en
+# bout : autre branche, autre construction, autre hébergeur, autre domaine.
+#
+# LA PORTE AVANT LE DÉPLOIEMENT. Trois étapes doivent passer avant que quoi que
+# ce soit parte : lint + tests unitaires (une fusion sur `staging` peut différer
+# des PR qui l'ont formée), puis `verifier-previsualisation.mjs`, qui relit le
+# `dist/` RÉEL et refuse un dossier auquel il manquerait le bandeau ou l'un des
+# deux verrous d'indexation. Un `dist/` non conforme ne part pas — et la
+# préversion précédente reste en ligne, ce qui est le bon repli.
+#
+# TANT QUE LES SECRETS N'EXISTENT PAS, ce workflow reste VERT et se contente de
+# l'écrire : créer le projet Cloudflare `maps-staging` (branche de production
+# `staging`) et déposer le jeton sont DEUX gestes du CEO (voir
+# docs/DEPLOIEMENT.md). Il n'y a plus de DNS à poser : `maps-staging.pages.dev`
+# est servi par Cloudflare sans enregistrement de notre part — le domaine
+# personnalisé est reporté. Un workflow qui rougirait à
+# chaque poussée en attendant ces gestes apprendrait surtout à ignorer le rouge.
+name: Prévisualisation
+on:
+  push:
+    branches: [staging]
+  # Pour rejouer un déploiement sans commit — après une panne Cloudflare, ou
+  # juste après que le CEO a déposé le jeton. LA BRANCHE EST VÉRIFIÉE : voir la
+  # toute première étape.
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  # Une seule préversion en vol : la dernière poussée gagne, les précédentes
+  # sont abandonnées plutôt que de se doubler à l'arrivée.
+  group: previsualisation
+  cancel-in-progress: true
+jobs:
+  previsualiser:
+    runs-on: ubuntu-latest
+    env:
+      PROJET_PAGES: maps-staging
+    steps:
+      # LA GARDE DE BRANCHE, ET ELLE EST EN PREMIER (revue Codex, 13/09).
+      # `workflow_dispatch` laisse choisir la branche : sans cette garde, un
+      # lancement manuel depuis une branche de fonctionnalité construisait CETTE
+      # branche et la publiait sous `--branch=staging`, donc sur le domaine que
+      # les testeurs de l'AFUVE regardent. Elle est placée AVANT le `checkout` :
+      # rien du dépôt n'est exécuté tant qu'elle n'a pas répondu.
+      #
+      # LE NOM DE BRANCHE PASSE PAR `env`, JAMAIS PAR `${{ }}` DANS LE SCRIPT
+      # (2e revue Codex). Interpolé directement, il est COLLÉ dans le script
+      # avant que Bash le lise : une branche nommée `feat/";exit 0;#` refermait
+      # la chaîne, exécutait `exit 0`, et l'étape réussissait — la garde tombait
+      # sur la seule règle de nommage d'une branche. En variable d'environnement,
+      # le contenu reste une donnée et n'est jamais du code.
+      - name: N'accepter que la branche staging
+        if: github.ref != 'refs/heads/staging'
+        env:
+          REFERENCE: ${{ github.ref }}
+        run: |
+          echo "Référence demandée : $REFERENCE"
+          echo "::error title=Branche interdite::La prévisualisation ne publie que « staging »."
+          exit 1
+
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        # Node 24 comme la CI : le npm 10 de Node 22 appelle un point d'audit
+        # retiré (voir ci.yml).
+        with: { node-version: 24, cache: npm }
+      - run: npm ci
+
+      - name: Lint et typecheck
+        run: npm run lint
+      - name: Tests unitaires
+        run: npm test
+
+      - name: Construire la préversion
+        # LA SEULE DIFFÉRENCE AVEC LA CONSTRUCTION DE PRODUCTION tient dans
+        # cette variable : elle allume le plugin de src/lib/previsualisation.ts
+        # (bandeau, titre, robots.txt fermé, _headers X-Robots-Tag).
+        env:
+          INFONOVICE_ENVIRONNEMENT: previsualisation
+        run: npm run build
+
+      - name: Porte — la préversion se dit et ne s'indexe pas
+        run: node scripts/verifier-previsualisation.mjs dist
+
+      # LE JETON N'EST DONNÉ QU'AUX DEUX ÉTAPES QUI EN ONT BESOIN (revue Codex).
+      # Posé au niveau du job, il était présent dans l'environnement de
+      # `npm ci`, du lint et des tests : un script d'installation compromis
+      # pouvait le lire directement. Ici, cette étape ne fait que constater s'il
+      # existe et publie un « oui » ou un « non » — elle n'imprime jamais sa
+      # valeur.
+      # C'EST UNE RÉDUCTION D'EXPOSITION, PAS UNE ISOLATION, et il faut le dire :
+      # une dépendance compromise peut encore écrire dans `$GITHUB_ENV` pour se
+      # faire charger par le shell d'une étape ultérieure. Contre CETTE menace,
+      # seul un job séparé sans `npm ci` protégerait vraiment ; c'est la piste à
+      # prendre si l'on veut fermer ce chemin.
+      - name: Les secrets sont-ils déposés ?
+        id: secrets
+        env:
+          JETON: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          COMPTE: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$JETON" ] && [ -n "$COMPTE" ]; then
+            echo "prets=oui" >> "$GITHUB_OUTPUT"
+          else
+            echo "prets=non" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Préversion construite, non déployée::Les secrets CLOUDFLARE_API_TOKEN et CLOUDFLARE_ACCOUNT_ID ne sont pas encore déposés. La construction est vérifiée ; le déploiement attend les gestes décrits dans docs/DEPLOIEMENT.md."
+          fi
+
+      - name: Déployer sur Cloudflare Pages
+        id: deploiement
+        if: steps.secrets.outputs.prets == 'oui'
+        # ÉPINGLÉE AU COMMIT, PAS AU TAG. Cette action reçoit un jeton d'API
+        # Cloudflare ; un tag mobile peut être redirigé vers un autre commit
+        # par quiconque a les droits sur le dépôt de l'action. Le commit, lui,
+        # ne bouge pas. Ci-dessous : cloudflare/wrangler-action v4.0.0
+        # (12/05/2026). Pour monter de version, remplacer le SHA ET le
+        # commentaire, jamais l'un sans l'autre.
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Version exacte : à trois semaines du Mondial de l'Auto, une montée
+          # de version automatique est un risque qu'on ne prend pas.
+          wranglerVersion: "4.131.1"
+          # LE NOM DU PROJET FABRIQUE L'ADRESSE, ET LA BRANCHE DE PRODUCTION
+          # DÉCIDE SI ON LA SERT. Cloudflare sert `<projet>.pages.dev` depuis la
+          # BRANCHE DE PRODUCTION du projet ; toute autre branche reçoit un
+          # alias `<branche>.<projet>.pages.dev` (documentation Pages, relevée
+          # le 13/09/2026). D'où deux conditions liées, et non une :
+          #   - le projet s'appelle `maps-staging` (variable PROJET_PAGES),
+          #     sans quoi l'adresse n'est pas maps-staging.pages.dev ;
+          #   - sa branche de production est `staging`, sans quoi cet envoi
+          #     devient une PRÉVERSION Cloudflare et maps-staging.pages.dev
+          #     reste figé — workflow vert, page immobile.
+          # Le projet étant en téléversement direct, ce réglage ne se corrige
+          # PAS au tableau de bord : voir le PATCH d'API du Geste 1 dans
+          # docs/DEPLOIEMENT.md.
+          command: pages deploy dist --project-name=${{ env.PROJET_PAGES }} --branch=staging --commit-hash=${{ github.sha }}
+
+      - name: Où regarder
+        if: steps.deploiement.outcome == 'success'
+        run: |
+          echo "### Préversion déployée" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Adresse : <https://maps-staging.pages.dev/>" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Déploiement : ${{ steps.deploiement.outputs.deployment-url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit : \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"

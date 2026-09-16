@@ -2,6 +2,930 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.149.0] — 2026-09-13 — SONDE-VRAIE-1
+
+### La sonde ne mesurait pas ce qu'elle annonçait — et une assertion affaiblie est restaurée
+- **UNE SECONDE ASSERTION NE POUVAIT PAS ROUGIR — corrigée.** Dans
+  `tests-e2e/sonde-chrono.spec.ts`, l'exigence « le bouton reste utilisable AU MOINS 8 000 ms »
+  lisait `toujoursOuverteApresMs`, c'est-à-dire `dernierRegard - porteOuverteA` — exactement la
+  quantité que le `waitForFunction` précédent attend de voir franchir 10 000 ms : elle était vraie
+  PAR CONSTRUCTION. Elle lit désormais la **tenue utilisable** du bouton (`dureeDeVieMs` quand la
+  porte se referme, la fenêtre observée sinon) et passe AVANT le contrôle de non-fermeture.
+  Contre-épreuve du 13/09, jeton d'abandon neutralisé dans le produit : **rouge sur cette
+  ligne-là, « reçu 1 484 ms, attendu ≥ 8 000 »** ; produit restauré, les quatre parcours du
+  fichier repassent au vert. Aucune barre n'a bougé : 8 000 reste 8 000.
+- **L'ASSERTION AFFAIBLIE AU COMMIT `3f38cb3` EST RESTAURÉE.**
+  `tests/garde-processus.test.ts` : `expect(c.node).toBeGreaterThanOrEqual(0)` redevient
+  `toBeGreaterThanOrEqual(1)`, avec son titre d'origine. Elle avait été baissée parce que la
+  CI Ubuntu comptait 0 processus `node` alors que node l'exécutait. **Baisser une barre parce
+  qu'on ne la franchit pas retire à la garde ce qu'elle vérifiait.** Elle passe aujourd'hui
+  parce que le compteur a été réparé, pas parce que la barre a été déplacée.
+- **Le comptage de processus lit désormais la source du NOYAU**
+  (`scripts/garde-processus.mjs`) : `/proc/<pid>/exe` sous Linux, le nom d'image `tasklist`
+  sous Windows, `ps -o comm=` (chemin de l'exécutable) ailleurs. `ps -o comm=` lisait
+  `/proc/<pid>/comm`, alimenté par `process.title` — et Vitest renomme ses processus, donc un
+  processus qui se renomme échappait au comptage. Le relevé dit désormais **d'où** il lit
+  (`source`) et **combien de pids il n'a pas pu résoudre** (`nonResolus`) : un compte de 12
+  dont 40 non résolus ne se lit pas comme un compte de 12 tout court.
+- **`--campagne` chronomètre le calcul d'itinéraire**, du geste qui le lance jusqu'au plan de
+  recharge lisible — la définition mot pour mot de la feuille de relevé mobile, pour que le
+  chiffre du poste et celui du téléphone se comparent. Il relevait jusqu'ici `performance.now()`
+  après le chargement de la page : **étalonné avec un retard connu de 3 000 ms sur la CI Ubuntu
+  du commit `a3732db` (run 34738395197, 13/09 05 h 07 UTC), l'ancien instrument aurait publié
+  599 ms là où le vrai calcul en prend 5 456.** Les six chiffres qu'il aurait produits n'auraient
+  rien dit du critère des 5 s. Ces nombres étalonnent l'INSTRUMENT sur une fixture, pas le
+  produit.
+- **Une valeur bornée par la fenêtre d'observation ne sort plus sous le nom d'une mesure.**
+  Quand la porte de sortie ne se referme pas — c'est-à-dire quand le correctif de la PR #318
+  fonctionne —, la sonde écrit `dureeDeVieMs: null` et `toujoursOuverteApresMs: <N>` au lieu
+  d'un nombre qui grandissait avec la patience de l'observateur.
+- **L'empreinte du bundle est contrôlée APRÈS le scénario**, donc après l'import dynamique du
+  panneau d'itinéraire — mesuré : ce chunk n'est cité ni dans `dist/index.html` ni dans ses
+  `modulepreload`, et le navigateur ne le demande que 1 141 ms après le DÉBUT de la navigation —
+  donc bien après le retour de `load` (CI du 13/09, commit `a3732db`, run 34738395197 ; l'écart
+  depuis la FIN du chargement, lui, n'est pas relevé par l'instrument). La
+  sonde **exige** en plus de l'avoir vu (sortie en code 5) : un contrôle qui n'a jamais vu le
+  fichier n'est pas un contrôle.
+- **Découvert en mesurant :** le prédicat de la porte confondait « le bouton n'existe pas » et
+  « le bouton est hors du champ visible ». À 1 280 × 720, « Réessayer » est à y = 732, sous la
+  ligne de flottaison. Les deux faits sont désormais relevés séparément. Le bouton n'a pas été
+  déplacé : le correctif de la porte est hors périmètre de cette passe.
+- **Relevé pour le CEO, pas tranché :** le délai avant la première porte de sortie vaut
+  **15 025 ms** mesurés, et pendant ces quinze secondes l'écran est immobile — « Calcul de
+  l'itinéraire… » à 6 ms, la ligne de lenteur à 2 513 ms, rien d'autre. Deux valeurs et leurs
+  coûts dans `docs/mesure-seuil-porte.md` §14.
+- **Après la revue Codex (verdict initial « NE PAS FUSIONNER ») :** les zombies ne sont plus comptés
+  comme des processus résidents ; la garde refuse aussi quand la borne pessimiste
+  `total + nonResolus` dépasse le plafond (1 processus reconnu et 24 pids illisibles laissaient
+  partir la campagne) ; le critère exige désormais un plan **lisible à l'écran** et non seulement
+  écrit ; deux assertions E2E qui pouvaient rougir sans régression ont été retirées ou rendues
+  déterministes. Au second passage, quatre trous de plus ont été fermés : l'étalonnage vérifie l'égalité `dureeCalculMs = planLisibleA − departA`, la fenêtre d'observation de la porte est déterministe et lue à l'horloge de l'observateur, et le contrôle de divergence n'est plus sauté en CI.
+- Nouveaux fichiers : `scripts/chrono-sonde.mjs` (verdicts purs, éprouvés dans les deux sens),
+  `scripts/serveur-dist.mjs` (le serveur de la sonde, extrait pour être essayé sans navigateur),
+  `tests/chrono-sonde.test.ts`, `tests/sonde-bundle.test.ts`, `tests-e2e/sonde-chrono.spec.ts`.
+- **Aucune campagne n'a tourné** : la garde refuse sur ce poste (37 processus résidents relevés
+  le 13/09 pour un plafond de 20, sortie en code 2). Ce qui est éprouvé, et comment, est écrit
+  au §15 de `docs/mesure-seuil-porte.md`.
+- **UN RELEVÉ PUBLIÉ EST RETIRÉ, et deux commandes non rejouables sont corrigées** (finition du
+  13/09, constats du vérificateur). `docs/mesure-seuil-porte.md` §13 annonçait « trois relevés,
+  tous rejouables » puis en publiait cinq, dont le premier — 12 637 / 10 124 / 3 059 ms pour trois
+  `compterProcessus()` — n'était produit par **aucune commande** et se trouve démenti d'un facteur
+  ~28 par deux mesures indépendantes (454 / 443 / 424 ms et 420 / 418 / 430 ms). Il est retiré, et
+  la dérivation « × 2,4 » qu'il portait avec lui : les délais de parcours 30 000 / 45 000 ms sont
+  désormais annoncés pour ce qu'ils sont, des plafonds volontairement larges, et **ce qui détecte
+  une dérive est le journal, pas le plafond**. §11 citait de son côté
+  `--config=playwright.contre-epreuve.config.ts`, un fichier **jamais committé** : la
+  contre-épreuve du seuil des 8 000 ms a été rejouée avec la configuration du dépôt et publie sa
+  séquence exacte (rouge à `sonde-chrono.spec.ts:411`, « reçu 1 516 ms, attendu ≥ 8 000 » ;
+  produit restauré → `4 passed`).
+- **La troisième lecture réelle de `tests/garde-processus.test.ts` publie enfin son coût.** Le
+  fichier affirmait que « chaque lecture réelle publie ce qu'elle a coûté » ; celle du parcours
+  « ne confond pas chrome… » lisait la table en silence, sous le délai par défaut de 5 s de
+  Vitest, à 469 ms mesurés — et jusqu'à 1 946 ms machine chargée. Trois lignes `[garde]` au
+  journal au lieu de deux, plafond explicite sur le parcours.
+
+## [1.148.0] — 2026-09-13 — SEUIL-1
+
+### La porte de sortie reste ouverte, et une campagne de mesure se refuse elle-même
+- **Le défaut repris d'ITI-LENT-1 était arithmétique, pas aléatoire.** Le seuil
+  d'abandon ouvrait « Réessayer » à 15 000 ms ; le plafond dur de
+  `calculerItineraire` (2 × 8 000 ms + 500 ms d'attente = 16 500 ms) faisait
+  rejeter la promesse 1 500 ms plus tard, et le `catch` masquait alors le
+  bandeau d'abandon. **Le bouton vivait une seconde et demie.** Personne ne
+  clique un bouton qui vit une seconde et demie.
+- **Correctif retenu : l'ACCORD des deux mécanismes, pas la baisse du seuil.**
+  Quand la porte a été ouverte pour ce calcul, l'échec de la promesse ne la
+  referme plus — il **écrit dedans**. L'usager garde le message ET le geste,
+  jusqu'à ce qu'il s'en serve, relance un calcul, ou efface le trajet.
+  *Pourquoi pas simplement baisser le seuil* : un seuil plus bas ne donne ses
+  huit secondes que dans le seul cas où le service épuise ses deux essais ; si
+  le service échoue de lui-même à 8,2 s, la soustraction redevient courte et le
+  défaut revient, invisible. Ici la durée de vie du bouton n'est plus une
+  soustraction entre deux constantes étrangères l'une à l'autre : elle est une
+  propriété de l'écran. Le seuil d'abandon reste à 15 000 ms — le faire
+  descendre est une question de produit (délai avant la première porte de
+  sortie), distincte, et non tranchée ici.
+- **La sonde de mesure refuse désormais de mesurer sur une machine chargée**
+  (`scripts/garde-processus.mjs`, `scripts/sonde-porte-sortie.mjs`). Elle compte
+  les processus `node` et `chrome` au début et à la fin, journalise les deux,
+  signale une campagne dont le compte de fin dérive, et **sort en erreur
+  (code 2) au-delà de 20 processus résidents**. Règle du CEO du 13/09,
+  implantée dans l'outil plutôt que confiée à la mémoire.
+- **⚠️ AUCUNE MESURE EN NAVIGATEUR N'A PU ÊTRE PRISE CE JOUR.** La garde a
+  rejeté la campagne : **30 processus résidents pour un plafond de 20**, machine
+  au repos, aucune autre mission en cours. L'application de bureau Codex en
+  occupe **16 à elle seule**. **Le critère des 5 secondes n'est donc ni tenu ni
+  non tenu : il n'est pas mesuré**, et la durée de vie du bouton n'est pas
+  chronométrée — seulement rendue structurellement non bornée par le code, ce
+  qui n'est pas la même chose. Tout est écrit dans `docs/mesure-seuil-porte.md`,
+  §5 pour le refus et §7 pour ce que cela ne prouve pas.
+- 27 tests (7 sur l'accord, contre-épreuve faite deux fois ; 20 sur la garde,
+  éprouvée des DEUX côtés du seuil — refus à 21, acceptation à 20 pile).
+  1 708 tests verts.
+  Bundle : +0,04 Ko gzip (125,45 → 125,62 Ko / 40,57 → 40,61 Ko gzip, mesuré).
+- **Revue Codex (BLOQUANT, corrigé)** : quatre constats, tous fondés. Le comptage
+  de processus n'appelait que `tasklist`, absent de la CI Ubuntu — le test de
+  comptage y aurait rougi à chaque exécution (corrigé, `ps` hors Windows) ; les
+  sélecteurs de la sonde n'existaient pas dans le panneau (réécrits d'après le
+  scénario E2E) ; une dérive incalculable était déclarée « tolérable »
+  (`NaN > 3` vaut false — corrigé, elle est suspecte) ; et la contre-épreuve de
+  régression dépendait de l'indentation (elle compte désormais les fermetures
+  au lieu de les filtrer). **Second passage : BLOQUANT, corrigé aussi** — le
+  comptage strict ratait tout le Chromium de Playwright (`chrome-headless`,
+  `headless_shell`), donc 24 navigateurs se comptaient pour zéro ; et la
+  contre-épreuve acceptait encore la fermeture placée APRÈS le bloc `else`.
+  **Troisième passage : BLOQUANT, corrigé aussi** — sous Windows le comptage
+  interrogeait `tasklist` par nom exact, donc `chrome-headless.exe` restait
+  invisible ; et la reconnaissance par préfixe comptait `chromedriver` et
+  `nodemon`. Le comptage lit désormais toute la table une fois et filtre sur
+  une **liste explicite de noms exacts**, la même sur les deux systèmes.
+  **Quatrième passage : un dernier constat** — la liste exacte ne voyait pas les
+  processus auxiliaires du navigateur sous macOS (« Chromium Helper
+  (Renderer) »), soit 24 processus par navigateur à 24 onglets ; le rôle entre
+  parenthèses est désormais retiré avant comparaison. Aucune fuite de
+  `#abandonAnnonce` trouvée aux quatre passages.
+- **Deux chiffres faux corrigés** dans le CHANGELOG d'ITI-LENT-1 : le ratio
+  « sept fois » (2 500 / 380 = 6,58, soit six fois et demie — corrigé aussi dans
+  le commentaire du code et dans `docs/mesure-itineraire-lent.md`), et une
+  taille de bundle périmée (125,34 Ko était la valeur d'AVANT le correctif de la
+  revue Codex du 12/09).
+
+## [1.147.0] — 2026-09-13 — STAGING-1
+
+### Une URL de prévisualisation qui porte `staging`
+- **Le motif, mot pour mot (CEO, 13/09)** : « Sans elle je ne peux pas tester
+  en conditions réelles ni faire tester par les testeurs AFUVE. » Trois choses
+  en dépendaient : la mesure sur téléphone réel, les quatre testeurs de
+  l'AFUVE, et la répétition du stand du Mondial de l'Auto.
+- **Un workflow `previsualisation.yml`** : chaque poussée sur `staging` relance
+  lint, tests unitaires, construction en mode prévisualisation, puis envoie le
+  `dist/` à un projet Cloudflare Pages (téléversement direct — Cloudflare ne
+  construit rien) qui sert `maps-staging.pages.dev`. La **production ne
+  bouge pas** : `deploiement.yml` et GitHub Pages sont inchangés.
+- **La préversion se DIT.** Liseré ambre sur les quatre bords avec la mention
+  « PRÉVISUALISATION — ce site n'est pas la production », titre d'onglet
+  préfixé, application installée renommée « Maps préviz », attribut
+  `data-environnement` sur `<html>`. Posé dans le HTML à la construction, donc
+  visible avant le bundle et même sans lui ; `pointer-events: none`, donc
+  jamais un clic intercepté. Un retour de testeur qui croit être en production
+  est un retour perdu — c'est cela qu'on achète.
+- **Pas d'indexation, par trois moyens et non par un** : `robots.txt` en
+  `Disallow: /`, en-tête `X-Robots-Tag: noindex, nofollow, noarchive` via le
+  fichier `_headers`, et balise `<meta name="robots">` dans chaque page. Le
+  fichier seul ne suffit pas si un lien fuite ; l'en-tête couvre aussi les URL
+  `*.pages.dev`. `CNAME` et `sitemap.xml` sortent du `dist/` de préversion.
+- **Une porte avant le déploiement** (`scripts/verifier-previsualisation.mjs`)
+  relit le dossier réellement construit et refuse de livrer s'il manque une
+  seule marque sur une seule des huit pages. Contre-épreuve refaite après la
+  fusion de `staging` : le même script rejette le `dist/` de production avec
+  **85 griefs**, code 1 — 10 par page (8 pages) plus 5 sur les fichiers de
+  socle. Le chiffre suit le nombre de pages : il ne se compare qu'à un relevé
+  fait sur le MÊME dossier.
+- **Deux revues Codex ont trouvé dix façons de franchir la porte.** Toutes de la
+  même famille : elle cherchait des CHAÎNES là où il fallait lire une STRUCTURE.
+  Un `X-Robots-Tag` en commentaire, sous `/prive/*`, sous le domaine d'un tiers,
+  adressé au seul Bingbot, ou détaché plus bas par `! X-Robots-Tag`. Un
+  `Disallow: /` réservé à un robot, ou annulé par un groupe `Googlebot: Allow: /`
+  placé après. Un bandeau éteint par une seconde règle CSS ou par un
+  `display : none` avec des espaces. Une page dans un sous-dossier. Un lien de
+  feuille qui ne résout nulle part. La porte lit désormais les groupes, les
+  blocs, toutes les règles d'un sélecteur, et suit les liens jusqu'au fichier.
+  Cent-sept tests la mettent à l'épreuve (`tests/porte-previsualisation.test.ts`),
+  et son témoin « conforme » est bâti avec les constantes de production, pas
+  écrit à la main pour la circonstance.
+- **LE SEUIL QUI SE CONTOURNAIT D'UN CARACTÈRE, FERMÉ** (vérificateur
+  indépendant, 13/09). La porte refusait le ZÉRO : `border: 0`, `font-size: 0`.
+  Un chiffre de plus la franchissait. Mesuré, pas supposé : sur le `dist/` de
+  préversion réellement construit, augmenté de `border: 0.1px` et
+  `font-size: 0.1px`, la porte d'avant sortait en **code 0** en imprimant
+  « liseré de 0.1 px solid #ffb300, cadre inerte, pastille à 0.1 px » puis
+  « Préversion conforme : peut être déployé ». C'est le défaut de la sonde
+  d'origine, décalé d'un chiffre.
+  **Le plancher n'est pas un nombre choisi** : ce sont les valeurs que la
+  feuille de référence écrit (4 px de liseré, 13 px de pastille), et un test
+  rougit si l'une des deux bouge sans l'autre — elles ne peuvent plus diverger
+  en silence. Une épaisseur dans une unité que la porte ne sait pas convertir
+  est refusée plutôt que comparée à tort (`0.5em` vaut 8 px, pas 0,5). Une
+  boîte sous le pixel est traitée comme une boîte nulle. Sur la même sonde, la
+  porte sort désormais en **code 1**, deux griefs chiffrés.
+- **LA LISTE DES TROUS SE DISAIT EXHAUSTIVE ET NE L'ÉTAIT PAS** (vérificateur
+  indépendant, 13/09). La porte nommait « les deux endroits où elle reste
+  lâche » — `opacity`, `text-indent` — et donnait cette liste pour complète. Il
+  en manquait un TROISIÈME de la même famille : **la mise à l'échelle n'était
+  refusée qu'à zéro exact**, si bien que `transform: scale(0.0001)` franchissait
+  la porte, qui imprimait alors « cadre visible et pastille visible ». C'est mot
+  pour mot le défaut « un caractère de plus » que le liseré et la pastille
+  venaient de payer, laissé intact une ligne plus bas. Une liste de trous qui se
+  dit exhaustive sans l'être rend la porte décorative : on la croit sur parole.
+  **La liste a donc été refaite par SONDE et non par lecture** — chaque façon
+  d'éteindre le bandeau ajoutée à la feuille réellement servie, la porte
+  relancée — **et deux fois plutôt qu'une**, parce que la première passe s'est
+  trompée : elle refermait l'échelle sous `transform: scale` et sous `scale` en
+  la laissant ouverte sous `zoom`, qui est la même chose sous un autre nom. Un
+  trou refermé sous un nom et laissé ouvert sous un autre n'est pas refermé.
+  Au total **dix-sept familles** de franchissement : douze refermées ici, cinq
+  déclarées et tenues par des tests.
+  **Refermées, chacune avec son test** : le plancher d'échelle — `transform:
+  scale`, la propriété `scale` et `zoom` — et c'est l'identité, pas un nombre
+  choisi, puisque la porte refuse déjà un marquage plus petit que la
+  référence ; les transformations qu'elle ne sait pas évaluer (`matrix`,
+  `rotateY`, `perspective`) et la propriété `rotate` hors du plan ;
+  `display: contents`, qui ne fabrique aucune boîte et n'a donc aucun liseré à
+  peindre ; les découpes, masques, filtres et `border-image` —
+  `clip-path: inset(50%)`, `circle(0)`, `url(#vide)`, `mask`,
+  `filter: opacity(0)` — désormais refusés en bloc plutôt qu'énumérés, parce que
+  la porte lit du texte et ne saurait pas dire ce qu'il en reste de peint ;
+  `all: unset`, qui efface les déclarations mêmes sur lesquelles elle s'appuie ;
+  `-webkit-text-fill-color: transparent`, qui peint le glyphe à la place de
+  `color` ; et un interligne qui rogne le texte de la pastille
+  (`line-height: 0`), alors que la porte annonçait ses 13 px.
+  **Ce qui reste lâche, et ce n'est pas deux mais CINQ** : une opacité presque
+  nulle (`0.05`), un `text-indent` au-dessus de −1000 px, la géométrie de la
+  boîte — déplacement hors écran et reflux (`translateX(-99999px)`, la propriété
+  `translate`, `left: -9999px`, `top: 100vh`, `inset: 100%`, `position: static`,
+  `contain`) —, l'empilement (`z-index: -1`, ou une autre feuille qui peindrait
+  par-dessus), et une boîte entre le pixel et la référence (`width: 1px`). Les
+  refermer demanderait de connaître la fenêtre du visiteur, de composer toutes
+  les feuilles et de les peindre : la porte lit du texte. **Ce que ces
+  déclarations font vraiment à l'écran n'a pas été mesuré** — la sonde dit
+  seulement que la porte les laisse passer, et c'est déjà assez pour l'écrire.
+  Ces cinq-là ne sont pas seulement écrits : **cinq tests affirment qu'ils
+  passent**, et un sixième relit la liste en tête du script. Si quelqu'un en
+  referme un sans mettre la liste à jour, la CI rougit et le lui demande — ce
+  qui est arrivé pendant l'écriture de ce correctif, et a servi.
+- **Deux trous de sécurité dans le workflow, fermés.** `workflow_dispatch`
+  laissait publier **n'importe quelle branche** sous `--branch=staging` : une
+  garde de branche est maintenant la toute première étape, avant le `checkout`.
+  Et cette garde interpolait `github.ref` dans un script shell — une branche
+  nommée `feat/";exit 0;#` la faisait réussir ; le nom passe désormais par une
+  variable d'environnement, où il reste une donnée. Le jeton Cloudflare, lui,
+  n'est plus posé au niveau du job : il n'entre que dans les deux étapes qui en
+  ont besoin. Réduction d'exposition, pas isolation — c'est écrit tel quel dans
+  le workflow.
+- **Une limite, écrite plutôt que tue** : `Disallow: /` empêche un moteur de
+  LIRE le `noindex` qu'on lui destine. Un lien fuité peut donc encore produire
+  un résultat nu, sans titre. On garde les deux (c'est la consigne, et certains
+  robots ignorent `robots.txt`), et `docs/DEPLOIEMENT.md` §3 dit pourquoi le
+  seul verrou qui fermerait vraiment — une porte Cloudflare Access — n'est PAS
+  posable sur un `*.pages.dev`, et à quelle condition il le redeviendrait.
+- **La contrainte 2 du `CLAUDE.md` est complétée dans le même commit**, pas
+  contournée : elle dit désormais ce qui vaut pour la production et ce qui est
+  ouvert pour la seule prévisualisation, et ce que l'ouverture ne couvre pas.
+  Une règle qu'on contourne en silence se retourne contre nous au premier agent
+  qui la fait respecter correctement.
+- **Ce qui reste à faire, et qui n'appartient pas aux agents** : créer le
+  projet Cloudflare `maps-staging` avec `--production-branch=staging`, et
+  déposer le jeton. **Deux gestes, plus trois** — le DNS a disparu avec le
+  changement de cible. Ils sont écrits prêts à exécuter dans
+  `docs/DEPLOIEMENT.md`, dans l'ordre, avec ce qui se passe si l'un manque.
+  Tant qu'ils ne sont pas faits, le workflow construit, vérifie, et **reste
+  vert** en disant qu'il n'a rien déployé.
+
+### Correction de cible du 13/09 (même version, avant fusion)
+- **La cible devient `maps-staging.pages.dev`.** Un certificat générique
+  `*.infonovice.fr` couvre `maps.infonovice.fr` mais pas ce qui serait un cran
+  plus bas : le sous-domaine de deuxième niveau visé d'abord était donc
+  inatteignable en HTTPS sans certificat dédié, chez OVH comme dans le SSL
+  universel de Cloudflare. Le projet Cloudflare s'appelle désormais
+  `maps-staging` — **c'est le nom du projet qui fabrique l'adresse** — et sa
+  **branche de production doit être `staging`**, faute de quoi chaque envoi
+  devient une préversion Cloudflare et l'adresse reste figée. Le domaine
+  personnalisé `maps-staging.infonovice.fr` est **reporté** : sa procédure est
+  écrite au §4 bis de `docs/DEPLOIEMENT.md` et n'est pas active.
+- **La porte lisait la présence d'une déclaration, pas sa valeur.** Un
+  `border: 0 solid #FFB300` et un `font-size: 0` la faisaient sortir en code 0
+  — et elle imprimait alors « cadre visible et pastille visible ». Le code
+  livré était correct : c'est la garde qui mentait, et une garde qui affirme ce
+  qu'elle n'a pas vérifié est pire qu'une absence de garde. Elle lit désormais
+  des NOMBRES : épaisseur du liseré (raccourci `border` compris, `!important`
+  compris, un seul côté à zéro suffit), `border-style: none|hidden`, liseré
+  transparent, taille de police (y compris celle cachée dans le raccourci
+  `font`), texte de la couleur du fond (`#FFB300` et `rgb(255,179,0)` sont
+  comparés comme des couleurs, pas comme des chaînes), et huit autres façons de
+  disparaître — `scale(0)`, boîte de taille nulle, `clip-path: inset(100%)`,
+  `visibility: collapse`, `text-indent` hors champ… La sonde du vérificateur
+  est devenue un test.
+- **La préversion se disait production quand on partageait son lien.** Chaque
+  page portait `<link rel="canonical">` et `og:url` vers
+  `maps.infonovice.fr`, plus un bloc JSON-LD de production : un testeur AFUVE
+  qui collait l'URL de préversion dans une messagerie produisait une vignette
+  annonçant le site de production. La construction de préversion retire
+  désormais le `canonical`, l'`og:url` et le JSON-LD, et préfixe `og:title` et
+  `og:site_name`. La porte refuse un `dist/` où l'un d'eux subsisterait.
+- **Le poids d'`index.html` est corrigé** : 9 171 octets en préversion contre
+  10 169 en production (−998), mesuré par `wc -c`. Le rapport du cycle annonçait
+  10 750 (+581) ; le chiffre juste avant le retrait des métadonnées était
+  10 514 (+345).
+## [1.146.0] — 2026-09-13 — WIKIMEDIA-0
+
+### Wikimedia sort de Maps gratuit — Decision D3 du CEO (11/09), appliquée
+- **Les trois hôtes sont sortis de la CSP d'`index.html`** :
+  `upload.wikimedia.org` (`img-src`), `query.wikidata.org` et
+  `commons.wikimedia.org` (`connect-src`). La `connect-src` passe de 19 à 17
+  hôtes déclarés, l'`img-src` de 3 à 2. C'est le point qui manquait : la
+  décision datait du 11/09 et les trois hôtes étaient encore en production le
+  12/09 à 22 h 11 UTC.
+- **Le code est parti avec** : `src/lib/photos-monuments.ts` supprimé,
+  et dans `src/carte/fiche-lieu.ts` l'import, le champ `#photoEnCours`, la
+  `<figure class="fb-photo">` et la méthode `#chargerPhoto`. Le crédit sous
+  l'image (`figcaption.fb-photo-credit`, « auteur — licence · Wikimedia
+  Commons ») disparaît avec elle, ainsi que le bloc `PHOTO-1` de
+  `src/styles/carte.css`.
+- **AUCUN EMPLACEMENT RÉSERVÉ NE RESTE.** Avant, une fiche sans photo portait
+  quand même une `<figure hidden>` : un cadre qui attendait. Mesuré au
+  viewport 1280×720, la boîte de la fiche est **identique au pixel** avant et
+  après — cadre `.fb` 360 × 455,89 px, corps qui ne défile pas (403 / 403),
+  gouttières inchangées (10 / 9,99 px), ordonnées des quatre blocs
+  identiques. Ce qui change : un nœud de moins, et **zéro requête** vers
+  Wikimedia contre une avant (`query.wikidata.org`).
+- **La fiche illustrée débordait**, elle : 652 px de contenu pour 451 px de
+  fenêtre, plafonnée à 504 px. Sans photo, la fiche tient entière.
+- **Deux portes anti-retour** dans `tests/csp-connect-src.test.ts` : aucun
+  hôte `wikimedia`/`wikidata`/`wikipedia` dans la CSP, aucun dans `src/`.
+  Contre-épreuve faite — réintroduire `upload.wikimedia.org` dans `img-src`
+  fait rougir le test.
+- **Le parcours E2E `PHOTO-1` devient `PHOTO-0`** : il n'affirme plus que la
+  photo arrive, il affirme que **rien ne part**. Il ÉCOUTE le réseau sans y
+  répondre (`page.on('request')`), vérifie qu'aucun nœud `.fb-photo` n'existe,
+  et mesure les trous entre blocs du corps de fiche.
+- **PHOTO-0 écoute aussi les VIOLATIONS DE CSP** — défaut relevé par Codex le
+  13/09 : un appel réintroduit vers un hôte absent de la CSP est bloqué par le
+  navigateur AVANT d'être émis, donc `page.on('request')` ne voit rien et le
+  test resterait vert. Contre-épreuve faite : un `fetch` vers
+  `query.wikidata.org` glissé dans `ouvrir()` laisse le compteur réseau à zéro
+  et fait échouer la nouvelle assertion (`tentatives bloquées par la CSP :
+  https://query.wikidata.org/sparql?q=1`).
+- **Ce que l'usager perd, et la phrase qui le dit** : la photographie en tête
+  de la fiche d'un monument classé. Le reste ne bouge pas — titre, commune,
+  siècle, statut, notice officielle `pop.culture.gouv.fr`, bouton
+  d'itinéraire. La phrase pour le stand et les cinq conditions d'un retour par
+  Panoramax (37 %, mesuré le 11/09/2026) sont dans `docs/apis.md`, §5.
+- **Les DEUX variantes de la phrase du stand disent maintenant la même chose,
+  et la même chose que la page servie.** La variante courte promettait encore
+  « à une exception près… la météo », alors que
+  `https://maps.infonovice.fr/a-propos.html`, telle qu'elle est servie le
+  13/09/2026, porte `<h2>Première exception : la météo</h2>` **et**
+  `<h2>Seconde exception : les photos des monuments</h2>` — `a-propos.html`
+  l. 164, fichier identique sur `origin/main`, `origin/staging` et cette
+  branche. Les deux variantes **nomment** désormais les deux exceptions au lieu
+  d'en promettre une seule ; **la courte y ajoute le décompte** (**15 hôtes en
+  `.fr` sur les 18 de la CSP servie**), la longue n'en porte aucun. Elle dit
+  « déclare pouvoir appeler », et non « interroge » : la CSP autorise, elle
+  ne prouve pas qu'une session les contacte tous. Documentation seule : aucun code, aucun test touché.
+- **Non fait, et dit** : `a-propos.html` décrit encore la « seconde
+  exception » Wikimedia (l. 166 et 171). Cette page fait l'objet d'une
+  décision CEO ouverte et sort du périmètre de la tâche — la page annonce
+  donc une fonction que l'application n'a plus.
+
+## [1.145.0] — 2026-09-13 — TERRAIN-2
+
+### Le panneau de guidage se lit : jamais d'identifiant brut, jamais plus de deux lignes
+- **Le défaut vient d'un usager, pas d'un test.** Armelin, son téléphone en
+  main le 11/09 : « un identifiant brut s'affiche à l'écran », et « un texte
+  long déborde du cadre ».
+- **(a) La règle de lisibilité est une fonction pure** — `src/lib/nom-lisible.ts`,
+  et non une rustine dans le rendu : le cartouche a déjà déménagé deux fois
+  depuis le 29/08, une rustine serait partie avec lui. Elle reconnaît ce
+  qu'aucun nom de ville ni de rue ne prend pour forme : élément OSM
+  (`way/123456789`, `n48219`), souligné des valeurs techniques
+  (`motorway_junction`), clé en tête (`osm:name`, `ref=A4`), suite de cinq
+  chiffres, code d'un seul tenant en capitales (`FR75056`), valeurs qui disent
+  l'absence (`noname`, `FIXME`). **Elle penche du côté de l'affichage** :
+  « CHU », « RN7 », « Marseille : port » restent lisibles — effacer un vrai
+  nom par excès de prudence serait le défaut inverse.
+- **Quand rien de lisible ne reste, la ligne secondaire ne paraît pas.**
+  L'instruction et les numéros de route suffisent : mieux vaut moins
+  d'information qu'une information illisible. C'est déjà la règle de SORTIE-1.
+- **(b) Deux lignes au maximum** — `src/carte/tenir-en-lignes.ts`. Dans cet
+  ordre, et l'ordre n'est pas un détail : **on réduit la police par paliers**
+  (1 · 0,92 · 0,84 · 0,76 · 0,68 · 0,6), **puis seulement on coupe à
+  l'ellipse**. Une instruction de navigation coupée est une instruction
+  fausse ; une instruction plus petite reste juste. On ne descend pas sous
+  60 % — en dessous, on ne lit plus au volant.
+- **Des observateurs, pas un appel derrière chaque écriture** : le texte du
+  cartouche s'écrit depuis quatre endroits du bandeau, et un cinquième
+  viendra. La mutation observée est le TEXTE (pas les attributs) et le
+  redimensionnement est filtré sur la LARGEUR du cadre : ni l'un ni l'autre
+  ne peut boucler sur notre propre réglage.
+- **La ligne secondaire n'est plus en `nowrap`** : elle perdait tout sauf son
+  premier mot sur un panneau qui en portait deux lignes.
+- **Mesuré, pas regardé.** Viewport 360 px, boîte englobante relevée dans le
+  navigateur : « À l'embranchement, restez légèrement à droite vers A4/E54 »
+  passe de **3 lignes** (avant) à **2 lignes** à 17,48 px, rendue
+  ENTIÈREMENT — `scrollWidth` 286 = `clientWidth` 286, aucune ellipse.
+- **Trois défauts relevés par la revue Codex, et corrigés** :
+  1. la règle effaçait « Impasse des 10000 Martyrs Pinet » — une voie réelle
+     d'Eyzin-Pinet (38). Un nom en PLUSIEURS MOTS est une phrase, pas un
+     identifiant : on y tolère désormais les nombres qu'un nom de voie porte
+     réellement (une date, un code postal) et l'on ne se méfie qu'au-delà de
+     **sept** chiffres, longueur qu'aucun nom de lieu ne prend et que toute
+     clé technique dépasse. Un mot SEUL reste jugé à cinq ;
+  1bis. le seuil plus souple laissait alors passer « OSM way 482190 » — les
+     motifs d'élément OSM étaient ancrés en début de chaîne. Un motif les
+     reconnaît désormais AU MILIEU d'une phrase, à trois chiffres collés au
+     mot : « Rue de la Relation » reste un nom, « OSM node 48219 » non ;
+  2. les observateurs n'étaient jamais coupés au retrait du composant. Un
+     `disconnectedCallback` les coupe, et `connectedCallback` les repose même
+     lorsque le balisage existe déjà — sans quoi le texte cesserait de tenir
+     en deux lignes après un déplacement dans le DOM.
+- 51 tests unitaires pour la règle de détection et le comptage de lignes
+  (nom lisible, identifiant brut, chaîne vide), 4 parcours à 360 px.
+
+### Reprise du 13/09 — la CI était ROUGE, et le défaut du CEO toujours à l'écran
+
+- **La CI de la PR #320 était rouge, et le rapport l'annonçait « pending ».**
+  Trois exécutions échouées (34732882937, 34733355972, 34733581014), toutes sur
+  le même parcours : « UNE LIGNE SECONDAIRE INTERMINABLE » mesurait **3 lignes**
+  là où deux étaient promises.
+- **La mesure comptait le CONTENU, pas la BOÎTE.** `mesurer()` divisait
+  `scrollHeight` par l'interligne. Dès qu'un texte est coupé — ce que la règle
+  prévoit en dernier recours — `scrollHeight` garde la hauteur du texte ENTIER :
+  la boîte peinte tenait en deux lignes, la mesure en annonçait trois. Sur ce
+  poste, la police est plus étroite, les paliers suffisaient, la coupe n'était
+  jamais atteinte et le parcours était vert ; sur le runner Linux, non.
+  Les DEUX hauteurs sont désormais relevées, et aucune n'est lâchée : la boîte
+  peinte doit tenir en deux lignes, **et** tout écart entre les deux doit être
+  une coupe VOULUE — jamais un débordement qu'on n'aurait pas vu.
+- **Le dernier recours ne reposait sur rien de garanti.** `.texte-coupe` déclare
+  `display:-webkit-box` pour obtenir `-webkit-line-clamp`, mais `.bg-destination`
+  est un **item flex** de `.bg-cartouche` : le mode de boîte d'un item flex est
+  blockifié. **Mesuré dans le navigateur le 13/09 : `display` calculé =
+  `flow-root`**, jamais `-webkit-box`. Une règle CSS écrite n'est pas une règle
+  CSS active. La garantie des deux lignes est donc posée en **pixels mesurés** —
+  `tenir-en-lignes.ts` écrit `max-height = 2 × interligne` au moment où il pose la
+  coupe (relevé : `22.50px` pour un interligne de `11.25px`). Elle ne dépend plus
+  d'aucun mode de boîte ni d'aucun moteur. Le clamp reste pour les trois points.
+- **`nomsLisibles()` n'était branché qu'à UN endroit** — `.bg-destination`.
+  Trois autres chemins menaient le même champ jusqu'à l'usager, et le défaut
+  qu'Armelin a vu passait par le premier :
+  1. **`.bg-voie`**, la voie courante en bas du bandeau, recevait `e.etape.voie`
+     sans filtre ;
+  2. **la VOIX** — `phraseAnnonce` disait « vers … » avec l'identifiant. **Un
+     identifiant prononcé est pire qu'affiché : on ne le masque pas d'un doigt.**
+     Le filtre est posé DANS la formulation, pas chez l'appelant, pour qu'un
+     appelant à venir ne puisse pas l'oublier ;
+  3. **la feuille de route imprimable** (`panneau-itineraire.ts`) écrivait la
+     même donnée noir sur blanc. Une feuille s'emporte : l'identifiant y vit plus
+     longtemps qu'à l'écran.
+- **Un numéro de route est un NOM** — `voieLisible()`. Filtrer le champ « voie »
+  avec la règle des noms de LIEU aurait effacé « A6 », « N7 », « D606 » : on
+  aurait réparé le défaut en supprimant l'information. La seconde règle garde les
+  numéros à leur forme courte (une lettre de réseau, au plus quatre chiffres) et
+  ferme au passage un trou que `classeRoute` seule laissait ouvert : « n48219 »,
+  forme courte d'un nœud OSM, passait pour une nationale et s'affichait en
+  cartouche rouge.
+- **Trois constats de la revue Codex du 13/09, tous corrigés — le verdict était
+  bloquant, et il avait raison** :
+  1. *(bloquant)* le contrôle de débordement excusait la hauteur dès que la
+     CLASSE `texte-coupe` était posée. **Une classe posée ne prouve pas que le
+     navigateur cache quoi que ce soit** — c'est exactement l'erreur qu'on venait
+     de réparer, commise une seconde fois. Le parcours lit désormais
+     `overflow-y` CALCULÉ : sans écrêtage réel, le débordement est un défaut ;
+  2. l'exception des numéros de route repêchée sur la seule FORME laissait
+     repasser « n4821 » — forme courte d'un nœud OSM à QUATRE chiffres, la
+     taille exacte d'un numéro de route. `motifIdentifiant()` nomme désormais la
+     règle déclenchée, et l'exception ne lève que « ressemble à un code »,
+     jamais « est un élément OpenStreetMap » ;
+  3. le repli de la voie visée sur la voie COURANTE se déclenchait aussi quand
+     la voie visée était ILLISIBLE : le panneau affichait alors l'écusson de la
+     route qu'on QUITTE comme celui de la route à PRENDRE. Le repli ne vaut plus
+     que pour un champ absent ; une voie visée illisible fait taire l'écusson.
+- **Trois constats de plus à la seconde revue Codex, corrigés aussi** :
+  1. *(bloquant)* le parcours du critère promettait « la phrase rendue
+     ENTIÈREMENT », et ne vérifiait que le DOM. **Être dans le DOM n'est pas
+     être à l'écran** : `.bg-instruction` hérite d'un `overflow:hidden`, une
+     troisième ligne écrêtée aurait la même hauteur peinte qu'une phrase qui
+     tient. La preuve est désormais l'ÉGALITÉ des deux hauteurs, et le même
+     contrôle s'applique à la ligne secondaire hors coupe ;
+  2. **la casse faisait passer une clé technique**. Le libellé de voie est
+     capitalisé avant d'atteindre la règle — **mesuré : `versEtapes` rend
+     « Osm:name » pour un champ `osm:name`** — et le motif, ancré sur une
+     minuscule, ne le voyait plus. Il traversait alors les quatre sorties,
+     voix comprise. Le motif ne dépend plus de la casse ;
+  3. **absent n'est pas vide** : `versEtapes` rend toujours le champ `voie`,
+     parfois à vide. Le repli sur la voie courante, resserré au premier tour,
+     se déclenchait encore sur une chaîne vide — et affichait l'écusson de la
+     route quittée pour une manœuvre vers une voie sans nom. Il ne vaut plus
+     que pour un champ MANQUANT.
+- **Troisième tour de revue Codex, trois constats de plus** :
+  1. *(bloquant)* **compter des lignes ARRONDIES ne prouve pas qu'il ne manque
+     rien.** Interligne 20 px, contenu 40, boîte 36 : deux lignes de chaque
+     côté, et quatre pixels cachés. La preuve est désormais l'inégalité en
+     PIXELS (`scrollHeight ≤ clientHeight + 1`), c'est-à-dire exactement
+     l'assertion d'origine — restituée, et levée seulement quand un plafond
+     est RÉELLEMENT posé : deux propriétés calculées, `max-height` ≠ `none`
+     ET `overflow-y` écrêtant. Aucune PREUVE GÉOMÉTRIQUE ne s'appuie plus
+     sur une classe — la classe ne sert qu'à dire que le mécanisme s'est
+     déclenché, plus à dire qu'il a marché ;
+  2. **la casse laissait encore passer un code** : le motif des codes d'un
+     seul tenant était en capitales seules, et **mesuré, un champ « AB12 »
+     rend « Ab12 »** après mise en forme du libellé — la voix disait
+     « vers Ab12 ». Le motif ignore la casse ; les lettres accentuées en
+     restent dehors, « Évry75 » est un nom mal saisi, pas un code ;
+  3. **un arbitrage assumé, et épinglé par un test** : une lettre de réseau
+     suivie de quatre chiffres SANS séparateur a deux lectures — « N1004 »,
+     une nationale, et « n4821 », la forme courte d'un nœud OSM. La casse les
+     distinguerait, mais elle est perdue en amont (mesuré : `libelleVoie`
+     capitalise). **On choisit le silence sur cette forme** : afficher un
+     identifiant est le défaut qu'Armelin a vu, taire un nom de route est une
+     information en moins. Les formes non équivoques sont gardées — « N 1004 »,
+     « RN1004 », « D1004 ». Ce test-là existe pour que l'arbitrage se renverse
+     par une décision, pas par accident.
+- **Aucune assertion n'a été affaiblie pour obtenir du vert** : neuf parcours à 360 px
+  et quatre-vingts tests unitaires ajoutés, dont un parcours qui FORCE le
+  dernier recours sur toute police (un texte qui ne tient sur aucune) et affirme,
+  dans le navigateur, que le plafond est bien posé et que la boîte peinte tient.
+
+### Finition du 13/09 — trois des quatre chemins n'avaient pas de garde capable de rougir
+
+- **LA CONTRE-ÉPREUVE, REJOUÉE ICI, ET SON COMPTE ENFIN PUBLIÉ PARCOURS PAR
+  PARCOURS.** Le récit précédent disait « 4 rouges sur 9, 5 verts » sans dire
+  LESQUELS, et ce silence le rendait illisible : « cinq parcours restaient
+  verts » et « trois des quatre chemins sans garde » semblaient se contredire.
+  Ils ne se contredisent pas, et voici pourquoi. Les trois sources remises dans
+  leur état d'avant (`bandeau-guidage.ts`, `panneau-itineraire.ts`,
+  `annonces.ts`), `dist/` reconstruit, les NEUF parcours d'alors : **4 rouges,
+  5 verts** — le compte est reproduit à l'identique. Et parmi les cinq verts,
+  **trois sont des contre-épreuves dont le métier EST de rester vertes**
+  (« un nom de voie LISIBLE s'affiche », « la voie courante lisible s'affiche »,
+  « D606 reste affiché » : l'ancien code n'effaçait rien, il affichait trop),
+  tandis que **deux étaient des gardes qui auraient dû rougir et ne le
+  pouvaient pas** — `.bg-voie` et la voie visée illisible. Un seul des quatre
+  chemins était donc réellement gardé. **Un test qui ne peut pas rougir ne
+  protège rien**, et il fait croire au suivant que le défaut est couvert.
+- **LA CAUSE, MESURÉE ET NON DÉDUITE : on affirmait sur la forme BRUTE, le
+  navigateur peint la forme MISE EN FORME.** `libelleVoie` capitalise avant
+  tout affichage : sondé le 13/09 sur le build d'avant, `.bg-voie` peignait
+  `Tronrout0000000352788241` pendant que le parcours cherchait
+  `TRONROUT0000000352788241` — et passait. Les assertions jugent désormais le
+  texte PEINT, sans égard à la casse, et refusent en plus toute suite de cinq
+  chiffres ou plus : aucun panneau de direction n'en porte.
+- **Deux chemins sur quatre n'avaient AUCUN parcours** — ils n'étaient tenus
+  que par des tests unitaires, qui ne disent rien de ce qui sort à l'écran :
+  1. **la VOIX** : `voix.spec.ts` affirme qu'aucun identifiant ne part à la
+     synthèse, **et** que la manœuvre elle-même est toujours dite — sans cette
+     seconde moitié, on aurait tenu la première en coupant la voix ;
+  2. **la feuille de route imprimable** : la liste imprimée ne porte plus
+     d'identifiant, **et** nomme toujours les voies lisibles.
+- **LES QUATRE CHEMINS SAVENT ROUGIR, ET LE COMPTE EST REFAIT SUR LA SUITE
+  ENTIÈRE.** Mêmes sources d'avant, mais les 22 parcours d'aujourd'hui :
+  **8 rouges, 14 verts.** Les quatre chemins y sont, chacun par son parcours —
+  `.bg-destination` (`guidage-lisible.spec.ts:324`), `.bg-voie` (`:355`), la
+  VOIX (`voix.spec.ts:285`), la feuille imprimable (`:488`) — et les quatre
+  rougissent en citant le texte réellement peint ou dit
+  (`Tournez à droite — Tronrout0000000352788241` sur la feuille,
+  `Dans 400 mètres, tournez à droite, vers Tronrout0000000352788241` à la voix).
+  Les 14 verts sont les trois contre-épreuves d'affichage et les onze AUTRES
+  parcours de `voix.spec.ts`, que rien dans ces trois sources ne touche.
+  Sources restaurées, `dist/` reconstruit : **22 parcours verts sur 22.**
+- **ET LA GARDE DE LA MANŒUVRE ÉTAIT TAUTOLOGIQUE — elle ne pouvait pas
+  rougir.** `voix.spec.ts` ATTENDAIT « tournez à droite », puis AFFIRMAIT
+  « tournez à droite » : l'attente sondait le texte même que l'assertion
+  vérifie. Rejoué ici avec la mutation exacte du vérificateur — `right:
+  'tournez à droite'` remplacé par `'prenez la sortie de droite'` dans
+  `src/lib/annonces.ts` — l'échec tombait sur le SONDAGE (« Timeout 10000ms
+  exceeded while waiting on the predicate »), jamais sur l'assertion, qui
+  n'était pas même atteinte. L'attente porte désormais sur la DISTANCE de
+  l'annonce — « Dans 400 mètres, » vient de `distanceDite()`, pas de la table
+  des manœuvres — et la même mutation fait maintenant rougir l'assertion
+  elle-même, qui cite ce que la voix a réellement dit : « Guidage vocal
+  activé… | Dans 400 mètres, prenez la sortie de droite ». **L'assertion n'a
+  pas été touchée** : seule la façon d'attendre a changé, et ce qu'elle garantit
+  est inchangé — la manœuvre doit être DITE, et dite avec les mots de la route.
+  **Les deux moitiés savent rougir, et c'est mesuré.** Seconde mutation, la ligne
+  `right:` RETIRÉE de `MOTS` — la phrase devient vide, donc silence : c'est
+  l'attente qui rougit alors, en disant pourquoi (« aucune annonce de manœuvre
+  à 400 m n'est partie »). Une garde qui sait rougir des deux côtés ne peut plus
+  être tenue par accident.
+- **La cause racine du 13/09 est rectifiée dans la description de la PR** :
+  ce qui faisait rougir la CI, c'était **la mesure sur `scrollHeight`**, qui
+  décrit le contenu et non la boîte peinte. Le `-webkit-box` blockifié d'un
+  item flex est réel et relevé, mais il n'était pas le facteur limitant.
+- **L'arbitrage « N1004 » est confirmé, et son coût est enfin CHIFFRÉ** —
+  il ne l'avait jamais été. Relevé le 13/09 sur OpenStreetMap, emprise
+  `ISO3166-1=FR` : **53 désignations de nationale** s'écrivent `N` + quatre
+  chiffres (N1001, N1013, N1113, N2007, N9057…), portées par **1 172
+  tronçons**. Sur les **278** désignations en `N` du pays, **223** restent
+  affichées et **53 sont tues, soit 19 %** ; en tronçons, 1 172 sur 39 570,
+  soit **3,0 %**. Les formes non équivoques restent affichées (« N 1004 »,
+  « RN1004 », « D1004 »). **Ce que l'arbitrage protège** : un identifiant
+  affiché est le défaut que le CEO a vu de ses yeux ; un nom de route tu est
+  une information en moins. Le renversement le moins coûteux, si le CEO le
+  décide, est de filtrer AVANT `libelleVoie` : la casse survit, et les deux
+  lectures se séparent d'elles-mêmes.
+- **`voix.spec.ts:243` a rougi chez le vérificateur : c'était un délai fixe,
+  mesuré.** Sur 21 exécutions de ce poste, la phrase de trafic part entre
+  **54 ms et 1 601 ms** après le retour de `suivre()` — l'attente écrite en dur
+  valait 1 500 ms. Une fois sur vingt et une, elle expirait avant la phrase.
+  **L'assertion n'a pas bougé** — la phrase de trafic DOIT partir ; c'est la
+  façon d'attendre qui a changé. Contre-épreuve : sans événement de trafic, la
+  garde rougit toujours (délai dépassé sur le prédicat).
+
+## [1.144.0] — 2026-09-13 — TERRAIN-1
+
+### La feuille des parkings se ferme comme tout le reste
+- **Le défaut vient d'un usager, pas d'un test.** Armelin, son téléphone en
+  main le 11/09 : le panneau des parkings « ne se ferme qu'au bouton ». Il
+  n'était pas un `<details>` — un `<div hidden>` posé dans le bandeau de
+  guidage — et passait donc à côté du mécanisme commun de `panneaux.ts`, qui
+  porte depuis le 25/08 l'exclusion mutuelle, Échap et l'appui extérieur.
+- **Aucun second mécanisme de fermeture n'a été écrit.** C'était la tentation,
+  et c'était la prochaine régression : deux jeux d'écouteurs à tenir d'accord.
+  `panneaux.ts` accueille désormais des **surfaces flottantes** qui ne sont
+  pas des volets `<details>`, et qui s'y raccordent en se DÉCLARANT : classe
+  `volet-flottant`, `hidden` pour état, `data-volet-bouton` pour nommer son
+  interrupteur, et l'événement `volet-fermer` pour que la surface fasse son
+  propre ménage — la feuille des parkings retire aussi ses pastilles P de la
+  carte, et le module commun n'a pas à connaître les pastilles.
+- **Le bouton P reste un interrupteur.** Il est explicitement exclu du « à
+  côté » : le compter dedans aurait fermé la feuille à l'appui pour que le
+  clic la rouvre aussitôt — le bouton aurait cessé de fermer. Il porte
+  désormais `aria-expanded`, qui suit l'état réel.
+- **Échap rend le focus au P** (même règle que A11Y-MODALE-1), et la surface
+  flottante passe DEVANT les volets du rail : Échap ferme ce qui est au-dessus.
+- **Un défaut relevé par la revue Codex, et corrigé** : le « P » s'efface dès
+  qu'un fixe GPS tombe hors route, tandis que la feuille reste ouverte.
+  `.focus()` sur un bouton masqué n'échoue pas — il ne fait RIEN, et le focus
+  tombait sur le `<body>`. Le focus est désormais rendu à l'hôte du volet,
+  rendu focalisable au programme seulement (`tabindex="-1"`, hors ordre de
+  tabulation) quand le bouton ne répond pas.
+- **Les parcours tapent AU DOIGT**, et ce n'est pas une coquetterie : la
+  maison a déjà payé un cycle pour l'avoir oublié (FANTOME-1, 03/09). Trois
+  parcours ajoutés à `tests-e2e/parking.spec.ts` — toucher hors panneau,
+  toucher DANS le panneau (qui ne doit rien fermer), Échap + focus + le P qui
+  rouvre et referme, plus le cas du bouton disparu. **Contre-épreuve faite** :
+  sans le mécanisme, deux des trois premiers rougissent ; sans le repli de
+  focus, le quatrième rougit.
+## [1.143.0] — 2026-09-12 — ITI-LENT-1
+
+### Le calcul d'itinéraire ne fait plus attendre en silence
+- **Le vrai reste de « plafonner l'altimétrie » (C4).** La contre-mesure du
+  12/09 l'a établi : le délai de garde posé au cycle précédent ne couvre que
+  l'altimétrie (facultative). L'itinéraire, lui, ne peut PAS être sauté —
+  sans lui il n'y a pas de trajet — donc pas de repli silencieux ici : deux
+  seuils qui préviennent l'usager, sans jamais annuler ni relancer l'appel.
+- **2 500 ms : « ça répond lentement, le calcul continue ».** Mesuré le
+  12/09 : huit appels réels au service (data.geopf.fr/navigation,
+  Paris→Lyon) répondent tous entre 246 et 380 ms — 2,5 s, c'est environ SIX
+  FOIS ET DEMIE ce plafond observé (2 500 / 380 = 6,58), loin de la latence
+  normale. *Corrigé le 13/09 : cette ligne annonçait « sept fois ».*
+- **15 000 ms : l'écran arrête de tourner en silence**, un bouton
+  « Réessayer » apparaît. `calculerItineraire` (deux essais, 8 s de timeout
+  chacun, 500 ms entre les deux) ne peut jamais dépasser 16,5 s — 15 s tombe
+  sous ce plafond dur : l'usager voit la porte de sortie avant que le
+  mécanisme interne n'ait fini de renoncer tout seul.
+- **Le mécanisme est différent de `delai-garde.ts` (ALTI-GARDE-1), et c'est
+  volontaire** : `avecDelaiDeGarde` jette la valeur tardive et rend
+  `undefined` — juste pour une donnée facultative. Ici (`lib/service-lent.ts`,
+  `signalerLenteur`), la promesse d'origine n'est jamais abandonnée : elle
+  continue de vivre, et sa résolution — même tardive, même après le bouton
+  « Réessayer » affiché — sert normalement à l'appelant, protégée par le
+  jeton de séquence déjà en place.
+- **Aucun appel de plus.** « Réessayer » relance le même calcul comme le
+  ferait n'importe quel geste de l'usager (changer une étape, cocher un
+  évitement) — aucune relance automatique, aucun martèlement du service
+  public. Bundle : +580 o gzip sur le morceau du planificateur (mesuré le 13/09 par
+  deux `npm run build` sur le même poste, 123,62 → 125,45 Ko / 39,99 →
+  40,57 Ko gzip). *Corrigé le 13/09 : cette ligne annonçait 125,34 Ko /
+  40,56 Ko, la taille d'AVANT le correctif de la revue Codex — périmée dès
+  le commit suivant.*
+- 4 tests unitaires sur le mécanisme (`tests/service-lent.test.ts`, dont les
+  deux scénarios du mandat : ralenti à 3 s, ralenti à 20 s) + 4 tests de
+  cohérence (`tests/iti-lent-seuils.test.ts`). 1 681 tests verts.
+- **Revue Codex (BLOQUANT, corrigé)** : « Effacer le trajet » (`#effacer`)
+  n'aurait masqué ni le bandeau de lenteur ni celui d'abandon — le jeton de
+  séquence change dans `#effacer`, donc le succès ou l'échec tardif de
+  `#calculer` ne les nettoie jamais lui-même. Corrigé, verrouillé par un
+  test dédié (contre-épreuve faite : le test rougit sans le correctif).
+## [1.142.1] — 2026-09-13 — PERF-PARIS-LYON (recgTL2LqMYAZf0mB)
+
+### 13/09/2026 (C10) — la régression que cette PR introduisait est corrigée ICI
+
+- **`tests-e2e/recharge.spec.ts:778` (« AUCUN appel tant que la section est
+  repliée ») redevient vert.** Le préchargement de l'index IRVE ci-dessous
+  gardait sur « le véhicule n'est pas thermique ». Or `panneau-vehicule.ts`
+  restaure au chargement de la page un véhicule électrique par défaut, même
+  quand personne n'a jamais rien saisi (capacité à 0) : `vehicule-change`
+  partait tout seul, « pas thermique » était vrai, et l'index national se
+  téléchargeait **sans qu'aucun usager ne l'ait demandé** — la violation
+  exacte de la règle « ne jamais marteler les API publiques sans demande »
+  que ce préchargement est censé respecter. Le garde est désormais
+  `#lireVehicule()`, le filtre qui décide RÉELLEMENT si un plan de recharge
+  peut se calculer (batterie ET consommation renseignées) : précharger pour
+  un profil que le planificateur rejetterait n'anticipe rien.
+  L'optimisation, elle, reste entière.
+- **Aucun test affaibli.** Le test qui tenait la régression est antérieur à
+  cette PR (identique au blob près sur `origin/staging`) et n'a pas été
+  touché. Contre-épreuve faite dans les deux sens le 13/09 : garde remis à
+  `estThermique` → `expect(appels).toBe(0)` reçoit 1, test rouge ; garde
+  restauré → vert. Les 35 parcours de `recharge.spec.ts` passent, et les
+  1 705 tests unitaires aussi.
+- **Cette correction vivait jusqu'ici dans la PR #315** (commit `5edacd1`).
+  Elle rentre dans la PR qui a causé la régression : une PR ne laisse pas sa
+  propre régression à corriger par une autre.
+
+### 13/09/2026 — ce que valent les chiffres de performance ci-dessous
+
+**Ils ont été pris sur le poste de développement, sur cette branche, et cette
+branche n'a jamais atteint `staging`.** Vérifié le 13/09 : `src/lib/arrets.ts`
+et `src/carte/panneau-itineraire.ts` sont identiques au blob près entre la
+tête du 10/09 et `origin/staging` — le produit calcule aujourd'hui comme le
+10 septembre. La seule mesure prise sur matériel neutre à ce jour est celle
+de la CI sur la PR #306 (exécution `34744537962`, commit `bbb7a7d`, dont
+`src/` est identique à `origin/staging`) : **5 251 ms, au-dessus du seuil de
+5 s.** Elle mesure donc `staging`, pas cette optimisation. Le chiffre qui
+tranchera est celui que la CI rendra sur CETTE branche, et il est cité dans
+la description de la PR.
+
+
+### Paris → Lyon, plan de recharge inclus, sous 5 secondes
+- **Le calcul mesuré par le banc T3 (`docs/mesure-paris-lyon.md`) passait
+  systématiquement le seuil de 5 s (p95 6 704 à 9 454 ms sur trois passages,
+  banc corrigé, réseau réel) ; il tient désormais large (p95 1 410 à 3 494 ms
+  sur les six passages mesurés après optimisation — trois avant la seconde
+  correction Codex, trois après ; médiane 673 à 702 ms).**
+- **Débounce de planification automatique, 1 200 ms → 300 ms**
+  (`panneau-itineraire.ts`, `#minuteurPlanAuto` → `DEBOUNCE_PLAN_AUTO_MS`) :
+  une taxe fixe et garantie sur CHAQUE calcul, mesurée à elle seule entre
+  1 207 et 1 578 ms sur les 30 exécutions de référence. La règle « ne jamais
+  marteler les API publiques » vise le réseau, pas ce minuteur local, et le
+  nombre d'appels ne change pas pour les scénarios mesurés (banc T3, démo
+  salon). Un cas plus étroit reste ouvert, signalé et assumé (revue Codex,
+  remarque 5) : sur un itinéraire déjà calculé, deux modifications du
+  véhicule espacées de 300 ms à 1 200 ms relancent chacune un relevé
+  météo + altimétrie au lieu d'un seul — jamais l'IRVE ni l'itinéraire,
+  jamais dans les parcours exercés ici. Détail dans le commentaire au-dessus
+  de `DEBOUNCE_PLAN_AUTO_MS`.
+- **Préchargement de l'index IRVE dès que le véhicule est renseigné**, pendant
+  la saisie de la destination (`vehicule-change`), au lieu d'attendre le
+  calcul : `indexNational` dédoublonne les appels réellement concurrents et
+  sert le cache IndexedDB existant, donc précharger plus tôt le même appel
+  unique n'en ajoute aucun. Le premier calcul d'une session payait jusqu'à
+  plusieurs secondes de ce seul téléchargement (~700 Ko). **Le garde est
+  `#lireVehicule()`** — batterie ET consommation renseignées — et non « pas
+  thermique » : voir la correction du 13/09 en tête de cette entrée.
+  **`indexNational` (`src/lib/index-bornes.ts`) garde
+  aussi, depuis la revue Codex (remarque 2 du second passage), une mémoire de
+  session en plus d'IndexedDB** : sans elle, un préchargement terminé AVANT
+  le calcul (le cas courant) pouvait être suivi d'un second téléchargement si
+  l'écriture IndexedDB avait échoué (quota, navigation privée) — l'appel
+  réellement AJOUTÉ que la première version ne fermait pas complètement.
+- **Filtrage des 14 133 stations contre le corridor, par grille de cellules**
+  (`stationsDuTrajet`, `src/lib/le-long-du-trajet.ts`) : le pré-filtre par
+  boîte englobante existait déjà, mais chaque candidat retenu était ensuite
+  projeté sur TOUS les segments du trajet — un coût qui grandit avec la
+  LONGUEUR du trajet (plusieurs milliers de segments sur Paris-Lyon), mesuré
+  entre 2,1 et 3,9 s à lui seul. Une grille de cellules ramène cette
+  recherche aux ~9 cellules qui entourent chaque candidat, sans changer le
+  résultat (preuve dans le commentaire du code, contre-épreuve différentielle
+  dans `tests/le-long-du-trajet.test.ts`) — **cellules dimensionnées par axe**
+  (longitude ET latitude séparément, `mLonMinimal`), **latitude de référence
+  élargie de la marge du pré-filtre** : deux passes de revue Codex ont trouvé
+  deux variantes du même défaut — une cellule carrée en degrés, qui
+  sous-couvrait l'axe est-ouest d'un facteur ~1,4-1,5 à latitude française
+  (1ʳᵉ passe), puis une référence de latitude limitée aux seuls sommets du
+  tracé, insuffisante pour une station légèrement plus proche du pôle que le
+  tracé lui-même mais encore dans la marge du pré-filtre (2ᵉ passe) — les
+  deux corrigées et verrouillées par des tests de régression différentiels
+  (`tests/le-long-du-trajet.test.ts`, cas « CODEX #1 » et « CODEX #1bis »).
+  Une égalité exacte départagée par l'ordre des cellules plutôt que l'ordre
+  du trajet, et une grille disproportionnée à rayon nul, ont reçu le même
+  traitement (cas « CODEX #2 » et « CODEX #6 ») — voir
+  `handoffs/2026-09-11-2100-codex-optim.md`.
+- **Altimétrie, météo et IRVE, déjà lancés en parallèle** (`Promise.all`,
+  `#planifierRecharge`) : vérifié en tête de cette tâche, rien à changer —
+  une cible de moins à optimiser n'est pas une cible ratée.
+- Bundle (chunks JS, gzippé) : `panneau-itineraire` inchangé au Ko près,
+  `index` +1,4 Ko brut / gzip stable (grille de cellules + mémoire de
+  session). Aucune dépendance nouvelle, aucun appel réseau de plus dans les
+  scénarios mesurés, « Pourquoi ce plan ? » inchangé.
+- Revue Codex, deux passes : `handoffs/2026-09-11-2100-codex-optim.md` —
+  VERDICT BLOQUANT sur la première (2 remarques bloquantes, 4 sérieuses) ;
+  VERDICT BLOQUANT sur la deuxième également (1 remarque bloquante restante
+  sur la grille, corrigée depuis et vérifiée par un nouveau test de
+  régression, mais non revue une troisième fois faute de budget de temps sur
+  cette tâche — signalé au chef de cabinet dans le compte rendu de mission).
+
+### 2026-09-12 — ALTI-GARDE-1 (recu7iXoI2DPdP5Pr) — le vrai facteur limitant, plafonné
+- **La contre-mesure indépendante du 12/09 (six sessions froides) a donné
+  p95 = 5 376 ms, AU-DESSUS du seuil dur** — après l'optimisation ci-dessus,
+  ce qui reste à dépasser 5 s n'est plus notre code : c'est l'altimétrie de
+  la Géoplateforme (902 ms à ~7 s), attendue dans le `Promise.all` de
+  `#chargerConditions` sans délai de garde ni repli.
+- **Délai de garde de 2 000 ms sur l'altimétrie seule** (nouveau
+  `src/lib/delai-garde.ts`, fonction `avecDelaiDeGarde`, générique et pure,
+  testée à sec dans `tests/delai-garde.test.ts`) : au-delà, le plan se
+  calcule sans le dénivelé — la promesse sous-jacente n'est NI annulée NI
+  relancée, aucun appel supplémentaire. Justifié par neuf appels réels aux
+  services (six à l'altimétrie — cinq entre 576 et 872 ms, un à 7 277 ms —
+  et trois à la météo, 103-150 ms, aucun risque comparable trouvé sur la
+  météo, d'où l'absence de délai de garde pour elle ; détail et limites de
+  cette mesure dans `docs/mesure-paris-lyon.md`).
+- **Jamais un silence** : quand le relief n'a pas pu être pris en compte
+  (délai dépassé ou service en erreur), « Pourquoi ce plan ? » et la note de
+  réserve du volet recharge le disent explicitement — avant cette tâche, un
+  dénivelé manquant se traduisait par une ligne D+/D− simplement absente,
+  sans un mot, quand d'autres conditions (température) avaient, elles,
+  abouti.
+- **Six sessions froides, relevés bruts publiés** dans
+  `docs/mesure-paris-lyon.md` (build vérifié par hash du bundle servi) :
+  2 364 / 494 / 6 642 / 3 924 / 4 291 / 3 202 ms. Médiane 3 563 ms (< 4 s,
+  tenu) ; **p95 = 6 642 ms, au-dessus du seuil de 5 s — critère NON tenu**.
+  Le relief a été compté dans les six sessions : l'altimétrie n'a jamais
+  dépassé le budget de 2 s que le délai de garde lui impose. Ça ne prouve PAS
+  qu'elle a répondu vite pour autant (un appel à 1 900 ms compte aussi comme
+  « relief pris en compte ») : la cause exacte de la session lente
+  (6 642 ms) reste NON VÉRIFIÉE — la sonde posée ici ne décompose pas le
+  total par poste réseau. Dit en clair, avec ses limites, dans le document
+  de mesure plutôt que résumé de façon trompeuse ici.
+- Bundle : `panneau-itineraire` 123 654 o contre 123 658 o avant la tâche
+  (−4 o après extraction de `noteReserveConditions` vers `lib/conditions.ts`),
+  bien sous le budget de ±5 Ko. Aucune dépendance nouvelle. 1 691 tests
+  unitaires verts (`npm test`), aucun test E2E touché (hors périmètre de
+  cette tâche, mission B du même cycle).
+- Revue Codex, deux passages : `handoffs/2026-09-12-1630-codex-altimetrie.md`
+  — VERDICT BLOQUANT sur le premier (4 remarques sérieuses, 1 mineure : un
+  vrai bug d'affichage sur la température d'arrivée seule, un test qui ne
+  prouvait pas tout ce que le document affirmait, une erreur de comptage
+  (« dix » au lieu de neuf appels de mesure) et une conclusion causale non
+  soutenue par les chiffres — toutes corrigées dans un second commit, détail
+  dans `docs/mesure-paris-lyon.md`).
+## [Non publié] — 2026-09-11 — DEMO-SALON-E2E (rectlR6gVbiWQzUN4)
+
+### Le garde-fou du stand : un test qui rejoue la démo contre les API réelles
+- `tests-e2e/demo-salon.spec.ts` (`npm run e2e:demo`) rejoue les huit étapes du
+  scénario du Mondial de l'Auto (`docs/demo-salon.md`, PR #304) dans l'ordre,
+  **contre les vraies API** — IGN (itinéraire, altimétrie, tuiles WMTS),
+  Open-Meteo, l'index national IRVE — sans aucune route simulée. Le calcul
+  itinéraire + plan de recharge est chronométré (clic → résumé conclu, sondage
+  `raf`, pas de texte transitoire) ; le test échoue au-delà de 5 s.
+- **Deux `test()`**, comme le prescrit `docs/demo-salon.md` : les étapes 1 à 7,
+  puis l'étape 8 (mode avion) dans son propre préambule — la route de contexte
+  qui simulerait les tuiles du service worker casse le parcours hors réseau
+  (mesuré le 09/09, `tests-e2e/tuiles-simulees.ts`), et cette suite ne simule
+  de toute façon aucune tuile.
+- **Résultat mesuré, pas corrigé (hors périmètre de la tâche T2)** : le calcul
+  chronométré dépasse systématiquement les 5 s annoncés au stand — 6 391 ms
+  puis 6 514 ms sur deux exécutions indépendantes, contre les vraies API
+  publiques. Le couloir hors ligne (1 038 tuiles réelles pour Paris → Lyon) a
+  aussi perdu une tuile sur 1 038 lors d'une exécution, absorbée par la
+  reprise (`retries: 1`). Voir le rapport de la tâche T2 pour le détail et la
+  recommandation (statut **Bloqué**).
+- **L’étape 4 ne nomme plus aucun exploitant** (décision du 13/09/2026, et
+  `docs/demo-salon.md` étape 4, tel que staging le porte depuis la PR #314).
+  La rédaction d’origine exigeait une étiquette « Ionity » puis une étiquette
+  « IZIVIA » : elle mesurait le fichier national IRVE du jour, pas le produit,
+  et a tenu ce parcours rouge trois cycles. À la place le parcours exige que le
+  dépliant annonce au moins un réseau, que le corps en montre exactement
+  `min(N, 15)` — le plafond réel de `#majListeReseaux` —, que chaque étiquette
+  soit de la forme `NOM (n)` avec n ≥ 1, qu’aucun réseau ne soit coché, et que
+  le résumé des filtres appliqués vaille EXACTEMENT « Tout afficher — retirer :
+  itinérance (badges) ». **Ce qu’il ne garantit plus** : qu’un exploitant NOMMÉ
+  soit présent sur le couloir Paris → Lyon — ce fait appartient à la donnée
+  publique, pas au code.
+
+## [1.142.0] — 2026-09-11 — SALON-1
+
+### La page du stand, `/salon.html` — jalon CEO du 18/09
+- **Une huitième page vitrine**, à côté des sept existantes : même gabarit,
+  même CSP (identique caractère pour caractère à `a-propos.html`), zéro
+  JavaScript. Elle n'est liée depuis AUCUNE autre page — on y arrive par le
+  QR du stand ou en tapant l'adresse (spec §1). **Péremption au 18/10/2026**,
+  posée dans `docs/ROADMAP.md`.
+- **Un QR code écrit à la main**, `scripts/generer-qr.mjs` — aucune
+  dépendance nouvelle, dans l'esprit de `png.mjs`. Version 2 (25×25),
+  niveau de correction M, mode octet : les 44 mots-code (28 données + 16
+  correction Reed-Solomon) sont calculés hors ligne et posés en `<svg>`
+  inline, en rectangles fusionnés par ligne. `tests/qr.test.ts` ne se
+  contente PAS de comparer le SVG à lui-même : un décodeur écrit à part
+  (`decoderMatrice`) rejoue l'algorithme dans l'autre sens et vérifie que
+  la correction Reed-Solomon concorde — un bit posé au mauvais endroit fait
+  rougir la CI. Vérifié en plus avec un décodeur indépendant (jsqr, hors
+  dépôt) pendant le développement ; **reste à scanner avec deux téléphones
+  réels au stand**, dit dans la description de PR.
+- **Bloc vidéo en placeholder** (PR A) : une `<figure>` avec l'image
+  d'attente seule, SANS balise `<video>` — la vidéo de démo est la PR B.
+  L'image d'attente est un aplat géométrique généré par code
+  (`scripts/generer-attente.mjs`, même famille que `generer-partage.mjs`) :
+  **ce n'est PAS Bélia**, qui reste une tâche Visuels (GPT puis Nano
+  Banana), cadencée pour la PR B.
+- **Les deux portes de repli** (décisions CEO du 11/09) : liste d'attente en
+  `mailto:contact@infonovice.fr` tant que Framaforms n'est pas approuvé ;
+  bouton « Installer l'application Android » qui pointe sur l'ancre de la
+  liste d'attente tant que la Play Console ne donne pas d'URL de test
+  interne. Dans les deux cas, un `<a>`, jamais un `<form>` —
+  `form-action 'none'` l'interdit, et le raisonnement est le même que sur
+  `/offre-flottes.html`.
+- **Budget de poids propre à la page** (`tests/salon-poids.test.ts`, seul
+  garde-fou : le budget CI ne mesure que les `.js`, invisible à une page
+  sans script) : `salon.html` 9 702 o (≤ 12 000), `qr-maps.svg` 2 470 o
+  (≤ 3 000), `attente.png` 10 419 o (≤ 60 000).
+- **Correction au passage, pas une décision nouvelle** : le manifeste PWA
+  (`vite.config.ts`) portait encore le mot retiré du discours public le
+  06/09 — c'était le seul texte public et non explicatif du dépôt à le
+  porter encore, affiché par le navigateur À L'INSTALLATION. Aligné sur
+  `index.html`. Signalé au CEO dans le compte rendu.
+
 ## [1.141.0] — 2026-09-10 — COURBES-1
 
 ### Les courbes de niveau IGN, en option d'affichage
@@ -7209,42 +8133,25 @@ Bundle hors MapLibre : 64 Ko gzippés sur 300 autorisés.
   chargement du style (pose du tracé différée au style.load).
 - E2E : tuiles IGN simulées (déterminisme, zéro quota consommé par la CI).
 
-## [0.1.0] — 2026-08-16 — Fondations
-- Scaffolding Vite + TypeScript strict + PWA (manifeste, service worker,
-  icônes générées par script).
-- Page « en construction » avec CSP stricte (seules origines : data.geopf.fr,
-  api-adresse.data.gouv.fr) et design tokens Infonovice.
-- Première brique de la bibliothèque partagée : `lib/coordonnees` (format
-  français, analyse défensive).
-- CI GitHub Actions : lint + typecheck + Vitest + Playwright + build + audit
-  bloquant (high) + budget bundle (< 300 Ko gzippé hors MapLibre).
-- Déploiement GitHub Pages automatique sur main, CNAME maps.infonovice.fr.
-- Test E2E de souveraineté : la page ne contacte AUCUN domaine externe.
-- Dependabot hebdomadaire (npm + actions).
-
-## [0.2.0] — 2026-08-16 — La carte
-- Carte MapLibre plein écran, fond Plan IGN v2 (WMTS Géoplateforme, sans clé),
-  attribution IGN obligatoire.
-- Contrôles zoom / boussole / géolocalisation / échelle, ENTIÈREMENT en
-  français (locale MapLibre surchargée) — la géolocalisation est un geste de
-  l'utilisateur, jamais demandée à l'arrivée.
-- En-tête flottant, lien d'évitement clavier, page sans JavaScript expliquée.
-- MapLibre isolé dans son propre chunk (252 Ko gzippé) ; code applicatif :
-  4,2 Ko gzippé — budget respecté.
-- E2E : tuiles IGN réellement servies (200), souveraineté mesurée (aucune
-  origine hors liste blanche), contrôles français visibles.
-
-## [0.3.0] — 2026-08-16 — Les fonds
-- Sélecteur de fonds (premier Web Component) : Plan IGN, Satellite,
-  Satellite + routes ; surcouche Parcelles cadastrales (utile à Arpentine).
-- Préférence persistée en IndexedDB (`lib/stockage`, socle des favoris à
-  venir) et rétablie au chargement — prouvé par E2E avec rechargement.
-- Mode sombre automatique du fond Plan (filtre calibré, canevas seul) ;
-  le satellite reste intouché.
-- Topo 25 écarté avec preuve : SCAN25 répond 400 sans clé. À réintroduire
-  après inscription Géoplateforme (gratuite).
-- Deux défauts attrapés par les tests avant l'œil : l'en-tête intercepait
-  les clics du sélecteur ; le panneau se reconstruisait en plein clic.
+## [0.6.0] — 2026-08-16 — Exporter et partager
+- Export GPX 1.1 et KML 2.2 du trajet, fabriqués à la main (20 lignes chacun),
+  nom échappé (il vient des libellés BAN). GPX : lat PUIS lon dans trkpt —
+  l'inverse du GeoJSON, l'erreur classique, verrouillée par test.
+- Partage par URL SANS serveur : l'itinéraire vit dans le fragment (#), qui
+  n'est jamais envoyé au serveur HTTP. Un lien ouvert rejoue le trajet tout
+  seul ; un fragment forgé rend null, jamais une exception.
+- Feuille de route imprimable scindée en PR #8bis (exige getSteps).
+## [0.5.0] — 2026-08-16 — Le planificateur
+- Itinéraire A→B (Géoplateforme bdtopo-osrm, sans clé) : voiture et à pied,
+  tracé bleu à liseré blanc lisible sur tout fond, marqueurs départ/arrivée,
+  distance et durée au format français, vol vers l'emprise du trajet.
+- Les deux champs réutilisent le composant de recherche BAN (rien dupliqué).
+- LE TRACÉ SURVIT AU CHANGEMENT DE FOND : setStyle détruit les sources,
+  le panneau repose le trajet à chaque style.load — prouvé par E2E.
+- Un 404 du service = « aucun itinéraire », sans seconde tentative ;
+  vélo écarté avec preuve (getcapabilities : car et pedestrian seulement).
+- 7 tests unitaires (formats français, 404-est-une-réponse, URL du service),
+  E2E complet Paris→Lyon simulé.
 
 ## [0.4.0] — 2026-08-16 — La recherche
 - Barre de recherche BAN dans l'en-tête : combobox ARIA complète (flèches,
@@ -7259,23 +8166,40 @@ Bundle hors MapLibre : 64 Ko gzippés sur 300 autorisés.
 - E2E : BAN simulée par interception (déterministe, zéro quota consommé) ;
   la sélection se prouve AU CLAVIER.
 
-## [0.5.0] — 2026-08-16 — Le planificateur
-- Itinéraire A→B (Géoplateforme bdtopo-osrm, sans clé) : voiture et à pied,
-  tracé bleu à liseré blanc lisible sur tout fond, marqueurs départ/arrivée,
-  distance et durée au format français, vol vers l'emprise du trajet.
-- Les deux champs réutilisent le composant de recherche BAN (rien dupliqué).
-- LE TRACÉ SURVIT AU CHANGEMENT DE FOND : setStyle détruit les sources,
-  le panneau repose le trajet à chaque style.load — prouvé par E2E.
-- Un 404 du service = « aucun itinéraire », sans seconde tentative ;
-  vélo écarté avec preuve (getcapabilities : car et pedestrian seulement).
-- 7 tests unitaires (formats français, 404-est-une-réponse, URL du service),
-  E2E complet Paris→Lyon simulé.
+## [0.3.0] — 2026-08-16 — Les fonds
+- Sélecteur de fonds (premier Web Component) : Plan IGN, Satellite,
+  Satellite + routes ; surcouche Parcelles cadastrales (utile à Arpentine).
+- Préférence persistée en IndexedDB (`lib/stockage`, socle des favoris à
+  venir) et rétablie au chargement — prouvé par E2E avec rechargement.
+- Mode sombre automatique du fond Plan (filtre calibré, canevas seul) ;
+  le satellite reste intouché.
+- Topo 25 écarté avec preuve : SCAN25 répond 400 sans clé. À réintroduire
+  après inscription Géoplateforme (gratuite).
+- Deux défauts attrapés par les tests avant l'œil : l'en-tête intercepait
+  les clics du sélecteur ; le panneau se reconstruisait en plein clic.
 
-## [0.6.0] — 2026-08-16 — Exporter et partager
-- Export GPX 1.1 et KML 2.2 du trajet, fabriqués à la main (20 lignes chacun),
-  nom échappé (il vient des libellés BAN). GPX : lat PUIS lon dans trkpt —
-  l'inverse du GeoJSON, l'erreur classique, verrouillée par test.
-- Partage par URL SANS serveur : l'itinéraire vit dans le fragment (#), qui
-  n'est jamais envoyé au serveur HTTP. Un lien ouvert rejoue le trajet tout
-  seul ; un fragment forgé rend null, jamais une exception.
-- Feuille de route imprimable scindée en PR #8bis (exige getSteps).
+## [0.2.0] — 2026-08-16 — La carte
+- Carte MapLibre plein écran, fond Plan IGN v2 (WMTS Géoplateforme, sans clé),
+  attribution IGN obligatoire.
+- Contrôles zoom / boussole / géolocalisation / échelle, ENTIÈREMENT en
+  français (locale MapLibre surchargée) — la géolocalisation est un geste de
+  l'utilisateur, jamais demandée à l'arrivée.
+- En-tête flottant, lien d'évitement clavier, page sans JavaScript expliquée.
+- MapLibre isolé dans son propre chunk (252 Ko gzippé) ; code applicatif :
+  4,2 Ko gzippé — budget respecté.
+- E2E : tuiles IGN réellement servies (200), souveraineté mesurée (aucune
+  origine hors liste blanche), contrôles français visibles.
+
+## [0.1.0] — 2026-08-16 — Fondations
+- Scaffolding Vite + TypeScript strict + PWA (manifeste, service worker,
+  icônes générées par script).
+- Page « en construction » avec CSP stricte (seules origines : data.geopf.fr,
+  api-adresse.data.gouv.fr) et design tokens Infonovice.
+- Première brique de la bibliothèque partagée : `lib/coordonnees` (format
+  français, analyse défensive).
+- CI GitHub Actions : lint + typecheck + Vitest + Playwright + build + audit
+  bloquant (high) + budget bundle (< 300 Ko gzippé hors MapLibre).
+- Déploiement GitHub Pages automatique sur main, CNAME maps.infonovice.fr.
+- Test E2E de souveraineté : la page ne contacte AUCUN domaine externe.
+- Dependabot hebdomadaire (npm + actions).
+

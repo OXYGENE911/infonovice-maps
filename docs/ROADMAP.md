@@ -183,6 +183,20 @@ Chaque ligne = une PR. Prompt court : « Implémente la PR #N de la roadmap ».
       partage 1200x630 GÉNÉRÉE par script (aucun binaire opaque au dépôt).
       Un test unitaire compare le sitemap aux pages réelles : une page qui
       naît hors du sitemap ou sans canonical fait échouer la CI.
+- [x] SALON-1 (11/09) : la page du stand, `/salon.html` — jalon CEO du
+      18/09 (Mondial de l'Auto, 12-18 octobre). Huitième page vitrine, liée
+      depuis AUCUNE autre — on y arrive par le QR du stand ou en tapant
+      l'adresse. QR version 2 écrit à la main (`scripts/generer-qr.mjs`,
+      aucune dépendance neuve), inline en SVG, DÉCODÉ par un test qui
+      rejoue l'algorithme à l'envers et vérifie la correction
+      Reed-Solomon — pas seulement comparé à lui-même. Bloc vidéo en
+      placeholder (image d'attente géométrique, PAS Bélia — Visuels s'en
+      charge pour la PR B). Deux portes de repli (décisions CEO du 11/09) :
+      liste d'attente en `mailto:`, bouton Android vers l'ancre de la liste
+      d'attente, en attendant Framaforms et l'URL Google Play. **DATE DE
+      PÉREMPTION : après le 18/10/2026, cette page est retirée du dépôt ou
+      redirigée vers `/`** — une page « salon » encore en ligne en décembre
+      serait une page qui ment.
 
 ## Limites connues, à traiter plus tard
 - [x] RÉSOLU le 26/08/2026 (PR #31) — les panoramas 360° s'explorent au lieu
@@ -335,6 +349,20 @@ celui qu'il concurrence.
       publique sur un site statique dans un dépôt public. Les deux voies
       possibles (extrait au build, ou dérogation avec mention publique) ont été
       présentées et écartées. Mesure conservée dans docs/apis.md.
+- [x] Photographie des monuments par Wikimedia Commons (via Wikidata) :
+      **RETIRÉE le 13/09/2026**, Decision D3 du CEO du 11/09/2026 — Maps
+      gratuit s'en tient aux sources FRANÇAISES, sans dérogation. La
+      dérogation du 29/08 (« OK pour Wikimedia ») tombe. Trois hôtes sortis de
+      la CSP, `src/lib/photos-monuments.ts` supprimé, crédit et feuille de
+      style avec. **Pourquoi on ne remplace pas** : sur le même échantillon de
+      30 monuments, mesuré le 11/09/2026, Wikimedia illustrait 28 fiches
+      (93 %) et Panoramax en illustre 11 (37 %) — et ce sont des vues de rue,
+      pas des cadrages du monument. **La porte reste ouverte pour l'après-
+      salon** : les cinq conditions d'un retour par Panoramax — remesurer
+      d'abord, élargir le motif d'hôte de `src/lib/panoramax.ts`, déclarer
+      `panoramax.ign.fr` dans `img-src`, dire « voir la rue » et non « photo du
+      monument », écrire le seuil d'acceptation AVANT — sont dans
+      `docs/apis.md` §5, avec leurs chiffres et leurs dates.
 
 ## Le mandat du 27/08/2026 — session en autonomie, retours triés
 Armelin a mandaté une session « en autonomie, dans cet ordre » avec une

@@ -1939,11 +1939,12 @@ test('PROFESSIONNELS : la page dit ce qu’elle ne fait pas, et contacte SANS se
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
 });
 
-test('PHOTO-1 : la fiche d’un lieu porte sa photo Wikimedia — auteur et licence compris', async ({ page }) => {
-  /* Décision d'Armelin du 29/08 : « OK pour Wikimedia ». Les deux services
-     sont simulés — ce que ce parcours défend, c'est la CHAÎNE : la
-     référence Mérimée part chez Wikidata, le fichier trouvé part chez
-     Commons, et rien ne s'affiche sans son crédit. */
+test('PHOTO-0 : la fiche d’un lieu n’appelle plus aucun hôte Wikimedia, et n’en garde pas la place', async ({ page }) => {
+  /* Decision D3 du CEO, 11/09/2026 : Maps gratuit s'en tient aux sources
+     FRANÇAISES, sans dérogation. La photo Wikimedia du 29/08 est retirée.
+     Ce parcours remplace PHOTO-1 et défend DEUX choses à la fois — qu'aucune
+     requête ne part vers les trois hôtes, et que la fiche qui n'a plus de
+     photo n'a pas non plus de cadre vide qui l'attend. */
   await page.route('**/donnees/monuments.json', (route) => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify([
@@ -1957,28 +1958,24 @@ test('PHOTO-1 : la fiche d’un lieu porte sa photo Wikimedia — auteur et lice
       distance: 390_000, duration: 13_000,
     }),
   }));
-  let refDemandee = '';
-  await page.route('**query.wikidata.org/**', (route) => {
-    refDemandee = decodeURIComponent(route.request().url());
-    return route.fulfill({
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      contentType: 'application/json',
-      body: JSON.stringify({ results: { bindings: [{ img: { value:
-        'http://commons.wikimedia.org/wiki/Special:FilePath/Ch%C3%A2teau.jpg' } }] } }),
+  /* On ÉCOUTE sans répondre : si une requête partait quand même, elle serait
+     ici. Un test qui simule la réponse ne verrait pas la différence. */
+  const versWikimedia: string[] = [];
+  page.on('request', (requete) => {
+    if (/wikimedia\.org|wikidata\.org/.test(requete.url())) versWikimedia.push(requete.url());
+  });
+  /* LE COMPTEUR RÉSEAU SEUL NE SUFFIT PAS, et c'est le défaut que Codex a
+     relevé le 13/09 : un appel réintroduit vers un hôte ABSENT de la CSP est
+     bloqué par le navigateur AVANT d'être émis — aucune requête ne paraît, et
+     un test qui ne regarde que le réseau reste vert. On écoute donc aussi les
+     violations de CSP, qui sont, elles, le signal d'une tentative. */
+  await page.addInitScript(() => {
+    (window as unknown as { __violationsCSP: string[] }).__violationsCSP = [];
+    document.addEventListener('securitypolicyviolation', (e) => {
+      (window as unknown as { __violationsCSP: string[] })
+        .__violationsCSP.push(e.blockedURI);
     });
   });
-  await page.route('**commons.wikimedia.org/**', (route) => route.fulfill({
-    headers: { 'Access-Control-Allow-Origin': '*' },
-    contentType: 'application/json',
-    body: JSON.stringify({ query: { pages: { 42: { imageinfo: [{
-      thumburl: 'https://upload.wikimedia.org/480px-Chateau.jpg',
-      descriptionurl: 'https://commons.wikimedia.org/wiki/File:Chateau.jpg',
-      extmetadata: {
-        Artist: { value: '<a href="//x">Jean Photographe</a>' },
-        LicenseShortName: { value: 'CC BY-SA 4.0' },
-      },
-    }] } } } }),
-  }));
 
   await page.goto('/#iti=2.35220,48.85660;4.83570,45.76400;car');
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
@@ -1987,19 +1984,37 @@ test('PHOTO-1 : la fiche d’un lieu porte sa photo Wikimedia — auteur et lice
   await page.locator('.monuments-voir', { hasText: 'Château de la Colline' }).click();
 
   const fiche = page.locator('fiche-lieu');
-  const photo = fiche.locator('.fb-photo');
-  await expect(photo).toBeVisible({ timeout: 15_000 });
-  await expect(photo.locator('img')).toHaveAttribute(
-    'src', 'https://upload.wikimedia.org/480px-Chateau.jpg');
-  // L'ATTRIBUTION EST UNE OBLIGATION : auteur, licence, source, et le lien.
-  await expect(photo.locator('figcaption')).toContainText('Jean Photographe');
-  await expect(photo.locator('figcaption')).toContainText('CC BY-SA 4.0');
-  await expect(photo.locator('figcaption')).toContainText('Wikimedia Commons');
-  // Le HTML rendu par l'API ne devient JAMAIS du balisage dans la page.
-  await expect(photo.locator('figcaption a')).toHaveCount(1);
-  // C'est bien la référence Mérimée du ministère qui est partie, rien d'autre.
-  expect(refDemandee).toContain('PA00078023');
-  expect(refDemandee, 'aucune position ne doit partir').not.toContain('47.3');
+  await expect(fiche).toBeVisible();
+  // La fiche reste une fiche : son titre et sa notice officielle sont là.
+  await expect(fiche.locator('.fb-titre')).toContainText('Château de la Colline');
+
+  /* AUCUN EMPLACEMENT RÉSERVÉ. Pas de figure cachée « au cas où » : le nœud
+     n'existe pas, ni l'image, ni le crédit. */
+  await expect(fiche.locator('.fb-photo')).toHaveCount(0);
+  await expect(fiche.locator('.fb-photo-image')).toHaveCount(0);
+  await expect(fiche.locator('.fb-photo-credit')).toHaveCount(0);
+  await expect(fiche.locator('figure')).toHaveCount(0);
+
+  /* PAS D'ESPACE MORT : chaque enfant visible du corps touche le suivant à
+     la gouttière près. Un trou franc trahirait une place laissée vide. */
+  const trous = await page.evaluate(() => {
+    const corps = document.querySelector('fiche-lieu .fb-corps')!;
+    const boites = [...corps.children]
+      .map((el) => el.getBoundingClientRect())
+      .filter((r) => r.height > 0);
+    return boites.slice(1).map((r, i) => r.y - (boites[i]!.y + boites[i]!.height));
+  });
+  expect(trous.length).toBeGreaterThan(0);
+  for (const trou of trous) expect(trou).toBeLessThanOrEqual(12);
+
+  /* LA PREUVE PAR LE RÉSEAU, et elle est en dernier : rien n'est parti… */
+  expect(versWikimedia, versWikimedia.join(' | ')).toHaveLength(0);
+  /* …et rien n'a même été TENTÉ : aucune violation de CSP vers ces hôtes. */
+  const bloques = await page.evaluate(() => (window as unknown as
+    { __violationsCSP: string[] }).__violationsCSP
+    .filter((u) => /wikimedia|wikidata|wikipedia/.test(u)));
+  expect(bloques, `tentatives bloquées par la CSP : ${bloques.join(' | ')}`)
+    .toHaveLength(0);
 });
 
 test('POI : sous le zoom 12, les recherches se DISENT inertes — avant le clic', async ({ page }) => {

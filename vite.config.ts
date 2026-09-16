@@ -1,9 +1,18 @@
 /// <reference types="vitest/config" />
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { defineConfig } from 'vite';
+import { defineConfig, type PluginOption } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { JOURS_EN_CACHE, RESERVES_TUILES } from './src/lib/tuiles-en-cache';
+import {
+  ENTETES_PREVISUALISATION,
+  FEUILLE_PREVISUALISATION,
+  FICHIER_FEUILLE,
+  MENTION_PREVISUALISATION,
+  ROBOTS_PREVISUALISATION,
+  estPrevisualisation,
+  marquerHtmlPrevisualisation,
+} from './src/lib/previsualisation';
 
 // La base du site vient de l'environnement : « / » quand il vivra à la racine
 // de maps.infonovice.fr, « /infonovice-maps/ » tant que github.io le sert sous
@@ -32,6 +41,52 @@ const VERSION = (() => {
   return m[1] as string;
 })();
 
+/* PRÉVISUALISATION (STAGING-1, 13/09) : la branche `staging` est construite
+   avec INFONOVICE_ENVIRONNEMENT=previsualisation et déployée sur
+   maps-staging.pages.dev. Le POURQUOI de chaque marque est dans
+   src/lib/previsualisation.ts ; ici, seulement la plomberie Vite. */
+const PREVISUALISATION = estPrevisualisation(process.env);
+
+function pluginPrevisualisation(): PluginOption {
+  let dossierSortie = 'dist';
+  return {
+    name: 'infonovice-previsualisation',
+    apply: 'build',
+    configResolved(config) {
+      dossierSortie = resolve(config.root, config.build.outDir);
+    },
+    transformIndexHtml: {
+      /* APRÈS TOUT LE MONDE : vite-plugin-pwa réécrit lui aussi le HTML
+         (injection du service worker). Marquer en dernier garantit que le
+         bandeau ne se fait pas recouvrir par une transformation ultérieure. */
+      order: 'post',
+      handler(html, ctx) {
+        return marquerHtmlPrevisualisation(html, ctx.path);
+      },
+    },
+    /* `closeBundle` ET NON `generateBundle` : Vite recopie le dossier
+       `public/` dans `dist/` pendant l'écriture du bundle. Écrit plus tôt,
+       notre robots.txt serait écrasé par celui de la production quelques
+       millisecondes plus tard — et personne ne s'en apercevrait avant qu'une
+       préversion remonte dans un moteur de recherche. */
+    closeBundle() {
+      /* LA FEUILLE PLUTÔT QUE DU STYLE EN LIGNE : les six pages de texte
+         portent une CSP `style-src 'self'` qui jette les attributs `style=`.
+         Le détail, et la capture d'écran qui l'a montré, sont dans
+         src/lib/previsualisation.ts. */
+      writeFileSync(resolve(dossierSortie, FICHIER_FEUILLE), FEUILLE_PREVISUALISATION, 'utf-8');
+      writeFileSync(resolve(dossierSortie, 'robots.txt'), ROBOTS_PREVISUALISATION, 'utf-8');
+      writeFileSync(resolve(dossierSortie, '_headers'), ENTETES_PREVISUALISATION, 'utf-8');
+      /* CE QUI APPARTIENT À LA PRODUCTION SORT DE LA PRÉVERSION : le CNAME est
+         un artefact GitHub Pages qui nomme maps.infonovice.fr, et le sitemap
+         liste des URL de production. Les servir depuis la préversion, c'est
+         entretenir exactement la confusion qu'on cherche à éteindre. */
+      rmSync(resolve(dossierSortie, 'CNAME'), { force: true });
+      rmSync(resolve(dossierSortie, 'sitemap.xml'), { force: true });
+    },
+  };
+}
+
 export default defineConfig({
   base: BASE,
   define: {
@@ -59,6 +114,10 @@ export default defineConfig({
         'sans-reseau': resolve(__dirname, 'sans-reseau.html'),
         'mentions-legales': resolve(__dirname, 'mentions-legales.html'),
         pro: resolve(__dirname, 'pro.html'),
+        /* SALON-1 (11/09) : la page du stand. Pas de lien depuis le reste du
+           site (spec-accueil-salon.md §1) — on y arrive par le QR ou en
+           tapant l'adresse, donc rien à câbler dans l'application. */
+        salon: resolve(__dirname, 'salon.html'),
       },
       output: {
         // MapLibre pèse ~230 Ko gzippé à lui seul : il vit dans son propre
@@ -74,6 +133,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    ...(PREVISUALISATION ? [pluginPrevisualisation()] : []),
     VitePWA({
       /* « prompt » ET NON « autoUpdate » (MAJ-1, 03/09). Armelin : « j'ai des
          testeurs qui ne savaient pas qu'il fallait rafraîchir l'application
@@ -87,10 +147,22 @@ export default defineConfig({
       // poser maintenant, c'est vérifier la chaîne PWA dès la CI de la PR #1
       // plutôt qu'au moment où la carte arrivera.
       manifest: {
-        name: 'Infonovice Maps',
-        short_name: 'Maps',
+        /* LE NOM DE L'APPLICATION INSTALLÉE CHANGE AUSSI. Un testeur qui
+           installe la préversion depuis son téléphone se retrouve sinon avec
+           deux icônes identiques sur son écran d'accueil — et ouvre l'une
+           pour l'autre. */
+        name: PREVISUALISATION ? `Infonovice Maps — ${MENTION_PREVISUALISATION}` : 'Infonovice Maps',
+        short_name: PREVISUALISATION ? 'Maps préviz' : 'Maps',
+        // CORRECTION (SALON-1, 11/09) : dernière trace du mot retiré du
+        // discours public le 06/09 (voir CLAUDE.md) — celle-ci était
+        // affichée par le navigateur À L'INSTALLATION, donc publique et non
+        // explicative. Alignée sur index.html. Ce n'est pas une nouvelle
+        // décision, juste son application oubliée ici ; signalé au CEO.
+        // La fusion de #317 (préversion) a REPRIS cette version-ci : la
+        // branche portait encore l'ancienne phrase, résoudre en sa faveur
+        // aurait réintroduit le mot dans le manifeste installé.
         description:
-          'Cartographie et itinéraires souverains : l’alternative française à Google Maps.',
+          'Cartographie française et open source : itinéraires, recharge et guidage, sans traceur.',
         lang: 'fr',
         start_url: BASE,
         display: 'standalone',
@@ -162,7 +234,7 @@ export default defineConfig({
            ses motifs à `pathname + search`, pas au seul chemin. Le « (^|/) »
            de tête laisse passer une base autre que la racine. */
         navigateFallbackDenylist: [
-          /(^|\/)(a-propos|offre-flottes|vie-privee|mentions-legales|pro)\.html(\?|$)/,
+          /(^|\/)(a-propos|offre-flottes|vie-privee|mentions-legales|pro|salon)\.html(\?|$)/,
         ],
       },
     }),

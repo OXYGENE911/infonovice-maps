@@ -90,6 +90,32 @@ describe('la CSP et le code disent la même chose', () => {
       .toEqual([]);
   });
 
+  /* LA PORTE DE LA DECISION D3 (CEO, 11/09/2026 — appliquée le 13/09/2026).
+     Maps gratuit s'en tient aux sources FRANÇAISES, sans dérogation. Les
+     trois hôtes de la Wikimedia Foundation sont sortis de la CSP et du code.
+     Ce test existe pour que leur retour se voie : la CSP est le seul endroit
+     où l'on pouvait les rajouter en une ligne sans que personne ne le lise. */
+  it('AUCUN HÔTE WIKIMEDIA n’est déclaré nulle part dans la CSP', () => {
+    const html = readFileSync(join(RACINE, 'index.html'), 'utf8');
+    const csp = /Content-Security-Policy"\s+content="([^"]*)"/.exec(html)?.[1] ?? '';
+    expect(csp, 'index.html ne déclare aucune CSP').not.toBe('');
+    for (const hote of ['upload.wikimedia.org', 'commons.wikimedia.org',
+      'query.wikidata.org']) {
+      expect(csp, `${hote} est ressorti dans la CSP — Decision D3 du 11/09/2026`)
+        .not.toContain(hote);
+    }
+    expect(csp, 'aucun hôte du domaine wikimedia/wikidata, quel qu’il soit')
+      .not.toMatch(/wikimedia\.org|wikidata\.org|wikipedia\.org/);
+  });
+
+  it('AUCUN MODULE DE src/ n’appelle un hôte Wikimedia', () => {
+    const fautifs = [...hotesAppeles()]
+      .filter(([hote]) => /wikimedia\.org|wikidata\.org|wikipedia\.org/.test(hote))
+      .map(([hote, fichiers]) => `${hote} (${[...new Set(fichiers)].join(', ')})`);
+    expect(fautifs, 'Decision D3 : Maps gratuit n’appelle aucune source Wikimedia')
+      .toEqual([]);
+  });
+
   it('LES SOURCES DE LA RECHERCHE y sont nommément', () => {
     /* Les cinq services dont dépend la recherche depuis RECHERCHE-8. Les
        nommer ici fait que leur retrait se voie. */

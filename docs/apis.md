@@ -972,5 +972,794 @@ faudra donc un champ déclaré dans « Mon véhicule » — ce qu'Armelin peut
 remplir, il connaît sa VF8. Sans poids déclaré, aucun avertissement : mieux
 vaut se taire que d'alerter au hasard.
 
+## Disponibilité des bornes — les cinq pistes du CEO, mesurées (11/09/2026)
+
+Armelin, le 10/09 : « TomTom EV availability ; le flux IRVE dynamique de
+transport.data.gouv.fr opérateur par opérateur ; data.gouv.fr ; les API
+OCPI/AFIR directes des cinq plus gros opérateurs français ». Cinq pistes, cinq
+appels réels datés du **10/09/2026 vers 22 h 20 UTC** (11/09, 00 h 20 à Paris).
+Rien ici n'est repris d'une documentation : chaque ligne a un `curl` derrière.
+
+**Le verdict tient en une ligne : rien de neuf ne se branche avant le salon.**
+La mesure du 01/09 (« la base existe, elle n'est pas vivante ») tient toujours,
+mais elle a changé d'échelle et de point d'entrée — c'est ce que dit la suite.
+
+| Source | Clé | CORS navigateur | Fraîcheur médiane | Verdict |
+|---|---|---|---|---|
+| TomTom EV Availability | **oui** | oui (préflight OK) | annoncée « minutes », **non mesurable sans compte** | **jamais** en l'état |
+| transport.data.gouv.fr — consolidation IRVE dynamique (bêta) | non | oui (`*`) | **23,8 h** sur 116 155 points | **après** le salon, et daté |
+| data.gouv.fr — `tabular-api` | non | oui (`*`) | même donnée, même fraîcheur | **après**, c'est la bonne porte |
+| OCPI direct des 5 opérateurs | **jeton bilatéral** | **non** | — | **jamais** depuis un navigateur |
+| Flux d'un opérateur qui joue le jeu (Parera) | non | oui (`*`) | **0,3 min** | preuve que le tuyau marche |
+
+### 1. TomTom EV Charging Stations Availability — écartée
+
+```
+GET https://api.tomtom.com/search/2/chargingAvailability.json?chargingAvailabilityId=…
+→ HTTP 401  {"detailedError":{"code":"Unauthorized",…}}  en 0,56 s
+```
+
+Le préflight, lui, répond parfaitement :
+
+```
+OPTIONS … avec Origin: https://maps.infonovice.fr
+→ HTTP 204
+   access-control-allow-origin: https://maps.infonovice.fr
+   access-control-allow-methods: GET,POST
+```
+
+Techniquement, un navigateur peut donc l'appeler. **Trois choses l'interdisent
+quand même.**
+
+1. **La clé passe dans l'URL.** Sur un site statique sans backend, elle est
+   lisible dans le source de la page par quiconque ouvre l'inspecteur. Le
+   premier passant peut brûler le quota du salon.
+2. **Obtenir la clé demande de créer un compte** — liste rouge d'INFONOVICE :
+   création de compte sur un service tiers. La mesure de fraîcheur RÉELLE de
+   TomTom est donc, à ce jour, **impossible sans une Décision du CEO**. La
+   documentation dit « Updates are provided regularly, typically within
+   minutes » ; c'est une promesse d'éditeur, pas un relevé, et cela ne s'écrit
+   pas dans l'interface.
+3. **`Cache-Control: no-cache`** dans la documentation de l'API : le cache
+   agressif qui est notre règle de résilience serait hors conditions d'usage.
+
+Éditeur : **TomTom N.V.**, Amsterdam, **Pays-Bas** ; le traitement observé
+vient de `x-tomtom-processed-by: westeurope`. **Cette origine européenne lève
+une objection, elle ne vaut pas approbation** — et il faut l'écrire ainsi pour
+qu'on ne s'y trompe pas plus tard. La contrainte 3 de `CLAUDE.md` demande des
+API publiques françaises ou de l'open data français **par défaut**,
+européennes seulement à défaut, et elle ajoute que toute dérogation autre que
+celle d'Open-Meteo « demande la même chose : une décision explicite ET une
+mention publique ». Ni l'une ni l'autre n'existe pour TomTom. La décision du
+CEO du 11/09 (D3) ferme la porte davantage : Maps gratuit s'en tient aux
+sources françaises **sans dérogation**. Un fournisseur retenu s'inscrirait en
+outre dans la table `Fournisseurs` du HQ — cela non plus n'est pas fait.
+
+**Verdict : jamais en l'état.** Réexaminable si le CEO décide un jour d'un
+compte TomTom ET d'un relais qui cache la clé — donc d'un backend, donc hors
+contrainte « 0 € ».
+
+### 2. transport.data.gouv.fr — la consolidation nationale a bougé depuis le 01/09
+
+Le catalogue du Point d'Accès National (`GET https://transport.data.gouv.fr/api/datasets`,
+HTTP 200 en 0,36 s, 2,5 Mo, `access-control-allow-origin: *`) porte 789 jeux,
+dont **5 de type `charging-stations`**. Le nouveau, absent de la mesure du
+01/09 :
+
+> **[BETA] Base Nationale des Points de Recharge pour Véhicules Électriques
+> (IRVE)**, éditeur *Point d'Accès National transport.data.gouv.fr* — avec une
+> ressource **« données dynamiques »** republiée en continu.
+
+**Attention à la porte d'entrée**, mesurée :
+
+```
+GET https://transport.data.gouv.fr/resources/84098/download
+→ 302 vers data.gouv.fr   (CETTE réponse n'a PAS d'access-control-allow-origin)
+→ 302 vers proxy.transport.data.gouv.fr  (celle-là oui)
+→ 200
+```
+
+Un `fetch` navigateur **échoue sur le premier saut** : une redirection sans
+en-tête CORS casse la chaîne. L'URL à appeler est donc la finale, directement :
+
+```
+https://proxy.transport.data.gouv.fr/resource/consolidation-nationale-irve-dynamique
+→ HTTP 200 en 0,40 s · content-encoding: gzip
+   1 543 919 o sur le fil · 8 624 411 o décompressés · access-control-allow-origin: *
+   colonnes : id_pdc_itinerance, etat_pdc, occupation_pdc, horodatage,
+              etat_prise_type_2 / _combo_ccs / _chademo / _ef
+```
+
+**Cette origine est DÉJÀ dans notre CSP** (`connect-src` d'`index.html`) : la
+brancher un jour ne coûtera pas une ligne de politique.
+
+**Comptage exact sur les 116 155 points, 10/09/2026 22 h 19 UTC** — aucun point
+sans horodatage, aucun horodatage dans le futur :
+
+| Âge du relevé | Points | Part |
+|---|---|---|
+| moins de **15 min** | 2 484 | **2,1 %** |
+| moins d'1 h | 9 513 | 8,2 % |
+| moins de 6 h | 34 319 | 29,5 % |
+| moins de 24 h | 58 211 | 50,1 % |
+| moins de 7 j | 70 535 | 60,7 % |
+| plus de 30 j | 41 107 | **35,4 %** |
+
+Médiane **23,75 h**. Le p75 saute à **2 102 h** (87 jours) : la distribution est
+à deux bosses — une minorité vivante, un tiers de fichier mort depuis près de
+trois mois. États déclarés : `en_service` 103 388, `hors_service` 9 384,
+`inconnu` 3 383 ; occupation : `libre` 96 859, `occupe` 8 318, `inconnu`
+10 970, `reserve` 8.
+
+#### Opérateur par opérateur — ce que le CEO demandait
+
+Le préfixe AFIREV des `id_pdc_itinerance` (5 caractères) donne l'opérateur ; le
+nom vient du fichier statique consolidé du même jour (169 002 lignes, 120 Mo,
+champ `nom_operateur`). Les vingt premiers par volume :
+
+| Opérateur | Points | Âge médian | < 15 min | < 1 h |
+|---|---|---|---|---|
+| EASYCHARGE | 10 025 | 36,0 h | 0,4 % | 1,9 % |
+| **Freshmile** | 9 366 | **90 j** | 0,0 % | 0,0 % |
+| Power Dot France | 7 541 | 10,7 h | 0,8 % | 2,3 % |
+| Lidl France | 4 992 | 10,1 h | 3,0 % | 5,8 % |
+| **Tesla** | 4 678 | **0,6 h** | **21,5 %** | **84,8 %** |
+| ENGIE Vianeo | 4 096 | 19,8 h | 0,0 % | 2,5 % |
+| **TotalEnergies Marketing France** | 4 081 | 4,3 h | 2,8 % | 12,1 % |
+| Citeos Mobilité Électrique Paris | 3 426 | 8,7 h | 1,3 % | 3,7 % |
+| Bouygues Energies & Services | 3 194 | 8,5 h | 1,3 % | 12,5 % |
+| EVzen | 3 161 | 17 j | 0,1 % | 0,4 % |
+| E.Leclerc | 3 137 | 89 j | 0,0 % | 0,0 % |
+| Allego | 3 063 | 4,7 h | 1,8 % | 7,5 % |
+| Atlante France | 2 970 | 87 j | 1,1 % | 4,0 % |
+| **Electra** | 2 961 | 4,2 h | 4,8 % | 15,8 % |
+| **IZIVIA** | 2 739 | 5,5 h | 1,2 % | 6,4 % |
+| **TotalEnergies Charging Services** | 2 615 | 2 j | 0,2 % | 1,5 % |
+| E-Totem | 2 512 | 33,6 h | 0,3 % | 2,0 % |
+| Load Stations | 2 343 | 88 j | 0,1 % | 0,4 % |
+| WAAT SAS | 2 136 | 89 j | 0,1 % | 0,3 % |
+| **Ionity** | 1 826 | 4,6 h | 4,4 % | 10,9 % |
+
+**Les cinq gros que le CEO nommait sont tous là — et aucun n'est en direct.**
+Le meilleur d'entre eux, Electra, a **4,8 %** de relevés de moins d'un quart
+d'heure. Freshmile, le plus gros contributeur français du lot, publie une
+photographie vieille de **trois mois**.
+
+Un seul opérateur du fichier tient une vraie cadence : **Tesla** (84,8 % de
+relevés de moins d'une heure) — réseau américain, fermé aux badges que le CEO
+cite, et donc sans usage pour nous.
+
+#### Le couloir Paris → Lyon, celui de la démo
+
+Restreint aux points de **150 kW et plus à moins de 25 km** de la droite
+Paris–Lyon (3 986 points, dont 3 525 présents dans le flux, soit **88 %** de
+couverture) :
+
+| Mesure sur le couloir | Valeur |
+|---|---|
+| âge médian | **4,0 h** |
+| moins de 15 min | 194 points (**5,5 %**) |
+| moins d'1 h | 823 points (23,3 %) |
+| moins de 6 h | 2 217 points (62,9 %) |
+
+Par opérateur sur ce couloir : Electra 701 pts (médiane 1,7 h), Tesla 485
+(0,5 h), TotalEnergies 367 (3,8 h), Allego 269 (3,8 h), Power Dot 262 (9,0 h),
+IZIVIA 249 (3,8 h), EVzen 142 (**87 j**), Fastned 72 (3,7 h).
+
+**Ce que cela permet, et rien de plus** : afficher un état **daté**, jamais un
+état présent. Un relevé de quatre heures ne dit rien de la borne à l'instant
+où on la regarde — pas davantage pour « hors service » que pour « occupée » :
+une borne déclarée en panne à 8 h et réparée à 9 h serait présentée en panne à
+midi. La seule phrase honnête porte son heure — « déclarée hors service,
+relevé de 8 h 05 » — et laisse l'usager juger de sa fraîcheur. Ce que cela
+interdit : promettre une place libre, annoncer une panne **au présent**, et
+surtout rerouter dessus. Quatre heures, c'est le temps qu'il faut pour vider
+et remplir trois fois une borne de 150 kW.
+
+**Verdict : après le salon, et daté.** La donnée est française, publique,
+gratuite, sans clé, déjà autorisée par notre CSP. Elle n'est simplement pas
+assez vivante pour ce qu'on en ferait sur un stand.
+
+### 3. data.gouv.fr — `tabular-api`, la bonne porte
+
+Les deux identifiants de ressource (`411443b1-…`, celui du 01/09, et
+`89185b1f-…`, celui que sert le PAN) rendent **le même premier
+enregistrement** : c'est le même fichier, servi en base interrogeable.
+
+```
+GET https://tabular-api.data.gouv.fr/api/resources/411443b1-…/data/?page_size=1
+→ HTTP 200 en 0,31 s
+   access-control-allow-origin: *
+   access-control-allow-methods: GET, OPTIONS
+```
+
+Mesures complémentaires du 10/09 :
+
+| Question | Réponse mesurée |
+|---|---|
+| filtre par liste d'identifiants | `id_pdc_itinerance__in=` avec **40 identifiants** → URL de 736 caractères, **HTTP 200 en 0,26 s**, 40 lignes, 11,8 Ko |
+| plafond de pagination | **200** (`page_size=200` → 200 ; `page_size=500` → `HTTP 400 « Page size exceeds allowed maximum: 200 »`) |
+| jointure | inchangée depuis le 01/09 : **seuls les `id_pdc_itinerance` joignent** ; l'identifiant de station n'est pas un préfixe de celui de ses points |
+
+Un appel par station (quarante points), jamais en boucle : la règle du 01/09
+reste la bonne, et la mesure de fraîcheur ci-dessus explique pourquoi
+interroger « à intervalles en approchant » redemanderait la valeur d'hier.
+
+**Verdict : après le salon.** C'est la route à retenir le jour où l'on
+affichera un état daté ; elle n'a besoin d'aucune décision, d'aucune clé,
+d'aucun hôte nouveau.
+
+### 4. Les API OCPI directes des cinq gros — écartées, deux fois
+
+Sondes du 10/09, toutes avec `Origin: https://maps.infonovice.fr` :
+
+| Opérateur | Point sondé | Réponse |
+|---|---|---|
+| **Freshmile** | `https://ocpi.freshmile.com/ocpi/cpo/versions` | **HTTP 401** — `{"status_code":2434,"status_message":"UnknownOperator: Unknown operator with no Authorization header or empty token."}` |
+| Freshmile | `…/ocpi/versions` | HTTP 404 |
+| **Ionity** | `https://api.ionity.eu/ocpi/versions` | **HTTP 403** |
+| Ionity | `https://api.ionity.eu/core/v1/locations` | HTTP 403 |
+| **IZIVIA** | `https://api.izivia.com/ocpi/versions` | HTTP 404 · `ocpi.izivia.com` : **le nom ne résout pas** |
+| **Electra** | `https://ocpi.go-electra.com/ocpi/versions` | HTTP 404 (page Rails) · `api.go-electra.com` : **ne résout pas** |
+| **TotalEnergies** | `ocpi.totalenergies.com`, `api.totalenergies.com`, `charge.totalenergies.fr` | **aucun ne résout** |
+
+La réponse de Freshmile est la plus instructive : le point d'entrée OCPI existe
+bel et bien, et il dit lui-même ce qu'il attend — un **opérateur connu** avec
+un **jeton d'autorisation**. OCPI est un protocole **bilatéral** entre un CPO
+et un e-MSP, pas une API ouverte : y accéder suppose un contrat d'itinérance,
+donc une entité juridique en face, donc bien au-delà du périmètre.
+
+**Et même avec un jeton, ce serait mort** : aucune de ces réponses ne porte
+d'en-tête `access-control-allow-origin`. Un navigateur ne pourrait pas lire le
+corps. Il faudrait un relais serveur — la contrainte « 0 €, aucun backend »
+l'interdit.
+
+**AFIR (règlement UE 2023/1804, article 20) pose DEUX obligations distinctes,
+et il faut les lire toutes les deux.** L'article 20 §2 oblige depuis le
+14/04/2025 les exploitants de points de charge ouverts au public à rendre
+disponibles sans frais leurs données statiques **et dynamiques**. Ensuite :
+
+- **Le point d'accès national** (§4, échéance 31/12/2024) : les États membres
+  veillent à ce que ces données « soient rendues accessibles sur une base
+  ouverte et non discriminatoire à tous les utilisateurs de données par
+  l'intermédiaire de leur point d'accès national ». En France, c'est
+  transport.data.gouv.fr — le fichier mesuré au §2 de cette section.
+- **Une API par exploitant** (§3), cité mot pour mot : « Chaque exploitant de
+  points de recharge et de points de ravitaillement en carburants alternatifs
+  ouverts au public ou, selon les modalités convenues entre eux, le
+  propriétaire de ces points **met en place une interface de programmation
+  d'application (API) qui donne accès sans frais et sans restrictions aux
+  données visées au paragraphe 2** et communique des informations sur cette
+  API aux points d'accès nationaux. »
+  ([texte officiel](https://eur-lex.europa.eu/eli/reg/2023/1804/oj?locale=fr))
+
+**Alimenter le PAN n'efface donc pas l'obligation d'ouvrir une API**, et il
+faut dire exactement ce que nos sondes établissent — et ce qu'elles
+n'établissent pas. Elles établissent que les cinq gros ne répondent pas sur
+les adresses **OCPI** que nous connaissions ; or OCPI, protocole bilatéral
+entre un CPO et un e-MSP, n'est pas l'API du §3. Elles n'établissent **pas**
+l'absence d'une API conforme ailleurs : nous ne l'avons pas cherchée.
+
+**Deux réserves avant d'espérer, l'une juridique, l'autre technique.**
+« Sans frais et sans restrictions » porte sur l'accès aux données, pas sur
+l'en-tête `Access-Control-Allow-Origin` : une API parfaitement conforme au §3
+peut rester illisible depuis une page web. Et les exigences techniques
+communes de ces API dépendent d'actes délégués que la Commission est
+« habilitée à adopter » (§6 b) ; tant qu'ils ne sont pas adoptés, chaque
+exploitant définit la sienne à sa main.
+
+**Par où rouvrir la piste, sans rien deviner** : le §3 oblige l'exploitant à
+COMMUNIQUER les informations sur son API **au point d'accès national**. La
+recherche à faire est donc dans le catalogue de transport.data.gouv.fr — pas
+sur des noms d'hôtes devinés comme ceux sondés ci-dessus. À mesurer au cycle
+suivant : ce que le PAN publie sur les API des exploitants, et si l'une
+d'elles répond avec un en-tête CORS.
+
+**Verdict : rien d'exploitable aujourd'hui depuis le navigateur.** Sans
+contrat d'itinérance, sans CORS, sans backend : trois murs, un seul
+suffisait. Ce verdict porte sur les **adresses sondées le 10/09**, et non sur
+l'article 20 §3, qui reste une piste à instruire par le PAN.
+
+### 5. Le contre-exemple qui prouve que le tuyau fonctionne — Parera Mobilité
+
+Le catalogue data.gouv.fr rend 31 jeux « IRVE dynamique » déposés **par
+opérateur** ; ce sont pour la plupart de petites structures, et la plupart
+n'ont pas bougé depuis 2024 (BORNECO, PROXITECH, Dubois, Charge-in…). Un seul
+est vivant à la seconde :
+
+```
+GET https://www.data.gouv.fr/api/1/datasets/?q=IRVE dynamique Parera   → 200 en 0,13 s
+GET https://static.data.gouv.fr/resources/irve-dynamique-organisation-parera-mobilite/
+    20260910-222130/data-gouv-dynamique.csv                            → 200 en 0,15 s
+   access-control-allow-origin: *   ·   17 461 o   ·   230 points
+   âge des relevés : min 0,3 min · médiane 0,3 min · max 0,3 min
+```
+
+**Piège mesuré** : l'URL porte l'horodatage de publication
+(`20260910-222130`). Un premier essai sur l'URL lue quarante-six secondes plus
+tôt (`…-222044`) a rendu **HTTP 404** : le fichier avait déjà été republié. Un
+client navigateur ne peut donc pas figer cette URL — il doit d'abord
+l'interroger auprès de l'API data.gouv, soit **deux requêtes par relevé**.
+
+230 points sur 116 155, c'est 0,2 % du parc. Mais cela démontre que la chaîne
+« opérateur → data.gouv → consolidation » sait porter du direct : ce qui
+manque n'est pas la plomberie, c'est la volonté des gros opérateurs.
+
+### Ce qui est décidé, et ce qui ne l'est pas
+
+- **Rien n'est branché pour le salon.** Aucune source ne tient la promesse
+  qu'une carte ferait en affichant « libre » ou « occupé ».
+- **La route d'après est écrite** : `tabular-api.data.gouv.fr`, filtre
+  `id_pdc_itinerance__in`, un appel par station, affichage **daté**, et rien
+  au-delà de sept jours. Aucun hôte nouveau, aucune clé, aucune Décision.
+- **À rouvrir** : le jour où la médiane du couloir Paris–Lyon passe sous
+  l'heure. Le comptage de ce jour (4,0 h de médiane, 5,5 % sous le quart
+  d'heure) est le point de comparaison.
+- **Pour mémoire, l'outil qui a manqué** : `gemini -p` n'a pas pu servir à la
+  recherche documentaire de cette session (`GEMINI_API_KEY` absente de
+  l'environnement non interactif). Les points documentaires — conditions
+  TomTom, article 20 d'AFIR — viennent de leurs pages officielles, lues
+  directement. Toutes les mesures chiffrées, elles, sont des appels faits ici.
+
+---
+
+## Wikimedia dans Maps : l'usage exact, et par quoi le remplacer (11/09/2026)
+
+**Pourquoi cette section.** Décision du CEO du 11/09/2026 (D3) : Maps gratuit
+s'en tient aux **sources françaises, sans dérogation**. La deuxième dérogation
+du projet — « OK pour Wikimedia », 29/08 — tombe donc. Il faut remplacer ou
+retirer avant le gel du 5 octobre. Ce qui suit est d'abord une lecture du
+code, ensuite des appels réels datés du 11/09/2026.
+
+### 1. L'usage exact, lu dans `src/`
+
+Trois hôtes sont déclarés dans la CSP d'`index.html` ; **un seul module les
+appelle**, `src/lib/photos-monuments.ts`, et **un seul appelant** l'utilise,
+`src/carte/fiche-lieu.ts` (méthode `#chargerPhoto`).
+
+| Fonction visible | Hôte | Donnée rapportée | Volume |
+|---|---|---|---|
+| Fiche d'un **lieu d'exception** : la photographie du monument | `query.wikidata.org` (SPARQL, `connect-src`) | la référence Mérimée (P380) → le nom du fichier image (P18) | **1 appel par fiche ouverte**, jamais en lot |
+| La même, suite | `commons.wikimedia.org` (`w/api.php`, `connect-src`) | l'URL de la vignette 480 px **et** son attribution (`extmetadata` : auteur, licence, page du fichier) | 1 appel par fiche, seulement si le SPARQL a rendu un fichier |
+| La même, l'image elle-même | `upload.wikimedia.org` (`img-src`) | le JPEG/PNG de la vignette, posé dans `.fb-photo-image` | 1 image par fiche illustrée |
+
+**Combien de fiches sont concernées : les 14 350 de l'index.**
+`public/donnees/monuments.json` porte 14 350 monuments classés géolocalisés
+(1,40 Mo), et **100 %** d'entre eux portent une référence Mérimée — vérifié
+ligne à ligne le 11/09. Toute fiche de lieu d'exception ouverte déclenche donc
+**l'appel SPARQL** ; le second ne part que si le premier a rendu un nom de
+fichier — `photoDuMonument()` rend `null` sans appeler Commons quand les
+`bindings` sont vides (`photos-monuments.ts`, l. 160-162). Sur notre
+échantillon du 11/09, c'est le cas 2 fois sur 30. Rien d'autre dans le produit
+ne touche Wikimedia : aucun autre résultat pour
+`wikidata|wikimedia|wikipedia` dans `src/`.
+
+**Les logos par Wikidata de la ROADMAP : INFIRMÉ.** Les lignes 1339, 1355 et
+1416 de `docs/ROADMAP.md` parlent bien de logos d'enseignes, mais pour dire
+**l'inverse** de ce qu'un lecteur pressé y verrait : « Wikidata exclu,
+chercher un équivalent français pour les logos » (Armelin, 01/09) et « aucune
+base française ne les expose […] la recommandation reste les pictogrammes
+maison ». Aucun code ne les implémente. Il n'y a donc rien à retirer de ce
+côté-là.
+
+### 2. Deux constats du jour qui changent la décision
+
+**(a) La fonction est probablement déjà morte en production.** L'API de
+Commons ne rend plus la vignette sur `upload.wikimedia.org` :
+
+```
+GET commons.wikimedia.org/w/api.php?…&iiurlwidth=480&titles=File:Pont du Gard BLS.jpg
+→ thumburl = https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/
+             Pont_du_Gard_BLS.jpg/500px-Pont_du_Gard_BLS.jpg?utm_source=…
+   (relevé sur 38 monuments le 11/09 : 38 vignettes sur 38 servies par
+    thumb.wikimedia.org, aucune par upload.wikimedia.org)
+```
+
+`fiche-lieu.ts` pose cette URL telle quelle dans `image.src`. Or la CSP
+d'`index.html` déclare `img-src … https://upload.wikimedia.org` et **pas**
+`thumb.wikimedia.org` : le navigateur bloque. Le même chemin sur
+`upload.wikimedia.org` répond toujours **HTTP 200, 48 531 o** — l'hôte
+historique vit encore, c'est l'API qui a changé d'annonce. À confirmer en
+navigateur par Ingénierie ; la lecture de la CSP, elle, ne laisse pas de
+doute.
+
+**(b) L'URL rendue porte des paramètres de mesure d'audience** :
+`?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail`.
+Sur un produit qui écrit « zéro traceur » dans sa méta-description, cela se
+remarque.
+
+Pour mémoire : `iiurlwidth=480` rend en réalité une vignette de **500 px**
+(Wikimedia arrondit au palier supérieur).
+
+### 3. Les alternatives, mesurées le 11/09/2026
+
+**L'échantillon, nommé.** 30 monuments tirés de l'index à pas régulier (tri
+par référence Mérimée, 14 219 en métropole, un sur 473) :
+PA00078018 Arcis-sur-Aube · PA00078830 Reuves · PA00080562 Embrun ·
+PA00081636 Hyères · PA00083060 Vézac · PA00084636 Boersch · PA00086299
+Paris 4e · PA00087822 Boissy-sous-Saint-Yon · PA00089559 Quintin ·
+PA00090630 Miniac-Morvan · PA00091968 Châteldon · PA00093363 Vicq ·
+PA00094923 Samatan · PA00096810 La Guerche-sur-l'Aubois · PA00098172 Tours ·
+PA00099501 Nojeon-en-Vexin · PA00100818 Rouen · PA00102268
+Saint-Loup-sur-Semouse · PA00103906 Prunières · PA00105196
+Saint-Laurent-de-la-Prée · PA00106505 Chonville-Malaumont · PA00107589 Lille ·
+PA00109049 Cheviré-le-Rouge · PA00110484 Le Mont-Saint-Michel · PA00112126
+Beaune · PA00113363 Milly-Lamartine · PA00114876 Saint-Vaast-de-Longmont ·
+PA00116284 Tilloloy · PA00118119 Villefranche-sur-Saône · PA25000040 Besançon.
+Et 10 « vedettes », celles qu'un visiteur du salon ouvrirait : Pont du Gard
+(PA00103291), Chambord (PA00098405), Cité de Carcassonne (PA00102588), Palais
+des Papes (PA00081941), Chenonceaux (PA00097705), Opéra Garnier (PA00089004),
+Panthéon (PA00088420), Sainte-Chapelle (PA00086001), Palais du Louvre
+(PA00085992), cathédrale de Bayeux (PA00111042).
+
+**Le point de comparaison, remesuré le même jour sur le même échantillon** :
+Wikimedia illustre **28/30 (93 %)** de l'échantillon régulier et **10/10** des
+vedettes ; latence médiane 746 ms, maximum 11,3 s (une requête SPARQL lente).
+
+| Source | Couverture ≤ 50 m (30 régulières) | Vedettes (10) | Verdict |
+|---|---|---|---|
+| **Panoramax** `api.panoramax.xyz` | **11/30 — 37 %** | 5/10 | insuffisant, et ce ne sont pas des photos du monument |
+| **POP / Mérimée–Mémoire** | — | — | **inutilisable au navigateur**, deux fois |
+| **DATAtourisme** (voie tabulaire) | — | — | **aucune colonne image** |
+| *(rappel)* Wikimedia | 28/30 — 93 % | 10/10 | ce qu'on perd |
+
+#### Panoramax — mesuré, et le compte n'y est pas
+
+Méthode : un `GET https://api.panoramax.xyz/api/search?bbox=…&limit=100` sur
+une emprise de ±150 m autour du point du monument, distance orthodromique
+calculée pour chaque photo rendue.
+
+| Rayon | Échantillon régulier | Vedettes |
+|---|---|---|
+| ≤ 25 m | 8/30 (27 %) | 2/10 |
+| **≤ 50 m** | **11/30 (37 %)** | **5/10** |
+| ≤ 100 m | 14/30 (47 %) | 8/10 |
+| ≤ 150 m | 15/30 (50 %) | 8/10 |
+
+Latence médiane **559 ms**, maximum 707 ms. CORS : l'API renvoie
+`access-control-allow-origin: https://maps.infonovice.fr` — elle reflète
+l'origine appelante, et l'hôte est déjà dans notre `connect-src`.
+
+**Deux monuments vedettes n'ont AUCUNE photo à moins de 150 m** : le **Pont du
+Gard** et **Chambord** — précisément ceux que l'on montrerait sur un stand.
+
+**Trois obstacles qu'il faut écrire, mesurés eux aussi.**
+
+1. **Les images viennent de trois hôtes, et nous n'en acceptons qu'un.**
+   Sur 794 photos relevées autour de huit monuments couverts :
+   `panoramax.openstreetmap.fr` 403 (51 %), **`panoramax.ign.fr` 388 (49 %)**,
+   `panoramax.mapcomplete.org` 3. **Près d'une photo sur deux est donc
+   inutilisable aujourd'hui**, y compris pour la fonction « photos de rue »
+   existante — mais le mécanisme n'est pas celui qu'on croit, et la nuance
+   change le correctif. Ce n'est pas la CSP qui bloque à l'affichage : c'est
+   `versPhotos()` qui écarte la photo AVANT, dans `src/lib/panoramax.ts`, sur
+   un motif d'hôte (`/^https:\/\/[a-z0-9.-]*panoramax\.(openstreetmap\.fr|xyz)\//`)
+   — une garde délibérée, dont le commentaire dit qu'elle évite « un cadre
+   vide ». Corriger demande donc **deux** gestes, pas un : élargir ce motif à
+   `panoramax.ign.fr` **et** ajouter l'hôte à `img-src` dans `index.html`.
+   L'un sans l'autre ne rend rien. Constat sur `src/`, à traiter par
+   Ingénierie, indépendant de la décision Wikimedia.
+2. **La licence n'est pas unique, elle est par photo.** Sur les mêmes 794 :
+   **CC-BY-SA-4.0** pour 406, **Licence Ouverte / Etalab 2.0** pour 388. Les
+   deux exigent la paternité ; CC-BY-SA impose en plus le partage à
+   l'identique des œuvres dérivées. Compatible avec un client AGPL-3.0 — ce
+   sont des objets distincts, le code d'un côté, l'image de l'autre — à
+   condition d'afficher sous chaque photo **producteur, licence et date**,
+   lus dans `properties` et dans le lien `rel="license"` de chaque `feature`.
+   Une mention globale « photos Panoramax » ne suffirait pas.
+3. **Une vue de rue n'est pas une photo de monument.** Une prise de vue à
+   30 m dans une rue voisine ne cadre pas forcément l'édifice ; les 37 % sont
+   un plafond de disponibilité, pas de pertinence.
+
+#### POP — bases Mérimée et Mémoire (ministère de la Culture)
+
+**L'API POP ne peut pas être appelée depuis un navigateur, et c'est net.**
+`https://api.pop.culture.gouv.fr/` répond `200 {"message":"POPv2 API"}` en
+728 ms, mais **aucune réponse ne porte `Access-Control-Allow-Origin`** — ni
+les 200, ni les 404. Le préflight le confirme :
+
+```
+OPTIONS https://api.pop.culture.gouv.fr/   Origin: https://maps.infonovice.fr
+→ HTTP 204
+   access-control-allow-methods: GET,POST,PUT,DELETE,PATCH
+   access-control-allow-credentials: true
+   (PAS d'access-control-allow-origin)
+```
+
+Un préflight sans `Allow-Origin` échoue : le navigateur refuse la requête.
+Sept chemins de notice ont par ailleurs été sondés (`/merimee/PA00103291`,
+`/search/merimee/_search`, `/notice/…`, `/v2/…`) — **404 partout**. Et
+`data.culture.gouv.fr` ne sert plus d'API Opendatasoft : l'adresse rend
+désormais la page d'accueil HTML de `culture.data.gouv.fr` (constat du 01/09,
+confirmé).
+
+**La voie open data existe, et elle bute sur les droits et sur le transport.**
+Le jeu « Mémoire — illustration Mérimée et Palissy », ministère de la
+Culture, licence **ODbL**, mis à jour le 06/09/2026 : **un seul fichier CSV de
+1 357 374 283 octets (1,36 Go)** sur `ministere-culture.s3.sbg.io.cloud.ovh.net`
+(pas d'en-tête CORS ; un index engendré au build, comme `monuments.json`, le
+contournerait). 120 colonnes. **Deux tirages distincts** par requêtes `Range`,
+et les dénominateurs diffèrent — autant les écrire :
+
+*Premier tirage : six fenêtres de 3 Mo, **17 590 lignes*** —
+
+- `Lien_vers_l_image` renseigné sur **17 511 lignes sur 17 590 — 99,55 %** ;
+- rattachement : **53,5 % à une référence Mérimée `PA…`**, 46,5 % à une
+  référence Palissy `PM…` ;
+- `Droits_de_diffusion` : vide sur 99,8 % ; les 0,2 % renseignés portent
+  « reproduction soumise à autorisation du titulaire des droits
+  d'exploitation ».
+
+*Second tirage, fenêtres différentes du même fichier : quatre fenêtres de
+3 Mo, **11 071 lignes***, dont 6 255 rattachées à un `PA…` —
+
+- `Copyright` : **vide sur 11 071 lignes sur 11 071**, et vide de même sur les
+  6 255 lignes Mérimée prises seules.
+
+Les 11 071 lignes du second tirage ne sont pas un sous-ensemble des 17 590 du
+premier : ce sont deux échantillons du même fichier de 1,36 Go, pas une
+mesure faite deux fois. Rien n'autorise à conclure sur les lignes non tirées ;
+ce qui est établi, c'est que **sur deux échantillons indépendants totalisant
+28 661 lignes, aucune ne porte de mention de droits exploitable**.
+
+Autrement dit : **l'open data ne publie aucune licence par image**. L'ODbL
+couvre la base de métadonnées, pas les photographies. Afficher l'image serait
+un pari juridique.
+
+**Et le pari ne se poserait même pas, parce que l'image n'arrive pas.** Les
+fichiers sont servis par `www2.culture.gouv.fr/Wave/image/memoire/…` **en HTTP
+seulement** :
+
+```
+http://www2.culture.gouv.fr/Wave/image/memoire/2355/sap04_80l016926_p.jpg
+→ HTTP 200, image/jpeg, 197 072 o, 129 ms
+https://www2.culture.gouv.fr/…  → échec TLS : [SSL: WRONG_VERSION_NUMBER]
+   (le port 443 ne sert pas TLS)
+```
+
+Une page servie en HTTPS ne charge pas une image en HTTP : contenu mixte,
+bloqué par le navigateur, et notre CSP n'admet aucune source `http:`.
+**Verdict : inutilisable, deux fois — droits et transport.**
+
+#### DATAtourisme — réévalué pour les images
+
+La voie ouverte le 07/09 (CSV régionaux interrogés par
+`tabular-api.data.gouv.fr`, déjà dans notre CSP) **ne porte aucune image** :
+les colonnes de `datatourisme-reg-idf.csv` sont `Nom_du_POI`,
+`Categories_de_POI`, `Latitude`, `Longitude`, `Adresse_postale`,
+`Code_postal_et_commune`, `Periodes_regroupees`, `Covid19_mesures_specifiques`,
+`Createur_de_la_donnee`, `SIT_diffuseur`, `Date_de_mise_a_jour`,
+`Contacts_du_POI`, `Classements_du_POI`, `Description`, `URI_ID_du_POI`
+(relevé le 11/09, HTTP 200 en 762 ms, `access-control-allow-origin: *`).
+
+Deux échappatoires testées, deux impasses :
+
+- **Déréférencer l'URI du POI** (`https://data.datatourisme.fr/19/…`) rend une
+  **page HTML** de 42 347 octets, sans CORS, quel que soit l'en-tête `Accept`
+  (`application/ld+json`, `application/json`, `text/turtle` : même page).
+- **Les vidages JSON-LD** référencés par le catalogue (« Sites touristiques »,
+  « Événements touristiques ») sont hébergés sur `data.cquest.org`, **en
+  HTTP**, sur un miroir personnel : ni officiel, ni chargeable depuis une page
+  HTTPS.
+
+Et sur le fond : l'échantillon rendu par la ressource Île-de-France est
+dominé par l'hébergement (hôtels). DATAtourisme n'est pas une photothèque de
+monuments historiques. **Verdict : rien pour les images.**
+
+#### Croiser deux sources ne sauve rien
+
+L'union ne dépasse pas le meilleur des termes : POP et DATAtourisme rendent
+**zéro** image utilisable. `37 % ∪ 0 % ∪ 0 % = 37 %`. Il n'y a pas de second
+terme à croiser — le croisement était la piste raisonnable, la mesure la
+ferme.
+
+### 4. Recommandation (une ligne, pour la Décision du CEO)
+
+**RETIRER la photographie des fiches de lieux d'exception avant le gel** —
+aucune source française ne dépasse 37 % là où Wikimedia atteint 93 %, la
+fonction est de toute façon probablement déjà bloquée par notre propre CSP, et
+le retrait (supprimer `src/lib/photos-monuments.ts` et son appel dans
+`fiche-lieu.ts`, deux hôtes de `connect-src` et un d'`img-src`, la section
+« Seconde exception » d'`a-propos.html`, les tests de
+`tests/photos-monuments.test.ts`) tient dans **un cycle d'Ingénierie**, là où
+un remplacement partiel par Panoramax coûterait autant pour rendre une vue de
+rue sur une fiche sur trois — et laisserait le Pont du Gard et Chambord sans
+image.
+
+**Ce que l'usager ne verra plus** : la photographie en haut de la fiche d'un
+monument classé. Le reste de la fiche ne bouge pas — titre, commune, siècle,
+statut « Monument historique classé », lien vers la notice officielle
+`pop.culture.gouv.fr`, bouton d'itinéraire. La page « À propos » y gagne une
+exception de moins à expliquer.
+
+**Si le CEO préfère garder une image**, la seule voie mesurée est Panoramax en
+**complément assumé** : un bouton « voir la rue » qui ne paraît que lorsqu'une
+photo existe à moins de 50 m, avec producteur, licence et date sous l'image.
+Combien de fiches en porteraient un ? **11 sur les 30 de notre échantillon** ;
+extrapoler ces 37 % aux 14 350 fiches est une estimation, pas une mesure — un
+comptage sur l'index entier demanderait 14 350 appels et n'a pas été fait.
+Préalable obligatoire, dans les deux cas : élargir le motif d'hôte de
+`src/lib/panoramax.ts` **et** ajouter `panoramax.ign.fr` à `img-src`, sans
+quoi une photo sur deux restera écartée.
+
+### 5. Retrait APPLIQUÉ le 13/09/2026 — ce qui est parti, et la porte laissée ouverte
+
+La Decision D3 du 11/09/2026 dormait depuis deux jours : Growth a mesuré le
+12/09 à 22 h 11 UTC que les trois hôtes étaient toujours dans la CSP de
+production. Ils n'y sont plus.
+
+**Ce qui est parti** (branche `feat/rec46S36kE181IeJE-wikimedia-retrait`) :
+
+| Canal | Ce qui a été retiré |
+|---|---|
+| CSP (`index.html`) | `https://upload.wikimedia.org` d'`img-src` ; `https://query.wikidata.org` et `https://commons.wikimedia.org` de `connect-src` |
+| Code | `src/lib/photos-monuments.ts` supprimé ; dans `src/carte/fiche-lieu.ts` : l'import, le champ `#photoEnCours`, la `<figure class="fb-photo">` et la méthode `#chargerPhoto` |
+| Crédit | la ligne `«  auteur — licence · Wikimedia Commons »` (`figcaption.fb-photo-credit`), partie avec la figure |
+| Feuille de style | le bloc `PHOTO-1` de `src/styles/carte.css` (`.fb-photo`, `.fb-photo-image`, `.fb-photo-credit`) |
+| Tests | `tests/photos-monuments.test.ts` supprimé ; le parcours E2E `PHOTO-1` remplacé par `PHOTO-0`, qui ÉCOUTE le réseau sans y répondre et échoue si une requête part |
+| Porte anti-retour | deux cas ajoutés à `tests/csp-connect-src.test.ts` : aucun hôte `wikimedia/wikidata/wikipedia` dans la CSP, aucun dans `src/` |
+
+**Service worker : rien à retirer.** Le `sw.js` engendré par `vite-plugin-pwa`
+ne connaît que les réserves de tuiles (`RESERVES_TUILES` dans `vite.config.ts`)
+— `grep -ci wikimedia dist/sw.js` rend `0`.
+
+**Page « À propos » : NON TOUCHÉE, et c'est délibéré.** `a-propos.html` porte
+encore la « seconde exception » qui explique la photo Wikimedia (l. 166 et
+171). Elle fait l'objet d'une décision CEO ouverte et sort du périmètre de
+cette tâche : tant qu'elle n'est pas reprise, la page décrit une fonction que
+l'application n'a plus.
+
+**Le rendu, mesuré — pas jugé à l'œil.** Viewport 1280×720, fiche d'un
+monument d'essai, `vite preview` sur un port dédié, empreinte du bundle servi
+comparée à `dist/` :
+
+| Cas | Cadre `.fb` | `.fb-corps` défile ? | Trous entre blocs | Requêtes Wikimedia |
+|---|---|---|---|---|
+| AVANT, fiche **sans** photo | 360 × 455,89 px | non (403 / 403) | 10 / 10 / 9,99 px | 1 (SPARQL) |
+| APRÈS, fiche **sans** photo | 360 × 455,89 px | non (403 / 403) | 10 / 10 / 9,99 px | **0** |
+| AVANT, fiche **avec** photo | 360 × 504 px (plafond) | **oui** (652 / 451) | — | 3 |
+
+La boîte d'une fiche sans photo est **identique au pixel** avant et après, et
+les ordonnées des quatre blocs visibles ne bougent pas (280,11 / 325,61 /
+454,61 / 526,73). Ce qui disparaît, c'est le nœud `<figure hidden>` — un
+emplacement réservé qui n'attendait plus rien. Effet de bord mesuré : la fiche
+illustrée débordait et se laissait défiler (652 px de contenu pour 451 px de
+fenêtre) ; sans photo, elle tient entière.
+
+**Poids du bundle**, remesuré le 13/09/2026 par deux `npm run build` propres
+(`rm -rf dist`), l'un sur `e453a48` (avant), l'autre sur `c50f5a4` (après) :
+`dist/assets/index-*.js` passe de **361,85 ko à 359,44 ko** (gzip **116,89 →
+115,99 ko**). Empreintes réellement produites : **`index-CKaEWQhM.js` avant**,
+**`index-FF7fm51B.js` après** — cette dernière vérifiée reproductible sur deux
+builds consécutifs. *Une version antérieure de cette page citait
+`index-Dgu8MxWE.js` pour l'état « après » : aucun commit de la branche ne produit
+cette empreinte, elle était fausse et est corrigée ici.*
+
+#### La porte laissée ouverte — Panoramax, et à quelles conditions
+
+**Le chiffre et sa date : Panoramax illustre 11 fiches sur 30, soit 37 %, de
+l'échantillon du §3, mesuré le 11/09/2026** (le brief du cycle du 13/09 date
+la même mesure du 12/09 ; elle n'a pas été refaite ici). Face aux **93 %
+(28/30) de Wikimedia, mesurés le même jour sur le même échantillon**, c'est
+l'écart qui a fondé le retrait. **Un chiffre sans sa date redevient faux tout
+seul : celui-ci vaut pour le 11/09/2026 et pour cet échantillon de 30.**
+
+Ce qu'il faudrait pour revenir, après le salon, sans redemander de dérogation :
+
+1. **Remesurer.** Le 37 % a une date. Toute reprise commence par un nouveau
+   comptage sur le même échantillon de 30, publié avec sa date — sinon on
+   décide sur un chiffre périmé.
+2. **Élargir le motif d'hôte de `src/lib/panoramax.ts`.** Le filtre actuel
+   (`/^https:\/\/[a-z0-9.-]*panoramax\.(openstreetmap\.fr|xyz)\//`) écarte
+   `panoramax.ign.fr`, qui sert **388 des 794 photos relevées le 11/09 (49 %)**.
+   Sans cela, près d'une photo sur deux reste jetée avant l'affichage.
+3. **Ajouter `panoramax.ign.fr` à `img-src`** dans le même commit que le point
+   2 — un hôte absent de la CSP ne donne pas d'échec réseau visible, seulement
+   une image qui ne vient pas.
+4. **Assumer le libellé.** Une photo Panoramax est une vue **de rue**, pas un
+   cadrage du monument : le bouton doit dire « voir la rue », jamais « photo du
+   monument », et porter producteur, licence et date sous l'image. Une mention
+   globale « photos Panoramax » ne suffit pas.
+5. **Seuil d'acceptation à écrire AVANT de recommencer.** En dessous de quel
+   taux de couverture la fonction ne vaut pas d'exister ? Ce seuil n'est pas
+   fixé à ce jour ; le poser évite de relivrer une fonction qui rend une image
+   une fois sur trois.
+
+Aucun de ces cinq points n'est engagé par cette tâche ; ils sont la liste de
+courses d'une reprise après le 18/10.
+
+#### La phrase pour le stand
+
+Si un visiteur demande pourquoi les fiches de monuments n'ont pas de photo :
+
+> « Parce que la seule photothèque qui couvrait nos monuments appartient à une
+> fondation américaine. Notre page « À propos » écrit elle-même **deux**
+> exceptions à nos sources françaises : la météo, qui vient d'un service
+> allemand faute d'équivalent français interrogeable sans clé, et la photo des
+> monuments — celle-là, **cette version la retire du produit**, et la page
+> sera reprise derrière. Il reste donc la météo, et nous n'en ouvrons pas de
+> nouvelle pour une photo. L'équivalent français, Panoramax, ne couvre
+> aujourd'hui qu'un monument sur trois : il reviendra quand il en couvrira
+> assez, pas avant. »
+
+Variante courte, si le visiteur est pressé :
+« Sur les dix-huit services que cette carte déclare pouvoir appeler, quinze
+sont en `.fr` : services publics et communs français. Les trois autres, nous
+les nommons au lieu de promettre « sans exception » — la météo allemande, le
+commun français d'imagerie Panoramax (en `.xyz`), et la plateforme qui sert le
+fichier Etalab des bornes de recharge. Et l'exception photo que « À propos »
+annonce encore, cette version la retire. »
+
+**Ce que cette phrase ne dit plus, et pourquoi.** La version précédente disait
+« ici tout vient de sources françaises — sans exception ». C'était faux, et faux
+dans le document que le visiteur peut ouvrir sur son téléphone pendant qu'on lui
+parle : `a-propos.html`, en ligne, annonce lui-même une exception météo
+(Open-Meteo, allemand). Relevé le 13/09/2026 sur l'`index.html` de `c50f5a4` :
+la CSP servie compte **18 hôtes externes distincts**, dont
+**`api.open-meteo.com`**. Une phrase de stand que l'application contredit à
+l'écran ne tient pas dix secondes devant une caméra.
+
+**Deuxième passe, 13/09/2026 : la variante COURTE disait encore « une
+exception ».** La phrase longue avait été reprise, la courte non : elle
+promettait « à une exception près que nous écrivons nous-mêmes — la météo »,
+et le document se contredisait lui-même vingt-cinq lignes plus bas, où la note
+du décompte écrit « 15 sont en `.fr` ». Deux choses la démentaient ensemble.
+
+1. **La page réellement servie.** `curl -sS https://maps.infonovice.fr/a-propos.html`
+   le 13/09/2026 (HTTP 200, 14 273 octets) rend une page qui porte
+   `<h2>Première exception : la météo</h2>` **et**
+   `<h2>Seconde exception : les photos des monuments</h2>`. **C'est sur cette
+   seconde ligne que les deux variantes s'alignent désormais : `a-propos.html`
+   l. 164** (l. 163 du HTML servi, qui perd une ligne à la construction). Le
+   fichier est le même partout —
+   `git rev-parse origin/main:a-propos.html origin/staging:a-propos.html HEAD:a-propos.html`
+   rend trois fois `ccaca3bb921e438e534bd8e4a028e67c9c33ad7b` : la page servie
+   en production, celle de `staging` et celle de cette branche sont
+   identiques. Une phrase de stand qui dit « une exception » est donc
+   démentie par le titre de section que le visiteur voit en faisant défiler.
+2. **La CSP servie.**
+   `awk '/Content-Security-Policy/,/form-action/' index.html | grep -o 'https://[A-Za-z0-9.-]*' | sed 's|https://||' | sort -u`
+   rend **18 hôtes distincts, dont 15 en `.fr`** ; les trois autres sont
+   `api.open-meteo.com`, `api.panoramax.xyz` et `public.opendatasoft.com`.
+   « Une exception » était donc faux une seconde fois, et sur un terrain
+   vérifiable en trente secondes par un journaliste.
+
+**Ce que les deux variantes garantissent maintenant, et ce qu'elles ne
+garantissent plus.** Toutes deux garantissent l'aveu des **deux** exceptions
+que « À propos » nomme, dans l'ordre où le visiteur les trouvera. **La seule
+qui porte le décompte est la courte** (15 sur 18) ; la longue répond à la
+question de la photo et ne compte rien — c'est voulu, on ne récite pas une
+CSP à quelqu'un qui demande pourquoi une fiche n'a pas d'image, mais il ne
+faut pas non plus lui prêter ce chiffre. Elles ne garantissent plus —
+et ne doivent plus laisser croire — ni que la nationalité de l'éditeur de
+`public.opendatasoft.com` a été vérifiée (elle ne l'est toujours pas), ni que
+« À propos » est à jour : la page annonce encore l'exception photo que cette
+version retire, **et elle se contredit elle-même** — son chapô (l. 61) et son
+« D'où viennent les données » (l. 93) disent « à une exception près » pendant
+que la l. 164 en nomme une seconde. La reprise de la page n'est pas faite ici.
+
+**Les trois pièges de la page « À propos », et la réponse vraie à chacun.**
+
+| Ce que le visiteur lit dans « À propos » | Ce qu'on répond |
+|---|---|
+| « Première exception : la météo » (Open-Meteo, allemand) | Vrai, assumé, et c'est nous qui l'avons écrit. Elle tombera le jour où une donnée publique française sera interrogeable sans clé. |
+| « Seconde exception : les photos des monuments » (Wikimedia) | **La page a une version de retard : la fonction est retirée du produit par cette tâche.** Sa reprise fait l'objet d'une décision CEO ouverte. À dire tel quel, pas à esquiver. |
+| « le code est hébergé sur GitHub … trois sociétés américaines » | Vrai, et écrit par nous. La chaîne qui livre la page n'est pas française ; les **données**, elles, viennent des services publics français. Ne jamais promettre la première en parlant des secondes. |
+
+**Tant que `a-propos.html` n'est pas repris, la phrase du stand doit devancer la
+page, jamais la contredire** : on dit l'exception avant que le visiteur la
+trouve.
+
+*Précision d'honnêteté sur le décompte.* Sur les 18 hôtes, 15 sont en `.fr`
+(services publics et communs français) ; `api.panoramax.xyz` est le commun
+français d'imagerie que la page « À propos » décrit déjà ;
+`public.opendatasoft.com` sert le fichier consolidé Etalab des bornes IRVE
+(donnée publique française) — **la nationalité de l'éditeur de cette plateforme
+n'a pas été vérifiée ici** ; `api.open-meteo.com` est l'exception météo. C'est
+pourquoi la variante courte **compte** (15 sur 18) et pourquoi les deux
+**nomment** les exceptions écrites, au lieu de promettre un « sans
+exception » — ou une exception unique, que la l. 164 de `a-propos.html`
+dément.
+
 ## À vérifier avant leur PR (ne pas présumer)
 - Adressage « commune + mot + chiffres » (PR #18) : rien n'est encore vérifié.
