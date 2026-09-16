@@ -3,15 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- PAS DE `frame-ancestors` ICI, ET C'EST DÉLIBÉRÉ. Le navigateur
-         l'IGNORE lorsqu'il est livré par une balise <meta> — il le dit
-         lui-même dans la console : « The Content Security Policy directive
-         'frame-ancestors' is ignored when delivered via a <meta> element ».
-         Il ne protégeait donc de rien, tout en polluant la console, ce qui
-         masque les vraies erreurs et coûtait un point de « bonnes pratiques »
-         à l'audit. La protection contre l'encadrement demande un EN-TÊTE HTTP,
-         que GitHub Pages ne permet pas d'ajouter. Limite assumée, écrite ici
-         plutôt que déguisée en directive inopérante. -->
+    <!-- PAS DE `frame-ancestors` ICI, ET C'EST DÉLIBÉRÉ : le navigateur
+         l'ignore lorsqu'il est livré par une balise <meta>. Voir le même
+         commentaire dans mentions-legales.html. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self';
     img-src 'self' data:; style-src 'self'; script-src 'none';
     base-uri 'self'; form-action 'none'">
@@ -58,9 +52,10 @@
   <main class="page-corps">
     <h1>Une carte qui ne vous suit pas</h1>
     <p class="page-chapo">Infonovice Maps affiche la France avec les données
-      publiques de l’État français — à une exception près, la météo, dite plus
-      bas. Pas de compte, pas de mouchard, pas de profil publicitaire — et le
-      code est lisible par quiconque veut vérifier.</p>
+      publiques de l’État français et les communs ouverts — à une exception
+      près, la météo, dite plus bas. Pas de compte, pas de mouchard, pas de
+      profil publicitaire — et le code est lisible par quiconque veut
+      vérifier.</p>
 
     <h2>Ce que l’application ne fait pas</h2>
     <ul class="page-promesses">
@@ -89,8 +84,9 @@
     </ul>
 
     <h2>D’où viennent les données</h2>
-    <p>De services publics français, interrogés directement par votre
-      navigateur — <strong>à une exception près, dite plus bas</strong> :</p>
+    <p>De services publics français et de communs ouverts, interrogés
+      directement par votre navigateur — <strong>à une exception près, dite
+      plus bas</strong> :</p>
     <dl>
       <dt>Fonds de carte, itinéraires, altitudes, parkings — Géoplateforme
         (IGN)</dt>
@@ -103,13 +99,34 @@
         <a href="https://adresse.data.gouv.fr/">adresse.data.gouv.fr</a>, qui
         publie ses conditions de réutilisation.</dd>
 
+      <dt>Panneaux, feux, giratoires, limites de vitesse et de tonnage —
+        OpenStreetMap</dt>
+      <dd>Les détails que le service d’itinéraire ne publie pas — numéro de
+        sortie, destination, giratoire, limite de vitesse, pont limité en
+        tonnage, feux tricolores, commodités d’une aire, lieux alentour —
+        viennent d’<strong>OpenStreetMap</strong>, la carte libre, interrogée
+        via l’instance Overpass d’<strong>OpenStreetMap France</strong>,
+        association loi 1901. Données sous licence <strong>ODbL</strong>,
+        © les contributeurs OpenStreetMap. C’est, en nombre d’appels, la
+        source la plus sollicitée de l’application, et c’est un service tenu
+        par des bénévoles : nous ne l’interrogeons qu’à votre demande, jamais
+        au fil de la carte.</dd>
+
+      <dt>Photos de rue — Panoramax</dt>
+      <dd>Le commun français d’imagerie, porté par l’IGN et OpenStreetMap
+        France. Photos sous licence CC-BY-SA, créditées à l’affichage.</dd>
+
       <dt>Écoles, collèges, lycées — Annuaire de l’Éducation nationale</dt>
       <dd>Chercher un établissement par son nom interroge
         <a href="https://data.education.gouv.fr/">data.education.gouv.fr</a>,
-        publié en Licence Ouverte par le ministère. Source française et
-        gratuite : aucune dérogation n’est nécessaire. Elle a été ajoutée
+        publié en Licence Ouverte par le ministère. Elle a été ajoutée
         parce qu’OpenStreetMap ignore une partie des établissements — un
         collège cherché par son nom n’y figurait pas.</dd>
+
+      <dt>Services publics et entreprises — DILA et base Sirene</dt>
+      <dd>Chercher une mairie ou une administration interroge l’Annuaire de
+        l’administration (DILA) ; chercher une entreprise interroge l’API
+        Recherche d’entreprises, adossée à la base Sirene de l’INSEE.</dd>
 
       <dt>Communes — API Découpage administratif</dt>
       <dd>Le nom, le code INSEE et le centre officiel des 34 969 communes,
@@ -122,36 +139,47 @@
 
       <dt>Bornes de recharge — fichier consolidé national</dt>
       <dd>Points de recharge pour véhicules électriques, sous Licence Ouverte
-        v2.0 (Etalab).</dd>
+        v2.0 (Etalab). L’occupation et l’état des bornes viennent de ce que
+        les opérateurs déposent sur data.gouv.fr : <strong>ce n’est pas du
+        direct</strong>, l’information n’est montrée que datée, et jamais
+        au-delà de sept jours.</dd>
+
+      <dt>Places de parking en direct — Aix-Marseille-Provence et Nantes
+        Métropole</dt>
+      <dd>Deux collectivités publient l’occupation de leurs parkings à la
+        minute. Un nombre de places n’est affiché que s’il a <strong>moins
+        d’une heure</strong>, avec son âge et le nom de la collectivité :
+        ailleurs, les jeux dits « temps réel » que nous avons mesurés dataient
+        de plusieurs mois.</dd>
 
       <dt>Info trafic — Bison Futé</dt>
       <dd>Événements routiers de toute la France (travaux, accidents,
         coupures), publiés par le ministère chargé des transports et
         actualisés toutes les trois minutes.</dd>
 
-      <dt>Transports en commun, en direct — transport.data.gouv.fr</dt>
-      <dd>La position des bus, cars et trams, telle que les réseaux la
-        publient au format GTFS-RT, relayée par le Point d’Accès National aux
-        données de transport. Quarante-quatre réseaux la diffusent
-        aujourd’hui ; seuls ceux qui desservent vraiment la carte affichée
-        sont interrogés, trois au plus. <strong>Les horaires et les arrêts ne
-        sont pas montrés</strong> : ces données pèsent des dizaines de
-        mégaoctets par réseau et demanderaient un serveur, que ce site n’a
-        pas. <strong>La vitesse non plus n’est pas affichée</strong> :
-        plusieurs réseaux la publient dans une unité différente de celle que
-        la spécification prévoit, et nous préférons ne rien dire qu’annoncer
-        un tramway à 248 km/h.</dd>
+      <dt>Monuments — plateforme ouverte du patrimoine (POP)</dt>
+      <dd>La fiche d’un monument classé renvoie à sa notice officielle dans la
+        base Mérimée du ministère de la Culture.</dd>
+
+      <dt>Photographies des monuments — retirées</dt>
+      <dd><strong>Cette fonction a été retirée en septembre 2026.</strong> Les
+        photographies affichées venaient de la photothèque de la fondation
+        Wikimédia, une fondation américaine : ouvrir une fiche envoyait votre
+        adresse IP aux États-Unis. Nous avons préféré retirer l’image plutôt
+        que de faire voyager vos requêtes. La fiche d’un monument classé
+        renvoie désormais à sa <strong>notice officielle</strong> dans la base
+        Mérimée du ministère de la Culture.</dd>
     </dl>
 
-    <h2>Première exception : la météo</h2>
+    <h2>Une exception : la météo</h2>
     <p>Les prévisions affichées à l’arrivée d’un itinéraire viennent
       d’<strong>Open-Meteo, un service européen (allemand)</strong> — pas
       d’un service français. Nous préférons l’écrire que le taire.</p>
     <p>La raison est simple : au 22 août 2026, Météo-France ne publie aucune
       prévision exploitable directement par un navigateur sans clé d’accès.
       Or une clé posée dans le code d’un site public serait visible de tous.
-      Sept sources françaises ont été testées, une par une, et consignées
-      dans le dépôt. Le jour où une donnée publique française sera
+      <strong>Huit sources françaises ont été testées</strong>, une par une, et
+      consignées dans le dépôt. Le jour où une donnée publique française sera
       interrogeable sans clé, cette exception disparaîtra.</p>
     <p>Ce qui ne change pas : <strong>seules les coordonnées de votre
       destination</strong> sont transmises pour obtenir la prévision — jamais
@@ -160,41 +188,28 @@
       <strong>enregistrer un parcours</strong> à la fin d’un trajet suivi —
       la température y est gardée parce que c’est elle qui explique, plus tard,
       pourquoi la même route a coûté davantage un matin de janvier.</p>
-
-    <h2>Seconde exception : les photos des monuments</h2>
-    <p>La fiche d’un <strong>lieu d’exception</strong> peut afficher une
-      photographie. Elle vient de <strong>Wikimedia Commons</strong>, la
-      photothèque libre de la fondation Wikimédia — une fondation
-      <strong>américaine</strong>. Là encore, nous préférons l’écrire que le
-      taire.</p>
-    <p>La raison est mesurée : le 29 août 2026, sur vingt-quatre monuments
-      classés tirés au hasard de notre index, Wikimedia en illustre
-      vingt-trois. <a href="https://panoramax.xyz">Panoramax</a>, le commun
-      français d’imagerie que ce site utilise déjà, en couvre trois quarts —
-      mais avec des vues de rue, prises en passant, et non des photographies
-      du monument. Quant à la base Mémoire du ministère de la Culture, son
-      interface ne répond pas aux navigateurs, et ses images ne sont pas
-      libres de droits.</p>
-    <p>Ce qui ne change pas : la photographie n’est demandée
-      <strong>qu’à l’ouverture d’une fiche</strong>, jamais pour une liste
-      entière ; ce qui part est <strong>la référence du monument</strong>
-      (celle du ministère), jamais votre position ni votre identité. Chaque
-      photographie porte <strong>le nom de son auteur et sa licence</strong> :
-      ces images sont libres, elles ne sont pas anonymes.</p>
+    <p class="page-note">Cette exception est également rappelée dans les
+      <a href="/mentions-legales.html">mentions légales</a> et sur la page
+      <a href="/vie-privee.html">Vie privée</a>, qui dit précisément ce qui est
+      transmis.</p>
 
     <h2>Ce que l’hébergement ne permet pas de promettre</h2>
     <p>Nous disions « souverain ». Le mot est retiré, parce qu’il n’était pas
-      tenu jusqu’au bout : le code est hébergé sur GitHub, le site est servi
-      par GitHub Pages derrière Cloudflare, et le certificat HTTPS est émis par
-      Google Trust Services — trois sociétés américaines, soumises au
-      <em>Cloud Act</em>. Aucune donnée personnelle ne transite par nous, il
-      n’y a aucun serveur à nous ; mais la chaîne qui vous livre la page n’est
-      pas française, et nous ne le ferons pas croire. Ce que nous tenons : une
-      <strong>cartographie française et open source</strong> (IGN, BAN,
-      OpenStreetMap), des données publiques <strong>françaises ou européennes
-      de préférence</strong>, aucun traceur, aucun compte. Le jour où un
-      hébergeur et une autorité de certification équivalents existeront en
-      France ou en Europe à coût nul, ce sera la prochaine étape.</p>
+      tenu jusqu’au bout. Voici la chaîne exacte, vérifiée :
+      le code et les pages sont hébergés sur <strong>GitHub Pages</strong>
+      (GitHub, Inc., groupe Microsoft) ; le nom <code>maps.infonovice.fr</code>
+      est résolu par <strong>Cloudflare</strong>, qui <em>ne sert pas</em> les
+      pages — votre navigateur va les chercher directement chez l’hébergeur ;
+      le certificat HTTPS est délivré par <strong>Let’s Encrypt</strong>
+      (Internet Security Research Group). Trois organisations américaines,
+      soumises au <em>Cloud Act</em>. Aucune donnée personnelle ne transite par
+      nous, il n’y a aucun serveur à nous ; mais la chaîne qui vous livre la
+      page n’est pas française, et nous ne le ferons pas croire. Ce que nous
+      tenons : une <strong>cartographie française et open source</strong>
+      (IGN, BAN, OpenStreetMap), des données publiques <strong>françaises ou
+      européennes de préférence</strong>, aucun traceur, aucun compte. Le jour
+      où un hébergeur et une autorité de certification équivalents existeront
+      en France ou en Europe à coût nul, ce sera la prochaine étape.</p>
 
     <h2>Le code est ouvert</h2>
     <p>Infonovice Maps est publié sous licence <strong>AGPL-3.0</strong> : le
@@ -222,6 +237,12 @@
         pour le relire.</li>
     </ul>
 
+    <h2>Et le chien ?</h2>
+    <p>Il s’appelle <strong>Bélia</strong>. C’est la mascotte d’Infonovice, et
+      elle sert de logo à l’application : vous la retrouverez au volant, la
+      carte à la main ou le compas à la patte, selon les pages. Elle ne
+      collecte rien non plus.</p>
+
     <div class="page-note">Infonovice Maps est un logiciel jeune, développé
       par une petite structure française. Il ne prétend pas remplacer un
       service mondial sur tous les points : il prétend ne rien vous prendre.</div>
@@ -236,7 +257,10 @@
         <a href="https://github.com/OXYGENE911/infonovice-maps">Code source</a>
       </nav>
       <p>Infonovice Maps — données © IGN-F / Géoplateforme, Base Adresse
-        Nationale et partenaires publics. Code sous AGPL-3.0.</p>
+        Nationale, © les contributeurs OpenStreetMap (ODbL) et partenaires
+        publics. Code sous AGPL-3.0.</p>
+      <p class="page-maj">Dernière mise à jour de cette page :
+        11 septembre 2026.</p>
     </footer>
   </main>
 </body>
