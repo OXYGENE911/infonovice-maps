@@ -1823,7 +1823,13 @@ test('VITRINE : les pages de texte s’ouvrent depuis la carte, SANS JavaScript'
   origines.clear();
   await page.locator('.page-pied a[href="/vie-privee.html"]').click();
   await expect(page).toHaveTitle(/Vie privée/);
-  await expect(page.locator('h1')).toHaveText('Vos données ne quittent jamais ce navigateur');
+  /* LE TITRE SUIT LA PAGE, PAS L'INVERSE (17/09/2026). La réécriture des textes
+     légaux du cycle C20 a remplacé « Vos données ne quittent jamais ce
+     navigateur » par « Vos données restent sur votre appareil », sans toucher à
+     cette ligne : le parcours a rougi en CI après la fusion, et c'est son
+     travail. L'assertion reste EXACTE plutôt que tolérante — c'est une promesse
+     affichée à l'usager, la voir changer doit demander un geste. */
+  await expect(page.locator('h1')).toHaveText('Vos données restent sur votre appareil');
   // Le cœur de la promesse : la page dit « aucun cookie » ET n'en pose aucun.
   await expect(page.getByText('Non — aucun.')).toBeVisible();
   expect(await page.context().cookies()).toHaveLength(0);
