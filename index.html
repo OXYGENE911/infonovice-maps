@@ -106,12 +106,17 @@
          ne disait « Pro » ni « Se connecter » — la seule porte était la
          marque en haut à gauche et une ligne rangée sous « Version » dans le
          menu. Un lien, pas un script : il marche avant le bundle et sans lui.
-         IL DISPARAÎT SOUS 640 px, et il le faut : l'en-tête mobile tient sur
-         UNE rangée (marque + champ de recherche), et une troisième boîte la
-         faisait passer à deux — le premier reproche des captures du 28/08.
-         Sur téléphone, la porte reste Menu → « Découvrir Maps Pro ». -->
+         SUR TÉLÉPHONE IL NE GARDE QUE SON PICTOGRAMME (16/09, second passage).
+         Il avait d'abord disparu sous 640 px pour préserver l'unique rangée de
+         l'en-tête mobile ; Armelin a aussitôt constaté l'absence — « en version
+         mobile, je n'ai pas de bouton Se connecter ». Un carré de 36 px tient
+         là où le mot ne tenait pas : 412 px d'écran moins les 130 réservés au
+         Menu, moins le picto et les marges, laissent encore plus de 200 px au
+         champ de recherche, son minimum. -->
     <a class="entete-compte" href="https://maps-pro.infonovice.fr/compte"
-      title="Maps Pro : cercles, véhicule connecté, itinéraires partagés">Se connecter</a>
+      title="Mon compte Maps Pro : cercles, véhicule connecté, itinéraires partagés">
+      <svg class="entete-compte-picto" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4.1 0-7.4 2.1-7.4 4.7V21h14.8v-2.3C19.4 16.1 16.1 14 12 14z" fill="currentColor"/></svg>
+      <span class="entete-compte-mot">Se connecter</span></a>
     <!-- LA BARRE DE RECHERCHE EXISTE AVANT LE SCRIPT (PERF-1, 04/09). Mesuré
          par Lighthouse mobile en production : le plus grand élément peint
          (LCP) est le texte « Rechercher une adresse… », et il n'arrivait

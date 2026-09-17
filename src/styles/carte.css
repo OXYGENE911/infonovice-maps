@@ -69,12 +69,14 @@ body { font-family: var(--police); background: var(--fond); }
    réclame. */
 .entete-compte {
   order: 9;
+  display: inline-flex; align-items: center; gap: 6px;
   font: 600 13px var(--police);
   color: var(--texte-2); text-decoration: none;
   padding: 5px 11px; border-radius: 9px;
   border: 1px solid var(--bord-2); background: var(--fond-doux);
   white-space: nowrap;
 }
+.entete-compte-picto { flex: none; }
 .entete-compte:hover, .entete-compte:focus-visible { color: var(--accent); border-color: var(--accent); }
 .entete-compte:focus-visible { outline: none; box-shadow: var(--focus); }
 .entete-note { font-size: 11.5px; color: var(--texte-3); }
@@ -397,12 +399,14 @@ body.recherche-ouverte .pied-carte { display: none; }
     flex-wrap: nowrap; align-items: center;
   }
   .entete-marque { font-size: 13px; white-space: nowrap; }
-  /* LE LIEN VERS LE COMPTE SORT DE L'EN-TÊTE SUR TÉLÉPHONE (PRO-LIENS-2) :
-     l'en-tête y tient sur UNE rangée en `flex-wrap: nowrap`, entre le bord
-     gauche et les 130 px réservés au Menu. Une troisième boîte volait au champ
-     de recherche la largeur qu'il lui reste — or c'est lui, le produit, à cet
-     endroit. La porte vers le compte reste Menu → « Découvrir Maps Pro ». */
-  .entete-compte { display: none; }
+  /* LE LIEN VERS LE COMPTE GARDE SON PICTOGRAMME, PAS SON MOT (PRO-LIENS-2).
+     Il avait d'abord disparu ici, pour préserver l'unique rangée de l'en-tête
+     mobile ; Armelin a aussitôt constaté l'absence. Le mot coûtait ~95 px, le
+     carré en coûte 36 : à 412 px d'écran, moins les 130 réservés au Menu et
+     les marges, le champ de recherche garde plus de 200 px — son minimum.
+     36 px, c'est aussi la cible tactile minimale respectée. */
+  .entete-compte { padding: 0; width: 36px; height: 36px; justify-content: center; gap: 0; }
+  .entete-compte-mot { display: none; }
   /* LA MARQUE CÈDE DÈS QUE L'EN-TÊTE SE CHARGE (A11Y-CIBLE-1, 07/09).
      Cette règle existait, mais sous 400 px seulement — et le défaut vivait
      JUSTE AU-DESSUS. Mesuré par Lighthouse sur son écran de référence
