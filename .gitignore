@@ -9,6 +9,14 @@ test-results/
 # Secrets : ce depot est public. Aucune cle ne doit pouvoir y entrer.
 .env
 .env.*
+# LA CLE DE SIGNATURE ANDROID, avant meme qu'elle existe (17/09/2026). Le
+# depot est PUBLIC : un keystore pousse ici serait a reprendre entierement, et
+# un `git rm` ne l'effacerait pas de l'historique. Le filet est pose d'avance,
+# pas apres l'accident. La cle vit hors de tout depot, dans C:\Dev\_cles\.
+*.jks
+*.p12
+*.keystore
+keystore.properties
 
 # Sorties de Playwright MCP et captures de travail.
 .playwright-mcp/
