@@ -1,14 +1,19 @@
 // Itinéraires — API Géoplateforme (data.geopf.fr/navigation), moteur
 // bdtopo-osrm, sans clé. Profils vérifiés par getcapabilities le 16/08 :
 // `car` et `pedestrian` SEULEMENT — pas de vélo sur les moteurs publics IGN,
-// l'écart est documenté dans la roadmap. Résilience : timeout 8 s, une
+// l'écart est documenté dans la roadmap. Résilience : timeout 4 s, une
 // reprise, erreurs en français (règles du projet).
 import type { LineString } from 'geojson';
 import type { PointGeo } from './coordonnees';
 import { relaisDuTrace } from './detour';
 
 const SERVICE = 'https://data.geopf.fr/navigation/itineraire';
-const DELAI_MS = 8000;
+/* BUDGET-ITINERAIRE-1, mission C21 du 17/09/2026 : à 8 000 ms, pire cas
+   8000 + 500 + 8000 = 16 500 ms, 165 % du plafond de 10 000 ms (critère
+   n° 1, décision CEO du 16/09/2026). À 4 000 ms, pire cas
+   4000 + 500 + 4000 = 8 500 ms, sous le plafond. La reprise est conservée :
+   l'itinéraire n'a pas de repli en `undefined`, seulement l'échec rapide. */
+const DELAI_MS = 4000;
 
 export type Profil = 'car' | 'pedestrian';
 export const PROFILS: Record<Profil, string> = { car: 'Voiture', pedestrian: 'À pied' };

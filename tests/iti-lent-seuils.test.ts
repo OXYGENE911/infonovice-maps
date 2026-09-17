@@ -15,7 +15,7 @@ const SOURCE = readFileSync(
 describe('les seuils de lenteur de l’itinéraire', () => {
   it('sont exportés, et valent ce que service-lent.test.ts vérifie', () => {
     expect(SOURCE).toMatch(/export const SEUIL_LENTEUR_ITINERAIRE_MS = 2500;/);
-    expect(SOURCE).toMatch(/export const SEUIL_ABANDON_ITINERAIRE_MS = 15000;/);
+    expect(SOURCE).toMatch(/export const SEUIL_ABANDON_ITINERAIRE_MS = 6000;/);
   });
 
   it('le seuil d’abandon reste SOUS le plafond dur de calculerItineraire — sinon l’usager ne verrait jamais le bouton Réessayer avant l’échec naturel', () => {

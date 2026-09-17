@@ -118,7 +118,11 @@ export async function chargerCommodites(
   lon: number, lat: number, rayonM = 400, signal?: AbortSignal,
 ): Promise<Commodite[]> {
   const horloge = new AbortController();
-  const minuteur = setTimeout(() => { horloge.abort(); }, 15_000);
+  /* BUDGET-ITINERAIRE-1, mission C21 du 17/09/2026 : 4 000 ms, cohérent avec
+     le budget du critère n° 1 (10 000 ms). Cet appel part au clic sur une
+     borne (panneau-itineraire.ts, bouton « Voir les commodités »), hors du
+     chemin du calcul d'itinéraire — voir le handoff pour le détail. */
+  const minuteur = setTimeout(() => { horloge.abort(); }, 4_000);
   const relais = (): void => { horloge.abort(); };
   signal?.addEventListener('abort', relais);
   try {
