@@ -59,6 +59,16 @@ body { font-family: var(--police); background: var(--fond); }
 .entete-marque:hover strong, .entete-marque:focus-visible strong { text-decoration: underline; }
 .entete-marque:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 6px; }
 .entete-marque strong { color: var(--accent); font-weight: 750; }
+/* LA MENTION « PRO » (PRO-LIENS-4, 17/09) : posée par main.ts quand l'usager
+   arrive de son compte Maps Pro. Une pastille, pas une réclame — elle dit d'où
+   l'on vient, elle n'ouvre rien. Elle suit la marque, donc elle ne coûte ni
+   rangée ni largeur disputée au champ de recherche. */
+.entete-pro {
+  margin-left: 6px; padding: 1px 6px; border-radius: 6px;
+  background: var(--accent); color: var(--fond);
+  font: 700 10.5px/1.5 var(--police); letter-spacing: .04em;
+  text-transform: uppercase; vertical-align: 2px;
+}
 .entete-note { font-size: 11.5px; color: var(--texte-3); }
 .entete recherche-adresse { flex: 1; min-width: 200px; }
 /* LA COQUILLE D'ATTENTE (PERF-1) a la géométrie EXACTE de la barre — même

@@ -9,6 +9,7 @@ import './styles/pages.css';
 import { registerSW } from 'virtual:pwa-register';
 import { preparerMaj } from './lib/maj-secours';
 import { creerCarte } from './carte/carte';
+import { reglerMarqueur, stockageLocal } from './lib/marqueur-pro';
 import { EtatConnexion } from './carte/etat-connexion';
 
 /* LA NOUVELLE VERSION S'ANNONCE, ELLE NE S'IMPOSE PAS (MAJ-1, 03/09).
@@ -90,6 +91,32 @@ document.body.append(new BandeauMaj());
 const entete = document.querySelector<HTMLElement>('.entete');
 if (entete) {
   entete.appendChild(new EtatConnexion());
+  /* LA MARQUE DIT « PRO » QUAND ON ARRIVE DU COMPTE PRO (PRO-LIENS-4, 17/09).
+     Armelin, après avoir payé un abonnement de test : « quand on est sur la
+     cartographie Maps, rien de distinctif à l'écran ne fait penser à ce que
+     cela ait fonctionné. Il faudrait avoir le logo Infonovice Maps en haut à
+     gauche différent quand on est connecté en mode Maps Pro. »
+     UN MOT AJOUTÉ À LA MARQUE, pas une ligne de plus : l'en-tête mobile tient
+     sur une seule rangée et chaque pixel y est disputé. « Pro » coûte une
+     vingtaine de pixels, une seconde ligne en aurait coûté quarante en hauteur
+     de carte.
+     CE QUE CETTE MENTION AFFIRME, et rien de plus : cet usager est arrivé ici
+     depuis son compte Maps Pro. Elle n'ouvre aucune fonction et ne vérifie
+     aucun abonnement — ce client ne peut pas appeler le service Pro, sa CSP
+     l'interdit, et c'est la frontière entre l'AGPL et l'offre payante. Voir
+     src/lib/marqueur-pro.ts. */
+  const { pro, fragmentNettoye } = reglerMarqueur(location.hash, stockageLocal());
+  if (fragmentNettoye !== location.hash) {
+    history.replaceState(null, '', location.pathname + location.search + fragmentNettoye);
+  }
+  const marque = entete.querySelector<HTMLAnchorElement>('.entete-marque');
+  if (pro && marque) {
+    const mention = document.createElement('span');
+    mention.className = 'entete-pro';
+    mention.textContent = 'Pro';
+    marque.appendChild(mention);
+    marque.title = 'Infonovice Maps Pro — ouvrir mon compte';
+  }
   /* LA HAUTEUR DE L'EN-TÊTE EST PUBLIÉE EN VARIABLE CSS. Le décalage des
      contrôles MapLibre était un « top: 62px » calibré sur un en-tête d'une
      seule ligne. Dès que le bandeau hors ligne ou le bouton d'installation le
