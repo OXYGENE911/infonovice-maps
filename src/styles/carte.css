@@ -59,26 +59,6 @@ body { font-family: var(--police); background: var(--fond); }
 .entete-marque:hover strong, .entete-marque:focus-visible strong { text-decoration: underline; }
 .entete-marque:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 6px; }
 .entete-marque strong { color: var(--accent); font-weight: 750; }
-/* LE LIEN VERS LE COMPTE (PRO-LIENS-2, 16/09) — À DROITE PAR `order`, PAS PAR
-   `margin-left: auto` : le champ de recherche porte `flex: 1` et mange tout
-   l'espace libre, une marge automatique n'aurait donc rien poussé. `order`
-   place le lien APRÈS le champ sans toucher à l'ordre du document, où il reste
-   avant la coquille de recherche — celle-ci est remplacée par le vrai
-   composant au chargement, et un lien posé après elle aurait été déplacé avec
-   elle. Discret par défaut, accentué au survol : c'est une porte, pas une
-   réclame. */
-.entete-compte {
-  order: 9;
-  display: inline-flex; align-items: center; gap: 6px;
-  font: 600 13px var(--police);
-  color: var(--texte-2); text-decoration: none;
-  padding: 5px 11px; border-radius: 9px;
-  border: 1px solid var(--bord-2); background: var(--fond-doux);
-  white-space: nowrap;
-}
-.entete-compte-picto { flex: none; }
-.entete-compte:hover, .entete-compte:focus-visible { color: var(--accent); border-color: var(--accent); }
-.entete-compte:focus-visible { outline: none; box-shadow: var(--focus); }
 .entete-note { font-size: 11.5px; color: var(--texte-3); }
 .entete recherche-adresse { flex: 1; min-width: 200px; }
 /* LA COQUILLE D'ATTENTE (PERF-1) a la géométrie EXACTE de la barre — même
@@ -399,14 +379,6 @@ body.recherche-ouverte .pied-carte { display: none; }
     flex-wrap: nowrap; align-items: center;
   }
   .entete-marque { font-size: 13px; white-space: nowrap; }
-  /* LE LIEN VERS LE COMPTE GARDE SON PICTOGRAMME, PAS SON MOT (PRO-LIENS-2).
-     Il avait d'abord disparu ici, pour préserver l'unique rangée de l'en-tête
-     mobile ; Armelin a aussitôt constaté l'absence. Le mot coûtait ~95 px, le
-     carré en coûte 36 : à 412 px d'écran, moins les 130 réservés au Menu et
-     les marges, le champ de recherche garde plus de 200 px — son minimum.
-     36 px, c'est aussi la cible tactile minimale respectée. */
-  .entete-compte { padding: 0; width: 36px; height: 36px; justify-content: center; gap: 0; }
-  .entete-compte-mot { display: none; }
   /* LA MARQUE CÈDE DÈS QUE L'EN-TÊTE SE CHARGE (A11Y-CIBLE-1, 07/09).
      Cette règle existait, mais sous 400 px seulement — et le défaut vivait
      JUSTE AU-DESSUS. Mesuré par Lighthouse sur son écran de référence
@@ -414,9 +386,12 @@ body.recherche-ouverte .pied-carte { display: none; }
      minimum tactile de 24, et le bouton « Installer l'application » le
      RECOUVRAIT (champ 123–145, bouton 131–271). Marque retirée, le champ
      reprend 100 px et le bouton ne le touche plus. L'en-tête reste sur une
-     ligne : lui en donner une seconde coûtait 40 px de carte. */
-  .entete:has(.hors-ligne:not(:empty)) .entete-marque,
-  .entete:has(.installer:not([hidden])) .entete-marque { display: none; }
+     ligne : lui en donner une seconde coûtait 40 px de carte.
+     LE BOUTON D'INSTALLATION N'EST PLUS ICI (PRO-LIENS-3, 17/09) : il a
+     rejoint le menu, et la marque n'a donc plus à lui céder la place. Il
+     ne reste que le bandeau hors ligne, qui prend toute la largeur quand il
+     paraît. C'est un gain : la marque reste visible sur téléphone. */
+  .entete:has(.hors-ligne:not(:empty)) .entete-marque { display: none; }
   /* La coquille d'attente (PERF-1) suit les MÊMES règles mobiles, sinon
      elle fait 220 px là où la barre en fait 139 — mesuré au pixel. */
   .entete recherche-adresse, .entete .recherche-attente { min-width: 0; }
@@ -1183,11 +1158,30 @@ etat-connexion { display: contents; }
 .vue-chien[hidden] { display: none; }
 
 .reglages-corps { position: relative; }
-.reglages-chien {
-  position: absolute; top: 0; right: 0; z-index: 1;
-  pointer-events: none;
+
+/* LA PREMIÈRE SECTION DU MENU : COMPTE ET INSTALLATION (PRO-LIENS-3, 17/09).
+   Décision d'Armelin : « les deux premiers boutons de la liste seront se
+   connecter puis installer l'application ». Les deux tiennent sur UNE rangée
+   qui s'enroule si la place manque — le menu est une feuille basse plafonnée à
+   62 % de l'écran, chaque rangée gagnée compte. Le bouton d'installation
+   arrive ici par déplacement de nœud depuis <etat-connexion> ; quand le
+   navigateur ne propose pas l'installation, il porte `hidden` et la rangée ne
+   montre que le lien de compte.
+   IL N'Y A PLUS DE MASCOTTE EN HAUT À DROITE : elle faisait doublon avec celle
+   de la boîte de la version, en bas du même menu, et sa marge de 52 px sur la
+   première section n'a plus de raison d'être. */
+/* Une section sans titre replie son étiquette : elle ne doit pas coûter une
+   rangée au budget de hauteur du menu. */
+.reglages-etiquette:empty { display: none; }
+.reglages-compte { display: flex; flex-wrap: wrap; gap: 8px; }
+.reglages-compte-lien {
+  display: inline-flex; align-items: center; min-height: 34px;
+  padding: 7px 13px; border-radius: 9px;
+  border: 1px solid var(--bord-2); background: var(--fond-doux);
+  color: var(--texte-1); font: 600 12.5px var(--police); text-decoration: none;
 }
-.reglages-section-tete { padding-right: 52px; }
+.reglages-compte-lien:hover { color: var(--accent); border-color: var(--accent); }
+.reglages-compte-lien:focus-visible { outline: none; box-shadow: var(--focus); }
 
 /* LE COULOIR HORS LIGNE (COULOIR-1, 08/09) : le geste, la jauge, le compte.
    La jauge occupe toute la largeur — c'est elle qu'on regarde pendant que
