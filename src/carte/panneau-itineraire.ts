@@ -157,16 +157,25 @@ const DELAI_GARDE_ALTIMETRIE_MS = 2000;
  * suspecte. Le scénario qui a révélé le problème (IGN ralenti à 3 s →
  * 5 198 ms au total) franchit ce seuil, comme voulu.
  *
- * SEUIL_ABANDON_ITINERAIRE_MS = 15 000 ms — `calculerItineraire`
- * (lib/itineraire.ts) tente deux fois, 8 s de timeout chacune
- * (`DELAI_MS = 8000`) et 500 ms d'attente entre les deux essais : la
- * promesse elle-même ne peut jamais mettre plus de 16 500 ms à trancher.
- * 15 000 ms tombe SOUS ce plafond dur : l'usager voit la porte de sortie
+ * SEUIL_ABANDON_ITINERAIRE_MS = 6 000 ms — `calculerItineraire`
+ * (lib/itineraire.ts) tente deux fois, 4 s de délai de garde chacune
+ * (`DELAI_MS = 4000`) et 500 ms d'attente entre les deux essais : la
+ * promesse elle-même ne peut jamais mettre plus de 8 500 ms à trancher.
+ * 6 000 ms tombe SOUS ce plafond dur : l'usager voit la porte de sortie
  * (« Réessayer ») avant que le mécanisme interne n'ait fini de renoncer
  * tout seul, jamais après coup sur un calcul déjà résolu.
+ * La valeur ne se déduit pas d'un simple rapport : le bouton doit rester
+ * ATTEIGNABLE, pas seulement apparaître (ordre direct du CEO du
+ * 15/09/2026 — « le bouton de reprise doit rester atteignable pendant
+ * toute la durée du calcul, pas 1,4 seconde »). 6 000 ms laisse
+ * 2,5 SECONDES pour cliquer avant l'échec naturel, et l'ensemble tient
+ * sous le plafond de 10 s du critère n° 1 de Maps gratuit (décision CEO
+ * du 16/09/2026). Ce seuil est LIÉ à `DELAI_MS` : le faire évoluer sans
+ * l'autre rend le bouton inatteignable, et tests/iti-lent-seuils.test.ts
+ * rougit pour cette raison précise.
  */
 export const SEUIL_LENTEUR_ITINERAIRE_MS = 2500;
-export const SEUIL_ABANDON_ITINERAIRE_MS = 15000;
+export const SEUIL_ABANDON_ITINERAIRE_MS = 6000;
 
 const SOURCE = 'itineraire';
 /* LES VARIANTES A/B/C — une seule source pour les trois : elles se
