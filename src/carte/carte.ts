@@ -50,6 +50,9 @@ import { OutilSignal } from './outil-signal';
 import { OutilPartage } from './outil-partage';
 import { PanneauVehicule } from './panneau-vehicule';
 import { MenuReglages } from './menu-reglages';
+// Le type seul : <etat-connexion> est posé dans l'en-tête par main.ts, la
+// carte ne fait que lui demander de déplacer son bouton d'installation.
+import type { EtatConnexion } from './etat-connexion';
 import { brancherAjoutFavori } from './choix-liste';
 import { depuisFragmentLieu } from '../lib/partage-favoris';
 import { ecrireRepere, REPERES, type CleRepere } from '../lib/reperes';
@@ -284,6 +287,42 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   const porteMenu = document.createElement('div');
   porteMenu.className = 'maplibregl-ctrl porte-menu';
   porteMenu.appendChild(menu);
+
+  /* LE COMPTE ET L'INSTALLATION OUVRENT LE MENU (PRO-LIENS-3, 17/09/2026).
+     Décision d'Armelin : « l'icône se connecter et le bouton Installer
+     l'application doivent se trouver tous les deux dans le bouton Menu en haut
+     à droite. On clique sur Menu et les deux premiers boutons de la liste
+     seront se connecter puis installer l'application. »
+     CE QUE ÇA RÉPARE, et c'est plus qu'un rangement. Les deux commandes se
+     disputaient la largeur de l'en-tête mobile, qui tient sur UNE rangée entre
+     le bord gauche et les 130 px du Menu : « la barre de recherche est masquée
+     et un bouton Installer l'application passe par dessus », puis, dans la
+     PWA, « le mot du champ Recherche est tronqué à cause de l'icône Se
+     connecter ». Le menu offre de la hauteur, pas de la largeur disputée.
+     CETTE SECTION EST LA PREMIÈRE : elle est ajoutée avant toutes les autres,
+     et `ajouter` empile dans l'ordre d'appel. */
+  const compte = document.createElement('div');
+  compte.className = 'reglages-compte';
+  const lienCompte = document.createElement('a');
+  lienCompte.className = 'reglages-compte-lien';
+  lienCompte.href = 'https://maps-pro.infonovice.fr/compte';
+  lienCompte.textContent = 'Se connecter';
+  lienCompte.title = 'Mon compte Maps Pro : cercles, véhicule connecté, itinéraires partagés';
+  compte.append(lienCompte);
+  /* LE BOUTON D'INSTALLATION REJOINT LE LIEN, par déplacement du nœud : ses
+     écouteurs et la logique de `hidden` restent ceux de <etat-connexion>, qui
+     le montre quand le navigateur propose l'installation et le cache sinon.
+     Le composant est déjà dans l'en-tête quand la carte se construit (main.ts
+     l'y pose avant le premier `requestAnimationFrame`) ; s'il n'y était pas,
+     la section garderait le seul lien de compte plutôt que de rien afficher. */
+  document.querySelector<EtatConnexion>('etat-connexion')?.deplacerBoutonVers(compte);
+  /* SANS ÉTIQUETTE, ET C'EST VOULU. Le menu est une feuille basse plafonnée à
+     62 % de l'écran par un parcours ; un titre de section coûte une vingtaine
+     de pixels que « Se connecter » et « Installer l'application » n'ont pas
+     besoin qu'on leur explique. La règle `.reglages-etiquette:empty` replie le
+     paragraphe vide. C'est aussi la raison pour laquelle la précédente
+     tentative de section à part avait fait déborder la fenêtre (PRO-LIENS-1). */
+  menu.ajouter('', compte);
   // Le contrôle est POSÉ PLUS BAS (après la géolocalisation) : voir le
   // commentaire à son ajout. L'objet, lui, existe dès maintenant car les
   // panneaux viennent s'y ranger au fil de leur création.

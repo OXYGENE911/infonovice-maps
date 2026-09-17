@@ -73,6 +73,14 @@ const NON_APPELES = new Set([
      onglet : une note OSM et le visualiseur cartes.gouv.fr, centrés sur la
      position. On n'y envoie rien — c'est l'usager qui écrit là-bas. */
   'cartes.gouv.fr',
+  /* MAPS PRO EST UN LIEN, ET DOIT LE RESTER (PRO-LIENS-3, 17/09/2026). Le
+     menu porte « Se connecter », un `a.href` vers la page de compte de Maps
+     Pro (carte.ts). Ce client-ci n'appelle JAMAIS le service Pro, et son
+     absence de la connect-src n'est pas un oubli : c'est la frontière entre
+     le client libre sous AGPL et l'offre propriétaire, tenue par le
+     navigateur lui-même. Si un jour du code d'ici tente un `fetch` vers ce
+     domaine, la CSP le bloquera — et ce sera la bonne réponse. */
+  'maps-pro.infonovice.fr',
 ]);
 
 describe('la CSP et le code disent la même chose', () => {

@@ -32,6 +32,30 @@ const LIEN_DETAIL = 'Ce qui marche sans réseau';
 export class EtatConnexion extends HTMLElement {
   #installation: EvenementInstallation | null = null;
 
+  /**
+   * Déplace le bouton d'installation hors de l'en-tête, dans l'hôte donné —
+   * en pratique, le menu du coin haut-droit.
+   *
+   * POURQUOI IL NE RESTE PAS DANS L'EN-TÊTE (17/09/2026). Armelin : « quand on
+   * se connecte via un mobile pour la première fois, la barre de recherche est
+   * masquée et un bouton Installer l'application passe par dessus la barre de
+   * recherche ». L'en-tête mobile tient sur UNE rangée entre le bord gauche et
+   * les 130 px réservés au Menu ; le bouton y prenait ~160 px, et la règle qui
+   * escamotait la marque pour lui faire place ne suffisait pas. Le menu, lui,
+   * a de la hauteur à offrir et aucune largeur à disputer.
+   *
+   * Le nœud est DÉPLACÉ, pas recréé : ses écouteurs et la logique de `hidden`
+   * de ce composant continuent de le piloter depuis son nouveau parent.
+   * Le bandeau hors ligne, lui, RESTE dans l'en-tête : une coupure de réseau
+   * doit se voir sans ouvrir un menu.
+   */
+  deplacerBoutonVers(hote: HTMLElement): boolean {
+    const bouton = this.querySelector('.installer');
+    if (!bouton) return false;
+    hote.append(bouton);
+    return true;
+  }
+
   connectedCallback(): void {
     if (this.firstElementChild) return;
     this.innerHTML = `

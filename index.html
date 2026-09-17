@@ -100,23 +100,15 @@
          bundle et sans lui. -->
     <a class="entete-marque" href="/pro.html" title="Infonovice Maps et Maps Pro">Infonovice <strong>Maps</strong></a>
     <span class="entete-note">Française et open source — IGN&nbsp;· BAN&nbsp;· zéro traceur</span>
-    <!-- LE CHEMIN VERS LE COMPTE EST VISIBLE (PRO-LIENS-2, 16/09). Armelin :
-         « le chemin d'accès à Maps Pro est dissimulé et trop compliqué
-         d'accès ». Mesuré le 16/09 sur la page livrée : sept liens, et aucun
-         ne disait « Pro » ni « Se connecter » — la seule porte était la
-         marque en haut à gauche et une ligne rangée sous « Version » dans le
-         menu. Un lien, pas un script : il marche avant le bundle et sans lui.
-         SUR TÉLÉPHONE IL NE GARDE QUE SON PICTOGRAMME (16/09, second passage).
-         Il avait d'abord disparu sous 640 px pour préserver l'unique rangée de
-         l'en-tête mobile ; Armelin a aussitôt constaté l'absence — « en version
-         mobile, je n'ai pas de bouton Se connecter ». Un carré de 36 px tient
-         là où le mot ne tenait pas : 412 px d'écran moins les 130 réservés au
-         Menu, moins le picto et les marges, laissent encore plus de 200 px au
-         champ de recherche, son minimum. -->
-    <a class="entete-compte" href="https://maps-pro.infonovice.fr/compte"
-      title="Mon compte Maps Pro : cercles, véhicule connecté, itinéraires partagés">
-      <svg class="entete-compte-picto" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4.1 0-7.4 2.1-7.4 4.7V21h14.8v-2.3C19.4 16.1 16.1 14 12 14z" fill="currentColor"/></svg>
-      <span class="entete-compte-mot">Se connecter</span></a>
+    <!-- L'EN-TÊTE NE PORTE NI COMPTE NI INSTALLATION (PRO-LIENS-3, 17/09).
+         Les deux ont vécu ici et s'y disputaient la largeur : l'en-tête mobile
+         tient sur UNE rangée entre le bord gauche et les 130 px du Menu.
+         Armelin : « la barre de recherche est masquée et un bouton Installer
+         l'application passe par dessus », puis « dans la PWA, le mot du champ
+         Recherche est tronqué à cause de l'icône Se connecter ». Les deux
+         commandes sont désormais les deux premières entrées du Menu, où il y a
+         de la hauteur et aucune largeur à disputer (voir carte.ts). Ici ne
+         restent que la marque, la mention et le champ de recherche. -->
     <!-- LA BARRE DE RECHERCHE EXISTE AVANT LE SCRIPT (PERF-1, 04/09). Mesuré
          par Lighthouse mobile en production : le plus grand élément peint
          (LCP) est le texte « Rechercher une adresse… », et il n'arrivait
