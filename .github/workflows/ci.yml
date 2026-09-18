@@ -33,7 +33,7 @@ jobs:
         # Publiées SEULEMENT quand un parcours rougit : `npx playwright
         # show-trace trace.zip` montre ce que le runner voyait.
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: traces-playwright
           path: test-results/**/trace.zip
