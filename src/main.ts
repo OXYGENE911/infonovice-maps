@@ -89,6 +89,18 @@ window.addEventListener('unhandledrejection', () => { direLaCasse(); });
 // ils concernent l'application entière, pas la carte.
 document.body.append(new BandeauMaj());
 const entete = document.querySelector<HTMLElement>('.entete');
+/* LE MARQUEUR PRO EST LU AVANT TOUT LE RESTE, ET HORS DU BLOC DE L'EN-TÊTE.
+   Il servait d'abord à une seule chose, la mention « Pro » de la marque, et
+   vivait donc dans le `if (entete)`. Le menu de la carte en a besoin lui
+   aussi depuis le 18/09/2026, et la carte se construit plus bas, hors de ce
+   bloc : l'état devait remonter d'un cran. Le nettoyage du fragment reste
+   collé à la lecture — c'est le même geste : on prend le marqueur passé dans
+   l'URL, puis on retire le paramètre de la barre d'adresse. */
+const { pro, fragmentNettoye } = reglerMarqueur(location.hash, stockageLocal());
+if (fragmentNettoye !== location.hash) {
+  history.replaceState(null, '', location.pathname + location.search + fragmentNettoye);
+}
+
 if (entete) {
   entete.appendChild(new EtatConnexion());
   /* LA MARQUE DIT « PRO » QUAND ON ARRIVE DU COMPTE PRO (PRO-LIENS-4, 17/09).
@@ -105,10 +117,6 @@ if (entete) {
      aucun abonnement — ce client ne peut pas appeler le service Pro, sa CSP
      l'interdit, et c'est la frontière entre l'AGPL et l'offre payante. Voir
      src/lib/marqueur-pro.ts. */
-  const { pro, fragmentNettoye } = reglerMarqueur(location.hash, stockageLocal());
-  if (fragmentNettoye !== location.hash) {
-    history.replaceState(null, '', location.pathname + location.search + fragmentNettoye);
-  }
   const marque = entete.querySelector<HTMLAnchorElement>('.entete-marque');
   if (pro && marque) {
     const mention = document.createElement('span');
@@ -142,7 +150,10 @@ if (entete) {
 const conteneur = document.getElementById('carte');
 const construire = (): void => {
   if (!conteneur) return;
-  creerCarte(conteneur);
+  /* L'ÉTAT PRO SUIT LA CARTE. Il est lu plus haut pour la mention « Pro » de
+     l'en-tête ; le menu de compte en a besoin aussi, pour dire « Se
+     déconnecter » plutôt que « Se connecter » (PRO-LIENS-4, 18/09/2026). */
+  creerCarte(conteneur, { pro });
 
   /* LA HAUTEUR DE L'ATTRIBUTION EST PUBLIÉE, ELLE AUSSI. Le pied de page se
      posait dessus dès qu'elle prenait deux lignes : son décalage était un

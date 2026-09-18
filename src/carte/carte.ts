@@ -8,6 +8,7 @@ import { CARTOUCHES, imageCartouche, zonesEtirables } from './cartouche-route';
 import { refermerPanneaux } from './panneaux';
 import { VERSION, libelleVersion, forcerMiseAJour } from '../lib/version';
 import { pictoMenu } from './icone-menu';
+import { CLE_PRO, stockageLocal } from '../lib/marqueur-pro';
 import 'maplibre-gl/dist/maplibre-gl.css';
 // LE WORKER DE MAPLIBRE DOIT ÊTRE ÉMIS PAR LE BUILD. MapLibre 6 le charge en
 // module séparé, résolu PAR DÉFAUT relativement à son propre fichier — dans
@@ -71,7 +72,24 @@ import { communeDuPoint } from '../lib/commune';
 // l'utilisateur (bouton), jamais une demande à l'arrivée — RGPD by design.
 const CENTRE_FRANCE: [number, number] = [2.4, 46.6];
 
-export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
+/**
+ * Options de construction de la carte.
+ *
+ * `pro` dit si CE NAVIGATEUR porte un marqueur d'abonnement Maps Pro valable.
+ * Ce n'est pas une preuve d'abonnement et ne doit jamais en tenir lieu : le
+ * marqueur est un indice local de 30 jours, pose au retour de maps-pro, et
+ * l'autorite reste le service Pro. Il ne sert qu'a l'affichage — la mention
+ * « Pro » dans l'en-tete, et le libelle du menu de compte.
+ */
+/** L'origine du service Maps Pro. Absente de `connect-src` a dessein : ce
+ *  client ne l'appelle jamais, il n'y NAVIGUE que. C'est la frontiere AGPL. */
+const COMPTE_PRO = 'https://maps-pro.infonovice.fr/compte';
+
+export interface OptionsCarte {
+  pro?: boolean;
+}
+
+export function creerCarte(conteneur: HTMLElement, options: OptionsCarte = {}): CarteMapLibre {
   const carte = new CarteMapLibre({
     container: conteneur,
     style: styleCarte({ fond: 'plan' }),
@@ -305,10 +323,47 @@ export function creerCarte(conteneur: HTMLElement): CarteMapLibre {
   compte.className = 'reglages-compte';
   const lienCompte = document.createElement('a');
   lienCompte.className = 'reglages-compte-lien';
-  lienCompte.href = 'https://maps-pro.infonovice.fr/compte';
-  lienCompte.textContent = 'Se connecter';
-  lienCompte.title = 'Mon compte Maps Pro : cercles, véhicule connecté, itinéraires partagés';
+  lienCompte.href = COMPTE_PRO;
   compte.append(lienCompte);
+
+  /* LE LIBELLÉ SUIT L'ÉTAT, IL NE LE DEVINE PAS (PRO-LIENS-4, 18/09/2026).
+     Armelin, après essai sur téléphone : « quand je suis connecté en mode PRO,
+     si je clique sur Menu, ça affiche encore le bouton Se connecter au lieu
+     d'afficher le bouton Se déconnecter. »
+     Le défaut était un lien écrit en dur la veille : l'information existait
+     déjà à deux fichiers de là — `main.ts` lit le marqueur et s'en sert pour
+     la mention « Pro » de l'en-tête — mais ce libellé-ci ne l'avait jamais
+     consultée. Elle arrive maintenant par `options.pro`.
+     POURQUOI DEUX COMMANDES ET NON UNE. Ce client est sous AGPL et sa CSP lui
+     interdit d'appeler maps-pro : `connect-src` ne le liste pas, et c'est
+     exactement la frontière entre le gratuit et le payant (voir
+     tests/csp-connect-src.test.ts). Il ne peut donc PAS révoquer une session
+     par lui-même. Ce qu'il possède, c'est le marqueur local : il l'efface, et
+     confie la révocation au service Pro par une NAVIGATION — que la CSP
+     autorise, puisqu'elle ne contraint ni `form-action` ni la navigation. Un
+     seul geste pour l'usager, la frontière intacte. */
+  if (options.pro) {
+    lienCompte.textContent = 'Mon compte Pro';
+    lienCompte.title = 'Mon abonnement Maps Pro : cercles, véhicule connecté, itinéraires partagés';
+    const sortie = document.createElement('button');
+    sortie.type = 'button';
+    sortie.className = 'reglages-compte-lien';
+    sortie.dataset.deconnexionPro = '';
+    sortie.textContent = 'Se déconnecter';
+    sortie.title = 'Oublier Maps Pro sur cet appareil et fermer la session côté Maps Pro';
+    sortie.addEventListener('click', () => {
+      /* L'EFFACEMENT LOCAL D'ABORD, ET SANS CONDITION. Si la navigation échoue
+         — hors ligne, service Pro en panne — l'usager a quand même obtenu ce
+         qu'il demandait sur l'appareil qu'il tient en main. L'inverse laisserait
+         une carte qui se prétend Pro après un clic sur « Se déconnecter ». */
+      try { stockageLocal()?.removeItem(CLE_PRO); } catch { /* stockage refusé : rien à effacer */ }
+      location.assign(`${COMPTE_PRO}?deconnexion=1`);
+    });
+    compte.append(sortie);
+  } else {
+    lienCompte.textContent = 'Se connecter';
+    lienCompte.title = 'Mon compte Maps Pro : cercles, véhicule connecté, itinéraires partagés';
+  }
   /* LE BOUTON D'INSTALLATION REJOINT LE LIEN, par déplacement du nœud : ses
      écouteurs et la logique de `hidden` restent ceux de <etat-connexion>, qui
      le montre quand le navigateur propose l'installation et le cache sinon.
