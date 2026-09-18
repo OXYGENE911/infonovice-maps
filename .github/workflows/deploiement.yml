@@ -23,8 +23,22 @@ jobs:
       # racine du domaine, la base par défaut du dépôt. L'époque du sous-chemin
       # github.io est consignée dans docs/DEPLOIEMENT.md.
       - run: npm run build
+      # `include-hidden-files: true` N'EST PAS UN DETAIL (18/09/2026).
+      # Par defaut, cette action empaquette `dist/` avec
+      # `tar --exclude=.[^/]*`, qui ECARTE TOUT CHEMIN COMMENCANT PAR UN POINT
+      # a la racine du site. Elle a donc jete `/.well-known/` en entier, sans
+      # un mot dans le journal : l'action est verte, le deploiement reussit, et
+      # `/.well-known/assetlinks.json` repond 404. Or ce fichier est ce qui
+      # autorise l'application Android a masquer la barre d'adresse de Chrome ;
+      # sans lui la TWA ressemble a un onglet. Le piege a coute une demi-heure
+      # et une fausse piste (Jekyll, qui n'y est pour rien : la source Pages
+      # est « GitHub Actions », aucun Jekyll ne tourne). La preuve est dans le
+      # journal de l'execution 35370442922, ou le listing du tar ne contient ni
+      # `.well-known/` ni `.nojekyll`.
       - uses: actions/upload-pages-artifact@v5
-        with: { path: dist }
+        with:
+          path: dist
+          include-hidden-files: true
   publier:
     needs: construire
     runs-on: ubuntu-latest

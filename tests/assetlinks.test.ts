@@ -43,6 +43,19 @@ describe('.nojekyll', () => {
   });
 });
 
+// ET LE WORKFLOW DOIT DEMANDER LES FICHIERS CACHES.
+// `actions/upload-pages-artifact` empaquette par defaut avec
+// `tar --exclude=.[^/]*` : tout chemin commencant par un point a la racine du
+// site est jete, /.well-known/ compris, sans rien dans le journal. Le drapeau
+// `include-hidden-files: true` retire cet exclude. Ce test garde le drapeau :
+// le supprimer casserait l'application Android sans casser aucun autre test.
+describe('workflow de deploiement', () => {
+  it('demande include-hidden-files, sinon /.well-known/ est jete a l empaquetage', () => {
+    const y = readFileSync('.github/workflows/deploiement.yml', 'utf8');
+    expect(y).toMatch(/include-hidden-files:\s*true/);
+  });
+});
+
 describe('assetlinks.json', () => {
   const doc = JSON.parse(readFileSync(CHEMIN, 'utf8'));
 
