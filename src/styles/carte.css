@@ -3637,14 +3637,26 @@ summary .picto-menu {
      que les informations soient visibles » — n'en souffre pas. */
   right: 36px; width: auto; max-width: 560px;
   display: flex; align-items: center; gap: 10px;
-  /* UN VRAI PANNEAU (PAN-1, 30/08). Le listel n'est PAS une bordure : sur
-     la route, c'est un filet BLANC posé en retrait du bord, et le bord lui
-     -même est la tôle. On le dessine donc en ombre portée intérieure — une
-     bordure l'aurait collé à l'arête, ce qui ne ressemble à rien. */
+  /* LE LISTEL EST AU BORD, ET C'ÉTAIT FAUX JUSQU'AU 18/09/2026.
+     PAN-1 (30/08) avait posé « le listel est un filet posé EN RETRAIT du
+     bord, et le bord lui-même est la tôle », d'où deux ombres intérieures :
+     3 px de FOND au bord, puis 1,5 px d'ENCRE. Armelin a apporté la preuve
+     photographique du contraire — un cliché de vrais panneaux A13 à côté
+     d'une capture de l'application : « on voit la couleur du panneau à
+     gauche et à droite du liseré […] alors que sur de vrais panneaux
+     autoroutiers le liseré est vraiment en bordure du panneau. On ne voit
+     pas la couleur du panneau à l'extérieur du liseré. »
+     Il a raison, et le rendu était pire que l'erreur de règle : la marge de
+     fond (3 px) était DEUX FOIS plus épaisse que le listel (1,5 px), ce qui
+     se lit comme une double bordure — le grief des premiers utilisateurs,
+     rapporté comme « un liseré de contour » qu'ils trouvent laid.
+     UNE SEULE OMBRE INTÉRIEURE DÉSORMAIS : le listel occupe l'arête, rien du
+     fond ne dépasse au-delà. L'ombre portée extérieure reste : c'est elle qui
+     détache le panneau de la carte, rôle que la marge de fond n'a jamais
+     rempli. */
   padding: 11px 13px; border-radius: 10px; border: 0;
   background: var(--panneau-fond); color: var(--panneau-encre);
-  box-shadow: inset 0 0 0 3px var(--panneau-fond),
-    inset 0 0 0 4.5px var(--panneau-encre), var(--ombre-flottante);
+  box-shadow: inset 0 0 0 3px var(--panneau-encre), var(--ombre-flottante);
   pointer-events: auto;
 }
 .bg-cartouche[hidden] { display: none; }
@@ -4909,7 +4921,9 @@ filtre-poi {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   border: 0; cursor: pointer; pointer-events: auto;
   background: var(--panneau-bleu); color: #FFFFFF;
-  box-shadow: inset 0 0 0 3px var(--panneau-bleu), inset 0 0 0 4.5px #FFFFFF, var(--ombre-flottante);
+  /* Listel au bord, comme .bg-cartouche depuis le 18/09/2026 : voir le
+     commentaire là-bas. Les deux doivent bouger ensemble. */
+  box-shadow: inset 0 0 0 3px #FFFFFF, var(--ombre-flottante);
 }
 .bg-aire-p[hidden] { display: none; }
 .bg-aire-p:focus-visible { outline: none; box-shadow: var(--focus); }
@@ -4924,7 +4938,9 @@ filtre-poi {
   width: min(340px, calc(100vw - 48px));
   padding: 10px 12px 12px; border-radius: 10px; border: 0;
   background: var(--panneau-bleu); color: #FFFFFF;
-  box-shadow: inset 0 0 0 3px var(--panneau-bleu), inset 0 0 0 4.5px #FFFFFF, var(--ombre-flottante);
+  /* Listel au bord, comme .bg-cartouche depuis le 18/09/2026 : voir le
+     commentaire là-bas. Les deux doivent bouger ensemble. */
+  box-shadow: inset 0 0 0 3px #FFFFFF, var(--ombre-flottante);
   pointer-events: auto;
 }
 .bg-aire[hidden] { display: none; }
