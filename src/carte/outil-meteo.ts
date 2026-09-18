@@ -13,8 +13,11 @@
 import { RechercheAdresse } from './recherche';
 import type { ResultatAdresse } from '../lib/adresse';
 import {
-  previsionsA, libelleTemps, symboleTemps, ErreurMeteo, type Previsions,
+  previsionsA, libelleTemps, symboleTemps, ErreurMeteo,
+  PREF_METEO_EXTERNE, invaliderCacheMeteoExterne, type Previsions,
 } from '../lib/meteo';
+import { lirePreference, ecrirePreference } from '../lib/stockage';
+import { confirmerActivationMeteo } from './panneau-meteo';
 
 const mm = (v: number): string => `${v.toFixed(1).replace('.', ',')} mm`;
 
@@ -49,6 +52,23 @@ export class OutilMeteo extends HTMLElement {
     this.#annulation?.abort();
     this.#annulation = new AbortController();
     const { signal } = this.#annulation;
+
+    /* L'outil s'ouvre volontairement, mais l'appel à Open-Meteo reste soumis
+       à la même préférence que les autres sites (mission C24, 18/09/2026) :
+       s'il n'a rien réglé, on propose l'activation avant d'interroger le
+       service, jamais en silence. */
+    if ((await lirePreference<unknown>(PREF_METEO_EXTERNE)) !== true) {
+      corps.textContent = 'Ce bulletin utilise Open-Meteo, désactivé par défaut.';
+      const confirme = await confirmerActivationMeteo();
+      if (signal.aborted) return;
+      if (!confirme) {
+        corps.textContent = 'Activation refusée : aucune météo n’a été demandée.';
+        return;
+      }
+      await ecrirePreference(PREF_METEO_EXTERNE, true);
+      invaliderCacheMeteoExterne(true);
+    }
+
     corps.textContent = `Prévisions pour ${r.libelle}…`;
     try {
       const p = await previsionsA(r.lon, r.lat, signal);

@@ -159,6 +159,12 @@ export const LEGENDES: Readonly<Record<string, { quoi: string; origine: string }
   'guidage-vocal': { quoi: 'Le guidage vocal, allumé ou éteint.', origine: 'Vos réglages.' },
   'curseur-vehicule': { quoi: 'La forme de votre repère pendant la navigation.', origine: 'Vos réglages.' },
   trafic: { quoi: 'L’affichage des événements routiers.', origine: 'Vos réglages.' },
+  'meteo-externe': {
+    quoi: 'L’activation des prévisions météo (Open-Meteo) : désactivée, aucune'
+      + ' coordonnée ne lui est envoyée ; activée, votre position lui part à chaque demande.',
+    origine: 'Désactivé par défaut. Activé par vous, dans le menu Réglages,'
+      + ' après confirmation.',
+  },
   theme: { quoi: 'Le thème choisi : auto, jour ou nuit.', origine: 'Vos réglages.' },
   'mode-deplacement': {
     quoi: 'Votre façon de partir : voiture, moto, vélo ou à pied.',

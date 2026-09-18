@@ -2,7 +2,7 @@
 // à Lyon maintenant n'aide personne qui y arrive dans cinq heures.
 //
 // ÉCART DE SOUVERAINETÉ ASSUMÉ, ET ÉCRIT. Open-Meteo est un service européen
-// (allemand), pas français. Le projet s'était promis « uniquement des API
+// (suisse), pas français. Le projet s'était promis « uniquement des API
 // publiques françaises » ; sept sources françaises ont été testées le
 // 22/08/2026 et aucune ne réunit « sans clé exposée + CORS » (le détail et
 // les preuves sont dans docs/apis.md). Décision d'Armelin : prendre
@@ -13,10 +13,37 @@
 //
 // Les VIGILANCES Météo-France restent hors de portée (elles n'existent que
 // derrière la clé) : la roadmap le consigne, l'interface ne les promet pas.
+import { lirePreference } from './stockage';
+
 const SERVICE = 'https://api.open-meteo.com/v1/forecast';
 const DELAI_MS = 8000;
 
 export class ErreurMeteo extends Error {}
+
+/** Préférence désactivée à l'installation (décision CEO du 18/09/2026,
+    mission C24) : personne n'appelle Open-Meteo tant que l'usager ne l'a pas
+    activé lui-même dans le menu Réglages. */
+export class ErreurMeteoDesactivee extends ErreurMeteo {
+  constructor() { super(''); }
+}
+
+export const PREF_METEO_EXTERNE = 'meteo-externe';
+
+/* Mémorisée pour éviter une lecture IndexedDB à chaque appel — le panneau de
+   réglage invalide ce cache dès l'activation ou la désactivation, sinon
+   basculer l'interrupteur n'aurait d'effet qu'au rechargement. */
+let meteoExterneCache: boolean | undefined;
+
+export function invaliderCacheMeteoExterne(activee: boolean): void {
+  meteoExterneCache = activee;
+}
+
+async function meteoExterneActivee(): Promise<boolean> {
+  if (meteoExterneCache === undefined) {
+    meteoExterneCache = (await lirePreference<unknown>(PREF_METEO_EXTERNE)) === true;
+  }
+  return meteoExterneCache;
+}
 
 export interface Meteo {
   /** Heure retenue, ISO locale du lieu (ex. « 2026-08-22T14:00 »). */
@@ -211,6 +238,7 @@ export function formaterHeure(arrivee: Date, decalageLieu = 0, maintenant?: Date
 export async function meteoA(
   lon: number, lat: number, vise: Date, signal?: AbortSignal,
 ): Promise<Meteo> {
+  if (!(await meteoExterneActivee())) throw new ErreurMeteoDesactivee();
   return versMeteo(await lireJson(urlMeteo(lon, lat), signal), vise);
 }
 

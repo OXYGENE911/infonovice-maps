@@ -43,6 +43,7 @@ interface DestinationChoisie {
 import { MesPoi } from './mes-poi';
 import { PanneauFavoris } from './panneau-favoris';
 import { PanneauTrafic } from './panneau-trafic';
+import { PanneauMeteo } from './panneau-meteo';
 import { OutilMesure } from './outil-mesure';
 import { OutilMeteo } from './outil-meteo';
 import { OutilsMenu } from './outils-menu';
@@ -587,6 +588,11 @@ export function creerCarte(conteneur: HTMLElement, options: OptionsCarte = {}): 
   const trafic = new PanneauTrafic();
   trafic.carte = carte;
   menu.ajouter('', trafic);
+
+  /* MÉTÉO EXTERNE (mission C24, 18/09/2026) : désactivée par défaut,
+     activée par l'usager depuis ce panneau — voir panneau-meteo.ts. */
+  const meteoReglage = new PanneauMeteo();
+  menu.ajouter('', meteoReglage);
 
   /* MESURER UNE DISTANCE (MESURE-1, 05/09). Des amis d'Armelin : « des
      outils dans le menu : mesurer une distance A→B, un parcours dessiné point

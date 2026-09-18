@@ -2,11 +2,11 @@
 // français, purs et testés à sec. Fixtures au FORMAT RÉEL d'Open-Meteo
 // (vérifié le 22/08/2026) : `hourly` en tableaux parallèles, heures locales
 // sans fuseau.
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   urlMeteo, versMeteo, phraseMeteo, libelleTemps, symboleTemps,
   heureArrivee, formaterHeure, meteoA, ECART_MAX_MINUTES, ErreurMeteo,
-  urlPrevisions, versPrevisions,
+  urlPrevisions, versPrevisions, invaliderCacheMeteoExterne,
 } from '../src/lib/meteo';
 
 const REPONSE = {
@@ -135,6 +135,10 @@ describe('heure d’arrivée', () => {
 });
 
 describe('meteoA (fetch simulé)', () => {
+  // Ce bloc teste la couche réseau (relance, mapping d'erreurs), pas la
+  // préférence d'activation — voir tests/meteo-opt-in.test.ts pour celle-ci
+  // (mission C24, 18/09/2026, garde ajoutée dans meteoA elle-même).
+  beforeEach(() => { invaliderCacheMeteoExterne(true); });
   afterEach(() => { vi.unstubAllGlobals(); });
 
   test('une panne se rejoue UNE fois, un double échec parle français', async () => {
