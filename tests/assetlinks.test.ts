@@ -18,7 +18,7 @@
 // retirer celle-ci : la documentation Chrome recommande de lister les deux, ce
 // qui garde les installations manuelles fonctionnelles.
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const CHEMIN = 'public/.well-known/assetlinks.json';
 const PAQUET = 'fr.infonovice.maps';
@@ -28,6 +28,20 @@ const PAQUET = 'fr.infonovice.maps';
 // secret : c'est l'empreinte d'un certificat public embarque dans chaque APK.
 const EMPREINTE_ENVOI =
   'A3:56:CD:41:75:5A:59:4E:39:9F:29:C4:55:5B:FE:A7:4E:5C:25:D9:9B:FA:74:E6:C2:1F:BE:33:17:B3:A5:6A';
+
+// LE .nojekyll EST AUSSI OBLIGATOIRE, ET C'EST LE PIEGE LE PLUS COUTEUX.
+// maps.infonovice.fr est servi par GitHub Pages. Sans un fichier `.nojekyll` a
+// la racine du site, Pages passe le dossier dans son filtre Jekyll, qui ECARTE
+// SILENCIEUSEMENT tout chemin commencant par un point. Le deploiement reussit,
+// le journal d'action est vert, et `/.well-known/assetlinks.json` repond 404.
+// Mesure du 18/09/2026 : deploiement "success" en 40 s, puis 404 sur le fichier
+// et `ERROR_CODE_FETCH_ERROR` cote API Google. Le test ci-dessous existe pour
+// que personne ne reperde cette demi-heure.
+describe('.nojekyll', () => {
+  it('existe, sinon GitHub Pages n exposera jamais /.well-known/', () => {
+    expect(existsSync('public/.nojekyll')).toBe(true);
+  });
+});
 
 describe('assetlinks.json', () => {
   const doc = JSON.parse(readFileSync(CHEMIN, 'utf8'));
