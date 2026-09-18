@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "fr.infonovice.maps",
+      "sha256_cert_fingerprints": [
+        "A3:56:CD:41:75:5A:59:4E:39:9F:29:C4:55:5B:FE:A7:4E:5C:25:D9:9B:FA:74:E6:C2:1F:BE:33:17:B3:A5:6A"
+      ]
+    }
+  }
+]
