@@ -13,10 +13,10 @@ import { PREF_METEO_EXTERNE, invaliderCacheMeteoExterne } from '../lib/meteo';
 
 export { PREF_METEO_EXTERNE };
 
-/* LIBELLÉ PROVISOIRE (voir handoff du cycle C24) : le texte définitif est
-   rédigé par Conformité & Risque et remplacera celui-ci au prochain cycle. */
-const MESSAGE_CONFIRMATION_PROVISOIRE =
-  'Activer la météo envoie votre position à Open-Meteo (Suisse) à chaque prévision demandée. Confirmez-vous l’activation ?';
+const TITRE_CONFIRMATION =
+  'Activer la météo Open-Meteo ?';
+const MESSAGE_CONFIRMATION =
+  'Cette option corrige l’autonomie affichée selon la température : par grand froid, la portée réelle peut chuter jusqu’à 45 %. En l’activant, vous transmettez à Open-Meteo (Suisse) votre adresse IP, la position de votre véhicule et les points de votre trajet.';
 
 /** Demande de confirmation à l'activation — UNE fonction, appelée depuis le
     panneau et depuis outil-meteo.ts, pour que le remplacement du libellé
@@ -26,18 +26,21 @@ export function confirmerActivationMeteo(): Promise<boolean> {
     const boite = document.createElement('dialog');
     boite.className = 'confirmation-meteo';
     boite.setAttribute('aria-label', 'Confirmer l’activation de la météo');
+    boite.setAttribute('tabindex', '-1');
+    const titre = document.createElement('h2');
+    titre.textContent = TITRE_CONFIRMATION;
     const texte = document.createElement('p');
-    texte.textContent = MESSAGE_CONFIRMATION_PROVISOIRE;
+    texte.textContent = MESSAGE_CONFIRMATION;
     const actions = document.createElement('div');
     actions.className = 'confirmation-meteo-actions';
     const annuler = document.createElement('button');
     annuler.type = 'button';
-    annuler.textContent = 'Annuler';
+    annuler.textContent = 'Ne pas activer';
     const confirmer = document.createElement('button');
     confirmer.type = 'button';
     confirmer.textContent = 'Activer';
     actions.append(annuler, confirmer);
-    boite.append(texte, actions);
+    boite.append(titre, texte, actions);
     document.body.appendChild(boite);
     const clore = (valeur: boolean): void => {
       boite.close();
@@ -48,7 +51,7 @@ export function confirmerActivationMeteo(): Promise<boolean> {
     confirmer.addEventListener('click', () => clore(true));
     boite.addEventListener('cancel', () => clore(false)); // Échap
     boite.showModal();
-    confirmer.focus();
+    boite.focus();
   });
 }
 
