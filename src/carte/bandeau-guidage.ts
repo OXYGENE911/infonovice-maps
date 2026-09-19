@@ -59,7 +59,7 @@ import type { PointGeo } from '../lib/coordonnees';
 import { Marker, type GeoJSONSource } from 'maplibre-gl';
 import { imagePastille, cleImage, RAPPORT_PASTILLE } from './icone-lieu';
 import { chargerCommodites, ErreurCommodites } from '../lib/commodites';
-import { meteoA, phraseMeteo, ECART_MAX_MINUTES, ErreurMeteo } from '../lib/meteo';
+import { meteoA, phraseMeteo, ECART_MAX_MINUTES, ErreurMeteo, ErreurMeteoDesactivee } from '../lib/meteo';
 import { socEstimeA } from '../lib/arrets';
 import {
   profilItineraire, versTraceSVG, denivele, pointSurTrace, ErreurAltimetrie,
@@ -3618,8 +3618,16 @@ export class BandeauGuidage extends HTMLElement {
             meteo.replaceWith(sortie);
           },
           (err: unknown) => {
-            meteo.textContent = err instanceof ErreurMeteo
-              ? err.message : 'Météo indisponible.';
+            /* DÉSACTIVÉE N'EST PAS UNE PANNE (C26, 19/09) : c'est l'état de
+               tout nouvel usager (décision CEO du 18/09, ErreurMeteoDesactivee
+               naît avec un message vide pour qu'aucun texte technique ne
+               s'affiche) — mais un <p> vide se lit comme une panne, pas comme
+               un choix. Le chemin est nommé, jamais un lien : ce paragraphe
+               vit dans le bandeau PENDANT la conduite. */
+            meteo.textContent = err instanceof ErreurMeteoDesactivee
+              ? 'Météo non activée — à activer dans Réglages › Météo.'
+              : err instanceof ErreurMeteo
+                ? err.message : 'Météo indisponible.';
           },
         );
         }
