@@ -89,6 +89,7 @@ const versLF = (s: string): string => s.replace(/\r\n/g, '\n');
 const BANDEAU = versLF(readFileSync(new URL('../src/carte/bandeau-guidage.ts', import.meta.url), 'utf-8'));
 const PANNEAU_ITINERAIRE = versLF(readFileSync(new URL('../src/carte/panneau-itineraire.ts', import.meta.url), 'utf-8'));
 const PANNEAU_VEHICULE = versLF(readFileSync(new URL('../src/carte/panneau-vehicule.ts', import.meta.url), 'utf-8'));
+const PANNEAU_METEO = versLF(readFileSync(new URL('../src/carte/panneau-meteo.ts', import.meta.url), 'utf-8'));
 
 describe('les cinq sites d’appel de meteoA — ce qui est affiché quand la préférence est désactivée', () => {
   test('bandeau-guidage:3608 — le paragraphe affiche le texte positif exact, jamais un blanc', () => {
@@ -144,6 +145,23 @@ describe('les cinq sites d’appel de meteoA — ce qui est affiché quand la pr
         + '          .then((m) => { conditions.tempArriveeC = m.temperature; })\n'
         + '          .catch(() => { /* idem */ })\n'
         + '        : Promise.resolve(),',
+      );
+  });
+
+  // CRAN EN-DESSOUS D'UN TEST DE RENDU : ce test ancre le littéral source
+  // assigné à innerHTML, pas ce que le panneau REND dans le DOM. Un test de
+  // rendu (instancier <panneau-meteo> et lire son textContent) exigerait
+  // jsdom, absent de ce dépôt (voir commentaire ci-dessus) ; l'ajouter est
+  // interdit par le mandat du 16/09 (§5.4). Ce test reste donc un test de
+  // littéral : il rougit si le libellé change de texte, mais ne prouve pas
+  // que le navigateur l'affiche tel quel (mission C27, 20/09/2026).
+  test('panneau-meteo:68 — le libellé du panneau nomme les trois données transmises à Open-Meteo', () => {
+    expect(PANNEAU_METEO, 'le paragraphe .meteo-externe-source a disparu ou a été déplacé')
+      .toContain('<p class="meteo-externe-source">Désactivée par défaut : l’activation');
+    expect(PANNEAU_METEO, 'le libellé doit nommer les trois données mot pour mot : adresse IP, position, points du trajet')
+      .toContain(
+        '            envoie à Open-Meteo (Suisse) votre adresse IP, votre position et les\n'
+        + '            points de votre trajet — adresse saisie ou position GPS selon le cas.</p>',
       );
   });
 
