@@ -19,8 +19,8 @@ const MESSAGE_CONFIRMATION =
   'Cette option corrige l’autonomie affichée selon la température : par grand froid, la portée réelle peut chuter jusqu’à 45 %. En l’activant, vous transmettez à Open-Meteo (Suisse) votre adresse IP, la position de votre véhicule et les points de votre trajet.';
 
 /** Demande de confirmation à l'activation — UNE fonction, appelée depuis le
-    panneau et depuis outil-meteo.ts, pour que le remplacement du libellé
-    provisoire se fasse en un seul endroit. */
+    panneau et depuis outil-meteo.ts, pour que le texte de confirmation n'ait
+    qu'un seul endroit où être modifié. */
 export function confirmerActivationMeteo(): Promise<boolean> {
   return new Promise((resoudre) => {
     const boite = document.createElement('dialog');
@@ -66,7 +66,8 @@ export class PanneauMeteo extends HTMLElement {
           <label><input type="checkbox" class="meteo-externe-case">
             Activer les prévisions météo</label>
           <p class="meteo-externe-source">Désactivée par défaut : l’activation
-            envoie votre position à Open-Meteo (Suisse) à chaque demande.</p>
+            envoie à Open-Meteo (Suisse) votre adresse IP, votre position et les
+            points de votre trajet — adresse saisie ou position GPS selon le cas.</p>
         </fieldset>
       </details>`;
     const case_ = this.querySelector('.meteo-externe-case') as HTMLInputElement;
