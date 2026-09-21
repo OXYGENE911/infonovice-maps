@@ -35,6 +35,10 @@
  */
 import { lirePreference, ecrirePreference } from './stockage';
 import { enItinerance, type Bbox, type ClePrise, type FiltresBornes } from './poi';
+import {
+  indexerMatrice,
+  type CleBadge, type MatriceBadges, type MotifBadges,
+} from './badges';
 
 /** Le seuil de l'index, en kW. Voir l'en-tête : c'est une décision. */
 export const SEUIL_RAPIDE = 50;
@@ -336,6 +340,20 @@ export function cleReseau(nom: string): string {
     .join('');
 }
 
+/**
+ * La matrice des badges, indexée par la MÊME clé que le filtre réseau.
+ *
+ * ELLE EST CONSTRUITE ICI, et non dans `badges.ts`, parce que `cleReseau` vit
+ * dans ce module : l'y importer refermerait un cycle (`badges` → `index-bornes`
+ * → `poi` → `badges`) dont l'ordre d'évaluation dépendrait du bundler. La clé
+ * descend donc vers la matrice, la matrice ne remonte pas vers la clé.
+ *
+ * UNE SEULE FOIS : l'indexation vérifie les collisions de clés et jette si
+ * deux graphies d'un même opérateur divergent. La faire à chaque station
+ * paierait cette vérification quatorze mille fois par vue.
+ */
+const MATRICE: MatriceBadges = indexerMatrice(cleReseau);
+
 /** Un réseau tel qu'il est proposé au filtre. */
 export interface ReseauNational {
   /** Le libellé montré : la variante la plus répandue. */
@@ -464,13 +482,125 @@ export function stationPasseFiltres(
     && !(s.operateur !== null && normaliserNom(s.operateur).includes(nom))) {
     return false;
   }
+  /* LES BADGES DÉCLARÉS, EN DERNIER — et dans CE prédicat, pas ailleurs.
+     C'est lui que le plan d'itinéraire appelle depuis BORNES-6 : la règle
+     écrite ici sert les deux surfaces d'un coup, et il n'existe aucun second
+     endroit où elle pourrait diverger. */
+  if (motifBadges(s, filtres) !== 'passe') return false;
   return true;
 }
+
+/**
+ * Le sort d'un opérateur face aux badges cochés — PURE.
+ *
+ * EXPOSÉE, ET C'EST LA RÈGLE UNIQUE. Deux routes amènent des bornes à
+ * l'écran : l'index national (`StationRapide`) sous le seuil de zoom, et le
+ * portail par emprise (`PoiBorne`) au-dessus. Elles ne portent pas la même
+ * forme de données, mais elles doivent porter le MÊME verdict — c'est la
+ * leçon de BORNES-6, où la couche du trajet avait sa propre règle et montrait
+ * des bornes que la carte cachait. La règle vit donc ici, une fois, et les
+ * deux routes lui passent un nom d'exploitant.
+ *
+ * SÉPARÉE DE `stationPasseFiltres` parce que le panneau a besoin du MOTIF,
+ * pas seulement du verdict : « la matrice refuse » et « la matrice ne sait
+ * pas » se filtrent pareil mais ne s'annoncent pas pareil (`messageBadges`).
+ */
+export function motifBadgesOperateur(
+  nomOperateur: string | null, badges: readonly CleBadge[] = [],
+): MotifBadges {
+  return MATRICE.motif(nomOperateur, badges);
+}
+
+const motifBadges = (s: StationRapide, filtres: FiltresBornes): MotifBadges =>
+  // Même ordre de préférence que le filtre réseau : l'exploitant d'abord.
+  motifBadgesOperateur(s.operateur ?? s.reseau, filtres.badges ?? []);
 
 export function filtrerStations(
   stations: StationRapide[], filtres: FiltresBornes = {},
 ): StationRapide[] {
   return stations.filter((s) => stationPasseFiltres(s, filtres));
+}
+
+/**
+ * Ce que le panneau doit savoir pour parler — et rien de plus.
+ *
+ * DES NOMBRES, PAS DES STATIONS, parce que les deux routes qui alimentent la
+ * carte ne rendent pas la même forme : l'index rend des `StationRapide`, le
+ * portail des `PoiBorne`. Le message, lui, est le même — il ne dépend que de
+ * ces trois compteurs.
+ */
+export interface CompteBadges {
+  /** Combien passent TOUS les filtres, badges compris. */
+  visibles: number;
+  /** Écartées par les seuls badges, faute d'information (verdict `inconnu`). */
+  masqueesInconnu: number;
+  /** Écartées par les seuls badges, sur un refus déclaré (verdict `non`). */
+  masqueesNon: number;
+}
+
+/** Le résultat du tri par badges — voir `trierParBadges`. */
+export interface TriBadges extends CompteBadges {
+  /** Les stations retenues, dans leur ordre d'origine. */
+  stations: StationRapide[];
+}
+
+/**
+ * Filtre ET compte, par motif — PURE.
+ *
+ * LE COMPTE NE SE DÉDUIT PAS D'UNE SOUSTRACTION entre deux totaux, et c'est
+ * la raison d'être de cette fonction. `total - visibles` mélangerait les
+ * stations écartées par la puissance, les prises, le réseau et le nom avec
+ * celles que la matrice ignore — le panneau annoncerait « N masquées faute
+ * d'information sur ce badge » pour des stations qu'un tout autre réglage
+ * écarte, et enverrait l'usager décocher la mauvaise case.
+ *
+ * On juge donc chaque station DEUX FOIS : les autres filtres d'abord, les
+ * badges ensuite. Seules celles qui passaient tout le reste sont comptées.
+ */
+export function trierParBadges(
+  stations: StationRapide[], filtres: FiltresBornes = {},
+): TriBadges {
+  const sansBadges: FiltresBornes = { ...filtres, badges: undefined };
+  const tri: TriBadges = {
+    stations: [], visibles: 0, masqueesInconnu: 0, masqueesNon: 0,
+  };
+  for (const s of stations) {
+    if (!stationPasseFiltres(s, sansBadges)) continue;
+    const motif = motifBadges(s, filtres);
+    if (motif === 'passe') tri.stations.push(s);
+    else if (motif === 'inconnu') tri.masqueesInconnu += 1;
+    else tri.masqueesNon += 1;
+  }
+  tri.visibles = tri.stations.length;
+  return tri;
+}
+
+/**
+ * La phrase que le panneau doit dire sur les badges — `null` quand il n'y a
+ * rien à dire. PURE.
+ *
+ * UN FILTRE QUI VIDE LA CARTE SANS UN MOT PASSE POUR CASSÉ, et la matrice
+ * est TRÈS lacunaire : deux colonnes entières sont inconnues. Se taire ici
+ * transformerait une lacune assumée de notre relevé en panne apparente du
+ * produit — le « mystère ZUNDER » de BORNES-4, en pire, puisque cette fois la
+ * carte se vide vraiment.
+ *
+ * DEUX PHRASES, PARCE QU'IL Y A DEUX SITUATIONS. Cocher Ionity rend zéro
+ * station sur un jeu couvert : non par bogue, mais parce qu'aucun des trente
+ * plus gros opérateurs français n'accepte ce badge — fait mesuré les 11 et
+ * 12/09/2026. Le dire en toutes lettres vaut mieux qu'un « aucune borne dans
+ * la vue » qui accuserait la carte. Une seule lacune interdit cette phrase :
+ * l'information manque, elle ne dit pas non.
+ */
+export function messageBadges(tri: CompteBadges): string | null {
+  if (tri.masqueesInconnu > 0) {
+    return `${tri.masqueesInconnu} station(s) masquée(s) faute d’information`
+      + ' sur ce badge.';
+  }
+  if (tri.visibles === 0 && tri.masqueesNon > 0) {
+    return 'Aucun des opérateurs de la matrice n’accepte ce badge.';
+  }
+  return null;
 }
 
 /**

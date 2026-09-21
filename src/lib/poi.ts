@@ -11,6 +11,8 @@
 // pour que l'interface dise honnêtement « 100 affichés sur N ».
 // Résilience : timeout 8 s, une reprise, erreurs en français ; l'annulation
 // volontaire (déplacement de carte) ne se rejoue pas (règles du projet).
+import { BADGES, type CleBadge } from './badges';
+
 export interface Bbox { ouest: number; sud: number; est: number; nord: number; }
 
 export class ErreurPoi extends Error {}
@@ -35,6 +37,14 @@ export interface PoiBorne {
   gratuit: boolean | null;
   /** L'enseigne affichée sur la borne (« eborn »), à défaut l'opérateur. */
   reseau: string | null;
+  /* L'EXPLOITANT, À PART — et c'est LUI que la matrice des badges interroge.
+     `reseau` ci-dessus fond l'enseigne et l'opérateur parce que c'est le nom
+     qu'on cherche des yeux depuis la route ; pour rapprocher une ligne de la
+     matrice, cette fusion est un défaut : l'enseigne porte souvent le nom du
+     SITE (« IONITY GmbH IONITY Vrigny »), qui ne figure dans aucune ligne.
+     Le champ `nom_operateur` était DÉJÀ demandé au portail — il servait à
+     remplir `reseau` par défaut ; on le garde simplement entier. */
+  operateur: string | null;
   /** L'identifiant d'itinérance, pour ouvrir le cartouche sans le chercher. */
   id: string | null;
   /** Les standards réellement présents sur la station. */
@@ -90,6 +100,20 @@ export interface FiltresBornes {
      majorité des badges. On filtre là-dessus, et l'interface dit exactement
      cela, jamais plus. */
   itinerance?: boolean | undefined;
+  /* LES BADGES DÉCLARÉS (C4, 21/09) — la réponse que BADGE-1 ne pouvait pas
+     donner. Le champ manquant du fichier IRVE n'est toujours pas apparu : la
+     compatibilité vient désormais d'une MATRICE EMBARQUÉE, relevée à la main
+     les 11 et 12/09/2026 sur les trente plus gros opérateurs français, et
+     mise à jour avec l'application (voir `badges.ts`).
+     ELLE NE REMPLACE PAS `itinerance` : « raccordé à l'itinérance » et
+     « accepté par CE badge » sont deux questions distinctes, et les deux
+     filtres se cumulent.
+     CE FILTRE NE PART PAS AU SERVICE, à la différence des autres : le jeu
+     IRVE ne porte AUCUN champ de compatibilité e-MSP (mesuré le 03/09), donc
+     aucune clause `where` ne peut l'exprimer. Il s'applique au RETOUR, dans
+     `stationPasseFiltres` — le prédicat que partagent la carte et le plan
+     d'itinéraire. Vide = aucun filtre. */
+  badges?: CleBadge[] | undefined;
 }
 
 /** Une station est-elle raccordée à l'itinérance ? — PURE.
@@ -331,6 +355,7 @@ export function versBornes(brut: unknown): Charge<PoiBorne> {
       // celui que l'usager cherche des yeux depuis la route. L'opérateur est
       // souvent une société technique dont le nom ne figure nulle part.
       reseau: texteOuNull(l['nom_enseigne']) ?? texteOuNull(l['nom_operateur']),
+      operateur: texteOuNull(l['nom_operateur']),
       id: texteOuNull(l['id_station_itinerance']),
       prises: PRISES.filter((p) => l[p.champ] === '1' || l[p.champ] === 1).map((p) => p.cle),
     });
@@ -453,6 +478,15 @@ export function resumerFiltresBornes(f: FiltresBornes): string | null {
     bouts.push(`${f.puissanceMin} kW et plus`);
   }
   if (f.itinerance === true) bouts.push('itinérance (badges)');
+  /* LE BADGE SE NOMME, AU SINGULIER COMME AU PLURIEL. C'est le filtre qui
+     retranche le plus (la matrice est lacunaire, et « inconnu » masque) :
+     celui qu'un usager doit pouvoir relier d'un coup d'œil à une carte
+     clairsemée, sans quoi il conclut à la panne (BORNES-4). */
+  const badges = f.badges ?? [];
+  if (badges.length === 1) {
+    const b = BADGES.find((x) => x.cle === badges[0]);
+    bouts.push(`badge ${b?.libelle ?? badges[0]}`);
+  } else if (badges.length > 1) bouts.push(`${badges.length} badges cochés`);
   const prises = f.prises ?? [];
   if (prises.length > 0) {
     const libelles = prises
