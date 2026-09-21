@@ -24,10 +24,13 @@ import { enItinerance,
   type Bbox,
 } from '../lib/poi';
 import {
-  indexNational, stationsDans, filtrerStations, reseauxNationaux,
+  indexNational, stationsDans, reseauxNationaux,
   chercherReseaux, ErreurIndex, ETENDUES, etendue,
+  trierParBadges, messageBadges, motifBadgesOperateur,
   type StationRapide, type ReseauNational, type CleEtendue,
+  type CompteBadges,
 } from '../lib/index-bornes';
+import { BADGES, type CleBadge } from '../lib/badges';
 import type { FicheBorne } from './fiche-borne';
 
 export const PREF_POI = 'poi';
@@ -84,6 +87,12 @@ export class PanneauPoi extends HTMLElement {
   #popupDe: Couche | null = null;
   /** L'index national, une fois chargé. Vide tant qu'il ne l'est pas. */
   #index: StationRapide[] = [];
+  /* CE QUE LE FILTRE PAR BADGE A CACHÉ, à la dernière pose. La matrice est
+     TRÈS lacunaire — deux colonnes entières inconnues — et un filtre qui vide
+     la carte sans un mot passe pour cassé : c'est le « mystère ZUNDER » de
+     BORNES-4, en pire, puisque cette fois la carte se vide vraiment. Les deux
+     routes (index et portail) alimentent ce même compteur. */
+  #compteBadges: CompteBadges = { visibles: 0, masqueesInconnu: 0, masqueesNon: 0 };
   /* LES ÉCRITURES RÉELLES DE CHAQUE ENSEIGNE, par libellé affiché. Le fichier
      IRVE écrit un même réseau de plusieurs façons — « LIDL » et « Lidl
      France », 446 et 434 stations. La liste les fond sous un libellé unique ;
@@ -162,6 +171,13 @@ export class PanneauPoi extends HTMLElement {
         ? { reseaux: [...this.#filtres.reseaux] } : {}),
       ...(this.#filtres.nom !== undefined && this.#filtres.nom !== ''
         ? { nom: this.#filtres.nom } : {}),
+      /* ET LES BADGES (C4, 21/09) — c'est même la surface où ils comptent le
+         plus. Un visiteur du salon sort son badge, le coche, et le plan
+         Paris → Lyon cesse de lui proposer des bornes qu'il ne peut pas
+         ouvrir. Le planificateur LIT les filtres, il ne les copie pas : cette
+         ligne suffit, et `stationPasseFiltres` fait le reste des deux côtés. */
+      ...(this.#filtres.badges !== undefined && this.#filtres.badges.length > 0
+        ? { badges: [...this.#filtres.badges] } : {}),
     };
   }
 
@@ -326,6 +342,25 @@ export class PanneauPoi extends HTMLElement {
             accepte la grande majorité des badges (Chargemap, Plugsurfing…).
             La donnée publique ne dit pas quels badges précisément — aucun
             filtre ne peut le promettre.</p>
+          <!-- LES BADGES DÉCLARÉS (C4, 21/09) — ce que l'itinérance ci-dessus
+               ne pouvait pas dire. La compatibilité ne vient PAS du fichier
+               IRVE, qui n'en porte rien : elle vient d'une matrice relevée à
+               la main sur les trente plus gros opérateurs, embarquée dans
+               l'application et mise à jour avec elle.
+               ELLE EST LACUNAIRE, ET LA NOTE LE DIT. On échoue fermé — une
+               compatibilité inconnue masque la station — parce qu'au stand,
+               proposer une borne que le badge du prospect n'ouvre pas, c'est
+               le produit qui ment devant lui. En montrer moins mais de sûres
+               se défend ; l'inverse, non. -->
+          <p class="poi-filtre-titre">Mes badges de recharge</p>
+          ${BADGES.map((b) => `
+            <label><input type="checkbox" class="poi-badge" value="${b.cle}"> ${b.libelle}</label>`).join('')}
+          <p class="poi-filtre-note">Relevé les 11 et 12 septembre 2026 sur les
+            30 plus gros exploitants français, mis à jour avec l’application.
+            Quand la compatibilité n’est pas connue, la station est
+            <strong>masquée</strong> : mieux vaut en montrer moins que d’en
+            proposer une que votre badge n’ouvrira pas.</p>
+          <p class="poi-filtre-note poi-badges-masquees" role="status"></p>
           <!-- LE NOM DE STATION CONTIENT… — « IZIVIA FAST a fait un
                partenariat avec McDonald pour mettre des bornes dans leur
                McDo. Ce serait bien de distinguer ces deux types de
@@ -446,7 +481,8 @@ export class PanneauPoi extends HTMLElement {
       const champ = this.querySelector<HTMLInputElement>('.poi-reseau-recherche');
       if (champ) champ.value = '';
       this.querySelectorAll<HTMLInputElement>(
-        '.poi-prise:checked, .poi-reseau:checked, .poi-itinerance:checked',
+        '.poi-prise:checked, .poi-reseau:checked, .poi-itinerance:checked,'
+        + ' .poi-badge:checked',
       ).forEach((case_) => { case_.checked = false; });
       this.#rendreReseaux(this.#reseaux);
       this.#rendreStations();
@@ -511,6 +547,15 @@ export class PanneauPoi extends HTMLElement {
       });
     });
 
+    this.querySelectorAll<HTMLInputElement>('.poi-badge').forEach((case_) => {
+      case_.addEventListener('change', () => {
+        const badges = [...this.querySelectorAll<HTMLInputElement>('.poi-badge:checked')]
+          .map((c) => c.value as CleBadge);
+        this.#filtres = { ...this.#filtres, badges };
+        surFiltre();
+      });
+    });
+
     this.querySelectorAll('fieldset:not(.poi-filtres) input').forEach((case_) => {
       case_.addEventListener('change', () => {
         const couche = (case_ as HTMLInputElement).value as Couche;
@@ -552,12 +597,21 @@ export class PanneauPoi extends HTMLElement {
       const reseauxLus = Array.isArray(m['reseaux']) ? m['reseaux'] : [];
       const nomLu = typeof m['nom'] === 'string' && m['nom'].trim() !== ''
         ? m['nom'].trim() : undefined;
+      /* LES BADGES RELUS SE VALIDENT CONTRE LE CATALOGUE, comme les prises :
+         c'est une frontière système. Une clé inventée — ou une clé d'une
+         version future de la matrice — masquerait TOUTES les stations sans
+         que rien ne l'explique, puisqu'un badge que la matrice ignore rend
+         « inconnu » partout. On la jette plutôt que de vider la carte. */
+      const badgesLus = Array.isArray(m['badges']) ? m['badges'] : [];
+      const badges = badgesLus.filter(
+        (v): v is CleBadge => typeof v === 'string' && BADGES.some((b) => b.cle === v));
       this.#filtres = {
         puissanceMin: Number.isFinite(puissance) && puissance > 0 ? puissance : undefined,
         prises,
         reseaux: reseauxLus.filter((v): v is string => typeof v === 'string' && v.trim() !== ''),
         nom: nomLu,
         itinerance: m['itinerance'] === true ? true : undefined,
+        badges,
       };
       const select = this.querySelector<HTMLSelectElement>('.poi-puissance');
       if (select) select.value = String(this.#filtres.puissanceMin ?? 0);
@@ -568,6 +622,10 @@ export class PanneauPoi extends HTMLElement {
       if (champNom && nomLu) champNom.value = nomLu;
       for (const cle of prises) {
         const c = this.querySelector<HTMLInputElement>(`.poi-prise[value="${cle}"]`);
+        if (c) c.checked = true;
+      }
+      for (const cle of badges) {
+        const c = this.querySelector<HTMLInputElement>(`.poi-badge[value="${cle}"]`);
         if (c) c.checked = true;
       }
       /* LE RÉGLAGE RÉTABLI S'ANNONCE : c'est le cœur de BORNES-4. */
@@ -828,6 +886,22 @@ export class PanneauPoi extends HTMLElement {
        planificateur, son résumé n'apparaît jamais. Mesuré par le parcours
        du badge, qui a trouvé le span rendu mais invisible. */
     this.surFiltresBornes?.(resume);
+    this.#majMessageBadges();
+  }
+
+  /* CE QUE LE BADGE A CACHÉ, DIT PRÈS DU RÉSUMÉ QUI L'ANNONCE. La matrice est
+     lacunaire par construction : sans cette ligne, cocher un badge vide la
+     carte en silence, et une carte vide sans explication se lit comme une
+     panne — pas comme un filtre qui fait son travail.
+     `role="status"` : le changement est PARLÉ, sans voler le focus. */
+  #majMessageBadges(): void {
+    const p = this.querySelector<HTMLElement>('.poi-badges-masquees');
+    if (!p) return;
+    const actif = this.#actives.has('bornes')
+      && (this.#filtres.badges ?? []).length > 0;
+    const message = actif ? messageBadges(this.#compteBadges) : null;
+    p.hidden = message === null;
+    p.textContent = message ?? '';
   }
 
   #rechargerActives(): void {
@@ -927,9 +1001,16 @@ export class PanneauPoi extends HTMLElement {
   #poserIndex(): void {
     const carte = this.#carte;
     if (!carte || this.#index.length === 0) return;
-    const visibles = filtrerStations(
+    /* `trierParBadges` PLUTÔT QUE `filtrerStations` : il rend le même tri ET
+       le motif de ce qu'il écarte. Le compte des masquées ne se déduit pas
+       d'une soustraction entre deux totaux — elle mélangerait la puissance,
+       les prises et le réseau avec les lacunes de la matrice, et le panneau
+       enverrait l'usager décocher la mauvaise case. */
+    const tri = trierParBadges(
       stationsDans(this.#index, this.#bbox()), this.#filtres,
     );
+    const visibles = tri.stations;
+    this.#compteBadges = tri;
     this.#bornes = {
       type: 'FeatureCollection',
       features: visibles.map((s) => ({
@@ -1017,8 +1098,30 @@ export class PanneauPoi extends HTMLElement {
         /* L'ITINÉRANCE SE JUGE ICI (BADGE-1) : la requête par emprise ne
            sait pas filtrer ce champ côté service — la même règle que
            l'index s'applique au retour, sur l'identifiant AFIREV. */
-        const gardes = this.#filtres.itinerance === true
-          ? c.elements.filter((p) => enItinerance(p.id)) : c.elements;
+        /* ET LES BADGES SE JUGENT ICI AUSSI (C4, 21/09), avec la MÊME règle
+           — `motifBadgesOperateur`, celle de `stationPasseFiltres`. Cette
+           route-ci ne passe pas par ce prédicat : elle filtre au service, et
+           le service ne sait RIEN des badges (le jeu IRVE n'a aucun champ de
+           compatibilité e-MSP, mesuré le 03/09). Sans ces lignes, le filtre
+           s'arrêterait silencieusement dès qu'on rapproche la carte — soit
+           exactement le geste qu'un visiteur du stand fait en premier, et la
+           borne qu'il ne peut pas ouvrir reparaîtrait sans un mot.
+           LE COMPTE DES MASQUÉES SE FAIT AU PASSAGE, par motif : l'itinérance
+           écarte AVANT, pour ne pas mettre ses exclusions sur le dos du
+           badge. */
+        const badges = this.#filtres.badges ?? [];
+        let masqueesInconnu = 0;
+        let masqueesNon = 0;
+        const gardes = c.elements.filter((p) => {
+          if (this.#filtres.itinerance === true && !enItinerance(p.id)) return false;
+          const motif = motifBadgesOperateur(p.operateur ?? p.reseau, badges);
+          if (motif === 'passe') return true;
+          if (motif === 'inconnu') masqueesInconnu += 1; else masqueesNon += 1;
+          return false;
+        });
+        this.#compteBadges = {
+          visibles: gardes.length, masqueesInconnu, masqueesNon,
+        };
         this.#bornes = {
           type: 'FeatureCollection',
           features: gardes.map((p) => ({
@@ -1040,7 +1143,13 @@ export class PanneauPoi extends HTMLElement {
             geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
           })),
         };
-        this.#montres.bornes = c.elements.length; this.#totaux.bornes = c.total;
+        /* CE QU'ON MONTRE, PAS CE QU'ON A REÇU. `c.elements.length` était
+           exact tant que rien ne triait après coup ; l'itinérance en écartait
+           déjà quelques-unes, la matrice des badges peut en écarter la
+           quasi-totalité. Un état qui annonce « 100 stations » sous une carte
+           qui en porte trois est précisément le mensonge que ce compteur
+           existe pour éviter. */
+        this.#montres.bornes = gardes.length; this.#totaux.bornes = c.total;
       } else {
         const c = await chargerParkings(bbox, controleur.signal);
         if (controleur !== this.#controleurs[couche]) return;
@@ -1066,8 +1175,11 @@ export class PanneauPoi extends HTMLElement {
   #purger(couche: Couche): void {
     const vide: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
     if (couche === 'carburants') this.#carburants = vide;
-    else if (couche === 'bornes') this.#bornes = vide;
-    else this.#parkings = vide;
+    else if (couche === 'bornes') {
+      this.#bornes = vide;
+      // Un compte qui survit à la couche qu'il décrit décrit un écran d'avant.
+      this.#compteBadges = { visibles: 0, masqueesInconnu: 0, masqueesNon: 0 };
+    } else this.#parkings = vide;
     delete this.#totaux[couche];
     delete this.#montres[couche];
     delete this.#chargee[couche];
@@ -1088,6 +1200,10 @@ export class PanneauPoi extends HTMLElement {
       « indisponibles » tant qu'une couche est en panne, et le rappel du seuil
       quand une couche sans index a cessé de répondre au dézoom. */
   #etat(message?: string): void {
+    /* LE COMPTE DES MASQUÉES SUIT LE CHARGEMENT, pas seulement le clic sur
+       une case : c'est la pose des bornes qui le calcule, et `#etat` est le
+       point par lequel les deux routes repassent en finissant. */
+    this.#majMessageBadges();
     const p = this.querySelector('.poi-etat') as HTMLElement;
     if (message) { p.textContent = message; return; }
     const fr = (n: number): string => n.toLocaleString('fr-FR');

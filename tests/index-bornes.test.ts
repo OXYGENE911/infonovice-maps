@@ -7,6 +7,7 @@ import {
   nomCourtReseau, chercherReseaux, etendue, ETENDUES,
   SEUIL_RAPIDE, PEREMPTION_MS, type StationRapide,
   stationPasseFiltres, indexNational, reinitialiserIndex,
+  trierParBadges, messageBadges,
 } from '../src/lib/index-bornes';
 import * as stockage from '../src/lib/stockage';
 
@@ -345,6 +346,210 @@ describe('filtrerStations', () => {
 
   it('un filtre réseau écarte les stations sans enseigne', () => {
     expect(filtrerStations([st({ reseau: null })], { reseaux: ['A'] })).toEqual([]);
+  });
+});
+
+/* LE FILTRE PAR BADGE DÉCLARÉ (C4, 21/09). Il vit dans `stationPasseFiltres`
+   et NULLE PART AILLEURS : ce prédicat est déjà celui de la carte ET du plan
+   d'itinéraire depuis BORNES-6, et « deux règles pour une même question
+   finissent toujours par diverger ». Les cumuls ci-dessous le prouvent filtre
+   par filtre — une règle qui REMPLACE les autres au lieu de s'y ajouter est
+   le défaut que ces tests guettent. */
+describe('filtrerStations · badges déclarés', () => {
+  const op = (operateur: string | null, p: Partial<StationRapide> = {}) =>
+    st({ operateur, reseau: null, ...p });
+
+  it('sans badge coché, la matrice ne retire rien', () => {
+    expect(filtrerStations([op('Bornes de la Creuse'), op(null)], { badges: [] }))
+      .toHaveLength(2);
+    expect(filtrerStations([op('Bornes de la Creuse')], {})).toHaveLength(1);
+  });
+
+  it('un « oui » de la matrice fait passer', () => {
+    expect(filtrerStations([op('Electra')], { badges: ['mobilize'] })).toHaveLength(1);
+  });
+
+  it('un « non » de la matrice écarte', () => {
+    expect(filtrerStations([op('Electra')], { badges: ['ionity'] })).toEqual([]);
+  });
+
+  /* « INCONNU » N'EST PAS COMPATIBLE — ON ÉCHOUE FERMÉ. Au stand, proposer
+     une borne que le badge du prospect n'ouvre pas, c'est le produit qui ment
+     devant lui ; en montrer moins mais de sûres se défend. */
+  it('un « inconnu » écarte, au même titre qu’un « non »', () => {
+    expect(filtrerStations([op('Tesla')], { badges: ['octopus'] })).toEqual([]);
+  });
+
+  it('un opérateur absent de la matrice est écarté dès qu’un badge est coché', () => {
+    expect(filtrerStations([op('Bornes de la Creuse')], { badges: ['chargemap'] }))
+      .toEqual([]);
+    expect(filtrerStations([op(null)], { badges: ['chargemap'] })).toEqual([]);
+  });
+
+  /* LE RAPPROCHEMENT PASSE PAR `cleReseau`, comme le filtre réseau : le
+     fichier IRVE écrit « LIDL France » et « Lidl France », « Electra » et
+     « ELECTRA ». Comparer la chaîne brute rendrait un verdict sur une
+     graphie et rien sur l'autre. */
+  it('la casse et la graphie ne changent pas le verdict', () => {
+    const jeu = [op('LIDL France', { nom: 'a' }), op('Lidl France', { nom: 'b' })];
+    expect(filtrerStations(jeu, { badges: ['izivia'] }).map((s) => s.nom))
+      .toEqual(['a', 'b']);
+    expect(filtrerStations(jeu, { badges: ['ionity'] })).toEqual([]);
+  });
+
+  it('OU entre les badges cochés : un seul « oui » suffit', () => {
+    expect(filtrerStations([op('Electra')], { badges: ['ionity', 'mobilize'] }))
+      .toHaveLength(1);
+  });
+
+  /* LE BADGE SE JUGE SUR L'EXPLOITANT, pas sur l'enseigne — même ordre de
+     préférence que le filtre réseau. L'enseigne porte souvent le nom du SITE
+     (« IONITY GmbH IONITY Vrigny ») et ne se retrouverait dans aucune ligne
+     de la matrice. */
+  it('juge sur l’opérateur quand il existe, sur l’enseigne à défaut', () => {
+    expect(filtrerStations(
+      [st({ operateur: 'Electra', reseau: 'Electra Carrefour Nantes' })],
+      { badges: ['mobilize'] },
+    )).toHaveLength(1);
+    expect(filtrerStations(
+      [st({ operateur: null, reseau: 'Electra' })], { badges: ['mobilize'] },
+    )).toHaveLength(1);
+  });
+
+  it('se cumule avec la puissance minimale', () => {
+    const jeu = [
+      op('Electra', { nom: 'faible', puissance: 50 }),
+      op('Electra', { nom: 'forte', puissance: 300 }),
+    ];
+    expect(filtrerStations(jeu, { badges: ['mobilize'], puissanceMin: 150 })
+      .map((s) => s.nom)).toEqual(['forte']);
+  });
+
+  it('se cumule avec les prises', () => {
+    const jeu = [
+      op('Electra', { nom: 'ccs', prises: ['combo_ccs'] }),
+      op('Electra', { nom: 't2', prises: ['type_2'] }),
+    ];
+    expect(filtrerStations(jeu, { badges: ['mobilize'], prises: ['type_2'] })
+      .map((s) => s.nom)).toEqual(['t2']);
+  });
+
+  it('se cumule avec le filtre réseau', () => {
+    const jeu = [op('Electra', { nom: 'e' }), op('Allego', { nom: 'a' })];
+    // Allego dit « oui » à Chargemap, Electra aussi : seul le réseau tranche.
+    expect(filtrerStations(jeu, { badges: ['chargemap'], reseaux: ['Allego'] })
+      .map((s) => s.nom)).toEqual(['a']);
+  });
+
+  it('se cumule avec la recherche par nom', () => {
+    const jeu = [
+      op('Electra', { nom: 'Electra McDonald’s Beaune' }),
+      op('Electra', { nom: 'Electra Gare de Lyon' }),
+    ];
+    expect(filtrerStations(jeu, { badges: ['mobilize'], nom: 'mcdonald' }))
+      .toHaveLength(1);
+  });
+
+  /* ET AVEC L'ITINÉRANCE (BADGE-1), qui reste en place INCHANGÉE : « raccordé
+     à l'itinérance » et « accepté par CE badge » sont deux questions, et la
+     matrice ne remplace pas l'approximation AFIREV. */
+  it('se cumule avec l’itinérance, qui reste une question distincte', () => {
+    const jeu = [
+      op('Electra', { nom: 'itin', id: 'FRELCP001' }),
+      op('Electra', { nom: 'hors', id: null }),
+    ];
+    expect(filtrerStations(jeu, { badges: ['mobilize'], itinerance: true })
+      .map((s) => s.nom)).toEqual(['itin']);
+    expect(filtrerStations(jeu, { badges: ['mobilize'] })).toHaveLength(2);
+  });
+});
+
+/* LE COMPTE DES MASQUÉES, ET POURQUOI IL EST EXPLICITE. La matrice est très
+   lacunaire : un filtre par badge qui vide la carte sans un mot PASSE POUR
+   CASSÉ. Le compte ne se déduit donc pas d'une soustraction entre deux
+   totaux — elle mélangerait « la matrice ne sait pas » avec la puissance, les
+   prises et le réseau, et ferait dire au panneau une phrase fausse. */
+describe('trierParBadges', () => {
+  const op = (operateur: string, p: Partial<StationRapide> = {}) =>
+    st({ operateur, reseau: null, ...p });
+
+  it('sans badge coché, ne masque rien et ne compte rien', () => {
+    const tri = trierParBadges([op('Tesla'), op('Electra')], {});
+    expect(tri.stations).toHaveLength(2);
+    expect(tri.visibles).toBe(2);
+    expect(tri.masqueesInconnu).toBe(0);
+    expect(tri.masqueesNon).toBe(0);
+  });
+
+  it('sépare les écartées « faute d’information » des écartées « non »', () => {
+    const tri = trierParBadges(
+      [op('Electra', { nom: 'oui' }), op('Allego', { nom: 'non' }),
+        op('Bornes de la Creuse', { nom: 'sait pas' })],
+      { badges: ['mobilize'] },
+    );
+    // Electra : mobilize = oui. Allego : mobilize = inconnu, pas « non ».
+    expect(tri.stations.map((s) => s.nom)).toEqual(['oui']);
+    expect(tri.masqueesInconnu).toBe(2);
+    expect(tri.masqueesNon).toBe(0);
+  });
+
+  /* IONITY REND ZÉRO, ET C'EST UN FAIT MESURÉ : la colonne vaut « non » pour
+     les trente opérateurs de la matrice. Sur un jeu entièrement couvert, tout
+     est écarté par un « non » — jamais par une lacune. */
+  it('compte des « non » quand la matrice refuse vraiment', () => {
+    const tri = trierParBadges([op('Electra'), op('Allego')], { badges: ['ionity'] });
+    expect(tri.stations).toEqual([]);
+    expect(tri.masqueesNon).toBe(2);
+    expect(tri.masqueesInconnu).toBe(0);
+  });
+
+  /* LE COMPTE NE MÉLANGE PAS LES MOTIFS : une station écartée par la
+     puissance n'est pas « masquée faute d'information sur ce badge », et
+     l'annoncer ainsi enverrait l'usager décocher le mauvais réglage. */
+  it('ne compte PAS les stations écartées par un autre filtre', () => {
+    const jeu = [
+      op('Bornes de la Creuse', { nom: 'faible', puissance: 50 }),
+      op('Bornes de la Creuse', { nom: 'forte', puissance: 300 }),
+    ];
+    const tri = trierParBadges(jeu, { badges: ['chargemap'], puissanceMin: 150 });
+    expect(tri.stations).toEqual([]);
+    expect(tri.masqueesInconnu).toBe(1);
+    expect(tri.masqueesNon).toBe(0);
+  });
+});
+
+describe('messageBadges', () => {
+  it('se tait quand aucun badge n’agit', () => {
+    expect(messageBadges({ visibles: 0, masqueesInconnu: 0, masqueesNon: 0 }))
+      .toBeNull();
+    expect(messageBadges({ visibles: 7, masqueesInconnu: 0, masqueesNon: 0 }))
+      .toBeNull();
+  });
+
+  it('dit combien de stations sont cachées, et pourquoi', () => {
+    expect(messageBadges({ visibles: 0, masqueesInconnu: 3, masqueesNon: 0 }))
+      .toBe('3 station(s) masquée(s) faute d’information sur ce badge.');
+  });
+
+  /* LE CAS IONITY, EN TOUTES LETTRES. Zéro station et QUE des « non » : ce
+     n'est pas une emprise vide, c'est un badge qu'aucun des trente plus gros
+     opérateurs français n'accepte. Le message générique d'emprise vide
+     laisserait croire à une panne. */
+  it('dit que le badge n’est accepté par personne quand tout est « non »', () => {
+    expect(messageBadges({ visibles: 0, masqueesInconnu: 0, masqueesNon: 12 }))
+      .toBe('Aucun des opérateurs de la matrice n’accepte ce badge.');
+  });
+
+  /* UN SEUL « INCONNU » INTERDIT LA PHRASE CI-DESSUS : l'information manque,
+     elle ne dit pas non. On annonce alors le compte des masquées. */
+  it('préfère le compte des masquées dès qu’une lacune s’en mêle', () => {
+    expect(messageBadges({ visibles: 0, masqueesInconnu: 1, masqueesNon: 12 }))
+      .toBe('1 station(s) masquée(s) faute d’information sur ce badge.');
+  });
+
+  it('annonce les masquées même quand la carte n’est pas vide', () => {
+    expect(messageBadges({ visibles: 9, masqueesInconnu: 4, masqueesNon: 2 }))
+      .toBe('4 station(s) masquée(s) faute d’information sur ce badge.');
   });
 });
 
