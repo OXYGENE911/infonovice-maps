@@ -98,3 +98,31 @@ describe('la politique de sécurité ne promet que ce qu’elle applique', () =>
     }
   });
 });
+
+/* LA LISTE DES SERVICES EST UNE DÉCLARATION, PAS UNE DOCUMENTATION.
+ *
+ * Le 21/09/2026, une Alerte a constaté que deux hôtes — public.opendatasoft.com
+ * et tabular-api.data.gouv.fr — étaient contactés par le navigateur sans figurer
+ * dans cette liste. Un visiteur qui lit « les voici, sans exception » lisait faux.
+ *
+ * Ce test cherche les deux hôtes DANS LE <ul> DES SERVICES, pas n'importe où dans
+ * le fichier : un nom cité en commentaire, ou apparaissant un jour dans la seule
+ * CSP de la page, ferait verdir un test naïf sans que personne ait rien déclaré. */
+describe('vie-privee.html déclare les services que le navigateur contacte', () => {
+  const listeDesServices = (): string => {
+    const html = lire('vie-privee.html');
+    const m = /Que voient les services interrogés[\s\S]*?<ul>([\s\S]*?)<\/ul>/.exec(html);
+    expect(m, 'bloc « Que voient les services interrogés » introuvable').not.toBeNull();
+    return m![1]!;
+  };
+
+  test('Opendatasoft (bornes de recharge) figure dans la liste', () => {
+    expect(listeDesServices(), 'hôte contacté par la carte des bornes, non déclaré')
+      .toMatch(/public\.opendatasoft\.com|Opendatasoft/);
+  });
+
+  test('data.gouv.fr (API tabulaire, état des points de charge) figure dans la liste', () => {
+    expect(listeDesServices(), 'hôte contacté à l’ouverture d’une fiche borne, non déclaré')
+      .toMatch(/tabular-api\.data\.gouv\.fr|data\.gouv\.fr/);
+  });
+});
