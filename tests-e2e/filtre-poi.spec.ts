@@ -655,3 +655,35 @@ test.describe('TEMPS-POI-1', () => {
     expect(itineraires).toHaveLength(2);
   });
 });
+
+test('L’HÔTE MUET NE BLOQUE PAS LE SABLIER — la garde de 15 s (C33)', async ({ page }) => {
+  /* La panne franche (504) est déjà défendue par « UNE PANNE DU SERVICE SE
+     DIT ». Ce qui manquait : le silence — une requête qui ne répond ni ne
+     tombe en erreur. Sans garde, le sablier bat pour toujours et le bouton
+     reste grisé. La garde vaut 15 s et il faut DEUX cycles de recherche
+     complets : la garde tarde donc plus que le timeout Playwright par
+     défaut (30 s). */
+  test.setTimeout(90_000);
+  await ouvrirCarte(page);
+  const appels: string[] = [];
+  await page.route('**overpass.openstreetmap.fr**', (route) => {
+    appels.push(route.request().url());
+    // On ne répond JAMAIS : c'est l'hôte muet, le cas que la garde doit trancher.
+  });
+  await ouvrir(page);
+  await page.locator('.poi-famille[data-cle="restaurant"]').click();
+  await poser(page, 2.3522, 48.8566);
+
+  const etat = page.locator('.poi-filtre-etat');
+  await expect(etat).toContainText('indisponible', { timeout: 20_000 });
+  expect(appels).toHaveLength(1);
+
+  /* LE SABLIER EST BIEN RETOMBÉ : `#chercher` sort tout de suite si
+     `#enCours` est vrai, donc si un second déplacement relance une requête,
+     c'est que le `finally` a bien remis `#enCours` à `false`. Sans le
+     `clearTimeout`/`finally` qui lève l'abandon, ce second appel n'a jamais
+     lieu. */
+  await poser(page, 2.3530, 48.8570);
+  expect(appels.length, 'la garde doit avoir libéré #enCours pour une seconde recherche')
+    .toBe(2);
+});

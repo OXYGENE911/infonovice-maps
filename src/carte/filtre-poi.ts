@@ -796,8 +796,10 @@ export class FiltrePoi extends HTMLElement {
     this.#echec = null;
     this.#dernierAppel = Date.now();
     this.#majEtat();
+    const horloge = new AbortController();
+    const minuteur = setTimeout(() => { horloge.abort(); }, 15_000);
     try {
-      const r = await fetch(urlFamilles(familles, zone));
+      const r = await fetch(urlFamilles(familles, zone), { signal: horloge.signal });
       if (!r.ok) throw new ErreurCategories('La recherche de lieux est indisponible.');
       const texte = await r.text();
       let lus: LieuCategorie[];
@@ -821,6 +823,7 @@ export class FiltrePoi extends HTMLElement {
       this.#echec = e instanceof ErreurCategories
         ? e.message : 'La recherche de lieux est indisponible.';
     } finally {
+      clearTimeout(minuteur);
       this.#enCours = false;
       this.#majEtat();
     }
