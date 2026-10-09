@@ -33,6 +33,11 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - **Un homonyme lointain de la BAN ne passe plus devant la vue** (RECHERCHE-4 et -5, rouge sur
   la CI de cette PR) : la note de la BAN ne dit que le texte ; une réponse hors de la vue, à plus
   de 50 km et dont la saisie ne nomme pas la commune, garde au plus le plancher de l'IGN (0,45).
+- **Une gare ne se fond plus dans la station de métro de son nom** (PICTO-2, rouge sur la CI de
+  cette PR) : « Gare Saint-Lazare » (IGN) contient « Saint-Lazare » (Wikidata, la station de
+  métro, à 235 m) ; le classement commun les fondait et la gare disparaissait derrière le métro.
+  Un mot d'équipement en plus (gare, station, métro, RER, arrêt, aéroport, parking, port) dit
+  désormais un autre lieu. Banc inchangé.
 - **Deux parcours e2e tiennent muettes les sources neuves** (`reperes.spec.ts`,
   `recherche-nav.spec.ts`) : ils défendent la saisie d'un repère et l'étape en suivi, pas le
   classement ; leurs attentes ne changent pas.
