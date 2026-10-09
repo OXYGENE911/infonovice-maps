@@ -141,10 +141,29 @@ export function noteDeDepart(source: Trouvaille['source'], scoreGeocodeur: numbe
   return source === 'osm' ? 0.55 : 0.6;
 }
 
-const deBan = (r: ResultatAdresse): Paire => ({
+/* UN HOMONYME LOINTAIN NE DÉPLACE PAS LA RECHERCHE (RECHERCHE-4 et -5, lot 145).
+   La note de la BAN ne dit que le texte : le client libre ne lui envoie pas la
+   position de la carte (contrainte 4). « Collège Albert Camus » rend le
+   lieu-dit de Thumeries, à deux cents kilomètres, noté 0,945 — et, dans le
+   classement commun du lot 144, il passait devant le collège de la vue
+   (e2e `recherche-nom.spec.ts:276`, rouge sur la CI de la PR #327). Une
+   réponse de la BAN hors de la vue, à plus de 50 km et dont la saisie ne
+   nomme pas la commune garde au plus le plancher de l'IGN (0,45) : la même
+   adaptation que `noteDeDepart`, pour la même raison. */
+export const PLAFOND_LOINTAINE = 0.45;
+
+/** La note de départ d'une réponse de la BAN — PURE : plafonnée si elle est lointaine et non nommée. */
+export function noteBan(texte: string, r: ResultatAdresse, vue: VueRecherche | null): number {
+  const s = r.score ?? 0.5;
+  const lointaine = vue !== null && !dansEmprise(vue.emprise, r) && distanceKm(r, vue) > SEUIL_LOIN_KM
+    && !communeNommee(texte, r.contexte);
+  return lointaine ? Math.min(s, PLAFOND_LOINTAINE) : s;
+}
+
+const deBan = (r: ResultatAdresse, score: number): Paire => ({
   c: {
     lon: r.lon, lat: r.lat, libelle: r.libelle, detail: r.contexte, genre: 'adresse', source: 'ban',
-    categorie: '', score: r.score ?? 0.5, typeBan: r.type,
+    categorie: '', score, typeBan: r.type,
   },
   rendu: r,
 });
@@ -228,7 +247,7 @@ export async function rechercherTout(texte: string, options: OptionsRecherche): 
      assignée dans un rappel échappe à l'analyse de flot de TypeScript. */
   const etat: { panne: Error | null; commune: string | null } = { panne: null, commune: null };
 
-  const banPaires = adresses.map(deBan);
+  const banPaires = adresses.map((r) => deBan(r, noteBan(texte, r, vue)));
   const classer = (): ResultatAdresse[] => {
     const tous = [...lieux, ...connus, ...banPaires];
     /* L'IDENTITÉ PAR LE RANG : le classement peut rendre une copie enrichie
