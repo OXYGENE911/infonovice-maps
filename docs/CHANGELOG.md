@@ -2,6 +2,28 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.150.0] — 2026-10-09 — DESIGN-PRO-1
+
+### Le nouveau design : le libre prend l'habit de Maps Pro, sans aucune de ses fonctions
+- **Décision d'Armelin, 08/10/2026** : « apporter un refresh à l'interface gratuite […] en la
+  mettant à jour à l'image de la fonction ou du bouton équivalent de l'interface Pro, sans
+  exposer la moindre fonctionnalité de la version Pro ». Le libre ne doit plus paraître
+  « fade, basique et peu professionnel » à qui le découvre avant Maps Pro.
+- **Les jetons** (`src/styles/tokens.css`) prennent les valeurs de la carte en ligne de Maps Pro :
+  gris froids, encre `#0E1014`, rayon de 18 px, ombre de carte, pile de polices du système de
+  Maps Pro (Segoe UI Variable d'abord, aucune police téléchargée). Nouveaux rôles : `--fond-2`,
+  `--filet`, `--survol`, `--bleu-clair`, `--bleu-bord`, `--accent-texte`, `--principal`, avec
+  leurs valeurs de nuit. Le gris d'appoint passe de 3,6:1 à 5,0:1 de contraste sur blanc.
+- **L'habit** (`src/styles/habillage.css`, importé après les feuilles de comportement) : barre de
+  recherche en carte blanche opaque, champ en pilule avec sa loupe, propositions à la barre bleue
+  de sélection, pastilles « Itinéraire » et « Menu » en pilules de 44 px, entonnoir et boutons de
+  la carte ronds, lignes de menu bordées, choix du thème en sélecteur segmenté, boutons
+  principaux en pilule bleue `#2272C4` (aussi de nuit : 4,9:1 au lieu de 3,6:1), bulles et fiche
+  d'un lieu arrondies à 16 px.
+- **Ce qui ne change pas** : aucun élément ajouté ou retiré, aucune fonction, aucun appel
+  réseau, aucun cadenas ; le comportement (feuilles basses, fenêtres, couches, guidage) vit
+  toujours dans `carte.css`, intact. `tests/habillage.test.ts` garde ces promesses.
+
 ## [1.149.0] — 2026-09-13 — SONDE-VRAIE-1
 
 ### La sonde ne mesurait pas ce qu'elle annonçait — et une assertion affaiblie est restaurée
