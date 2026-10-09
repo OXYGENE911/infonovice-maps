@@ -1,0 +1,368 @@
+/* ═══ LE NOUVEAU DESIGN DU CLIENT LIBRE, À L'IMAGE DE MAPS PRO (lot 144) ════
+   Décision d'Armelin, 08/10/2026 au soir : « apporter un refresh à
+   l'interface gratuite […] reprendre uniquement l'interface graphique de la
+   version Maps gratuite, en la mettant à jour à l'image de la fonction ou du
+   bouton équivalent de l'interface Pro, sans exposer la moindre
+   fonctionnalité de la version Pro ».
+
+   CE QUE CETTE FEUILLE FAIT, ET RIEN D'AUTRE. Elle habille les éléments que
+   le libre a DÉJÀ — barre de recherche, résultats, pastilles du rail, menu,
+   planificateur, fiches, boutons de la carte — avec le langage visuel de la
+   carte en ligne de Maps Pro (apps/web/src/carte/carte.css du dépôt Pro) :
+   cartes blanches à rayon de 18 px et ombre douce, champ de recherche en
+   pilule sur fond gris clair, boutons en pilule, bouton principal bleu
+   #2272C4, boutons ronds sur la carte, lignes de menu bordées. Elle n'ajoute
+   AUCUN élément, AUCUNE fonction, AUCUN appel réseau, AUCUN cadenas : que du
+   CSS, posé après carte.css, sur les classes que le code utilise déjà.
+
+   POURQUOI UNE FEUILLE À PART plutôt que des retouches dans carte.css : le
+   comportement vit dans carte.css (276 Ko de règles de mise en page, de
+   couches, de feuilles basses, chacune justifiée par un défaut vécu). Ici ne
+   vit que l'habit. On le relit d'un bloc, on le retire d'une ligne (son
+   import dans main.ts) si un jour il le faut, et la revue voit d'un coup
+   d'œil qu'aucune règle de comportement n'a bougé.
+
+   LES DEUX THÈMES : les couleurs passent par les jetons de tokens.css, qui
+   ont leur valeur de nuit. Les rares règles propres à la nuit suivent la
+   transformation du projet — média gardé par :not([data-theme="clair"]) et
+   doublé sous [data-theme="sombre"] (voir src/lib/theme.ts).
+
+   AUCUNE TRANSITION : plusieurs parcours lisent une couleur calculée juste
+   après un clic ; une transition de 150 ms leur ferait lire une couleur
+   intermédiaire. L'habit ne doit rien coûter au comportement. */
+
+
+/* ─── 1. L'EN-TÊTE : la carte blanche de la barre de recherche Pro ───────── */
+/* OPAQUE, comme la barre Pro : le voile translucide flouté laissait passer
+   les routes de la carte sous la marque. (Le mode « page de recherche »
+   garde ses propres règles, plus fortes : `body.recherche-ouverte .entete`
+   l'aplatit toujours.) */
+.entete {
+  align-items: center;
+  background: var(--fond);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border-color: var(--bord);
+  box-shadow: var(--ombre-m);
+}
+.entete-marque { font-weight: 600; letter-spacing: -0.01em; }
+.entete-marque strong { font-weight: 750; }
+.entete-pro { border-radius: var(--rayon-pilule); padding: 1px 8px; }
+@media (min-width: 641px) {
+  .entete { padding: 7px 7px 7px 18px; }
+  .entete-marque { font-size: 16.5px; }
+}
+
+/* LE CHAMP DE RECHERCHE EN PILULE, loupe comprise — la barre de Maps Pro.
+   La loupe est une IMAGE DE FOND : aucun nœud ajouté, le champ reste le seul
+   élément que le code et le lecteur d'écran connaissent. La coquille
+   d'attente (PERF-1) reçoit EXACTEMENT les mêmes règles : son remplacement
+   ne doit pas faire sauter la page. */
+.entete recherche-adresse:not(.recherche-page) .recherche input,
+.entete .recherche-attente input {
+  height: 40px;
+  padding: 0 14px 0 40px;
+  border-radius: var(--rayon-pilule);
+  border: 1.5px solid var(--filet);
+  background-color: var(--fond-2);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%236B7079%27 stroke-width=%272%27 stroke-linecap=%27round%27%3E%3Ccircle cx=%2711%27 cy=%2711%27 r=%277%27/%3E%3Cpath d=%27m20 20-4-4%27/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 14px 50%;
+  background-size: 18px 18px;
+  font-size: 15px;
+}
+@media (max-width: 640px) {
+  .entete recherche-adresse:not(.recherche-page) .recherche input,
+  .entete .recherche-attente input {
+    height: 36px; padding: 0 10px 0 32px;
+    background-position: 10px 50%; background-size: 16px 16px;
+    font-size: 14px;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="clair"]) .entete recherche-adresse:not(.recherche-page) .recherche input,
+  :root:not([data-theme="clair"]) .entete .recherche-attente input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%238A94A2%27 stroke-width=%272%27 stroke-linecap=%27round%27%3E%3Ccircle cx=%2711%27 cy=%2711%27 r=%277%27/%3E%3Cpath d=%27m20 20-4-4%27/%3E%3C/svg%3E");
+  }
+}
+:root[data-theme="sombre"] .entete recherche-adresse:not(.recherche-page) .recherche input,
+:root[data-theme="sombre"] .entete .recherche-attente input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%238A94A2%27 stroke-width=%272%27 stroke-linecap=%27round%27%3E%3Ccircle cx=%2711%27 cy=%2711%27 r=%277%27/%3E%3Cpath d=%27m20 20-4-4%27/%3E%3C/svg%3E");
+}
+
+/* LES AUTRES CHAMPS D'ADRESSE (départ, étapes, destination, météo d'une
+   ville) : le champ du planificateur de Maps Pro — rectangle arrondi de
+   12 px sur fond gris clair, bord de 1,5 px qui devient bleu au focus. */
+.recherche input {
+  border: 1.5px solid var(--filet);
+  border-radius: 12px;
+  background-color: var(--fond-2);
+}
+.recherche input::placeholder { color: var(--texte-3); opacity: 1; }
+.recherche input:focus-visible {
+  background-color: var(--fond);
+  border-color: var(--accent);
+  box-shadow: var(--focus);
+}
+
+/* LA PAGE DE RECHERCHE (téléphone) garde sa géométrie — la flèche de retour,
+   la mascotte, la place sous le clavier sont réglées au pixel ailleurs. Seul
+   l'habit change : la pilule, et un retour rond. */
+recherche-adresse.recherche-page .recherche input {
+  border-radius: var(--rayon-pilule);
+}
+recherche-adresse.recherche-page .recherche-retour {
+  border-radius: 50%;
+  border-color: var(--filet);
+  background: var(--fond-2);
+}
+
+/* ─── 2. LES RÉSULTATS : les propositions de Maps Pro ─────────────────────── */
+.recherche ul {
+  padding: 6px;
+  border-color: var(--bord);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre-m);
+}
+recherche-adresse:not(.recherche-page) .recherche [role="option"] {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 14.5px;
+}
+.recherche [role="option"]:hover,
+.recherche [role="option"][aria-selected="true"] { background: var(--bleu-clair); }
+/* La ligne choisie au clavier porte la barre bleue de Maps Pro : la
+   sélection se voit aussi sans la couleur de fond. */
+.recherche [role="option"][aria-selected="true"] { box-shadow: inset 3px 0 0 var(--principal); }
+
+/* ─── 3. LES PASTILLES DU RAIL : « Itinéraire » et « Menu » ────────────────── */
+/* Les pastilles blanches de Maps Pro : pleine opacité, pilule, 44 px de haut
+   (la cible tactile recommandée), ombre de carte. Seul le sommaire DIRECT
+   change : les volets imbriqués gardent le leur. */
+.iti > summary,
+.reglages > summary {
+  min-height: 44px;
+  border-radius: var(--rayon-pilule);
+  background: var(--fond);
+  border: 1px solid var(--bord);
+  box-shadow: var(--ombre-m);
+  font: 650 14px/20px var(--police);
+  color: var(--texte-1);
+}
+/* LE SOMMAIRE DE L'ITINÉRAIRE GARDE SON `display` D'ORIGINE, et c'est une
+   leçon payée par trente parcours rouges : passé en `flex`, il perdait le
+   test de toucher au profit de son enveloppe `<porte-planificateur>` (un
+   élément en ligne qui contient un bloc) — elementsFromPoint rendait la
+   porte AVANT le sommaire, et aucun clic ne l'atteignait plus. Mesuré le
+   09/10 : `list-item` ou `block` rendent le sommaire, `flex` rend la porte.
+   La hauteur de 44 px vient donc du rembourrage, pas de l'alignement. */
+.iti > summary { padding: 11px 16px 11px 14px; }
+.reglages > summary { padding: 0 16px 0 14px; }
+.iti > summary .picto-menu { width: 18px; height: 18px; vertical-align: -4px; }
+.iti > summary:hover,
+.reglages > summary:hover { background: var(--bleu-clair); }
+.iti[open] > summary,
+.reglages[open] > summary { border-color: var(--bleu-bord); }
+.iti > summary:focus-visible,
+.reglages > summary:focus-visible { box-shadow: var(--focus), var(--ombre-m); }
+
+/* L'ENTONNOIR DES LIEUX : un bouton rond, comme les commandes de Maps Pro. */
+.poi-bulle {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--bord);
+  box-shadow: var(--ombre-m);
+}
+.poi-bulle:hover { background: var(--bleu-clair); }
+.poi-bulle[aria-expanded="true"] { background: var(--bleu-clair); border-color: var(--accent); }
+.poi-bulle:focus-visible { box-shadow: var(--focus), var(--ombre-m); }
+
+/* ─── 4. LES BOUTONS DE LA CARTE (me localiser, boussole) ─────────────────── */
+/* Les commandes rondes de Maps Pro : une pilule blanche, 44 px par bouton.
+   (Le `!important` répond à celui de carte.css, posé contre la feuille de
+   MapLibre chargée après elle.) */
+.maplibregl-ctrl-group {
+  border-radius: var(--rayon-pilule) !important;
+  box-shadow: var(--ombre-m) !important;
+}
+.maplibregl-ctrl-group button { width: 44px !important; height: 44px !important; }
+
+/* ─── 5. LES PANNEAUX : la carte blanche de Maps Pro, rayon 18 ───────────── */
+/* LE FOND DU MENU N'EST PAS TOUT À FAIT OPAQUE, et c'est voulu — la même
+   parade que la feuille de Maps Pro (mesurée le 30/09 sous Chromium). Opaque,
+   la fenêtre fixe et défilante est prise par le compositeur pour un cache
+   aussi haut que tout son contenu : la carte n'était plus peinte dans un
+   grand rectangle blanc au-dessus (téléphone) ou au-dessous (bureau) de la
+   fenêtre — vu sur les captures du lot 144, et déjà présent au bureau avant
+   lui. À 99,2 %, rien ne se voit au travers, et la carte reste entière.
+   `rgba()` et non `color-mix()` : les parcours de contraste lisent la
+   couleur calculée chiffre à chiffre. */
+.reglages-corps { background: rgba(255, 255, 255, .992); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="clair"]) .reglages-corps { background: rgba(14, 16, 20, .992); }
+}
+:root[data-theme="sombre"] .reglages-corps { background: rgba(14, 16, 20, .992); }
+@media (min-width: 641px) {
+  #carte .iti[open] .iti-corps { border-radius: var(--rayon); }
+  .reglages[open] .reglages-corps { border-radius: var(--rayon); }
+}
+.poi-panneau { border-radius: var(--rayon); border-color: var(--bord); }
+/* LA FEUILLE BASSE DU TÉLÉPHONE (BS-1) : les coins de 22 px de la feuille de
+   Maps Pro. Les PAGES, elles, restent des fenêtres arrondies partout. */
+@media (max-width: 640px) {
+  #carte .iti[open]:not([data-page]) .iti-corps { border-radius: 22px 22px 0 0; }
+}
+
+/* LA TÊTE D'UNE PAGE : blanche, titre à la typographie des titres Pro,
+   retour et fermeture en boutons ronds. */
+.vue-tete { background: var(--fond); }
+.vue-titre { font-family: var(--police-titre); letter-spacing: -0.01em; }
+.vue-retour,
+.vue-fermer {
+  border-radius: 50%;
+  border-color: var(--filet);
+  background: var(--fond-2);
+}
+.vue-retour:hover,
+.vue-fermer:hover { background: var(--bleu-clair); }
+
+/* ─── 6. LE MENU : les lignes bordées de Maps Pro ─────────────────────────── */
+.reglages-etiquette { color: var(--texte-2); letter-spacing: .06em; }
+/* Les entrées du menu (Fonds, Trafic, Météo, Outils, Favoris, Historique) et
+   celles du planificateur (Mon véhicule, Options du trajet…) : des lignes
+   blanches bordées, rayon 14, qui bleuissent au survol — `.menu-entree` de
+   Maps Pro. Aucune entrée ajoutée, aucune retirée.
+   LEUR HAUTEUR NE BOUGE PAS : le menu doit tenir à l'écran sans défiler
+   (ERGO-5, et trois parcours le mesurent). Les lignes de Maps Pro font
+   48 px ; ici, seul l'habit passe — bord, rayon, fond, survol. */
+.reglages-corps summary,
+.iti-vers {
+  border: 1px solid var(--filet);
+  border-radius: 14px;
+  background: var(--fond);
+  box-shadow: none;
+}
+.reglages-corps summary:hover,
+.iti-vers:hover { border-color: var(--accent); background: var(--bleu-clair); color: var(--accent-texte); }
+.reglages-corps summary:focus-visible,
+.iti-vers:focus-visible { box-shadow: var(--focus); }
+
+/* LE CHOIX DU THÈME : le sélecteur segmenté des modes de Maps Pro — un rail
+   gris, le choix courant en carte blanche. Le soleil et la lune gardent leur
+   jaune (MENU-GRAPH-1). */
+.reglages-theme {
+  gap: 2px; padding: 2px;
+  border-radius: 14px;
+  background: var(--fond-2);
+}
+/* 2 px de rail, 6 px de rembourrage au lieu de 8 : la rangée garde sa
+   hauteur d'avant (le menu doit tenir à l'écran). */
+.reglages-theme-choix span {
+  padding-top: 6px; padding-bottom: 6px;
+  border-color: transparent;
+  border-radius: 12px;
+  background: transparent;
+}
+.reglages-theme-choix span:hover { background: var(--survol); }
+.reglages-theme-choix input:checked ~ span {
+  background: var(--fond);
+  border-color: transparent;
+  color: var(--accent-texte);
+  box-shadow: 0 1px 4px rgba(14, 16, 20, .16);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="clair"]) .reglages-theme-choix input:checked ~ span {
+    background: #2A313C; box-shadow: 0 1px 4px rgba(0, 0, 0, .5);
+  }
+}
+:root[data-theme="sombre"] .reglages-theme-choix input:checked ~ span {
+  background: #2A313C; box-shadow: 0 1px 4px rgba(0, 0, 0, .5);
+}
+.reglages-theme-choix input:focus-visible ~ span { box-shadow: var(--focus); }
+
+/* ─── 7. LES BOUTONS : pilules, le principal en bleu Maps Pro ────────────── */
+/* LE BOUTON PRINCIPAL — une action qui fait avancer (Y aller, Démarrer le
+   suivi, Utiliser ma position…). Pilule, bleu #2272C4 dans les deux thèmes
+   (voir --principal dans tokens.css), graisse 650. Les boutons du guidage
+   (`.bg-*`) ne sont pas touchés : ils suivent la signalisation routière. */
+.recherche-ici-oui, .maj-oui, .carte-perdue-recharger,
+.casse-bandeau button, .carte-muette button,
+.iti-actions .iti-demarrer, .fb-aller, .iti-lien, .iti-partager-sys,
+.recevoir-ajouter, .cible-definir, .poi-chercher, .poi-fiche-aller,
+.favoris-liste-creer, .mesure-demarrer,
+.partage-position-obtenir, .partage-position-actions button,
+.iti-hist-telecharger {
+  border-radius: var(--rayon-pilule);
+  border-color: var(--principal);
+  background: var(--principal);
+  color: var(--blanc);
+  font-weight: 650;
+}
+.recherche-ici-oui:hover:not(:disabled), .maj-oui:hover:not(:disabled),
+.carte-perdue-recharger:hover:not(:disabled),
+.casse-bandeau button:hover:not(:disabled), .carte-muette button:hover:not(:disabled),
+.iti-actions .iti-demarrer:hover:not(:disabled), .fb-aller:hover:not(:disabled),
+.iti-lien:hover:not(:disabled), .iti-partager-sys:hover:not(:disabled),
+.recevoir-ajouter:hover:not(:disabled), .cible-definir:hover:not(:disabled),
+.poi-chercher:hover:not(:disabled), .poi-fiche-aller:hover:not(:disabled),
+.favoris-liste-creer:hover:not(:disabled), .mesure-demarrer:hover:not(:disabled),
+.partage-position-obtenir:hover:not(:disabled),
+.partage-position-actions button:hover:not(:disabled),
+.iti-hist-telecharger:hover {
+  border-color: var(--principal-survol);
+  background: var(--principal-survol);
+}
+
+/* LES BOUTONS SECONDAIRES : la pilule blanche à bord bleu pâle de Maps Pro. */
+.poi-fiche-favori, .poi-fiche-partager,
+.reglages-maj, .reglages-compte-lien {
+  border-radius: var(--rayon-pilule);
+  border: 1.5px solid var(--bleu-bord);
+  background: var(--fond);
+  color: var(--accent-texte);
+  font-weight: 650;
+}
+.poi-fiche-favori:hover:not(:disabled), .poi-fiche-partager:hover:not(:disabled),
+.reglages-maj:hover:not(:disabled), .reglages-compte-lien:hover {
+  border-color: var(--accent);
+  background: var(--bleu-clair);
+}
+
+/* LES BOUTONS DISCRETS du pied du planificateur (Effacer, Partager…) : la
+   pilule grise de Maps Pro. Le principal, plus haut, garde son bleu. */
+.iti-actions button:not(.iti-demarrer) {
+  border-radius: var(--rayon-pilule);
+  border-color: var(--filet);
+  background: var(--fond-2);
+}
+.iti-actions button:not(.iti-demarrer):hover { background: var(--survol); }
+
+/* LES MODES DU TRAJET (voiture, à pied…) : les cartes de choix de Maps Pro. */
+.iti-profil span { border-radius: 12px; border-color: var(--filet); }
+.iti-profil input:checked ~ span { background: var(--bleu-clair); color: var(--accent-texte); }
+
+/* ─── 8. LES BULLES ET LA FICHE D'UN LIEU ─────────────────────────────────── */
+/* La bulle de Maps Pro : rayon 16, ombre de carte, titre en typographie de
+   titre, boutons en pilule. La croix devient un bouton rond.
+   `#carte` EN TÊTE, ET IL LE FAUT : la feuille de MapLibre est chargée APRÈS
+   les nôtres (carte.ts l'importe), et ses règles d'une seule classe
+   gagneraient à égalité. Seuls le rayon et l'ombre passent ici : les
+   marges intérieures restent celles de chaque bulle (`.plein-bulle`…). */
+#carte .maplibregl-popup-content {
+  border-radius: 16px;
+  box-shadow: var(--ombre-m);
+}
+#carte .maplibregl-popup-close-button {
+  width: 32px; height: 32px; top: 4px; right: 4px;
+  padding: 0; border-radius: 50%;
+  font-size: 20px; line-height: 1;
+}
+#carte .maplibregl-popup-close-button:hover { background: var(--fond-2); color: var(--texte-1); }
+.poi-fiche-nom { padding-right: 24px; font: 700 16.5px/1.3 var(--police-titre); letter-spacing: -0.01em; }
+.poi-fiche-boutons button {
+  min-height: 42px;
+  padding: 8px 16px;
+  border-radius: var(--rayon-pilule);
+  font-size: 14px;
+}
+.poi-fiche-temps-mode { border-color: var(--filet); background: var(--fond-2); }
+.poi-fiche-temps-mode:hover { background: var(--bleu-clair); }
