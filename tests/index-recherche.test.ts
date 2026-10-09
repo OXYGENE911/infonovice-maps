@@ -68,11 +68,14 @@ const VUE = [{ lon: 2.2875, lat: 48.8322 }];
 
 describe('les paquets de la recherche des lieux connus (lot 145)', () => {
   it('sont exactement ce que les sources engendrent', () => {
-    expect(readFileSync(`${DOSSIER}sommaire.json`, 'utf8')).toBe(construit.sommaire);
+    /* LES FINS DE LIGNE NE COMPTENT PAS : un poste Windows (core.autocrlf)
+       extrait les fichiers en CRLF — le contenu, lui, doit être identique. */
+    const lire = (chemin: string): string => readFileSync(chemin, 'utf8').replace(/\r\n/g, '\n');
+    expect(lire(`${DOSSIER}sommaire.json`)).toBe(construit.sommaire);
     const fichiers = readdirSync(DOSSIER).filter((f) => /^p\d{3}\.json$/.test(f)).sort();
     expect(fichiers).toHaveLength(construit.paquets.length);
     construit.paquets.forEach((p, n) => {
-      expect(readFileSync(`${RACINE}public${urlPaquet(n)}`, 'utf8'), urlPaquet(n)).toBe(p);
+      expect(lire(`${RACINE}public${urlPaquet(n)}`), urlPaquet(n)).toBe(p);
     });
   });
 
