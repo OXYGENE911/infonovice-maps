@@ -26,6 +26,17 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
 - **Ce qui ne change pas** : aucun élément ajouté ou retiré, aucune fonction, aucun appel
   réseau, aucun cadenas ; le comportement (feuilles basses, fenêtres, couches, guidage) vit
   toujours dans `carte.css`, intact. `tests/habillage.test.ts` garde ces promesses.
+- **Les pastilles de catégories prennent les dessins de Maps Pro** (lot 145) : même disque de la
+  couleur de la famille, même dessin blanc ; trois familles s'alignent — Cinémas et théâtres (la
+  pellicule), Services (les ciseaux), Sport et stades (un stade, nouveau motif, que portent aussi
+  les stades sur la carte). Dessins au trait dans le code : ni marque, ni mascotte, aucun binaire,
+  aucune famille ajoutée ; la pastille du filtre reste celle de la carte (POI-5).
+- **`sans-reseau.spec.ts:93` ne dépendait pas du numéro de version** (lot 145) : son attente du
+  service worker n'attendait rien (`waitForFunction` ne sait pas attendre une fonction
+  asynchrone : une promesse est toujours « vraie »). Sous charge, le réseau était coupé pendant le
+  précache, l'installation échouait et la page partait sur un réseau coupé — sur `main` en
+  1.149.0 comme ici. Le parcours attend désormais l'état « activated » (et la recette recopiée
+  par `demo-salon.spec.ts` aussi).
 
 ## [1.149.0] — 2026-09-13 — SONDE-VRAIE-1
 
