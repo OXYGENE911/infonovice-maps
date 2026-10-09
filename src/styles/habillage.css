@@ -215,7 +215,7 @@ recherche-adresse:not(.recherche-page) .recherche [role="option"] {
 /* LA TÊTE D'UNE PAGE : blanche, titre à la typographie des titres Pro,
    retour et fermeture en boutons ronds. */
 .vue-tete { background: var(--fond); }
-.vue-titre { font-family: var(--police-titre); letter-spacing: -0.01em; }
+.vue-titre { letter-spacing: -0.01em; }
 .vue-retour,
 .vue-fermer {
   border-radius: 50%;

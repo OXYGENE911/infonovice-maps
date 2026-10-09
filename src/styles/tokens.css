@@ -72,11 +72,14 @@
   --rayon-pilule: 999px;
   --focus: 0 0 0 3px rgba(34, 114, 196, .45);
 
-  /* Système, pas Google Fonts : contrainte de souveraineté n° 3. LA PILE DE
-     MAPS PRO (lot 144) : Segoe UI Variable d'abord sous Windows 11, puis la
-     police du système partout ailleurs (Roboto sous Android, San Francisco
-     sous iOS). Aucune police téléchargée : rien ne part vers un CDN. */
-  --police: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif;
+  /* Système, pas Google Fonts : contrainte de souveraineté n° 3.
+     LA PILE DU TEXTE NE CHANGE PAS (lot 144), et c'est mesuré : celle de
+     Maps Pro (Segoe UI Variable d'abord) change la hauteur de ligne sous
+     Windows 11 — le menu grandissait de 50 px et ne tenait plus à l'écran
+     (ERGO-5, trois parcours rouges le 09/10). Sur téléphone, les deux piles
+     donnent la même police (Roboto sous Android, San Francisco sous iOS).
+     Seuls les TITRES d'une ligne prennent la pile d'affichage de Maps Pro. */
+  --police: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
   --police-titre: 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif;
 
   /* LES COUCHES, NOMMÉES ET ORDONNÉES EN UN SEUL ENDROIT. Les z-index
