@@ -10,10 +10,13 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   exposer la moindre fonctionnalité de la version Pro ». Le libre ne doit plus paraître
   « fade, basique et peu professionnel » à qui le découvre avant Maps Pro.
 - **Les jetons** (`src/styles/tokens.css`) prennent les valeurs de la carte en ligne de Maps Pro :
-  gris froids, encre `#0E1014`, rayon de 18 px, ombre de carte, pile de polices du système de
-  Maps Pro (Segoe UI Variable d'abord, aucune police téléchargée). Nouveaux rôles : `--fond-2`,
-  `--filet`, `--survol`, `--bleu-clair`, `--bleu-bord`, `--accent-texte`, `--principal`, avec
-  leurs valeurs de nuit. Le gris d'appoint passe de 3,6:1 à 5,0:1 de contraste sur blanc.
+  gris froids, encre `#0E1014`, rayon de 18 px, ombre de carte. Nouveaux rôles : `--fond-2`,
+  `--filet`, `--survol`, `--bleu-clair`, `--bleu-bord`, `--accent-texte`, `--principal`,
+  `--police-titre`, avec leurs valeurs de nuit. Le gris d'appoint passe de 3,6:1 à 5,0:1 de
+  contraste sur blanc. **La pile de polices du texte ne change pas** : celle de Maps Pro
+  (Segoe UI Variable d'abord) change la hauteur de ligne sous Windows 11 et le menu ne tenait
+  plus à l'écran (mesuré par la suite e2e) ; sur téléphone, les deux piles donnent la même
+  police. Aucune police téléchargée.
 - **L'habit** (`src/styles/habillage.css`, importé après les feuilles de comportement) : barre de
   recherche en carte blanche opaque, champ en pilule avec sa loupe, propositions à la barre bleue
   de sélection, pastilles « Itinéraire » et « Menu » en pilules de 44 px, entonnoir et boutons de
