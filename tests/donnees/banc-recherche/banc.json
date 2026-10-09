@@ -1,0 +1,948 @@
+{
+ "_origine": "Banc du lot 141 de Maps Pro (nuit du 06 au 07/10/2026) : les 67 saisies publiques mesurées par l'application, que des lieux publics. Recopié le 09/10/2026 (lot 144) par son auteur. `nom` et `commune` : expressions sur le libellé et le détail normalisés (sans accents) ; `pres`/`rayon_m` : le point attendu et la tolérance. Juste : le nom dans le LIBELLÉ, la commune dans le libellé ou le détail, le point dans la tolérance (critère de BancLieuxTest.kt). `echantillon36` : les 36 saisies de l'étude du 08/10 ; `proApresLot141` : le verdict de Maps Pro (application) au lot 141.",
+ "centre": {
+  "nom": "Paris, Porte de Versailles (Mondial de l'Auto)",
+  "lat": 48.8322,
+  "lon": 2.2875
+ },
+ "requetes": [
+  {
+   "id": "m01",
+   "saisie": "Notre Dame de Paris",
+   "nom": "^cathedrale notre dame|^notre dame de paris",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.853,
+    2.3499
+   ],
+   "rayon_m": 400,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "m02",
+   "saisie": "Cathédrale Notre Dame de Paris",
+   "nom": "^cathedrale notre dame",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.853,
+    2.3499
+   ],
+   "rayon_m": 400,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "m03",
+   "saisie": "notre-dame",
+   "nom": "^cathedrale notre dame|^notre dame",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.853,
+    2.3499
+   ],
+   "rayon_m": 600,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "m04",
+   "saisie": "tour Eiffel",
+   "nom": "tour eiffel",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.8584,
+    2.2945
+   ],
+   "rayon_m": 400,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "m05",
+   "saisie": "tour effeil",
+   "nom": "tour eiffel",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.8584,
+    2.2945
+   ],
+   "rayon_m": 400,
+   "echantillon36": true,
+   "proApresLot141": false
+  },
+  {
+   "id": "m06",
+   "saisie": "Mont Saint-Michel",
+   "nom": "mont saint michel|abbaye",
+   "commune": "mont saint michel",
+   "cas": "monument",
+   "pres": [
+    48.6361,
+    -1.5115
+   ],
+   "rayon_m": 1500,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "m07",
+   "saisie": "Pont du Gard",
+   "nom": "^pont du gard",
+   "commune": "gard|remoulins",
+   "cas": "monument",
+   "pres": [
+    43.9475,
+    4.5353
+   ],
+   "rayon_m": 2500,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "m08",
+   "saisie": "château de Versailles",
+   "nom": "^chateau de versailles|^domaine national de versailles",
+   "commune": "versailles",
+   "cas": "monument",
+   "pres": [
+    48.8049,
+    2.1204
+   ],
+   "rayon_m": 1000,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "m09",
+   "saisie": "Sacré-Cœur",
+   "nom": "sacre c(oe|œ)ur",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.8867,
+    2.3431
+   ],
+   "rayon_m": 400,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "m10",
+   "saisie": "Arc de Triomphe",
+   "nom": "arc de triomphe",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.8738,
+    2.295
+   ],
+   "rayon_m": 400,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "m11",
+   "saisie": "Louvre",
+   "nom": "louvre",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.8606,
+    2.3376
+   ],
+   "rayon_m": 700,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "m12",
+   "saisie": "musée d'Orsay",
+   "nom": "musee d orsay",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.86,
+    2.3266
+   ],
+   "rayon_m": 400,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "m13",
+   "saisie": "Panthéon",
+   "nom": "pantheon",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.8462,
+    2.3464
+   ],
+   "rayon_m": 400,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "m17",
+   "saisie": "Invalides",
+   "nom": "^invalides|hotel des invalides|^les invalides",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.855,
+    2.3125
+   ],
+   "rayon_m": 600,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "m19",
+   "saisie": "Fourvière",
+   "nom": "fourviere",
+   "commune": "lyon",
+   "cas": "monument",
+   "pres": [
+    45.7623,
+    4.8225
+   ],
+   "rayon_m": 600,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "m20",
+   "saisie": "Palais des Papes",
+   "nom": "^palais des papes",
+   "commune": "avignon",
+   "cas": "monument",
+   "pres": [
+    43.9509,
+    4.8075
+   ],
+   "rayon_m": 500,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "e01",
+   "saisie": "Leroy Merlin",
+   "nom": "leroy merlin",
+   "commune": "",
+   "cas": "commerce",
+   "pres": [
+    48.8322,
+    2.2875
+   ],
+   "rayon_m": 15000,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "e06",
+   "saisie": "pharmacie",
+   "nom": "pharmacie",
+   "commune": "",
+   "cas": "commerce",
+   "pres": [
+    48.8322,
+    2.2875
+   ],
+   "rayon_m": 5000,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "a01",
+   "saisie": "6 parvis Notre-Dame Paris",
+   "nom": "parvis notre dame",
+   "commune": "paris",
+   "cas": "adresse",
+   "pres": [
+    48.8534,
+    2.3488
+   ],
+   "rayon_m": 300,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "a06",
+   "saisie": "3 rue du pont neuf paris",
+   "nom": "3 rue du pont neuf",
+   "commune": "paris",
+   "cas": "adresse",
+   "pres": [
+    48.8588,
+    2.3435
+   ],
+   "rayon_m": 300,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "s01",
+   "saisie": "avenue des Champs-Élysées",
+   "nom": "champs elysees",
+   "commune": "paris",
+   "cas": "adresse",
+   "pres": [
+    48.8698,
+    2.3076
+   ],
+   "rayon_m": 1200,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "f01",
+   "saisie": "champs elysees",
+   "nom": "champs elysees",
+   "commune": "paris",
+   "cas": "adresse",
+   "pres": [
+    48.8698,
+    2.3076
+   ],
+   "rayon_m": 1200,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "f03",
+   "saisie": "chateau de versaille",
+   "nom": "versailles",
+   "commune": "versailles",
+   "cas": "monument",
+   "pres": [
+    48.8049,
+    2.1204
+   ],
+   "rayon_m": 1000,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "f04",
+   "saisie": "gare montparnase",
+   "nom": "montparnasse",
+   "commune": "paris",
+   "cas": "transport",
+   "pres": [
+    48.841,
+    2.32
+   ],
+   "rayon_m": 600,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "f05",
+   "saisie": "musee du louvres",
+   "nom": "louvre",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.8606,
+    2.3376
+   ],
+   "rayon_m": 700,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "f06",
+   "saisie": "Notre Dame",
+   "nom": "^cathedrale notre dame|^notre dame",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.853,
+    2.3499
+   ],
+   "rayon_m": 600,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "l01",
+   "saisie": "La Défense",
+   "nom": "la defense",
+   "commune": "puteaux|courbevoie|nanterre|defense",
+   "cas": "lieu",
+   "pres": [
+    48.8918,
+    2.2362
+   ],
+   "rayon_m": 1500,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "l02",
+   "saisie": "Montmartre",
+   "nom": "^montmartre|butte montmartre",
+   "commune": "paris",
+   "cas": "lieu",
+   "pres": [
+    48.8867,
+    2.3431
+   ],
+   "rayon_m": 1200,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "l04",
+   "saisie": "Sophia Antipolis",
+   "nom": "sophia antipolis",
+   "commune": "valbonne|biot|antibes|sophia",
+   "cas": "lieu",
+   "pres": [
+    43.616,
+    7.055
+   ],
+   "rayon_m": 4000,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "c01",
+   "saisie": "Saint-Denis",
+   "nom": "saint denis",
+   "commune": "saint denis",
+   "cas": "commune",
+   "pres": [
+    48.9362,
+    2.3574
+   ],
+   "rayon_m": 3000,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "c03",
+   "saisie": "Vitry",
+   "nom": "vitry",
+   "commune": "vitry sur seine",
+   "cas": "commune",
+   "pres": [
+    48.7875,
+    2.3928
+   ],
+   "rayon_m": 3000,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "g01",
+   "saisie": "gare de Lyon",
+   "nom": "gare de lyon",
+   "commune": "paris",
+   "cas": "transport",
+   "pres": [
+    48.8443,
+    2.3744
+   ],
+   "rayon_m": 500,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "g02",
+   "saisie": "gare du Nord",
+   "nom": "gare du nord",
+   "commune": "paris",
+   "cas": "transport",
+   "pres": [
+    48.8809,
+    2.3553
+   ],
+   "rayon_m": 500,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "g04",
+   "saisie": "CDG",
+   "nom": "charles de gaulle|roissy",
+   "commune": "",
+   "cas": "transport",
+   "pres": [
+    49.0097,
+    2.5479
+   ],
+   "rayon_m": 6000,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "g05",
+   "saisie": "Orly",
+   "nom": "orly",
+   "commune": "orly|paray",
+   "cas": "transport",
+   "pres": [
+    48.7262,
+    2.3652
+   ],
+   "rayon_m": 4000,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "g06",
+   "saisie": "aéroport de Nice",
+   "nom": "nice",
+   "commune": "nice",
+   "cas": "transport",
+   "pres": [
+    43.6584,
+    7.2159
+   ],
+   "rayon_m": 4000,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "g09",
+   "saisie": "gare RER Villiers sur Marne",
+   "nom": "villiers",
+   "commune": "villiers|plessis",
+   "cas": "transport",
+   "pres": [
+    48.829,
+    2.5403
+   ],
+   "rayon_m": 800,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "g10",
+   "saisie": "gare Part-Dieu",
+   "nom": "part dieu",
+   "commune": "lyon",
+   "cas": "transport",
+   "pres": [
+    45.7605,
+    4.8597
+   ],
+   "rayon_m": 600,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "h01",
+   "saisie": "hôpital Necker",
+   "nom": "necker",
+   "commune": "paris",
+   "cas": "service",
+   "pres": [
+    48.8458,
+    2.3151
+   ],
+   "rayon_m": 500,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "h02",
+   "saisie": "Pitié-Salpêtrière",
+   "nom": "pitie salpetriere|salpetriere",
+   "commune": "paris",
+   "cas": "service",
+   "pres": [
+    48.8389,
+    2.3626
+   ],
+   "rayon_m": 700,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "h03",
+   "saisie": "mairie de Boulogne-Billancourt",
+   "nom": "mairie|hotel de ville",
+   "commune": "boulogne",
+   "cas": "service",
+   "pres": [
+    48.8355,
+    2.241
+   ],
+   "rayon_m": 500,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "h04",
+   "saisie": "préfecture de Nanterre",
+   "nom": "prefecture",
+   "commune": "nanterre",
+   "cas": "service",
+   "pres": [
+    48.8926,
+    2.216
+   ],
+   "rayon_m": 1200,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "h05",
+   "saisie": "Sorbonne",
+   "nom": "^sorbonne|^la sorbonne|universite paris.*sorbonne|^chancellerie",
+   "commune": "paris",
+   "cas": "service",
+   "pres": [
+    48.8487,
+    2.3432
+   ],
+   "rayon_m": 700,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "h07",
+   "saisie": "Hôtel de Ville de Paris",
+   "nom": "hotel de ville",
+   "commune": "paris",
+   "cas": "service",
+   "pres": [
+    48.8565,
+    2.3524
+   ],
+   "rayon_m": 500,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "h08",
+   "saisie": "hôpital de Créteil",
+   "nom": "^hopital|^centre hospitalier|mondor|^chu|intercommunal",
+   "commune": "creteil",
+   "cas": "service",
+   "pres": [
+    48.7813,
+    2.4546
+   ],
+   "rayon_m": 3000,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "n01",
+   "saisie": "parc de la Villette",
+   "nom": "^parc de la villette",
+   "commune": "paris",
+   "cas": "nature",
+   "pres": [
+    48.8938,
+    2.39
+   ],
+   "rayon_m": 800,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "n02",
+   "saisie": "jardin du Luxembourg",
+   "nom": "^jardin du luxembourg",
+   "commune": "paris",
+   "cas": "nature",
+   "pres": [
+    48.8462,
+    2.3372
+   ],
+   "rayon_m": 600,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "n05",
+   "saisie": "col du Galibier",
+   "nom": "^col du galibier",
+   "commune": "valloire|monetier|galibier",
+   "cas": "nature",
+   "pres": [
+    45.0642,
+    6.4078
+   ],
+   "rayon_m": 2500,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "n06",
+   "saisie": "lac d'Annecy",
+   "nom": "^lac d annecy|^annecy$",
+   "commune": "annecy|lac",
+   "cas": "nature",
+   "pres": [
+    45.86,
+    6.17
+   ],
+   "rayon_m": 8000,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "n07",
+   "saisie": "Puy de Dôme",
+   "nom": "^puy de dome",
+   "commune": "orcines|ceyssat|puy",
+   "cas": "nature",
+   "pres": [
+    45.7722,
+    2.9644
+   ],
+   "rayon_m": 2500,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "n09",
+   "saisie": "Disneyland Paris",
+   "nom": "disneyland",
+   "commune": "chessy|coupvray|marne",
+   "cas": "nature",
+   "pres": [
+    48.8722,
+    2.7758
+   ],
+   "rayon_m": 2500,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "cc01",
+   "saisie": "Vélizy 2",
+   "nom": "velizy 2",
+   "commune": "velizy",
+   "cas": "commerce",
+   "pres": [
+    48.7818,
+    2.2175
+   ],
+   "rayon_m": 1200,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "cc02",
+   "saisie": "Les 4 Temps",
+   "nom": "4 temps|quatre temps",
+   "commune": "puteaux|defense",
+   "cas": "commerce",
+   "pres": [
+    48.8912,
+    2.2365
+   ],
+   "rayon_m": 800,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "cc05",
+   "saisie": "Belle Épine",
+   "nom": "belle epine",
+   "commune": "thiais",
+   "cas": "commerce",
+   "pres": [
+    48.7613,
+    2.3758
+   ],
+   "rayon_m": 1200,
+   "echantillon36": true,
+   "proApresLot141": false
+  },
+  {
+   "id": "st01",
+   "saisie": "Stade de France",
+   "nom": "stade de france",
+   "commune": "saint denis",
+   "cas": "loisir",
+   "pres": [
+    48.9245,
+    2.3602
+   ],
+   "rayon_m": 600,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "st02",
+   "saisie": "Parc des Princes",
+   "nom": "parc des princes",
+   "commune": "paris",
+   "cas": "loisir",
+   "pres": [
+    48.8414,
+    2.253
+   ],
+   "rayon_m": 500,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "ev01",
+   "saisie": "Mondial de l'Auto",
+   "nom": "^paris expo porte de versailles|parc des expositions|^porte de versailles",
+   "commune": "paris",
+   "cas": "loisir",
+   "pres": [
+    48.8322,
+    2.2875
+   ],
+   "rayon_m": 900,
+   "echantillon36": true,
+   "proApresLot141": false
+  },
+  {
+   "id": "ev02",
+   "saisie": "Paris Expo Porte de Versailles",
+   "nom": "^paris expo porte de versailles|parc des expositions",
+   "commune": "paris",
+   "cas": "loisir",
+   "pres": [
+    48.8322,
+    2.2875
+   ],
+   "rayon_m": 900,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "ev03",
+   "saisie": "Porte de Versailles",
+   "nom": "^porte de versailles",
+   "commune": "paris",
+   "cas": "lieu",
+   "pres": [
+    48.8322,
+    2.2875
+   ],
+   "rayon_m": 900,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "ev06",
+   "saisie": "Accor Arena",
+   "nom": "accor arena|bercy",
+   "commune": "paris",
+   "cas": "loisir",
+   "pres": [
+    48.8386,
+    2.3786
+   ],
+   "rayon_m": 800,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "me01",
+   "saisie": "métro Châtelet",
+   "nom": "chatelet",
+   "commune": "paris",
+   "cas": "transport",
+   "pres": [
+    48.8584,
+    2.347
+   ],
+   "rayon_m": 600,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "me03",
+   "saisie": "Porte de Versailles métro",
+   "nom": "porte de versailles",
+   "commune": "paris",
+   "cas": "transport",
+   "pres": [
+    48.8325,
+    2.288
+   ],
+   "rayon_m": 600,
+   "echantillon36": false,
+   "proApresLot141": true
+  },
+  {
+   "id": "cp01",
+   "saisie": "75015",
+   "nom": "75015|paris 15",
+   "commune": "paris",
+   "cas": "commune",
+   "pres": [
+    48.84,
+    2.293
+   ],
+   "rayon_m": 4000,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "co01",
+   "saisie": "48.8584, 2.2945",
+   "nom": "^48",
+   "commune": "",
+   "cas": "adresse",
+   "pres": [
+    48.8584,
+    2.2945
+   ],
+   "rayon_m": 50,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "ln01",
+   "saisie": "une pharmacie ouverte près de la gare de Lyon",
+   "nom": "pharmacie",
+   "commune": "paris",
+   "cas": "commerce",
+   "pres": [
+    48.8443,
+    2.3744
+   ],
+   "rayon_m": 900,
+   "echantillon36": false,
+   "proApresLot141": false
+  },
+  {
+   "id": "ln03",
+   "saisie": "où est la tour Eiffel",
+   "nom": "tour eiffel",
+   "commune": "paris",
+   "cas": "monument",
+   "pres": [
+    48.8584,
+    2.2945
+   ],
+   "rayon_m": 400,
+   "echantillon36": true,
+   "proApresLot141": true
+  },
+  {
+   "id": "ln04",
+   "saisie": "hôtel près de Porte de Versailles",
+   "nom": "hotel|ibis|mercure|novotel|pullman",
+   "commune": "paris|vanves|issy",
+   "cas": "commerce",
+   "pres": [
+    48.8322,
+    2.2875
+   ],
+   "rayon_m": 1500,
+   "echantillon36": true,
+   "proApresLot141": false
+  }
+ ]
+}
