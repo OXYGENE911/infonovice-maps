@@ -21,31 +21,66 @@
   --panneau-bleu: #0B4EA2;  --panneau-vert: #146B3A;
   --panneau-rouge: #C8102E; --panneau-jaune: #F2C200;
 
-  /* Rôles */
+  /* Rôles
+     LE NOUVEAU DESIGN (lot 144, 09/10/2026) : les rôles prennent les valeurs
+     de Maps Pro (apps/web/src/carte/carte.css) — gris froids au lieu des
+     gris chauds, encre plus franche, bords plus nets. Décision d'Armelin du
+     08/10 : « une interface visuelle assez commune aux trois versions », pour
+     qu'un futur client ne découvre pas le gratuit « fade, basique et peu
+     professionnel ». Les NOMS des rôles ne changent pas : les 276 Ko de
+     carte.css les lisent tels quels, seules leurs valeurs bougent. */
   --fond: var(--blanc);
-  --fond-doux: #FAFBFC;
+  --fond-doux: #F7F8FA;
   --fond-profond: #0F1B2D;
-  --texte-1: var(--gris-900);
-  --texte-2: var(--gris-600);
-  --texte-3: var(--gris-400);
-  --bord: var(--gris-100);
-  --bord-2: var(--gris-200);
+  --texte-1: #0E1014;     /* Pro : --encre */
+  --texte-2: #4A4F57;     /* Pro : --encre-2 */
+  /* Pro : la couleur des textes d'appoint (#6B7079). Contraste sur blanc :
+     5,0:1 au lieu de 3,6:1 pour l'ancien gris chaud (calculés selon WCAG) —
+     les notes en 11,5 px passent enfin le seuil AA. */
+  --texte-3: #6B7079;
+  --bord: #E6E9ED;
+  --bord-2: #D9DCE1;      /* Pro : --filet */
   --accent: var(--bleu-500);
   --accent-vif: var(--bleu-400);
 
-  --ombre-s: 0 1px 2px rgba(10, 30, 60, .05);
-  --ombre-m: 0 6px 24px -8px rgba(10, 30, 60, .14);
+  /* LES RÔLES QUE MAPS PRO AJOUTE (lot 144). Ils n'avaient pas de nom ici :
+     leurs valeurs vivaient en dur, ou n'existaient pas. */
+  --fond-2: #F2F4F7;       /* champs, boutons discrets, rail des choix */
+  --filet: #D9DCE1;        /* bord des champs et des lignes de menu */
+  --survol: #E4E8EE;       /* survol d'un bouton discret */
+  --bleu-clair: #E8F1FB;   /* sélection, survol bleu */
+  --bleu-bord: #B9CFE6;    /* bord d'un bouton secondaire */
+  --accent-texte: var(--bleu-700); /* texte bleu posé sur un fond clair */
+  /* LE BOUTON PRINCIPAL GARDE SON BLEU DANS LES DEUX THÈMES : blanc sur
+     #2272C4 fait 4,9:1 ; blanc sur le bleu vif du thème sombre (#378ADD) ne
+     fait que 3,6:1 — sous le seuil AA d'un texte de 13 px. */
+  --principal: var(--bleu-500);
+  --principal-survol: var(--bleu-600);
+
+  /* Pro : --ombre, la carte blanche posée sur la carte. */
+  --ombre-s: 0 1px 2px rgba(14, 16, 20, .06), 0 2px 8px rgba(14, 16, 20, .08);
+  --ombre-m: 0 1px 3px rgba(14, 16, 20, .10), 0 8px 24px rgba(14, 16, 20, .16);
   /* L'élévation d'une FENÊTRE FLOTTANTE (FEN-1, validée par Armelin le
      29/08) : au-dessus de la carte, et ça se voit. */
-  --ombre-flottante: 0 18px 50px -12px rgba(10, 30, 60, .28);
+  --ombre-flottante: 0 18px 50px -12px rgba(14, 16, 20, .30);
   /* Une fenêtre POSÉE AU CENTRE flotte plus haut qu'un panneau adossé à un
      bord : son ombre porte plus loin, sans quoi elle paraît collée. */
-  --ombre-fenetre-centree: 0 28px 70px -16px rgba(10, 30, 60, .40);
-  --rayon: 14px;
-  --focus: 0 0 0 3px rgba(55, 138, 221, .35);
+  --ombre-fenetre-centree: 0 28px 70px -16px rgba(14, 16, 20, .40);
+  /* 18 px : le rayon des cartes de Maps Pro, déjà celui des fenêtres
+     flottantes d'ici depuis FEN-4. */
+  --rayon: 18px;
+  --rayon-pilule: 999px;
+  --focus: 0 0 0 3px rgba(34, 114, 196, .45);
 
-  /* Système, pas Google Fonts : contrainte de souveraineté n° 3. */
+  /* Système, pas Google Fonts : contrainte de souveraineté n° 3.
+     LA PILE DU TEXTE NE CHANGE PAS (lot 144), et c'est mesuré : celle de
+     Maps Pro (Segoe UI Variable d'abord) change la hauteur de ligne sous
+     Windows 11 — le menu grandissait de 50 px et ne tenait plus à l'écran
+     (ERGO-5, trois parcours rouges le 09/10). Sur téléphone, les deux piles
+     donnent la même police (Roboto sous Android, San Francisco sous iOS).
+     Seuls les TITRES d'une ligne prennent la pile d'affichage de Maps Pro. */
   --police: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+  --police-titre: 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif;
 
   /* LES COUCHES, NOMMÉES ET ORDONNÉES EN UN SEUL ENDROIT. Les z-index
      numériques éparpillés dans carte.css s'arbitraient de mémoire — le
@@ -74,10 +109,23 @@
     --fond-doux: #13161C;
     --texte-1: #F0F2F5;
     --texte-2: #B5BDC8;
-    --texte-3: #788391;
-    --bord: #222730;
-    --bord-2: #2E3540;
+    /* #8A94A2 et non plus #788391 (lot 144) : 6,2:1 sur le fond de nuit au
+       lieu de 4,9:1 (calculés selon WCAG) — de la marge au-dessus du seuil. */
+    --texte-3: #8A94A2;
+    --bord: #262B35;
+    --bord-2: #343B47;
     --accent: var(--bleu-400);
+    /* Les rôles de Maps Pro, transposés à la nuit — Maps Pro web n'a pas de
+       thème sombre : ces valeurs sont celles du libre (lot 144). */
+    --fond-2: #1A1E25;
+    --filet: #343B47;
+    --survol: #252B35;
+    --bleu-clair: #14263A;
+    --bleu-bord: #2E4E73;
+    --accent-texte: var(--bleu-100);
+    --ombre-s: 0 1px 2px rgba(0, 0, 0, .40), 0 2px 8px rgba(0, 0, 0, .30);
+    --ombre-m: 0 1px 3px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .45);
+    --focus: 0 0 0 3px rgba(55, 138, 221, .60);
   }
 }
 
@@ -88,8 +136,21 @@
     --fond-doux: #13161C;
     --texte-1: #F0F2F5;
     --texte-2: #B5BDC8;
-    --texte-3: #788391;
-    --bord: #222730;
-    --bord-2: #2E3540;
+    /* #8A94A2 et non plus #788391 (lot 144) : 6,2:1 sur le fond de nuit au
+       lieu de 4,9:1 (calculés selon WCAG) — de la marge au-dessus du seuil. */
+    --texte-3: #8A94A2;
+    --bord: #262B35;
+    --bord-2: #343B47;
     --accent: var(--bleu-400);
+    /* Les rôles de Maps Pro, transposés à la nuit — Maps Pro web n'a pas de
+       thème sombre : ces valeurs sont celles du libre (lot 144). */
+    --fond-2: #1A1E25;
+    --filet: #343B47;
+    --survol: #252B35;
+    --bleu-clair: #14263A;
+    --bleu-bord: #2E4E73;
+    --accent-texte: var(--bleu-100);
+    --ombre-s: 0 1px 2px rgba(0, 0, 0, .40), 0 2px 8px rgba(0, 0, 0, .30);
+    --ombre-m: 0 1px 3px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .45);
+    --focus: 0 0 0 3px rgba(55, 138, 221, .60);
   }

@@ -450,11 +450,14 @@ test.describe('DÉMO SALON — Paris 15e → Lyon Part-Dieu, VF 8 Plus (T2, rect
     await page.getByRole('button', { name: 'Emporter la carte du trajet' }).click();
     await expect(etat).toContainText(`Couloir emporté : ${attendues} tuiles`, { timeout: 4 * 60_000 });
 
-    // ---- LA RECETTE DE tests-e2e/sans-reseau.spec.ts (l. 19-30) ----
-    await page.waitForFunction(async () => {
+    // ---- LA RECETTE DE tests-e2e/sans-reseau.spec.ts (`attendreLeServiceWorker`) ----
+    /* `waitForFunction` n'attend pas une fonction asynchrone (une promesse
+       est toujours « vraie ») : on attend l'état « activated » pour de bon,
+       le précache est alors complet (lot 145, voir sans-reseau.spec.ts). */
+    await expect.poll(() => page.evaluate(async () => {
       const r = await navigator.serviceWorker?.getRegistration?.();
-      return !!r?.active;
-    }, null, { timeout: 20_000 });
+      return r?.active?.state ?? 'aucun';
+    }), { timeout: 20_000, message: 'le service worker ne s’active pas' }).toBe('activated');
     await page.goto(urlTrajet);
     await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
     await context.setOffline(true);
