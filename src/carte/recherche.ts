@@ -2,14 +2,10 @@
 // rôles ARIA complets, navigation aux flèches, Entrée sélectionne, Échap
 // referme. Débounce de 300 ms et annulation de la requête précédente : le
 // quota BAN est un bien commun (règle du projet).
-import {
-  chercherAdresses, communeNommee, contexteADire, repondALaSaisie,
-  type ResultatAdresse,
-} from '../lib/adresse';
+import { contexteADire, type ResultatAdresse } from '../lib/adresse';
+import { rechercherTout } from '../lib/recherche-globale';
 import { toutesACote, MOT_A_COTE } from '../lib/frappe';
-import { dansEmprise, type Emprise } from '../lib/couverture';
-import { LONGUEUR_MIN_NOM } from '../lib/recherche-lieux';
-import { chercherPartout } from '../lib/recherche-multi';
+import { type Emprise } from '../lib/couverture';
 import { familleDevinee } from '../lib/famille-devinee';
 import { MOTIF_DE_FAMILLE } from '../lib/pictos-lieux';
 import {
@@ -74,35 +70,9 @@ export function positionConnueActuelle(): { lon: number; lat: number } | null {
   return positionConnue;
 }
 
-/* CE QUI RESSEMBLE À UNE ADRESSE NE VA PAS CHERCHER UN NOM. Un numéro en
-   tête, c'est la Base Adresse Nationale qui répond — et Overpass n'a pas à
-   être dérangé pour « 25 avenue du prophète ». */
-function ressembleAUnNom(texte: string): boolean {
-  return !/^\s*\d/.test(texte);
-}
-
-/* LE SCORE NE DÉCIDE DE RIEN, ET C'EST LUI QUI M'A TROMPÉ (RECHERCHE-5,
-   01/09). RECHERCHE-3 refusait de chercher plus loin quand la BAN se disait
-   sûre — seuil 0,9 — et RECHERCHE-4 refusait de l'ancrer sous 0,6. J'avais
-   calibré ces deux seuils sur des scores mesurés SANS le paramètre
-   `autocomplete`. Or l'application, elle, l'envoie : mesuré sur la production
-   le jour même, « Collège Albert Camus » y vaut **0,945** au lieu de 0,48. La
-   porte ne s'ouvrait donc jamais, et le collège de la fille d'Armelin restait
-   introuvable pour la troisième fois — « Je n'ai toujours pas le collège de
-   ma fille visible ».
-   CE QUI DÉCIDE, C'EST LA DISTANCE. La BAN peut être très sûre d'un résultat
-   qui n'a rien à voir : son lieu-dit « Collège Albert Camus » est dans le
-   Nord, à deux cents kilomètres du Plessis-Trévise. Une saisie qui ressemble
-   à un nom cherche donc TOUJOURS plus loin ; ce qui se choisit, c'est l'ANCRE. */
-
-/* CE QU'ON REGARDE PASSE D'ABORD : un résultat DANS la vue est celui qu'on
-   vise, et cela se lit sans seuil — une vue large accepte tout, ce qui est
-   juste, car une carte de France entière n'exprime aucune préférence.
-   LE RAYON N'EST QUE LE RATTRAPAGE DU BORD : zoomé sur sa ville, on cherche
-   parfois un lieu qui tient à la ville voisine, hors écran de quelques
-   kilomètres. Cinquante — la distance d'une ville à sa voisine, pas celle
-   d'un département à l'autre. */
-const SEUIL_LOIN_KM = 50;
+/* LA PORTE, LE SCORE ET L'ANCRE (RECHERCHE-3 à RECHERCHE-5) VIVENT DÉSORMAIS
+   DANS `lib/recherche-globale.ts` (lot 144), avec leurs mesures : le banc de
+   recherche joue ce chemin-là, sans le DOM. */
 
 /* LE RAYON DU RAIL (RAIL-POI-1) : cinq kilomètres — un quartier et sa
    périphérie. Dix noierait la liste en ville ; deux rendrait la campagne
@@ -381,131 +351,28 @@ export class RechercheAdresse extends HTMLElement {
     const note = this.querySelector('.recherche-note') as HTMLElement;
     note.hidden = true;
 
+    /* TOUT LE CHEMIN VIT DANS `lib/recherche-globale.ts` (lot 144) : la BAN,
+       la porte, les lieux, le classement commun, les coordonnées — sans le
+       DOM, pour que le banc de mesure joue exactement ce que joue la barre.
+       Ici, il ne reste que l'affichage. LES ADRESSES S'AFFICHENT SANS
+       ATTENDRE (RECHERCHE-3) et chaque source qui répond redonne la liste,
+       reclassée (RECHERCHE-8) : c'est le rôle de `auFil`. */
+    const signal = this.#annulation.signal;
     try {
-      this.#resultats = await chercherAdresses(texte, this.#annulation.signal);
-      /* LA RECHERCHE PAR NOM PART DÈS QUE LA SAISIE EST UN NOM (RECHERCHE-3,
-         01/09), et non plus seulement quand la BAN s'est tue.
-         POURQUOI CE CHANGEMENT : la BAN rend presque TOUJOURS quelque chose
-         — une rue floue, un lieu-dit. « Tour Eiffel Paris » y rend « Avenue
-         Gustave Eiffel » (score 0,378), « Collège Albert Camus… » rend
-         « avenue albert camus » (0,636). La porte d'hier, ouverte sur le
-         seul silence de la BAN, ne s'ouvrait donc jamais — et Armelin l'a vu
-         le lendemain : « je ne parviens pas à trouver une adresse ».
-         LE CENTRE EST LE POINT LE PLUS PROBABLE, pas la vue : le meilleur
-         résultat de la BAN quand il existe — c'est lui qui porte la commune
-         que l'usager vient d'écrire — sinon le centre de la carte. */
-      /* LES ADRESSES S'AFFICHENT SANS ATTENDRE (RECHERCHE-3). Les chercher
-         plus loin prend des SECONDES — trois à cinq mesurées sur Overpass —
-         et faire patienter quelqu'un qui a déjà sa réponse sous les yeux
-         serait lui faire payer une recherche qu'il n'a pas demandée. */
-      this.#actif = -1;
-      this.#afficher();
-      const meilleur = this.#resultats[0];
-      const vue = vueCourante?.() ?? null;
-        /* L'ANCRE EST LE RÉSULTAT DE LA BAN S'IL EST PLAUSIBLE — c'est-à-dire
-           PRÈS de ce qu'on regarde, ou dans une commune qu'on a nommée
-           soi-même (« Tour Eiffel Paris » : Paris est le bon endroit parce
-           qu'on l'a écrit). Sinon, c'est la vue : on cherche là où l'on
-           regarde, pas à deux cents kilomètres de là. */
-      const plausible = meilleur !== undefined
-        && (vue === null
-          || dansEmprise(vue.emprise, meilleur)
-          || distanceKm(meilleur, vue) <= SEUIL_LOIN_KM
-          || communeNommee(texte, meilleur.contexte));
-      /* LA BAN A RÉPONDU QUAND ELLE REND CE QU'ON A TAPÉ, LÀ OÙ ON REGARDE.
-         Les deux conditions comptent, et le cas d'Armelin est celui qui les
-         sépare : « Collège Albert Camus » lui rend un lieu-dit qui porte bien
-         ces trois mots — mais à deux cents kilomètres de sa vue. Les mots
-         seuls auraient refermé la porte ; la distance seule l'aurait ouverte
-         sur « lyon » et deux appels pour rien. */
-      const repondu = meilleur !== undefined && plausible
-        && repondALaSaisie(texte, meilleur.libelle);
-      if (ressembleAUnNom(texte) && texte.trim().length >= LONGUEUR_MIN_NOM
-        && !repondu) {
-        const centre = plausible && meilleur
-          ? { lon: meilleur.lon, lat: meilleur.lat }
-          : (vue === null ? null : { lon: vue.lon, lat: vue.lat });
-        /* IL N'EST PLUS OBLIGATOIRE DE SITUER LA RECHERCHE (RECHERCHE-8,
-           03/09). On refusait de chercher sans centre de carte — « déplacez la
-           carte vers la zone qui vous intéresse » — parce que les deux seules
-           sources d'alors, OpenStreetMap et l'annuaire des écoles, ne savent
-           chercher qu'AUTOUR d'un point. L'index de la Géoplateforme et
-           l'annuaire des entreprises cherchent dans TOUTE la France : on peut
-           enfin chercher un lieu qu'on n'a pas déjà sous les yeux, ce qui est
-           tout de même l'usage ordinaire d'une barre de recherche.
-           Le centre, quand on l'a, sert encore aux deux sources qui en ont
-           besoin — et à départager deux communes homonymes. */
-        {
-          try {
-            /* CINQ PISTES, UN SEUL TEMPS D'ATTENTE (RECHERCHE-8, 03/09).
-
-               LE MANDAT D'ARMELIN, la nuit du 03/09 : « faire fonctionner la
-               recherche […] parcours toutes les API libres du gouvernement
-               s'il le faut ». Aucune source ne résout ses douze requêtes
-               d'essai — la mesure est dans `scripts/mesure-recherche.mjs` — et
-               c'est le fait qui commande toute cette architecture : l'index
-               de la Géoplateforme tolère la faute mais ignore les commerces ;
-               l'annuaire des entreprises porte tous les commerces de France
-               avec leur adresse mais ne tolère rien ; OpenStreetMap ne répond
-               qu'à l'égalité ; l'annuaire de l'Éducation accepte un nom
-               partiel d'école. On les interroge donc TOUTES en même temps, et
-               une source en panne n'emporte pas les autres. */
-            /* ET L'ON MONTRE AU FIL DE L'EAU (RECHERCHE-8, 03/09). Les
-               sources ne vont pas à la même vitesse : 30 ms pour l'index de la
-               Géoplateforme, jusqu'à dix secondes pour la piste « enseigne +
-               commune » qui passe par Overpass. Attendre la plus lente pour
-               montrer la plus rapide ferait une barre de recherche vide dix
-               secondes durant. */
-            const adresses = [...this.#resultats];
-            const poser = (t: { lieux: { lon: number; lat: number;
-              libelle: string; contexte: string; source: string }[] }): void => {
-              const nommes = t.lieux.map((l) => ({
-                lon: l.lon, lat: l.lat,
-                libelle: l.libelle,
-                type: l.source === 'entreprise' ? 'etablissement' : 'lieu',
-                contexte: l.contexte,
-              }));
-              this.#resultats = nommes.length > 0 ? [...nommes, ...adresses] : [...adresses];
-              this.#actif = -1;
-              this.#afficher();
-            };
-            const trouve = await chercherPartout(texte, {
-              centre, signal: this.#annulation.signal, auFil: poser,
-            });
-            const nommes = trouve.lieux.map((l) => ({
-              lon: l.lon, lat: l.lat,
-              libelle: l.libelle,
-              type: l.source === 'entreprise' ? 'etablissement' : 'lieu',
-              /* LA SOURCE ET L'ADRESSE SE DISENT : savoir d'où vient une
-                 réponse, c'est pouvoir la contester — et l'adresse est ce
-                 qu'Armelin réclamait le 03/09 (« aucune information sur
-                 l'adresse du lieu au format texte »). */
-              contexte: l.contexte,
-            }));
-            /* UNE PANNE N'EST PAS UNE ABSENCE, et il suffit d'UNE source en
-               défaut pour qu'on ne puisse plus rien affirmer. */
-            if (trouve.panne !== null && nommes.length === 0) throw trouve.panne;
-            /* LES LIEUX PASSENT DEVANT : la BAN a déjà dit ce qu'elle savait,
-               et un lieu nommé répond mieux qu'une rue approchante. Les
-               adresses restent dessous, jamais perdues. */
-            if (nommes.length > 0) this.#resultats = [...nommes, ...adresses];
-            if (this.#resultats.length === 0) {
-              /* ON DIT OÙ L'ON A CHERCHÉ quand on a reconnu une commune :
-                 sans cela, l'usager ne sait pas si l'on a compris sa phrase. */
-              note.textContent = trouve.commune
-                ? `Rien trouvé pour « ${texte.trim()} », y compris autour de `
-                  + `${trouve.commune.nom}.`
-                : `Aucune adresse ni lieu nommé « ${texte.trim()} ».`;
-              note.hidden = false;
-            }
-          } catch (e) {
-            /* UN SERVICE QUI EXPIRE NE DIT PAS « CE LIEU N'EXISTE PAS ».
-               Les adresses trouvées, elles, restent affichées. */
-            note.textContent = e instanceof Error ? e.message
-              : 'La recherche de lieux est indisponible pour le moment.';
-            note.hidden = false;
-          }
-        }
+      const trouve = await rechercherTout(texte, {
+        vue: vueCourante?.() ?? null,
+        signal,
+        auFil: (liste) => {
+          this.#resultats = liste;
+          this.#actif = -1;
+          this.#afficher();
+        },
+      });
+      if (signal.aborted) return;
+      this.#resultats = trouve.resultats;
+      if (trouve.note !== null) {
+        note.textContent = trouve.note;
+        note.hidden = false;
       }
       this.#actif = -1;
       this.#afficher();

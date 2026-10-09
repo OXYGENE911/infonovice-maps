@@ -53,6 +53,10 @@ export interface Trouvaille extends PointGeo {
   adresse: string;
   /** D'où vient la réponse : savoir cela, c'est pouvoir la contester. */
   source: 'ign' | 'entreprise' | 'osm' | 'ecole' | 'administration';
+  /** La catégorie de la Géoplateforme (« stade », « col »…), pour le classement commun (lot 144). */
+  categorie?: string | undefined;
+  /** La confiance du géocodeur de la Géoplateforme, de 0 à 1 (lot 144). */
+  score?: number | undefined;
 }
 
 /* L'ORDRE DES SOURCES DANS LA LISTE, et il n'est pas arbitraire.
@@ -330,6 +334,10 @@ const deIgn = (l: LieuIgn): Trouvaille => ({
   lon: l.lon, lat: l.lat, libelle: l.nom, adresse: '',
   contexte: [l.commune, l.codePostal].filter((s) => s !== '').join(' ') || 'Lieu (IGN)',
   source: 'ign',
+  /* LA CATÉGORIE ET LA NOTE SUIVENT (lot 144) : le classement commun lit la
+     première pour la prime du type, la seconde comme note de départ. */
+  ...(l.categorie !== '' ? { categorie: l.categorie } : {}),
+  ...(l.score !== undefined ? { score: l.score } : {}),
 });
 
 const deEntreprise = (e: Etablissement): Trouvaille => ({

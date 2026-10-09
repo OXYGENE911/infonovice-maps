@@ -37,6 +37,9 @@ export interface LieuIgn extends PointGeo {
   codePostal: string;
   /** Ce que la Géoplateforme dit du genre de lieu, quand elle le dit. */
   categorie: string;
+  /* LA CONFIANCE DU GÉOCODEUR, de 0 à 1 (lot 144) : c'est la note de départ du
+     classement commun (`classement-recherche.ts`), comme chez Maps Pro. */
+  score?: number | undefined;
 }
 
 /* CINQ RÉPONSES SUFFISENT. Au-delà, la liste cesse d'être lisible et
@@ -49,11 +52,15 @@ export const PLAFOND_IGN = 5;
  *
  * `null` pour une saisie trop courte : deux lettres rendent tout et rien.
  */
-export function urlPoiIgn(texte: string): string | null {
+export function urlPoiIgn(texte: string, categories?: string): string | null {
   const q = texte.trim();
   if (q.length < 3) return null;
+  /* LE FILTRE DES TRANSPORTS (lot 144, comme Maps Pro au lot 140) : « métro
+     Châtelet » cherche « Châtelet » parmi les seules gares et stations — sans
+     lui, l'index rendait des boutiques dont l'adresse dit « RER Châtelet ». */
   return 'https://data.geopf.fr/geocodage/search'
-    + `?q=${encodeURIComponent(q)}&index=poi&limit=${PLAFOND_IGN}`;
+    + `?q=${encodeURIComponent(q)}&index=poi&limit=${PLAFOND_IGN}`
+    + (categories ? `&category=${encodeURIComponent(categories)}` : '');
 }
 
 /** Les valeurs que le service rend tantôt seules, tantôt en liste. */
@@ -87,6 +94,7 @@ export function versLieuxIgn(brut: unknown): LieuIgn[] {
       commune: premier(p['city']),
       codePostal: premier(p['postcode']),
       categorie: premier(p['category']) || premier(p['classification']),
+      ...(typeof p['score'] === 'number' && Number.isFinite(p['score']) ? { score: p['score'] } : {}),
     });
   }
   return sortie;
@@ -100,9 +108,9 @@ export function versLieuxIgn(brut: unknown): LieuIgn[] {
  * qu'une page vide.
  */
 export async function chercherPoiIgn(
-  texte: string, signal?: AbortSignal,
+  texte: string, signal?: AbortSignal, categories?: string,
 ): Promise<LieuIgn[]> {
-  const url = urlPoiIgn(texte);
+  const url = urlPoiIgn(texte, categories);
   if (url === null) return [];
   /* `exactOptionalPropertyTypes` interdit `signal: undefined` : on ne pose
      la clé que si l'on a vraiment un signal. */
