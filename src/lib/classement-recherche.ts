@@ -264,8 +264,19 @@ function memeLieu(g: Candidat, r: Candidat): boolean {
   if (ng === nr) return ecartM(g, r) < 300;
   /* « Cathédrale Notre-Dame » (Mérimée) et « cathédrale Notre-Dame de Paris » (Wikidata) : l'un contient l'autre, au même endroit. */
   const connus = (c: Candidat) => c.source === 'notoire' || c.source === 'wikidata' || c.source === 'ign';
-  return connus(g) && connus(r) && (ng.includes(nr) || nr.includes(ng)) && ecartM(g, r) < 250;
+  if (!(connus(g) && connus(r)) || !(ng.includes(nr) || nr.includes(ng)) || ecartM(g, r) >= 250) return false;
+  /* UNE GARE N'EST PAS LA STATION DE MÉTRO DE SON NOM (lot 145). « Gare
+     Saint-Lazare » (IGN) contient « Saint-Lazare » (Wikidata : la station de
+     métro, à 235 m) : fondus, la gare disparaissait derrière le métro pour la
+     saisie « Gare Saint Lazare » (e2e `recherche-multi.spec.ts:198`, PICTO-2).
+     Un mot d'équipement en plus dit un AUTRE lieu. */
+  const court = (ng.length <= nr.length ? ng : nr).split(' ');
+  const enPlus = (ng.length <= nr.length ? nr : ng).split(' ').filter((w) => !court.includes(w));
+  return !enPlus.some((w) => EQUIPEMENTS_DISTINCTS.has(w));
 }
+
+/** Les mots qui, ajoutés à un nom, désignent un autre équipement que le lieu de ce nom (lot 145). */
+const EQUIPEMENTS_DISTINCTS: ReadonlySet<string> = new Set(['gare', 'station', 'metro', 'rer', 'arret', 'aeroport', 'aerogare', 'parking', 'port']);
 
 /**
  * TOUTES LES SUGGESTIONS ENSEMBLE, DANS L'ORDRE DE CE QUI EST DEMANDÉ — PURE
