@@ -1,7 +1,7 @@
 // LES LIEUX CONNUS, CHERCHÉS PAR LEUR NOM DANS LE NAVIGATEUR (lot 144, 09/10/2026).
 //
-// TROIS INDEX EMBARQUÉS, servis par ce site même, chargés à la PREMIÈRE
-// recherche et gardés pour la session — jamais précachés, hors du budget du
+// TROIS INDEX EMBARQUÉS, servis par ce site même, lus PAR PAQUETS à la
+// demande et gardés pour la session — jamais précachés, hors du budget du
 // bundle. Rien de l'usager ne part : on télécharge des fichiers statiques, on
 // cherche ici.
 //
@@ -23,14 +23,32 @@
 // vides et les mots de type) dans le nom ou la commune, un au moins dans le
 // nom ; les mots de trop coûtent ; le type dit, la notoriété et la proximité
 // comptent.
-import { chargerMonuments } from './monuments';
+//
+// LA PREMIÈRE RECHERCHE ÉTAIT LOURDE (lot 145, 09/10/2026) : les trois fichiers
+// entiers, ≈ 545 Ko gzip, dont 404 Ko de monuments (mesuré). Ils sont désormais
+// rangés en PAQUETS (`public/donnees/recherche/`, engendrés par
+// `tests/index-recherche.test.ts`) : chaque lieu, réduit à son point, son nom,
+// sa commune et son type, se range sous les TROIS PREMIÈRES LETTRES de chaque
+// mot de son nom et de sa commune. Une saisie lit le petit SOMMAIRE (≈ 9 Ko
+// gzip), puis le seul paquet du mot cherché LE PLUS RARE (≈ 8 Ko gzip en
+// médiane sur le banc) : la règle du nom demande que CHAQUE mot cherché soit
+// dans le nom ou la commune, donc tout lieu qui peut répondre est dans ce
+// paquet-là. Les paquets gardent l'ordre de l'index entier : le classement
+// rend exactement ce que rendait l'index entier (essai d'équivalence).
+// SEULE LIMITE, écrite et mesurée : une faute de frappe dans les trois
+// premières lettres d'un mot long (« Mnotmartre ») ne retrouve plus le lieu
+// par la tolérance d'une faute.
 import { MOTS_VIDES, mots, ecartM, type Analyse, type Candidat, type Repere } from './classement-recherche';
 import { correspond, estType, transportDe } from './types-lieu';
 
 export const MONUMENT = 'Monument historique';
 export const MUSEE = 'Musée de France';
-export const URL_MUSEES = '/donnees/musees.json';
-export const URL_WIKIDATA = '/donnees/lieux-wikidata.json';
+/** Le sommaire des paquets : clé de trois lettres → [numéro du paquet, nombre de lieux]. */
+export const URL_SOMMAIRE = '/donnees/recherche/sommaire.json';
+/** L'adresse d'un paquet — PURE. */
+export function urlPaquet(n: number): string {
+  return `/donnees/recherche/p${String(n).padStart(3, '0')}.json`;
+}
 /** Trois lieux connus au plus par saisie : les autres sources ont droit à leur place. */
 export const LIMITE_CONNUS = 3;
 /** Les notes de départ (Maps Pro) : un monument au-dessus de l'annuaire (0,6), Wikidata comme la carte (0,55). */
@@ -86,6 +104,82 @@ export function lireWikidata(brut: unknown): LieuConnu[] {
   });
 }
 
+/** Le fichier des monuments (`monuments.json`, Mérimée) → l'index — PUR, défensif. `[[lon, lat, titre, commune, …], …]`. */
+export function lireMonuments(brut: unknown): LieuConnu[] {
+  if (!Array.isArray(brut)) return [];
+  return brut.flatMap((m) => {
+    if (!Array.isArray(m)) return [];
+    const r = lieu(m[0], m[1], m[2], m[3], MONUMENT, 'notoire', 0);
+    return r ? [r] : [];
+  });
+}
+
+/**
+ * Une ligne de paquet → un lieu — PURE, défensive. Trois formes :
+ * `[lon, lat, nom, commune]` (monument), `[lon, lat, nom, commune, 1]` (musée),
+ * `[lon, lat, nom, commune, 2, type, articles]` (Wikidata).
+ */
+export function lireLigne(l: unknown): LieuConnu | null {
+  if (!Array.isArray(l)) return null;
+  if (l[4] === 2) {
+    const articles = nombre(l[6]) ? Math.max(0, Math.round(l[6])) : 0;
+    return lieu(l[0], l[1], l[2], l[3], texte(l[5]) || 'Lieu', 'wikidata', articles);
+  }
+  return lieu(l[0], l[1], l[2], l[3], l[4] === 1 ? MUSEE : MONUMENT, 'notoire', 0);
+}
+
+/** La clé d'un mot : ses trois premières lettres, le mot entier s'il est plus court — PURE. */
+export function cleDuMot(m: string): string {
+  return m.slice(0, 3);
+}
+
+/**
+ * Les clés sous lesquelles un lieu se range — PURE : chaque mot de son nom ET
+ * de sa commune, sauf les mots vides (qu'aucune saisie ne cherche).
+ */
+export function clesDuLieu(nom: string, commune: string): string[] {
+  return [...new Set([...mots(nom), ...mots(commune)].filter((m) => !MOTS_VIDES.has(m)).map(cleDuMot))];
+}
+
+/** Le sommaire lu : clé → [numéro du paquet, nombre de lieux rangés sous la clé]. */
+export type Sommaire = ReadonlyMap<string, readonly [number, number]>;
+
+/** Le fichier du sommaire → le sommaire — PUR, défensif ; null s'il est illisible. */
+export function lireSommaire(brut: unknown): Sommaire | null {
+  const cles = (brut as { cles?: unknown } | null)?.cles;
+  if (cles === null || typeof cles !== 'object' || Array.isArray(cles)) return null;
+  const s = new Map<string, readonly [number, number]>();
+  for (const [k, v] of Object.entries(cles as Record<string, unknown>)) {
+    if (Array.isArray(v) && Number.isInteger(v[0]) && Number.isInteger(v[1])) s.set(k, [v[0] as number, v[1] as number]);
+  }
+  return s;
+}
+
+/** Une saisie peut-elle appeler un lieu connu ? (les conditions de `chercherLieuxConnus`) — PURE. */
+function peutRepondre(a: Analyse): string[] | null {
+  if (a.numero) return null;
+  const cherches = motsCherches(a);
+  if (cherches.length === 0 || cherches.reduce((t, m) => t + m.length, 0) < 4) return null;
+  return cherches;
+}
+
+/**
+ * Le paquet à lire pour une saisie — PURE : celui du mot cherché le plus rare.
+ * null : aucun lieu connu ne peut répondre (un mot cherché n'a aucune clé),
+ * rien à télécharger.
+ */
+export function paquetPour(a: Analyse, sommaire: Sommaire): number | null {
+  const cherches = peutRepondre(a);
+  if (cherches === null) return null;
+  let meilleur: readonly [number, number] | null = null;
+  for (const m of cherches) {
+    const e = sommaire.get(cleDuMot(m));
+    if (e === undefined) return null;
+    if (meilleur === null || e[1] < meilleur[1]) meilleur = e;
+  }
+  return meilleur === null ? null : meilleur[0];
+}
+
 /** Lit un fichier du site en JSON ; remplaçable dans les essais et le banc. */
 export type LecteurJson = (url: string) => Promise<unknown>;
 
@@ -95,43 +189,71 @@ const lireDuSite: LecteurJson = async (url) => {
   return r.json();
 };
 
-let enMemoire: Promise<LieuConnu[]> | null = null;
-let charges: LieuConnu[] | null = null;
+/* CE QUI EST LU SE GARDE POUR LA SESSION, ce qui échoue ne se grave pas : la
+   recherche suivante réessaiera. Les promesses sont partagées : deux frappes
+   rapprochées ne téléchargent pas deux fois le même paquet. */
+let sommaireEnCours: Promise<Sommaire> | null = null;
+let sommaireLu: Sommaire | null = null;
+const paquetsEnCours = new Map<number, Promise<LieuConnu[]>>();
+const paquetsLus = new Map<number, LieuConnu[]>();
 
-/**
- * Charge les trois index, une fois pour la session. UN INDEX EN PANNE N'EMPORTE
- * PAS LES AUTRES ; si TOUS manquent, l'échec ne se grave pas : la recherche
- * suivante réessaiera.
- */
-export function chargerLieuxConnus(lire: LecteurJson = lireDuSite): Promise<LieuConnu[]> {
-  enMemoire ??= (async () => {
-    const [monuments, musees, wikidata] = await Promise.allSettled([
-      lire === lireDuSite ? chargerMonuments() : lire('/donnees/monuments.json').then((b) => (Array.isArray(b) ? b : [])),
-      lire(URL_MUSEES).then(lireMusees),
-      lire(URL_WIKIDATA).then(lireWikidata),
-    ]);
-    const index: LieuConnu[] = [];
-    if (monuments.status === 'fulfilled') {
-      for (const m of monuments.value as { lon?: unknown; lat?: unknown; titre?: unknown; commune?: unknown }[] | unknown[][]) {
-        const r = Array.isArray(m) ? lieu(m[0], m[1], m[2], m[3], MONUMENT, 'notoire', 0)
-          : lieu(m.lon, m.lat, m.titre, m.commune, MONUMENT, 'notoire', 0);
-        if (r) index.push(r);
-      }
-    }
-    if (musees.status === 'fulfilled') index.push(...musees.value);
-    if (wikidata.status === 'fulfilled') index.push(...wikidata.value);
-    if (index.length === 0) { enMemoire = null; return []; }
-    charges = index;
-    return index;
-  })();
-  return enMemoire;
+const versLieux = (brut: unknown): LieuConnu[] => {
+  const lignes = (brut as { lieux?: unknown } | null)?.lieux;
+  if (!Array.isArray(lignes)) throw new Error('paquet illisible');
+  return lignes.flatMap((l) => { const r = lireLigne(l); return r ? [r] : []; });
+};
+
+function chargerSommaire(lire: LecteurJson): Promise<Sommaire> {
+  if (lire !== lireDuSite) {
+    return lire(URL_SOMMAIRE).then((b) => { const s = lireSommaire(b); if (!s) throw new Error('sommaire illisible'); return s; });
+  }
+  sommaireEnCours ??= lire(URL_SOMMAIRE).then((b) => {
+    const s = lireSommaire(b);
+    if (!s) throw new Error('sommaire illisible');
+    sommaireLu = s;
+    return s;
+  }, (e: unknown) => { sommaireEnCours = null; throw e; });
+  return sommaireEnCours;
 }
 
-/** L'index s'il est déjà là — sans attendre ni rien télécharger. */
-export function lieuxConnusCharges(): LieuConnu[] | null { return charges; }
+function chargerPaquet(n: number, lire: LecteurJson): Promise<LieuConnu[]> {
+  if (lire !== lireDuSite) return lire(urlPaquet(n)).then(versLieux);
+  let p = paquetsEnCours.get(n);
+  if (!p) {
+    p = lire(urlPaquet(n)).then(versLieux).then((lieux) => { paquetsLus.set(n, lieux); return lieux; },
+      (e: unknown) => { paquetsEnCours.delete(n); throw e; });
+    paquetsEnCours.set(n, p);
+  }
+  return p;
+}
 
-/** Pour les essais : oublie l'index chargé. */
-export function oublierLieuxConnus(): void { enMemoire = null; charges = null; }
+/**
+ * Les lieux connus qui PEUVENT répondre à cette saisie : le sommaire, puis un
+ * seul paquet — rien du tout si la saisie ne peut appeler aucun lieu connu.
+ * Le lecteur par défaut lit ce site et garde ce qu'il a lu ; un autre lecteur
+ * (le banc, les essais) lit sans rien garder.
+ */
+export async function chargerLieuxConnus(a: Analyse, lire: LecteurJson = lireDuSite): Promise<LieuConnu[]> {
+  if (peutRepondre(a) === null) return [];
+  const n = paquetPour(a, await chargerSommaire(lire));
+  return n === null ? [] : chargerPaquet(n, lire);
+}
+
+/** Les lieux connus de cette saisie s'ils sont déjà là — sans attendre ni rien télécharger ; null sinon. */
+export function lieuxConnusCharges(a: Analyse): LieuConnu[] | null {
+  if (peutRepondre(a) === null) return [];
+  if (sommaireLu === null) return null;
+  const n = paquetPour(a, sommaireLu);
+  return n === null ? [] : paquetsLus.get(n) ?? null;
+}
+
+/** Pour les essais : oublie ce qui a été lu. */
+export function oublierLieuxConnus(): void {
+  sommaireEnCours = null;
+  sommaireLu = null;
+  paquetsEnCours.clear();
+  paquetsLus.clear();
+}
 
 /** Les mots de type qui disent un lieu connu : ils ne coûtent rien de trop (« Basilique » du Sacré-Cœur). */
 const NOTOIRES = new Set(['cathedrale', 'basilique', 'palais', 'chateau', 'abbaye', 'domaine', 'arc', 'pantheon', 'opera', 'citadelle', 'remparts', 'cite', 'musee', 'eglise']);

@@ -23,8 +23,7 @@ import { fileURLToPath } from 'node:url';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { rechercherTout } from '../src/lib/recherche-globale';
-import { lireMusees, lireWikidata, MONUMENT, type LieuConnu } from '../src/lib/lieux-connus';
-import { mots } from '../src/lib/classement-recherche';
+import { chargerLieuxConnus } from '../src/lib/lieux-connus';
 import type { ResultatAdresse } from '../src/lib/adresse';
 
 const ICI = fileURLToPath(new URL('./donnees/banc-recherche/', import.meta.url));
@@ -77,17 +76,11 @@ async function fetchBanc(input: RequestInfo | URL, init: RequestInit = {}): Prom
   } finally { liberer(); }
 }
 
-/* LES LIEUX CONNUS, lus sur le disque : les fichiers mêmes que le site sert. */
-function indexDuDisque(): LieuConnu[] {
-  const lire = (f: string): unknown => JSON.parse(readFileSync(`${RACINE}public/donnees/${f}`, 'utf8'));
-  const monuments = (lire('monuments.json') as unknown[][]).flatMap((m) => {
-    const [lon, lat, titre, commune] = m;
-    if (typeof lon !== 'number' || typeof lat !== 'number' || typeof titre !== 'string') return [];
-    const c = typeof commune === 'string' ? commune : '';
-    return [{ nom: titre, commune: c, lon, lat, type: MONUMENT, source: 'notoire' as const, notoriete: 0, motsNom: mots(titre), motsCommune: mots(c) }];
-  });
-  return [...monuments, ...lireMusees(lire('musees.json')), ...lireWikidata(lire('lieux-wikidata.json'))];
-}
+/* LES LIEUX CONNUS, lus sur le disque PAR LE CHEMIN DU SITE (lot 145) : le
+   sommaire, puis le seul paquet qui peut répondre — les fichiers mêmes que le
+   site sert (`public/donnees/recherche/`). */
+const lireDisque = (url: string): Promise<unknown> =>
+  Promise.resolve(JSON.parse(readFileSync(`${RACINE}public${url}`, 'utf8')) as unknown);
 
 /* LE CRITÈRE DE BancLieuxTest.kt : même normalisation, même distance. */
 const normaliser = (s: string): string => s.replace(/œ/g, 'oe').replace(/Œ/g, 'oe').replace(/æ/g, 'ae').replace(/Æ/g, 'ae')
@@ -130,12 +123,11 @@ describe('banc de recherche du lot 141 (67 saisies, réponses gardées)', () => 
 
   it('rejoue chaque saisie sur le vrai chemin de la barre', async () => {
     vi.stubGlobal('fetch', fetchBanc);
-    const index = indexDuDisque();
     try {
       for (const s of banc.requetes) {
         let liste: ResultatAdresse[] = [];
         try {
-          liste = (await rechercherTout(s.saisie, { vue, lieuxConnus: () => Promise.resolve(index) })).resultats;
+          liste = (await rechercherTout(s.saisie, { vue, lieuxConnus: (a) => chargerLieuxConnus(a, lireDisque) })).resultats;
         } catch { liste = []; }
         const rang = liste.slice(0, 10).findIndex((r) => juste(r, s)) + 1;
         verdicts.set(s.id, { juste: rang === 1, rang, tete: liste.slice(0, 3).map((r) => `${r.libelle} — ${r.contexte}`).join(' // ') });

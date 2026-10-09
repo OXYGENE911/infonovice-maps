@@ -20,7 +20,8 @@
 //    Saint-Denis (93) avant Saint-Denis de La Réunion ; « 6 parvis Notre-Dame
 //    Paris » rend Paris avant Mayenne.
 // 4. LES COORDONNÉES DANS LA BARRE : « 48.8584, 2.2945 » se lit, sans appel.
-// 5. LES LIEUX CONNUS EMBARQUÉS : Mérimée, Muséofile, extrait Wikidata.
+// 5. LES LIEUX CONNUS EMBARQUÉS : Mérimée, Muséofile, extrait Wikidata — lus
+//    par paquets, à la demande (lot 145, `lieux-connus.ts`).
 import {
   chercherAdresses, communeNommee, repondALaSaisie, type ResultatAdresse,
 } from './adresse';
@@ -30,7 +31,7 @@ import { LONGUEUR_MIN_NOM } from './recherche-lieux';
 import { chercherPartout, type Resultat as ResultatMulti, type Trouvaille } from './recherche-multi';
 import { chercherPoiIgn, type LieuIgn } from './recherche-poi-ign';
 import {
-  analyser, classerCandidats, normaliser, type Candidat, type Repere,
+  analyser, classerCandidats, normaliser, type Analyse, type Candidat, type Repere,
 } from './classement-recherche';
 import { chargerLieuxConnus, chercherLieuxConnus, lieuxConnusCharges, type LieuConnu } from './lieux-connus';
 import { CATEGORIES_AIR, CATEGORIES_TRANSPORT } from './types-lieu';
@@ -55,8 +56,8 @@ export interface OptionsRecherche {
   signal?: AbortSignal;
   /** Appelé à chaque étape : la liste, déjà classée, à montrer tout de suite. */
   auFil?: (resultats: ResultatAdresse[]) => void;
-  /** Les lieux connus : le chargeur du site par défaut ; le banc donne le sien. */
-  lieuxConnus?: () => Promise<LieuConnu[]>;
+  /** Les lieux connus qui peuvent répondre à la saisie : le chargeur du site par défaut ; le banc donne le sien. */
+  lieuxConnus?: (a: Analyse) => Promise<LieuConnu[]>;
 }
 
 /* LE RAYON DE PLAUSIBILITÉ d'une réponse de la BAN : voir `carte/recherche.ts`
@@ -245,11 +246,12 @@ export async function rechercherTout(texte: string, options: OptionsRecherche): 
   };
 
   const attentes: Promise<void>[] = [];
-  /* LES LIEUX CONNUS : tout de suite s'ils sont là, sinon dès qu'ils arrivent. */
-  const deja = options.lieuxConnus ? null : lieuxConnusCharges();
+  /* LES LIEUX CONNUS : tout de suite s'ils sont là, sinon dès que LEUR paquet
+     arrive (lot 145 : le sommaire, puis le seul paquet qui peut répondre). */
+  const deja = options.lieuxConnus ? null : lieuxConnusCharges(a);
   if (deja) ajouterConnus(deja);
   else {
-    attentes.push((options.lieuxConnus ?? (() => chargerLieuxConnus()))().then(
+    attentes.push((options.lieuxConnus ?? chargerLieuxConnus)(a).then(
       (index) => { ajouterConnus(index); dire(classer()); },
       () => undefined,
     ));
