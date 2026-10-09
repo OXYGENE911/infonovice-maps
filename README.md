@@ -8,6 +8,8 @@ transport.data.gouv.fr. Le mot « souverain » a été retiré le 06/09/2026 :
 l'hébergement (GitHub Pages, Cloudflare) et le certificat (Google Trust
 Services) sont américains, et la page « À propos » le dit.
 
+- **Deux sources non françaises, dites.** La météo (Open-Meteo, européen) et,
+  pour la recherche de lieux, un extrait embarqué de Wikidata. Dérogation accordée par Armelin le 09/10/2026 : Wikidata (Wikimedia Foundation, États-Unis ; données sous CC0), pour la recherche de lieux — de préférence un extrait embarqué ; à défaut des requêtes avec la seule saisie, jamais la position précise ni un identifiant ; aucun autre usage sans nouvelle décision.
 - **Zéro tracking.** Aucune donnée ne quitte votre navigateur : favoris et
   préférences vivent en IndexedDB local, exportables en JSON.
 - **Zéro coût d'infrastructure.** Site statique (PWA) hébergé sur GitHub

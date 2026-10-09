@@ -152,6 +152,12 @@ const DESSINS: Record<CleMotif, Dessin> = {
       'M16 7.6h2.6v8.8H16ZM19.4 9.4H22v5.2h-2.6Z',
     ],
   },
+  /* LE STADE (lot 145), comme la pastille « Sport » de Maps Pro : l'anneau
+     des tribunes et la pelouse au centre. */
+  stade: {
+    traits: ['M2.6 12a9.4 6.2 0 1 0 18.8 0 9.4 6.2 0 1 0-18.8 0Z'],
+    pleins: ['M6.4 12a5.6 3.1 0 1 0 11.2 0 5.6 3.1 0 1 0-11.2 0Z'],
+  },
   wc: { lettre: 'WC' },
   /* La toque de diplômé des écoles (POI-6) : le plateau en losange, la
      calotte en dessous, le gland qui pend à droite. */

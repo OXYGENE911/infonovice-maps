@@ -41,6 +41,22 @@ async function suivre(page: Page): Promise<{ itineraires: string[] }> {
       properties: { label: ETAPE.libelle, type: 'street', postcode: '75012', city: 'Paris', name: 'Gare de Lyon' },
     }] }),
   }));
+  /* LES DEUX SOURCES NEUVES DE LA RECHERCHE (lot 144), TENUES MUETTES (lot 145).
+     « gare de lyon » dit un transport : la recherche interroge désormais aussi
+     l'index des lieux de la Géoplateforme (ici sur le VRAI réseau, faute de
+     simulation : la vraie gare, à 2,374677 / 48,844162, passait devant) et les
+     lieux connus embarqués (la gare de Paris-Lyon de Wikidata). Que la gare
+     passe devant la rue qui porte son nom est l'amélioration voulue — c'est
+     le banc de recherche qui la défend. CE PARCOURS-CI défend autre chose :
+     que le lieu choisi devienne une étape. Ses sources sont donc simulées,
+     toutes, et l'attente sur l'étape ne change pas. */
+  await page.route('**/data.geopf.fr/geocodage/**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' }, contentType: 'application/json',
+    body: JSON.stringify({ type: 'FeatureCollection', features: [] }),
+  }));
+  await page.route('**/donnees/recherche/sommaire.json', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify({ v: 1, cles: {} }),
+  }));
   await page.goto(`/#iti=${TRACE[0]![0]},${TRACE[0]![1]};${TRACE[20]![0]},${TRACE[20]![1]};car`);
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
   return { itineraires };

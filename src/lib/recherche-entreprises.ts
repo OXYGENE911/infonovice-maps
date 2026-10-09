@@ -86,6 +86,21 @@ function nombreDe(v: unknown): number | null {
    est ce qu'il est — mais on les repousse au classement. */
 const FORMES = /^(SCI|SARL|SAS|SASU|EURL|SNC|SCM|SELARL|GIE|SCP)\b/i;
 
+/**
+ * Les codes d'activité (NAF) des établissements où l'on ne va pas — la liste
+ * de Maps Pro (`PAS_UN_LIEU`, lot 141), MOINS TROIS FAMILLES que le client
+ * libre garde à dessein : les sièges sociaux (70.10) — « Fnac Darty » doit
+ * rendre le siège d'Ivry, c'est une des douze requêtes d'Armelin
+ * (RECHERCHE-9) —, le commerce de gros (46) et les associations (94), où des
+ * usagers se rendent bel et bien.
+ */
+export const PAS_UN_LIEU = /^(64\.20|52\.10|81\.10|68\.3|68\.20|65\.)/;
+
+/** Une société civile (nature juridique 65xx : SCI, SCP…) — PURE. */
+export function estSocieteCivile(natureJuridique: string): boolean {
+  return natureJuridique.startsWith('65');
+}
+
 /** Un établissement mérite-t-il d'être proposé en premier ? — PURE. */
 export function estUneEnseigne(e: Etablissement): boolean {
   return !FORMES.test(e.nom);
@@ -107,6 +122,11 @@ export function versEtablissements(brut: unknown): Etablissement[] {
   const vus = new Set<string>();
   for (const r of d.results) {
     const u = (r ?? {}) as Record<string, unknown>;
+    /* LES SOCIÉTÉS CIVILES NE SONT PAS DES LIEUX (lot 144, règle de Maps Pro
+       du 07/10) : « SCI COL DU GALIBIER » passait devant le col, mesuré le
+       08/10. Nature juridique 65xx : SCI, SCP, sociétés civiles de toute
+       sorte — personne ne cherche à s'y rendre. */
+    if (estSocieteCivile(texteDe(u['nature_juridique']))) continue;
     const nomLegal = texteDe(u['nom_complet']) || texteDe(u['nom_raison_sociale']);
     const etabs = Array.isArray(u['matching_etablissements'])
       ? u['matching_etablissements'] : [];
@@ -119,6 +139,10 @@ export function versEtablissements(brut: unknown): Etablissement[] {
          producteur met quand il ne sait pas. La garder enverrait l'usager
          dans le golfe de Guinée. */
       if (lon === 0 && lat === 0) continue;
+      /* NI HOLDING, NI GÉRANCE IMMOBILIÈRE (lot 144, Maps Pro lot 141) :
+         64.20, 68.20, 68.3, 65, 52.10, 81.10 — des établissements où
+         personne ne se rend (voir `PAS_UN_LIEU`). */
+      if (PAS_UN_LIEU.test(texteDe(e['activite_principale']))) continue;
       const nom = texteDe(e['enseigne']) || texteDe(e['nom_commercial']) || nomLegal;
       if (nom === '') continue;
       const adresse = texteDe(e['adresse']);

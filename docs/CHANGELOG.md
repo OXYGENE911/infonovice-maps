@@ -2,6 +2,81 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [1.151.0] — 2026-10-09 — LOT-144 RECHERCHE-NIVEAU-PRO
+
+*Se fusionne APRÈS la 1.150.0 (PR #326, le design), qu'elle contient déjà.*
+
+### La recherche du client libre au niveau de Maps Pro (décision d'Armelin du 08/10)
+- **Banc du lot 141 (saisies publiques), première réponse juste** : 17 → **33 sur 36**,
+  33 → **60 sur 67** (Maps Pro, application : 32 sur 36, 62 sur 67). Rejoué sans réseau
+  à chaque `npm test` (`tests/banc-recherche.test.ts`, réponses gardées) ; aucune des
+  33 saisies justes avant ce lot n'est perdue.
+- **Fin de la « porte »** : une rue de la BAN qui porte les mots tapés ne coupe plus la
+  recherche de lieux (« Stade de France », « Sorbonne », « mairie de Boulogne-Billancourt »).
+  Un seul appel de plus (l'index des lieux de la Géoplateforme), et seulement dans ce cas.
+- **Classement commun** porté de Maps Pro (`lib/classement-recherche.ts`, `lib/types-lieu.ts`) :
+  nom entier, type demandé, transports, proximité, notoriété ; sociétés civiles et
+  holdings écartées de l'annuaire ; homonymes lointaines rétrogradées (« Saint-Denis »).
+- **Coordonnées dans la barre** (« 48.8584, 2.2945 »), sans aucun appel.
+- **Lieux connus embarqués** : monuments classés (Mérimée, déjà sur le site), Musées de France
+  (Muséofile), extrait Wikidata — **dérogation Wikidata** écrite dans CLAUDE.md et sur « À propos ».
+- **La première recherche allégée (lot 145)** : les lieux connus ne se téléchargent plus en
+  entier (≈ 545 Ko compressés, dont 404 Ko de monuments). Réduits au point, au nom, à la commune
+  et au type, ils sont rangés en paquets sous les trois premières lettres de chaque mot de leur
+  nom et de leur commune (`public/donnees/recherche/`, engendrés et vérifiés par
+  `tests/index-recherche.test.ts`) : une saisie lit le sommaire (9,9 Ko compressé), puis le seul
+  paquet de son mot le plus rare — **7,7 Ko compressé en médiane sur le banc, 77,5 Ko au pire**
+  (« métro Châtelet ») ; une adresse ou une saisie trop courte ne télécharge rien. Les paquets
+  rendent les mêmes lieux que l'index entier (essai d'équivalence sur 1 007 saisies), à une
+  limite près, écrite : une faute dans les trois premières lettres d'un mot long. Le banc reste
+  à 33 sur 36 et 60 sur 67.
+- **Un homonyme lointain de la BAN ne passe plus devant la vue** (RECHERCHE-4 et -5, rouge sur
+  la CI de cette PR) : la note de la BAN ne dit que le texte ; une réponse hors de la vue, à plus
+  de 50 km et dont la saisie ne nomme pas la commune, garde au plus le plancher de l'IGN (0,45).
+- **Une gare ne se fond plus dans la station de métro de son nom** (PICTO-2, rouge sur la CI de
+  cette PR) : « Gare Saint-Lazare » (IGN) contient « Saint-Lazare » (Wikidata, la station de
+  métro, à 235 m) ; le classement commun les fondait et la gare disparaissait derrière le métro.
+  Un mot d'équipement en plus (gare, station, métro, RER, arrêt, aéroport, parking, port) dit
+  désormais un autre lieu. Banc inchangé.
+- **Deux parcours e2e tiennent muettes les sources neuves** (`reperes.spec.ts`,
+  `recherche-nav.spec.ts`) : ils défendent la saisie d'un repère et l'étape en suivi, pas le
+  classement ; leurs attentes ne changent pas.
+## [1.150.0] — 2026-10-09 — DESIGN-PRO-1
+
+### Le nouveau design : le libre prend l'habit de Maps Pro, sans aucune de ses fonctions
+- **Décision d'Armelin, 08/10/2026** : « apporter un refresh à l'interface gratuite […] en la
+  mettant à jour à l'image de la fonction ou du bouton équivalent de l'interface Pro, sans
+  exposer la moindre fonctionnalité de la version Pro ». Le libre ne doit plus paraître
+  « fade, basique et peu professionnel » à qui le découvre avant Maps Pro.
+- **Les jetons** (`src/styles/tokens.css`) prennent les valeurs de la carte en ligne de Maps Pro :
+  gris froids, encre `#0E1014`, rayon de 18 px, ombre de carte. Nouveaux rôles : `--fond-2`,
+  `--filet`, `--survol`, `--bleu-clair`, `--bleu-bord`, `--accent-texte`, `--principal`,
+  `--police-titre`, avec leurs valeurs de nuit. Le gris d'appoint passe de 3,6:1 à 5,0:1 de
+  contraste sur blanc. **La pile de polices du texte ne change pas** : celle de Maps Pro
+  (Segoe UI Variable d'abord) change la hauteur de ligne sous Windows 11 et le menu ne tenait
+  plus à l'écran (mesuré par la suite e2e) ; sur téléphone, les deux piles donnent la même
+  police. Aucune police téléchargée.
+- **L'habit** (`src/styles/habillage.css`, importé après les feuilles de comportement) : barre de
+  recherche en carte blanche opaque, champ en pilule avec sa loupe, propositions à la barre bleue
+  de sélection, pastilles « Itinéraire » et « Menu » en pilules de 44 px, entonnoir et boutons de
+  la carte ronds, lignes de menu bordées, choix du thème en sélecteur segmenté, boutons
+  principaux en pilule bleue `#2272C4` (aussi de nuit : 4,9:1 au lieu de 3,6:1), bulles et fiche
+  d'un lieu arrondies à 16 px.
+- **Ce qui ne change pas** : aucun élément ajouté ou retiré, aucune fonction, aucun appel
+  réseau, aucun cadenas ; le comportement (feuilles basses, fenêtres, couches, guidage) vit
+  toujours dans `carte.css`, intact. `tests/habillage.test.ts` garde ces promesses.
+- **Les pastilles de catégories prennent les dessins de Maps Pro** (lot 145) : même disque de la
+  couleur de la famille, même dessin blanc ; trois familles s'alignent — Cinémas et théâtres (la
+  pellicule), Services (les ciseaux), Sport et stades (un stade, nouveau motif, que portent aussi
+  les stades sur la carte). Dessins au trait dans le code : ni marque, ni mascotte, aucun binaire,
+  aucune famille ajoutée ; la pastille du filtre reste celle de la carte (POI-5).
+- **`sans-reseau.spec.ts:93` ne dépendait pas du numéro de version** (lot 145) : son attente du
+  service worker n'attendait rien (`waitForFunction` ne sait pas attendre une fonction
+  asynchrone : une promesse est toujours « vraie »). Sous charge, le réseau était coupé pendant le
+  précache, l'installation échouait et la page partait sur un réseau coupé — sur `main` en
+  1.149.0 comme ici. Le parcours attend désormais l'état « activated » (et la recette recopiée
+  par `demo-salon.spec.ts` aussi).
+
 ## [1.149.0] — 2026-09-13 — SONDE-VRAIE-1
 
 ### La sonde ne mesurait pas ce qu'elle annonçait — et une assertion affaiblie est restaurée

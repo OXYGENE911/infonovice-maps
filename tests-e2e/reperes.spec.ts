@@ -132,6 +132,21 @@ test('un repère se définit PAR ADRESSE — le boulot se saisit depuis chez soi
         postcode: '75007', city: 'Paris', context: '75, Paris' },
     }] }),
   }));
+  /* LES DEUX SOURCES NEUVES DE LA RECHERCHE (lot 144), TENUES MUETTES (lot 145).
+     Quand la BAN rend une voie qui porte les mots, la recherche interroge
+     désormais aussi l'index des lieux de la Géoplateforme (ici sur le VRAI
+     réseau, faute de simulation) et les lieux connus embarqués : « anatole
+     france » rend alors aussi les stations de métro de ce nom — l'amélioration
+     voulue, que défend le banc de recherche. CE PARCOURS-CI défend la saisie
+     d'un repère PAR ADRESSE : ses sources sont simulées, toutes, comme la BAN
+     l'était déjà, et ses attentes ne changent pas. */
+  await page.route('**/data.geopf.fr/geocodage/**', (route) => route.fulfill({
+    headers: { 'Access-Control-Allow-Origin': '*' }, contentType: 'application/json',
+    body: JSON.stringify({ type: 'FeatureCollection', features: [] }),
+  }));
+  await page.route('**/donnees/recherche/sommaire.json', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify({ v: 1, cles: {} }),
+  }));
   await page.goto('/');
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
   await ouvrirVolet(page, '.favoris');

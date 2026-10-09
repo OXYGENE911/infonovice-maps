@@ -38,7 +38,7 @@ export type CleMotif =
   | 'couverts' | 'tasse' | 'cocktail' | 'caddie' | 'boutique' | 'vetement'
   | 'lit' | 'colonnes' | 'roue' | 'bobine' | 'masques'
   | 'croix' | 'dent' | 'patte' | 'billet' | 'parking'
-  | 'cle' | 'cintre' | 'ciseaux' | 'train' | 'avion' | 'haltere' | 'wc'
+  | 'cle' | 'cintre' | 'ciseaux' | 'train' | 'avion' | 'haltere' | 'stade' | 'wc'
   | 'toque'
   | 'eclair'
   | 'point';
@@ -78,6 +78,10 @@ const MOTIFS: readonly { motif: CleMotif; test: (t: Record<string, string>) => b
     || t['public_transport'] === 'station' },
   { motif: 'avion', test: (t) => t['aeroway'] === 'aerodrome' || t['aeroway'] === 'terminal' },
   // — Bouger son corps —
+  /* LE STADE (lot 145) : la famille « Sport et stades » de Maps Pro porte un
+     stade ; un stade portait ici le simple point. Les salles gardent leurs
+     haltères (la liste d'Armelin du 31/08). */
+  { motif: 'stade', test: (t) => t['leisure'] === 'stadium' },
   { motif: 'haltere', test: (t) => ['fitness_centre', 'sports_centre'].includes(t['leisure'] ?? '') },
   // — Apprendre —
   { motif: 'toque', test: (t) => ['school', 'kindergarten', 'college', 'university']
@@ -107,20 +111,32 @@ export function motifDe(tags: Record<string, string>): CleMotif {
    clique sur le bouton de filtre, les POI associés sont encore écrits avec un
    rond de couleur au lieu de leur logo dédié comme c'est le cas sur la
    carte. » Une famille regroupe plusieurs motifs ; sa pastille de filtre
-   porte le plus parlant d'entre eux — celui qu'on se figure en la nommant. */
+   porte le plus parlant d'entre eux — celui qu'on se figure en la nommant.
+
+   LES ICÔNES DE CATÉGORIES DE MAPS PRO (lot 145, 09/10/2026). Maps Pro pose
+   sur chaque famille une pastille : un disque de la couleur de la famille, un
+   dessin blanc — la grammaire d'ici, et les mêmes couleurs. Douze familles
+   portaient déjà le même dessin ; trois s'alignent sur Pro, chacune sur un
+   motif que la carte dessine (la pastille du filtre reste celle de la carte,
+   POI-5) : le cinéma prend la pellicule (Pro : le clap) plutôt que les
+   masques du théâtre, les services les ciseaux (Pro : les ciseaux) plutôt que
+   le cintre, le sport le stade (Pro : le stade) plutôt que les haltères. Les
+   pastilles de Pro, des images, ne sont pas reprises telles quelles : la carte
+   du libre dessine un motif PAR TYPE (la tasse et le verre, le caddie et le
+   cintre, demandés par Armelin le 31/08), qu'une image de famille effacerait. */
 export const MOTIF_DE_FAMILLE: Readonly<Record<string, CleMotif>> = {
   restaurant: 'couverts',
   cafe: 'tasse',
   commerce: 'caddie',
   hotel: 'lit',
   culture: 'colonnes',
-  cinema: 'masques',
+  cinema: 'bobine',
   sante: 'croix',
   argent: 'billet',
   parking: 'parking',
   auto: 'cle',
-  services: 'cintre',
-  sport: 'haltere',
+  services: 'ciseaux',
+  sport: 'stade',
   transport: 'train',
   ecole: 'toque',
   wc: 'wc',

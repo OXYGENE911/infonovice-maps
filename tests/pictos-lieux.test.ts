@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { motifDe } from '../src/lib/pictos-lieux';
+import { MOTIF_DE_FAMILLE, motifDe } from '../src/lib/pictos-lieux';
 import { familleDe } from '../src/lib/categories';
 
 /* LE MOTIF DIT LE TYPE, LA COULEUR DIT LA FAMILLE (POI-4, 31/08).
@@ -22,6 +22,7 @@ describe('motifDe — la liste d’Armelin, dessin par dessin', () => {
     ['un P pour les parkings', { amenity: 'parking' }, 'parking'],
     ['un caddie pour les supermarchés', { shop: 'supermarket' }, 'caddie'],
     ['des haltères pour les salles de sport', { leisure: 'fitness_centre' }, 'haltere'],
+    ['un stade pour les stades (lot 145, la pastille « Sport » de Maps Pro)', { leisure: 'stadium' }, 'stade'],
     ['une grande roue pour les parcs d’attractions', { tourism: 'theme_park' }, 'roue'],
     ['une clé pour les garages', { shop: 'car_repair' }, 'cle'],
     ['idem pour le lavage auto', { amenity: 'car_wash' }, 'cle'],
@@ -86,5 +87,20 @@ describe('l’ordre tranche, et le silence est permis', () => {
 
   it('ne se laisse pas piéger par des étiquettes vides', () => {
     expect(motifDe({ amenity: '', shop: '' })).toBe('point');
+  });
+});
+
+describe('les pastilles de famille, alignées sur Maps Pro (lot 145)', () => {
+  /* La pastille du filtre porte un motif QUE LA CARTE DESSINE (POI-5) — et,
+     pour les trois familles qui différaient, le dessin de Maps Pro. */
+  it('le cinéma, les services et le sport portent le dessin de Pro', () => {
+    expect(MOTIF_DE_FAMILLE['cinema']).toBe('bobine');
+    expect(MOTIF_DE_FAMILLE['services']).toBe('ciseaux');
+    expect(MOTIF_DE_FAMILLE['sport']).toBe('stade');
+  });
+  it('chaque pastille de famille est un motif de la carte', () => {
+    expect(motifDe({ amenity: 'cinema' })).toBe(MOTIF_DE_FAMILLE['cinema']);
+    expect(motifDe({ shop: 'hairdresser' })).toBe(MOTIF_DE_FAMILLE['services']);
+    expect(motifDe({ leisure: 'stadium' })).toBe(MOTIF_DE_FAMILLE['sport']);
   });
 });
