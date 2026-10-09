@@ -55,7 +55,11 @@ bibliothèque interne `/src/lib/` réutilisable — pas de backend.
    (européen), aucune source française n'étant utilisable sans clé au
    navigateur (huit testées, preuves dans docs/apis.md). Toute autre
    dérogation demande la même chose : une décision explicite ET une mention
-   publique. Le reste : uniquement des API publiques françaises ou de l'open data
+   publique.
+   UNE SECONDE DÉROGATION, ÉCRITE MOT POUR MOT : « Dérogation accordée par Armelin le 09/10/2026 : Wikidata (Wikimedia Foundation, États-Unis ; données sous CC0), pour la recherche de lieux — de préférence un extrait embarqué ; à défaut des requêtes avec la seule saisie, jamais la position précise ni un identifiant ; aucun autre usage sans nouvelle décision. » Elle est servie
+   en EXTRAIT EMBARQUÉ (public/donnees/lieux-wikidata.json, lot 144) : le
+   navigateur n'appelle pas Wikidata. Mention publique : page « À propos ».
+   Le reste : uniquement des API publiques françaises ou de l'open data
    français. INTERDITS : Google (Maps, Fonts, Analytics), AWS, Azure CDN,
    tout tracker tiers, tout cookie non essentiel.
 4. RGPD by design : aucune donnée utilisateur ne quitte le navigateur.

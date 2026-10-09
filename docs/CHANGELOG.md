@@ -2,6 +2,24 @@
 
 Format : [semver] — date — résumé. Le détail vit dans les PR.
 
+## [non publié] — 2026-10-09 — LOT-144 RECHERCHE-NIVEAU-PRO
+
+### La recherche du client libre au niveau de Maps Pro (décision d'Armelin du 08/10)
+- **Banc du lot 141 (saisies publiques), première réponse juste** : 17 → **33 sur 36**,
+  33 → **60 sur 67** (Maps Pro, application : 32 sur 36, 62 sur 67). Rejoué sans réseau
+  à chaque `npm test` (`tests/banc-recherche.test.ts`, réponses gardées) ; aucune des
+  33 saisies justes avant ce lot n'est perdue.
+- **Fin de la « porte »** : une rue de la BAN qui porte les mots tapés ne coupe plus la
+  recherche de lieux (« Stade de France », « Sorbonne », « mairie de Boulogne-Billancourt »).
+  Un seul appel de plus (l'index des lieux de la Géoplateforme), et seulement dans ce cas.
+- **Classement commun** porté de Maps Pro (`lib/classement-recherche.ts`, `lib/types-lieu.ts`) :
+  nom entier, type demandé, transports, proximité, notoriété ; sociétés civiles et
+  holdings écartées de l'annuaire ; homonymes lointaines rétrogradées (« Saint-Denis »).
+- **Coordonnées dans la barre** (« 48.8584, 2.2945 »), sans aucun appel.
+- **Lieux connus embarqués**, chargés à la première recherche : monuments classés (Mérimée,
+  déjà sur le site), Musées de France (Muséofile, +78 Ko, 29 Ko compressé), extrait Wikidata
+  (+340 Ko, 111 Ko compressé) — **dérogation Wikidata** écrite dans CLAUDE.md et sur « À propos ».
+
 ## [1.149.0] — 2026-09-13 — SONDE-VRAIE-1
 
 ### La sonde ne mesurait pas ce qu'elle annonçait — et une assertion affaiblie est restaurée
