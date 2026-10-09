@@ -16,13 +16,37 @@ import { ouvrirPlanificateur } from './planificateur';
  * seul état où la promesse a un sens.
  */
 
+/* ON ATTEND VRAIMENT LE SERVICE WORKER (lot 145, 09/10/2026).
+ *
+ * L'ATTENTE D'AVANT N'ATTENDAIT RIEN. `page.waitForFunction(async () => …)`
+ * ne sait pas attendre une fonction ASYNCHRONE : Playwright appelle le
+ * prédicat et teste sa valeur, et une promesse est toujours « vraie »
+ * (playwright-core 1.62, `const success = predicate(); if (success) …`).
+ * L'attente rendait donc la main au premier appel, service worker installé
+ * ou non.
+ *
+ * CE QUE ÇA CASSAIT, LU DANS LA TRACE (« sans-reseau.spec.ts:93 », rouge sur
+ * ce poste sous charge, sur `main` en 1.149.0 comme sur la branche du design
+ * en 1.150.0 ; vert seul, 6 fois sur 6) : le réseau était coupé PENDANT le
+ * précache. La page « pro.html » partait au moment de la coupure
+ * (ERR_INTERNET_DISCONNECTED), l'installation échouait, aucun service worker
+ * ne prenait la main, et la navigation vers /sans-reseau.html partait sur un
+ * réseau coupé : pas de page, pas d'événement « load ». Le numéro de version
+ * n'y était pour rien ; seule la durée du précache comptait.
+ *
+ * `expect.poll` attend, lui, l'état « activated » : le précache est alors
+ * COMPLET (une installation n'active qu'après avoir tout mis en cache). */
+async function attendreLeServiceWorker(page: Page): Promise<void> {
+  await expect.poll(() => page.evaluate(async () => {
+    const r = await navigator.serviceWorker?.getRegistration?.();
+    return r?.active?.state ?? 'aucun';
+  }), { timeout: 20_000, message: 'le service worker ne s’active pas' }).toBe('activated');
+}
+
 async function premiereVisitePuisCoupure(page: Page, context: BrowserContext): Promise<void> {
   await page.goto('/');
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
-  await page.waitForFunction(async () => {
-    const r = await navigator.serviceWorker?.getRegistration?.();
-    return !!r?.active;
-  }, null, { timeout: 20_000 });
+  await attendreLeServiceWorker(page);
   await page.reload();
   await expect(page.locator('#carte canvas.maplibregl-canvas')).toBeVisible({ timeout: 15_000 });
   await context.setOffline(true);

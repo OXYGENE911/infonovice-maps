@@ -6,6 +6,9 @@ import './styles/tokens.css';
 import './styles/carte.css';
 // Le pied de page de la carte partage la feuille des pages de texte.
 import './styles/pages.css';
+// LE NOUVEAU DESIGN, À L'IMAGE DE MAPS PRO (lot 144) : l'habit seul, posé
+// APRÈS les feuilles de comportement pour les habiller sans les réécrire.
+import './styles/habillage.css';
 import { registerSW } from 'virtual:pwa-register';
 import { preparerMaj } from './lib/maj-secours';
 import { creerCarte } from './carte/carte';
