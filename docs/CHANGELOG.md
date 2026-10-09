@@ -16,9 +16,24 @@ Format : [semver] — date — résumé. Le détail vit dans les PR.
   nom entier, type demandé, transports, proximité, notoriété ; sociétés civiles et
   holdings écartées de l'annuaire ; homonymes lointaines rétrogradées (« Saint-Denis »).
 - **Coordonnées dans la barre** (« 48.8584, 2.2945 »), sans aucun appel.
-- **Lieux connus embarqués**, chargés à la première recherche : monuments classés (Mérimée,
-  déjà sur le site), Musées de France (Muséofile, +78 Ko, 29 Ko compressé), extrait Wikidata
-  (+340 Ko, 111 Ko compressé) — **dérogation Wikidata** écrite dans CLAUDE.md et sur « À propos ».
+- **Lieux connus embarqués** : monuments classés (Mérimée, déjà sur le site), Musées de France
+  (Muséofile), extrait Wikidata — **dérogation Wikidata** écrite dans CLAUDE.md et sur « À propos ».
+- **La première recherche allégée (lot 145)** : les lieux connus ne se téléchargent plus en
+  entier (≈ 545 Ko compressés, dont 404 Ko de monuments). Réduits au point, au nom, à la commune
+  et au type, ils sont rangés en paquets sous les trois premières lettres de chaque mot de leur
+  nom et de leur commune (`public/donnees/recherche/`, engendrés et vérifiés par
+  `tests/index-recherche.test.ts`) : une saisie lit le sommaire (9,9 Ko compressé), puis le seul
+  paquet de son mot le plus rare — **7,7 Ko compressé en médiane sur le banc, 77,5 Ko au pire**
+  (« métro Châtelet ») ; une adresse ou une saisie trop courte ne télécharge rien. Les paquets
+  rendent les mêmes lieux que l'index entier (essai d'équivalence sur 1 007 saisies), à une
+  limite près, écrite : une faute dans les trois premières lettres d'un mot long. Le banc reste
+  à 33 sur 36 et 60 sur 67.
+- **Un homonyme lointain de la BAN ne passe plus devant la vue** (RECHERCHE-4 et -5, rouge sur
+  la CI de cette PR) : la note de la BAN ne dit que le texte ; une réponse hors de la vue, à plus
+  de 50 km et dont la saisie ne nomme pas la commune, garde au plus le plancher de l'IGN (0,45).
+- **Deux parcours e2e tiennent muettes les sources neuves** (`reperes.spec.ts`,
+  `recherche-nav.spec.ts`) : ils défendent la saisie d'un repère et l'étape en suivi, pas le
+  classement ; leurs attentes ne changent pas.
 
 ## [1.149.0] — 2026-09-13 — SONDE-VRAIE-1
 

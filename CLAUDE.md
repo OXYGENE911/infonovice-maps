@@ -57,7 +57,8 @@ bibliothèque interne `/src/lib/` réutilisable — pas de backend.
    dérogation demande la même chose : une décision explicite ET une mention
    publique.
    UNE SECONDE DÉROGATION, ÉCRITE MOT POUR MOT : « Dérogation accordée par Armelin le 09/10/2026 : Wikidata (Wikimedia Foundation, États-Unis ; données sous CC0), pour la recherche de lieux — de préférence un extrait embarqué ; à défaut des requêtes avec la seule saisie, jamais la position précise ni un identifiant ; aucun autre usage sans nouvelle décision. » Elle est servie
-   en EXTRAIT EMBARQUÉ (public/donnees/lieux-wikidata.json, lot 144) : le
+   en EXTRAIT EMBARQUÉ (source scripts/index-recherche/sources/lieux-wikidata.json,
+   servie par paquets sous public/donnees/recherche/, lots 144-145) : le
    navigateur n'appelle pas Wikidata. Mention publique : page « À propos ».
    Le reste : uniquement des API publiques françaises ou de l'open data
    français. INTERDITS : Google (Maps, Fonts, Analytics), AWS, Azure CDN,
