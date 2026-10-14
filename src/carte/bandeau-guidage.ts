@@ -804,8 +804,8 @@ export class BandeauGuidage extends HTMLElement {
                pas une fenêtre de plus : le geste d'enregistrer reste le
                premier. -->
           <p class="bg-bilan-pro">Le trajet vous a plu ?
-            <a href="/pro.html">Découvrez Maps Pro</a> — cercles, véhicule
-            connecté, itinéraires partagés.</p>
+            <a href="/pro.html">Découvrez Maps Pro</a> — BéliA la copilote,
+            plan de recharge, Android Auto.</p>
         </section>
         <!-- CE QUI SE DÉPLIE. « Soit l'utilisateur scrolle la barre vers le
              haut pour afficher les options cachées, soit il appuie une fois
